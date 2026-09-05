@@ -1,0 +1,56 @@
+/* Hallmark · macrostructure: Long Document · tone: composing-room · anchor hue: 45
+ * theme: custom (vibe: "oxidized copper washi" · paper oklch(86% 0.03 85) · accent oklch(48% 0.12 45) copper · Noto Serif TC + Noto Sans TC)
+ * nav: N6 masthead stick · footer: none · enrichment: none
+ * audience: local WAI compositor · use: set type, pull drawer, print · tone: print-shop
+ */
+
+:root {
+  --color-paper: oklch(86% 0.03 85);
+  --color-paper-2: oklch(81% 0.035 80);
+  --color-paper-3: oklch(76% 0.04 75);
+  --color-rule: oklch(62% 0.05 55);
+  --color-chip: oklch(90% 0.025 88);
+  --color-neutral: oklch(45% 0.04 50);
+  --color-muted: oklch(42% 0.04 50);
+  --color-ink: oklch(22% 0.04 45);
+  --color-accent: oklch(48% 0.12 45);
+  --color-accent-2: oklch(42% 0.1 40);
+  --color-focus: oklch(48% 0.14 45);
+  --color-pin: oklch(55% 0.14 55);
+  --color-ban: oklch(55% 0.03 50);
+  --color-danger: oklch(48% 0.16 25);
+  --color-ok: oklch(48% 0.1 145);
+
+  --font-display: "Noto Serif TC", "PMingLiU", serif;
+  --font-body: "Noto Sans TC", "Microsoft JhengHei", sans-serif;
+  --font-outlier: "IBM Plex Mono", ui-monospace, monospace;
+
+  --text-xs: 0.75rem;
+  --text-sm: 0.8125rem;
+  --text-base: 1rem;
+  --text-md: 1.25rem;
+  --text-lg: 1.5625rem;
+  --text-xl: 1.9531rem;
+  --text-2xl: 2.4414rem;
+
+  --space-1: 4px;
+  --space-2: 8px;
+  --space-3: 12px;
+  --space-4: 16px;
+  --space-5: 24px;
+  --space-6: 32px;
+  --space-7: 48px;
+  --space-8: 64px;
+
+  --rule: 1px;
+  --radius: 0;
+  --ruler: 3.75rem;
+  --galley: minmax(260px, 32vw);
+
+  --ease-out: cubic-bezier(0.16, 1, 0.3, 1);
+  --ease-in: cubic-bezier(0.55, 0, 1, 0.45);
+  --ease-in-out: cubic-bezier(0.65, 0, 0.35, 1);
+  --dur-micro: 140ms;
+  --dur-ui: 240ms;
+  --dur-move: 400ms;
+}

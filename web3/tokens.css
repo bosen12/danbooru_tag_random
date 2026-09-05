@@ -1,0 +1,55 @@
+/* Hallmark · macrostructure: Bento Grid · tone: night-market stall · anchor hue: 35
+ * theme: custom (vibe: "indigo noren lantern" · paper oklch(22% 0.04 280) · accent oklch(68% 0.19 35) lantern · Yusei Magic + Zen Kaku Gothic New)
+ * nav: N5 well · footer: none · enrichment: none
+ * audience: local WAI compositor · use: draw a lot, clip polaroid · tone: festival-stall
+ */
+
+:root {
+  --color-paper: oklch(22% 0.04 280);
+  --color-paper-2: oklch(26% 0.045 278);
+  --color-paper-3: oklch(30% 0.05 275);
+  --color-rule: oklch(40% 0.05 270);
+  --color-chip: oklch(28% 0.05 278);
+  --color-neutral: oklch(70% 0.04 90);
+  --color-muted: oklch(78% 0.04 90);
+  --color-ink: oklch(94% 0.03 95);
+  --color-accent: oklch(68% 0.19 35);
+  --color-accent-2: oklch(80% 0.13 85);
+  --color-focus: oklch(80% 0.14 80);
+  --color-pin: oklch(82% 0.14 85);
+  --color-ban: oklch(50% 0.04 280);
+  --color-danger: oklch(64% 0.18 20);
+  --color-ok: oklch(72% 0.12 145);
+
+  --font-display: "Yusei Magic", "Microsoft JhengHei", sans-serif;
+  --font-body: "Zen Kaku Gothic New", "Segoe UI", sans-serif;
+  --font-outlier: "IBM Plex Mono", ui-monospace, monospace;
+
+  --text-xs: 0.75rem;
+  --text-sm: 0.8125rem;
+  --text-base: 1rem;
+  --text-md: 1.25rem;
+  --text-lg: 1.5625rem;
+  --text-xl: 1.9531rem;
+  --text-2xl: 2.4414rem;
+
+  --space-1: 4px;
+  --space-2: 8px;
+  --space-3: 12px;
+  --space-4: 16px;
+  --space-5: 24px;
+  --space-6: 32px;
+  --space-7: 48px;
+  --space-8: 64px;
+
+  --rule: 1px;
+  --radius: 4px;
+  --well: minmax(260px, 42vh);
+
+  --ease-out: cubic-bezier(0.16, 1, 0.3, 1);
+  --ease-in: cubic-bezier(0.55, 0, 1, 0.45);
+  --ease-in-out: cubic-bezier(0.65, 0, 0.35, 1);
+  --dur-micro: 110ms;
+  --dur-ui: 220ms;
+  --dur-move: 360ms;
+}

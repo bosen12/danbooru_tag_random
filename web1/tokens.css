@@ -1,0 +1,57 @@
+/* Hallmark · macrostructure: Workbench · tone: darkroom · anchor hue: 62
+ * theme: custom (vibe: "safe-light enlarger" · paper oklch(14% 0.02 50) · accent oklch(72% 0.18 62) amber · Syne + Figtree)
+ * nav: N3 right HUD · footer: none · enrichment: none
+ * audience: local WAI compositor · use: pin, draw, expose · tone: darkroom
+ */
+
+:root {
+  --color-paper: oklch(14% 0.02 50);
+  --color-paper-2: oklch(18% 0.024 48);
+  --color-paper-3: oklch(22% 0.03 46);
+  --color-rule: oklch(30% 0.03 50);
+  --color-chip: oklch(20% 0.025 48);
+  --color-neutral: oklch(62% 0.04 70);
+  --color-muted: oklch(74% 0.04 80);
+  --color-ink: oklch(93% 0.03 85);
+  --color-accent: oklch(72% 0.18 62);
+  --color-accent-2: oklch(80% 0.12 80);
+  --color-focus: oklch(78% 0.14 75);
+  --color-pin: oklch(82% 0.14 85);
+  --color-ban: oklch(48% 0.03 50);
+  --color-danger: oklch(62% 0.16 25);
+  --color-ok: oklch(72% 0.12 145);
+
+  --font-display: "Syne", "Arial Narrow", sans-serif;
+  --font-body: "Figtree", "Segoe UI", sans-serif;
+  --font-outlier: "IBM Plex Mono", ui-monospace, monospace;
+
+  --text-xs: 0.75rem;
+  --text-sm: 0.8125rem;
+  --text-base: 1rem;
+  --text-md: 1.25rem;
+  --text-lg: 1.5625rem;
+  --text-xl: 1.9531rem;
+  --text-2xl: 2.4414rem;
+
+  --space-1: 4px;
+  --space-2: 8px;
+  --space-3: 12px;
+  --space-4: 16px;
+  --space-5: 24px;
+  --space-6: 32px;
+  --space-7: 48px;
+  --space-8: 64px;
+
+  --rule: 1px;
+  --radius: 0;
+  --hud: 272px;
+  --sheet: minmax(240px, 36vh);
+  --mast: 52px;
+
+  --ease-out: cubic-bezier(0.16, 1, 0.3, 1);
+  --ease-in: cubic-bezier(0.55, 0, 1, 0.45);
+  --ease-in-out: cubic-bezier(0.65, 0, 0.35, 1);
+  --dur-micro: 120ms;
+  --dur-ui: 200ms;
+  --dur-move: 320ms;
+}

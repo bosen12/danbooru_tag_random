@@ -1,0 +1,15 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 32 32" role="img" aria-labelledby="title">
+  <title id="title">排字匣</title>
+  <rect width="32" height="32" rx="2" fill="#2a1814"/>
+  <!-- 匚：活字匣，右側開口 -->
+  <path
+    d="M25 6.5H7v19h18"
+    fill="none"
+    stroke="#eee7d9"
+    stroke-width="2.25"
+    stroke-linecap="square"
+    stroke-linejoin="miter"
+  />
+  <!-- 一枚活字；底邊 nick 是鉛字的切口，小尺寸會讀成釘子 -->
+  <path fill="#ebbd57" d="M13 10.5h10v8.5h-3.25v2.25h-3.5v-2.25H13z"/>
+</svg>

@@ -56,7 +56,7 @@ a {
 
 .mast {
   display: flex;
-  align-items: baseline;
+  align-items: center;
   justify-content: space-between;
   gap: var(--space-4);
   padding: var(--space-4) var(--space-5);
@@ -68,16 +68,34 @@ a {
 }
 
 .wordmark {
+  display: flex;
+  align-items: center;
+  gap: var(--space-3);
+  min-width: 0;
+  margin: 0;
+}
+
+.brand-mark {
+  width: 40px;
+  height: 40px;
+  flex: 0 0 auto;
+  display: block;
+  border-radius: var(--radius);
+  box-shadow: 0 0 0 var(--rule) var(--color-rule);
+}
+
+.wordmark-copy {
   font-family: var(--font-display);
   font-style: normal;
   font-weight: 800;
   font-size: var(--text-xl);
   letter-spacing: -0.03em;
   line-height: 1.05;
-  margin: 0;
+  min-width: 0;
+  overflow-wrap: anywhere;
 }
 
-.wordmark span {
+.wordmark-copy span {
   display: block;
   font-family: var(--font-body);
   font-weight: 400;
@@ -338,10 +356,29 @@ input[type="search"] {
 }
 
 .tray {
-  margin-bottom: var(--space-5);
+  display: grid;
+  grid-template-rows: 0fr;
+  transition: grid-template-rows var(--dur-ui) var(--ease-in-out);
+}
+
+.tray.is-on {
+  grid-template-rows: 1fr;
+}
+
+.tray-clip {
+  overflow: hidden;
+  min-height: 0;
+}
+
+.tray-pad {
   padding: var(--space-3);
+  margin-bottom: var(--space-5);
   background: var(--color-paper-2);
   border: var(--rule) solid var(--color-rule);
+}
+
+.cat-body {
+  min-height: 0;
 }
 
 .tray-head {
@@ -358,6 +395,8 @@ input[type="search"] {
 
 .cat {
   scroll-margin-top: 9.5rem;
+  content-visibility: auto;
+  contain-intrinsic-size: 1px 240px;
 }
 
 .cats {
@@ -877,10 +916,12 @@ input[type="search"] {
   .cat {
     scroll-margin-top: 10rem;
   }
-  .wordmark {
+  .brand-mark {
+    width: 32px;
+    height: 32px;
+  }
+  .wordmark-copy {
     font-size: var(--text-lg);
-    overflow-wrap: anywhere;
-    min-width: 0;
   }
 }
 

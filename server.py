@@ -19,12 +19,15 @@ from http.server import BaseHTTPRequestHandler, ThreadingHTTPServer
 from pathlib import Path
 
 ROOT = Path(__file__).resolve().parent
-WEB = ROOT / "web"
+WEB = (ROOT / os.environ.get("WEB_DIR", "web")).resolve()
+SHARED = (ROOT / "web").resolve()
 CKPT = os.environ.get(
     "COMFY_CKPT", r"illurtrious\waiIllustriousSDXL_v170.safetensors"
 )
 def _negative() -> str:
-    path = WEB / "lexicon.json"
+    path = SHARED / "lexicon.json"
+    if not path.is_file():
+        path = WEB / "lexicon.json"
     try:
         data = json.loads(path.read_text(encoding="utf-8"))
         n = str(data.get("negative") or "").strip()
@@ -456,25 +459,66 @@ class Handler(BaseHTTPRequestHandler):
             except Exception:
                 pass
 
+    def _static_dest(self):
+        path = urllib.parse.urlparse(self.path).path
+        if path in ("/", ""):
+            path = "/index.html"
+        rel = urllib.parse.unquote(path).lstrip("/")
+        dest = (WEB / rel).resolve()
+        if str(dest).startswith(str(WEB)) and dest.is_file():
+            return dest
+        shared = (SHARED / rel).resolve()
+        if str(shared).startswith(str(SHARED)) and shared.is_file():
+            return shared
+        return None
+
+    def _serve_static(self, body: bool) -> None:
+        dest = self._static_dest()
+        if dest is None:
+            self._json(404, {"ok": False, "error": "not found"})
+            return
+        mime = mimetypes.guess_type(dest.name)[0] or "application/octet-stream"
+        if mime in (
+            "text/html",
+            "text/css",
+            "text/javascript",
+            "application/javascript",
+            "application/json",
+            "image/svg+xml",
+        ):
+            mime = f"{mime}; charset=utf-8"
+        st = dest.stat()
+        etag = f'"{st.st_mtime_ns:x}-{st.st_size:x}"'
+        if self.headers.get("If-None-Match") == etag:
+            self.send_response(304)
+            self.send_header("ETag", etag)
+            self.send_header("Cache-Control", "no-cache")
+            self.end_headers()
+            return
+        data = dest.read_bytes() if body else b""
+        size = st.st_size if not body else len(data)
+        self.send_response(200)
+        self.send_header("Content-Type", mime)
+        self.send_header("Content-Length", str(size))
+        self.send_header("ETag", etag)
+        self.send_header("Cache-Control", "no-cache")
+        self.end_headers()
+        if body:
+            self.wfile.write(data)
+
+    def do_HEAD(self) -> None:
+        path = urllib.parse.urlparse(self.path).path
+        if path == "/api/ping":
+            self._json(200, ping())
+            return
+        self._serve_static(False)
+
     def do_GET(self) -> None:
         path = urllib.parse.urlparse(self.path).path
         if path == "/api/ping":
             self._json(200, ping())
             return
-        if path in ("/", ""):
-            path = "/index.html"
-        rel = urllib.parse.unquote(path).lstrip("/")
-        dest = (WEB / rel).resolve()
-        if not str(dest).startswith(str(WEB.resolve())) or not dest.is_file():
-            self._json(404, {"ok": False, "error": "not found"})
-            return
-        mime = mimetypes.guess_type(dest.name)[0] or "application/octet-stream"
-        data = dest.read_bytes()
-        self.send_response(200)
-        self.send_header("Content-Type", mime)
-        self.send_header("Content-Length", str(len(data)))
-        self.end_headers()
-        self.wfile.write(data)
+        self._serve_static(True)
 
     def do_POST(self) -> None:
         path = urllib.parse.urlparse(self.path).path
@@ -512,7 +556,7 @@ def main() -> None:
     host = os.environ.get("HOST", "127.0.0.1")
     port = int(os.environ.get("PORT", "8787"))
     httpd = ThreadingHTTPServer((host, port), Handler)
-    print(f"排字匣  http://{host}:{port}   Comfy {comfy_base()}")
+    print(f"排字匣  http://{host}:{port}   畫面 {WEB.name}   Comfy {comfy_base()}")
     httpd.serve_forever()
 
 
