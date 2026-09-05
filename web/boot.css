@@ -237,6 +237,7 @@ input[type="number"] {
 .tag {
   position: relative;
   overflow: visible;
+  contain: layout style;
   border: var(--rule) solid var(--color-rule);
   background: var(--color-chip);
   color: var(--color-ink);

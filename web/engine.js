@@ -198,53 +198,82 @@ function erasIntersect(a, b) {
   return a.some((x) => b.includes(x));
 }
 
-export function indexLexicon(data) {
-  const byTag = new Map();
-  const bySection = { subject: [], feature: [], pose: [], clothing: [], env: [] };
-  const mutexOf = new Map();
-  for (const item of data.tags) {
-    byTag.set(item.tag, item);
-    if (bySection[item.section]) bySection[item.section].push(item);
-    const groups = extraMutex(item);
-    for (const g of groups) {
-      if (!mutexOf.has(g)) mutexOf.set(g, []);
-      if (!mutexOf.get(g).includes(item.tag)) mutexOf.get(g).push(item.tag);
-    }
-  }
-  return { data, byTag, bySection, mutexOf };
-}
-
 function extraMutex(item) {
+  if (item._mx) return item._mx;
   const groups = [];
   if (item.mutex) groups.push(item.mutex);
   if (SEX_ACT.has(item.tag) && item.mutex !== "sex_act") groups.push("sex_act");
+  item._mx = groups;
   return groups;
 }
 
-function relatedTags(lex, tag) {
-  const item = lex.byTag.get(tag);
-  const out = new Set([tag]);
-  if (!item) return out;
-  for (const x of item.bind || []) out.add(x);
-  for (const x of item.implies || []) out.add(x);
-  return out;
+function relOf(item) {
+  if (item._rel) return item._rel;
+  const rel = new Set();
+  for (const x of item.bind || []) rel.add(x);
+  for (const x of item.implies || []) rel.add(x);
+  item._rel = rel;
+  return rel;
 }
 
 function parentChild(lex, a, b) {
   const A = lex.byTag.get(a);
   const B = lex.byTag.get(b);
-  if (A && ((A.implies || []).includes(b) || (A.bind || []).includes(b))) return true;
-  if (B && ((B.implies || []).includes(a) || (B.bind || []).includes(a))) return true;
+  if (A && relOf(A).has(b)) return true;
+  if (B && relOf(B).has(a)) return true;
   return false;
 }
 
+export function indexLexicon(data) {
+  const byTag = new Map();
+  const bySection = { subject: [], feature: [], pose: [], clothing: [], env: [] };
+  const mutexOf = new Map();
+  const byMutex = new Map();
+  const byGroup = new Map();
+  for (const item of data.tags) {
+    extraMutex(item);
+    relOf(item);
+    byTag.set(item.tag, item);
+    if (bySection[item.section]) bySection[item.section].push(item);
+    for (const g of extraMutex(item)) {
+      if (!mutexOf.has(g)) mutexOf.set(g, []);
+      mutexOf.get(g).push(item.tag);
+    }
+    if (item.mutex) {
+      const k = item.section + ":" + item.mutex;
+      if (!byMutex.has(k)) byMutex.set(k, []);
+      byMutex.get(k).push(item);
+    }
+    if (item.group) {
+      const k = item.section + ":" + item.group;
+      if (!byGroup.has(k)) byGroup.set(k, []);
+      byGroup.get(k).push(item);
+    }
+  }
+  const siblings = new Map();
+  const lexStub = { byTag };
+  for (const item of data.tags) {
+    const related = new Set([item.tag, ...relOf(item)]);
+    const out = new Set();
+    for (const g of extraMutex(item)) {
+      for (const t of mutexOf.get(g) || []) {
+        if (related.has(t) || parentChild(lexStub, item.tag, t)) continue;
+        out.add(t);
+      }
+    }
+    siblings.set(item.tag, [...out]);
+  }
+  return { data, byTag, bySection, mutexOf, siblings, byMutex, byGroup };
+}
+
 export function mutexSiblings(lex, tag) {
+  const cached = lex.siblings && lex.siblings.get(tag);
+  if (cached) return cached;
   const item = lex.byTag.get(tag);
   if (!item) return [];
-  const groups = extraMutex(item);
-  const related = relatedTags(lex, tag);
+  const related = new Set([tag, ...relOf(item)]);
   const out = new Set();
-  for (const g of groups) {
+  for (const g of extraMutex(item)) {
     for (const t of lex.mutexOf.get(g) || []) {
       if (related.has(t) || parentChild(lex, tag, t)) continue;
       out.add(t);
@@ -830,9 +859,23 @@ export function drawOne(lex, settings, pinned, userBanned, rand, seed) {
     (item) => heat === "flash" && (item.mutex === "clothes_action" || item.group === "flash"),
     (item) => heat === "tease" && item.group === "tease",
   ];
+  const countSection = (section) => {
+    let n = 0;
+    for (const t of used) {
+      if (lex.byTag.get(t)?.section === section) n += 1;
+    }
+    return n;
+  };
+  const someUsed = (fn) => {
+    for (const t of used) {
+      const it = lex.byTag.get(t);
+      if (it && fn(it, t)) return true;
+    }
+    return false;
+  };
+
   const fill = (section, extraFilter) => {
-    const here = [...used].filter((t) => lex.byTag.get(t)?.section === section).length;
-    const need = Math.max(0, (counts[section] || 0) - here);
+    const need = Math.max(0, (counts[section] || 0) - countSection(section));
     if (need <= 0) return;
     const pool = lex.bySection[section].filter(
       (item) => allow(item) && (!extraFilter || extraFilter(item))
@@ -855,8 +898,9 @@ export function drawOne(lex, settings, pinned, userBanned, rand, seed) {
 
   const fillSlot = (section, mutexName) => {
     if (mutexTaken.has(mutexName)) return;
-    const pool = lex.bySection[section].filter(
-      (item) => allow(item) && item.mutex === mutexName
+    const indexed = lex.byMutex && lex.byMutex.get(section + ":" + mutexName);
+    const pool = (indexed || lex.bySection[section].filter((item) => item.mutex === mutexName)).filter(
+      (item) => allow(item)
     );
     let prefer = null;
     if (section === "clothing") prefer = clothingPrefer;
@@ -865,9 +909,10 @@ export function drawOne(lex, settings, pinned, userBanned, rand, seed) {
   };
 
   const fillGroup = (section, groupName) => {
-    if ([...used].some((t) => lex.byTag.get(t)?.group === groupName)) return;
-    const pool = lex.bySection[section].filter(
-      (item) => allow(item) && item.group === groupName
+    if (someUsed((it) => it.group === groupName)) return;
+    const indexed = lex.byGroup && lex.byGroup.get(section + ":" + groupName);
+    const pool = (indexed || lex.bySection[section].filter((item) => item.group === groupName)).filter(
+      (item) => allow(item)
     );
     takeFromPool(pool, 1, rand, commit);
   };
@@ -880,13 +925,8 @@ export function drawOne(lex, settings, pinned, userBanned, rand, seed) {
   if (male && rand() < 0.38) fillSlot("feature", "race");
   fill("feature", (item) => item.mutex !== "race");
 
-  const clothingPinned = [...pinned].some(
-    (t) => lex.byTag.get(t)?.section === "clothing" && used.has(t)
-  );
-  const nudePinned = [...used].some((t) => {
-    const it = lex.byTag.get(t);
-    return it && it.section === "clothing" && it.layer === "skin";
-  });
+  const clothingPinned = someUsed((it, t) => it.section === "clothing" && pinned.has(t));
+  const nudePinned = someUsed((it) => it.section === "clothing" && it.layer === "skin");
   let forceNude = nudePinned;
   if (!clothingPinned && !nudePinned) {
     if (heat === "sex" && rand() < 0.42) forceNude = true;
@@ -896,14 +936,10 @@ export function drawOne(lex, settings, pinned, userBanned, rand, seed) {
     const skin = lex.bySection.clothing.filter((item) => item.layer === "skin" && allow(item));
     if (skin.length && !nudePinned) takeFromPool(skin, 1, rand, commit);
   }
-  const gotNude = [...used].some((t) => {
-    const it = lex.byTag.get(t);
-    return it && it.section === "clothing" && it.layer === "skin";
-  });
+  const gotNude = someUsed((it) => it.section === "clothing" && it.layer === "skin");
   const hasBodyGarment = () =>
-    [...used].some((t) => {
-      const it = lex.byTag.get(t);
-      if (!it || it.section !== "clothing") return false;
+    someUsed((it, t) => {
+      if (it.section !== "clothing") return false;
       if (it.layer === "skin") return true;
       if (it.layer === "garment" && (it.mutex === "onepiece" || it.mutex === "top" || it.mutex === "bottom")) {
         return true;
@@ -933,7 +969,7 @@ export function drawOne(lex, settings, pinned, userBanned, rand, seed) {
     fill("clothing", (item) => {
       if (item.layer === "skin") return false;
       if (item.layer === "garment" && !item.mutex) {
-        return [...used].some((t) => (lex.byTag.get(t)?.implies || []).includes(item.tag));
+        return someUsed((it) => relOf(it).has(item.tag));
       }
       if (item.mutex === "onepiece" || item.mutex === "top" || item.mutex === "bottom") {
         if (mutexTaken.has("onepiece") || item.mutex === "onepiece") return false;

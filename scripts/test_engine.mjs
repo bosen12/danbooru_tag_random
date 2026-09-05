@@ -58,6 +58,14 @@ function drawN(pinned, banned, n, seed0 = 1000) {
 }
 
 {
+  const sibs = new Set(mutexSiblings(lex, "goblin"));
+  ok("cached siblings: goblin mutexes orc", sibs.has("orc"));
+  ok("cached siblings: goblin keeps monster boy", !sibs.has("monster boy"));
+  const pool = lex.byMutex.get("feature:race") || [];
+  ok("byMutex race pool has goblin", pool.some((it) => it.tag === "goblin"));
+}
+
+{
   const next = applyPin(lex, new Set(), new Set(["bikini"]), "micro bikini");
   ok(
     "pin micro after ban bikini unbans bikini",

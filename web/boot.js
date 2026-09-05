@@ -45,6 +45,8 @@ let running = false;
 let genAbort = null;
 let viewMode = "all";
 let eraOnly = true;
+const btnByTag = new Map();
+let paintPrev = { pin: new Set(), auto: new Set(), user: new Set() };
 
 const $ = (id) => document.getElementById(id);
 
@@ -209,7 +211,7 @@ function applyPreset(name) {
   if (!settings.heats.length) settings.heats = ["tease"];
   syncHeat();
   saveStore();
-  renderCats();
+  renderCats("heat");
 }
 
 function toggleHeat(h) {
@@ -226,7 +228,7 @@ function toggleHeat(h) {
   settings.weights = w;
   syncHeat();
   saveStore();
-  renderCats();
+  renderCats("heat");
 }
 
 function tagsBanned(tags) {
@@ -488,63 +490,94 @@ function hintFor(sec, vis) {
   return `${vis.length} · ${sec.hint}`;
 }
 
+function setData(el, key, val) {
+  if (!val) {
+    if (el.dataset[key]) delete el.dataset[key];
+    return;
+  }
+  if (el.dataset[key] !== val) el.dataset[key] = val;
+}
+
 function applyTagState(btn, item, auto, secId) {
   if (secId === "quality" || btn.dataset.locked === "1") return;
   const st = tagState(item.tag, pinned, userBanned, auto);
   const zh = item.zh || labelOf(lex, item.tag);
-  btn.dataset.state = st;
-  if (st === "banned") {
-    const mutexBan = auto.has(item.tag) && !userBanned.has(item.tag);
-    btn.dataset.ban = mutexBan ? "mutex" : "user";
-    btn.setAttribute("aria-label", `${zh} (${item.tag}) ${mutexBan ? "與釘選互斥" : "已關閉"}`);
-  } else {
-    delete btn.dataset.ban;
-    btn.setAttribute("aria-label", `${zh} (${item.tag})`);
-  }
-  if (!fitsEra(item) && st !== "pinned") btn.dataset.offEra = "1";
-  else delete btn.dataset.offEra;
-  if (!fitsCast(item) && st !== "pinned") btn.dataset.offCast = "1";
-  else delete btn.dataset.offCast;
-  if (secId !== "subject" && !fitsHeat(item) && st === "pool") btn.dataset.offHeat = "1";
-  else delete btn.dataset.offHeat;
+  const mutexBan = st === "banned" && auto.has(item.tag) && !userBanned.has(item.tag);
+  const ban = st === "banned" ? (mutexBan ? "mutex" : "user") : "";
+  const label =
+    st === "banned" ? `${zh} (${item.tag}) ${mutexBan ? "與釘選互斥" : "已關閉"}` : `${zh} (${item.tag})`;
+  setData(btn, "state", st);
+  setData(btn, "ban", ban);
+  setData(btn, "offEra", !fitsEra(item) && st !== "pinned" ? "1" : "");
+  setData(btn, "offCast", !fitsCast(item) && st !== "pinned" ? "1" : "");
+  setData(btn, "offHeat", secId !== "subject" && !fitsHeat(item) && st === "pool" ? "1" : "");
+  if (btn.getAttribute("aria-label") !== label) btn.setAttribute("aria-label", label);
 }
 
-function paintCats() {
+function rememberBtn(tag, btn) {
+  let list = btnByTag.get(tag);
+  if (!list) {
+    list = [];
+    btnByTag.set(tag, list);
+  }
+  list.push(btn);
+}
+
+function paintDirty(auto, dirty) {
+  for (const tag of dirty) {
+    const item = lex.byTag.get(tag);
+    if (!item) continue;
+    for (const btn of btnByTag.get(tag) || []) applyTagState(btn, item, auto, item.section);
+  }
+}
+
+function paintAll(auto) {
+  for (const [tag, btns] of btnByTag) {
+    const item = lex.byTag.get(tag);
+    if (!item) continue;
+    for (const btn of btns) applyTagState(btn, item, auto, item.section);
+  }
+}
+
+function collectDirty(auto) {
+  const dirty = new Set();
+  const mark = (cur, prev) => {
+    for (const t of cur) if (!prev.has(t)) dirty.add(t);
+    for (const t of prev) if (!cur.has(t)) dirty.add(t);
+  };
+  mark(pinned, paintPrev.pin);
+  mark(auto, paintPrev.auto);
+  mark(userBanned, paintPrev.user);
+  return dirty;
+}
+
+function paintCats(scope = "dirty") {
   const root = $("cats");
-  if (!root || !root.querySelector(".cat")) {
+  if (!root || !root.querySelector(".cat") || !btnByTag.size) {
     buildCats();
     return;
   }
   const auto = autoBannedFromPins(lex, pinned);
-  const q = ($("q").value || "").trim().toLowerCase();
-  for (const wrap of root.querySelectorAll(".cat")) {
-    const sec = SECTIONS.find((s) => wrap.id === "sec-" + s.id);
-    if (!sec) continue;
-    const vis = visibleItems(sec, auto, q);
-    const hint = wrap.querySelector(".cat-actions > span");
-    if (hint) hint.textContent = hintFor(sec, vis);
-    const closer = wrap.querySelector(":scope > header .ghost.mini");
-    if (closer) {
-      const closed = tagsBanned(vis.map((it) => it.tag));
-      closer.textContent = closed ? "開啟全部" : "關閉全部";
-    }
-    for (const btn of wrap.querySelectorAll(".tag[data-tag]")) {
-      const item = lex.byTag.get(btn.dataset.tag);
-      if (item) applyTagState(btn, item, auto, sec.id);
-    }
+  if (scope === "all") paintAll(auto);
+  else {
+    const dirty = collectDirty(auto);
+    if (dirty.size) paintDirty(auto, dirty);
   }
+  paintPrev = { pin: new Set(pinned), auto, user: new Set(userBanned) };
   syncViewFilters();
 }
 
 function renderCats(mode = "auto") {
   const full = mode === "full" || viewMode !== "all" || !$("cats")?.querySelector(".cat");
   if (full) buildCats();
-  else paintCats();
+  else paintCats(mode === "heat" ? "all" : "dirty");
 }
 
 function buildCats() {
+  btnByTag.clear();
   const q = ($("q").value || "").trim().toLowerCase();
   const auto = autoBannedFromPins(lex, pinned);
+  paintPrev = { pin: new Set(pinned), auto, user: new Set(userBanned) };
   const root = $("cats");
   const open = new Set(
     [...root.querySelectorAll(".cat.is-open")].map((el) => el.id)
@@ -638,7 +671,7 @@ function buildCats() {
 }
 
 function tagButtons(tag) {
-  return [...document.querySelectorAll("#cats .tag, #tray .tag")].filter((el) => el.dataset.tag === tag);
+  return btnByTag.get(tag) || [];
 }
 
 function flashPin(tag) {
@@ -686,6 +719,7 @@ function makeTagBtn(item, sec, auto) {
     return btn;
   }
   applyTagState(btn, item, auto, sec.id);
+  rememberBtn(item.tag, btn);
   return btn;
 }
 

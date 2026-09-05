@@ -3,6 +3,7 @@
 from __future__ import annotations
 
 import base64
+import gzip
 import json
 import mimetypes
 import os
@@ -78,15 +79,33 @@ def api(method: str, path: str, data=None, timeout: float = 60):
         return raw
 
 
+_PING = {"t": 0.0, "val": None}
+_STATIC: dict[str, dict] = {}
+_GZIP_TYPES = {
+    "text/html",
+    "text/css",
+    "text/javascript",
+    "application/javascript",
+    "application/json",
+    "image/svg+xml",
+}
+
+
 def ping() -> dict:
+    now = time.time()
+    if _PING["val"] is not None and now - _PING["t"] < 2:
+        return _PING["val"]
     try:
         stats = api("GET", "/system_stats", timeout=8)
         ver = ""
         if isinstance(stats, dict):
             ver = str((stats.get("system") or {}).get("comfyui_version") or "")
-        return {"ok": True, "base": comfy_base(), "version": ver}
+        val = {"ok": True, "base": comfy_base(), "version": ver}
     except Exception as exc:
-        return {"ok": False, "base": comfy_base(), "error": str(exc)}
+        val = {"ok": False, "base": comfy_base(), "error": str(exc)}
+    _PING["t"] = now
+    _PING["val"] = val
+    return val
 
 
 def build_workflow(positive: str, width: int, height: int, seed: int) -> dict:
@@ -472,36 +491,60 @@ class Handler(BaseHTTPRequestHandler):
             return shared
         return None
 
+    def _cached_file(self, dest: Path) -> dict:
+        st = dest.stat()
+        key = str(dest)
+        hit = _STATIC.get(key)
+        if hit and hit["mtime"] == st.st_mtime_ns and hit["size"] == st.st_size:
+            return hit
+        raw = dest.read_bytes()
+        mime = mimetypes.guess_type(dest.name)[0] or "application/octet-stream"
+        base = mime.split(";")[0]
+        gz = None
+        if base in _GZIP_TYPES and len(raw) > 1024:
+            packed = gzip.compress(raw, 5)
+            if len(packed) < len(raw):
+                gz = packed
+        rec = {
+            "mtime": st.st_mtime_ns,
+            "size": st.st_size,
+            "raw": raw,
+            "gz": gz,
+            "mime": mime,
+        }
+        _STATIC[key] = rec
+        return rec
+
     def _serve_static(self, body: bool) -> None:
         dest = self._static_dest()
         if dest is None:
             self._json(404, {"ok": False, "error": "not found"})
             return
-        mime = mimetypes.guess_type(dest.name)[0] or "application/octet-stream"
-        if mime in (
-            "text/html",
-            "text/css",
-            "text/javascript",
-            "application/javascript",
-            "application/json",
-            "image/svg+xml",
-        ):
+        rec = self._cached_file(dest)
+        mime = rec["mime"]
+        if mime.split(";")[0] in _GZIP_TYPES:
             mime = f"{mime}; charset=utf-8"
-        st = dest.stat()
-        etag = f'"{st.st_mtime_ns:x}-{st.st_size:x}"'
+        etag = f'"{rec["mtime"]:x}-{rec["size"]:x}"'
         if self.headers.get("If-None-Match") == etag:
             self.send_response(304)
             self.send_header("ETag", etag)
             self.send_header("Cache-Control", "no-cache")
             self.end_headers()
             return
-        data = dest.read_bytes() if body else b""
-        size = st.st_size if not body else len(data)
+        use_gz = (
+            body
+            and rec["gz"] is not None
+            and "gzip" in (self.headers.get("Accept-Encoding") or "")
+        )
+        data = rec["gz"] if use_gz else rec["raw"]
         self.send_response(200)
         self.send_header("Content-Type", mime)
-        self.send_header("Content-Length", str(size))
+        self.send_header("Content-Length", str(len(data) if body else rec["size"]))
         self.send_header("ETag", etag)
         self.send_header("Cache-Control", "no-cache")
+        self.send_header("Vary", "Accept-Encoding")
+        if use_gz:
+            self.send_header("Content-Encoding", "gzip")
         self.end_headers()
         if body:
             self.wfile.write(data)
