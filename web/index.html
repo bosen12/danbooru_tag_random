@@ -1,0 +1,137 @@
+<!DOCTYPE html>
+<html lang="zh-Hant">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <meta name="theme-color" content="#2a1814" />
+    <title>排字匣 · Danbooru case</title>
+    <link rel="preconnect" href="https://fonts.googleapis.com" />
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+    <link
+      rel="stylesheet"
+      href="https://fonts.googleapis.com/css2?family=Bricolage+Grotesque:opsz,wght@12..96,700;12..96,800&family=IBM+Plex+Mono:wght@400&family=IBM+Plex+Sans:wght@400;500&display=swap"
+    />
+    <link rel="stylesheet" href="styles.css" />
+  </head>
+  <body>
+    <a class="skip" href="#stage">跳到詞庫</a>
+    <header class="mast">
+      <h1 class="wordmark">排字匣<span>Danbooru case · WAI</span></h1>
+      <div class="ping" id="ping" data-ok="0"><i></i><span>Comfy…</span></div>
+    </header>
+
+    <div class="shell">
+      <aside class="rail" aria-label="抽卡設定">
+        <h2>先定規則，再點詞庫</h2>
+
+        <div class="field">
+          <label for="n">一次幾張</label>
+          <input id="n" name="n" type="number" min="1" max="10" value="1" />
+        </div>
+
+        <div class="field">
+          <label>尺寸</label>
+          <div class="row" id="sizes">
+            <button type="button" class="seg" data-w="1024" data-h="1024" aria-pressed="true">方</button>
+            <button type="button" class="seg" data-w="832" data-h="1216" aria-pressed="false">直</button>
+            <button type="button" class="seg" data-w="1216" data-h="832" aria-pressed="false">橫</button>
+          </div>
+          <div class="row">
+            <input id="width" name="width" type="number" min="256" max="2048" value="1024" aria-label="寬" />
+            <input id="height" name="height" type="number" min="256" max="2048" value="1024" aria-label="高" />
+          </div>
+        </div>
+
+        <div class="field step">
+          <label><span class="num">1</span> 畫面裡有誰</label>
+          <p class="hint">點女＝只有女生，男生的字會收起來也不會抽到。點男＝只有男生。不限＝男女都可能出現。</p>
+          <div class="row">
+            <button type="button" class="chip-toggle" id="girl" aria-pressed="true">女</button>
+            <button type="button" class="chip-toggle" id="boy" aria-pressed="false">男</button>
+            <button type="button" class="chip-toggle" id="cast-any" aria-pressed="false">不限</button>
+          </div>
+          <p class="hint clash" id="cast-clash" hidden></p>
+        </div>
+
+        <fieldset class="heat step">
+          <legend><span class="num">2</span> 尺度</legend>
+          <p class="hint">這張有多色情。上排改機率，下排是允許哪些。每張只擲一個。</p>
+          <div class="row" id="presets">
+            <button type="button" class="seg" data-preset="tease" aria-pressed="false">偏誘惑</button>
+            <button type="button" class="seg" data-preset="mixed" aria-pressed="true">混合</button>
+            <button type="button" class="seg" data-preset="sex" aria-pressed="false">偏性愛</button>
+          </div>
+          <div class="row" id="heats">
+            <button type="button" class="chip-toggle" data-heat="tease" aria-pressed="true">誘惑</button>
+            <button type="button" class="chip-toggle" data-heat="flash" aria-pressed="true">走光</button>
+            <button type="button" class="chip-toggle" data-heat="sex" aria-pressed="true">性愛</button>
+          </div>
+        </fieldset>
+
+        <fieldset class="heat step">
+          <legend><span class="num">3</span> 時代</legend>
+          <p class="hint">點一個年代鎖場景。混合＝每張隨機。釘選的衣服一定進圖。</p>
+          <div class="row" id="eras"></div>
+          <p class="hint clash" id="era-clash" hidden></p>
+        </fieldset>
+
+        <div class="field step">
+          <label><span class="num">4</span> 每段抽幾個</label>
+          <p class="hint">骨架補幾張。釘選已佔的會先扣。0 或不補＝這段只留釘選。</p>
+          <div class="count-grid" id="counts"></div>
+        </div>
+
+        <div class="legend" aria-label="詞庫點法">
+          <span class="tag" data-state="pool" data-locked="1">池中＝可能抽到</span>
+          <span class="tag" data-state="pinned" data-locked="1">亮底＝必進</span>
+          <span class="tag" data-state="banned" data-ban="mutex" data-locked="1">紅框＝互斥</span>
+          <span class="tag" data-state="banned" data-ban="user" data-locked="1">虛線＝關掉</span>
+        </div>
+        <button type="button" class="ghost" id="clear-pins">清除釘選</button>
+      </aside>
+
+      <main class="stage" id="stage">
+        <div class="tray" id="tray" hidden>
+          <div class="tray-head">
+            <strong>必進這張圖</strong>
+            <span class="hint" id="tray-count"></span>
+          </div>
+          <div class="tags" id="tray-pins"></div>
+        </div>
+
+        <section class="results" id="results" aria-label="出圖"></section>
+
+        <div class="filter-bar" id="filter-bar">
+          <nav class="jump" aria-label="跳到分類">
+            <a href="#sec-quality">畫質</a>
+            <a href="#sec-subject">人數</a>
+            <a href="#sec-feature">長相</a>
+            <a href="#sec-pose">姿勢</a>
+            <a href="#sec-clothing">服裝</a>
+            <a href="#sec-env">場景</a>
+          </nav>
+          <div class="filter-row">
+            <input id="q" type="search" placeholder="搜中文或英文…" autocomplete="off" spellcheck="false" />
+            <div class="row view-filters" id="view-filters">
+              <button type="button" class="seg" data-view="all" aria-pressed="true">全部</button>
+              <button type="button" class="seg" data-view="pinned" aria-pressed="false">釘選</button>
+              <button type="button" class="seg" data-view="banned" aria-pressed="false">封禁</button>
+              <button type="button" class="seg" id="era-only" aria-pressed="true">只看這時代</button>
+            </div>
+          </div>
+        </div>
+        <div class="cats" id="cats"></div>
+      </main>
+    </div>
+
+    <div class="dock">
+      <div>
+        <button type="button" class="primary" id="go"><span>抽並生圖</span></button>
+        <button type="button" class="ghost" id="cancel" hidden>取消</button>
+      </div>
+      <div class="status" id="status">Comfy 一次一張排隊</div>
+    </div>
+    <div class="live" id="live" aria-live="polite"></div>
+    <script type="module" src="app.js"></script>
+  </body>
+</html>

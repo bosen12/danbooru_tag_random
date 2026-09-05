@@ -1,0 +1,56 @@
+/* Hallmark · macrostructure: Catalogue · tone: workshop · anchor hue: 28
+ * theme: custom (vibe: "ink shop type case" · paper oklch(16% 0.018 40) · accent oklch(64% 0.19 28) vermillion · Bricolage Grotesque + IBM Plex Sans)
+ * nav: N3 side-rail · footer: none · enrichment: none
+ * audience: local WAI compositor · use: pin tags, draw, send Comfy · tone: utilitarian-print
+ */
+
+:root {
+  --color-paper: oklch(16% 0.018 40);
+  --color-paper-2: oklch(20% 0.02 40);
+  --color-paper-3: oklch(24% 0.022 38);
+  --color-rule: oklch(32% 0.02 38);
+  --color-chip: oklch(22% 0.02 40);
+  --color-neutral: oklch(62% 0.03 50);
+  --color-muted: oklch(74% 0.025 70);
+  --color-ink: oklch(93% 0.02 85);
+  --color-accent: oklch(64% 0.19 28);
+  --color-accent-2: oklch(78% 0.12 85);
+  --color-focus: oklch(78% 0.14 75);
+  --color-pin: oklch(82% 0.13 85);
+  --color-ban: oklch(48% 0.03 40);
+  --color-danger: oklch(62% 0.16 25);
+  --color-ok: oklch(72% 0.12 145);
+
+  --font-display: "Bricolage Grotesque", "Arial Narrow", sans-serif;
+  --font-body: "IBM Plex Sans", "Segoe UI", sans-serif;
+  --font-outlier: "IBM Plex Mono", ui-monospace, monospace;
+
+  --text-xs: 0.75rem;
+  --text-sm: 0.8125rem;
+  --text-base: 1rem;
+  --text-md: 1.25rem;
+  --text-lg: 1.5625rem;
+  --text-xl: 1.9531rem;
+  --text-2xl: 2.4414rem;
+
+  --space-1: 4px;
+  --space-2: 8px;
+  --space-3: 12px;
+  --space-4: 16px;
+  --space-5: 24px;
+  --space-6: 32px;
+  --space-7: 48px;
+  --space-8: 64px;
+
+  --rule: 1px;
+  --radius: 2px;
+  --rail: 288px;
+  --dock: 72px;
+
+  --ease-out: cubic-bezier(0.16, 1, 0.3, 1);
+  --ease-in: cubic-bezier(0.55, 0, 1, 0.45);
+  --ease-in-out: cubic-bezier(0.65, 0, 0.35, 1);
+  --dur-micro: 140ms;
+  --dur-ui: 220ms;
+  --dur-move: 320ms;
+}

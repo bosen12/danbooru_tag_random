@@ -1,0 +1,826 @@
+#!/usr/bin/env node
+/** Engine pin / imply tests. Failures print and exit 1. */
+import { readFileSync } from "fs";
+import { dirname, join } from "path";
+import { fileURLToPath } from "url";
+import {
+  applyBan,
+  applyClear,
+  applyPin,
+  cycleTag,
+  defaultSettings,
+  drawOne,
+  indexLexicon,
+  missingPins,
+  mulberry32,
+  mutexSiblings,
+} from "../web/engine.js";
+
+const ROOT = join(dirname(fileURLToPath(import.meta.url)), "..");
+const data = JSON.parse(readFileSync(join(ROOT, "web/lexicon.json"), "utf8"));
+const lex = indexLexicon(data);
+
+let failed = 0;
+function eq(name, got, want) {
+  const a = JSON.stringify(got);
+  const b = JSON.stringify(want);
+  if (a !== b) {
+    failed += 1;
+    console.error(`FAIL ${name}\n  got  ${a}\n  want ${b}`);
+  } else console.log(`ok   ${name}`);
+}
+function ok(name, cond, detail) {
+  if (!cond) {
+    failed += 1;
+    console.error(`FAIL ${name}${detail ? "\n  " + detail : ""}`);
+  } else console.log(`ok   ${name}`);
+}
+
+function settings() {
+  const s = defaultSettings(data);
+  s.girl = true;
+  s.boy = true;
+  s.heats = ["tease", "flash", "sex"];
+  return s;
+}
+
+function tagsOf(drawn) {
+  return new Set(drawn.positive.split(", ").map((t) => t.trim()));
+}
+
+function drawN(pinned, banned, n, seed0 = 1000) {
+  const s = settings();
+  const out = [];
+  for (let i = 0; i < n; i++) {
+    out.push(drawOne(lex, s, pinned, banned, mulberry32(seed0 + i), seed0 + i));
+  }
+  return out;
+}
+
+{
+  const next = applyPin(lex, new Set(), new Set(["bikini"]), "micro bikini");
+  ok(
+    "pin micro after ban bikini unbans bikini",
+    next.pinned.has("micro bikini") && next.pinned.has("bikini") && !next.userBanned.has("bikini"),
+    `pinned=${[...next.pinned]} banned=${[...next.userBanned]}`
+  );
+}
+
+{
+  let pinned = new Set();
+  let userBanned = new Set();
+  ({ pinned, userBanned } = cycleTag(lex, pinned, userBanned, "bikini"));
+  ({ pinned, userBanned } = cycleTag(lex, pinned, userBanned, "bikini"));
+  ({ pinned, userBanned } = cycleTag(lex, pinned, userBanned, "micro bikini"));
+  const draws = drawN(pinned, userBanned, 40);
+  const miss = draws.filter((d) => missingPins(d.positive, pinned).includes("bikini"));
+  const without = draws.filter((d) => !tagsOf(d).has("bikini") || !tagsOf(d).has("micro bikini"));
+  eq("ban bikini then pin micro: missing bikini count", miss.length, 0);
+  eq("ban bikini then pin micro: both in POS", without.length, 0);
+}
+
+{
+  const pinned = new Set(["micro bikini"]);
+  const draws = drawN(pinned, new Set(), 40, 2000);
+  const without = draws.filter((d) => !tagsOf(d).has("bikini") || !tagsOf(d).has("micro bikini"));
+  eq("pin micro only: implied bikini still in POS", without.length, 0);
+}
+
+{
+  const pinned = new Set(["micro bikini", "bikini"]);
+  const draws = drawN(pinned, new Set(), 20, 3000);
+  const miss = draws.filter((d) => missingPins(d.positive, pinned).length);
+  eq("pin both: no missing", miss.length, 0);
+}
+
+{
+  const item = lex.byTag.get("sundress");
+  if (item && (item.implies || []).includes("dress")) {
+    const next = applyPin(lex, new Set(), new Set(["dress"]), "sundress");
+    ok(
+      "pin sundress after ban dress unbans dress",
+      next.pinned.has("dress") && !next.userBanned.has("dress"),
+      `pinned=${[...next.pinned]} banned=${[...next.userBanned]}`
+    );
+    const draws = drawN(next.pinned, next.userBanned, 20, 4000);
+    const without = draws.filter((d) => !tagsOf(d).has("sundress") || !tagsOf(d).has("dress"));
+    eq("pin sundress: dress in POS", without.length, 0);
+  } else {
+    console.log("skip sundress/dress (lexicon has no imply)");
+  }
+}
+
+const WESTERN_CLOTHES = [
+  "dress",
+  "sundress",
+  "wedding dress",
+  "short dress",
+  "shirt",
+  "blouse",
+  "jeans",
+  "hoodie",
+  "t-shirt",
+  "bikini",
+  "micro bikini",
+  "miniskirt",
+  "pants",
+  "shorts",
+  "school uniform",
+  "sweater",
+  "tank top",
+  "necktie",
+  "high heels",
+  "lingerie",
+  "bra",
+  "panties",
+  "evening gown",
+  "lab coat",
+  "sneakers",
+  "yoga pants",
+];
+const MODERN_PLACES = [
+  "pool",
+  "office",
+  "classroom",
+  "train",
+  "car interior",
+  "elevator",
+  "skyscraper",
+  "neon lights",
+  "cityscape",
+  "love hotel",
+];
+
+function eraDraws(era, n = 60, seed0 = 9000) {
+  const s = settings();
+  s.eras = [era];
+  s.girl = true;
+  s.boy = false;
+  const out = [];
+  for (let i = 0; i < n; i++) {
+    out.push(drawOne(lex, s, new Set(), new Set(), mulberry32(seed0 + i), seed0 + i));
+  }
+  return out;
+}
+
+{
+  const draws = eraDraws("ancient_china", 80, 9100);
+  const hits = [];
+  for (const d of draws) {
+    const tags = tagsOf(d);
+    if (d.era !== "ancient_china") hits.push("era=" + d.era);
+    for (const t of WESTERN_CLOTHES) if (tags.has(t)) hits.push(t);
+    for (const t of MODERN_PLACES) if (tags.has(t)) hits.push(t);
+  }
+  eq("ancient_china: no western clothes or modern places", [...new Set(hits)], []);
+  const missingClothes = draws.filter((d) => {
+    const t = tagsOf(d);
+    const nude = t.has("nude") || t.has("completely nude");
+    if (nude) return false;
+    return !(t.has("chinese clothes") || t.has("hanfu") || t.has("ruqun"));
+  });
+  eq("ancient_china: era clothes when not nude", missingClothes.length, 0);
+}
+
+{
+  const draws = eraDraws("edo", 40, 9200);
+  const hits = [];
+  for (const d of draws) {
+    const tags = tagsOf(d);
+    for (const t of ["dress", "bikini", "jeans", "hoodie", "school uniform"]) {
+      if (tags.has(t)) hits.push(t);
+    }
+  }
+  eq("edo: no western street clothes", [...new Set(hits)], []);
+}
+
+{
+  let pinned = new Set(["bikini"]);
+  let userBanned = new Set();
+  const group = ["bikini", "dress", "shirt"];
+  for (const t of group) {
+    ({ pinned, userBanned } = applyBan(lex, pinned, userBanned, t));
+  }
+  ok(
+    "ban group: all banned, pins cleared",
+    group.every((t) => userBanned.has(t)) && !pinned.has("bikini"),
+    `pinned=${[...pinned]} banned=${[...userBanned]}`
+  );
+  for (const t of group) {
+    ({ pinned, userBanned } = applyClear(pinned, userBanned, t));
+  }
+  ok(
+    "clear group: bans lifted",
+    group.every((t) => !userBanned.has(t)),
+    `banned=${[...userBanned]}`
+  );
+}
+
+{
+  const s = settings();
+  s.girl = false;
+  s.boy = false;
+  s.eras = ["modern"];
+  let boys = 0;
+  for (let i = 0; i < 80; i++) {
+    const d = drawOne(lex, s, new Set(), new Set(), mulberry32(9300 + i), 9300 + i);
+    if ([...tagsOf(d)].some((t) => t.includes("boy"))) boys += 1;
+  }
+  ok("both genders off still draws mixed (some boys)", boys > 0, `boys=${boys}/80`);
+}
+
+{
+  const s = settings();
+  s.girl = true;
+  s.boy = false;
+  s.eras = ["modern"];
+  let femFlag = 0;
+  let femCloth = 0;
+  let femFeat = 0;
+  let breasts = 0;
+  for (let i = 0; i < 50; i++) {
+    const d = drawOne(lex, s, new Set(), new Set(), mulberry32(12000 + i), 12000 + i);
+    if (d.female) femFlag += 1;
+    for (const t of tagsOf(d)) {
+      const it = lex.byTag.get(t);
+      if (it?.gate === "female" && it.section === "clothing") femCloth += 1;
+      if (it?.gate === "female" && it.section === "feature") femFeat += 1;
+      if (t.includes("breast")) breasts += 1;
+    }
+  }
+  eq("girl-only sets female flag", femFlag, 50);
+  ok("girl-only draws female clothing", femCloth > 0, `femCloth=${femCloth}`);
+  ok("girl-only draws female features", femFeat > 0, `femFeat=${femFeat}`);
+  ok("girl-only can draw breasts", breasts > 0, `breasts=${breasts}`);
+}
+
+{
+  const s = settings();
+  s.girl = false;
+  s.boy = true;
+  s.eras = ["modern"];
+  let maleFlag = 0;
+  let maleFeat = 0;
+  for (let i = 0; i < 40; i++) {
+    const d = drawOne(lex, s, new Set(), new Set(), mulberry32(13000 + i), 13000 + i);
+    if (d.male) maleFlag += 1;
+    for (const t of tagsOf(d)) {
+      const it = lex.byTag.get(t);
+      if (it?.gate === "male" && it.section === "feature") maleFeat += 1;
+    }
+  }
+  eq("boy-only sets male flag", maleFlag, 40);
+  ok("boy-only draws male features", maleFeat > 0, `maleFeat=${maleFeat}`);
+}
+
+{
+  const s = settings();
+  s.girl = true;
+  s.boy = false;
+  s.eras = ["edo"];
+  const hits = [];
+  for (let i = 0; i < 40; i++) {
+    const d = drawOne(lex, s, new Set(), new Set(), mulberry32(14000 + i), 14000 + i);
+    const tags = tagsOf(d);
+    if (tags.has("armor")) {
+      const era = lex.byTag.get("armor")?.era || [];
+      if (!era.includes("edo") && !era.includes("any")) hits.push("armor");
+    }
+  }
+  eq("edo does not pull medieval-only armor", hits.length, 0);
+}
+
+{
+  ok(
+    "white shirt does not mutex shirt",
+    !mutexSiblings(lex, "white shirt").includes("shirt"),
+    "siblings=" + mutexSiblings(lex, "white shirt").filter((t) => t.includes("shirt")).join(",")
+  );
+  ok(
+    "white dress does not mutex dress",
+    !mutexSiblings(lex, "white dress").includes("dress")
+  );
+  const pinShirt = applyPin(lex, new Set(), new Set(), "white shirt");
+  ok("pin white shirt also pins shirt", pinShirt.pinned.has("shirt") && pinShirt.pinned.has("white shirt"));
+  const dShirt = drawOne(
+    lex,
+    Object.assign(settings(), { eras: ["modern"], girl: true, boy: false }),
+    pinShirt.pinned,
+    new Set(),
+    mulberry32(77),
+    77
+  );
+  const have = tagsOf(dShirt);
+  ok("white shirt draw keeps shirt", have.has("white shirt") && have.has("shirt"));
+}
+
+{
+  ok(
+    "cowgirl does not mutex umbrella sex",
+    !mutexSiblings(lex, "cowgirl position").includes("sex")
+  );
+  const pin = applyPin(lex, new Set(), new Set(), "cowgirl position");
+  ok("pin cowgirl also pins sex", pin.pinned.has("sex") && pin.pinned.has("cowgirl position"));
+  const s = settings();
+  s.girl = true;
+  s.boy = true;
+  s.heats = ["sex"];
+  s.weights = { tease: 0, flash: 0, sex: 1 };
+  s.eras = ["modern"];
+  const d = drawOne(lex, s, pin.pinned, new Set(), mulberry32(88), 88);
+  const have = tagsOf(d);
+  ok("cowgirl draw keeps sex", have.has("cowgirl position") && have.has("sex"));
+}
+
+{
+  const pull = lex.byTag.get("dress pull");
+  ok(
+    "dress pull is pose not onepiece",
+    pull && pull.section === "pose" && pull.mutex !== "onepiece",
+    JSON.stringify({ section: pull?.section, mutex: pull?.mutex })
+  );
+  const ds = lex.byTag.get("dress shirt");
+  ok(
+    "dress shirt is a shirt (top)",
+    ds && ds.mutex === "top" && (ds.implies || []).includes("shirt"),
+    JSON.stringify({ mutex: ds?.mutex, implies: ds?.implies })
+  );
+}
+
+{
+  const s = settings();
+  s.girl = true;
+  s.boy = true;
+  s.heats = ["sex"];
+  s.weights = { tease: 0, flash: 0, sex: 1 };
+  s.eras = ["modern"];
+  let pinned = applyPin(lex, new Set(), new Set(), "1girl").pinned;
+  pinned = applyPin(lex, pinned, new Set(), "1boy").pinned;
+  let both = 0;
+  let onepieceClash = 0;
+  for (let i = 0; i < 40; i++) {
+    const d = drawOne(lex, s, pinned, new Set(), mulberry32(16000 + i), 16000 + i);
+    const have = tagsOf(d);
+    if (have.has("sex") && (have.has("cowgirl position") || have.has("girl on top") || have.has("vaginal") || have.has("oral") || have.has("doggystyle"))) {
+      both += 1;
+    }
+    if (have.has("competition swimsuit") && have.has("one-piece swimsuit") && have.has("blue one-piece swimsuit")) {
+      onepieceClash += 1;
+    }
+    if (d.conflicts.some((c) => c[0] === "onepiece")) onepieceClash += 1;
+  }
+  ok("pair+sex heat can draw sex with a position", both > 0, `both=${both}/40`);
+  eq("no onepiece child-child clash", onepieceClash, 0);
+}
+
+{
+  const s = settings();
+  s.girl = true;
+  s.boy = false;
+  s.eras = ["medieval"];
+  const pinned = applyPin(lex, new Set(), new Set(), "bikini").pinned;
+  let modern = 0;
+  let missingAnchor = 0;
+  let missingBikini = 0;
+  for (let i = 0; i < 30; i++) {
+    const d = drawOne(lex, s, pinned, new Set(), mulberry32(17000 + i), 17000 + i);
+    if (d.era !== "medieval") modern += 1;
+    const have = tagsOf(d);
+    if (!have.has("bikini")) missingBikini += 1;
+    if (!have.has("armor") && !have.has("castle")) missingAnchor += 1;
+  }
+  eq("exclusive medieval beats bikini pin for era", modern, 0);
+  eq("medieval + bikini pin still has bikini", missingBikini, 0);
+  eq("medieval + bikini pin still stamps armor/castle", missingAnchor, 0);
+}
+
+{
+  const s = settings();
+  s.girl = true;
+  s.boy = false;
+  s.eras = ["modern"];
+  s.heats = ["tease"];
+  s.weights = { tease: 1, flash: 0, sex: 0 };
+  let hair = 0;
+  let eyes = 0;
+  let breasts = 0;
+  let body = 0;
+  for (let i = 0; i < 40; i++) {
+    const d = drawOne(lex, s, new Set(), new Set(), mulberry32(18000 + i), 18000 + i);
+    const have = tagsOf(d);
+    if ([...have].some((t) => lex.byTag.get(t)?.mutex === "hair_color")) hair += 1;
+    if ([...have].some((t) => lex.byTag.get(t)?.mutex === "eye_color")) eyes += 1;
+    if ([...have].some((t) => lex.byTag.get(t)?.mutex === "breast_size")) breasts += 1;
+    if (
+      [...have].some((t) => {
+        const it = lex.byTag.get(t);
+        return it && it.layer === "garment" && (it.mutex === "onepiece" || it.mutex === "top" || it.mutex === "bottom");
+      })
+    ) {
+      body += 1;
+    }
+  }
+  ok("modern girl usually has hair color", hair >= 36, `hair=${hair}/40`);
+  ok("modern girl usually has eye color", eyes >= 36, `eyes=${eyes}/40`);
+  ok("modern girl usually has breast size", breasts >= 36, `breasts=${breasts}/40`);
+  ok("modern tease usually has a body garment", body >= 36, `body=${body}/40`);
+}
+
+{
+  const s = settings();
+  s.girl = true;
+  s.boy = true;
+  s.eras = ["modern"];
+  s.heats = ["sex"];
+  s.weights = { tease: 0, flash: 0, sex: 1 };
+  let pinned = applyPin(lex, new Set(), new Set(), "1girl").pinned;
+  pinned = applyPin(lex, pinned, new Set(), "1boy").pinned;
+  let acts = 0;
+  for (let i = 0; i < 40; i++) {
+    const d = drawOne(lex, s, pinned, new Set(), mulberry32(18100 + i), 18100 + i);
+    const have = tagsOf(d);
+    if (
+      [...have].some((t) => {
+        const it = lex.byTag.get(t);
+        return t === "sex" || it?.mutex === "sex_act";
+      })
+    ) {
+      acts += 1;
+    }
+  }
+  ok("pair sex heat usually has a sex act", acts >= 32, `acts=${acts}/40`);
+}
+
+{
+  const s = settings();
+  s.girl = true;
+  s.boy = false;
+  s.eras = ["edo"];
+  let day = 0;
+  let maleHair = 0;
+  for (let i = 0; i < 40; i++) {
+    const d = drawOne(lex, s, new Set(), new Set(), mulberry32(18200 + i), 18200 + i);
+    const have = tagsOf(d);
+    if ([...have].some((t) => lex.byTag.get(t)?.mutex === "day_night")) day += 1;
+    if (have.has("male pubic hair")) maleHair += 1;
+  }
+  ok("edo usually has day or night", day >= 36, `day=${day}/40`);
+  eq("girl-only does not draw male pubic hair", maleHair, 0);
+}
+
+{
+  const kinds = [];
+  const combos = [
+    { girl: true, boy: false, eras: ["modern"], heats: ["tease", "flash", "sex"] },
+    { girl: true, boy: false, eras: ["ancient_china"], heats: ["sex"] },
+    { girl: false, boy: true, eras: ["edo"], heats: ["tease", "flash"] },
+    { girl: true, boy: true, eras: ["medieval"], heats: ["flash"] },
+    { girl: true, boy: false, eras: ["victorian"], heats: ["tease"] },
+    { girl: true, boy: true, eras: ["ancient_greece"], heats: ["tease", "flash", "sex"] },
+  ];
+  for (const combo of combos) {
+    const s = settings();
+    Object.assign(s, combo);
+    for (let i = 0; i < 25; i++) {
+      const d = drawOne(lex, s, new Set(), new Set(), mulberry32(15000 + i), 15000 + i);
+      if (d.conflicts.length) kinds.push("conflict:" + JSON.stringify(d.conflicts[0]));
+      const set = tagsOf(d);
+      if (set.has("solo") && (set.has("2girls") || set.has("2boys") || set.has("3girls"))) {
+        kinds.push("solo_multi");
+      }
+      if (set.has("indoors") && set.has("outdoors")) kinds.push("in_out");
+      if (set.has("day") && set.has("night")) kinds.push("day_night");
+      const hasGirl = [...set].some((t) => t.includes("girl"));
+      const hasBoy = [...set].some((t) => t.includes("boy"));
+      for (const t of set) {
+        const it = lex.byTag.get(t);
+        if (!it) continue;
+        if (it.gate === "female" && !hasGirl) kinds.push("fem_gate:" + t);
+        if (it.gate === "male" && !hasBoy) kinds.push("male_gate:" + t);
+        const er = it.era;
+        if (er && er.length && !er.includes("any") && !er.includes(d.era)) {
+          kinds.push("era:" + t + "@" + d.era);
+        }
+      }
+    }
+  }
+  eq("scan: no contradictions across eras/heats", [...new Set(kinds)], []);
+}
+
+const PRE_MODERN = ["ancient_china", "ancient_greece", "medieval", "edo"];
+const MODERN_ONLY = [
+  "gaming chair",
+  "swivel chair",
+  "office chair",
+  "living room",
+  "bathroom",
+  "kitchen",
+  "bathtub",
+  "ceiling light",
+  "city lights",
+  "pool ladder",
+  "beach towel",
+  "restaurant",
+  "watch",
+  "hard hat",
+  "police hat",
+  "vibrator",
+  "egg vibrator",
+  "handbag",
+  "beach umbrella",
+  "no bra",
+  "no panties",
+  "panties aside",
+  "bra pull",
+  "panty pull",
+  "hand in panties",
+  "sports bra lift",
+  "shirt lift",
+  "blue necktie",
+  "black necktie",
+  "black bowtie",
+  "blue bodysuit",
+  "black leotard",
+  "power armor",
+  "detached collar",
+];
+
+{
+  for (const tag of MODERN_ONLY) {
+    const item = lex.byTag.get(tag);
+    const era = item?.era || [];
+    ok(
+      `${tag} is not any-era`,
+      item && era.length && !era.includes("any"),
+      `${tag} era=${JSON.stringify(era)}`
+    );
+    ok(
+      `${tag} does not leak into pre-modern`,
+      era.every((e) => !PRE_MODERN.includes(e)),
+      `${tag} era=${JSON.stringify(era)}`
+    );
+  }
+}
+
+{
+  const leaks = [];
+  for (const era of PRE_MODERN) {
+    const s = settings();
+    s.girl = true;
+    s.boy = true;
+    s.eras = [era];
+    s.heats = ["tease", "flash", "sex"];
+    for (let i = 0; i < 50; i++) {
+      const d = drawOne(lex, s, new Set(), new Set(), mulberry32(21000 + i), 21000 + i);
+      const have = tagsOf(d);
+      for (const tag of MODERN_ONLY) {
+        if (have.has(tag)) leaks.push(era + ":" + tag);
+      }
+    }
+  }
+  eq("pre-modern draws never pick modern furniture/clothes/poses", [...new Set(leaks)], []);
+}
+
+{
+  const s = settings();
+  s.girl = true;
+  s.boy = false;
+  s.eras = ["medieval"];
+  const pinned = applyPin(lex, new Set(), new Set(), "sports bra").pinned;
+  let chair = 0;
+  let missingBra = 0;
+  let missingCastle = 0;
+  for (let i = 0; i < 30; i++) {
+    const d = drawOne(lex, s, pinned, new Set(), mulberry32(22000 + i), 22000 + i);
+    const have = tagsOf(d);
+    if (have.has("gaming chair") || have.has("swivel chair")) chair += 1;
+    if (!have.has("sports bra") || !have.has("bra")) missingBra += 1;
+    if (!have.has("castle") && !have.has("armor")) missingCastle += 1;
+    if (d.era !== "medieval") chair += 1;
+  }
+  eq("medieval + sports bra pin still medieval", chair, 0);
+  eq("medieval + sports bra pin keeps bra", missingBra, 0);
+  eq("medieval + sports bra pin still stamps castle/armor", missingCastle, 0);
+}
+
+{
+  eq("shirt sits with tops, not accessories", lex.byTag.get("shirt")?.group, "top");
+  eq("bikini sits with one-piece", lex.byTag.get("bikini")?.group, "onepiece");
+  eq("hanfu sits in era clothes", lex.byTag.get("hanfu")?.group, "era");
+  eq("kimono sits in era clothes", lex.byTag.get("kimono")?.group, "era");
+  eq("chinese clothes sits in era clothes", lex.byTag.get("chinese clothes")?.group, "era");
+  eq("earrings stay accessories", lex.byTag.get("earrings")?.group, "acc");
+  eq("white shirt stays top", lex.byTag.get("white shirt")?.group, "top");
+}
+
+{
+  const s = settings();
+  s.girl = true;
+  s.boy = false;
+  s.eras = ["modern"];
+  s.heats = ["tease"];
+  s.weights = { tease: 1, flash: 0, sex: 0 };
+  let garments = 0;
+  let accessories = 0;
+  let styles = 0;
+  let poses = 0;
+  for (let i = 0; i < 40; i++) {
+    const d = drawOne(lex, s, new Set(), new Set(), mulberry32(19000 + i), 19000 + i);
+    const have = tagsOf(d);
+    if ([...have].some((t) => lex.byTag.get(t)?.group === "hair_style")) styles += 1;
+    if ([...have].some((t) => lex.byTag.get(t)?.mutex === "body_pose")) poses += 1;
+    for (const t of have) {
+      const it = lex.byTag.get(t);
+      if (!it || it.section !== "clothing") continue;
+      if (it.layer === "skin") continue;
+      if (it.layer === "accessory") accessories += 1;
+      else if (it.layer === "garment") garments += 1;
+    }
+  }
+  ok("modern tease draws more garments than accessories", garments > accessories, `garments=${garments} acc=${accessories}`);
+  ok("modern tease usually has a hair style", styles >= 32, `styles=${styles}/40`);
+  ok("modern tease usually has a body pose", poses >= 32, `poses=${poses}/40`);
+}
+
+function indoorOutdoorClash(have) {
+  const names = have;
+  const indoor = names.has("indoors");
+  const outdoor = names.has("outdoors");
+  if (indoor && outdoor) return "both in_out";
+  for (const t of names) {
+    const it = lex.byTag.get(t);
+    const impl = it?.implies || [];
+    if (impl.includes("indoors") && outdoor) return t + "+outdoors";
+    if (impl.includes("outdoors") && indoor) return t + "+indoors";
+  }
+  return null;
+}
+
+{
+  const s = settings();
+  s.girl = true;
+  s.boy = false;
+  s.eras = ["modern"];
+  s.heats = ["tease"];
+  s.weights = { tease: 1, flash: 0, sex: 0 };
+  const hits = [];
+  const extraBodies = [];
+  for (let i = 0; i < 50; i++) {
+    const d = drawOne(lex, s, new Set(), new Set(), mulberry32(23000 + i), 23000 + i);
+    const have = tagsOf(d);
+    const clash = indoorOutdoorClash(have);
+    if (clash) hits.push(clash);
+    const one = [...have].find((t) => lex.byTag.get(t)?.mutex === "onepiece");
+    if (one) {
+      for (const extra of ["leotard", "pants", "skirt", "shirt"]) {
+        if (have.has(extra) && !(lex.byTag.get(one)?.implies || []).includes(extra)) {
+          extraBodies.push(one + "+" + extra);
+        }
+      }
+    }
+  }
+  eq("modern tease: no indoor place with outdoors", [...new Set(hits)], []);
+  eq("modern tease: onepiece does not stack unrelated umbrellas", [...new Set(extraBodies)], []);
+}
+
+{
+  const s = settings();
+  s.girl = true;
+  s.boy = false;
+  s.eras = ["edo"];
+  s.heats = ["flash"];
+  s.weights = { tease: 0, flash: 1, sex: 0 };
+  let penis = 0;
+  let lookOther = 0;
+  for (let i = 0; i < 40; i++) {
+    const d = drawOne(lex, s, new Set(), new Set(), mulberry32(23100 + i), 23100 + i);
+    const have = tagsOf(d);
+    if (have.has("penis on ass")) penis += 1;
+    if (have.has("looking at another") && have.has("solo")) lookOther += 1;
+  }
+  eq("girl-only flash does not draw penis on ass", penis, 0);
+  eq("solo does not look at another", lookOther, 0);
+}
+
+{
+  const s = settings();
+  s.girl = true;
+  s.boy = true;
+  s.eras = ["modern"];
+  s.heats = ["sex"];
+  s.weights = { tease: 0, flash: 0, sex: 1 };
+  let pairs = 0;
+  for (let i = 0; i < 40; i++) {
+    const d = drawOne(lex, s, new Set(), new Set(), mulberry32(23200 + i), 23200 + i);
+    if (d.people >= 2) pairs += 1;
+  }
+  ok("sex heat with both genders usually draws a pair", pairs >= 28, `pairs=${pairs}/40`);
+}
+
+{
+  const s = settings();
+  s.girl = true;
+  s.boy = false;
+  s.eras = ["modern"];
+  s.heats = ["tease", "flash", "sex"];
+  const hits = [];
+  for (let i = 0; i < 50; i++) {
+    const d = drawOne(lex, s, new Set(), new Set(), mulberry32(24000 + i), 24000 + i);
+    const have = tagsOf(d);
+    if ([...have].some((t) => /^(?:\d+)?boys$/.test(t) || t === "multiple boys")) {
+      hits.push("cast:" + [...have].filter((t) => /boy/.test(t)).join(","));
+    }
+    for (const t of have) {
+      const it = lex.byTag.get(t);
+      if (it?.gate === "male") hits.push("gate:" + t);
+    }
+    if (have.has("clothed male nude female") || have.has("clothed female nude male")) hits.push("clothed-cross");
+  }
+  eq("girl-only never draws a boy or male-gated tag", [...new Set(hits)], []);
+}
+
+{
+  ok("goblin mutexes orc", mutexSiblings(lex, "goblin").includes("orc"));
+  ok("goblin does not mutex monster boy", !mutexSiblings(lex, "goblin").includes("monster boy"));
+  const pin = applyPin(lex, new Set(), new Set(), "goblin");
+  ok("pin goblin also pins monster boy", pin.pinned.has("goblin") && pin.pinned.has("monster boy"));
+  const s = settings();
+  s.girl = false;
+  s.boy = true;
+  s.eras = ["modern"];
+  s.heats = ["tease"];
+  s.weights = { tease: 1, flash: 0, sex: 0 };
+  let races = 0;
+  let clash = 0;
+  let girlGob = 0;
+  for (let i = 0; i < 80; i++) {
+    const d = drawOne(lex, s, new Set(), new Set(), mulberry32(25000 + i), 25000 + i);
+    const have = tagsOf(d);
+    const got = [...have].filter((t) => lex.byTag.get(t)?.mutex === "race");
+    if (got.length) races += 1;
+    if (got.length > 1) clash += 1;
+  }
+  const sg = settings();
+  sg.girl = true;
+  sg.boy = false;
+  sg.eras = ["modern"];
+  for (let i = 0; i < 40; i++) {
+    const d = drawOne(lex, sg, new Set(), new Set(), mulberry32(25100 + i), 25100 + i);
+    if (tagsOf(d).has("goblin") || tagsOf(d).has("orc") || tagsOf(d).has("wolf boy")) girlGob += 1;
+  }
+  const pinnedDraw = drawOne(
+    lex,
+    s,
+    applyPin(lex, new Set(), new Set(), "orc").pinned,
+    new Set(),
+    mulberry32(99),
+    99
+  );
+  const ph = tagsOf(pinnedDraw);
+  ok("boy-only sometimes draws a race", races >= 8 && races <= 55, `races=${races}/80`);
+  eq("never two race tags at once", clash, 0);
+  eq("girl-only does not draw male races", girlGob, 0);
+  ok("pin orc stays orc not goblin", ph.has("orc") && !ph.has("goblin"), [...ph].filter((t) => lex.byTag.get(t)?.mutex === "race").join(","));
+}
+
+{
+  ok("fat man mutexes muscular male", mutexSiblings(lex, "fat man").includes("muscular male"));
+  ok("fat man mutexes plump", mutexSiblings(lex, "fat man").includes("plump"));
+  ok("fat man does not mutex otaku", !mutexSiblings(lex, "fat man").includes("otaku"));
+  ok("fat man does not mutex ugly bastard", !mutexSiblings(lex, "fat man").includes("ugly bastard"));
+  ok("nerd does not mutex otaku", !mutexSiblings(lex, "nerd").includes("otaku"));
+  const pinNerd = applyPin(lex, new Set(), new Set(), "nerd");
+  ok("pin nerd also pins otaku", pinNerd.pinned.has("nerd") && pinNerd.pinned.has("otaku"));
+  const pinFat = applyPin(lex, new Set(), new Set(), "fat man");
+  ok("pin fat man also pins fat", pinFat.pinned.has("fat") && pinFat.pinned.has("fat man"));
+  const s = settings();
+  s.girl = false;
+  s.boy = true;
+  s.eras = ["modern"];
+  s.heats = ["tease"];
+  s.weights = { tease: 1, flash: 0, sex: 0 };
+  const dFat = drawOne(lex, s, pinFat.pinned, new Set(), mulberry32(101), 101);
+  const haveFat = tagsOf(dFat);
+  ok("pin fat man keeps fat man", haveFat.has("fat man") && haveFat.has("fat"));
+  ok("pin fat man drops muscle", !haveFat.has("muscular male") && !haveFat.has("bara") && !haveFat.has("toned male"));
+  let girlUgly = 0;
+  const sg = settings();
+  sg.girl = true;
+  sg.boy = false;
+  sg.eras = ["modern"];
+  for (let i = 0; i < 40; i++) {
+    const d = drawOne(lex, sg, new Set(), new Set(), mulberry32(25200 + i), 25200 + i);
+    const h = tagsOf(d);
+    if (h.has("ugly bastard") || h.has("fat man") || h.has("otaku") || h.has("nerd")) girlUgly += 1;
+  }
+  eq("girl-only does not draw ugly/fat/otaku men", girlUgly, 0);
+}
+
+if (failed) {
+  console.error(`\n${failed} failed`);
+  process.exit(1);
+}
+console.log("\nok");
+
+
+
