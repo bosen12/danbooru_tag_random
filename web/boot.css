@@ -316,7 +316,11 @@ input[type="number"] {
   border-style: dashed;
 }
 
-.tag[hidden] {
+.tag[hidden],
+.sub[hidden],
+.cat[hidden],
+.family[hidden],
+.empty-filter[hidden] {
   display: none;
 }
 

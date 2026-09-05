@@ -613,7 +613,11 @@ input[type="search"] {
   opacity: 0.55;
 }
 
-.tag[hidden] {
+.tag[hidden],
+.sub[hidden],
+.cat[hidden],
+.family[hidden],
+.empty-filter[hidden] {
   display: none;
 }
 

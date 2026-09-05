@@ -142,7 +142,7 @@ function renderEras() {
     settings.eras = [...ERAS];
     saveStore();
     renderEras();
-    renderCats("full");
+    renderCats("filter");
   });
   box.append(mix);
   for (const era of ERAS) {
@@ -156,7 +156,7 @@ function renderEras() {
       settings.eras = [era];
       saveStore();
       renderEras();
-      renderCats("full");
+      renderCats("filter");
     });
     box.append(btn);
   }
@@ -236,6 +236,7 @@ function tagsBanned(tags) {
 }
 
 function toggleBanTags(tags) {
+  if (!tags.length) return;
   if (tagsBanned(tags)) {
     for (const t of tags) {
       const next = applyClear(pinned, userBanned, t);
@@ -252,14 +253,13 @@ function toggleBanTags(tags) {
   afterPin();
 }
 
-function closeAllBtn(tags, label) {
+function closeAllBtn(label) {
   const btn = document.createElement("button");
   btn.type = "button";
   btn.className = "ghost mini";
-  const closed = tagsBanned(tags);
-  btn.textContent = closed ? "開啟全部" : "關閉全部";
-  btn.setAttribute("aria-label", `${btn.textContent}：${label}`);
-  btn.addEventListener("click", () => toggleBanTags(tags));
+  btn.dataset.close = "1";
+  btn.textContent = "關閉全部";
+  btn.setAttribute("aria-label", `關閉全部：${label}`);
   return btn;
 }
 
@@ -462,20 +462,17 @@ function sectionItems(sec) {
   return lex.bySection[sec.id] || [];
 }
 
-function visibleItems(sec, auto, q) {
-  const items = sectionItems(sec);
-  return items.filter((it) => {
-    if (sec.id !== "quality") {
-      const st = tagState(it.tag, pinned, userBanned, auto);
-      if (viewMode === "pinned" && st !== "pinned") return false;
-      if (viewMode === "banned" && st !== "banned") return false;
-      if (eraOnly && exclusiveEra() && !fitsEra(it) && st !== "pinned") return false;
-      if (!fitsCast(it) && st !== "pinned") return false;
-    }
-    if (!q) return true;
-    const zh = (it.zh || labelOf(lex, it.tag) || "").toLowerCase();
-    return it.tag.toLowerCase().includes(q) || zh.includes(q);
-  });
+function chipShouldShow(item, auto, q) {
+  const st = tagState(item.tag, pinned, userBanned, auto);
+  if (viewMode === "pinned" && st !== "pinned") return false;
+  if (viewMode === "banned" && st !== "banned") return false;
+  if (eraOnly && exclusiveEra() && !fitsEra(item) && st !== "pinned") return false;
+  if (!fitsCast(item) && st !== "pinned") return false;
+  if (q) {
+    const zh = (item.zh || labelOf(lex, item.tag) || "").toLowerCase();
+    if (!item.tag.toLowerCase().includes(q) && !zh.includes(q)) return false;
+  }
+  return true;
 }
 
 function hintFor(sec, vis) {
@@ -551,37 +548,97 @@ function collectDirty(auto) {
   return dirty;
 }
 
-function paintCats(scope = "dirty") {
+function syncVisibility(auto) {
   const root = $("cats");
-  if (!root || !root.querySelector(".cat") || !btnByTag.size) {
+  if (!root) return;
+  const q = ($("q").value || "").trim().toLowerCase();
+  const famShow = new Map();
+  const subShow = new Map();
+  const catN = new Map();
+  for (const [tag, btns] of btnByTag) {
+    const item = lex.byTag.get(tag);
+    if (!item) continue;
+    const show = chipShouldShow(item, auto, q);
+    for (const btn of btns) {
+      if (btn.hidden !== !show) btn.hidden = !show;
+      if (!show) continue;
+      const fam = btn.closest(".family");
+      const sub = btn.closest(".sub");
+      const cat = btn.closest(".cat");
+      if (fam) famShow.set(fam, true);
+      if (sub) subShow.set(sub, true);
+      if (cat) catN.set(cat, (catN.get(cat) || 0) + 1);
+    }
+  }
+  for (const fam of root.querySelectorAll(".family")) fam.hidden = !famShow.get(fam);
+  for (const sub of root.querySelectorAll(".sub")) sub.hidden = !subShow.get(sub);
+  let any = false;
+  for (const wrap of root.querySelectorAll(".cat")) {
+    if (wrap.classList.contains("quality")) {
+      wrap.hidden = false;
+      any = true;
+      continue;
+    }
+    const n = catN.get(wrap) || 0;
+    wrap.hidden = n === 0;
+    if (n) any = true;
+    const sec = SECTIONS.find((s) => wrap.id === "sec-" + s.id);
+    const hint = wrap.querySelector(".cat-actions > span");
+    if (hint && sec) hint.textContent = hintFor(sec, { length: n });
+    const closer = wrap.querySelector(":scope > header .ghost.mini");
+    if (closer) {
+      const tags = [];
+      for (const btn of wrap.querySelectorAll(".tag[data-tag]")) {
+        if (!btn.hidden) tags.push(btn.dataset.tag);
+      }
+      const closed = tagsBanned(tags);
+      closer.textContent = closed ? "開啟全部" : "關閉全部";
+    }
+    for (const sub of wrap.querySelectorAll(":scope .sub")) {
+      const subClose = sub.querySelector(":scope > .sub-head .ghost.mini");
+      if (!subClose) continue;
+      const tags = [];
+      for (const btn of sub.querySelectorAll(".tag[data-tag]")) {
+        if (!btn.hidden) tags.push(btn.dataset.tag);
+      }
+      const closed = tagsBanned(tags);
+      subClose.textContent = closed ? "開啟全部" : "關閉全部";
+    }
+  }
+  let empty = root.querySelector(":scope > .empty-filter");
+  if (!any) {
+    if (!empty) {
+      empty = document.createElement("p");
+      empty.className = "hint empty-filter";
+      root.append(empty);
+    }
+    empty.hidden = false;
+    empty.textContent = q ? "沒有符合的字。" : "這個篩選下沒有 tag。";
+  } else if (empty) empty.hidden = true;
+}
+
+function renderCats(mode = "auto") {
+  if (!btnByTag.size) {
     buildCats();
     return;
   }
   const auto = autoBannedFromPins(lex, pinned);
-  if (scope === "all") paintAll(auto);
-  else {
+  if (mode === "heat" || mode === "filter") paintAll(auto);
+  else if (mode !== "search") {
     const dirty = collectDirty(auto);
     if (dirty.size) paintDirty(auto, dirty);
   }
   paintPrev = { pin: new Set(pinned), auto, user: new Set(userBanned) };
+  if (mode !== "heat") syncVisibility(auto);
   syncViewFilters();
-}
-
-function renderCats(mode = "auto") {
-  const full = mode === "full" || viewMode !== "all" || !$("cats")?.querySelector(".cat");
-  if (full) buildCats();
-  else paintCats(mode === "heat" ? "all" : "dirty");
 }
 
 function buildCats() {
   btnByTag.clear();
-  const q = ($("q").value || "").trim().toLowerCase();
   const auto = autoBannedFromPins(lex, pinned);
   paintPrev = { pin: new Set(pinned), auto, user: new Set(userBanned) };
   const root = $("cats");
-  const open = new Set(
-    [...root.querySelectorAll(".cat.is-open")].map((el) => el.id)
-  );
+  const open = new Set([...root.querySelectorAll(".cat.is-open")].map((el) => el.id));
   const frag = document.createDocumentFragment();
   syncViewFilters();
 
@@ -593,24 +650,22 @@ function buildCats() {
     const title = document.createElement("strong");
     title.textContent = sec.title;
     const hint = document.createElement("span");
-    const vis = visibleItems(sec, auto, q);
-    hint.textContent = hintFor(sec, vis);
+    hint.textContent = hintFor(sec, { length: 0 });
     const actions = document.createElement("div");
     actions.className = "cat-actions";
     actions.append(hint);
-    if (sec.id !== "quality") {
-      actions.append(closeAllBtn(vis.map((it) => it.tag), sec.title));
-    }
+    if (sec.id !== "quality") actions.append(closeAllBtn(sec.title));
     head.append(title, actions);
     wrap.append(head);
     const body = document.createElement("div");
     body.className = "cat-body";
     wrap.append(body);
     if (sec.id === "quality" || open.has(wrap.id)) wrap.classList.add("is-open");
+    const items = sectionItems(sec);
     const order = (lex.data.groupOrder && lex.data.groupOrder[sec.id]) || ["other"];
     const zhMap = lex.data.groupZh || {};
     const buckets = new Map();
-    for (const item of vis) {
+    for (const item of items) {
       const g = item.group || "other";
       if (!buckets.has(g)) buckets.set(g, []);
       buckets.get(g).push(item);
@@ -624,9 +679,7 @@ function buildCats() {
       const h = document.createElement("h3");
       h.textContent = zhMap[g] || g;
       subHead.append(h);
-      if (sec.id !== "quality") {
-        subHead.append(closeAllBtn(buckets.get(g).map((it) => it.tag), zhMap[g] || g));
-      }
+      if (sec.id !== "quality") subHead.append(closeAllBtn(zhMap[g] || g));
       const box = document.createElement("div");
       box.className = "tags";
       const sorted = sortItems(buckets.get(g));
@@ -649,25 +702,10 @@ function buildCats() {
       sub.append(subHead, box);
       body.append(sub);
     }
-    if (!body.querySelector(".sub") && sec.id !== "quality") {
-      if (q) {
-        const empty = document.createElement("p");
-        empty.className = "hint";
-        empty.textContent = "這段沒有符合的字。";
-        body.append(empty);
-        frag.append(wrap);
-      }
-      continue;
-    }
-    if (body.querySelector(".sub") || sec.id === "quality") frag.append(wrap);
+    frag.append(wrap);
   }
   root.replaceChildren(frag);
-  if (!root.children.length) {
-    const empty = document.createElement("p");
-    empty.className = "hint";
-    empty.textContent = q ? "沒有符合的字。" : "這個篩選下沒有 tag。";
-    root.append(empty);
-  }
+  syncVisibility(auto);
 }
 
 function tagButtons(tag) {
@@ -1004,6 +1042,18 @@ async function runBatch() {
 
 function bindUi() {
   $("cats").addEventListener("click", (e) => {
+    const closer = e.target.closest("[data-close]");
+    if (closer) {
+      const scope = closer.closest(".sub") || closer.closest(".cat");
+      const tags = [];
+      if (scope) {
+        for (const btn of scope.querySelectorAll(".tag[data-tag]")) {
+          if (!btn.hidden && btn.dataset.locked !== "1") tags.push(btn.dataset.tag);
+        }
+      }
+      toggleBanTags(tags);
+      return;
+    }
     const tagBtn = e.target.closest(".tag[data-tag]");
     if (tagBtn && !tagBtn.disabled && tagBtn.dataset.locked !== "1") {
       onTagClick(tagBtn.dataset.tag);
@@ -1034,21 +1084,21 @@ function bindUi() {
     settings.boy = false;
     saveStore();
     syncCast();
-    renderCats("full");
+    renderCats("filter");
   });
   $("boy").addEventListener("click", () => {
     settings.girl = false;
     settings.boy = true;
     saveStore();
     syncCast();
-    renderCats("full");
+    renderCats("filter");
   });
   $("cast-any").addEventListener("click", () => {
     settings.girl = true;
     settings.boy = true;
     saveStore();
     syncCast();
-    renderCats("full");
+    renderCats("filter");
   });
   $("sizes").addEventListener("click", (e) => {
     const btn = e.target.closest(".seg");
@@ -1077,18 +1127,18 @@ function bindUi() {
   let searchTimer = 0;
   $("q").addEventListener("input", () => {
     window.clearTimeout(searchTimer);
-    searchTimer = window.setTimeout(() => renderCats("full"), 120);
+    searchTimer = window.setTimeout(() => renderCats("search"), 120);
   });
   $("view-filters").addEventListener("click", (e) => {
     const btn = e.target.closest("[data-view]");
     if (btn) {
       viewMode = btn.dataset.view;
-      renderCats("full");
+      renderCats("search");
       return;
     }
     if (e.target.closest("#era-only")) {
       eraOnly = !eraOnly;
-      renderCats("full");
+      renderCats("search");
     }
   });
   $("clear-pins").addEventListener("click", () => {
@@ -1134,7 +1184,7 @@ async function main() {
   syncSizeButtons();
   syncHeat();
   renderEras();
-  renderCats("full");
+  renderCats();
   renderTray();
   bindUi();
   ping();
