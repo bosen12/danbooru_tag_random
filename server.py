@@ -36,6 +36,7 @@ def _negative() -> str:
             return n
     except Exception:
         pass
+    # Last resort if lexicon.json is missing. Source of truth: merge_lexicon.NEGATIVE.
     return (
         "bad quality, worst quality, worst detail, lowres, sketch, censor, censored, "
         "bar censor, mosaic censoring, text, watermark, signature, username, logo, "
@@ -165,22 +166,32 @@ def wait_done(prompt_id: str, timeout: float = 600) -> dict:
     raise TimeoutError(prompt_id)
 
 
-def first_image_b64(history: dict) -> str | None:
+_VIEW_TYPES = {"output", "temp", "input"}
+
+
+def comfy_view_query(filename: str, subfolder: str = "", type_: str = "output") -> str | None:
+    if type_ not in _VIEW_TYPES:
+        return None
+    name = str(filename or "")
+    if not name or name in {".", ".."} or "/" in name or "\\" in name:
+        return None
+    sub = str(subfolder or "").replace("\\", "/")
+    parts = [p for p in sub.split("/") if p]
+    if any(p in {".", ".."} for p in parts):
+        return None
+    return urllib.parse.urlencode({"filename": name, "subfolder": "/".join(parts), "type": type_})
+
+
+def first_image_src(history: dict) -> str | None:
     for node_out in (history.get("outputs") or {}).values():
         for img in node_out.get("images") or []:
-            fname = img.get("filename")
-            if not fname:
-                continue
-            q = urllib.parse.urlencode(
-                {
-                    "filename": fname,
-                    "subfolder": img.get("subfolder") or "",
-                    "type": img.get("type") or "output",
-                }
+            q = comfy_view_query(
+                img.get("filename") or "",
+                img.get("subfolder") or "",
+                img.get("type") or "output",
             )
-            raw = api("GET", f"/view?{q}", timeout=60)
-            if isinstance(raw, (bytes, bytearray)):
-                return "data:image/png;base64," + base64.b64encode(raw).decode("ascii")
+            if q:
+                return "/api/image?" + q
     return None
 
 
@@ -344,7 +355,7 @@ def gen_via_ws(payload: dict, width: int, height: int, seed: int, positive: str,
             except socket.timeout:
                 hist = api("GET", f"/history/{prompt_id}", timeout=20)
                 if hist and prompt_id in hist:
-                    image = first_image_b64(hist[prompt_id])
+                    image = first_image_src(hist[prompt_id])
                     if image:
                         yield ("done", _job(seed, width, height, positive, image))
                         return
@@ -381,7 +392,7 @@ def gen_via_ws(payload: dict, width: int, height: int, seed: int, positive: str,
                     continue
                 hist = api("GET", f"/history/{prompt_id}", timeout=30)
                 if hist and prompt_id in hist:
-                    image = first_image_b64(hist[prompt_id])
+                    image = first_image_src(hist[prompt_id])
                     if image:
                         yield ("done", _job(seed, width, height, positive, image))
                         return
@@ -432,7 +443,7 @@ def gen(payload: dict) -> dict:
     wf = build_workflow(positive, width, height, seed)
     prompt_id = api("POST", "/prompt", {"prompt": wf}, timeout=60)["prompt_id"]
     hist = wait_done(prompt_id)
-    image = first_image_b64(hist)
+    image = first_image_src(hist)
     if not image:
         raise RuntimeError("Comfy 沒有產出圖片")
     return {
@@ -477,6 +488,39 @@ class Handler(BaseHTTPRequestHandler):
                 api("POST", "/interrupt", {}, timeout=8)
             except Exception:
                 pass
+
+    def _serve_comfy_image(self) -> None:
+        qs = urllib.parse.parse_qs(urllib.parse.urlparse(self.path).query)
+
+        def one(key: str, default: str = "") -> str:
+            vals = qs.get(key) or [default]
+            return vals[0] if vals else default
+
+        q = comfy_view_query(one("filename"), one("subfolder"), one("type") or "output")
+        if not q:
+            self._json(400, {"ok": False, "error": "bad image query"})
+            return
+        try:
+            raw = api("GET", f"/view?{q}", timeout=60)
+        except Exception as exc:
+            self._json(502, {"ok": False, "error": str(exc)})
+            return
+        if not isinstance(raw, (bytes, bytearray)):
+            self._json(502, {"ok": False, "error": "not an image"})
+            return
+        mime = "image/png"
+        if raw[:3] == b"\xff\xd8\xff":
+            mime = "image/jpeg"
+        elif raw[:4] == b"RIFF":
+            mime = "image/webp"
+        safe = one("filename").replace('"', "")
+        self.send_response(200)
+        self.send_header("Content-Type", mime)
+        self.send_header("Content-Length", str(len(raw)))
+        self.send_header("Cache-Control", "private, max-age=86400")
+        self.send_header("Content-Disposition", f'inline; filename="{safe}"')
+        self.end_headers()
+        self.wfile.write(raw)
 
     def _static_dest(self):
         path = urllib.parse.urlparse(self.path).path
@@ -560,6 +604,9 @@ class Handler(BaseHTTPRequestHandler):
         path = urllib.parse.urlparse(self.path).path
         if path == "/api/ping":
             self._json(200, ping())
+            return
+        if path == "/api/image":
+            self._serve_comfy_image()
             return
         self._serve_static(True)
 

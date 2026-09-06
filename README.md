@@ -43,9 +43,7 @@ py -3 server.py
 | `PORT` | `8787` |
 | `WEB_DIR` | `web`（也可 `web1` / `web2` / `web3`） |
 
-負向固定：
-
-`bad quality, worst quality, worst detail, lowres, sketch, censor, censored, bar censor, mosaic censoring, text, watermark, signature, username, logo, speech bubble, bad anatomy, bad hands, extra fingers, fused fingers, missing fingers, extra limbs, deformed, disfigured, ugly, blurry, jpeg artifacts, 3d, realistic, photorealistic, loli, shota, teen, child`
+負向 prompt 寫在 `web/lexicon.json` 的 `negative`（來源是 `scripts/merge_lexicon.py`）。詞庫載入失敗時 `server.py` 才用內建後備字串。
 
 即時預覽需要 Comfy 開著 latent 預覽（Preview method：Latent2RGB 或 TAESD）。
 

@@ -7,12 +7,22 @@
     <title>排字匣 · 活字樓</title>
     <link rel="icon" href="logo.svg" type="image/svg+xml" />
     <link rel="preload" href="lexicon.json" as="fetch" crossorigin />
+    <link rel="modulepreload" href="boot.js" />
+    <link rel="modulepreload" href="engine.js" />
     <link rel="preconnect" href="https://fonts.googleapis.com" />
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
     <link
       rel="stylesheet"
       href="https://fonts.googleapis.com/css2?family=IBM+Plex+Mono:wght@400&family=Noto+Sans+TC:wght@400;500&family=Noto+Serif+TC:wght@600;700&display=swap"
+      media="print"
+      onload="this.media='all'"
     />
+    <noscript>
+      <link
+        rel="stylesheet"
+        href="https://fonts.googleapis.com/css2?family=IBM+Plex+Mono:wght@400&family=Noto+Sans+TC:wght@400;500&family=Noto+Serif+TC:wght@600;700&display=swap"
+      />
+    </noscript>
     <link rel="stylesheet" href="tokens.css" />
     <link rel="stylesheet" href="boot.css" />
     <link rel="stylesheet" href="styles.css" />

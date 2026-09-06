@@ -8,7 +8,15 @@ import sys
 from pathlib import Path
 
 sys.path.insert(0, str(Path(__file__).resolve().parents[1]))
-from server import Handler, mask_ws, parse_comfy_binary, sse, ws_frame  # noqa: E402
+from server import (  # noqa: E402
+    Handler,
+    comfy_view_query,
+    first_image_src,
+    mask_ws,
+    parse_comfy_binary,
+    sse,
+    ws_frame,
+)
 
 failed = 0
 
@@ -52,6 +60,19 @@ class _Req:
 ok("static allows styles.css", Handler._static_dest(_Req("/styles.css")) is not None)
 ok("static blocks ../web2", Handler._static_dest(_Req("/../web2/styles.css")) is None)
 ok("static blocks encoded ..", Handler._static_dest(_Req("/%2e%2e/web2/styles.css")) is None)
+
+ok("view query ok", comfy_view_query("ComfyUI_1.png") == "filename=ComfyUI_1.png&subfolder=&type=output")
+ok("view query keeps subfolder", comfy_view_query("a.png", "batch/out") == "filename=a.png&subfolder=batch%2Fout&type=output")
+ok("view query rejects slash in name", comfy_view_query("a/b.png") is None)
+ok("view query rejects .. name", comfy_view_query("..") is None)
+ok("view query rejects .. subfolder", comfy_view_query("a.png", "../x") is None)
+ok("view query rejects type", comfy_view_query("a.png", type_="etc") is None)
+ok(
+    "history becomes /api/image url",
+    first_image_src({"outputs": {"9": {"images": [{"filename": "x.png", "type": "output"}]}}})
+    == "/api/image?filename=x.png&subfolder=&type=output",
+)
+ok("empty history has no image", first_image_src({"outputs": {}}) is None)
 
 if failed:
     print(f"\n{failed} failed")

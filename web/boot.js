@@ -933,6 +933,14 @@ function fillCard(el, job, err) {
     }
     img.src = job.image;
     img.classList.add("is-on");
+    if (!String(job.image).startsWith("data:")) {
+      try {
+        const fn = new URL(job.image, location.href).searchParams.get("filename");
+        if (fn) img.alt = fn;
+      } catch {
+        /* ignore */
+      }
+    }
   }
   if (skel) skel.remove();
   let meta = el.querySelector(".meta");
