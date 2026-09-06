@@ -176,6 +176,8 @@ def comfy_view_query(filename: str, subfolder: str = "", type_: str = "output") 
     if not name or name in {".", ".."} or "/" in name or "\\" in name:
         return None
     sub = str(subfolder or "").replace("\\", "/")
+    if any(ord(c) < 0x20 or ord(c) == 0x7F for c in name + sub):
+        return None
     parts = [p for p in sub.split("/") if p]
     if any(p in {".", ".."} for p in parts):
         return None
@@ -337,7 +339,7 @@ class WsUnavailable(Exception):
     pass
 
 
-def gen_via_ws(payload: dict, width: int, height: int, seed: int, positive: str, wf: dict):
+def gen_via_ws(width: int, height: int, seed: int, positive: str, wf: dict):
     cid = uuid.uuid4().hex
     try:
         ws = ws_connect(comfy_base(), cid, timeout=20)
@@ -345,7 +347,6 @@ def gen_via_ws(payload: dict, width: int, height: int, seed: int, positive: str,
         raise WsUnavailable(str(exc)) from exc
     posted = api("POST", "/prompt", {"prompt": wf, "client_id": cid}, timeout=60)
     prompt_id = posted["prompt_id"]
-    yield ("queued", {"prompt_id": prompt_id, "seed": seed, "width": width, "height": height})
     t0 = time.time()
     try:
         while time.time() - t0 < 600:
@@ -415,7 +416,7 @@ def gen_events(payload: dict):
     wf = build_workflow(positive, width, height, seed)
     yield ("queued", {"seed": seed, "width": width, "height": height})
     try:
-        yield from gen_via_ws(payload, width, height, seed, positive, wf)
+        yield from gen_via_ws(width, height, seed, positive, wf)
         return
     except WsUnavailable:
         pass
@@ -458,6 +459,8 @@ def gen(payload: dict) -> dict:
 
 
 class Handler(BaseHTTPRequestHandler):
+    protocol_version = "HTTP/1.1"
+
     def log_message(self, fmt: str, *args) -> None:
         sys.stderr.write("%s - %s\n" % (self.address_string(), fmt % args))
 

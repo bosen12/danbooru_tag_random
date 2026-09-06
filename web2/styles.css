@@ -153,25 +153,12 @@ html {
   border-bottom: var(--rule) solid var(--color-rule);
   padding: 0;
   margin: 0;
-  display: grid;
-  grid-template-rows: auto 0fr;
-  transition: grid-template-rows var(--dur-move) var(--ease-in-out);
 }
 
 .cat header {
   margin: 0;
   padding: var(--space-3) 0;
   border-bottom: 0;
-}
-
-.cat-body {
-  overflow: hidden;
-  min-height: 0;
-}
-
-.cat:target,
-.cat.is-open {
-  grid-template-rows: auto 1fr;
 }
 
 .cat:target header strong,

@@ -67,6 +67,9 @@ ok("view query rejects slash in name", comfy_view_query("a/b.png") is None)
 ok("view query rejects .. name", comfy_view_query("..") is None)
 ok("view query rejects .. subfolder", comfy_view_query("a.png", "../x") is None)
 ok("view query rejects type", comfy_view_query("a.png", type_="etc") is None)
+ok("view query rejects CR in name", comfy_view_query("a.png\r\nX-Injected: yes") is None)
+ok("view query rejects NUL in subfolder", comfy_view_query("a.png", "out\x00") is None)
+ok("http/1.1", Handler.protocol_version == "HTTP/1.1")
 ok(
     "history becomes /api/image url",
     first_image_src({"outputs": {"9": {"images": [{"filename": "x.png", "type": "output"}]}}})

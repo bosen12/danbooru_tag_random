@@ -633,12 +633,19 @@ function syncVisibility(auto) {
     }
   }
   for (const fam of root.querySelectorAll(".family")) fam.hidden = !famShow.get(fam);
-  for (const sub of root.querySelectorAll(".sub")) sub.hidden = !subShow.get(sub);
+  for (const sub of root.querySelectorAll(".sub")) {
+    if (sub.closest(".cat.quality")) sub.hidden = false;
+    else sub.hidden = !subShow.get(sub);
+  }
   let any = false;
   for (const wrap of root.querySelectorAll(".cat")) {
     if (wrap.classList.contains("quality")) {
       wrap.hidden = false;
       any = true;
+      const sec = SECTIONS.find((s) => wrap.id === "sec-" + s.id);
+      const hint = wrap.querySelector(".cat-actions > span");
+      const n = wrap.querySelectorAll(".tag[data-tag]").length;
+      if (hint && sec) hint.textContent = hintFor(sec, { length: n });
       continue;
     }
     const n = catN.get(wrap) || 0;
@@ -718,8 +725,9 @@ function buildCats() {
     const title = document.createElement("strong");
     title.textContent = sec.title;
     toggle.append(title);
+    const items = sectionItems(sec);
     const hint = document.createElement("span");
-    hint.textContent = hintFor(sec, { length: 0 });
+    hint.textContent = hintFor(sec, { length: sec.id === "quality" ? items.length : 0 });
     const actions = document.createElement("div");
     actions.className = "cat-actions";
     actions.append(hint);
@@ -731,7 +739,6 @@ function buildCats() {
     body.id = wrap.id + "-body";
     toggle.setAttribute("aria-controls", body.id);
     wrap.append(body);
-    const items = sectionItems(sec);
     const order = (lex.data.groupOrder && lex.data.groupOrder[sec.id]) || ["other"];
     const zhMap = lex.data.groupZh || {};
     const buckets = new Map();
@@ -909,6 +916,7 @@ function setLive(el, ev) {
 function fillCard(el, job, err) {
   el.classList.remove("is-wait");
   if (err) {
+    el.classList.remove("is-done");
     el.classList.add("is-fail");
     hideMeter(el);
     const bar = el.querySelector(".bar");
@@ -931,6 +939,13 @@ function fillCard(el, job, err) {
       img.width = job.width;
       img.height = job.height;
     }
+    img.addEventListener(
+      "error",
+      () => {
+        if (!el.classList.contains("is-fail")) fillCard(el, null, "圖片載入失敗");
+      },
+      { once: true }
+    );
     img.src = job.image;
     img.classList.add("is-on");
     if (!String(job.image).startsWith("data:")) {

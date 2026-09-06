@@ -392,6 +392,14 @@ input[type="number"] {
 .cat-body {
   overflow: hidden;
   min-height: 0;
+  visibility: hidden;
+  transition: visibility 0s linear var(--dur-move);
+}
+
+.cat.is-open .cat-body,
+.cat:target .cat-body {
+  visibility: visible;
+  transition-delay: 0s;
 }
 
 .cat header {
