@@ -10,6 +10,8 @@ import {
   cycleTag,
   defaultSettings,
   drawOne,
+  ERAS,
+  sanitizeSettings,
   indexLexicon,
   missingPins,
   mulberry32,
@@ -958,6 +960,41 @@ function indoorOutdoorClash(have) {
   ok("huge breasts needs female", (breasts?.needs || []).includes("female"));
   const kiss = lex.byTag.get("kiss");
   ok("kiss needs pair", (kiss?.needs || []).includes("pair"));
+}
+
+{
+  const s = settings();
+  s.counts.feature = "x";
+  const dump = drawOne(lex, s, new Set(), new Set(), mulberry32(1), 1);
+  const feats = [...tagsOf(dump)].filter((t) => lex.byTag.get(t)?.section === "feature");
+  ok("NaN feature count does not dump the pool", feats.length <= 20, `feature=${feats.length}`);
+  s.counts.feature = 1e9;
+  const huge = drawOne(lex, s, new Set(), new Set(), mulberry32(2), 2);
+  const feats2 = [...tagsOf(huge)].filter((t) => lex.byTag.get(t)?.section === "feature");
+  ok("huge feature count is capped", feats2.length <= 50, `feature=${feats2.length}`);
+}
+
+{
+  const dirty = sanitizeSettings(
+    {
+      n: "",
+      width: "",
+      height: -5,
+      counts: { feature: "x", pose: 1e9 },
+      heats: ["nope"],
+      eras: ["future"],
+      girl: "yes",
+      boy: 0,
+    },
+    data
+  );
+  ok("junk n falls back", dirty.n >= 1 && dirty.n <= 10);
+  ok("junk width falls back", dirty.width === 1024);
+  ok("negative height clamps to 256", dirty.height === 256);
+  eq("junk feature count is 0", dirty.counts.feature, 0);
+  ok("huge pose count clamps to 20", dirty.counts.pose === 20);
+  ok("junk heats fall back", dirty.heats.length > 0 && dirty.heats.every((h) => ["tease", "flash", "sex"].includes(h)));
+  ok("junk eras fall back", dirty.eras.length > 0 && dirty.eras.every((e) => ERAS.includes(e)));
 }
 
 if (failed) {

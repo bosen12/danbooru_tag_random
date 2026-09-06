@@ -750,7 +750,8 @@ export function drawOne(lex, settings, pinned, userBanned, rand, seed) {
   };
 
   const fill = (section, extraFilter) => {
-    const need = Math.max(0, (counts[section] || 0) - countSection(section));
+    const want = Math.max(0, Math.min(40, Number(counts[section]) || 0));
+    const need = want - countSection(section);
     if (need <= 0) return;
     const pool = lex.bySection[section].filter(
       (item) => allow(item) && (!extraFilter || extraFilter(item))
@@ -945,6 +946,40 @@ export function defaultSettings(data) {
     heatPreset: d.heatPreset,
     weights: { ...data.heatWeights[d.heatPreset] },
     eras: d.eras ? [...d.eras] : [...ERAS],
+  };
+}
+
+export function sanitizeSettings(raw, data) {
+  const base = defaultSettings(data);
+  if (!raw || typeof raw !== "object") return base;
+  const counts = { ...base.counts };
+  const incoming = raw.counts && typeof raw.counts === "object" ? raw.counts : {};
+  for (const key of Object.keys(counts)) {
+    counts[key] = Math.max(0, Math.min(20, Number(incoming[key]) || 0));
+  }
+  const girl = raw.girl === true || raw.girl === false ? raw.girl : base.girl;
+  const boy = raw.boy === true || raw.boy === false ? raw.boy : base.boy;
+  const heats = Array.isArray(raw.heats) ? raw.heats.filter((h) => HEATS.includes(h)) : [];
+  const heatPreset = data.heatWeights && data.heatWeights[raw.heatPreset] ? raw.heatPreset : base.heatPreset;
+  const weights = { ...(data.heatWeights[heatPreset] || base.weights) };
+  if (raw.weights && typeof raw.weights === "object") {
+    for (const h of HEATS) {
+      const w = Number(raw.weights[h]);
+      if (Number.isFinite(w) && w >= 0) weights[h] = w;
+    }
+  }
+  const eras = Array.isArray(raw.eras) ? raw.eras.filter((e) => ERAS.includes(e)) : [];
+  return {
+    n: Math.max(1, Math.min(10, Number(raw.n) || base.n)),
+    width: Math.max(256, Math.min(2048, Number(raw.width) || base.width)),
+    height: Math.max(256, Math.min(2048, Number(raw.height) || base.height)),
+    counts,
+    girl: girl || boy ? girl : true,
+    boy: girl || boy ? boy : true,
+    heats: heats.length ? heats : [...base.heats],
+    heatPreset,
+    weights,
+    eras: eras.length ? eras : [...base.eras],
   };
 }
 

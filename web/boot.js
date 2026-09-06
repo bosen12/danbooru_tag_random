@@ -5,6 +5,7 @@ import {
   cycleTag,
   defaultSettings,
   drawOne,
+  sanitizeSettings,
   ERAS,
   ERA_LABELS,
   eraMismatches,
@@ -1336,17 +1337,11 @@ async function main() {
   lex = indexLexicon(data);
   settings = defaultSettings(data);
   const saved = loadStore();
-  if (saved.settings) {
-    settings = { ...settings, ...saved.settings, counts: { ...settings.counts, ...saved.settings.counts } };
-  }
-  if (saved.pinned) pinned = new Set(saved.pinned);
-  if (saved.userBanned) userBanned = new Set(saved.userBanned);
+  if (saved.settings) settings = sanitizeSettings(saved.settings, data);
+  if (Array.isArray(saved.pinned)) pinned = new Set(saved.pinned.filter((t) => typeof t === "string"));
+  if (Array.isArray(saved.userBanned)) userBanned = new Set(saved.userBanned.filter((t) => typeof t === "string"));
 
   $("n").value = String(settings.n);
-  if (!settings.girl && !settings.boy) {
-    settings.girl = true;
-    settings.boy = true;
-  }
   syncCast();
   renderCounts();
   syncSizeButtons();
