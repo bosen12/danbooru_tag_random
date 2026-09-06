@@ -955,12 +955,16 @@ export function sanitizeSettings(raw, data) {
   const counts = { ...base.counts };
   const incoming = raw.counts && typeof raw.counts === "object" ? raw.counts : {};
   for (const key of Object.keys(counts)) {
+    if (incoming[key] === undefined || incoming[key] === null) continue;
     counts[key] = Math.max(0, Math.min(20, Number(incoming[key]) || 0));
   }
   const girl = raw.girl === true || raw.girl === false ? raw.girl : base.girl;
   const boy = raw.boy === true || raw.boy === false ? raw.boy : base.boy;
   const heats = Array.isArray(raw.heats) ? raw.heats.filter((h) => HEATS.includes(h)) : [];
-  const heatPreset = data.heatWeights && data.heatWeights[raw.heatPreset] ? raw.heatPreset : base.heatPreset;
+  const heatPreset =
+    raw.heatPreset === "custom" || (data.heatWeights && data.heatWeights[raw.heatPreset])
+      ? raw.heatPreset
+      : base.heatPreset;
   const weights = { ...(data.heatWeights[heatPreset] || base.weights) };
   if (raw.weights && typeof raw.weights === "object") {
     for (const h of HEATS) {

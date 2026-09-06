@@ -993,8 +993,26 @@ function indoorOutdoorClash(have) {
   ok("negative height clamps to 256", dirty.height === 256);
   eq("junk feature count is 0", dirty.counts.feature, 0);
   ok("huge pose count clamps to 20", dirty.counts.pose === 20);
+  eq("missing count keys keep defaults", dirty.counts.subject, data.defaults.counts.subject);
   ok("junk heats fall back", dirty.heats.length > 0 && dirty.heats.every((h) => ["tease", "flash", "sex"].includes(h)));
   ok("junk eras fall back", dirty.eras.length > 0 && dirty.eras.every((e) => ERAS.includes(e)));
+}
+
+{
+  const custom = sanitizeSettings(
+    {
+      heatPreset: "custom",
+      heats: ["tease", "sex"],
+      weights: { flash: 0, sex: 0.5, tease: 0.5 },
+    },
+    data
+  );
+  eq("custom heatPreset is kept", custom.heatPreset, "custom");
+  ok("custom keeps flash off", custom.heats.includes("tease") && custom.heats.includes("sex") && !custom.heats.includes("flash"));
+  const partial = sanitizeSettings({ n: 2, counts: { feature: 3 } }, data);
+  eq("n-only keeps default feature-adjacent counts", partial.counts.subject, data.defaults.counts.subject);
+  eq("partial feature count is kept", partial.counts.feature, 3);
+  eq("n-only keeps default pose count", partial.counts.pose, data.defaults.counts.pose);
 }
 
 if (failed) {
