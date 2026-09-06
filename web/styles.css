@@ -377,7 +377,21 @@ input[type="search"] {
   border: var(--rule) solid var(--color-rule);
 }
 
+.tray .tag {
+  animation: rise var(--dur-ui) var(--ease-out) both;
+  animation-delay: calc(var(--i, 0) * 12ms);
+}
+
+.boot-error {
+  margin: var(--space-4) 0;
+  padding: var(--space-3) var(--space-4);
+  border: var(--rule) solid var(--color-danger);
+  color: var(--color-danger);
+  background: var(--color-paper-2);
+}
+
 .cat-body {
+  overflow: hidden;
   min-height: 0;
 }
 
@@ -396,7 +410,15 @@ input[type="search"] {
 .cat {
   scroll-margin-top: 9.5rem;
   content-visibility: auto;
-  contain-intrinsic-size: 1px 240px;
+  contain-intrinsic-size: auto 240px;
+  display: grid;
+  grid-template-rows: auto 0fr;
+  transition: grid-template-rows var(--dur-move) var(--ease-in-out);
+}
+
+.cat.is-open,
+.cat:target {
+  grid-template-rows: auto 1fr;
 }
 
 .cats {
@@ -413,6 +435,40 @@ input[type="search"] {
   margin-bottom: var(--space-3);
   border-bottom: var(--rule) solid var(--color-rule);
   padding-bottom: var(--space-2);
+}
+
+.cat-toggle {
+  appearance: none;
+  background: transparent;
+  border: 0;
+  padding: 0;
+  margin: 0;
+  color: inherit;
+  font: inherit;
+  cursor: pointer;
+  display: inline-flex;
+  align-items: center;
+  gap: var(--space-2);
+  min-width: 0;
+  text-align: left;
+}
+
+.cat-toggle::before {
+  content: "";
+  width: 0.42em;
+  height: 0.42em;
+  border-right: 2px solid currentColor;
+  border-bottom: 2px solid currentColor;
+  transform: rotate(-45deg);
+  translate: 0 -0.08em;
+  flex: 0 0 auto;
+  opacity: 0.65;
+}
+
+.cat.is-open .cat-toggle::before,
+.cat:target .cat-toggle::before {
+  transform: rotate(45deg);
+  translate: 0 -0.18em;
 }
 
 .cat header strong {
@@ -534,8 +590,15 @@ input[type="search"] {
 
 .pos span[data-en] {
   position: relative;
-  cursor: help;
+  cursor: pointer;
   border-bottom: 1px dotted var(--color-rule);
+}
+.pos span[data-state="pinned"] {
+  color: var(--color-pin);
+  border-bottom-color: var(--color-pin);
+}
+.pos span[data-locked="1"] {
+  cursor: help;
 }
 
 .pos span[data-en]:hover::after,

@@ -1,7 +1,6 @@
 import {
   applyBan,
   applyClear,
-  applyPin,
   autoBannedFromPins,
   cycleTag,
   defaultSettings,
@@ -9,8 +8,10 @@ import {
   ERAS,
   ERA_LABELS,
   eraMismatches,
+  FEMALE_COUNT,
   indexLexicon,
   labelOf,
+  MALE_COUNT,
   missingPins,
   mulberry32,
   randomSeed,
@@ -45,6 +46,7 @@ let running = false;
 let genAbort = null;
 let viewMode = "all";
 let eraOnly = true;
+let lastPositive = "";
 const btnByTag = new Map();
 let paintPrev = { pin: new Set(), auto: new Set(), user: new Set() };
 
@@ -295,10 +297,10 @@ function syncCast() {
   for (const t of pinned) {
     const it = lex.byTag.get(t);
     if (!it) continue;
-    if (ex === "female" && (it.gate === "male" || (it.needs || []).includes("male") || t.includes("boy"))) {
+    if (ex === "female" && (it.gate === "male" || (it.needs || []).includes("male") || MALE_COUNT.has(t))) {
       clash.push(t);
     }
-    if (ex === "male" && (it.gate === "female" || (it.needs || []).includes("female") || t.includes("girl"))) {
+    if (ex === "male" && (it.gate === "female" || (it.needs || []).includes("female") || FEMALE_COUNT.has(t))) {
       clash.push(t);
     }
   }
@@ -409,32 +411,92 @@ function clusterItems(list, auto) {
   return { roots, children };
 }
 
+function isFixedTag(tag) {
+  if (!lex) return true;
+  if ((lex.data.quality || []).includes(tag)) return true;
+  if ((lex.data.alwaysEnv || []).includes(tag)) return true;
+  if ((lex.data.nsfwTail || []).includes(tag)) return true;
+  return !lex.byTag.has(tag);
+}
+
+function showPos(positive) {
+  lastPositive = String(positive || "").trim();
+  renderTray();
+}
+
+function paintTrayChip(btn, tag, auto) {
+  btn.dataset.tag = tag;
+  btn.dataset.en = tag;
+  btn.textContent = labelOf(lex, tag);
+  if (isFixedTag(tag)) {
+    btn.dataset.state = "pinned";
+    btn.dataset.locked = "1";
+    btn.disabled = true;
+    delete btn.dataset.ban;
+    btn.title = tag;
+    return;
+  }
+  btn.disabled = false;
+  delete btn.dataset.locked;
+  const st = tagState(tag, pinned, userBanned, auto);
+  btn.dataset.state = st;
+  if (st === "banned") btn.dataset.ban = auto.has(tag) && !userBanned.has(tag) ? "mutex" : "user";
+  else delete btn.dataset.ban;
+  btn.title = "點一下：釘選／關掉／回到池中";
+}
+
 function renderTray() {
   const tray = $("tray");
   const box = $("tray-pins");
   const count = $("tray-count");
   if (!tray || !box) return;
-  box.replaceChildren();
-  tray.classList.toggle("is-on", pinned.size > 0);
+  const auto = lex ? autoBannedFromPins(lex, pinned) : new Set();
+  const tags = lastPositive
+    ? lastPositive.split(", ").map((t) => t.trim()).filter(Boolean)
+    : [...pinned];
+  tray.classList.toggle("is-on", tags.length > 0);
   tray.hidden = false;
-  if (!pinned.size) {
+  const head = tray.querySelector(".tray-head");
+  const title = head && head.querySelector("strong");
+  if (title) title.textContent = lastPositive ? "這張 POS" : "必進這張圖";
+  if (head && lastPositive && !head.querySelector(".copy-pos")) {
+    const copy = document.createElement("button");
+    copy.type = "button";
+    copy.className = "ghost mini copy-pos";
+    copy.textContent = "複製";
+    copy.addEventListener("click", async (e) => {
+      e.stopPropagation();
+      if (!lastPositive) return;
+      await navigator.clipboard.writeText(lastPositive);
+      copy.textContent = "已複製";
+      window.setTimeout(() => {
+        copy.textContent = "複製";
+      }, 1200);
+    });
+    head.append(copy);
+  }
+  if (!tags.length) {
+    box.replaceChildren();
     if (count) count.textContent = "";
     return;
   }
-  if (count) count.textContent = `${pinned.size} 個`;
+  if (count) count.textContent = lastPositive ? `${tags.length} 個 · 點字可釘／關` : `${pinned.size} 個`;
+  const prev = [...box.querySelectorAll(":scope > .tag")];
+  const same = prev.length === tags.length && prev.every((el, i) => el.dataset.tag === tags[i]);
+  if (same) {
+    for (let i = 0; i < prev.length; i++) paintTrayChip(prev[i], tags[i], auto);
+    return;
+  }
   const frag = document.createDocumentFragment();
-  for (const tag of pinned) {
+  tags.forEach((tag, i) => {
     const btn = document.createElement("button");
     btn.type = "button";
     btn.className = "tag";
-    btn.dataset.state = "pinned";
-    btn.dataset.tag = tag;
-    btn.dataset.en = tag;
-    btn.textContent = labelOf(lex, tag);
-    btn.title = "點一下取消釘選";
+    btn.style.setProperty("--i", String(Math.min(i, 16)));
+    paintTrayChip(btn, tag, auto);
     frag.append(btn);
-  }
-  box.append(frag);
+  });
+  box.replaceChildren(frag);
 }
 
 function syncViewFilters() {
@@ -646,21 +708,29 @@ function buildCats() {
     const wrap = document.createElement("section");
     wrap.className = "cat" + (sec.id === "quality" ? " quality" : "");
     wrap.id = "sec-" + sec.id;
+    const opened = sec.id === "quality" || open.has(wrap.id) || location.hash === "#" + wrap.id;
+    if (opened) wrap.classList.add("is-open");
     const head = document.createElement("header");
+    const toggle = document.createElement("button");
+    toggle.type = "button";
+    toggle.className = "cat-toggle";
+    toggle.setAttribute("aria-expanded", opened ? "true" : "false");
     const title = document.createElement("strong");
     title.textContent = sec.title;
+    toggle.append(title);
     const hint = document.createElement("span");
     hint.textContent = hintFor(sec, { length: 0 });
     const actions = document.createElement("div");
     actions.className = "cat-actions";
     actions.append(hint);
     if (sec.id !== "quality") actions.append(closeAllBtn(sec.title));
-    head.append(title, actions);
+    head.append(toggle, actions);
     wrap.append(head);
     const body = document.createElement("div");
     body.className = "cat-body";
+    body.id = wrap.id + "-body";
+    toggle.setAttribute("aria-controls", body.id);
     wrap.append(body);
-    if (sec.id === "quality" || open.has(wrap.id)) wrap.classList.add("is-open");
     const items = sectionItems(sec);
     const order = (lex.data.groupOrder && lex.data.groupOrder[sec.id]) || ["other"];
     const zhMap = lex.data.groupZh || {};
@@ -729,6 +799,11 @@ function afterPin() {
   renderTray();
   updateEraClash();
   syncCast();
+  const auto = autoBannedFromPins(lex, pinned);
+  for (const span of document.querySelectorAll(".pos span[data-tag]")) {
+    if (span.dataset.locked === "1") continue;
+    span.dataset.state = tagState(span.dataset.tag, pinned, userBanned, auto);
+  }
 }
 
 function onTagClick(tag) {
@@ -789,12 +864,16 @@ function setPosLine(el, positive) {
   const pos = el.querySelector(".pos");
   if (!pos) return;
   pos.replaceChildren();
+  const auto = autoBannedFromPins(lex, pinned);
   for (const tag of String(positive || "").split(", ")) {
     if (!tag) continue;
     const span = document.createElement("span");
     span.dataset.en = tag;
-    span.title = tag;
+    span.dataset.tag = tag;
+    span.title = isFixedTag(tag) ? tag : "點一下：釘選／關掉／回到池中";
     span.textContent = labelOf(lex, tag);
+    if (isFixedTag(tag)) span.dataset.locked = "1";
+    else span.dataset.state = tagState(tag, pinned, userBanned, auto);
     pos.append(span, document.createTextNode(" · "));
   }
   if (pos.lastChild) pos.lastChild.remove();
@@ -985,6 +1064,7 @@ async function runBatch() {
     const rng = mulberry32(seedNum);
     const drawn = drawOne(lex, settings, pinned, userBanned, rng, seedNum);
     const card = cards[i];
+    showPos(drawn.positive);
     setPosLine(card, drawn.positive);
     setLive(card, { status: `抽好了，生圖 ${i + 1}/${n}…` });
     const extra = {
@@ -1059,22 +1139,26 @@ function bindUi() {
       onTagClick(tagBtn.dataset.tag);
       return;
     }
-    const head = e.target.closest(".cat > header");
-    if (head && !e.target.closest("button")) {
-      head.parentElement.classList.toggle("is-open");
+    const toggle = e.target.closest(".cat-toggle");
+    if (toggle) {
+      const cat = toggle.closest(".cat");
+      const opened = cat.classList.toggle("is-open");
+      toggle.setAttribute("aria-expanded", opened ? "true" : "false");
     }
   });
   const trayPins = $("tray-pins");
   if (trayPins) {
     trayPins.addEventListener("click", (e) => {
       const btn = e.target.closest(".tag[data-tag]");
-      if (!btn) return;
-      const next = applyClear(pinned, userBanned, btn.dataset.tag);
-      pinned = next.pinned;
-      userBanned = next.userBanned;
-      afterPin();
+      if (!btn || btn.disabled || btn.dataset.locked === "1") return;
+      onTagClick(btn.dataset.tag);
     });
   }
+  $("results").addEventListener("click", (e) => {
+    const span = e.target.closest(".pos span[data-tag]");
+    if (!span || span.dataset.locked === "1") return;
+    onTagClick(span.dataset.tag);
+  });
   $("n").addEventListener("change", () => {
     settings.n = Math.max(1, Math.min(10, Number($("n").value) || 1));
     saveStore();
@@ -1129,6 +1213,19 @@ function bindUi() {
     window.clearTimeout(searchTimer);
     searchTimer = window.setTimeout(() => renderCats("search"), 120);
   });
+  $("q").addEventListener("keydown", (e) => {
+    if (e.key !== "Escape") return;
+    if (!$("q").value) return;
+    $("q").value = "";
+    renderCats("search");
+  });
+  document.addEventListener("keydown", (e) => {
+    if (e.key !== "/" || e.ctrlKey || e.metaKey || e.altKey) return;
+    const el = e.target;
+    if (el && (el.tagName === "INPUT" || el.tagName === "TEXTAREA" || el.isContentEditable)) return;
+    e.preventDefault();
+    $("q").focus();
+  });
   $("view-filters").addEventListener("click", (e) => {
     const btn = e.target.closest("[data-view]");
     if (btn) {
@@ -1164,7 +1261,21 @@ function bindUi() {
 }
 
 async function main() {
-  const data = await fetch("lexicon.json").then((r) => r.json());
+  let data;
+  try {
+    const r = await fetch("lexicon.json");
+    if (!r.ok) throw new Error("lexicon.json HTTP " + r.status);
+    data = await r.json();
+    if (!data || !Array.isArray(data.tags)) throw new Error("lexicon.json 格式不對");
+  } catch (err) {
+    const stage = $("cats") || document.body;
+    const p = document.createElement("p");
+    p.className = "boot-error";
+    p.setAttribute("role", "alert");
+    p.textContent = "詞庫載入失敗：" + (err && err.message ? err.message : String(err));
+    stage.prepend(p);
+    return;
+  }
   lex = indexLexicon(data);
   settings = defaultSettings(data);
   const saved = loadStore();
@@ -1189,7 +1300,6 @@ async function main() {
   bindUi();
   ping();
   setInterval(ping, 15000);
-  document.documentElement.classList.add("is-booted");
 }
 
 main();

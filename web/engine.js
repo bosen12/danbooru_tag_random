@@ -18,137 +18,6 @@ export const ERA_LABELS = {
   victorian: "維多利亞",
 };
 
-const SEX_ACT = new Set([
-  "vaginal",
-  "anal",
-  "cowgirl position",
-  "reverse cowgirl position",
-  "doggystyle",
-  "standing doggystyle",
-  "missionary",
-  "mating press",
-  "standing sex",
-  "sex from behind",
-  "full nelson",
-  "amazon position",
-  "prone bone",
-  "spooning",
-  "suspended congress",
-  "spitroast",
-  "double penetration",
-  "69",
-  "paizuri",
-  "paizuri under clothes",
-  "fellatio",
-  "deepthroat",
-  "irrumatio",
-  "cunnilingus",
-  "anilingus",
-  "handjob",
-  "footjob",
-  "facesitting",
-  "tribadism",
-  "girl on top",
-  "oral",
-  "squatting cowgirl position",
-  "perpendicular paizuri",
-  "vaginal object insertion",
-  "imminent fellatio",
-]);
-
-const NEEDS_MALE = new Set([
-  "fellatio",
-  "deepthroat",
-  "irrumatio",
-  "handjob",
-  "paizuri",
-  "paizuri under clothes",
-  "ejaculation",
-  "erection",
-  "penis",
-  "large penis",
-  "huge penis",
-  "veiny penis",
-  "testicles",
-  "creampie",
-  "cum in pussy",
-  "cum in mouth",
-  "facial",
-  "guided penetration",
-  "imminent penetration",
-  "vaginal",
-  "anal",
-  "cowgirl position",
-  "reverse cowgirl position",
-  "doggystyle",
-  "standing doggystyle",
-  "missionary",
-  "mating press",
-  "standing sex",
-  "sex from behind",
-  "full nelson",
-  "prone bone",
-  "spitroast",
-  "double penetration",
-]);
-
-const NEEDS_FEMALE = new Set([
-  "vaginal",
-  "paizuri",
-  "paizuri under clothes",
-  "cunnilingus",
-  "upskirt",
-  "pussy",
-  "pussy focus",
-  "pussy juice",
-  "spread pussy",
-  "cowgirl position",
-  "reverse cowgirl position",
-  "missionary",
-  "mating press",
-  "after vaginal",
-  "cum in pussy",
-  "female ejaculation",
-  "tribadism",
-  "huge breasts",
-  "large breasts",
-  "gigantic breasts",
-  "medium breasts",
-  "small breasts",
-  "sagging breasts",
-  "nipples",
-  "areolae",
-  "milf",
-  "mature female",
-]);
-
-const NEEDS_PAIR = new Set([
-  "sex",
-  "kiss",
-  "kissing",
-  "french kiss",
-  "looking at another",
-  "hug from behind",
-  "sitting on lap",
-  "spitroast",
-  "double penetration",
-  "69",
-  "clothed sex",
-  "public sex",
-  "cowgirl position",
-  "reverse cowgirl position",
-  "doggystyle",
-  "missionary",
-  "mating press",
-  "standing sex",
-  "fellatio",
-  "cunnilingus",
-  "paizuri",
-  "handjob",
-  "facesitting",
-  "tribadism",
-]);
-
 export function mulberry32(seed) {
   let a = seed >>> 0;
   return function rand() {
@@ -202,7 +71,9 @@ function extraMutex(item) {
   if (item._mx) return item._mx;
   const groups = [];
   if (item.mutex) groups.push(item.mutex);
-  if (SEX_ACT.has(item.tag) && item.mutex !== "sex_act") groups.push("sex_act");
+  for (const g of item.mutexExtra || []) {
+    if (g && !groups.includes(g)) groups.push(g);
+  }
   item._mx = groups;
   return groups;
 }
@@ -357,18 +228,31 @@ export function cycleTag(lex, pinned, userBanned, tag) {
   return applyClear(pinned, userBanned, tag);
 }
 
-function hasFemale(cast) {
-  return cast.some((t) => t.includes("girl"));
+export const FEMALE_COUNT = new Set(["1girl", "2girls", "3girls", "4girls", "multiple girls"]);
+export const MALE_COUNT = new Set(["1boy", "2boys", "3boys", "multiple boys"]);
+const COUNT_NUM = {
+  "1girl": 1,
+  "2girls": 2,
+  "3girls": 3,
+  "4girls": 4,
+  "multiple girls": 2,
+  "1boy": 1,
+  "2boys": 2,
+  "3boys": 3,
+  "multiple boys": 2,
+};
+
+export function hasFemale(cast) {
+  return cast.some((t) => FEMALE_COUNT.has(t));
 }
-function hasMale(cast) {
-  return cast.some((t) => t.includes("boy"));
+export function hasMale(cast) {
+  return cast.some((t) => MALE_COUNT.has(t));
 }
-function personCount(cast) {
+export function personCount(cast) {
   let n = 0;
   for (const t of cast) {
-    const m = t.match(/^(\d+)/);
-    if (m) n += Number(m[1]);
-    else if (t === "multiple girls" || t === "multiple boys") n += 2;
+    const add = COUNT_NUM[t];
+    if (add) n += add;
   }
   return n;
 }
@@ -408,11 +292,10 @@ function gateOk(item, female, male) {
 }
 
 function castOk(item, female, male, people) {
-  const t = item.tag;
-  const needs = new Set(item.needs || []);
-  if ((NEEDS_PAIR.has(t) || needs.has("pair")) && people < 2) return false;
-  if ((NEEDS_MALE.has(t) || needs.has("male")) && !male) return false;
-  if ((NEEDS_FEMALE.has(t) || needs.has("female")) && !female) return false;
+  const needs = item.needs || [];
+  if (needs.includes("pair") && people < 2) return false;
+  if (needs.includes("male") && !male) return false;
+  if (needs.includes("female") && !female) return false;
   return true;
 }
 
@@ -425,23 +308,14 @@ function pinContext(lex, pinned) {
   for (const tag of pinned) {
     const item = lex.byTag.get(tag);
     if (!item) continue;
-    if (
-      item.gate === "female" ||
-      NEEDS_FEMALE.has(tag) ||
-      (item.needs || []).includes("female") ||
-      (item.section === "subject" && tag.includes("girl"))
-    ) {
+    const needs = item.needs || [];
+    if (item.gate === "female" || needs.includes("female") || FEMALE_COUNT.has(tag)) {
       needFemale = true;
     }
-    if (
-      item.gate === "male" ||
-      NEEDS_MALE.has(tag) ||
-      (item.needs || []).includes("male") ||
-      (item.section === "subject" && tag.includes("boy"))
-    ) {
+    if (item.gate === "male" || needs.includes("male") || MALE_COUNT.has(tag)) {
       needMale = true;
     }
-    if (NEEDS_PAIR.has(tag) || (item.needs || []).includes("pair")) needPair = true;
+    if (needs.includes("pair")) needPair = true;
     heatLists.push(item.heat && item.heat.length ? item.heat : HEATS);
     const e = erasOf(item);
     if (e) eraLists.push(e);
@@ -464,8 +338,8 @@ function intersectOrUnion(lists) {
   return acc;
 }
 
-function chooseCast(lex, settings, pinned, banned, rand) {
-  const ctx = pinContext(lex, pinned);
+function chooseCast(lex, settings, pinned, banned, rand, ctx) {
+  ctx = ctx || pinContext(lex, pinned);
   const forced = [];
   for (const t of ["1girl", "2girls", "3girls", "4girls", "1boy", "2boys", "3boys"]) {
     if (pinned.has(t) && !banned.has(t)) forced.push(t);
@@ -527,9 +401,9 @@ function chooseCast(lex, settings, pinned, banned, rand) {
   return [...new Set(parts)];
 }
 
-function chooseHeat(settings, pinned, lex, rand) {
+function chooseHeat(settings, pinned, lex, rand, ctx) {
   const enabled = HEATS.filter((h) => settings.heats.includes(h));
-  const ctx = pinContext(lex, pinned);
+  ctx = ctx || pinContext(lex, pinned);
   const fromPins = intersectOrUnion(ctx.heatLists);
   let allowed = enabled.length ? enabled : ["tease"];
   if (fromPins && fromPins.length) {
@@ -542,11 +416,11 @@ function chooseHeat(settings, pinned, lex, rand) {
   return pickWeighted(filtered, rand) || allowed[0];
 }
 
-function chooseEra(settings, pinned, lex, rand) {
+function chooseEra(settings, pinned, lex, rand, ctx) {
   let pool = (settings.eras || ERAS).filter((e) => ERAS.includes(e));
   if (!pool.length) pool = ["modern"];
   if (pool.length === 1) return pool[0];
-  const ctx = pinContext(lex, pinned);
+  ctx = ctx || pinContext(lex, pinned);
   const fromPins = intersectOrUnion(ctx.eraLists);
   if (fromPins && fromPins.length) {
     const hit = pool.filter((e) => fromPins.includes(e));
@@ -776,10 +650,11 @@ export function drawOne(lex, settings, pinned, userBanned, rand, seed) {
   const used = new Set();
   const mutexTaken = new Map();
 
-  const heat = chooseHeat(settings, pinned, lex, rand);
-  const era = chooseEra(settings, pinned, lex, rand);
+  const ctx = pinContext(lex, pinned);
+  const heat = chooseHeat(settings, pinned, lex, rand, ctx);
+  const era = chooseEra(settings, pinned, lex, rand, ctx);
   const commit = makeCommit(lex, used, mutexTaken, banned, era);
-  const cast = chooseCast(lex, settings, pinned, banned, rand);
+  const cast = chooseCast(lex, settings, pinned, banned, rand, ctx);
   let female = hasFemale(cast);
   let male = hasMale(cast);
   let people = personCount(cast);
@@ -927,14 +802,14 @@ export function drawOne(lex, settings, pinned, userBanned, rand, seed) {
 
   const clothingPinned = someUsed((it, t) => it.section === "clothing" && pinned.has(t));
   const nudePinned = someUsed((it) => it.section === "clothing" && it.layer === "skin");
-  let forceNude = nudePinned;
-  if (!clothingPinned && !nudePinned) {
-    if (heat === "sex" && rand() < 0.42) forceNude = true;
-    else if (heat === "flash" && rand() < 0.22) forceNude = true;
-  }
-  if (forceNude) {
-    const skin = lex.bySection.clothing.filter((item) => item.layer === "skin" && allow(item));
-    if (skin.length && !nudePinned) takeFromPool(skin, 1, rand, commit);
+  if (heat === "sex" && !clothingPinned && !nudePinned && !mutexTaken.has("onepiece") && !mutexTaken.has("top") && !mutexTaken.has("bottom")) {
+    const cover = lex.bySection.clothing.filter(
+      (item) =>
+        allow(item) &&
+        (item.layer === "skin" ||
+          (item.layer === "garment" && (item.mutex === "onepiece" || item.mutex === "top" || item.mutex === "bottom")))
+    );
+    takeFromPool(cover, 1, rand, commit, clothingPrefer);
   }
   const gotNude = someUsed((it) => it.section === "clothing" && it.layer === "skin");
   const hasBodyGarment = () =>
@@ -983,6 +858,16 @@ export function drawOne(lex, settings, pinned, userBanned, rand, seed) {
   fillSlot("pose", "body_pose");
   fillSlot("pose", "camera");
   fillSlot("pose", "gaze");
+  fillSlot("pose", "expression");
+  if (heat === "flash") {
+    const hasAct = someUsed((it) => it.mutex === "clothes_action" || it.group === "flash");
+    if (!hasAct) {
+      fillSlot("pose", "clothes_action");
+      if (!someUsed((it) => it.mutex === "clothes_action" || it.group === "flash")) {
+        fillGroup("pose", "flash");
+      }
+    }
+  }
   if (heat === "sex" && people >= 2) {
     const acts = lex.bySection.pose.filter(
       (item) => allow(item) && (item.mutex === "sex_act" || item.tag === "sex")

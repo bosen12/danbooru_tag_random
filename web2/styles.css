@@ -161,7 +161,6 @@ html {
 .cat header {
   margin: 0;
   padding: var(--space-3) 0;
-  cursor: pointer;
   border-bottom: 0;
 }
 
@@ -171,13 +170,12 @@ html {
 }
 
 .cat:target,
-.cat:focus-within,
 .cat.is-open {
   grid-template-rows: auto 1fr;
 }
 
 .cat:target header strong,
-.cat:focus-within header strong {
+.cat.is-open header strong {
   color: var(--color-accent);
 }
 

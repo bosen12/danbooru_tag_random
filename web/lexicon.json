@@ -2255,6 +2255,9 @@
         "any"
       ],
       "group": "body_f",
+      "needs": [
+        "female"
+      ],
       "zh": "巨乳"
     },
     {
@@ -2274,6 +2277,9 @@
         "any"
       ],
       "group": "body_f",
+      "needs": [
+        "female"
+      ],
       "zh": "大胸"
     },
     {
@@ -2293,6 +2299,9 @@
         "any"
       ],
       "group": "body_f",
+      "needs": [
+        "female"
+      ],
       "zh": "中等胸部"
     },
     {
@@ -2312,6 +2321,9 @@
         "any"
       ],
       "group": "body_f",
+      "needs": [
+        "female"
+      ],
       "zh": "貧乳"
     },
     {
@@ -2331,6 +2343,9 @@
         "any"
       ],
       "group": "body_f",
+      "needs": [
+        "female"
+      ],
       "zh": "超巨乳"
     },
     {
@@ -2388,6 +2403,9 @@
         "any"
       ],
       "group": "body_f",
+      "needs": [
+        "female"
+      ],
       "zh": "下垂胸部"
     },
     {
@@ -2504,6 +2522,9 @@
         "any"
       ],
       "group": "body_f",
+      "needs": [
+        "female"
+      ],
       "zh": "熟女"
     },
     {
@@ -2525,6 +2546,9 @@
         "any"
       ],
       "group": "body_f",
+      "needs": [
+        "female"
+      ],
       "zh": "成熟女性"
     },
     {
@@ -2642,6 +2666,9 @@
         "any"
       ],
       "group": "body_f",
+      "needs": [
+        "female"
+      ],
       "zh": "乳頭"
     },
     {
@@ -2678,6 +2705,9 @@
         "any"
       ],
       "group": "body_f",
+      "needs": [
+        "female"
+      ],
       "zh": "乳暈"
     },
     {
@@ -2713,6 +2743,9 @@
         "any"
       ],
       "group": "body_f",
+      "needs": [
+        "female"
+      ],
       "zh": "陰部"
     },
     {
@@ -3021,6 +3054,9 @@
         "any"
       ],
       "group": "body_m",
+      "needs": [
+        "male"
+      ],
       "zh": "勃起"
     },
     {
@@ -3038,6 +3074,9 @@
         "any"
       ],
       "group": "body_m",
+      "needs": [
+        "male"
+      ],
       "zh": "大陰莖"
     },
     {
@@ -3055,6 +3094,9 @@
         "any"
       ],
       "group": "body_m",
+      "needs": [
+        "male"
+      ],
       "zh": "巨大陰莖"
     },
     {
@@ -3072,6 +3114,9 @@
         "any"
       ],
       "group": "body_m",
+      "needs": [
+        "male"
+      ],
       "zh": "睪丸"
     },
     {
@@ -3089,6 +3134,9 @@
         "any"
       ],
       "group": "body_m",
+      "needs": [
+        "male"
+      ],
       "zh": "青筋陰莖"
     },
     {
@@ -3106,6 +3154,9 @@
         "any"
       ],
       "group": "body_m",
+      "needs": [
+        "male"
+      ],
       "zh": "陰莖"
     },
     {
@@ -3810,6 +3861,9 @@
         "any"
       ],
       "group": "tease",
+      "needs": [
+        "pair"
+      ],
       "zh": "從後擁抱"
     },
     {
@@ -3829,6 +3883,9 @@
         "any"
       ],
       "group": "tease",
+      "needs": [
+        "pair"
+      ],
       "zh": "坐在腿上"
     },
     {
@@ -4057,7 +4114,7 @@
         "flash",
         "sex"
       ],
-      "mutex": null,
+      "mutex": "expression",
       "bind": [],
       "implies": [],
       "layer": "normal",
@@ -4678,6 +4735,9 @@
         "any"
       ],
       "group": "flash",
+      "needs": [
+        "female"
+      ],
       "zh": "陰部特寫"
     },
     {
@@ -4725,7 +4785,7 @@
         "flash",
         "sex"
       ],
-      "mutex": null,
+      "mutex": "expression",
       "bind": [],
       "implies": [],
       "layer": "normal",
@@ -4743,7 +4803,7 @@
         "tease",
         "flash"
       ],
-      "mutex": null,
+      "mutex": "expression",
       "bind": [],
       "implies": [],
       "layer": "normal",
@@ -4836,7 +4896,7 @@
         "flash",
         "sex"
       ],
-      "mutex": null,
+      "mutex": "expression",
       "bind": [],
       "implies": [],
       "layer": "normal",
@@ -4891,7 +4951,7 @@
         "tease",
         "flash"
       ],
-      "mutex": null,
+      "mutex": "expression",
       "bind": [],
       "implies": [],
       "layer": "normal",
@@ -4909,7 +4969,7 @@
         "tease",
         "flash"
       ],
-      "mutex": null,
+      "mutex": "expression",
       "bind": [],
       "implies": [],
       "layer": "normal",
@@ -4944,7 +5004,7 @@
       "heat": [
         "sex"
       ],
-      "mutex": null,
+      "mutex": "expression",
       "bind": [],
       "implies": [],
       "layer": "normal",
@@ -5143,6 +5203,9 @@
         "any"
       ],
       "group": "flash",
+      "needs": [
+        "female"
+      ],
       "zh": "裙底視角"
     },
     {
@@ -5643,7 +5706,7 @@
       "heat": [
         "sex"
       ],
-      "mutex": null,
+      "mutex": "sex_act",
       "bind": [],
       "implies": [
         "sex"
@@ -5653,6 +5716,11 @@
         "any"
       ],
       "group": "sex",
+      "needs": [
+        "male",
+        "female",
+        "pair"
+      ],
       "zh": "乳交"
     },
     {
@@ -5662,7 +5730,7 @@
       "heat": [
         "sex"
       ],
-      "mutex": null,
+      "mutex": "sex_act",
       "bind": [],
       "implies": [],
       "layer": "normal",
@@ -5670,6 +5738,10 @@
         "any"
       ],
       "group": "sex",
+      "needs": [
+        "male",
+        "female"
+      ],
       "zh": "隔衣乳交"
     },
     {
@@ -5679,7 +5751,7 @@
       "heat": [
         "sex"
       ],
-      "mutex": null,
+      "mutex": "sex_act",
       "bind": [],
       "implies": [
         "oral",
@@ -5690,6 +5762,10 @@
         "any"
       ],
       "group": "sex",
+      "needs": [
+        "male",
+        "pair"
+      ],
       "zh": "口交"
     },
     {
@@ -5699,7 +5775,7 @@
       "heat": [
         "sex"
       ],
-      "mutex": null,
+      "mutex": "sex_act",
       "bind": [],
       "implies": [],
       "layer": "normal",
@@ -5707,6 +5783,9 @@
         "any"
       ],
       "group": "sex",
+      "needs": [
+        "male"
+      ],
       "zh": "深喉"
     },
     {
@@ -5716,7 +5795,7 @@
       "heat": [
         "sex"
       ],
-      "mutex": null,
+      "mutex": "sex_act",
       "bind": [],
       "implies": [
         "oral",
@@ -5727,6 +5806,10 @@
         "any"
       ],
       "group": "sex",
+      "needs": [
+        "female",
+        "pair"
+      ],
       "zh": "舔陰"
     },
     {
@@ -5736,7 +5819,7 @@
       "heat": [
         "sex"
       ],
-      "mutex": null,
+      "mutex": "sex_act",
       "bind": [],
       "implies": [
         "sex"
@@ -5746,6 +5829,10 @@
         "any"
       ],
       "group": "sex",
+      "needs": [
+        "male",
+        "pair"
+      ],
       "zh": "手交"
     },
     {
@@ -5755,7 +5842,7 @@
       "heat": [
         "sex"
       ],
-      "mutex": null,
+      "mutex": "sex_act",
       "bind": [],
       "implies": [],
       "layer": "normal",
@@ -5781,6 +5868,9 @@
         "any"
       ],
       "group": "tease",
+      "needs": [
+        "pair"
+      ],
       "zh": "接吻中"
     },
     {
@@ -5798,6 +5888,9 @@
         "any"
       ],
       "group": "sex",
+      "needs": [
+        "pair"
+      ],
       "zh": "法式深吻"
     },
     {
@@ -5815,6 +5908,9 @@
         "any"
       ],
       "group": "sex",
+      "needs": [
+        "pair"
+      ],
       "zh": "性交"
     },
     {
@@ -5824,7 +5920,7 @@
       "heat": [
         "sex"
       ],
-      "mutex": null,
+      "mutex": "sex_act",
       "bind": [],
       "implies": [
         "sex"
@@ -5834,6 +5930,10 @@
         "any"
       ],
       "group": "sex",
+      "needs": [
+        "male",
+        "female"
+      ],
       "zh": "陰道插入"
     },
     {
@@ -5843,7 +5943,7 @@
       "heat": [
         "sex"
       ],
-      "mutex": null,
+      "mutex": "sex_act",
       "bind": [],
       "implies": [
         "sex"
@@ -5853,6 +5953,9 @@
         "any"
       ],
       "group": "sex",
+      "needs": [
+        "male"
+      ],
       "zh": "肛交"
     },
     {
@@ -5862,7 +5965,7 @@
       "heat": [
         "sex"
       ],
-      "mutex": null,
+      "mutex": "sex_act",
       "bind": [],
       "implies": [
         "sex"
@@ -5872,6 +5975,11 @@
         "any"
       ],
       "group": "sex",
+      "needs": [
+        "male",
+        "female",
+        "pair"
+      ],
       "zh": "騎乘位"
     },
     {
@@ -5881,7 +5989,7 @@
       "heat": [
         "sex"
       ],
-      "mutex": null,
+      "mutex": "sex_act",
       "bind": [],
       "implies": [
         "sex"
@@ -5891,6 +5999,11 @@
         "any"
       ],
       "group": "sex",
+      "needs": [
+        "male",
+        "female",
+        "pair"
+      ],
       "zh": "反向騎乘"
     },
     {
@@ -5900,7 +6013,7 @@
       "heat": [
         "sex"
       ],
-      "mutex": null,
+      "mutex": "sex_act",
       "bind": [],
       "implies": [
         "sex"
@@ -5910,6 +6023,10 @@
         "any"
       ],
       "group": "sex",
+      "needs": [
+        "male",
+        "pair"
+      ],
       "zh": "背後位"
     },
     {
@@ -5919,7 +6036,7 @@
       "heat": [
         "sex"
       ],
-      "mutex": null,
+      "mutex": "sex_act",
       "bind": [],
       "implies": [
         "sex"
@@ -5929,6 +6046,9 @@
         "any"
       ],
       "group": "sex",
+      "needs": [
+        "male"
+      ],
       "zh": "站立後入"
     },
     {
@@ -5938,7 +6058,7 @@
       "heat": [
         "sex"
       ],
-      "mutex": null,
+      "mutex": "sex_act",
       "bind": [],
       "implies": [
         "sex"
@@ -5948,6 +6068,11 @@
         "any"
       ],
       "group": "sex",
+      "needs": [
+        "male",
+        "female",
+        "pair"
+      ],
       "zh": "正常位"
     },
     {
@@ -5957,7 +6082,7 @@
       "heat": [
         "sex"
       ],
-      "mutex": null,
+      "mutex": "sex_act",
       "bind": [],
       "implies": [
         "sex"
@@ -5967,6 +6092,11 @@
         "any"
       ],
       "group": "sex",
+      "needs": [
+        "male",
+        "female",
+        "pair"
+      ],
       "zh": "交配壓制"
     },
     {
@@ -5976,7 +6106,7 @@
       "heat": [
         "sex"
       ],
-      "mutex": null,
+      "mutex": "sex_act",
       "bind": [],
       "implies": [
         "sex"
@@ -5986,6 +6116,10 @@
         "any"
       ],
       "group": "sex",
+      "needs": [
+        "male",
+        "pair"
+      ],
       "zh": "站立性交"
     },
     {
@@ -5995,7 +6129,7 @@
       "heat": [
         "sex"
       ],
-      "mutex": null,
+      "mutex": "sex_act",
       "bind": [],
       "implies": [],
       "layer": "normal",
@@ -6013,7 +6147,7 @@
         "tease",
         "sex"
       ],
-      "mutex": null,
+      "mutex": "sex_act",
       "bind": [],
       "implies": [],
       "layer": "normal",
@@ -6030,7 +6164,7 @@
       "heat": [
         "sex"
       ],
-      "mutex": null,
+      "mutex": "sex_act",
       "bind": [],
       "implies": [],
       "layer": "normal",
@@ -6038,6 +6172,9 @@
         "any"
       ],
       "group": "sex",
+      "needs": [
+        "male"
+      ],
       "zh": "俯臥後入"
     },
     {
@@ -6047,7 +6184,7 @@
       "heat": [
         "sex"
       ],
-      "mutex": null,
+      "mutex": "sex_act",
       "bind": [],
       "implies": [
         "sex"
@@ -6057,6 +6194,9 @@
         "any"
       ],
       "group": "sex",
+      "needs": [
+        "male"
+      ],
       "zh": "從後插入"
     },
     {
@@ -6066,7 +6206,7 @@
       "heat": [
         "sex"
       ],
-      "mutex": null,
+      "mutex": "sex_act",
       "bind": [],
       "implies": [],
       "layer": "normal",
@@ -6074,6 +6214,9 @@
         "any"
       ],
       "group": "sex",
+      "needs": [
+        "pair"
+      ],
       "zh": "坐臉"
     },
     {
@@ -6091,6 +6234,9 @@
         "any"
       ],
       "group": "sex",
+      "needs": [
+        "male"
+      ],
       "zh": "中出"
     },
     {
@@ -6159,6 +6305,9 @@
         "any"
       ],
       "group": "sex",
+      "needs": [
+        "male"
+      ],
       "zh": "顏射"
     },
     {
@@ -6176,6 +6325,9 @@
         "any"
       ],
       "group": "sex",
+      "needs": [
+        "male"
+      ],
       "zh": "射精"
     },
     {
@@ -6210,6 +6362,9 @@
         "any"
       ],
       "group": "sex",
+      "needs": [
+        "female"
+      ],
       "zh": "插入事後"
     },
     {
@@ -6219,7 +6374,7 @@
       "heat": [
         "sex"
       ],
-      "mutex": null,
+      "mutex": "sex_act",
       "bind": [],
       "implies": [],
       "layer": "normal",
@@ -6227,6 +6382,9 @@
         "any"
       ],
       "group": "sex",
+      "needs": [
+        "pair"
+      ],
       "zh": "69式"
     },
     {
@@ -6236,7 +6394,7 @@
       "heat": [
         "sex"
       ],
-      "mutex": null,
+      "mutex": "sex_act",
       "bind": [],
       "implies": [],
       "layer": "normal",
@@ -6244,6 +6402,10 @@
         "any"
       ],
       "group": "sex",
+      "needs": [
+        "male",
+        "pair"
+      ],
       "zh": "兩端夾擊"
     },
     {
@@ -6253,7 +6415,7 @@
       "heat": [
         "sex"
       ],
-      "mutex": null,
+      "mutex": "sex_act",
       "bind": [],
       "implies": [],
       "layer": "normal",
@@ -6261,6 +6423,10 @@
         "any"
       ],
       "group": "sex",
+      "needs": [
+        "male",
+        "pair"
+      ],
       "zh": "雙重插入"
     },
     {
@@ -6313,6 +6479,9 @@
         "any"
       ],
       "group": "sex",
+      "needs": [
+        "female"
+      ],
       "zh": "愛液"
     },
     {
@@ -6332,6 +6501,9 @@
         "any"
       ],
       "group": "sex",
+      "needs": [
+        "pair"
+      ],
       "zh": "著衣做愛"
     },
     {
@@ -6352,6 +6524,9 @@
         "any"
       ],
       "group": "sex",
+      "needs": [
+        "pair"
+      ],
       "zh": "公開場合性交"
     },
     {
@@ -6369,6 +6544,10 @@
         "any"
       ],
       "group": "sex",
+      "needs": [
+        "male",
+        "female"
+      ],
       "zh": "內射"
     },
     {
@@ -6386,6 +6565,9 @@
         "any"
       ],
       "group": "sex",
+      "needs": [
+        "male"
+      ],
       "zh": "口內射精"
     },
     {
@@ -6420,6 +6602,9 @@
         "any"
       ],
       "group": "sex",
+      "needs": [
+        "male"
+      ],
       "zh": "引導插入"
     },
     {
@@ -6429,7 +6614,7 @@
       "heat": [
         "sex"
       ],
-      "mutex": null,
+      "mutex": "sex_act",
       "bind": [],
       "implies": [],
       "layer": "normal",
@@ -6437,6 +6622,10 @@
         "any"
       ],
       "group": "sex",
+      "needs": [
+        "female",
+        "pair"
+      ],
       "zh": "磨鏡"
     },
     {
@@ -6524,6 +6713,9 @@
         "any"
       ],
       "group": "sex",
+      "needs": [
+        "male"
+      ],
       "zh": "即將插入"
     },
     {
@@ -6630,6 +6822,9 @@
         "any"
       ],
       "group": "flash",
+      "needs": [
+        "female"
+      ],
       "zh": "張開陰部"
     },
     {
@@ -6647,6 +6842,9 @@
         "any"
       ],
       "group": "sex",
+      "needs": [
+        "female"
+      ],
       "zh": "潮吹"
     },
     {
@@ -6656,7 +6854,7 @@
       "heat": [
         "sex"
       ],
-      "mutex": null,
+      "mutex": "sex_act",
       "bind": [],
       "implies": [],
       "layer": "normal",
@@ -6664,6 +6862,9 @@
         "any"
       ],
       "group": "sex",
+      "needs": [
+        "male"
+      ],
       "zh": "強制口交"
     },
     {
@@ -6673,7 +6874,7 @@
       "heat": [
         "sex"
       ],
-      "mutex": null,
+      "mutex": "sex_act",
       "bind": [],
       "implies": [],
       "layer": "normal",
@@ -6690,7 +6891,7 @@
       "heat": [
         "sex"
       ],
-      "mutex": null,
+      "mutex": "sex_act",
       "bind": [],
       "implies": [],
       "layer": "normal",
@@ -6698,6 +6899,9 @@
         "any"
       ],
       "group": "sex",
+      "needs": [
+        "male"
+      ],
       "zh": "鎖頸體位"
     },
     {
@@ -6707,7 +6911,7 @@
       "heat": [
         "sex"
       ],
-      "mutex": null,
+      "mutex": "sex_act",
       "bind": [],
       "implies": [],
       "layer": "normal",
@@ -11577,6 +11781,9 @@
       "group": "sex",
       "needs": [
         "pair"
+      ],
+      "mutexExtra": [
+        "sex_act"
       ],
       "zh": "口交"
     },
@@ -18116,6 +18323,641 @@
         "male"
       ],
       "zh": "瓶底眼鏡"
+    },
+    {
+      "tag": "dutch angle",
+      "section": "pose",
+      "gate": "any",
+      "heat": [
+        "tease",
+        "flash",
+        "sex"
+      ],
+      "mutex": "camera",
+      "bind": [],
+      "implies": [],
+      "layer": "normal",
+      "era": [
+        "any"
+      ],
+      "group": "camera",
+      "zh": "荷蘭角"
+    },
+    {
+      "tag": "fisheye",
+      "section": "pose",
+      "gate": "any",
+      "heat": [
+        "tease",
+        "flash",
+        "sex"
+      ],
+      "mutex": "camera",
+      "bind": [],
+      "implies": [],
+      "layer": "normal",
+      "era": [
+        "any"
+      ],
+      "group": "camera",
+      "zh": "魚眼"
+    },
+    {
+      "tag": "wide shot",
+      "section": "pose",
+      "gate": "any",
+      "heat": [
+        "tease",
+        "flash",
+        "sex"
+      ],
+      "mutex": "camera",
+      "bind": [],
+      "implies": [],
+      "layer": "normal",
+      "era": [
+        "any"
+      ],
+      "group": "camera",
+      "zh": "遠景"
+    },
+    {
+      "tag": "extreme close-up",
+      "section": "pose",
+      "gate": "any",
+      "heat": [
+        "tease",
+        "flash",
+        "sex"
+      ],
+      "mutex": "camera",
+      "bind": [],
+      "implies": [
+        "close-up"
+      ],
+      "layer": "normal",
+      "era": [
+        "any"
+      ],
+      "group": "camera",
+      "zh": "大特寫"
+    },
+    {
+      "tag": "over shoulder",
+      "section": "pose",
+      "gate": "any",
+      "heat": [
+        "tease",
+        "flash",
+        "sex"
+      ],
+      "mutex": "camera",
+      "bind": [],
+      "implies": [],
+      "layer": "normal",
+      "era": [
+        "any"
+      ],
+      "group": "camera",
+      "zh": "過肩鏡頭"
+    },
+    {
+      "tag": "from outside",
+      "section": "pose",
+      "gate": "any",
+      "heat": [
+        "tease",
+        "flash",
+        "sex"
+      ],
+      "mutex": "camera",
+      "bind": [],
+      "implies": [],
+      "layer": "normal",
+      "era": [
+        "any"
+      ],
+      "group": "camera",
+      "zh": "從外面看"
+    },
+    {
+      "tag": "lower body",
+      "section": "pose",
+      "gate": "any",
+      "heat": [
+        "tease",
+        "flash",
+        "sex"
+      ],
+      "mutex": "camera",
+      "bind": [],
+      "implies": [],
+      "layer": "normal",
+      "era": [
+        "any"
+      ],
+      "group": "camera",
+      "zh": "下半身"
+    },
+    {
+      "tag": "straight-on",
+      "section": "pose",
+      "gate": "any",
+      "heat": [
+        "tease",
+        "flash",
+        "sex"
+      ],
+      "mutex": "camera",
+      "bind": [],
+      "implies": [],
+      "layer": "normal",
+      "era": [
+        "any"
+      ],
+      "group": "camera",
+      "zh": "正面平視"
+    },
+    {
+      "tag": "head out of frame",
+      "section": "pose",
+      "gate": "any",
+      "heat": [
+        "tease",
+        "flash",
+        "sex"
+      ],
+      "mutex": "camera",
+      "bind": [],
+      "implies": [],
+      "layer": "normal",
+      "era": [
+        "any"
+      ],
+      "group": "camera",
+      "zh": "頭在畫面外"
+    },
+    {
+      "tag": "feet out of frame",
+      "section": "pose",
+      "gate": "any",
+      "heat": [
+        "tease",
+        "flash",
+        "sex"
+      ],
+      "mutex": "camera",
+      "bind": [],
+      "implies": [],
+      "layer": "normal",
+      "era": [
+        "any"
+      ],
+      "group": "camera",
+      "zh": "腳在畫面外"
+    },
+    {
+      "tag": "looking away",
+      "section": "pose",
+      "gate": "any",
+      "heat": [
+        "tease",
+        "flash",
+        "sex"
+      ],
+      "mutex": "gaze",
+      "bind": [],
+      "implies": [],
+      "layer": "normal",
+      "era": [
+        "any"
+      ],
+      "group": "gaze",
+      "zh": "看向別處"
+    },
+    {
+      "tag": "looking ahead",
+      "section": "pose",
+      "gate": "any",
+      "heat": [
+        "tease",
+        "flash",
+        "sex"
+      ],
+      "mutex": "gaze",
+      "bind": [],
+      "implies": [],
+      "layer": "normal",
+      "era": [
+        "any"
+      ],
+      "group": "gaze",
+      "zh": "向前看"
+    },
+    {
+      "tag": "sideways glance",
+      "section": "pose",
+      "gate": "any",
+      "heat": [
+        "tease",
+        "flash",
+        "sex"
+      ],
+      "mutex": "gaze",
+      "bind": [],
+      "implies": [],
+      "layer": "normal",
+      "era": [
+        "any"
+      ],
+      "group": "gaze",
+      "zh": "側眼一瞥"
+    },
+    {
+      "tag": "looking at breasts",
+      "section": "pose",
+      "gate": "any",
+      "heat": [
+        "tease",
+        "flash",
+        "sex"
+      ],
+      "mutex": "gaze",
+      "bind": [],
+      "implies": [],
+      "layer": "normal",
+      "era": [
+        "any"
+      ],
+      "group": "gaze",
+      "needs": [
+        "female"
+      ],
+      "zh": "看著胸部"
+    },
+    {
+      "tag": "frown",
+      "section": "pose",
+      "gate": "any",
+      "heat": [
+        "tease",
+        "flash",
+        "sex"
+      ],
+      "mutex": "expression",
+      "bind": [],
+      "implies": [],
+      "layer": "normal",
+      "era": [
+        "any"
+      ],
+      "group": "face",
+      "zh": "皺眉"
+    },
+    {
+      "tag": "light smile",
+      "section": "pose",
+      "gate": "any",
+      "heat": [
+        "tease",
+        "flash",
+        "sex"
+      ],
+      "mutex": "expression",
+      "bind": [],
+      "implies": [
+        "smile"
+      ],
+      "layer": "normal",
+      "era": [
+        "any"
+      ],
+      "group": "face",
+      "zh": "淺笑"
+    },
+    {
+      "tag": "expressionless",
+      "section": "pose",
+      "gate": "any",
+      "heat": [
+        "tease",
+        "flash",
+        "sex"
+      ],
+      "mutex": "expression",
+      "bind": [],
+      "implies": [],
+      "layer": "normal",
+      "era": [
+        "any"
+      ],
+      "group": "face",
+      "zh": "面無表情"
+    },
+    {
+      "tag": "pout",
+      "section": "pose",
+      "gate": "any",
+      "heat": [
+        "tease",
+        "flash",
+        "sex"
+      ],
+      "mutex": "expression",
+      "bind": [],
+      "implies": [],
+      "layer": "normal",
+      "era": [
+        "any"
+      ],
+      "group": "face",
+      "zh": "嘟嘴"
+    },
+    {
+      "tag": "angry",
+      "section": "pose",
+      "gate": "any",
+      "heat": [
+        "tease",
+        "flash",
+        "sex"
+      ],
+      "mutex": "expression",
+      "bind": [],
+      "implies": [],
+      "layer": "normal",
+      "era": [
+        "any"
+      ],
+      "group": "face",
+      "zh": "生氣"
+    },
+    {
+      "tag": "sad",
+      "section": "pose",
+      "gate": "any",
+      "heat": [
+        "tease",
+        "flash",
+        "sex"
+      ],
+      "mutex": "expression",
+      "bind": [],
+      "implies": [],
+      "layer": "normal",
+      "era": [
+        "any"
+      ],
+      "group": "face",
+      "zh": "悲傷"
+    },
+    {
+      "tag": "crying",
+      "section": "pose",
+      "gate": "any",
+      "heat": [
+        "tease",
+        "flash",
+        "sex"
+      ],
+      "mutex": "expression",
+      "bind": [],
+      "implies": [
+        "tears"
+      ],
+      "layer": "normal",
+      "era": [
+        "any"
+      ],
+      "group": "face",
+      "zh": "哭泣"
+    },
+    {
+      "tag": "drooling",
+      "section": "pose",
+      "gate": "any",
+      "heat": [
+        "flash",
+        "sex"
+      ],
+      "mutex": null,
+      "bind": [],
+      "implies": [],
+      "layer": "normal",
+      "era": [
+        "any"
+      ],
+      "group": "face",
+      "zh": "流口水"
+    },
+    {
+      "tag": "moaning",
+      "section": "pose",
+      "gate": "any",
+      "heat": [
+        "sex"
+      ],
+      "mutex": null,
+      "bind": [],
+      "implies": [],
+      "layer": "normal",
+      "era": [
+        "any"
+      ],
+      "group": "face",
+      "zh": "呻吟"
+    },
+    {
+      "tag": "clenched teeth",
+      "section": "pose",
+      "gate": "any",
+      "heat": [
+        "tease",
+        "flash",
+        "sex"
+      ],
+      "mutex": null,
+      "bind": [],
+      "implies": [],
+      "layer": "normal",
+      "era": [
+        "any"
+      ],
+      "group": "face",
+      "zh": "咬牙"
+    },
+    {
+      "tag": "sparkling eyes",
+      "section": "pose",
+      "gate": "any",
+      "heat": [
+        "tease",
+        "flash",
+        "sex"
+      ],
+      "mutex": null,
+      "bind": [],
+      "implies": [],
+      "layer": "normal",
+      "era": [
+        "any"
+      ],
+      "group": "face",
+      "zh": "閃亮的眼睛"
+    },
+    {
+      "tag": "empty eyes",
+      "section": "pose",
+      "gate": "any",
+      "heat": [
+        "tease",
+        "flash",
+        "sex"
+      ],
+      "mutex": null,
+      "bind": [],
+      "implies": [],
+      "layer": "normal",
+      "era": [
+        "any"
+      ],
+      "group": "face",
+      "zh": "空洞的眼睛"
+    },
+    {
+      "tag": "sleepy",
+      "section": "pose",
+      "gate": "any",
+      "heat": [
+        "tease",
+        "flash",
+        "sex"
+      ],
+      "mutex": "expression",
+      "bind": [],
+      "implies": [],
+      "layer": "normal",
+      "era": [
+        "any"
+      ],
+      "group": "face",
+      "zh": "睏倦"
+    },
+    {
+      "tag": "serious",
+      "section": "pose",
+      "gate": "any",
+      "heat": [
+        "tease",
+        "flash",
+        "sex"
+      ],
+      "mutex": "expression",
+      "bind": [],
+      "implies": [],
+      "layer": "normal",
+      "era": [
+        "any"
+      ],
+      "group": "face",
+      "zh": "嚴肅"
+    },
+    {
+      "tag": "happy",
+      "section": "pose",
+      "gate": "any",
+      "heat": [
+        "tease",
+        "flash",
+        "sex"
+      ],
+      "mutex": "expression",
+      "bind": [],
+      "implies": [
+        "smile"
+      ],
+      "layer": "normal",
+      "era": [
+        "any"
+      ],
+      "group": "face",
+      "zh": "開心"
+    },
+    {
+      "tag": "surprised",
+      "section": "pose",
+      "gate": "any",
+      "heat": [
+        "tease",
+        "flash",
+        "sex"
+      ],
+      "mutex": "expression",
+      "bind": [],
+      "implies": [],
+      "layer": "normal",
+      "era": [
+        "any"
+      ],
+      "group": "face",
+      "zh": "驚訝"
+    },
+    {
+      "tag": "scared",
+      "section": "pose",
+      "gate": "any",
+      "heat": [
+        "tease",
+        "flash",
+        "sex"
+      ],
+      "mutex": "expression",
+      "bind": [],
+      "implies": [],
+      "layer": "normal",
+      "era": [
+        "any"
+      ],
+      "group": "face",
+      "zh": "害怕"
+    },
+    {
+      "tag": "smug",
+      "section": "pose",
+      "gate": "any",
+      "heat": [
+        "tease",
+        "flash",
+        "sex"
+      ],
+      "mutex": "expression",
+      "bind": [],
+      "implies": [],
+      "layer": "normal",
+      "era": [
+        "any"
+      ],
+      "group": "face",
+      "zh": "得意"
+    },
+    {
+      "tag": "nervous",
+      "section": "pose",
+      "gate": "any",
+      "heat": [
+        "tease",
+        "flash",
+        "sex"
+      ],
+      "mutex": "expression",
+      "bind": [],
+      "implies": [],
+      "layer": "normal",
+      "era": [
+        "any"
+      ],
+      "group": "face",
+      "zh": "緊張"
     }
   ]
 }

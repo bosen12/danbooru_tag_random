@@ -484,10 +484,10 @@ class Handler(BaseHTTPRequestHandler):
             path = "/index.html"
         rel = urllib.parse.unquote(path).lstrip("/")
         dest = (WEB / rel).resolve()
-        if str(dest).startswith(str(WEB)) and dest.is_file():
+        if dest.is_relative_to(WEB) and dest.is_file():
             return dest
         shared = (SHARED / rel).resolve()
-        if str(shared).startswith(str(SHARED)) and shared.is_file():
+        if shared.is_relative_to(SHARED) and shared.is_file():
             return shared
         return None
 

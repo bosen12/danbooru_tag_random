@@ -312,6 +312,165 @@ RECLASS = {
 }
 
 
+EXPRESSION = {
+    "smile",
+    "seductive smile",
+    "smirk",
+    "grin",
+    "light smile",
+    "happy",
+    "frown",
+    "angry",
+    "sad",
+    "crying",
+    "expressionless",
+    "pout",
+    "surprised",
+    "scared",
+    "sleepy",
+    "serious",
+    "smug",
+    "nervous",
+    "ahegao",
+    "naughty face",
+    "embarrassed",
+    "shy",
+    "come hither",
+}
+
+# Engine reads stamped needs / mutex. Add new sex acts here, not in engine.js.
+SEX_ACT = {
+    "vaginal",
+    "anal",
+    "cowgirl position",
+    "reverse cowgirl position",
+    "doggystyle",
+    "standing doggystyle",
+    "missionary",
+    "mating press",
+    "standing sex",
+    "sex from behind",
+    "full nelson",
+    "amazon position",
+    "prone bone",
+    "spooning",
+    "suspended congress",
+    "spitroast",
+    "double penetration",
+    "69",
+    "paizuri",
+    "paizuri under clothes",
+    "fellatio",
+    "deepthroat",
+    "irrumatio",
+    "cunnilingus",
+    "anilingus",
+    "handjob",
+    "footjob",
+    "facesitting",
+    "tribadism",
+    "girl on top",
+    "oral",
+    "squatting cowgirl position",
+    "perpendicular paizuri",
+    "vaginal object insertion",
+    "imminent fellatio",
+}
+
+NEEDS_MALE = {
+    "fellatio",
+    "deepthroat",
+    "irrumatio",
+    "handjob",
+    "paizuri",
+    "paizuri under clothes",
+    "ejaculation",
+    "erection",
+    "penis",
+    "large penis",
+    "huge penis",
+    "veiny penis",
+    "testicles",
+    "creampie",
+    "cum in pussy",
+    "cum in mouth",
+    "facial",
+    "guided penetration",
+    "imminent penetration",
+    "vaginal",
+    "anal",
+    "cowgirl position",
+    "reverse cowgirl position",
+    "doggystyle",
+    "standing doggystyle",
+    "missionary",
+    "mating press",
+    "standing sex",
+    "sex from behind",
+    "full nelson",
+    "prone bone",
+    "spitroast",
+    "double penetration",
+}
+
+NEEDS_FEMALE = {
+    "vaginal",
+    "paizuri",
+    "paizuri under clothes",
+    "cunnilingus",
+    "upskirt",
+    "pussy",
+    "pussy focus",
+    "pussy juice",
+    "spread pussy",
+    "cowgirl position",
+    "reverse cowgirl position",
+    "missionary",
+    "mating press",
+    "after vaginal",
+    "cum in pussy",
+    "female ejaculation",
+    "tribadism",
+    "huge breasts",
+    "large breasts",
+    "gigantic breasts",
+    "medium breasts",
+    "small breasts",
+    "sagging breasts",
+    "nipples",
+    "areolae",
+    "milf",
+    "mature female",
+}
+
+NEEDS_PAIR = {
+    "sex",
+    "kiss",
+    "kissing",
+    "french kiss",
+    "looking at another",
+    "hug from behind",
+    "sitting on lap",
+    "spitroast",
+    "double penetration",
+    "69",
+    "clothed sex",
+    "public sex",
+    "cowgirl position",
+    "reverse cowgirl position",
+    "doggystyle",
+    "missionary",
+    "mating press",
+    "standing sex",
+    "fellatio",
+    "cunnilingus",
+    "paizuri",
+    "handjob",
+    "facesitting",
+    "tribadism",
+}
+
+
 def apply_relations(tag: str, implies: list[str], bind: list[str], mutex, section, gate, layer, heat, era, needs):
     if tag in RECLASS:
         rc = RECLASS[tag]
@@ -360,6 +519,8 @@ def apply_relations(tag: str, implies: list[str], bind: list[str], mutex, sectio
         im = [x for x in im if x not in ("indoors", "outdoors")]
     elif section == "env" and mutex not in ("place", "in_out"):
         im = [x for x in im if x not in ("indoors", "outdoors", "day", "night")]
+    if tag in EXPRESSION:
+        mutex = "expression"
     return im, bind, mutex, section, gate, layer, heat, era, needs
 
 
@@ -434,7 +595,27 @@ def norm(item: dict) -> dict | None:
     implies, bind, mutex, section, gate, layer, heat, era, needs = apply_relations(
         tag, implies, bind, mutex, section, gate, layer, heat, era, needs
     )
+    seen_needs = set(needs)
+    needs = list(needs)
+    if tag in NEEDS_MALE and "male" not in seen_needs:
+        needs.append("male")
+        seen_needs.add("male")
+    if tag in NEEDS_FEMALE and "female" not in seen_needs:
+        needs.append("female")
+        seen_needs.add("female")
+    if tag in NEEDS_PAIR and "pair" not in seen_needs:
+        needs.append("pair")
+        seen_needs.add("pair")
+    mutex_extra: list[str] = []
+    if tag in SEX_ACT:
+        if mutex and mutex != "sex_act":
+            mutex_extra.append("sex_act")
+        elif mutex != "sex_act":
+            mutex = "sex_act"
     if tag in UMBRELLA:
+        if mutex == "sex_act" or tag in SEX_ACT:
+            if "sex_act" not in mutex_extra:
+                mutex_extra.append("sex_act")
         mutex = None
     if tag in ERA_OF:
         era = list(ERA_OF[tag])
@@ -463,7 +644,64 @@ def norm(item: dict) -> dict | None:
     }
     if needs:
         out["needs"] = needs
+    if mutex_extra:
+        out["mutexExtra"] = mutex_extra
     return out
+
+
+def extra_shot_face_tags() -> list[dict]:
+    """More camera framings, gaze, and expressions. Camera/gaze still one each."""
+    all_h = list(HEATS)
+
+    def P(tag, mutex=None, implies=None, heat=None, needs=None, gate="any"):
+        return {
+            "tag": tag,
+            "section": "pose",
+            "gate": gate,
+            "heat": list(heat or all_h),
+            "mutex": mutex,
+            "bind": [],
+            "implies": implies or [],
+            "layer": "normal",
+            "era": ["any"],
+            "needs": needs or [],
+        }
+
+    return [
+        P("dutch angle", mutex="camera"),
+        P("fisheye", mutex="camera"),
+        P("wide shot", mutex="camera"),
+        P("extreme close-up", mutex="camera", implies=["close-up"]),
+        P("over shoulder", mutex="camera"),
+        P("from outside", mutex="camera"),
+        P("lower body", mutex="camera"),
+        P("straight-on", mutex="camera"),
+        P("head out of frame", mutex="camera"),
+        P("feet out of frame", mutex="camera"),
+        P("looking away", mutex="gaze"),
+        P("looking ahead", mutex="gaze"),
+        P("sideways glance", mutex="gaze"),
+        P("looking at breasts", mutex="gaze", heat=["tease", "flash", "sex"], needs=["female"]),
+        P("frown"),
+        P("light smile", implies=["smile"]),
+        P("expressionless"),
+        P("pout"),
+        P("angry"),
+        P("sad"),
+        P("crying", implies=["tears"]),
+        P("drooling", heat=["flash", "sex"]),
+        P("moaning", heat=["sex"]),
+        P("clenched teeth"),
+        P("sparkling eyes"),
+        P("empty eyes"),
+        P("sleepy"),
+        P("serious"),
+        P("happy", implies=["smile"]),
+        P("surprised"),
+        P("scared"),
+        P("smug"),
+        P("nervous"),
+    ]
 
 
 def extra_male_look_tags() -> list[dict]:
@@ -639,6 +877,7 @@ def main() -> None:
     rows.extend(extra_era_tags())
     rows.extend(extra_race_tags())
     rows.extend(extra_male_look_tags())
+    rows.extend(extra_shot_face_tags())
 
     old_zh: dict[str, str] = {}
     if OUT.exists():

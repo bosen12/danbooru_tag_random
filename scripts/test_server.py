@@ -8,7 +8,7 @@ import sys
 from pathlib import Path
 
 sys.path.insert(0, str(Path(__file__).resolve().parents[1]))
-from server import mask_ws, parse_comfy_binary, sse, ws_frame  # noqa: E402
+from server import Handler, mask_ws, parse_comfy_binary, sse, ws_frame  # noqa: E402
 
 failed = 0
 
@@ -42,6 +42,16 @@ ok("unknown event ignored", parse_comfy_binary(struct.pack(">II", 9, 1) + b"x") 
 frame = ws_frame(b"hello", opcode=1)
 ok("client frame is masked", frame[1] & 0x80 == 0x80)
 ok("unmask roundtrip", mask_ws(frame) == (1, b"hello"), str(mask_ws(frame)))
+
+
+class _Req:
+    def __init__(self, path: str) -> None:
+        self.path = path
+
+
+ok("static allows styles.css", Handler._static_dest(_Req("/styles.css")) is not None)
+ok("static blocks ../web2", Handler._static_dest(_Req("/../web2/styles.css")) is None)
+ok("static blocks encoded ..", Handler._static_dest(_Req("/%2e%2e/web2/styles.css")) is None)
 
 if failed:
     print(f"\n{failed} failed")

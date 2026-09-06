@@ -199,7 +199,7 @@ py -3 server.py
 
 現用詞庫是 `web/lexicon.json`（中文名寫在每個 tag 的 `zh`）。
 
-來源是 `web/lexicon_parts/` 裡的分類 JSON，合併時會套時代、父子、互斥規則。另外會補上男性種族和醜男／胖男／宅男這類長相。
+來源是 `web/lexicon_parts/` 裡的分類 JSON，合併時會套時代、父子、互斥規則，並把體位／性別需求寫進每個 tag 的 `needs`／`mutex`（引擎不再另抄一份清單）。另外會補上男性種族和醜男／胖男／宅男這類長相。
 
 ```bash
 python scripts/merge_lexicon.py
@@ -214,7 +214,7 @@ python scripts/merge_lexicon.py
 python scripts/add_zh.py
 ```
 
-抽牌與對帳測試：
+抽牌與對帳測試（或雙擊 `test.bat`）：
 
 ```bash
 node scripts/test_engine.mjs

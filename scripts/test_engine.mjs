@@ -14,6 +14,10 @@ import {
   missingPins,
   mulberry32,
   mutexSiblings,
+  FEMALE_COUNT,
+  MALE_COUNT,
+  hasFemale,
+  hasMale,
 } from "../web/engine.js";
 
 const ROOT = join(dirname(fileURLToPath(import.meta.url)), "..");
@@ -232,7 +236,7 @@ function eraDraws(era, n = 60, seed0 = 9000) {
   let boys = 0;
   for (let i = 0; i < 80; i++) {
     const d = drawOne(lex, s, new Set(), new Set(), mulberry32(9300 + i), 9300 + i);
-    if ([...tagsOf(d)].some((t) => t.includes("boy"))) boys += 1;
+    if (hasMale([...tagsOf(d)])) boys += 1;
   }
   ok("both genders off still draws mixed (some boys)", boys > 0, `boys=${boys}/80`);
 }
@@ -498,8 +502,8 @@ function eraDraws(era, n = 60, seed0 = 9000) {
       }
       if (set.has("indoors") && set.has("outdoors")) kinds.push("in_out");
       if (set.has("day") && set.has("night")) kinds.push("day_night");
-      const hasGirl = [...set].some((t) => t.includes("girl"));
-      const hasBoy = [...set].some((t) => t.includes("boy"));
+      const hasGirl = [...set].some((t) => FEMALE_COUNT.has(t));
+      const hasBoy = [...set].some((t) => MALE_COUNT.has(t));
       for (const t of set) {
         const it = lex.byTag.get(t);
         if (!it) continue;
@@ -735,8 +739,8 @@ function indoorOutdoorClash(have) {
   for (let i = 0; i < 50; i++) {
     const d = drawOne(lex, s, new Set(), new Set(), mulberry32(24000 + i), 24000 + i);
     const have = tagsOf(d);
-    if ([...have].some((t) => /^(?:\d+)?boys$/.test(t) || t === "multiple boys")) {
-      hits.push("cast:" + [...have].filter((t) => /boy/.test(t)).join(","));
+    if ([...have].some((t) => MALE_COUNT.has(t))) {
+      hits.push("cast:" + [...have].filter((t) => MALE_COUNT.has(t)).join(","));
     }
     for (const t of have) {
       const it = lex.byTag.get(t);
@@ -822,6 +826,138 @@ function indoorOutdoorClash(have) {
     if (h.has("ugly bastard") || h.has("fat man") || h.has("otaku") || h.has("nerd")) girlUgly += 1;
   }
   eq("girl-only does not draw ugly/fat/otaku men", girlUgly, 0);
+}
+
+{
+  ok("cowboy shot is not a female count", !FEMALE_COUNT.has("cowboy shot") && !hasFemale(["cowboy shot"]));
+  ok("cowboy shot is not a male count", !MALE_COUNT.has("cowboy shot") && !hasMale(["cowboy shot"]));
+  ok("1boy counts as male", hasMale(["1boy"]) && !hasMale(["girl on top"]));
+}
+
+{
+  ok("dutch angle is in lexicon", lex.byTag.has("dutch angle"));
+  ok("light smile is in lexicon", lex.byTag.has("light smile"));
+  eq("dutch angle mutex", lex.byTag.get("dutch angle")?.mutex, "camera");
+  eq("looking away mutex", lex.byTag.get("looking away")?.mutex, "gaze");
+  ok("dutch angle mutexes cowboy shot", mutexSiblings(lex, "dutch angle").includes("cowboy shot"));
+  eq("smile mutex", lex.byTag.get("smile")?.mutex, "expression");
+  ok("smile mutexes frown", mutexSiblings(lex, "smile").includes("frown"));
+  ok("smile does not mutex wink", !mutexSiblings(lex, "smile").includes("wink"));
+  const pinSmile = applyPin(lex, new Set(), new Set(), "light smile");
+  ok("light smile keeps smile", pinSmile.pinned.has("light smile") && pinSmile.pinned.has("smile"));
+  const pinXcu = applyPin(lex, new Set(), new Set(), "extreme close-up");
+  ok("pin extreme close-up also pins close-up", pinXcu.pinned.has("extreme close-up") && pinXcu.pinned.has("close-up"));
+  const s = settings();
+  s.girl = true;
+  s.boy = false;
+  s.eras = ["modern"];
+  s.heats = ["tease"];
+  s.weights = { tease: 1, flash: 0, sex: 0 };
+  let faces = 0;
+  let twoCam = 0;
+  let twoMood = 0;
+  for (let i = 0; i < 40; i++) {
+    const d = drawOne(lex, s, new Set(), new Set(), mulberry32(27000 + i), 27000 + i);
+    const h = tagsOf(d);
+    const cams = [...h].filter((t) => lex.byTag.get(t)?.mutex === "camera");
+    if (cams.length > 1) {
+      const keep = cams.filter((t) => !cams.some((o) => o !== t && (lex.byTag.get(t)?.implies || []).includes(o)));
+      if (keep.length > 1) twoCam += 1;
+    }
+    const moods = [...h].filter((t) => lex.byTag.get(t)?.mutex === "expression");
+    const moodRoots = moods.filter(
+      (t) => !moods.some((o) => o !== t && (lex.byTag.get(o)?.implies || []).includes(t))
+    );
+    if (moodRoots.length > 1) twoMood += 1;
+    if ([...h].some((t) => lex.byTag.get(t)?.group === "face")) faces += 1;
+  }
+  eq("tease never two camera frames", twoCam, 0);
+  eq("tease never two mood expressions", twoMood, 0);
+  ok("modern tease usually has an expression", faces >= 28, `faces=${faces}/40`);
+}
+
+{
+  const s = settings();
+  s.girl = true;
+  s.boy = false;
+  s.eras = ["modern"];
+  s.heats = ["tease"];
+  s.weights = { tease: 1, flash: 0, sex: 0 };
+  const nude = [];
+  for (let i = 0; i < 40; i++) {
+    const d = drawOne(lex, s, new Set(), new Set(), mulberry32(26000 + i), 26000 + i);
+    const h = tagsOf(d);
+    if (h.has("nude") || h.has("completely nude")) nude.push(i);
+  }
+  eq("tease never force-nudes", nude.length, 0);
+}
+
+{
+  const s = settings();
+  s.girl = true;
+  s.boy = false;
+  s.eras = ["modern"];
+  s.heats = ["flash"];
+  s.weights = { tease: 0, flash: 1, sex: 0 };
+  const nude = [];
+  const noGarment = [];
+  const noAct = [];
+  for (let i = 0; i < 40; i++) {
+    const d = drawOne(lex, s, new Set(), new Set(), mulberry32(26100 + i), 26100 + i);
+    const h = tagsOf(d);
+    if (h.has("nude") || h.has("completely nude")) nude.push(i);
+    const garment = [...h].some((t) => {
+      const it = lex.byTag.get(t);
+      if (!it || it.section !== "clothing") return false;
+      return it.layer === "garment" && (it.mutex === "onepiece" || it.mutex === "top" || it.mutex === "bottom");
+    });
+    if (!garment) noGarment.push(i);
+    const act = [...h].some((t) => {
+      const it = lex.byTag.get(t);
+      return it && (it.mutex === "clothes_action" || it.group === "flash");
+    });
+    if (!act) noAct.push(i);
+  }
+  eq("flash never force-nudes", nude.length, 0);
+  eq("flash always has a body garment", noGarment.length, 0);
+  eq("flash always has a clothes action", noAct.length, 0);
+}
+
+{
+  const s = settings();
+  s.girl = true;
+  s.boy = false;
+  s.eras = ["modern"];
+  s.heats = ["sex"];
+  s.weights = { tease: 0, flash: 0, sex: 1 };
+  let nude = 0;
+  let clothed = 0;
+  for (let i = 0; i < 50; i++) {
+    const d = drawOne(lex, s, new Set(), new Set(), mulberry32(26200 + i), 26200 + i);
+    const h = tagsOf(d);
+    if (h.has("nude") || h.has("completely nude")) nude += 1;
+    else clothed += 1;
+  }
+  ok("sex heat is not always nude", clothed >= 8, `clothed=${clothed} nude=${nude}`);
+}
+
+{
+  const cg = lex.byTag.get("cowgirl position");
+  ok("cowgirl mutex is sex_act", cg && cg.mutex === "sex_act");
+  ok("cowgirl needs pair", (cg?.needs || []).includes("pair"));
+  ok("cowgirl needs male", (cg?.needs || []).includes("male"));
+  ok("cowgirl needs female", (cg?.needs || []).includes("female"));
+  const fell = lex.byTag.get("fellatio");
+  ok("fellatio needs male", (fell?.needs || []).includes("male"));
+  ok("fellatio needs pair", (fell?.needs || []).includes("pair"));
+  const oral = lex.byTag.get("oral");
+  ok("oral umbrella has no mutex", oral && !oral.mutex);
+  ok("oral mutexExtra sex_act", (oral?.mutexExtra || []).includes("sex_act"));
+  ok("oral still mutexes cowgirl", mutexSiblings(lex, "oral").includes("cowgirl position"));
+  const breasts = lex.byTag.get("huge breasts");
+  ok("huge breasts needs female", (breasts?.needs || []).includes("female"));
+  const kiss = lex.byTag.get("kiss");
+  ok("kiss needs pair", (kiss?.needs || []).includes("pair"));
 }
 
 if (failed) {
