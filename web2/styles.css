@@ -161,7 +161,6 @@ html {
   border-bottom: 0;
 }
 
-.cat:target header strong,
 .cat.is-open header strong {
   color: var(--color-accent);
 }

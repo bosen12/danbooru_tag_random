@@ -344,8 +344,7 @@ input[type="number"] {
   transition: grid-template-rows var(--dur-move) var(--ease-in-out);
 }
 
-.cat.is-open,
-.cat:target {
+.cat.is-open {
   grid-template-rows: auto 1fr;
 }
 
@@ -430,8 +429,7 @@ input[type="number"] {
   opacity: 0.65;
 }
 
-.cat.is-open .cat-toggle::before,
-.cat:target .cat-toggle::before {
+.cat.is-open .cat-toggle::before {
   transform: rotate(45deg);
   translate: 0 -0.18em;
 }

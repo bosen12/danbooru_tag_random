@@ -666,7 +666,7 @@ function syncVisibility(auto) {
     const n = catN.get(wrap) || 0;
     wrap.hidden = n === 0;
     if (n) any = true;
-    const shouldOpen = filtering ? n > 0 : userOpen.has(wrap.id) || location.hash === "#" + wrap.id;
+    const shouldOpen = filtering ? n > 0 : userOpen.has(wrap.id);
     applyCatOpen(wrap, shouldOpen);
     const sec = SECTIONS.find((s) => wrap.id === "sec-" + s.id);
     const hint = wrap.querySelector(".cat-actions > span");
@@ -732,6 +732,7 @@ function buildCats() {
     wrap.className = "cat" + (sec.id === "quality" ? " quality" : "");
     wrap.id = "sec-" + sec.id;
     const opened = userOpen.has(wrap.id) || location.hash === "#" + wrap.id;
+    if (opened) userOpen.add(wrap.id);
     const head = document.createElement("header");
     const toggle = document.createElement("button");
     toggle.type = "button";
