@@ -546,7 +546,7 @@ function takeFromPool(pool, count, rand, commit, prefer) {
 }
 
 export function reconcile(lex, used, female, male, people, pinned = new Set()) {
-  const order = { subject: 0, feature: 1, pose: 2, clothing: 3, env: 4 };
+  const order = { subject: 0, feature: 1, clothing: 2, pose: 3, env: 4 };
   const items = [...used].map(
     (t) => lex.byTag.get(t) || { tag: t, section: "env", layer: "normal" }
   );
@@ -910,7 +910,7 @@ export function drawOne(lex, settings, pinned, userBanned, rand, seed) {
   if (!env.includes("soft lighting")) env.unshift("soft lighting");
 
   const nsfw = lex.data.nsfwTail;
-  const ordered = [...quality, ...subject, ...feature, ...pose, ...clothing, ...env, ...nsfw];
+  const ordered = [...quality, ...subject, ...feature, ...clothing, ...pose, ...env, ...nsfw];
   const seen = new Set();
   const positive = [];
   for (const t of ordered) {

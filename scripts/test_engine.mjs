@@ -1015,6 +1015,24 @@ function indoorOutdoorClash(have) {
   eq("n-only keeps default pose count", partial.counts.pose, data.defaults.counts.pose);
 }
 
+{
+  const s = settings();
+  s.girl = true;
+  s.boy = false;
+  s.eras = ["modern"];
+  s.heats = ["tease"];
+  s.weights = { tease: 1, flash: 0, sex: 0 };
+  const d = drawOne(lex, s, new Set(), new Set(), mulberry32(42), 42);
+  const parts = d.positive.split(", ").map((t) => t.trim()).filter(Boolean);
+  const firstCloth = parts.findIndex((t) => lex.byTag.get(t)?.section === "clothing");
+  const firstPose = parts.findIndex((t) => lex.byTag.get(t)?.section === "pose");
+  ok(
+    "clothing comes before pose in POS",
+    firstCloth >= 0 && firstPose >= 0 && firstCloth < firstPose,
+    `cloth@${firstCloth} pose@${firstPose} pos=${d.positive}`
+  );
+}
+
 if (failed) {
   console.error(`\n${failed} failed`);
   process.exit(1);
