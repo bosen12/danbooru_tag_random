@@ -12,6 +12,7 @@ from server import (  # noqa: E402
     Handler,
     comfy_view_query,
     first_image_src,
+    image_error_code,
     mask_ws,
     parse_comfy_binary,
     sse,
@@ -76,6 +77,15 @@ ok(
     == "/api/image?filename=x.png&subfolder=&type=output",
 )
 ok("empty history has no image", first_image_src({"outputs": {}}) is None)
+
+
+class _Http:
+    def __init__(self, code: int) -> None:
+        self.code = code
+
+
+ok("missing image is 404", image_error_code(_Http(404)) == 404)
+ok("comfy down is 502", image_error_code(OSError("refused")) == 502)
 
 if failed:
     print(f"\n{failed} failed")

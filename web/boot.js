@@ -48,6 +48,7 @@ let viewMode = "all";
 let eraOnly = true;
 let lastPositive = "";
 const btnByTag = new Map();
+const userOpen = new Set(["sec-quality"]);
 let paintPrev = { pin: new Set(), auto: new Set(), user: new Set() };
 
 const $ = (id) => document.getElementById(id);
@@ -525,6 +526,14 @@ function sectionItems(sec) {
 }
 
 function chipShouldShow(item, auto, q) {
+  if (item.section === "quality") {
+    if (viewMode === "pinned" || viewMode === "banned") return false;
+    if (q) {
+      const zh = (item.zh || labelOf(lex, item.tag) || "").toLowerCase();
+      if (!item.tag.toLowerCase().includes(q) && !zh.includes(q)) return false;
+    }
+    return true;
+  }
   const st = tagState(item.tag, pinned, userBanned, auto);
   if (viewMode === "pinned" && st !== "pinned") return false;
   if (viewMode === "banned" && st !== "banned") return false;
@@ -535,6 +544,23 @@ function chipShouldShow(item, auto, q) {
     if (!item.tag.toLowerCase().includes(q) && !zh.includes(q)) return false;
   }
   return true;
+}
+
+function catalogItem(tag) {
+  const item = lex.byTag.get(tag);
+  if (item) return item;
+  if ((lex.data.quality || []).includes(tag)) {
+    return { tag, section: "quality", zh: (lex.data.zh || {})[tag] };
+  }
+  return null;
+}
+
+function applyCatOpen(wrap, opened) {
+  wrap.classList.toggle("is-open", opened);
+  const toggle = wrap.querySelector(":scope > header .cat-toggle");
+  if (toggle) toggle.setAttribute("aria-expanded", opened ? "true" : "false");
+  const body = wrap.querySelector(":scope > .cat-body");
+  if (body) body.inert = !opened;
 }
 
 function hintFor(sec, vis) {
@@ -618,7 +644,7 @@ function syncVisibility(auto) {
   const subShow = new Map();
   const catN = new Map();
   for (const [tag, btns] of btnByTag) {
-    const item = lex.byTag.get(tag);
+    const item = catalogItem(tag);
     if (!item) continue;
     const show = chipShouldShow(item, auto, q);
     for (const btn of btns) {
@@ -633,24 +659,15 @@ function syncVisibility(auto) {
     }
   }
   for (const fam of root.querySelectorAll(".family")) fam.hidden = !famShow.get(fam);
-  for (const sub of root.querySelectorAll(".sub")) {
-    if (sub.closest(".cat.quality")) sub.hidden = false;
-    else sub.hidden = !subShow.get(sub);
-  }
+  for (const sub of root.querySelectorAll(".sub")) sub.hidden = !subShow.get(sub);
+  const filtering = !!q || viewMode !== "all";
   let any = false;
   for (const wrap of root.querySelectorAll(".cat")) {
-    if (wrap.classList.contains("quality")) {
-      wrap.hidden = false;
-      any = true;
-      const sec = SECTIONS.find((s) => wrap.id === "sec-" + s.id);
-      const hint = wrap.querySelector(".cat-actions > span");
-      const n = wrap.querySelectorAll(".tag[data-tag]").length;
-      if (hint && sec) hint.textContent = hintFor(sec, { length: n });
-      continue;
-    }
     const n = catN.get(wrap) || 0;
     wrap.hidden = n === 0;
     if (n) any = true;
+    const shouldOpen = filtering ? n > 0 : userOpen.has(wrap.id) || location.hash === "#" + wrap.id;
+    applyCatOpen(wrap, shouldOpen);
     const sec = SECTIONS.find((s) => wrap.id === "sec-" + s.id);
     const hint = wrap.querySelector(".cat-actions > span");
     if (hint && sec) hint.textContent = hintFor(sec, { length: n });
@@ -707,7 +724,6 @@ function buildCats() {
   const auto = autoBannedFromPins(lex, pinned);
   paintPrev = { pin: new Set(pinned), auto, user: new Set(userBanned) };
   const root = $("cats");
-  const open = new Set([...root.querySelectorAll(".cat.is-open")].map((el) => el.id));
   const frag = document.createDocumentFragment();
   syncViewFilters();
 
@@ -715,8 +731,7 @@ function buildCats() {
     const wrap = document.createElement("section");
     wrap.className = "cat" + (sec.id === "quality" ? " quality" : "");
     wrap.id = "sec-" + sec.id;
-    const opened = sec.id === "quality" || open.has(wrap.id) || location.hash === "#" + wrap.id;
-    if (opened) wrap.classList.add("is-open");
+    const opened = userOpen.has(wrap.id) || location.hash === "#" + wrap.id;
     const head = document.createElement("header");
     const toggle = document.createElement("button");
     toggle.type = "button";
@@ -739,6 +754,7 @@ function buildCats() {
     body.id = wrap.id + "-body";
     toggle.setAttribute("aria-controls", body.id);
     wrap.append(body);
+    applyCatOpen(wrap, opened);
     const order = (lex.data.groupOrder && lex.data.groupOrder[sec.id]) || ["other"];
     const zhMap = lex.data.groupZh || {};
     const buckets = new Map();
@@ -836,6 +852,7 @@ function makeTagBtn(item, sec, auto) {
     btn.dataset.state = "pinned";
     btn.dataset.locked = "1";
     btn.disabled = true;
+    rememberBtn(item.tag, btn);
     return btn;
   }
   applyTagState(btn, item, auto, sec.id);
@@ -942,7 +959,15 @@ function fillCard(el, job, err) {
     img.addEventListener(
       "error",
       () => {
-        if (!el.classList.contains("is-fail")) fillCard(el, null, "圖片載入失敗");
+        if (el.classList.contains("is-fail") || el.classList.contains("is-img-fail")) return;
+        el.classList.add("is-img-fail");
+        const meta = el.querySelector(".meta");
+        if (meta && !meta.querySelector(".img-fail")) {
+          const note = document.createElement("p");
+          note.className = "warn img-fail";
+          note.textContent = "圖片載入失敗，Comfy 可能已關閉或輸出被清掉。POS 仍在下面。";
+          meta.append(note);
+        }
       },
       { once: true }
     );
@@ -1165,8 +1190,10 @@ function bindUi() {
     const toggle = e.target.closest(".cat-toggle");
     if (toggle) {
       const cat = toggle.closest(".cat");
-      const opened = cat.classList.toggle("is-open");
-      toggle.setAttribute("aria-expanded", opened ? "true" : "false");
+      const opened = !cat.classList.contains("is-open");
+      applyCatOpen(cat, opened);
+      if (opened) userOpen.add(cat.id);
+      else userOpen.delete(cat.id);
     }
   });
   const trayPins = $("tray-pins");
@@ -1232,6 +1259,12 @@ function bindUi() {
     if (btn) toggleHeat(btn.dataset.heat);
   });
   let searchTimer = 0;
+  window.addEventListener("hashchange", () => {
+    const wrap = location.hash ? document.getElementById(location.hash.slice(1)) : null;
+    if (!wrap || !wrap.classList.contains("cat")) return;
+    userOpen.add(wrap.id);
+    applyCatOpen(wrap, true);
+  });
   $("q").addEventListener("input", () => {
     window.clearTimeout(searchTimer);
     searchTimer = window.setTimeout(() => renderCats("search"), 120);

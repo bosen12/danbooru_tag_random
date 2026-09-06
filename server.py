@@ -184,6 +184,10 @@ def comfy_view_query(filename: str, subfolder: str = "", type_: str = "output") 
     return urllib.parse.urlencode({"filename": name, "subfolder": "/".join(parts), "type": type_})
 
 
+def image_error_code(exc: BaseException) -> int:
+    return 404 if getattr(exc, "code", None) == 404 else 502
+
+
 def first_image_src(history: dict) -> str | None:
     for node_out in (history.get("outputs") or {}).values():
         for img in node_out.get("images") or []:
@@ -506,7 +510,7 @@ class Handler(BaseHTTPRequestHandler):
         try:
             raw = api("GET", f"/view?{q}", timeout=60)
         except Exception as exc:
-            self._json(502, {"ok": False, "error": str(exc)})
+            self._json(image_error_code(exc), {"ok": False, "error": str(exc)})
             return
         if not isinstance(raw, (bytes, bytearray)):
             self._json(502, {"ok": False, "error": "not an image"})
