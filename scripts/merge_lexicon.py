@@ -737,6 +737,31 @@ def extra_style_tags() -> list[dict]:
     ]
 
 
+def extra_quality_boost_tags() -> list[dict]:
+    """Optional. WAI does not need these on every card."""
+    zh = {
+        "absurdres": "超高解析",
+        "highres": "高解析",
+        "very aesthetic": "非常有美感",
+    }
+    return [
+        {
+            "tag": tag,
+            "section": "quality",
+            "gate": "any",
+            "heat": list(HEATS),
+            "mutex": None,
+            "bind": [],
+            "implies": [],
+            "layer": "normal",
+            "era": ["any"],
+            "needs": [],
+            "zh": zh[tag],
+        }
+        for tag in ("absurdres", "highres", "very aesthetic")
+    ]
+
+
 def extra_breast_feel_tags() -> list[dict]:
     """Always-on breast feel. No mutex so they sit beside breast_size."""
     return [
@@ -987,6 +1012,7 @@ def main() -> None:
     rows.extend(extra_shot_face_tags())
     rows.extend(extra_breast_feel_tags())
     rows.extend(extra_style_tags())
+    rows.extend(extra_quality_boost_tags())
 
     old_zh: dict[str, str] = {}
     if OUT.exists():
@@ -1029,9 +1055,6 @@ def main() -> None:
             "masterpiece",
             "best quality",
             "amazing quality",
-            "absurdres",
-            "highres",
-            "very aesthetic",
         ],
         "nsfwTail": ["nsfw", "explicit"],
         "alwaysEnv": ["soft lighting"],

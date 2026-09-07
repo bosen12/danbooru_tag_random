@@ -2,10 +2,7 @@
   "quality": [
     "masterpiece",
     "best quality",
-    "amazing quality",
-    "absurdres",
-    "highres",
-    "very aesthetic"
+    "amazing quality"
   ],
   "nsfwTail": [
     "nsfw",
@@ -81,7 +78,8 @@
   "groupOrder": {
     "quality": [
       "fixed",
-      "style"
+      "style",
+      "boost"
     ],
     "subject": [
       "count_f",
@@ -136,6 +134,7 @@
   "groupZh": {
     "fixed": "固定",
     "style": "風格",
+    "boost": "解析／美感",
     "count_f": "人數・女",
     "count_m": "人數・男",
     "extra": "其他",
@@ -19314,6 +19313,63 @@
       ],
       "group": "style",
       "zh": "乾淨線條"
+    },
+    {
+      "tag": "absurdres",
+      "section": "quality",
+      "gate": "any",
+      "heat": [
+        "tease",
+        "flash",
+        "sex"
+      ],
+      "mutex": null,
+      "bind": [],
+      "implies": [],
+      "layer": "normal",
+      "era": [
+        "any"
+      ],
+      "group": "boost",
+      "zh": "超高解析"
+    },
+    {
+      "tag": "highres",
+      "section": "quality",
+      "gate": "any",
+      "heat": [
+        "tease",
+        "flash",
+        "sex"
+      ],
+      "mutex": null,
+      "bind": [],
+      "implies": [],
+      "layer": "normal",
+      "era": [
+        "any"
+      ],
+      "group": "boost",
+      "zh": "高解析"
+    },
+    {
+      "tag": "very aesthetic",
+      "section": "quality",
+      "gate": "any",
+      "heat": [
+        "tease",
+        "flash",
+        "sex"
+      ],
+      "mutex": null,
+      "bind": [],
+      "implies": [],
+      "layer": "normal",
+      "era": [
+        "any"
+      ],
+      "group": "boost",
+      "zh": "非常有美感"
     }
   ]
 }

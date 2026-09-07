@@ -1152,6 +1152,11 @@ function indoorOutdoorClash(have) {
   ok("quality sits after subject", qAt > girlAt && girlAt >= 0, `girl@${girlAt} quality@${qAt}`);
   ok("quality sits after nsfw tail", qAt > nsfwAt && nsfwAt >= 0, `nsfw@${nsfwAt} quality@${qAt}`);
   ok("default draw has no cel shading", !parts.includes("cel shading"));
+  ok("default draw has no absurdres", !parts.includes("absurdres"));
+  ok("default draw has no highres", !parts.includes("highres"));
+  ok("default draw has no very aesthetic", !parts.includes("very aesthetic"));
+  ok("default draw keeps masterpiece", parts.includes("masterpiece"));
+  ok("default draw keeps best quality", parts.includes("best quality"));
 }
 
 {
@@ -1172,6 +1177,7 @@ function indoorOutdoorClash(have) {
   );
   eq("cel shading is optional quality", lex.byTag.get("cel shading")?.section, "quality");
   eq("cel shading is style group", lex.byTag.get("cel shading")?.group, "style");
+  eq("absurdres is optional boost", lex.byTag.get("absurdres")?.group, "boost");
 }
 
 {

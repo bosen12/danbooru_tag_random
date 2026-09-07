@@ -1,7 +1,7 @@
 """Assign a display subgroup to each tag. One source of truth for merge + UI order."""
 
 GROUP_ORDER = {
-    "quality": ["fixed", "style"],
+    "quality": ["fixed", "style", "boost"],
     "subject": ["count_f", "count_m", "extra"],
     "feature": [
         "hair_len",
@@ -35,6 +35,7 @@ GROUP_ORDER = {
 GROUP_ZH = {
     "fixed": "固定",
     "style": "風格",
+    "boost": "解析／美感",
     "count_f": "人數・女",
     "count_m": "人數・男",
     "extra": "其他",
@@ -304,6 +305,8 @@ def assign_group(item: dict) -> str:
     gate = item.get("gate") or "any"
 
     if sec == "quality":
+        if tag in {"absurdres", "highres", "very aesthetic"}:
+            return "boost"
         return "style"
 
     if sec == "subject":
