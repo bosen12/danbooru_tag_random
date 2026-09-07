@@ -437,7 +437,7 @@ function chooseHeat(settings, pinned, lex, rand, ctx) {
   let allowed = enabled.length ? enabled : ["tease"];
   if (fromPins && fromPins.length) {
     const hit = allowed.filter((h) => fromPins.includes(h));
-    allowed = hit.length ? hit : fromPins;
+    if (hit.length) allowed = hit;
   }
   const weights = { ...settings.weights };
   const filtered = {};
@@ -468,6 +468,19 @@ export function eraMismatches(lex, pinned, era) {
     const e = item?.era;
     if (!e || !e.length || e.includes("any")) continue;
     if (!e.includes(era)) out.push(t);
+  }
+  return out;
+}
+
+export function heatMismatches(lex, pinned, heats) {
+  const enabled = HEATS.filter((h) => (heats || []).includes(h));
+  if (!enabled.length) return [];
+  const out = [];
+  for (const t of pinned) {
+    const item = lex.byTag.get(t);
+    if (!item) continue;
+    const hs = item.heat && item.heat.length ? item.heat : HEATS;
+    if (!hs.some((h) => enabled.includes(h))) out.push(t);
   }
   return out;
 }
@@ -969,6 +982,7 @@ export function drawOne(lex, settings, pinned, userBanned, rand, seed) {
     positive: positive.join(", "),
     conflicts: contradictions(lex, positive),
     eraClash: eraMismatches(lex, pinned, era),
+    heatClash: heatMismatches(lex, pinned, settings.heats),
   };
 }
 

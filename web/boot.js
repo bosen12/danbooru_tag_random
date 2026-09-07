@@ -11,6 +11,7 @@ import {
   ERAS,
   ERA_LABELS,
   eraMismatches,
+  heatMismatches,
   FEMALE_COUNT,
   indexLexicon,
   labelOf,
@@ -170,6 +171,27 @@ function renderEras() {
   updateEraClash();
 }
 
+const HEAT_LABELS = { tease: "誘惑", flash: "走光", sex: "性愛" };
+
+function updateHeatClash() {
+  const note = $("heat-clash");
+  if (!note) return;
+  const clash = heatMismatches(lex, pinned, settings.heats);
+  if (clash.length) {
+    const scale = (settings.heats || []).map((h) => HEAT_LABELS[h] || h).join("／");
+    note.hidden = false;
+    note.textContent =
+      "你釘了「" +
+      clash.map((t) => labelOf(lex, t)).join("、") +
+      "」，尺度對不上（現在只開" +
+      scale +
+      "）。衣服仍會進圖，這張還是走你勾的尺度。";
+  } else {
+    note.hidden = true;
+    note.textContent = "";
+  }
+}
+
 function updateEraClash() {
   const note = $("era-clash");
   if (!note) return;
@@ -239,6 +261,7 @@ function syncHeat() {
       settings.heats.includes(btn.dataset.heat) ? "true" : "false"
     );
   }
+  updateHeatClash();
 }
 
 function applyPreset(name) {
@@ -861,6 +884,7 @@ function afterPin() {
   renderCats();
   renderTray();
   updateEraClash();
+  updateHeatClash();
   syncCast();
   const auto = autoBannedFromPins(lex, pinned);
   for (const span of document.querySelectorAll(".pos span[data-tag]")) {

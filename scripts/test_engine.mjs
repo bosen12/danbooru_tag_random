@@ -12,6 +12,7 @@ import {
   drawOne,
   ERAS,
   identityPins,
+  heatMismatches,
   sanitizeSettings,
   indexLexicon,
   missingPins,
@@ -494,6 +495,53 @@ function eraDraws(era, n = 60, seed0 = 9000) {
     }
   }
   ok("pair sex heat usually has a sex act", acts >= 32, `acts=${acts}/40`);
+}
+
+{
+  const s = settings();
+  s.girl = true;
+  s.boy = true;
+  s.eras = ["modern"];
+  s.heats = ["sex"];
+  s.weights = { tease: 0, flash: 0, sex: 1 };
+  let pinned = applyPin(lex, new Set(), new Set(), "micro bikini").pinned;
+  pinned = applyPin(lex, pinned, new Set(), "1girl").pinned;
+  pinned = applyPin(lex, pinned, new Set(), "1boy").pinned;
+  let sexHeat = 0;
+  let acts = 0;
+  let keptBikini = 0;
+  for (let i = 0; i < 20; i++) {
+    const d = drawOne(lex, s, pinned, new Set(), mulberry32(19100 + i), 19100 + i);
+    if (d.heat === "sex") sexHeat += 1;
+    const have = tagsOf(d);
+    if (have.has("micro bikini")) keptBikini += 1;
+    if ([...have].some((t) => t === "sex" || lex.byTag.get(t)?.mutex === "sex_act")) acts += 1;
+  }
+  ok("sex-only heat stays sex when micro bikini is pinned", sexHeat === 20, `sexHeat=${sexHeat}/20`);
+  ok("pinned micro bikini still enters sex draws", keptBikini === 20, `bikini=${keptBikini}/20`);
+  ok("sex-only + pair + bikini pin still gets a sex act", acts >= 16, `acts=${acts}/20`);
+}
+
+{
+  const s = settings();
+  s.girl = true;
+  s.boy = false;
+  s.heats = ["tease", "flash", "sex"];
+  s.weights = { tease: 0.3, flash: 0.3, sex: 0.4 };
+  const pinned = applyPin(lex, new Set(), new Set(), "micro bikini").pinned;
+  let flash = 0;
+  for (let i = 0; i < 20; i++) {
+    const d = drawOne(lex, s, pinned, new Set(), mulberry32(19200 + i), 19200 + i);
+    if (d.heat === "flash") flash += 1;
+  }
+  ok("mixed heat + flash-only pin still rolls flash", flash === 20, `flash=${flash}/20`);
+}
+
+{
+  const pinned = applyPin(lex, new Set(), new Set(), "micro bikini").pinned;
+  const clash = heatMismatches(lex, pinned, ["sex"]);
+  ok("sex-only clash lists micro bikini", clash.includes("micro bikini"), `clash=${clash}`);
+  ok("mixed heats do not clash with micro bikini", heatMismatches(lex, pinned, ["tease", "flash", "sex"]).length === 0);
 }
 
 {
