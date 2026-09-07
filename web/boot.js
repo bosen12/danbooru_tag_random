@@ -5,6 +5,7 @@ import {
   cycleTag,
   defaultSettings,
   drawOne,
+  identityPins,
   sanitizeSettings,
   ERAS,
   ERA_LABELS,
@@ -186,6 +187,12 @@ function updateEraClash() {
     note.hidden = true;
     note.textContent = "";
   }
+}
+
+function syncSamePerson() {
+  const btn = $("same-person");
+  if (!btn) return;
+  btn.setAttribute("aria-pressed", settings.samePerson ? "true" : "false");
 }
 
 function syncHeat() {
@@ -932,18 +939,41 @@ function setLive(el, ev) {
   }
 }
 
+function failCard(el, err) {
+  el.classList.remove("is-wait", "is-done");
+  el.classList.add("is-fail");
+  hideMeter(el);
+  const skel = el.querySelector(".skel");
+  if (skel) skel.remove();
+  const bar = el.querySelector(".bar");
+  if (!bar) return;
+  const bits = [err];
+  if (el.dataset.seed) bits.push("seed " + el.dataset.seed);
+  if (el.dataset.era && ERA_LABELS[el.dataset.era]) bits.push(ERA_LABELS[el.dataset.era]);
+  const label = document.createElement("span");
+  label.textContent = bits.join(" · ");
+  bar.replaceChildren(label);
+  if (el.dataset.positive) {
+    const btn = document.createElement("button");
+    btn.type = "button";
+    btn.className = "ghost copy";
+    btn.textContent = "複製 POS";
+    btn.addEventListener("click", async () => {
+      await navigator.clipboard.writeText(el.dataset.positive);
+      speak("已複製 POS");
+      btn.textContent = "已複製";
+      setTimeout(() => {
+        btn.textContent = "複製 POS";
+      }, 1200);
+    });
+    bar.append(btn);
+  }
+}
+
 function fillCard(el, job, err) {
   el.classList.remove("is-wait");
   if (err) {
-    el.classList.remove("is-done");
-    el.classList.add("is-fail");
-    hideMeter(el);
-    const bar = el.querySelector(".bar");
-    if (bar) bar.textContent = "失敗";
-    const pos = el.querySelector(".pos");
-    if (pos) pos.textContent = err;
-    const skel = el.querySelector(".skel");
-    if (skel) skel.remove();
+    failCard(el, err);
     return;
   }
   el.classList.add("is-done");
@@ -1103,17 +1133,24 @@ async function runBatch() {
     $("results").append(c);
   }
 
+  let ident = new Set();
   for (let i = 0; i < n; i++) {
     if (aborting) {
       speak("已取消");
-      for (let j = i; j < cards.length; j++) fillCard(cards[j], null, "已取消");
+      for (let j = i; j < cards.length; j++) failCard(cards[j], "已取消");
       break;
     }
     speak(`生圖 ${i + 1}/${n}`);
     const seedNum = randomSeed();
     const rng = mulberry32(seedNum);
-    const drawn = drawOne(lex, settings, pinned, userBanned, rng, seedNum);
+    const pinForDraw =
+      settings.samePerson && ident.size ? new Set([...pinned, ...ident]) : pinned;
+    const drawn = drawOne(lex, settings, pinForDraw, userBanned, rng, seedNum);
+    if (settings.samePerson && ident.size === 0) ident = identityPins(lex, drawn.positive);
     const card = cards[i];
+    card.dataset.seed = String(drawn.seed);
+    card.dataset.era = drawn.era || "";
+    card.dataset.positive = drawn.positive;
     showPos(drawn.positive);
     setPosLine(card, drawn.positive);
     setLive(card, { status: `抽好了，生圖 ${i + 1}/${n}…` });
@@ -1151,15 +1188,15 @@ async function runBatch() {
             fillCard(card, { ...data, ...extra });
           } else if (event === "error") {
             finished = true;
-            fillCard(card, null, String(data.error || "gen failed"));
+            failCard(card, String(data.error || "Comfy 報錯"));
           }
         },
         genAbort.signal
       );
       if (!finished) throw new Error("生圖中斷");
     } catch (err) {
-      if (aborting || err.name === "AbortError") fillCard(card, null, "已取消");
-      else fillCard(card, null, String(err.message || err));
+      if (aborting || err.name === "AbortError") failCard(card, "已取消");
+      else failCard(card, String(err.message || err));
     }
   }
 
@@ -1215,6 +1252,27 @@ function bindUi() {
     settings.n = Math.max(1, Math.min(10, Number($("n").value) || 1));
     saveStore();
   });
+  const sameBtn = $("same-person");
+  if (sameBtn) {
+    sameBtn.addEventListener("click", () => {
+      settings.samePerson = !settings.samePerson;
+      syncSamePerson();
+      saveStore();
+    });
+  }
+  for (const nav of document.querySelectorAll(".jump")) {
+    nav.addEventListener("click", (e) => {
+      const a = e.target.closest("a[href^='#sec-']");
+      if (!a) return;
+      e.preventDefault();
+      const wrap = document.getElementById(a.hash.slice(1));
+      if (!wrap || !wrap.classList.contains("cat")) return;
+      userOpen.add(wrap.id);
+      applyCatOpen(wrap, true);
+      if (location.hash !== a.hash) location.hash = a.hash;
+      else wrap.scrollIntoView({ block: "start" });
+    });
+  }
   $("girl").addEventListener("click", () => {
     settings.girl = true;
     settings.boy = false;
@@ -1342,6 +1400,7 @@ async function main() {
   if (Array.isArray(saved.userBanned)) userBanned = new Set(saved.userBanned.filter((t) => typeof t === "string"));
 
   $("n").value = String(settings.n);
+  syncSamePerson();
   syncCast();
   renderCounts();
   syncSizeButtons();

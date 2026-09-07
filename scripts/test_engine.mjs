@@ -11,6 +11,7 @@ import {
   defaultSettings,
   drawOne,
   ERAS,
+  identityPins,
   sanitizeSettings,
   indexLexicon,
   missingPins,
@@ -1031,6 +1032,39 @@ function indoorOutdoorClash(have) {
     firstCloth >= 0 && firstPose >= 0 && firstCloth < firstPose,
     `cloth@${firstCloth} pose@${firstPose} pos=${d.positive}`
   );
+}
+
+{
+  const s = settings();
+  s.girl = true;
+  s.boy = false;
+  s.eras = ["modern"];
+  s.heats = ["tease"];
+  s.weights = { tease: 1, flash: 0, sex: 0 };
+  const first = drawOne(lex, s, new Set(), new Set(), mulberry32(9001), 9001);
+  const ident = identityPins(lex, first.positive);
+  ok("identity harvest has hair color", [...ident].some((t) => lex.byTag.get(t)?.mutex === "hair_color"));
+  ok("identity harvest skips clothing", ![...ident].some((t) => lex.byTag.get(t)?.section === "clothing"));
+  ok("identity harvest skips pose", ![...ident].some((t) => lex.byTag.get(t)?.section === "pose"));
+  const hair = [...ident].find((t) => lex.byTag.get(t)?.mutex === "hair_color");
+  const eyes = [...ident].find((t) => lex.byTag.get(t)?.mutex === "eye_color");
+  let sameHair = 0;
+  let sameEyes = 0;
+  let clothChanged = 0;
+  const firstCloth = [...tagsOf(first)].filter((t) => lex.byTag.get(t)?.section === "clothing").sort().join("|");
+  for (let i = 0; i < 8; i++) {
+    const pin = new Set(ident);
+    const d = drawOne(lex, s, pin, new Set(), mulberry32(9100 + i), 9100 + i);
+    const have = tagsOf(d);
+    if (hair && have.has(hair)) sameHair += 1;
+    if (eyes && have.has(eyes)) sameEyes += 1;
+    const cloth = [...have].filter((t) => lex.byTag.get(t)?.section === "clothing").sort().join("|");
+    if (cloth !== firstCloth) clothChanged += 1;
+  }
+  ok("later draws keep harvested hair color", !hair || sameHair === 8, `hair=${hair} kept=${sameHair}/8`);
+  ok("later draws keep harvested eye color", !eyes || sameEyes === 8, `eyes=${eyes} kept=${sameEyes}/8`);
+  ok("later draws can still change clothes", clothChanged >= 1, `changed=${clothChanged}/8`);
+  eq("samePerson defaults off", defaultSettings(data).samePerson, false);
 }
 
 if (failed) {

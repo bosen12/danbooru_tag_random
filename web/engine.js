@@ -194,6 +194,35 @@ export function applyBan(lex, pinned, userBanned, tag) {
   return { pinned: nextPin, userBanned: nextBan };
 }
 
+export const IDENTITY_MUTEX = new Set([
+  "hair_length",
+  "hair_color",
+  "eye_color",
+  "breast_size",
+  "race",
+  "male_build",
+]);
+
+export function isIdentityItem(item) {
+  if (!item) return false;
+  return IDENTITY_MUTEX.has(item.mutex) || item.group === "hair_style";
+}
+
+export function identityPins(lex, positive) {
+  let pinned = new Set();
+  let banned = new Set();
+  for (const t of String(positive || "")
+    .split(",")
+    .map((s) => s.trim())
+    .filter(Boolean)) {
+    if (!isIdentityItem(lex.byTag.get(t))) continue;
+    const next = applyPin(lex, pinned, banned, t);
+    pinned = next.pinned;
+    banned = next.userBanned;
+  }
+  return pinned;
+}
+
 export function applyClear(pinned, userBanned, tag) {
   const nextPin = new Set(pinned);
   const nextBan = new Set(userBanned);
@@ -946,6 +975,7 @@ export function defaultSettings(data) {
     heatPreset: d.heatPreset,
     weights: { ...data.heatWeights[d.heatPreset] },
     eras: d.eras ? [...d.eras] : [...ERAS],
+    samePerson: false,
   };
 }
 
@@ -984,6 +1014,7 @@ export function sanitizeSettings(raw, data) {
     heatPreset,
     weights,
     eras: eras.length ? eras : [...base.eras],
+    samePerson: raw.samePerson === true,
   };
 }
 
