@@ -4,6 +4,7 @@ from __future__ import annotations
 
 import base64
 import gzip
+import ipaddress
 import json
 import mimetypes
 import os
@@ -47,6 +48,29 @@ def _negative() -> str:
 
 
 NEGATIVE = _negative()
+_DEFAULT_ALLOW_NET = "127.0.0.0/8,100.64.0.0/10"
+
+
+def parse_allow_nets(raw: str | None = None):
+    if raw is None:
+        raw = os.environ.get("ALLOW_NET", "")
+    text = raw.strip() or _DEFAULT_ALLOW_NET
+    return [ipaddress.ip_network(part.strip(), strict=False) for part in text.split(",") if part.strip()]
+
+
+ALLOW_NETS = parse_allow_nets()
+
+
+def allowed_client(addr: str, nets=None) -> bool:
+    try:
+        ip = ipaddress.ip_address(addr)
+    except ValueError:
+        return False
+    if ip.version == 6 and ip.ipv4_mapped is not None:
+        ip = ip.ipv4_mapped
+    return any(ip in net for net in (ALLOW_NETS if nets is None else nets))
+
+
 STEPS = 25
 CFG = 6.5
 SAMPLER = "euler_ancestral"
@@ -477,6 +501,13 @@ class Handler(BaseHTTPRequestHandler):
         self.end_headers()
         self.wfile.write(blob)
 
+    def _allowed(self) -> bool:
+        if allowed_client(self.client_address[0]):
+            return True
+        self.close_connection = True
+        self._json(403, {"ok": False, "error": "forbidden"})
+        return False
+
     def _sse(self, events) -> None:
         self.send_response(200)
         self.send_header("Content-Type", "text/event-stream; charset=utf-8")
@@ -601,6 +632,8 @@ class Handler(BaseHTTPRequestHandler):
             self.wfile.write(data)
 
     def do_HEAD(self) -> None:
+        if not self._allowed():
+            return
         path = urllib.parse.urlparse(self.path).path
         if path == "/api/ping":
             self._json(200, ping())
@@ -608,6 +641,8 @@ class Handler(BaseHTTPRequestHandler):
         self._serve_static(False)
 
     def do_GET(self) -> None:
+        if not self._allowed():
+            return
         path = urllib.parse.urlparse(self.path).path
         if path == "/api/ping":
             self._json(200, ping())
@@ -618,6 +653,8 @@ class Handler(BaseHTTPRequestHandler):
         self._serve_static(True)
 
     def do_POST(self) -> None:
+        if not self._allowed():
+            return
         path = urllib.parse.urlparse(self.path).path
         length = int(self.headers.get("Content-Length") or 0)
         raw = self.rfile.read(length) if length else b"{}"
@@ -654,6 +691,7 @@ def main() -> None:
     port = int(os.environ.get("PORT", "8787"))
     httpd = ThreadingHTTPServer((host, port), Handler)
     print(f"排字匣  http://{host}:{port}   畫面 {WEB.name}   Comfy {comfy_base()}")
+    print("allow    " + ",".join(str(n) for n in ALLOW_NETS))
     httpd.serve_forever()
 
 

@@ -10,10 +10,12 @@ from pathlib import Path
 sys.path.insert(0, str(Path(__file__).resolve().parents[1]))
 from server import (  # noqa: E402
     Handler,
+    allowed_client,
     comfy_view_query,
     first_image_src,
     image_error_code,
     mask_ws,
+    parse_allow_nets,
     parse_comfy_binary,
     sse,
     ws_frame,
@@ -86,6 +88,42 @@ class _Http:
 
 ok("missing image is 404", image_error_code(_Http(404)) == 404)
 ok("comfy down is 502", image_error_code(OSError("refused")) == 502)
+
+nets = parse_allow_nets("")
+ok("loopback allowed", allowed_client("127.0.0.1", nets))
+ok("loopback net allowed", allowed_client("127.0.0.2", nets))
+ok("tailscale allowed", allowed_client("100.79.212.103", nets))
+ok("cgnat low allowed", allowed_client("100.64.0.1", nets))
+ok("cgnat high allowed", allowed_client("100.127.255.254", nets))
+ok("wifi blocked", not allowed_client("192.168.1.101", nets))
+ok("hotspot blocked", not allowed_client("192.168.137.1", nets))
+ok("wsl blocked", not allowed_client("172.17.64.1", nets))
+ok("cgnat below blocked", not allowed_client("100.63.255.255", nets))
+ok("mapped tailscale allowed", allowed_client("::ffff:100.79.212.103", nets))
+ok("mapped wifi blocked", not allowed_client("::ffff:192.168.1.101", nets))
+ok("garbage blocked", not allowed_client("not-an-ip", nets))
+ok("allow-all env", allowed_client("192.168.1.101", parse_allow_nets("0.0.0.0/0")))
+
+
+class _Client:
+    def __init__(self, ip: str) -> None:
+        self.client_address = (ip, 9)
+        self.close_connection = False
+        self.dumped = None
+
+    def _json(self, code, obj):
+        self.dumped = (code, obj)
+
+
+wifi = _Client("192.168.1.101")
+ok(
+    "wifi handler 403",
+    Handler._allowed(wifi) is False
+    and wifi.close_connection
+    and wifi.dumped == (403, {"ok": False, "error": "forbidden"}),
+)
+loop = _Client("127.0.0.1")
+ok("loopback handler ok", Handler._allowed(loop) is True and loop.dumped is None)
 
 if failed:
     print(f"\n{failed} failed")

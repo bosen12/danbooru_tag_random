@@ -20,7 +20,7 @@
 
 四套畫面抽牌規則相同，只是版面不同。詞庫和引擎都在 `web/`。
 
-`start*.bat` 會把伺服器綁在 `0.0.0.0`（本機瀏覽器仍開 `127.0.0.1`）。手機走 Tailscale 時用黑窗印出的 `Tailscale http://100.x.x.x:埠/`。防火牆若跳出，允許存取。只想本機聽可設 `HOST=127.0.0.1`。
+`start*.bat` 會把伺服器綁在 `0.0.0.0`（本機瀏覽器仍開 `127.0.0.1`）。請求只收 loopback 和 Tailscale（`100.64.0.0/10`），家裡 Wi-Fi / 熱點 / WSL 會 403。手機走 Tailscale 時用黑窗印出的 `Tailscale http://100.x.x.x:埠/`。防火牆若跳出，允許存取。只想本機聽可設 `HOST=127.0.0.1`。
 
 視窗不要關。改過程式後請 **Ctrl+F5**。
 
@@ -44,6 +44,7 @@ py -3 server.py
 | `COMFY_CKPT` | `illurtrious\waiIllustriousSDXL_v170.safetensors` |
 | `PORT` | `8787` |
 | `HOST` | 伺服器預設 `127.0.0.1`；`start*.bat` 設成 `0.0.0.0` |
+| `ALLOW_NET` | `127.0.0.0/8,100.64.0.0/10`（逗號分隔 CIDR；家用網要開再加） |
 | `WEB_DIR` | `web`（也可 `web1` / `web2` / `web3`） |
 
 負向 prompt 寫在 `web/lexicon.json` 的 `negative`（來源是 `scripts/merge_lexicon.py`）。詞庫載入失敗時 `server.py` 才用內建後備字串。
