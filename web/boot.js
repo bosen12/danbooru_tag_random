@@ -6,6 +6,7 @@ import {
   defaultSettings,
   drawOne,
   identityPins,
+  isIdentityItem,
   sanitizeSettings,
   ERAS,
   ERA_LABELS,
@@ -51,6 +52,7 @@ let eraOnly = true;
 let lastPositive = "";
 const btnByTag = new Map();
 const userOpen = new Set(["sec-quality"]);
+let lastIdent = new Set();
 let paintPrev = { pin: new Set(), auto: new Set(), user: new Set() };
 
 const $ = (id) => document.getElementById(id);
@@ -189,10 +191,39 @@ function updateEraClash() {
   }
 }
 
+function identitySummary(ident) {
+  if (!ident || !ident.size) return "";
+  const skip = /pubic|leg hair/;
+  const bits = [];
+  const seen = new Set();
+  for (const t of ident) {
+    if (skip.test(t) || t === "colored inner hair") continue;
+    const it = lex.byTag.get(t);
+    if (!isIdentityItem(it)) continue;
+    const lab = labelOf(lex, t);
+    if (!lab || seen.has(lab)) continue;
+    seen.add(lab);
+    bits.push(lab);
+    if (bits.length >= 5) break;
+  }
+  return bits.join(" · ");
+}
+
 function syncSamePerson() {
   const btn = $("same-person");
   if (!btn) return;
-  btn.setAttribute("aria-pressed", settings.samePerson ? "true" : "false");
+  const on = !!settings.samePerson;
+  btn.classList.toggle("is-on", on);
+  btn.setAttribute("aria-checked", on ? "true" : "false");
+  const hint = $("same-person-hint");
+  if (!hint) return;
+  const n = Math.max(1, Number(($("n") && $("n").value) || settings.n) || 1);
+  if (!on) hint.textContent = "多張鎖髮瞳胸，衣場照抽";
+  else if (n < 2) hint.textContent = "已開。抽 2 張以上才會鎖臉";
+  else if (lastIdent.size) {
+    const sum = identitySummary(lastIdent);
+    hint.textContent = sum ? "這批鎖：" + sum : "第 1 張定臉，後面跟著";
+  } else hint.textContent = "第 1 張定臉，後面跟著";
 }
 
 function syncHeat() {
@@ -1146,11 +1177,25 @@ async function runBatch() {
     const pinForDraw =
       settings.samePerson && ident.size ? new Set([...pinned, ...ident]) : pinned;
     const drawn = drawOne(lex, settings, pinForDraw, userBanned, rng, seedNum);
-    if (settings.samePerson && ident.size === 0) ident = identityPins(lex, drawn.positive);
+    if (settings.samePerson && ident.size === 0) {
+      ident = identityPins(lex, drawn.positive);
+      lastIdent = ident;
+      syncSamePerson();
+    }
     const card = cards[i];
     card.dataset.seed = String(drawn.seed);
     card.dataset.era = drawn.era || "";
     card.dataset.positive = drawn.positive;
+    if (settings.samePerson && i > 0) {
+      card.dataset.same = "1";
+      const shot = card.querySelector(".shot");
+      if (shot && !shot.querySelector(".same-mark")) {
+        const mark = document.createElement("span");
+        mark.className = "same-mark";
+        mark.textContent = "同 #1";
+        shot.append(mark);
+      }
+    }
     showPos(drawn.positive);
     setPosLine(card, drawn.positive);
     setLive(card, { status: `抽好了，生圖 ${i + 1}/${n}…` });
@@ -1250,12 +1295,19 @@ function bindUi() {
   });
   $("n").addEventListener("change", () => {
     settings.n = Math.max(1, Math.min(10, Number($("n").value) || 1));
+    syncSamePerson();
     saveStore();
   });
   const sameBtn = $("same-person");
   if (sameBtn) {
     sameBtn.addEventListener("click", () => {
       settings.samePerson = !settings.samePerson;
+      if (settings.samePerson && settings.n < 2) {
+        settings.n = 2;
+        $("n").value = "2";
+        speak("一次改成 2 張，鎖同一張臉");
+      }
+      if (!settings.samePerson) lastIdent = new Set();
       syncSamePerson();
       saveStore();
     });

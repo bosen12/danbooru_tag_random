@@ -41,11 +41,25 @@
       <aside class="rail" aria-label="抽卡設定">
         <h2>先定規則，再點詞庫</h2>
 
-        <div class="field">
+        <div class="field batch-field">
           <label for="n">一次幾張</label>
-          <input id="n" name="n" type="number" min="1" max="10" value="1" />
-          <button type="button" class="chip-toggle" id="same-person" aria-pressed="false">這批同一個人</button>
-          <p class="hint">多張時鎖髮、瞳、胸／男體型種族。衣、姿勢、場照抽。</p>
+          <div class="batch-row">
+            <input id="n" name="n" type="number" min="1" max="10" value="1" />
+            <button
+              type="button"
+              class="same-switch"
+              id="same-person"
+              role="switch"
+              aria-checked="false"
+              aria-describedby="same-person-hint"
+            >
+              <span class="same-knob" aria-hidden="true"><i></i></span>
+              <span class="same-copy">
+                <strong>同一個人</strong>
+                <em id="same-person-hint">多張鎖髮瞳胸，衣場照抽</em>
+              </span>
+            </button>
+          </div>
         </div>
 
         <div class="field">
