@@ -236,10 +236,27 @@ html {
 }
 
 @media (max-width: 900px) {
+  .mast {
+    padding-left: max(var(--space-3), env(safe-area-inset-left, 0px));
+    padding-right: max(var(--space-3), env(safe-area-inset-right, 0px));
+    padding-top: max(var(--space-3), env(safe-area-inset-top, 0px));
+  }
   .floor {
     grid-template-columns: 1fr;
+    grid-template-areas:
+      "galley"
+      "ruler"
+      "aisle";
+  }
+  .galley {
+    grid-area: galley;
+    position: static;
+    height: auto;
+    border-left: 0;
+    border-bottom: 2px solid var(--color-ink);
   }
   .ruler {
+    grid-area: ruler;
     position: static;
     height: auto;
     flex-direction: row;
@@ -250,14 +267,23 @@ html {
   .ruler a {
     writing-mode: horizontal-tb;
     letter-spacing: 0.06em;
+    min-height: 44px;
   }
-  .galley {
-    position: static;
-    height: auto;
-    border-left: 0;
-    border-top: 2px solid var(--color-ink);
+  .aisle {
+    grid-area: aisle;
+    padding: var(--space-3);
+    padding-bottom: calc(var(--space-5) + env(safe-area-inset-bottom, 0px));
+  }
+  .print-bar {
+    position: sticky;
+    top: 0;
+    z-index: 7;
+    background: var(--color-paper-2);
+  }
+  .print-bar .primary {
+    flex: 1;
   }
   .stick {
-    top: 56px;
+    top: 0;
   }
 }

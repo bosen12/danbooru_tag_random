@@ -799,6 +799,77 @@ input[type="number"] {
   animation-delay: 80ms;
 }
 
+@media (max-width: 900px) {
+  html {
+    -webkit-text-size-adjust: 100%;
+  }
+
+  .jump {
+    flex-wrap: nowrap;
+    overflow-x: auto;
+    overscroll-behavior-x: contain;
+    -webkit-overflow-scrolling: touch;
+    gap: var(--space-1);
+    scrollbar-width: none;
+  }
+  .jump::-webkit-scrollbar {
+    display: none;
+  }
+  .jump a {
+    min-height: 44px;
+    padding: 0 14px;
+    flex: 0 0 auto;
+    border: var(--rule) solid var(--color-rule);
+    border-radius: var(--radius);
+    touch-action: manipulation;
+  }
+
+  .cat-toggle {
+    min-height: 44px;
+    padding: 8px 0;
+  }
+
+  .ghost.mini {
+    min-height: 36px;
+    padding: 0 10px;
+  }
+
+  .tag {
+    min-height: 44px;
+    padding: 12px 14px;
+  }
+
+  .results {
+    grid-template-columns: 1fr;
+    gap: var(--space-3);
+  }
+
+  .batch-row {
+    flex-direction: column;
+    align-items: stretch;
+  }
+  .batch-row input[type="number"] {
+    width: 100%;
+  }
+  .same-switch {
+    flex: 1 1 auto;
+  }
+
+  .filter-bar {
+    position: sticky;
+    top: env(safe-area-inset-top, 0px);
+    z-index: 6;
+    background: color-mix(in oklab, var(--color-paper) 88%, transparent);
+    backdrop-filter: blur(12px);
+  }
+
+  .card .pos span[data-en] {
+    min-height: 28px;
+    display: inline-flex;
+    align-items: center;
+  }
+}
+
 @media (prefers-reduced-motion: reduce) {
   *,
   *::before,

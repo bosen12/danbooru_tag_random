@@ -181,9 +181,14 @@
 }
 
 @media (max-width: 900px) {
+  .mast {
+    padding-left: max(var(--space-3), env(safe-area-inset-left, 0px));
+    padding-right: max(var(--space-3), env(safe-area-inset-right, 0px));
+    padding-top: env(safe-area-inset-top, 0px);
+  }
   .darkroom {
     grid-template-columns: 1fr;
-    grid-template-rows: minmax(200px, 38vh) auto minmax(220px, 1fr);
+    grid-template-rows: minmax(180px, 34vh) minmax(280px, 1fr) auto;
     height: auto;
     min-height: calc(100dvh - var(--mast));
   }
@@ -191,16 +196,40 @@
     grid-column: 1;
     grid-row: 1;
   }
-  .hud {
+  .sheet {
     grid-column: 1;
     grid-row: 2;
+    min-height: 42vh;
+  }
+  .hud {
+    grid-column: 1;
+    grid-row: 3;
     max-height: none;
     border-left: 0;
     border-top: var(--rule) solid var(--color-rule);
+    padding-bottom: calc(var(--space-4) + env(safe-area-inset-bottom, 0px));
   }
-  .sheet {
-    grid-column: 1;
-    grid-row: 3;
-    min-height: 50vh;
+  .sheet .filter-bar {
+    order: 1;
+    position: sticky;
+    top: calc(2.75rem + env(safe-area-inset-top, 0px));
+    z-index: 6;
+    background: var(--color-paper-2);
+  }
+  .sheet .cats {
+    order: 2;
+  }
+  .sheet-bar {
+    position: sticky;
+    bottom: 0;
+    z-index: 8;
+    order: 3;
+    background: var(--color-paper-2);
+    border-top: var(--rule) solid var(--color-rule);
+    border-bottom: 0;
+    padding-bottom: calc(var(--space-3) + env(safe-area-inset-bottom, 0px));
+  }
+  .sheet-bar .primary {
+    flex: 1;
   }
 }

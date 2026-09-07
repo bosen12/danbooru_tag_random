@@ -263,12 +263,38 @@
 }
 
 @media (max-width: 900px) {
+  .noren {
+    padding-top: max(var(--space-3), env(safe-area-inset-top, 0px));
+    padding-left: max(var(--space-3), env(safe-area-inset-left, 0px));
+    padding-right: max(var(--space-3), env(safe-area-inset-right, 0px));
+  }
   .legend {
     margin-left: 0;
     width: 100%;
   }
   .wordmark-copy {
     font-size: var(--text-lg);
+  }
+  .line {
+    padding: var(--space-4) var(--space-3);
+  }
+  .counter {
+    position: sticky;
+    bottom: 0;
+    z-index: 8;
+    padding-left: max(var(--space-3), env(safe-area-inset-left, 0px));
+    padding-right: max(var(--space-3), env(safe-area-inset-right, 0px));
+    padding-bottom: calc(var(--space-3) + env(safe-area-inset-bottom, 0px));
+    background: color-mix(in oklab, var(--color-paper-2) 92%, transparent);
+    backdrop-filter: blur(12px);
+  }
+  .lot {
+    flex: 1 1 auto;
+    min-width: 0;
+  }
+  .hang {
+    padding: var(--space-3);
+    padding-bottom: calc(var(--space-6) + env(safe-area-inset-bottom, 0px));
   }
 }
 
