@@ -401,7 +401,7 @@ def heat_for(tag: str) -> list[str]:
     if has_any_tok(tag, ("upskirt", "flashing", "undressing", "topless", "bottomless", "nude")) or "clothes lift" in tag or "one breast" in tag:
         return ["flash", "sex"]
     if has_any_tok(tag, ("bikini", "lingerie", "panties", "bra", "cleavage", "wet", "sweat")):
-        return ["tease", "flash"]
+        return list(HEATS)
     return list(HEATS)
 
 
@@ -565,7 +565,7 @@ def classify(tag: str) -> dict | None:
         layer = "garment"
         if has_any_tok(tag, ("panties", "bra", "thong", "lingerie")):
             gate = "female"
-        heat = ["tease", "flash"]
+        heat = list(HEATS)
         era = ["modern"]
     elif has_any_tok(tag, CLOTH_LEG):
         section = "clothing"

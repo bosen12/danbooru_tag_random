@@ -13,6 +13,31 @@ ROOT = Path(__file__).resolve().parents[1]
 PARTS = ROOT / "web" / "lexicon_parts"
 OUT = ROOT / "web" / "lexicon.json"
 HEATS = ["tease", "flash", "sex"]
+# Clothes are outfits, not a heat. You can have sex in a bikini.
+# These are undress / toy states, not something you "wear to a scene".
+CLOTHING_STATE = {
+    "nude",
+    "completely nude",
+    "topless female",
+    "topless male",
+    "bottomless",
+    "panties aside",
+    "no bra",
+    "no panties",
+    "underwear only",
+    "see-through clothes",
+    "open clothes",
+    "open shirt",
+    "open kimono",
+    "clothes between breasts",
+    "naked sweater",
+    "naked shirt",
+    "naked apron",
+    "naked towel",
+    "sex toy",
+    "vibrator",
+    "egg vibrator",
+}
 SECTIONS = {"subject", "feature", "pose", "clothing", "env"}
 GATES = {"any", "female", "male"}
 
@@ -595,6 +620,8 @@ def norm(item: dict) -> dict | None:
     implies, bind, mutex, section, gate, layer, heat, era, needs = apply_relations(
         tag, implies, bind, mutex, section, gate, layer, heat, era, needs
     )
+    if section == "clothing" and layer != "skin" and tag not in CLOTHING_STATE:
+        heat = list(HEATS)
     seen_needs = set(needs)
     needs = list(needs)
     if tag in NEEDS_MALE and "male" not in seen_needs:

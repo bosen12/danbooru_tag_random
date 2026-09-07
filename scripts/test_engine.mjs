@@ -528,20 +528,32 @@ function eraDraws(era, n = 60, seed0 = 9000) {
   s.boy = false;
   s.heats = ["tease", "flash", "sex"];
   s.weights = { tease: 0.3, flash: 0.3, sex: 0.4 };
-  const pinned = applyPin(lex, new Set(), new Set(), "micro bikini").pinned;
+  const pinned = applyPin(lex, new Set(), new Set(), "flashing").pinned;
   let flash = 0;
   for (let i = 0; i < 20; i++) {
     const d = drawOne(lex, s, pinned, new Set(), mulberry32(19200 + i), 19200 + i);
     if (d.heat === "flash") flash += 1;
   }
-  ok("mixed heat + flash-only pin still rolls flash", flash === 20, `flash=${flash}/20`);
+  ok("mixed heat + flash-only pose pin still rolls flash", flash === 20, `flash=${flash}/20`);
+}
+
+{
+  const bikini = lex.byTag.get("micro bikini");
+  const suit = lex.byTag.get("bikini");
+  const nude = lex.byTag.get("nude");
+  const toy = lex.byTag.get("sex toy");
+  ok("micro bikini allows sex", (bikini?.heat || []).includes("sex"), `heat=${bikini?.heat}`);
+  ok("bikini allows sex", (suit?.heat || []).includes("sex"), `heat=${suit?.heat}`);
+  ok("dress allows sex", (lex.byTag.get("dress")?.heat || []).includes("sex"));
+  ok("nude is not a tease outfit", !(nude?.heat || []).includes("tease"), `heat=${nude?.heat}`);
+  ok("sex toy stays sex-only", JSON.stringify(toy?.heat) === '["sex"]', `heat=${toy?.heat}`);
 }
 
 {
   const pinned = applyPin(lex, new Set(), new Set(), "micro bikini").pinned;
-  const clash = heatMismatches(lex, pinned, ["sex"]);
-  ok("sex-only clash lists micro bikini", clash.includes("micro bikini"), `clash=${clash}`);
-  ok("mixed heats do not clash with micro bikini", heatMismatches(lex, pinned, ["tease", "flash", "sex"]).length === 0);
+  ok("sex-only does not clash with micro bikini", !heatMismatches(lex, pinned, ["sex"]).includes("micro bikini"));
+  const flashPin = applyPin(lex, new Set(), new Set(), "flashing").pinned;
+  ok("sex-only clash lists flashing", heatMismatches(lex, flashPin, ["sex"]).includes("flashing"));
 }
 
 {
