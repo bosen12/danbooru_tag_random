@@ -526,34 +526,39 @@ function eraDraws(era, n = 60, seed0 = 9000) {
   const s = settings();
   s.girl = true;
   s.boy = false;
-  s.heats = ["tease", "flash", "sex"];
-  s.weights = { tease: 0.3, flash: 0.3, sex: 0.4 };
+  s.heats = ["tease", "flash"];
+  s.weights = { tease: 0.5, flash: 0.5, sex: 0 };
   const pinned = applyPin(lex, new Set(), new Set(), "flashing").pinned;
   let flash = 0;
   for (let i = 0; i < 20; i++) {
     const d = drawOne(lex, s, pinned, new Set(), mulberry32(19200 + i), 19200 + i);
     if (d.heat === "flash") flash += 1;
   }
-  ok("mixed heat + flash-only pose pin still rolls flash", flash === 20, `flash=${flash}/20`);
+  ok("tease+flash allowlist + flashing pin still rolls flash", flash === 20, `flash=${flash}/20`);
 }
 
 {
-  const bikini = lex.byTag.get("micro bikini");
-  const suit = lex.byTag.get("bikini");
-  const nude = lex.byTag.get("nude");
-  const toy = lex.byTag.get("sex toy");
-  ok("micro bikini allows sex", (bikini?.heat || []).includes("sex"), `heat=${bikini?.heat}`);
-  ok("bikini allows sex", (suit?.heat || []).includes("sex"), `heat=${suit?.heat}`);
-  ok("dress allows sex", (lex.byTag.get("dress")?.heat || []).includes("sex"));
-  ok("nude is not a tease outfit", !(nude?.heat || []).includes("tease"), `heat=${nude?.heat}`);
-  ok("sex toy stays sex-only", JSON.stringify(toy?.heat) === '["sex"]', `heat=${toy?.heat}`);
+  const has = (tag, h) => (lex.byTag.get(tag)?.heat || []).includes(h);
+  ok("micro bikini allows sex", has("micro bikini", "sex"));
+  ok("bikini allows sex", has("bikini", "sex"));
+  ok("dress allows sex", has("dress", "sex"));
+  ok("undressing allows sex", has("undressing", "sex"));
+  ok("flashing allows sex", has("flashing", "sex"));
+  ok("wink allows sex", has("wink", "sex"));
+  ok("indian style allows sex", has("indian style", "sex"));
+  ok("bed allows tease", has("bed", "tease"));
+  ok("torii allows sex", has("torii", "sex"));
+  ok("wet hair allows sex", has("wet hair", "sex"));
+  ok("nude is not a tease outfit", !has("nude", "tease"));
+  ok("sex toy stays sex-only", JSON.stringify(lex.byTag.get("sex toy")?.heat) === '["sex"]');
+  ok("ahegao stays sex-only", JSON.stringify(lex.byTag.get("ahegao")?.heat) === '["sex"]');
 }
 
 {
   const pinned = applyPin(lex, new Set(), new Set(), "micro bikini").pinned;
   ok("sex-only does not clash with micro bikini", !heatMismatches(lex, pinned, ["sex"]).includes("micro bikini"));
-  const flashPin = applyPin(lex, new Set(), new Set(), "flashing").pinned;
-  ok("sex-only clash lists flashing", heatMismatches(lex, flashPin, ["sex"]).includes("flashing"));
+  ok("sex-only does not clash with undressing", !heatMismatches(lex, applyPin(lex, new Set(), new Set(), "undressing").pinned, ["sex"]).includes("undressing"));
+  ok("tease-only clash lists fellatio", heatMismatches(lex, applyPin(lex, new Set(), new Set(), "fellatio").pinned, ["tease"]).includes("fellatio"));
 }
 
 {

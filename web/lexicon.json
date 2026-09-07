@@ -1863,6 +1863,7 @@
       "section": "feature",
       "gate": "any",
       "heat": [
+        "tease",
         "flash",
         "sex"
       ],
@@ -3316,6 +3317,7 @@
       "section": "pose",
       "gate": "any",
       "heat": [
+        "tease",
         "flash",
         "sex"
       ],
@@ -3392,7 +3394,8 @@
       "gate": "any",
       "heat": [
         "tease",
-        "flash"
+        "flash",
+        "sex"
       ],
       "mutex": "body_pose",
       "bind": [],
@@ -3410,7 +3413,8 @@
       "gate": "any",
       "heat": [
         "tease",
-        "flash"
+        "flash",
+        "sex"
       ],
       "mutex": "body_pose",
       "bind": [],
@@ -3427,6 +3431,7 @@
       "section": "pose",
       "gate": "any",
       "heat": [
+        "tease",
         "flash",
         "sex"
       ],
@@ -3445,6 +3450,7 @@
       "section": "pose",
       "gate": "any",
       "heat": [
+        "tease",
         "flash",
         "sex"
       ],
@@ -3464,7 +3470,8 @@
       "gate": "any",
       "heat": [
         "tease",
-        "flash"
+        "flash",
+        "sex"
       ],
       "mutex": "body_pose",
       "bind": [],
@@ -3482,6 +3489,7 @@
       "gate": "any",
       "heat": [
         "tease",
+        "flash",
         "sex"
       ],
       "mutex": "body_pose",
@@ -3575,7 +3583,8 @@
       "gate": "any",
       "heat": [
         "tease",
-        "flash"
+        "flash",
+        "sex"
       ],
       "mutex": null,
       "bind": [],
@@ -3688,7 +3697,8 @@
       "gate": "any",
       "heat": [
         "tease",
-        "flash"
+        "flash",
+        "sex"
       ],
       "mutex": null,
       "bind": [],
@@ -3706,7 +3716,8 @@
       "gate": "any",
       "heat": [
         "tease",
-        "flash"
+        "flash",
+        "sex"
       ],
       "mutex": null,
       "bind": [],
@@ -3724,7 +3735,8 @@
       "gate": "any",
       "heat": [
         "tease",
-        "flash"
+        "flash",
+        "sex"
       ],
       "mutex": null,
       "bind": [],
@@ -3741,7 +3753,9 @@
       "section": "pose",
       "gate": "any",
       "heat": [
-        "tease"
+        "tease",
+        "flash",
+        "sex"
       ],
       "mutex": null,
       "bind": [],
@@ -3894,6 +3908,7 @@
       "gate": "any",
       "heat": [
         "tease",
+        "flash",
         "sex"
       ],
       "mutex": null,
@@ -3912,6 +3927,7 @@
       "gate": "any",
       "heat": [
         "tease",
+        "flash",
         "sex"
       ],
       "mutex": null,
@@ -3930,7 +3946,8 @@
       "gate": "any",
       "heat": [
         "tease",
-        "flash"
+        "flash",
+        "sex"
       ],
       "mutex": null,
       "bind": [],
@@ -3948,7 +3965,8 @@
       "gate": "any",
       "heat": [
         "tease",
-        "flash"
+        "flash",
+        "sex"
       ],
       "mutex": null,
       "bind": [],
@@ -3965,7 +3983,9 @@
       "section": "pose",
       "gate": "any",
       "heat": [
-        "tease"
+        "tease",
+        "flash",
+        "sex"
       ],
       "mutex": null,
       "bind": [],
@@ -3983,7 +4003,8 @@
       "gate": "any",
       "heat": [
         "tease",
-        "flash"
+        "flash",
+        "sex"
       ],
       "mutex": null,
       "bind": [],
@@ -4001,7 +4022,8 @@
       "gate": "any",
       "heat": [
         "tease",
-        "flash"
+        "flash",
+        "sex"
       ],
       "mutex": null,
       "bind": [],
@@ -4019,7 +4041,8 @@
       "gate": "any",
       "heat": [
         "tease",
-        "flash"
+        "flash",
+        "sex"
       ],
       "mutex": null,
       "bind": [],
@@ -4037,7 +4060,8 @@
       "gate": "any",
       "heat": [
         "tease",
-        "flash"
+        "flash",
+        "sex"
       ],
       "mutex": null,
       "bind": [],
@@ -4055,7 +4079,8 @@
       "gate": "any",
       "heat": [
         "tease",
-        "flash"
+        "flash",
+        "sex"
       ],
       "mutex": null,
       "bind": [],
@@ -4186,7 +4211,8 @@
       "gate": "any",
       "heat": [
         "tease",
-        "flash"
+        "flash",
+        "sex"
       ],
       "mutex": null,
       "bind": [],
@@ -4203,7 +4229,9 @@
       "section": "pose",
       "gate": "any",
       "heat": [
-        "tease"
+        "tease",
+        "flash",
+        "sex"
       ],
       "mutex": null,
       "bind": [],
@@ -4220,7 +4248,9 @@
       "section": "pose",
       "gate": "any",
       "heat": [
-        "tease"
+        "tease",
+        "flash",
+        "sex"
       ],
       "mutex": null,
       "bind": [],
@@ -4238,7 +4268,8 @@
       "gate": "any",
       "heat": [
         "tease",
-        "flash"
+        "flash",
+        "sex"
       ],
       "mutex": null,
       "bind": [],
@@ -4256,7 +4287,8 @@
       "gate": "any",
       "heat": [
         "tease",
-        "flash"
+        "flash",
+        "sex"
       ],
       "mutex": null,
       "bind": [],
@@ -4273,7 +4305,9 @@
       "section": "pose",
       "gate": "any",
       "heat": [
-        "tease"
+        "tease",
+        "flash",
+        "sex"
       ],
       "mutex": null,
       "bind": [],
@@ -4290,7 +4324,9 @@
       "section": "pose",
       "gate": "any",
       "heat": [
-        "tease"
+        "tease",
+        "flash",
+        "sex"
       ],
       "mutex": null,
       "bind": [],
@@ -4403,7 +4439,8 @@
       "gate": "any",
       "heat": [
         "tease",
-        "flash"
+        "flash",
+        "sex"
       ],
       "mutex": "gaze",
       "bind": [],
@@ -4421,6 +4458,7 @@
       "gate": "any",
       "heat": [
         "tease",
+        "flash",
         "sex"
       ],
       "mutex": "gaze",
@@ -4439,6 +4477,7 @@
       "gate": "any",
       "heat": [
         "tease",
+        "flash",
         "sex"
       ],
       "mutex": "gaze",
@@ -4801,7 +4840,8 @@
       "gate": "any",
       "heat": [
         "tease",
-        "flash"
+        "flash",
+        "sex"
       ],
       "mutex": "expression",
       "bind": [],
@@ -4875,7 +4915,8 @@
       "gate": "any",
       "heat": [
         "tease",
-        "flash"
+        "flash",
+        "sex"
       ],
       "mutex": null,
       "bind": [],
@@ -4949,7 +4990,8 @@
       "gate": "any",
       "heat": [
         "tease",
-        "flash"
+        "flash",
+        "sex"
       ],
       "mutex": "expression",
       "bind": [],
@@ -4967,7 +5009,8 @@
       "gate": "any",
       "heat": [
         "tease",
-        "flash"
+        "flash",
+        "sex"
       ],
       "mutex": "expression",
       "bind": [],
@@ -5108,7 +5151,8 @@
       "gate": "any",
       "heat": [
         "tease",
-        "flash"
+        "flash",
+        "sex"
       ],
       "mutex": null,
       "bind": [],
@@ -5125,7 +5169,8 @@
       "section": "pose",
       "gate": "female",
       "heat": [
-        "flash"
+        "flash",
+        "sex"
       ],
       "mutex": null,
       "bind": [],
@@ -5142,7 +5187,8 @@
       "section": "pose",
       "gate": "any",
       "heat": [
-        "flash"
+        "flash",
+        "sex"
       ],
       "mutex": null,
       "bind": [],
@@ -5159,7 +5205,8 @@
       "section": "pose",
       "gate": "any",
       "heat": [
-        "flash"
+        "flash",
+        "sex"
       ],
       "mutex": null,
       "bind": [],
@@ -5176,7 +5223,8 @@
       "section": "pose",
       "gate": "female",
       "heat": [
-        "flash"
+        "flash",
+        "sex"
       ],
       "mutex": null,
       "bind": [],
@@ -5193,7 +5241,8 @@
       "section": "pose",
       "gate": "female",
       "heat": [
-        "flash"
+        "flash",
+        "sex"
       ],
       "mutex": null,
       "bind": [],
@@ -5213,7 +5262,8 @@
       "section": "pose",
       "gate": "female",
       "heat": [
-        "flash"
+        "flash",
+        "sex"
       ],
       "mutex": null,
       "bind": [],
@@ -5267,7 +5317,8 @@
       "section": "pose",
       "gate": "female",
       "heat": [
-        "flash"
+        "flash",
+        "sex"
       ],
       "mutex": null,
       "bind": [],
@@ -5284,7 +5335,8 @@
       "section": "pose",
       "gate": "any",
       "heat": [
-        "flash"
+        "flash",
+        "sex"
       ],
       "mutex": null,
       "bind": [],
@@ -5301,7 +5353,8 @@
       "section": "pose",
       "gate": "any",
       "heat": [
-        "flash"
+        "flash",
+        "sex"
       ],
       "mutex": null,
       "bind": [],
@@ -5318,7 +5371,8 @@
       "section": "pose",
       "gate": "any",
       "heat": [
-        "flash"
+        "flash",
+        "sex"
       ],
       "mutex": null,
       "bind": [],
@@ -5353,7 +5407,8 @@
       "section": "pose",
       "gate": "any",
       "heat": [
-        "flash"
+        "flash",
+        "sex"
       ],
       "mutex": null,
       "bind": [],
@@ -5370,7 +5425,8 @@
       "section": "pose",
       "gate": "any",
       "heat": [
-        "flash"
+        "flash",
+        "sex"
       ],
       "mutex": null,
       "bind": [],
@@ -5387,7 +5443,8 @@
       "section": "pose",
       "gate": "female",
       "heat": [
-        "flash"
+        "flash",
+        "sex"
       ],
       "mutex": null,
       "bind": [],
@@ -5404,7 +5461,8 @@
       "section": "pose",
       "gate": "female",
       "heat": [
-        "flash"
+        "flash",
+        "sex"
       ],
       "mutex": null,
       "bind": [],
@@ -5421,7 +5479,8 @@
       "section": "pose",
       "gate": "female",
       "heat": [
-        "flash"
+        "flash",
+        "sex"
       ],
       "mutex": null,
       "bind": [],
@@ -5438,7 +5497,8 @@
       "section": "pose",
       "gate": "female",
       "heat": [
-        "flash"
+        "flash",
+        "sex"
       ],
       "mutex": null,
       "bind": [],
@@ -5473,7 +5533,8 @@
       "section": "pose",
       "gate": "female",
       "heat": [
-        "flash"
+        "flash",
+        "sex"
       ],
       "mutex": null,
       "bind": [],
@@ -5490,7 +5551,8 @@
       "section": "pose",
       "gate": "any",
       "heat": [
-        "flash"
+        "flash",
+        "sex"
       ],
       "mutex": null,
       "bind": [],
@@ -5562,7 +5624,8 @@
       "section": "pose",
       "gate": "any",
       "heat": [
-        "flash"
+        "flash",
+        "sex"
       ],
       "mutex": null,
       "bind": [],
@@ -5635,7 +5698,8 @@
       "section": "pose",
       "gate": "any",
       "heat": [
-        "flash"
+        "flash",
+        "sex"
       ],
       "mutex": null,
       "bind": [],
@@ -5652,7 +5716,8 @@
       "section": "pose",
       "gate": "any",
       "heat": [
-        "flash"
+        "flash",
+        "sex"
       ],
       "mutex": null,
       "bind": [],
@@ -5669,7 +5734,8 @@
       "section": "pose",
       "gate": "female",
       "heat": [
-        "flash"
+        "flash",
+        "sex"
       ],
       "mutex": null,
       "bind": [],
@@ -5687,7 +5753,8 @@
       "gate": "any",
       "heat": [
         "tease",
-        "flash"
+        "flash",
+        "sex"
       ],
       "mutex": null,
       "bind": [],
@@ -5858,6 +5925,7 @@
       "gate": "any",
       "heat": [
         "tease",
+        "flash",
         "sex"
       ],
       "mutex": null,
@@ -9048,6 +9116,7 @@
       "section": "env",
       "gate": "any",
       "heat": [
+        "tease",
         "flash",
         "sex"
       ],
@@ -9089,6 +9158,7 @@
       "section": "env",
       "gate": "any",
       "heat": [
+        "tease",
         "flash",
         "sex"
       ],
@@ -9109,6 +9179,7 @@
       "section": "env",
       "gate": "any",
       "heat": [
+        "tease",
         "flash",
         "sex"
       ],
@@ -9130,6 +9201,7 @@
       "section": "env",
       "gate": "any",
       "heat": [
+        "tease",
         "flash",
         "sex"
       ],
@@ -9172,6 +9244,7 @@
       "section": "env",
       "gate": "any",
       "heat": [
+        "tease",
         "flash",
         "sex"
       ],
@@ -9193,6 +9266,7 @@
       "section": "env",
       "gate": "any",
       "heat": [
+        "tease",
         "flash",
         "sex"
       ],
@@ -9531,6 +9605,7 @@
       "section": "env",
       "gate": "any",
       "heat": [
+        "tease",
         "flash",
         "sex"
       ],
@@ -10178,6 +10253,7 @@
       "section": "env",
       "gate": "any",
       "heat": [
+        "tease",
         "flash",
         "sex"
       ],
@@ -10849,7 +10925,8 @@
       "gate": "any",
       "heat": [
         "tease",
-        "flash"
+        "flash",
+        "sex"
       ],
       "mutex": "place",
       "bind": [],
@@ -11134,7 +11211,8 @@
       "gate": "any",
       "heat": [
         "tease",
-        "flash"
+        "flash",
+        "sex"
       ],
       "mutex": "place",
       "bind": [],
@@ -11295,7 +11373,8 @@
       "gate": "any",
       "heat": [
         "tease",
-        "flash"
+        "flash",
+        "sex"
       ],
       "mutex": "place",
       "bind": [],
@@ -14396,7 +14475,8 @@
       "gate": "any",
       "heat": [
         "tease",
-        "flash"
+        "flash",
+        "sex"
       ],
       "mutex": null,
       "bind": [],

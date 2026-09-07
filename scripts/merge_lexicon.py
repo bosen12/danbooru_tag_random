@@ -38,6 +38,14 @@ CLOTHING_STATE = {
     "vibrator",
     "egg vibrator",
 }
+# Faces that *are* a heat. Everyday faces / sitting / looking are not.
+POSE_CLIMAX = {
+    "ahegao",
+    "fucked silly",
+    "rolling eyes",
+    "orgasm",
+    "moaning",
+}
 SECTIONS = {"subject", "feature", "pose", "clothing", "env"}
 GATES = {"any", "female", "male"}
 
@@ -549,6 +557,34 @@ def apply_relations(tag: str, implies: list[str], bind: list[str], mutex, sectio
     return im, bind, mutex, section, gate, layer, heat, era, needs
 
 
+def widen_heat(tag: str, section: str, mutex, layer: str, heat: list[str]) -> list[str]:
+    """Outfits, places, sitting, looking, and clothes-moves are not a heat."""
+    heat = [h for h in heat if h in HEATS] or list(HEATS)
+    if section == "clothing" and layer != "skin" and tag not in CLOTHING_STATE:
+        return list(HEATS)
+    if section == "env" and tag != "cum pool":
+        return list(HEATS)
+    if section == "feature" and tag in {"wet hair", "wet"}:
+        return list(HEATS)
+    if section != "pose":
+        return heat
+    if mutex == "sex_act" or tag in SEX_ACT or tag in POSE_CLIMAX:
+        return heat
+    if mutex in {"body_pose", "camera", "gaze", "expression"}:
+        return list(HEATS)
+    if mutex == "clothes_action":
+        keep = set(heat) | {"flash", "sex"}
+        return [h for h in HEATS if h in keep]
+    if "sex" not in heat:
+        keep = set(heat) | {"sex"}
+        if "tease" in heat:
+            keep.add("flash")
+        return [h for h in HEATS if h in keep]
+    if set(heat) == {"tease", "sex"}:
+        return list(HEATS)
+    return heat
+
+
 def inherit_eras(tags: list[dict]) -> None:
     """A colour variant must not be wider than its parent (blue necktie ≠ 中世紀)."""
     by = {t["tag"]: t for t in tags}
@@ -620,8 +656,6 @@ def norm(item: dict) -> dict | None:
     implies, bind, mutex, section, gate, layer, heat, era, needs = apply_relations(
         tag, implies, bind, mutex, section, gate, layer, heat, era, needs
     )
-    if section == "clothing" and layer != "skin" and tag not in CLOTHING_STATE:
-        heat = list(HEATS)
     seen_needs = set(needs)
     needs = list(needs)
     if tag in NEEDS_MALE and "male" not in seen_needs:
@@ -647,6 +681,7 @@ def norm(item: dict) -> dict | None:
     if tag in ERA_OF:
         era = list(ERA_OF[tag])
     needs = [x for x in needs if x in {"female", "male", "pair"}]
+    heat = widen_heat(tag, section, mutex, layer, heat)
     out = {
         "tag": tag,
         "section": section,
