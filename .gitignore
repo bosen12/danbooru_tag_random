@@ -4,3 +4,4 @@ __pycache__/
 scripts/harvest_report.json
 scripts/.cache_danbooru_tags.json
 scripts/.cache_*.json
+docs/

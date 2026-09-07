@@ -439,6 +439,32 @@ input[type="number"] {
   background: var(--color-paper-2);
 }
 
+.boot-load {
+  margin: var(--space-4) 0;
+  font-size: var(--text-sm);
+  color: var(--color-muted);
+  animation: breathe 1.6s var(--ease-in-out) infinite;
+}
+
+/* Shown by every skin while #results is still empty. */
+.results:empty {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr);
+  place-content: center;
+  place-items: center;
+  text-align: center;
+  padding: var(--space-5);
+}
+
+.results:empty::before {
+  content: attr(data-empty);
+  max-width: 22rem;
+  font-size: var(--text-sm);
+  line-height: 1.6;
+  color: var(--color-muted);
+  white-space: pre-line;
+}
+
 .cat {
   content-visibility: auto;
   contain-intrinsic-size: auto 240px;
@@ -771,6 +797,12 @@ input[type="number"] {
   to {
     opacity: 1;
     transform: none;
+  }
+}
+
+@keyframes breathe {
+  50% {
+    opacity: 0.45;
   }
 }
 

@@ -12,6 +12,7 @@ import urllib.parse
 import urllib.request
 from collections import Counter, defaultdict
 from concurrent.futures import ThreadPoolExecutor, as_completed
+import os
 from pathlib import Path
 
 sys.path.insert(0, str(Path(__file__).resolve().parent))
@@ -19,7 +20,8 @@ from groups import assign_group
 from merge_lexicon import BANNED, HEATS
 
 ROOT = Path(__file__).resolve().parents[1]
-PACKS = Path("/mnt/c/projects/special_prompts")
+# Optional: a directory of prompt-pack JSON to mine for new tags. Not part of this repo.
+PACKS = Path(os.environ.get("PACKS_DIR", "/mnt/c/projects/special_prompts"))
 LEX = ROOT / "web" / "lexicon.json"
 OUT_PART = ROOT / "web" / "lexicon_parts" / "05-harvest.json"
 REPORT = ROOT / "scripts" / "harvest_report.json"
@@ -646,10 +648,18 @@ def classify(tag: str) -> dict | None:
 
 def main() -> None:
     if not PACKS.is_dir():
-        raise SystemExit(f"missing packs dir: {PACKS}")
+        raise SystemExit(
+            f"missing packs dir: {PACKS}\n"
+            "This script mines an external corpus of prompt packs that ships separately. "
+            "Point PACKS_DIR at a folder of .json prompt packs, or skip it — "
+            "web/lexicon.json is already built."
+        )
     have = load_lexicon_tags()
     files = iter_pack_files()
     print(f"packs on disk: {len(files)}")
+    if not files:
+        # Writing an empty harvest would blank a real lexicon part. Stop instead.
+        raise SystemExit(f"no .json packs under {PACKS} — refusing to overwrite {OUT_PART.name}")
     rng = random.Random(SEED)
     n = min(SAMPLE, len(files))
     sample = rng.sample(files, n)
@@ -733,6 +743,12 @@ def main() -> None:
         accepted.append(item)
 
     clean = [{k: v for k, v in item.items() if k != "harvest"} for item in accepted]
+    if not clean and OUT_PART.is_file():
+        # A run that harvests nothing must not blank the last good harvest.
+        raise SystemExit(
+            f"harvested 0 tags from {PACKS} — keeping the existing {OUT_PART.name}. "
+            "Check that PACKS_DIR holds readable prompt packs."
+        )
     OUT_PART.write_text(json.dumps(clean, ensure_ascii=False, indent=2), encoding="utf-8")
     REPORT.write_text(
         json.dumps(

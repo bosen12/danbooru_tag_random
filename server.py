@@ -686,12 +686,38 @@ class Handler(BaseHTTPRequestHandler):
         self._json(404, {"ok": False, "error": "not found"})
 
 
+def checkpoints() -> list[str]:
+    info = api("GET", "/object_info/CheckpointLoaderSimple", timeout=15)
+    node = (info or {}).get("CheckpointLoaderSimple") or {}
+    names = ((node.get("input") or {}).get("required") or {}).get("ckpt_name") or []
+    return [str(n) for n in (names[0] if names and isinstance(names[0], list) else [])]
+
+
+def check_ckpt() -> None:
+    """A fresh clone will not have the author's checkpoint. Say so before the first gen fails."""
+    try:
+        have = checkpoints()
+    except Exception:
+        return
+    if not have or CKPT in have:
+        return
+    print(f"warn     找不到 checkpoint {CKPT}")
+    print("         Comfy 現有的：")
+    for name in have[:20]:
+        print("           " + name)
+    if len(have) > 20:
+        print(f"           …還有 {len(have) - 20} 個")
+    print("         用 COMFY_CKPT 環境變數指定，或改 start*.bat 裡的 COMFY_CKPT。")
+
+
 def main() -> None:
     host = os.environ.get("HOST", "127.0.0.1")
     port = int(os.environ.get("PORT", "8787"))
     httpd = ThreadingHTTPServer((host, port), Handler)
     print(f"排字匣  http://{host}:{port}   畫面 {WEB.name}   Comfy {comfy_base()}")
     print("allow    " + ",".join(str(n) for n in ALLOW_NETS))
+    print(f"ckpt     {CKPT}")
+    check_ckpt()
     httpd.serve_forever()
 
 

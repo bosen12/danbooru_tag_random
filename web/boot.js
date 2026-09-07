@@ -1435,7 +1435,19 @@ function bindUi() {
   });
 }
 
+function bootNote(text, cls) {
+  const stage = $("cats") || document.body;
+  const p = document.createElement("p");
+  p.className = cls;
+  if (cls === "boot-error") p.setAttribute("role", "alert");
+  p.textContent = text;
+  stage.prepend(p);
+  return p;
+}
+
 async function main() {
+  // lexicon.json is ~340 KB, so say something instead of showing an empty shell.
+  const loading = bootNote("詞庫載入中…", "boot-load");
   let data;
   try {
     const r = await fetch("lexicon.json");
@@ -1443,14 +1455,11 @@ async function main() {
     data = await r.json();
     if (!data || !Array.isArray(data.tags)) throw new Error("lexicon.json 格式不對");
   } catch (err) {
-    const stage = $("cats") || document.body;
-    const p = document.createElement("p");
-    p.className = "boot-error";
-    p.setAttribute("role", "alert");
-    p.textContent = "詞庫載入失敗：" + (err && err.message ? err.message : String(err));
-    stage.prepend(p);
+    loading.remove();
+    bootNote("詞庫載入失敗：" + (err && err.message ? err.message : String(err)), "boot-error");
     return;
   }
+  loading.remove();
   lex = indexLexicon(data);
   settings = defaultSettings(data);
   const saved = loadStore();

@@ -87,6 +87,17 @@
 .well .results {
   grid-template-columns: minmax(0, 1fr);
   max-width: 720px;
+  margin-inline: auto;
+}
+
+/* Before the first shot, hand the height to the lexicon instead of the void. */
+.darkroom:has(.results:empty) {
+  grid-template-rows: minmax(180px, 26vh) minmax(0, 1fr);
+}
+
+.well .results:empty {
+  min-height: 100%;
+  max-width: none;
 }
 
 .well .card {
@@ -212,7 +223,7 @@
   .sheet .filter-bar {
     order: 1;
     position: sticky;
-    top: calc(2.75rem + env(safe-area-inset-top, 0px));
+    top: env(safe-area-inset-top, 0px);
     z-index: 6;
     background: var(--color-paper-2);
   }

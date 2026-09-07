@@ -50,7 +50,11 @@
           </div>
         </div>
       </div>
-      <div class="results" id="results"></div>
+      <div
+        class="results"
+        id="results"
+        data-empty="繩上還沒有籤。&#10;下面挑好字，按「抽一籤」。"
+      ></div>
     </section>
 
     <div class="counter">
@@ -65,21 +69,30 @@
         <span class="tag" data-state="banned" data-ban="user" data-locked="1">關掉</span>
       </div>
       <div class="strip">
-        <div class="row">
-          <button type="button" class="chip-toggle" id="girl" aria-pressed="true">女</button>
-          <button type="button" class="chip-toggle" id="boy" aria-pressed="false">男</button>
-          <button type="button" class="chip-toggle" id="cast-any" aria-pressed="false">不限</button>
-        </div>
-        <p class="hint clash" id="cast-clash" hidden></p>
-        <div class="row" id="heats">
-          <button type="button" class="chip-toggle" data-heat="mixed" aria-pressed="true">混合</button>
-          <button type="button" class="chip-toggle" data-heat="tease" aria-pressed="false">誘惑</button>
-          <button type="button" class="chip-toggle" data-heat="flash" aria-pressed="false">走光</button>
-          <button type="button" class="chip-toggle" data-heat="sex" aria-pressed="false">性愛</button>
-        </div>
-        <p class="hint clash" id="heat-clash" hidden></p>
-        <div class="row" id="eras"></div>
-        <p class="hint clash" id="era-clash" hidden></p>
+        <fieldset class="lane">
+          <legend>畫面裡有誰</legend>
+          <div class="row">
+            <button type="button" class="chip-toggle" id="girl" aria-pressed="true">女</button>
+            <button type="button" class="chip-toggle" id="boy" aria-pressed="false">男</button>
+            <button type="button" class="chip-toggle" id="cast-any" aria-pressed="false">不限</button>
+          </div>
+          <p class="hint clash" id="cast-clash" hidden></p>
+        </fieldset>
+        <fieldset class="lane">
+          <legend>尺度</legend>
+          <div class="row" id="heats">
+            <button type="button" class="chip-toggle" data-heat="mixed" aria-pressed="true">混合</button>
+            <button type="button" class="chip-toggle" data-heat="tease" aria-pressed="false">誘惑</button>
+            <button type="button" class="chip-toggle" data-heat="flash" aria-pressed="false">走光</button>
+            <button type="button" class="chip-toggle" data-heat="sex" aria-pressed="false">性愛</button>
+          </div>
+          <p class="hint clash" id="heat-clash" hidden></p>
+        </fieldset>
+        <fieldset class="lane">
+          <legend>時代</legend>
+          <div class="row" id="eras"></div>
+          <p class="hint clash" id="era-clash" hidden></p>
+        </fieldset>
       </div>
     </div>
 

@@ -4,12 +4,51 @@
 
 畫面上看到的是中文。真正送給 Comfy 的 POS 仍是英文 tag。滑鼠停在中文上會顯示英文。
 
-成人向。詞庫和負向 prompt 會擋 `loli`、`shota`、`teen`、`child`。
+四套版面（原版／暗房／活字樓／抽籤棚）抽牌規則相同，只是排版不同。詞庫和引擎都在 `web/`。
 
-## 怎麼開
+> **成人向。** 這個工具會產生成人內容。詞庫和負向 prompt 會擋 `loli`、`shota`、`teen`、`child`。
+> 只在自己的機器上跑，伺服器預設只收 loopback 和 Tailscale 的連線。
 
-1. 先開 ComfyUI（`http://127.0.0.1:8188`）。checkpoint 預設 `illurtrious\waiIllustriousSDXL_v170.safetensors`。
-2. 在檔案總管雙擊下面其中一個 **`.bat`**（不要用記事本打開）。會自動找 `py -3` 或 `python`，並打開瀏覽器。
+---
+
+## 你需要先有什麼
+
+| | 版本 | 為什麼 |
+|---|---|---|
+| **Python** | 3.9 以上 | 跑 `server.py`。沒有第三方套件，標準函式庫就夠 |
+| **ComfyUI** | 跑在 `http://127.0.0.1:8188` | 真正生圖的是它 |
+| **SDXL checkpoint** | 建議 WAI / Illustrious 系列 | 詞庫是照 Danbooru tag 調的 |
+| 瀏覽器 | 近三年的 Chrome / Edge / Firefox / Safari | 用到 `:has()`、`popover`、`oklch()` |
+| Node.js（選用） | 18 以上 | 只有跑抽牌測試才需要 |
+
+## 五分鐘上手
+
+```bash
+git clone https://github.com/bosen12/danbooru_tag_random.git
+cd danbooru_tag_random
+```
+
+**1. 先把 ComfyUI 開起來**，確認瀏覽器打得開 <http://127.0.0.1:8188>。
+
+**2. 告訴排字匣你的 checkpoint 叫什麼。** 這是新 clone 唯一一定要改的東西——預設值是作者機器上的檔名，你的一定不一樣。名字要跟 ComfyUI 的 `CheckpointLoaderSimple` 下拉選單裡**一模一樣**（含子資料夾）。
+
+Windows：
+
+```bat
+set COMFY_CKPT=waiIllustriousSDXL_v170.safetensors
+```
+
+macOS / Linux：
+
+```bash
+export COMFY_CKPT=waiIllustriousSDXL_v170.safetensors
+```
+
+不確定名字？先直接跑第 3 步。checkpoint 對不上時，黑窗會把 ComfyUI 現有的清單印出來給你挑。
+
+**3. 開伺服器。**
+
+Windows 可以在檔案總管直接雙擊 `.bat`（不要用記事本打開），會自動找 `py -3` 或 `python` 並開瀏覽器：
 
 | 雙擊這個 | 畫面 | 網址 |
 |----------|------|------|
@@ -18,38 +57,79 @@
 | `start-typefloor.bat` | 活字樓：抽屜撿字、右邊校樣付印 | http://127.0.0.1:8789 |
 | `start-stall.bat` | 抽籤棚：衣繩拍立得、櫃檯抽籤 | http://127.0.0.1:8790 |
 
-四套畫面抽牌規則相同，只是版面不同。詞庫和引擎都在 `web/`。
+任何系統都可以直接跑（macOS / Linux 只有這條路）：
 
-`start*.bat` 會把伺服器綁在 `0.0.0.0`（本機瀏覽器仍開 `127.0.0.1`）。請求只收 loopback 和 Tailscale（`100.64.0.0/10`），家裡 Wi-Fi / 熱點 / WSL 會 403。手機走 Tailscale 時用黑窗印出的 `Tailscale http://100.x.x.x:埠/`。防火牆若跳出，允許存取。只想本機聽可設 `HOST=127.0.0.1`。
+```bash
+python3 server.py
+```
+
+然後開 <http://127.0.0.1:8787>。要換版面就加 `WEB_DIR`：
+
+```bash
+WEB_DIR=web1 PORT=8788 python3 server.py
+```
 
 視窗不要關。改過程式後請 **Ctrl+F5**。
 
-### bat 打不開時
+## 設定
 
-- 請用英文檔名那四個 `start*.bat`。中文檔名（`啟動.bat` 等）只是呼叫英文檔，有的 Windows 會讀錯。
-- 必須已安裝 Python 3，安裝時勾 **Add python.exe to PATH**。也可在終端機先試 `py -3 --version`。
-- 不要把 bat 複製到別的資料夾再點；它要跟 `server.py` 同一層。
-- 黑窗一閃就沒了：用記事本以外的方式，確認不是「用 Python 打開」而是「用命令提示字元」。
-- 仍不行，在本目錄手動跑：
+全部走環境變數，不用改程式：
 
-```bat
-py -3 server.py
-```
+| 環境變數 | 預設 | 說明 |
+|----------|------|------|
+| `COMFY_CKPT` | `illurtrious\waiIllustriousSDXL_v170.safetensors` | **新 clone 一定要改。** 要跟 ComfyUI 選單裡的字一樣 |
+| `COMFY_API` | `http://127.0.0.1:8188` | ComfyUI 位置 |
+| `WEB_DIR` | `web` | 版面：`web`／`web1`／`web2`／`web3` |
+| `PORT` | `8787` | |
+| `HOST` | `127.0.0.1`（`start*.bat` 設成 `0.0.0.0`） | |
+| `ALLOW_NET` | `127.0.0.0/8,100.64.0.0/10` | 逗號分隔 CIDR。家用網要開要自己加 |
 
-然後瀏覽器開 <http://127.0.0.1:8787>
+`server.py` 沒有讀設定檔，換 checkpoint／換埠都靠上面這張表。
 
-| 環境變數 | 預設 |
-|----------|------|
-| `COMFY_API` | `http://127.0.0.1:8188` |
-| `COMFY_CKPT` | `illurtrious\waiIllustriousSDXL_v170.safetensors` |
-| `PORT` | `8787` |
-| `HOST` | 伺服器預設 `127.0.0.1`；`start*.bat` 設成 `0.0.0.0` |
-| `ALLOW_NET` | `127.0.0.0/8,100.64.0.0/10`（逗號分隔 CIDR；家用網要開再加） |
-| `WEB_DIR` | `web`（也可 `web1` / `web2` / `web3`） |
+生圖參數（`steps` 25、`cfg` 6.5、`euler_ancestral`）寫死在 `server.py` 上方的常數，要改就改那裡。
 
 負向 prompt 寫在 `web/lexicon.json` 的 `negative`（來源是 `scripts/merge_lexicon.py`）。詞庫載入失敗時 `server.py` 才用內建後備字串。
 
 即時預覽需要 Comfy 開著 latent 預覽（Preview method：Latent2RGB 或 TAESD）。
+
+## 手機 / 區網
+
+`start*.bat` 會把伺服器綁在 `0.0.0.0`（本機瀏覽器仍開 `127.0.0.1`）。請求只收 loopback 和 Tailscale（`100.64.0.0/10`），家裡 Wi-Fi / 熱點 / WSL 會 403。手機走 Tailscale 時用黑窗印出的 `Tailscale http://100.x.x.x:埠/`。防火牆若跳出，允許存取。只想本機聽可設 `HOST=127.0.0.1`。
+
+## 跑不起來時
+
+**bat 一閃就關 / 打不開**
+
+- 請用英文檔名那四個 `start*.bat`。中文檔名（`啟動.bat` 等）只是呼叫英文檔，有的 Windows 會讀錯。
+- 必須已安裝 Python 3，安裝時勾 **Add python.exe to PATH**。也可在終端機先試 `py -3 --version`。
+- 不要把 bat 複製到別的資料夾再點；它要跟 `server.py` 同一層。
+- 確認不是「用 Python 打開」而是「用命令提示字元」執行。
+- 仍不行就在本目錄手動跑 `py -3 server.py`，錯誤訊息會留在畫面上。
+
+**右上角一直顯示「Comfy 未連上」**
+
+ComfyUI 沒開，或不在 `COMFY_API` 指的位置。先用瀏覽器確認 <http://127.0.0.1:8188> 打得開。
+
+**黑窗印出「找不到 checkpoint」**
+
+照它印出來的清單挑一個，設進 `COMFY_CKPT`。
+
+**畫面上寫「詞庫載入失敗」**
+
+`web/lexicon.json` 不見了或壞了。重跑 `python scripts/merge_lexicon.py` 和 `python scripts/add_zh.py` 重建。
+
+## 測試
+
+```bash
+node scripts/test_engine.mjs
+python scripts/test_server.py
+```
+
+Windows 也可以雙擊 `test.bat`（兩個都跑）。`test_engine.mjs` 測抽牌與互斥對帳，`test_server.py` 測網段白名單和 Comfy 代理，都不需要開 ComfyUI。
+
+## 授權
+
+MIT，見 [LICENSE](LICENSE)。詞庫裡的 tag 名稱來自 Danbooru，生成內容的責任在使用者自己。
 
 ---
 
@@ -210,17 +290,14 @@ python scripts/merge_lexicon.py
 python scripts/add_zh.py
 ```
 
-從 `C:\projects\special_prompts` 抽詞包補新 tag（先隨機 5000 包、打 Danbooru 確認再分類）：
+`web/lexicon.json` 已經建好放在 repo 裡，clone 下來直接可用。上面兩個腳本只有你想改詞庫規則時才需要跑。
+
+`scripts/harvest_prompts.py` 是選用的：它從一堆外部 prompt 詞包裡挖沒收錄的新 tag（隨機抽 5000 包、打 Danbooru 確認再分類）。那批詞包**不在這個 repo 裡**，要自己準備一個裝 `.json` 詞包的資料夾，用 `PACKS_DIR` 指過去：
 
 ```bash
-python scripts/harvest_prompts.py
+PACKS_DIR=/path/to/prompt-packs python scripts/harvest_prompts.py
 python scripts/merge_lexicon.py
 python scripts/add_zh.py
 ```
 
-抽牌與對帳測試（或雙擊 `test.bat`）：
-
-```bash
-node scripts/test_engine.mjs
-python scripts/test_server.py
-```
+挖不到東西時它會停下來，不會把既有的 `web/lexicon_parts/05-harvest.json` 洗掉。

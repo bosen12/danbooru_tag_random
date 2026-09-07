@@ -135,8 +135,42 @@
   flex: 1 1 100%;
   display: flex;
   flex-wrap: wrap;
-  gap: var(--space-2) var(--space-4);
-  align-items: center;
+  gap: var(--space-3) var(--space-4);
+  align-items: flex-start;
+}
+
+/* Cast, heat and era all offer a chip called 混合 — keep the groups apart. */
+.lane {
+  border: 0;
+  margin: 0;
+  padding: 0;
+  min-width: 0;
+  min-inline-size: 0;
+}
+
+.lane + .lane {
+  padding-left: var(--space-4);
+  border-left: var(--rule) solid var(--color-rule);
+}
+
+.lane legend {
+  display: block;
+  padding: 0;
+  margin-bottom: 6px;
+  font-size: 11px;
+  letter-spacing: 0.12em;
+  color: var(--color-muted);
+}
+
+.lane .hint {
+  margin-top: 6px;
+  max-width: 24rem;
+}
+
+.line .results:empty {
+  display: grid;
+  min-height: 220px;
+  border: var(--rule) dashed var(--color-rule);
 }
 
 .lot {
@@ -291,6 +325,22 @@
   .lot {
     flex: 1 1 auto;
     min-width: 0;
+  }
+  /* The counter is pinned to the bottom, so swipe the lanes instead of stacking them. */
+  .strip {
+    flex-wrap: nowrap;
+    overflow-x: auto;
+    overscroll-behavior-x: contain;
+    scrollbar-width: none;
+  }
+  .strip::-webkit-scrollbar {
+    display: none;
+  }
+  .lane {
+    flex: 0 0 auto;
+  }
+  .lane .row {
+    flex-wrap: nowrap;
   }
   .hang {
     padding: var(--space-3);

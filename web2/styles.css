@@ -5,6 +5,7 @@ html {
 }
 
 .mast {
+  min-height: var(--mast);
   display: flex;
   align-items: center;
   justify-content: space-between;
@@ -73,14 +74,14 @@ html {
 .floor {
   display: grid;
   grid-template-columns: var(--ruler) minmax(0, 1fr) var(--galley);
-  min-height: calc(100dvh - 64px);
+  min-height: calc(100dvh - var(--mast));
   align-items: start;
 }
 
 .ruler {
   position: sticky;
-  top: 64px;
-  height: calc(100dvh - 64px);
+  top: var(--mast);
+  height: calc(100dvh - var(--mast));
   display: flex;
   flex-direction: column;
   justify-content: space-evenly;
@@ -117,7 +118,7 @@ html {
 
 .stick {
   position: sticky;
-  top: 72px;
+  top: var(--mast);
   z-index: 6;
   background: var(--color-paper-3);
   border: var(--rule) solid var(--color-ink);
@@ -167,8 +168,8 @@ html {
 
 .galley {
   position: sticky;
-  top: 64px;
-  height: calc(100dvh - 64px);
+  top: var(--mast);
+  height: calc(100dvh - var(--mast));
   overflow: auto;
   overscroll-behavior: contain;
   border-left: 2px solid var(--color-ink);
@@ -190,6 +191,11 @@ html {
   flex: 0 0 auto;
   grid-template-columns: 1fr;
   min-height: 12rem;
+}
+
+.galley .results:empty {
+  border: var(--rule) dashed var(--color-rule);
+  background: var(--color-paper-3);
 }
 
 .hud-block label,
@@ -237,6 +243,7 @@ html {
 
 @media (max-width: 900px) {
   .mast {
+    min-height: 0;
     padding-left: max(var(--space-3), env(safe-area-inset-left, 0px));
     padding-right: max(var(--space-3), env(safe-area-inset-right, 0px));
     padding-top: max(var(--space-3), env(safe-area-inset-top, 0px));
