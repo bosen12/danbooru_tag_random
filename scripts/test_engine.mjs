@@ -1146,6 +1146,32 @@ function indoorOutdoorClash(have) {
     firstCloth >= 0 && firstPose >= 0 && firstCloth < firstPose,
     `cloth@${firstCloth} pose@${firstPose} pos=${d.positive}`
   );
+  const qAt = parts.indexOf("masterpiece");
+  const nsfwAt = Math.max(parts.lastIndexOf("nsfw"), parts.lastIndexOf("explicit"));
+  const girlAt = parts.indexOf("1girl");
+  ok("quality sits after subject", qAt > girlAt && girlAt >= 0, `girl@${girlAt} quality@${qAt}`);
+  ok("quality sits after nsfw tail", qAt > nsfwAt && nsfwAt >= 0, `nsfw@${nsfwAt} quality@${qAt}`);
+  ok("default draw has no cel shading", !parts.includes("cel shading"));
+}
+
+{
+  const s = settings();
+  s.girl = true;
+  s.boy = false;
+  s.eras = ["modern"];
+  s.heats = ["tease"];
+  s.weights = { tease: 1, flash: 0, sex: 0 };
+  const pinned = applyPin(lex, new Set(), new Set(), "cel shading").pinned;
+  const d = drawOne(lex, s, pinned, new Set(), mulberry32(43), 43);
+  const parts = d.positive.split(", ").map((t) => t.trim()).filter(Boolean);
+  ok("pinned cel shading enters POS", parts.includes("cel shading"));
+  ok(
+    "style sits before quality",
+    parts.indexOf("cel shading") >= 0 && parts.indexOf("cel shading") < parts.indexOf("masterpiece"),
+    `style@${parts.indexOf("cel shading")} quality@${parts.indexOf("masterpiece")}`
+  );
+  eq("cel shading is optional quality", lex.byTag.get("cel shading")?.section, "quality");
+  eq("cel shading is style group", lex.byTag.get("cel shading")?.group, "style");
 }
 
 {

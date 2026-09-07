@@ -97,7 +97,7 @@ function parentChild(lex, a, b) {
 
 export function indexLexicon(data) {
   const byTag = new Map();
-  const bySection = { subject: [], feature: [], pose: [], clothing: [], env: [] };
+  const bySection = { quality: [], subject: [], feature: [], pose: [], clothing: [], env: [] };
   const mutexOf = new Map();
   const byMutex = new Map();
   const byGroup = new Map();
@@ -927,6 +927,7 @@ export function drawOne(lex, settings, pinned, userBanned, rand, seed) {
   const kept = reconcile(lex, used, female, male, people, pinned);
 
   const quality = lex.data.quality.slice();
+  const style = [];
   const subject = [];
   const feature = [];
   const pose = [];
@@ -945,6 +946,8 @@ export function drawOne(lex, settings, pinned, userBanned, rand, seed) {
     if (!item) continue;
     if (item.section === "subject") {
       if (!subject.includes(tag)) subject.push(tag);
+    } else if (item.section === "quality") {
+      if (!quality.includes(tag) && !style.includes(tag)) style.push(tag);
     } else if (bucket[item.section] && !bucket[item.section].includes(tag)) {
       bucket[item.section].push(tag);
     }
@@ -962,7 +965,7 @@ export function drawOne(lex, settings, pinned, userBanned, rand, seed) {
   if (!env.includes("soft lighting")) env.unshift("soft lighting");
 
   const nsfw = lex.data.nsfwTail;
-  const ordered = [...quality, ...subject, ...feature, ...clothing, ...pose, ...env, ...nsfw];
+  const ordered = [...subject, ...feature, ...clothing, ...pose, ...env, ...nsfw, ...style, ...quality];
   const seen = new Set();
   const positive = [];
   for (const t of ordered) {
@@ -978,7 +981,7 @@ export function drawOne(lex, settings, pinned, userBanned, rand, seed) {
     male,
     people,
     seed,
-    sections: { quality, subject, feature, pose, clothing, env, nsfw },
+    sections: { quality, style, subject, feature, pose, clothing, env, nsfw },
     positive: positive.join(", "),
     conflicts: contradictions(lex, positive),
     eraClash: eraMismatches(lex, pinned, era),

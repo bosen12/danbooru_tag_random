@@ -80,7 +80,8 @@
   },
   "groupOrder": {
     "quality": [
-      "fixed"
+      "fixed",
+      "style"
     ],
     "subject": [
       "count_f",
@@ -134,6 +135,7 @@
   },
   "groupZh": {
     "fixed": "固定",
+    "style": "風格",
     "count_f": "人數・女",
     "count_m": "人數・男",
     "extra": "其他",
@@ -19236,6 +19238,82 @@
         "female"
       ],
       "zh": "自然胸"
+    },
+    {
+      "tag": "cel shading",
+      "section": "quality",
+      "gate": "any",
+      "heat": [
+        "tease",
+        "flash",
+        "sex"
+      ],
+      "mutex": null,
+      "bind": [],
+      "implies": [],
+      "layer": "normal",
+      "era": [
+        "any"
+      ],
+      "group": "style",
+      "zh": "賽璐璐上色"
+    },
+    {
+      "tag": "anime coloring",
+      "section": "quality",
+      "gate": "any",
+      "heat": [
+        "tease",
+        "flash",
+        "sex"
+      ],
+      "mutex": null,
+      "bind": [],
+      "implies": [],
+      "layer": "normal",
+      "era": [
+        "any"
+      ],
+      "group": "style",
+      "zh": "動畫上色"
+    },
+    {
+      "tag": "flat color",
+      "section": "quality",
+      "gate": "any",
+      "heat": [
+        "tease",
+        "flash",
+        "sex"
+      ],
+      "mutex": null,
+      "bind": [],
+      "implies": [],
+      "layer": "normal",
+      "era": [
+        "any"
+      ],
+      "group": "style",
+      "zh": "平塗"
+    },
+    {
+      "tag": "clean lines",
+      "section": "quality",
+      "gate": "any",
+      "heat": [
+        "tease",
+        "flash",
+        "sex"
+      ],
+      "mutex": null,
+      "bind": [],
+      "implies": [],
+      "layer": "normal",
+      "era": [
+        "any"
+      ],
+      "group": "style",
+      "zh": "乾淨線條"
     }
   ]
 }

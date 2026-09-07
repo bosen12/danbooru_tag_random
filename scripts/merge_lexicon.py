@@ -46,7 +46,7 @@ POSE_CLIMAX = {
     "orgasm",
     "moaning",
 }
-SECTIONS = {"subject", "feature", "pose", "clothing", "env"}
+SECTIONS = {"quality", "subject", "feature", "pose", "clothing", "env"}
 GATES = {"any", "female", "male"}
 
 NEGATIVE = (
@@ -711,6 +711,32 @@ def norm(item: dict) -> dict | None:
     return out
 
 
+def extra_style_tags() -> list[dict]:
+    """Optional look. Pin to add; never auto-drawn."""
+    zh = {
+        "cel shading": "賽璐璐上色",
+        "anime coloring": "動畫上色",
+        "flat color": "平塗",
+        "clean lines": "乾淨線條",
+    }
+    return [
+        {
+            "tag": tag,
+            "section": "quality",
+            "gate": "any",
+            "heat": list(HEATS),
+            "mutex": None,
+            "bind": [],
+            "implies": [],
+            "layer": "normal",
+            "era": ["any"],
+            "needs": [],
+            "zh": zh[tag],
+        }
+        for tag in ("cel shading", "anime coloring", "flat color", "clean lines")
+    ]
+
+
 def extra_breast_feel_tags() -> list[dict]:
     """Always-on breast feel. No mutex so they sit beside breast_size."""
     return [
@@ -960,6 +986,7 @@ def main() -> None:
     rows.extend(extra_male_look_tags())
     rows.extend(extra_shot_face_tags())
     rows.extend(extra_breast_feel_tags())
+    rows.extend(extra_style_tags())
 
     old_zh: dict[str, str] = {}
     if OUT.exists():

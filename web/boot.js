@@ -23,7 +23,7 @@ import {
 } from "./engine.js";
 
 const SECTIONS = [
-  { id: "quality", title: "畫質與風格", hint: "每張都帶，不能改" },
+  { id: "quality", title: "畫質與風格", hint: "固定畫質每張都帶。風格預設不進，釘了才進" },
   { id: "subject", title: "人數", hint: "跟左欄走。只開女就不會看到男生的字" },
   { id: "feature", title: "長相", hint: "髮、眼、身材。有男時可抽種族，同類只一個" },
   { id: "pose", title: "姿勢", hint: "先身體和鏡頭，尺度對上才補走光／性愛" },
@@ -557,18 +557,25 @@ function syncViewFilters() {
 
 function sectionItems(sec) {
   if (sec.id === "quality") {
-    return lex.data.quality.map((tag) => ({
+    const fixed = new Set(lex.data.quality || []);
+    const locked = (lex.data.quality || []).map((tag) => ({
       tag,
       section: "quality",
       group: "fixed",
       zh: (lex.data.zh || {})[tag],
     }));
+    const extra = (lex.bySection.quality || []).filter((item) => !fixed.has(item.tag));
+    return [...locked, ...extra];
   }
   return lex.bySection[sec.id] || [];
 }
 
+function isLockedQuality(tag) {
+  return (lex.data.quality || []).includes(tag);
+}
+
 function chipShouldShow(item, auto, q) {
-  if (item.section === "quality") {
+  if (isLockedQuality(item.tag)) {
     if (viewMode === "pinned" || viewMode === "banned") return false;
     if (q) {
       const zh = (item.zh || labelOf(lex, item.tag) || "").toLowerCase();
@@ -626,7 +633,7 @@ function setData(el, key, val) {
 }
 
 function applyTagState(btn, item, auto, secId) {
-  if (secId === "quality" || btn.dataset.locked === "1") return;
+  if (isLockedQuality(item.tag) || btn.dataset.locked === "1") return;
   const st = tagState(item.tag, pinned, userBanned, auto);
   const zh = item.zh || labelOf(lex, item.tag);
   const mutexBan = st === "banned" && auto.has(item.tag) && !userBanned.has(item.tag);
@@ -815,7 +822,7 @@ function buildCats() {
       const h = document.createElement("h3");
       h.textContent = zhMap[g] || g;
       subHead.append(h);
-      if (sec.id !== "quality") subHead.append(closeAllBtn(zhMap[g] || g));
+      if (sec.id !== "quality" || g !== "fixed") subHead.append(closeAllBtn(zhMap[g] || g));
       const box = document.createElement("div");
       box.className = "tags";
       const sorted = sortItems(buckets.get(g));
@@ -892,7 +899,7 @@ function makeTagBtn(item, sec, auto) {
   btn.dataset.en = item.tag;
   btn.title = item.tag;
   btn.setAttribute("aria-label", `${zh} (${item.tag})`);
-  if (sec.id === "quality") {
+  if (isLockedQuality(item.tag)) {
     btn.dataset.state = "pinned";
     btn.dataset.locked = "1";
     btn.disabled = true;
