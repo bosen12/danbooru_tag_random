@@ -249,48 +249,28 @@ function syncSamePerson() {
 }
 
 function syncHeat() {
-  for (const btn of $("presets").querySelectorAll(".seg")) {
-    btn.setAttribute(
-      "aria-pressed",
-      btn.dataset.preset === settings.heatPreset ? "true" : "false"
-    );
-  }
-  for (const btn of $("heats").querySelectorAll(".chip-toggle")) {
-    btn.setAttribute(
-      "aria-pressed",
-      settings.heats.includes(btn.dataset.heat) ? "true" : "false"
-    );
+  const box = $("heats");
+  if (!box) return;
+  const exclusive = settings.heats.length === 1 ? settings.heats[0] : null;
+  for (const btn of box.querySelectorAll(".chip-toggle")) {
+    const h = btn.dataset.heat;
+    const on = h === "mixed" ? !exclusive : exclusive === h;
+    btn.setAttribute("aria-pressed", on ? "true" : "false");
   }
   updateHeatClash();
 }
 
-function applyPreset(name) {
-  const table = lex.data.heatWeights[name];
-  if (!table) return;
-  settings.heatPreset = name;
-  settings.weights = { ...table };
-  settings.heats = Object.entries(table)
-    .filter(([, w]) => w > 0)
-    .map(([h]) => h);
-  if (name === "mixed") settings.heats = ["tease", "flash", "sex"];
-  if (!settings.heats.length) settings.heats = ["tease"];
-  syncHeat();
-  saveStore();
-  renderCats("heat");
-}
-
-function toggleHeat(h) {
-  const set = new Set(settings.heats);
-  if (set.has(h)) {
-    if (set.size === 1) return;
-    set.delete(h);
-  } else set.add(h);
-  settings.heats = [...set];
-  settings.heatPreset = "custom";
-  const w = { tease: 0, flash: 0, sex: 0 };
-  const share = 1 / settings.heats.length;
-  for (const x of settings.heats) w[x] = share;
-  settings.weights = w;
+function pickHeat(h) {
+  if (h === "mixed") {
+    settings.heatPreset = "mixed";
+    settings.heats = ["tease", "flash", "sex"];
+    settings.weights = { ...(lex.data.heatWeights.mixed || { tease: 0.3, flash: 0.3, sex: 0.4 }) };
+  } else {
+    settings.heatPreset = h;
+    settings.heats = [h];
+    settings.weights = { tease: 0, flash: 0, sex: 0 };
+    settings.weights[h] = 1;
+  }
   syncHeat();
   saveStore();
   renderCats("heat");
@@ -1386,13 +1366,9 @@ function bindUi() {
       saveStore();
     });
   }
-  $("presets").addEventListener("click", (e) => {
-    const btn = e.target.closest("[data-preset]");
-    if (btn) applyPreset(btn.dataset.preset);
-  });
   $("heats").addEventListener("click", (e) => {
     const btn = e.target.closest("[data-heat]");
-    if (btn) toggleHeat(btn.dataset.heat);
+    if (btn) pickHeat(btn.dataset.heat);
   });
   let searchTimer = 0;
   window.addEventListener("hashchange", () => {

@@ -158,18 +158,32 @@ HAIR_STYLE = {
     "hime cut",
     "hair bun",
     "double bun",
+    "single hair bun",
     "drill hair",
     "wavy hair",
     "straight hair",
     "curly hair",
-    "floating hair",
+    "parted hair",
     "hair over one eye",
     "hair between eyes",
     "hair over shoulder",
+}
+
+HAIR_COLOR_LOOK = {
     "gradient hair",
     "streaked hair",
     "two-tone hair",
     "colored inner hair",
+}
+
+BODY_HAIR = {
+    "pubic hair": "body_f",
+    "female pubic hair": "body_f",
+    "male pubic hair": "body_m",
+    "leg hair": "body_m",
+    "arm hair": "body_m",
+    "chest hair": "body_m",
+    "facial hair": "body_m",
 }
 
 FACE = {
@@ -234,6 +248,7 @@ SKIN = {
     "scar",
     "tattoo",
     "steaming body",
+    "wet hair",
 }
 
 SEX = {
@@ -310,16 +325,16 @@ def assign_group(item: dict) -> str:
             return "body_m"
         if mx == "hair_length":
             return "hair_len"
-        if mx == "hair_color":
+        if mx == "hair_color" or tag in HAIR_COLOR_LOOK:
             return "hair_color"
         if mx == "eye_color" or "eye" in tag or tag in {"eyelashes", "eyeshadow", "heterochromia", "tareme", "tsurime"}:
             return "eyes"
-        if tag in HAIR_STYLE or "hair" in tag:
+        if tag in BODY_HAIR:
+            return BODY_HAIR[tag]
+        if tag in HAIR_STYLE or tag.endswith(" bangs") or tag.endswith(" ponytail"):
             return "hair_style"
         if tag in MAKEUP:
             return "makeup"
-        if tag in {"parted bangs"}:
-            return "hair_style"
         if mx == "breast_size" or gate == "female" and any(
             k in tag
             for k in (

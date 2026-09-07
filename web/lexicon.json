@@ -45,14 +45,19 @@
       "sex": 0.4
     },
     "tease": {
-      "tease": 0.7,
-      "flash": 0.3,
+      "tease": 1.0,
+      "flash": 0.0,
+      "sex": 0.0
+    },
+    "flash": {
+      "tease": 0.0,
+      "flash": 1.0,
       "sex": 0.0
     },
     "sex": {
-      "tease": 0.1,
-      "flash": 0.2,
-      "sex": 0.7
+      "tease": 0.0,
+      "flash": 0.0,
+      "sex": 1.0
     }
   },
   "castWeights": {
@@ -962,7 +967,7 @@
       "era": [
         "any"
       ],
-      "group": "hair_style",
+      "group": "other",
       "zh": "髮絲飄起"
     },
     {
@@ -1266,7 +1271,7 @@
       "era": [
         "any"
       ],
-      "group": "hair_style",
+      "group": "hair_color",
       "zh": "雙色髮"
     },
     {
@@ -1285,7 +1290,7 @@
       "era": [
         "any"
       ],
-      "group": "hair_style",
+      "group": "hair_color",
       "zh": "漸層髮色"
     },
     {
@@ -1304,7 +1309,7 @@
       "era": [
         "any"
       ],
-      "group": "hair_style",
+      "group": "hair_color",
       "zh": "條紋挑染"
     },
     {
@@ -1323,7 +1328,7 @@
       "era": [
         "any"
       ],
-      "group": "hair_style",
+      "group": "hair_color",
       "zh": "內層彩髮"
     },
     {
@@ -2725,7 +2730,7 @@
       "era": [
         "any"
       ],
-      "group": "hair_style",
+      "group": "body_f",
       "zh": "陰毛"
     },
     {
@@ -2843,7 +2848,7 @@
       "era": [
         "any"
       ],
-      "group": "hair_style",
+      "group": "body_m",
       "zh": "鬍渣／鬍鬚"
     },
     {
@@ -2957,7 +2962,7 @@
       "era": [
         "any"
       ],
-      "group": "hair_style",
+      "group": "body_m",
       "zh": "胸毛"
     },
     {
@@ -11625,7 +11630,7 @@
       "era": [
         "any"
       ],
-      "group": "hair_style",
+      "group": "body_m",
       "zh": "男性陰毛"
     },
     {
@@ -11828,7 +11833,7 @@
       "era": [
         "any"
       ],
-      "group": "hair_style",
+      "group": "body_f",
       "zh": "女性陰毛"
     },
     {
@@ -13515,7 +13520,7 @@
       "era": [
         "any"
       ],
-      "group": "hair_style",
+      "group": "other",
       "zh": "髮圈"
     },
     {
@@ -14294,7 +14299,7 @@
       "era": [
         "any"
       ],
-      "group": "hair_style",
+      "group": "other",
       "zh": "髮花"
     },
     {
@@ -14485,7 +14490,7 @@
       "era": [
         "any"
       ],
-      "group": "hair_style",
+      "group": "skin",
       "zh": "濕髮"
     },
     {
@@ -15336,7 +15341,7 @@
       "era": [
         "any"
       ],
-      "group": "hair_style",
+      "group": "body_m",
       "zh": "手臂毛"
     },
     {
@@ -15355,7 +15360,7 @@
       "era": [
         "any"
       ],
-      "group": "hair_style",
+      "group": "body_m",
       "zh": "腿毛"
     },
     {
@@ -15679,7 +15684,7 @@
       "era": [
         "any"
       ],
-      "group": "hair_style",
+      "group": "other",
       "zh": "抓別人頭髮"
     },
     {

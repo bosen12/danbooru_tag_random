@@ -12,6 +12,7 @@ import {
   drawOne,
   ERAS,
   identityPins,
+  isIdentityItem,
   heatMismatches,
   sanitizeSettings,
   indexLexicon,
@@ -721,6 +722,24 @@ const MODERN_ONLY = [
   eq("chinese clothes sits in era clothes", lex.byTag.get("chinese clothes")?.group, "era");
   eq("earrings stay accessories", lex.byTag.get("earrings")?.group, "acc");
   eq("white shirt stays top", lex.byTag.get("white shirt")?.group, "top");
+  eq("ponytail is hair style", lex.byTag.get("ponytail")?.group, "hair_style");
+  eq("wavy hair is hair style", lex.byTag.get("wavy hair")?.group, "hair_style");
+  eq("pubic hair is not a hair style", lex.byTag.get("pubic hair")?.group, "body_f");
+  eq("female pubic hair is not a hair style", lex.byTag.get("female pubic hair")?.group, "body_f");
+  eq("male pubic hair is not a hair style", lex.byTag.get("male pubic hair")?.group, "body_m");
+  eq("leg hair is not a hair style", lex.byTag.get("leg hair")?.group, "body_m");
+  eq("facial hair is not a hair style", lex.byTag.get("facial hair")?.group, "body_m");
+  eq("grabbing another's hair is not a hair style", lex.byTag.get("grabbing another's hair")?.group, "other");
+  eq("hair flower is not a hair style", lex.byTag.get("hair flower")?.group, "other");
+  eq("wet hair is not a hair style", lex.byTag.get("wet hair")?.group, "skin");
+  eq("two-tone hair sits with hair color", lex.byTag.get("two-tone hair")?.group, "hair_color");
+  ok("pubic hair is not identity", !isIdentityItem(lex.byTag.get("pubic hair")));
+  ok("ponytail is identity", isIdentityItem(lex.byTag.get("ponytail")));
+  ok(
+    "sex preset is sex-only",
+    data.heatWeights.sex.sex === 1 && data.heatWeights.sex.tease === 0 && data.heatWeights.sex.flash === 0
+  );
+  ok("flash preset exists", data.heatWeights.flash && data.heatWeights.flash.flash === 1);
 }
 
 {

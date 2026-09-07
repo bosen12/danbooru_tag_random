@@ -1028,8 +1028,9 @@ def main() -> None:
         },
         "heatWeights": {
             "mixed": {"tease": 0.3, "flash": 0.3, "sex": 0.4},
-            "tease": {"tease": 0.7, "flash": 0.3, "sex": 0.0},
-            "sex": {"tease": 0.1, "flash": 0.2, "sex": 0.7},
+            "tease": {"tease": 1.0, "flash": 0.0, "sex": 0.0},
+            "flash": {"tease": 0.0, "flash": 1.0, "sex": 0.0},
+            "sex": {"tease": 0.0, "flash": 0.0, "sex": 1.0},
         },
         "castWeights": {
             "girl_only": {"1girl": 0.72, "2girls": 0.22, "3girls": 0.06},
