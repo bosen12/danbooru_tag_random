@@ -277,6 +277,8 @@ ZH = {
     "hug from behind": "從後擁抱",
     "huge ass": "巨臀",
     "huge breasts": "巨乳",
+    "natural breasts": "自然胸",
+    "soft breasts": "柔軟胸",
     "huge penis": "巨大陰莖",
     "imminent penetration": "即將插入",
     "index fingers together": "食指對碰",

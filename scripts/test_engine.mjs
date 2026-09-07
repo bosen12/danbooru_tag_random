@@ -253,10 +253,15 @@ function eraDraws(era, n = 60, seed0 = 9000) {
   let femCloth = 0;
   let femFeat = 0;
   let breasts = 0;
+  let soft = 0;
+  let natural = 0;
   for (let i = 0; i < 50; i++) {
     const d = drawOne(lex, s, new Set(), new Set(), mulberry32(12000 + i), 12000 + i);
+    const have = tagsOf(d);
     if (d.female) femFlag += 1;
-    for (const t of tagsOf(d)) {
+    if (have.has("soft breasts")) soft += 1;
+    if (have.has("natural breasts")) natural += 1;
+    for (const t of have) {
       const it = lex.byTag.get(t);
       if (it?.gate === "female" && it.section === "clothing") femCloth += 1;
       if (it?.gate === "female" && it.section === "feature") femFeat += 1;
@@ -267,6 +272,8 @@ function eraDraws(era, n = 60, seed0 = 9000) {
   ok("girl-only draws female clothing", femCloth > 0, `femCloth=${femCloth}`);
   ok("girl-only draws female features", femFeat > 0, `femFeat=${femFeat}`);
   ok("girl-only can draw breasts", breasts > 0, `breasts=${breasts}`);
+  eq("girl-only always has soft breasts", soft, 50);
+  eq("girl-only always has natural breasts", natural, 50);
 }
 
 {
@@ -276,16 +283,39 @@ function eraDraws(era, n = 60, seed0 = 9000) {
   s.eras = ["modern"];
   let maleFlag = 0;
   let maleFeat = 0;
+  let breastFeel = 0;
   for (let i = 0; i < 40; i++) {
     const d = drawOne(lex, s, new Set(), new Set(), mulberry32(13000 + i), 13000 + i);
+    const have = tagsOf(d);
     if (d.male) maleFlag += 1;
-    for (const t of tagsOf(d)) {
+    if (have.has("soft breasts") || have.has("natural breasts")) breastFeel += 1;
+    for (const t of have) {
       const it = lex.byTag.get(t);
       if (it?.gate === "male" && it.section === "feature") maleFeat += 1;
     }
   }
   eq("boy-only sets male flag", maleFlag, 40);
   ok("boy-only draws male features", maleFeat > 0, `maleFeat=${maleFeat}`);
+  eq("boy-only has no breast feel tags", breastFeel, 0);
+}
+
+{
+  const s = settings();
+  s.girl = true;
+  s.boy = false;
+  s.eras = ["modern"];
+  const d = drawOne(lex, s, new Set(), new Set(["soft breasts"]), mulberry32(14000), 14000);
+  const have = tagsOf(d);
+  ok("ban soft breasts is respected", !have.has("soft breasts") && have.has("natural breasts"));
+  const parts = d.positive.split(", ").map((t) => t.trim());
+  const sizeAt = parts.findIndex((t) => lex.byTag.get(t)?.mutex === "breast_size");
+  const softAt = parts.indexOf("soft breasts");
+  const natAt = parts.indexOf("natural breasts");
+  ok(
+    "breast feel sits after breast size",
+    sizeAt < 0 || (natAt > sizeAt && (softAt < 0 || softAt > sizeAt)),
+    `size@${sizeAt} soft@${softAt} natural@${natAt}`
+  );
 }
 
 {

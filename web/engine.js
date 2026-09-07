@@ -936,6 +936,16 @@ export function drawOne(lex, settings, pinned, userBanned, rand, seed) {
       bucket[item.section].push(tag);
     }
   }
+  if (female) {
+    const feel = ["soft breasts", "natural breasts"];
+    const after = feature.findLastIndex((t) => lex.byTag.get(t)?.mutex === "breast_size");
+    let at = after >= 0 ? after + 1 : feature.length;
+    for (const t of feel) {
+      if (userBanned.has(t) || feature.includes(t)) continue;
+      feature.splice(at, 0, t);
+      at += 1;
+    }
+  }
   if (!env.includes("soft lighting")) env.unshift("soft lighting");
 
   const nsfw = lex.data.nsfwTail;

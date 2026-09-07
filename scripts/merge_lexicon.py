@@ -649,6 +649,25 @@ def norm(item: dict) -> dict | None:
     return out
 
 
+def extra_breast_feel_tags() -> list[dict]:
+    """Always-on breast feel. No mutex so they sit beside breast_size."""
+    return [
+        {
+            "tag": tag,
+            "section": "feature",
+            "gate": "female",
+            "heat": list(HEATS),
+            "mutex": None,
+            "bind": [],
+            "implies": [],
+            "layer": "normal",
+            "era": ["any"],
+            "needs": ["female"],
+        }
+        for tag in ("soft breasts", "natural breasts")
+    ]
+
+
 def extra_shot_face_tags() -> list[dict]:
     """More camera framings, gaze, and expressions. Camera/gaze still one each."""
     all_h = list(HEATS)
@@ -878,6 +897,7 @@ def main() -> None:
     rows.extend(extra_race_tags())
     rows.extend(extra_male_look_tags())
     rows.extend(extra_shot_face_tags())
+    rows.extend(extra_breast_feel_tags())
 
     old_zh: dict[str, str] = {}
     if OUT.exists():
