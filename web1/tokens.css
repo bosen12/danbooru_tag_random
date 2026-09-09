@@ -20,6 +20,7 @@
   --color-ban: oklch(48% 0.03 50);
   --color-danger: oklch(62% 0.16 25);
   --color-ok: oklch(72% 0.12 145);
+  --color-weight: oklch(82% 0.14 210);
 
   --font-display: "Syne", "Arial Narrow", sans-serif;
   --font-body: "Figtree", "Segoe UI", sans-serif;

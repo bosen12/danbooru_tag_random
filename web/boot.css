@@ -766,6 +766,171 @@ input[type="number"] {
   cursor: help;
 }
 
+.tag,
+.pos span[data-tag] {
+  user-select: none;
+}
+
+.tag:hover,
+.tag:focus-within {
+  z-index: 5;
+}
+
+.pos span[data-tag] {
+  display: inline-flex;
+  align-items: center;
+  position: relative;
+}
+
+.w-ctl {
+  position: absolute;
+  top: 50%;
+  left: 2px;
+  z-index: 4;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 1px;
+  padding: 0;
+  border: 0;
+  background: transparent;
+  font-family: var(--font-outlier);
+  transform: translateY(-50%);
+  opacity: 0;
+  pointer-events: none;
+  transition: opacity var(--dur-micro) var(--ease-out);
+}
+
+.tag:hover .w-ctl,
+.tag:focus-within .w-ctl {
+  opacity: 1;
+  pointer-events: auto;
+  flex-direction: row;
+  top: 2px;
+  left: auto;
+  right: 2px;
+  transform: none;
+  gap: 1px;
+  padding: 1px 2px;
+  border: 1px solid var(--color-weight);
+  border-radius: 6px;
+  background: var(--color-paper-2);
+}
+
+.tag:hover > .w-flag,
+.tag:focus-within > .w-flag {
+  display: none;
+}
+
+.tag:hover .w-ctl .w,
+.tag:focus-within .w-ctl .w {
+  position: static;
+  width: auto;
+  height: auto;
+  overflow: visible;
+  clip: auto;
+  min-width: 1.4em;
+  color: var(--color-weight);
+  font-size: 10px;
+  font-weight: 800;
+  text-align: center;
+}
+
+.pos span[data-tag] .w-ctl {
+  display: none;
+}
+
+.w-btn {
+  position: relative;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  flex: 0 0 auto;
+  width: 14px;
+  height: 14px;
+  padding: 0;
+  color: var(--color-weight);
+  font-weight: 800;
+  font-size: 11px;
+  line-height: 1;
+  border: 1px solid var(--color-weight);
+  border-radius: 3px;
+  background: var(--color-paper-2);
+  cursor: pointer;
+}
+
+.w-btn::before {
+  content: "";
+  position: absolute;
+  inset: -4px;
+}
+
+.w-btn:hover {
+  background: color-mix(in oklch, var(--color-weight) 22%, var(--color-paper-2));
+}
+
+.w-ctl .w {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  overflow: hidden;
+  clip: rect(0 0 0 0);
+}
+
+.w-flag {
+  position: absolute;
+  top: 2px;
+  right: 2px;
+  z-index: 3;
+  padding: 0 5px;
+  border-radius: 99px;
+  background: var(--color-weight);
+  color: var(--color-paper);
+  font-family: var(--font-outlier);
+  font-size: 10px;
+  font-weight: 800;
+  line-height: 1.45;
+  font-variant-numeric: tabular-nums;
+  pointer-events: none;
+}
+
+.pos span[data-tag] > .w-flag {
+  position: static;
+  top: auto;
+  right: auto;
+  left: auto;
+  transform: none;
+  margin-left: 0.2em;
+  vertical-align: super;
+  line-height: 1;
+  padding: 0 3px;
+}
+
+.tag:not([data-weight]) > .w-flag,
+.pos span:not([data-weight]) > .w-flag {
+  display: none;
+}
+
+.tag[data-weight] {
+  box-shadow: 0 0 0 1.5px var(--color-weight);
+}
+
+.pos span[data-weight] {
+  color: var(--color-weight);
+  border-bottom-color: var(--color-weight);
+  box-shadow: none;
+}
+
+.tag[data-state="pinned"][data-weight] {
+  box-shadow: 0 0 0 2px var(--color-weight);
+}
+
+.tag[data-state="pinned"] .w-ctl .w,
+.tag[data-state="pinned"] .w-btn {
+  color: var(--color-weight);
+}
+
 .status {
   font-size: var(--text-sm);
   color: var(--color-muted);

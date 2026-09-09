@@ -248,6 +248,11 @@ input[type="search"] {
     transform var(--dur-micro) var(--ease-out);
 }
 
+.pos span[data-weight] {
+  color: var(--color-weight);
+  font-weight: inherit;
+}
+
 .pos span[data-en]:hover::after,
 .pos span[data-en]:focus-visible::after {
   content: attr(data-en);

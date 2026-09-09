@@ -293,6 +293,14 @@ SEX = {
     "ejaculation",
     "after sex",
     "after vaginal",
+    "upright straddle",
+    "reverse upright straddle",
+    "reverse suspended congress",
+    "piledriver (sex)",
+    "boy on top",
+    "thigh sex",
+    "frottage",
+    "reverse spitroast",
 }
 
 
@@ -338,10 +346,14 @@ def assign_group(item: dict) -> str:
             return "eyes"
         if tag in BODY_HAIR:
             return BODY_HAIR[tag]
-        if tag in HAIR_STYLE or tag.endswith(" bangs") or tag.endswith(" ponytail"):
+        if mx == "hair_style" or tag in HAIR_STYLE or tag.endswith(" bangs") or tag.endswith(" ponytail"):
             return "hair_style"
         if tag in MAKEUP:
             return "makeup"
+        if mx == "height" or tag in {"kokod", "tall female", "petite"}:
+            return "body_f"
+        if mx == "height_m" or tag in {"kkob", "tall male", "short male"}:
+            return "body_m"
         if mx == "breast_size" or gate == "female" and any(
             k in tag
             for k in (

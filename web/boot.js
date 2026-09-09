@@ -16,8 +16,14 @@ import {
   indexLexicon,
   labelOf,
   MALE_COUNT,
-  missingPins,
+  pinMissLine,
+  knownTags,
   mulberry32,
+  applyTagWeights,
+  stepTagWeight,
+  parseWeighted,
+  formatWeighted,
+  formatWeight,
   randomSeed,
   tagState,
 } from "./engine.js";
@@ -45,6 +51,7 @@ let lex;
 let settings;
 let pinned = new Set();
 let userBanned = new Set();
+let tagWeights = new Map();
 let aborting = false;
 let running = false;
 let genAbort = null;
@@ -73,6 +80,7 @@ function saveStore() {
       settings,
       pinned: [...pinned],
       userBanned: [...userBanned],
+      tagWeights: Object.fromEntries(tagWeights),
     })
   );
 }
@@ -467,25 +475,83 @@ function showPos(positive) {
   renderTray();
 }
 
+function tagWeightOf(tag) {
+  const w = Number(tagWeights.get(tag));
+  return Number.isFinite(w) && w > 0 ? Math.round(w * 10) / 10 : 1;
+}
+
+function ensureWeightCtl(el) {
+  let ctl = el.querySelector(":scope > .w-ctl");
+  if (!ctl) {
+    ctl = document.createElement("span");
+    ctl.className = "w-ctl";
+    const minus = document.createElement("span");
+    minus.className = "w-btn";
+    minus.dataset.w = "-1";
+    minus.setAttribute("role", "button");
+    minus.setAttribute("aria-label", "降低權重");
+    minus.textContent = "−";
+    const mark = document.createElement("b");
+    mark.className = "w";
+    const plus = document.createElement("span");
+    plus.className = "w-btn";
+    plus.dataset.w = "1";
+    plus.setAttribute("role", "button");
+    plus.setAttribute("aria-label", "提高權重");
+    plus.textContent = "+";
+    ctl.append(minus, mark, plus);
+    el.append(ctl);
+  }
+  if (!el.querySelector(":scope > .w-flag")) {
+    const flag = document.createElement("b");
+    flag.className = "w-flag";
+    el.append(flag);
+  }
+  return ctl;
+}
+
+function paintWeightMark(el, tag) {
+  const w = tagWeightOf(tag);
+  const shown = formatWeighted(tag, w);
+  el.dataset.en = shown;
+  const ctl = ensureWeightCtl(el);
+  const mark = ctl.querySelector(".w");
+  const flag = el.querySelector(":scope > .w-flag");
+  const shownW = formatWeight(w);
+  mark.textContent = shownW;
+  flag.textContent = shownW;
+  if (w === 1) {
+    if (el.dataset.weight) delete el.dataset.weight;
+  } else {
+    el.dataset.weight = shownW;
+  }
+  const base = isFixedTag(tag) ? tag : "點一下釘選／關掉";
+  el.title = `${base} · 停上去用 −＋調權重 · 目前 ${shownW}`;
+}
+
 function paintTrayChip(btn, tag, auto) {
-  btn.dataset.tag = tag;
-  btn.dataset.en = tag;
-  btn.textContent = labelOf(lex, tag);
-  if (isFixedTag(tag)) {
+  const raw = parseWeighted(tag).tag;
+  btn.dataset.tag = raw;
+  let lab = btn.querySelector(":scope > .label");
+  if (!lab) {
+    lab = document.createElement("span");
+    lab.className = "label";
+    btn.prepend(lab);
+  }
+  lab.textContent = labelOf(lex, raw);
+  if (isFixedTag(raw)) {
     btn.dataset.state = "pinned";
     btn.dataset.locked = "1";
-    btn.disabled = true;
     delete btn.dataset.ban;
-    btn.title = tag;
+    paintWeightMark(btn, raw);
     return;
   }
-  btn.disabled = false;
   delete btn.dataset.locked;
-  const st = tagState(tag, pinned, userBanned, auto);
+  const st = tagState(raw, pinned, userBanned, auto);
   btn.dataset.state = st;
-  if (st === "banned") btn.dataset.ban = auto.has(tag) && !userBanned.has(tag) ? "mutex" : "user";
+  if (st === "banned") btn.dataset.ban = auto.has(raw) && !userBanned.has(raw) ? "mutex" : "user";
   else delete btn.dataset.ban;
-  btn.title = "點一下：釘選／關掉／回到池中";
+  paintWeightMark(btn, raw);
 }
 
 function renderTray() {
@@ -496,7 +562,7 @@ function renderTray() {
   const auto = lex ? autoBannedFromPins(lex, pinned) : new Set();
   const tags = lastPositive
     ? lastPositive.split(", ").map((t) => t.trim()).filter(Boolean)
-    : [...pinned];
+    : knownTags(lex, pinned);
   tray.classList.toggle("is-on", tags.length > 0);
   tray.hidden = false;
   const head = tray.querySelector(".tray-head");
@@ -510,7 +576,7 @@ function renderTray() {
     copy.addEventListener("click", async (e) => {
       e.stopPropagation();
       if (!lastPositive) return;
-      await navigator.clipboard.writeText(lastPositive);
+      await navigator.clipboard.writeText(weightedPos(lastPositive));
       copy.textContent = "已複製";
       window.setTimeout(() => {
         copy.textContent = "複製";
@@ -523,7 +589,7 @@ function renderTray() {
     if (count) count.textContent = "";
     return;
   }
-  if (count) count.textContent = lastPositive ? `${tags.length} 個 · 點字可釘／關` : `${pinned.size} 個`;
+  if (count) count.textContent = lastPositive ? `${tags.length} 個 · 點釘／關 · −＋或捲動調權重` : `${pinned.size} 個`;
   const prev = [...box.querySelectorAll(":scope > .tag")];
   const same = prev.length === tags.length && prev.every((el, i) => el.dataset.tag === tags[i]);
   if (same) {
@@ -646,6 +712,7 @@ function applyTagState(btn, item, auto, secId) {
   setData(btn, "offCast", !fitsCast(item) && st !== "pinned" ? "1" : "");
   setData(btn, "offHeat", secId !== "subject" && !fitsHeat(item) && st === "pool" ? "1" : "");
   if (btn.getAttribute("aria-label") !== label) btn.setAttribute("aria-label", label);
+  paintWeightMark(btn, item.tag);
 }
 
 function rememberBtn(tag, btn) {
@@ -866,6 +933,37 @@ function flashPin(tag) {
   }
 }
 
+function pinsAtDrawOf(card) {
+  try {
+    const raw = JSON.parse(card.dataset.pinsAtDraw || "[]");
+    return new Set(Array.isArray(raw) ? raw : []);
+  } catch {
+    return new Set();
+  }
+}
+
+function paintPinMiss(card) {
+  const meta = card.querySelector(".meta");
+  if (!meta) return;
+  const pos = card.dataset.bare || "";
+  let warn = meta.querySelector(":scope > .warn.pin-miss");
+  if (!pos) {
+    warn?.remove();
+    return;
+  }
+  const line = pinMissLine(lex, pos, pinned, pinsAtDrawOf(card));
+  if (!line) {
+    warn?.remove();
+    return;
+  }
+  if (!warn) {
+    warn = document.createElement("p");
+    warn.className = "warn pin-miss";
+    meta.append(warn);
+  }
+  warn.textContent = line;
+}
+
 function afterPin() {
   saveStore();
   renderCats();
@@ -878,6 +976,46 @@ function afterPin() {
     if (span.dataset.locked === "1") continue;
     span.dataset.state = tagState(span.dataset.tag, pinned, userBanned, auto);
   }
+  for (const card of document.querySelectorAll(".card")) paintPinMiss(card);
+}
+
+function weightedPos(positive) {
+  return applyTagWeights(positive, tagWeights);
+}
+
+function refreshWeights() {
+  saveStore();
+  for (const [tag, btns] of btnByTag) {
+    for (const btn of btns) paintWeightMark(btn, tag);
+  }
+  const auto = lex ? autoBannedFromPins(lex, pinned) : new Set();
+  const box = $("tray-pins");
+  if (box) {
+    for (const btn of box.querySelectorAll(":scope > .tag[data-tag]")) {
+      paintTrayChip(btn, btn.dataset.tag, auto);
+    }
+  }
+  for (const card of document.querySelectorAll(".card[data-bare]")) {
+    const bare = card.dataset.bare || "";
+    card.dataset.positive = weightedPos(bare);
+    for (const span of card.querySelectorAll(".pos span[data-tag]")) {
+      paintWeightMark(span, span.dataset.tag);
+    }
+  }
+  if (lastPositive) {
+    const copy = document.querySelector(".copy-pos");
+    if (copy) copy.dataset.pos = weightedPos(lastPositive);
+  }
+}
+
+function onTagWeight(tag, dir = 1) {
+  if (!tag) return;
+  const next = stepTagWeight(tagWeightOf(tag), dir);
+  if (next === 1) tagWeights.delete(tag);
+  else tagWeights.set(tag, next);
+  refreshWeights();
+  const zh = labelOf(lex, tag);
+  speak(`${zh} 權重 ${formatWeight(next)}`);
 }
 
 function onTagClick(tag) {
@@ -894,7 +1032,10 @@ function makeTagBtn(item, sec, auto) {
   btn.type = "button";
   btn.className = "tag";
   const zh = item.zh || labelOf(lex, item.tag);
-  btn.textContent = zh;
+  const lab = document.createElement("span");
+  lab.className = "label";
+  lab.textContent = zh;
+  btn.append(lab);
   btn.dataset.tag = item.tag;
   btn.dataset.en = item.tag;
   btn.title = item.tag;
@@ -903,10 +1044,12 @@ function makeTagBtn(item, sec, auto) {
     btn.dataset.state = "pinned";
     btn.dataset.locked = "1";
     btn.disabled = true;
+    paintWeightMark(btn, item.tag);
     rememberBtn(item.tag, btn);
     return btn;
   }
   applyTagState(btn, item, auto, sec.id);
+  paintWeightMark(btn, item.tag);
   rememberBtn(item.tag, btn);
   return btn;
 }
@@ -940,15 +1083,18 @@ function setPosLine(el, positive) {
   if (!pos) return;
   pos.replaceChildren();
   const auto = autoBannedFromPins(lex, pinned);
-  for (const tag of String(positive || "").split(", ")) {
+  for (const part of String(positive || "").split(",")) {
+    const { tag } = parseWeighted(part);
     if (!tag) continue;
     const span = document.createElement("span");
-    span.dataset.en = tag;
+    const lab = document.createElement("span");
+    lab.className = "label";
+    lab.textContent = labelOf(lex, tag);
+    span.append(lab);
     span.dataset.tag = tag;
-    span.title = isFixedTag(tag) ? tag : "點一下：釘選／關掉／回到池中";
-    span.textContent = labelOf(lex, tag);
     if (isFixedTag(tag)) span.dataset.locked = "1";
     else span.dataset.state = tagState(tag, pinned, userBanned, auto);
+    paintWeightMark(span, tag);
     pos.append(span, document.createTextNode(" · "));
   }
   if (pos.lastChild) pos.lastChild.remove();
@@ -1078,13 +1224,7 @@ function fillCard(el, job, err) {
     }, 1200);
   });
   meta.replaceChildren(bar, pos || document.createElement("div"));
-  if (job.missing && job.missing.length) {
-    const warn = document.createElement("p");
-    warn.className = "warn";
-    warn.textContent =
-      "釘選未入：" + job.missing.map((t) => labelOf(lex, t)).join("、");
-    meta.append(warn);
-  }
+  paintPinMiss(el);
   if (job.eraClash && job.eraClash.length) {
     const warn = document.createElement("p");
     warn.className = "warn";
@@ -1196,7 +1336,10 @@ async function runBatch() {
     const card = cards[i];
     card.dataset.seed = String(drawn.seed);
     card.dataset.era = drawn.era || "";
-    card.dataset.positive = drawn.positive;
+    card.dataset.bare = drawn.positive;
+    card.dataset.pinsAtDraw = JSON.stringify([...pinned]);
+    const pos = weightedPos(drawn.positive);
+    card.dataset.positive = pos;
     if (settings.samePerson && i > 0) {
       card.dataset.same = "1";
       const shot = card.querySelector(".shot");
@@ -1211,16 +1354,15 @@ async function runBatch() {
     setPosLine(card, drawn.positive);
     setLive(card, { status: `抽好了，生圖 ${i + 1}/${n}…` });
     const extra = {
-      positive: drawn.positive,
+      positive: pos,
       era: drawn.era,
-      missing: missingPins(drawn.positive, pinned),
       eraClash: drawn.eraClash,
     };
     try {
       let finished = false;
       await streamGen(
         {
-          positive: drawn.positive,
+          positive: pos,
           width: settings.width,
           height: settings.height,
           seed: seedNum,
@@ -1264,7 +1406,26 @@ async function runBatch() {
 }
 
 function bindUi() {
+  const tagSel = ".tag[data-tag], .pos span[data-tag]";
+  const onWeightClick = (e) => {
+    const host = e.target.closest(tagSel);
+    if (!host || !host.dataset.tag) return false;
+    const btn = e.target.closest("[data-w]");
+    if (btn) {
+      e.preventDefault();
+      e.stopPropagation();
+      onTagWeight(host.dataset.tag, Number(btn.dataset.w) < 0 ? -1 : 1);
+      return true;
+    }
+    if (e.target.closest(".w-ctl")) {
+      e.preventDefault();
+      e.stopPropagation();
+      return true;
+    }
+    return false;
+  };
   $("cats").addEventListener("click", (e) => {
+    if (onWeightClick(e)) return;
     const closer = e.target.closest("[data-close]");
     if (closer) {
       const scope = closer.closest(".sub") || closer.closest(".cat");
@@ -1294,16 +1455,38 @@ function bindUi() {
   const trayPins = $("tray-pins");
   if (trayPins) {
     trayPins.addEventListener("click", (e) => {
+      if (onWeightClick(e)) return;
       const btn = e.target.closest(".tag[data-tag]");
       if (!btn || btn.disabled || btn.dataset.locked === "1") return;
       onTagClick(btn.dataset.tag);
     });
   }
   $("results").addEventListener("click", (e) => {
+    if (onWeightClick(e)) return;
     const span = e.target.closest(".pos span[data-tag]");
     if (!span || span.dataset.locked === "1") return;
     onTagClick(span.dataset.tag);
   });
+  const onTagWheel = (e) => {
+    const hit = e.target.closest(".w-ctl");
+    const el = e.target.closest(tagSel);
+    if (!hit || !el || !el.dataset.tag) return;
+    e.preventDefault();
+    onTagWeight(el.dataset.tag, e.deltaY > 0 ? -1 : 1);
+  };
+  $("cats").addEventListener("wheel", onTagWheel, { passive: false });
+  if (trayPins) trayPins.addEventListener("wheel", onTagWheel, { passive: false });
+  $("results").addEventListener("wheel", onTagWheel, { passive: false });
+  const onTagKey = (e) => {
+    if (e.key !== "ArrowUp" && e.key !== "ArrowDown") return;
+    const el = e.target.closest(tagSel);
+    if (!el || !el.dataset.tag) return;
+    e.preventDefault();
+    onTagWeight(el.dataset.tag, e.key === "ArrowUp" ? 1 : -1);
+  };
+  $("cats").addEventListener("keydown", onTagKey);
+  if (trayPins) trayPins.addEventListener("keydown", onTagKey);
+  $("results").addEventListener("keydown", onTagKey);
   $("n").addEventListener("change", () => {
     settings.n = Math.max(1, Math.min(10, Number($("n").value) || 1));
     syncSamePerson();
@@ -1418,6 +1601,14 @@ function bindUi() {
     userBanned = new Set();
     afterPin();
   });
+  const clearW = $("clear-weights");
+  if (clearW) {
+    clearW.addEventListener("click", () => {
+      tagWeights = new Map();
+      refreshWeights();
+      speak("權重已清掉");
+    });
+  }
   $("go").addEventListener("click", runBatch);
   $("cancel").addEventListener("click", async () => {
     aborting = true;
@@ -1464,8 +1655,16 @@ async function main() {
   settings = defaultSettings(data);
   const saved = loadStore();
   if (saved.settings) settings = sanitizeSettings(saved.settings, data);
-  if (Array.isArray(saved.pinned)) pinned = new Set(saved.pinned.filter((t) => typeof t === "string"));
-  if (Array.isArray(saved.userBanned)) userBanned = new Set(saved.userBanned.filter((t) => typeof t === "string"));
+  if (Array.isArray(saved.pinned)) pinned = new Set(knownTags(lex, saved.pinned));
+  if (Array.isArray(saved.userBanned)) userBanned = new Set(knownTags(lex, saved.userBanned));
+  if (saved.tagWeights && typeof saved.tagWeights === "object") {
+    tagWeights = new Map(
+      Object.entries(saved.tagWeights).filter(
+        ([t, w]) => lex.byTag.has(t) && Number.isFinite(Number(w)) && Number(w) > 0 && Number(w) !== 1
+      )
+    );
+  }
+  saveStore();
 
   $("n").value = String(settings.n);
   syncSamePerson();

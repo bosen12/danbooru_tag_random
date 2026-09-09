@@ -213,7 +213,7 @@ export function identityPins(lex, positive) {
   let banned = new Set();
   for (const t of String(positive || "")
     .split(",")
-    .map((s) => s.trim())
+    .map((s) => parseWeighted(s).tag)
     .filter(Boolean)) {
     if (!isIdentityItem(lex.byTag.get(t))) continue;
     const next = applyPin(lex, pinned, banned, t);
@@ -325,6 +325,7 @@ function castOk(item, female, male, people) {
   if (needs.includes("pair") && people < 2) return false;
   if (needs.includes("male") && !male) return false;
   if (needs.includes("female") && !female) return false;
+  if (needs.includes("yuri") && male) return false;
   return true;
 }
 
@@ -557,6 +558,68 @@ function isColorVariant(item) {
   return parts.length >= 2 && COLOR_WORD.has(parts[0]);
 }
 
+const GARMENT_KEYS = [
+  "shirt",
+  "dress",
+  "skirt",
+  "sweater",
+  "bikini",
+  "swimsuit",
+  "bra",
+  "panties",
+  "panty",
+  "leotard",
+  "coat",
+  "jacket",
+  "kimono",
+  "yukata",
+  "pants",
+  "shorts",
+  "jeans",
+  "hoodie",
+  "blouse",
+  "towel",
+];
+
+const KEY_WEAR = {
+  panty: ["panties", "thong", "panty"],
+  panties: ["panties", "thong", "panty"],
+  pants: ["pants", "jeans", "shorts"],
+  jeans: ["jeans", "pants"],
+  shorts: ["shorts"],
+};
+
+function tagTokens(tag) {
+  return String(tag || "")
+    .toLowerCase()
+    .match(/[a-z0-9]+/g) || [];
+}
+
+export function actionGarmentKeys(actionTag) {
+  const toks = new Set(tagTokens(actionTag));
+  const keys = GARMENT_KEYS.filter((g) => toks.has(g));
+  if (/blouse/.test(actionTag) && !keys.includes("blouse")) keys.push("blouse");
+  return keys;
+}
+
+export function clothingWearsKey(clothingTag, key) {
+  const tag = String(clothingTag || "").toLowerCase();
+  if (!tag || tag.startsWith("no ")) return false;
+  const aliases = KEY_WEAR[key] || [key];
+  const toks = new Set(tagTokens(tag));
+  return aliases.some((w) => {
+    if (tag === w || tag.endsWith(" " + w) || tag.endsWith(w)) return true;
+    return tagTokens(w).every((t) => toks.has(t));
+  });
+}
+
+export function actionFitsClothes(actionTag, clothingTags) {
+  const keys = actionGarmentKeys(actionTag);
+  if (!keys.length) return 1;
+  const worn = (clothingTags || []).filter(Boolean);
+  return keys.some((k) => worn.some((c) => clothingWearsKey(c, k))) ? 2 : 0;
+}
+
 function takeFromPool(pool, count, rand, commit, prefer) {
   let buckets;
   if (Array.isArray(prefer) && prefer.length) {
@@ -652,6 +715,14 @@ export function reconcile(lex, used, female, male, people, pinned = new Set()) {
     if (solo) keep.push(solo);
   }
 
+  if (keep.some((i) => i.tag === "bald")) {
+    keep = keep.filter((i) => {
+      if (pinned.has(i.tag) || i.tag === "bald") return true;
+      if (i.mutex === "hair_color" || i.group === "hair_style") return false;
+      return true;
+    });
+  }
+
   return new Set(keep.map((i) => i.tag));
 }
 
@@ -744,10 +815,25 @@ export function drawOne(lex, settings, pinned, userBanned, rand, seed) {
     people = personCount(subjectNow);
   }
 
+  const actionFitsWorn = (item) => {
+    const cloth = [];
+    for (const t of used) {
+      const it = lex.byTag.get(t);
+      if (it && it.section === "clothing") cloth.push(t);
+    }
+    return actionFitsClothes(item.tag, cloth);
+  };
   const allow = (item) => {
     if (banned.has(item.tag) || used.has(item.tag)) return false;
     if (!heatOk(item, heat) || !eraOk(item, era) || !gateOk(item, female, male)) return false;
     if (!castOk(item, female, male, people)) return false;
+    if (used.has("bald") && (item.mutex === "hair_color" || item.group === "hair_style")) return false;
+    if (
+      (item.mutex === "clothes_action" || item.group === "flash") &&
+      actionFitsWorn(item) === 0
+    ) {
+      return false;
+    }
     for (const g of extraMutex(item)) {
       if (mutexTaken.has(g)) return false;
     }
@@ -800,7 +886,7 @@ export function drawOne(lex, settings, pinned, userBanned, rand, seed) {
     );
     let prefer = null;
     if (section === "clothing") prefer = clothingPrefer;
-    else if (section === "env") prefer = (item) => eraSpecific(item, era);
+    else if (section === "env") prefer = (item) => eraSpecific(item, era) && item.mutex;
     else if (section === "pose") prefer = posePrefer;
     takeFromPool(pool, need, rand, commit, prefer);
   };
@@ -814,15 +900,17 @@ export function drawOne(lex, settings, pinned, userBanned, rand, seed) {
     }
   };
 
-  const fillSlot = (section, mutexName) => {
+  const fillSlot = (section, mutexName, preferOverride) => {
     if (mutexTaken.has(mutexName)) return;
     const indexed = lex.byMutex && lex.byMutex.get(section + ":" + mutexName);
     const pool = (indexed || lex.bySection[section].filter((item) => item.mutex === mutexName)).filter(
       (item) => allow(item)
     );
-    let prefer = null;
-    if (section === "clothing") prefer = clothingPrefer;
-    else if (section === "env") prefer = (item) => eraSpecific(item, era);
+    let prefer = preferOverride;
+    if (prefer == null) {
+      if (section === "clothing") prefer = clothingPrefer;
+      else if (section === "env") prefer = (item) => eraSpecific(item, era);
+    }
     takeFromPool(pool, 1, rand, commit, prefer);
   };
 
@@ -836,9 +924,11 @@ export function drawOne(lex, settings, pinned, userBanned, rand, seed) {
   };
 
   fillSlot("feature", "hair_length");
-  fillSlot("feature", "hair_color");
   fillSlot("feature", "eye_color");
-  fillGroup("feature", "hair_style");
+  if (!used.has("bald")) {
+    fillSlot("feature", "hair_color");
+    fillGroup("feature", "hair_style");
+  }
   if (female) fillSlot("feature", "breast_size");
   if (male && rand() < 0.38) fillSlot("feature", "race");
   fill("feature", (item) => item.mutex !== "race");
@@ -905,19 +995,32 @@ export function drawOne(lex, settings, pinned, userBanned, rand, seed) {
   if (heat === "flash") {
     const hasAct = someUsed((it) => it.mutex === "clothes_action" || it.group === "flash");
     if (!hasAct) {
-      fillSlot("pose", "clothes_action");
+      fillSlot("pose", "clothes_action", [
+        (item) => actionFitsWorn(item) === 2,
+        (item) => actionFitsWorn(item) === 1,
+      ]);
       if (!someUsed((it) => it.mutex === "clothes_action" || it.group === "flash")) {
         fillGroup("pose", "flash");
       }
     }
   }
+  const soloSex = (tag) =>
+    tag === "masturbation" ||
+    tag === "female masturbation" ||
+    tag === "male masturbation" ||
+    tag === "fingering" ||
+    tag === "masturbation through clothes";
   if (heat === "sex" && people >= 2) {
     const acts = lex.bySection.pose.filter(
       (item) => allow(item) && (item.mutex === "sex_act" || item.tag === "sex")
     );
     takeFromPool(acts, 1, rand, commit);
   }
-  fill("pose");
+  if (heat === "sex" && people === 1) {
+    const acts = lex.bySection.pose.filter((item) => allow(item) && soloSex(item.tag));
+    takeFromPool(acts, 1, rand, commit);
+  }
+  fill("pose", (item) => !(people >= 2 && soloSex(item.tag)));
   stampAnchors("env");
   fillSlot("env", "place");
   fillSlot("env", "in_out");
@@ -1045,14 +1148,78 @@ export function sanitizeSettings(raw, data) {
   };
 }
 
+const WEIGHT_STEPS = [10, 11, 12, 13, 14, 15, 6, 7, 8, 9];
+
+export function parseWeighted(part) {
+  const s = String(part || "").trim();
+  const m = s.match(/^\((.+):(\d+(?:\.\d+)?)\)$/);
+  if (m) {
+    const weight = Number(m[2]);
+    return { tag: m[1].trim(), weight: Number.isFinite(weight) ? weight : 1 };
+  }
+  return { tag: s, weight: 1 };
+}
+
+export function formatWeight(w) {
+  const n = Math.round((Number(w) || 1) * 10) / 10;
+  return Number.isInteger(n) ? String(n) : n.toFixed(1);
+}
+
+export function formatWeighted(tag, weight) {
+  if (!tag) return "";
+  const n = Math.round((Number(weight) || 1) * 10) / 10;
+  if (n === 1) return tag;
+  return `(${tag}:${formatWeight(n)})`;
+}
+
+export function nextTagWeight(weight) {
+  let t = Math.round((Number(weight) || 1) * 10);
+  if (!WEIGHT_STEPS.includes(t)) t = 10;
+  const i = WEIGHT_STEPS.indexOf(t);
+  return WEIGHT_STEPS[(i + 1) % WEIGHT_STEPS.length] / 10;
+}
+
+export function stepTagWeight(weight, dir) {
+  let t = Math.round((Number(weight) || 1) * 10);
+  t += dir < 0 ? -1 : 1;
+  if (t > 15) t = 15;
+  if (t < 6) t = 6;
+  return t / 10;
+}
+
+export function applyTagWeights(positive, weights) {
+  const map = weights instanceof Map ? weights : new Map(Object.entries(weights || {}));
+  const out = [];
+  for (const part of String(positive || "").split(",")) {
+    const parsed = parseWeighted(part);
+    if (!parsed.tag) continue;
+    const w = map.has(parsed.tag) ? Number(map.get(parsed.tag)) : parsed.weight;
+    out.push(formatWeighted(parsed.tag, w));
+  }
+  return out.join(", ");
+}
+
 export function missingPins(positive, pinned) {
   const have = new Set(
     String(positive || "")
       .split(",")
-      .map((s) => s.trim())
+      .map((s) => parseWeighted(s).tag)
       .filter(Boolean)
   );
   return [...pinned].filter((t) => !have.has(t));
+}
+
+export function pinMissLine(lex, positive, pinned, pinsAtDraw) {
+  const scope = pinsAtDraw
+    ? [...pinned].filter((t) => pinsAtDraw.has(t))
+    : pinned;
+  const miss = missingPins(positive, scope);
+  if (!miss.length) return "";
+  return "釘選未入：" + miss.map((t) => labelOf(lex, t)).join("、");
+}
+
+export function knownTags(lex, tags) {
+  return [...(tags || [])].filter((t) => typeof t === "string" && t && lex.byTag.has(t));
 }
 
 export function labelOf(lex, tag) {

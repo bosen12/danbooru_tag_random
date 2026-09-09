@@ -157,6 +157,9 @@ SEX_POS = {
     "spitroast", "double penetration", "lotus position", "folded",
     "legs up", "mating press", "piledriver", "reverse piledriver",
     "reverse standing", "sideways", "x-ray",
+    "upright straddle", "reverse upright straddle",
+    "reverse suspended congress", "piledriver (sex)", "boy on top",
+    "thigh sex", "frottage", "reverse spitroast",
 }
 SEX_ACT = {
     "sex", "vaginal", "anal", "oral", "fellatio", "cunnilingus", "paizuri",

@@ -20,6 +20,7 @@
   --color-ban: oklch(55% 0.03 50);
   --color-danger: oklch(48% 0.16 25);
   --color-ok: oklch(48% 0.1 145);
+  --color-weight: oklch(40% 0.14 210);
 
   --font-display: "Noto Serif TC", "PMingLiU", serif;
   --font-body: "Noto Sans TC", "Microsoft JhengHei", sans-serif;

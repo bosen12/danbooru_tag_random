@@ -199,9 +199,6 @@
     "masterpiece": "傑作",
     "best quality": "最高品質",
     "amazing quality": "極致品質",
-    "absurdres": "超高解析",
-    "highres": "高解析",
-    "very aesthetic": "非常有美感",
     "nsfw": "限制級",
     "explicit": "露骨",
     "soft lighting": "柔光"
@@ -581,7 +578,7 @@
         "flash",
         "sex"
       ],
-      "mutex": null,
+      "mutex": "hair_style",
       "bind": [],
       "implies": [],
       "layer": "normal",
@@ -600,9 +597,11 @@
         "flash",
         "sex"
       ],
-      "mutex": null,
+      "mutex": "hair_style",
       "bind": [],
-      "implies": [],
+      "implies": [
+        "ponytail"
+      ],
       "layer": "normal",
       "era": [
         "any"
@@ -619,9 +618,11 @@
         "flash",
         "sex"
       ],
-      "mutex": null,
+      "mutex": "hair_style",
       "bind": [],
-      "implies": [],
+      "implies": [
+        "ponytail"
+      ],
       "layer": "normal",
       "era": [
         "any"
@@ -638,7 +639,7 @@
         "flash",
         "sex"
       ],
-      "mutex": null,
+      "mutex": "hair_style",
       "bind": [],
       "implies": [],
       "layer": "normal",
@@ -657,7 +658,7 @@
         "flash",
         "sex"
       ],
-      "mutex": null,
+      "mutex": "hair_style",
       "bind": [],
       "implies": [],
       "layer": "normal",
@@ -676,9 +677,11 @@
         "flash",
         "sex"
       ],
-      "mutex": null,
+      "mutex": "hair_style",
       "bind": [],
-      "implies": [],
+      "implies": [
+        "braid"
+      ],
       "layer": "normal",
       "era": [
         "any"
@@ -904,7 +907,7 @@
         "flash",
         "sex"
       ],
-      "mutex": null,
+      "mutex": "hair_style",
       "bind": [],
       "implies": [],
       "layer": "normal",
@@ -923,9 +926,11 @@
         "flash",
         "sex"
       ],
-      "mutex": null,
+      "mutex": "hair_style",
       "bind": [],
-      "implies": [],
+      "implies": [
+        "hair bun"
+      ],
       "layer": "normal",
       "era": [
         "any"
@@ -942,7 +947,7 @@
         "flash",
         "sex"
       ],
-      "mutex": null,
+      "mutex": "hair_style",
       "bind": [],
       "implies": [],
       "layer": "normal",
@@ -999,7 +1004,7 @@
         "flash",
         "sex"
       ],
-      "mutex": null,
+      "mutex": "hair_style",
       "bind": [],
       "implies": [],
       "layer": "normal",
@@ -2609,14 +2614,14 @@
         "flash",
         "sex"
       ],
-      "mutex": null,
+      "mutex": "height",
       "bind": [],
       "implies": [],
       "layer": "normal",
       "era": [
         "any"
       ],
-      "group": "other",
+      "group": "body_f",
       "zh": "高個女性"
     },
     {
@@ -4475,6 +4480,9 @@
         "any"
       ],
       "group": "gaze",
+      "needs": [
+        "pair"
+      ],
       "zh": "對視"
     },
     {
@@ -5653,9 +5661,7 @@
       ],
       "mutex": null,
       "bind": [],
-      "implies": [
-        "panties"
-      ],
+      "implies": [],
       "layer": "normal",
       "era": [
         "modern"
@@ -6698,7 +6704,8 @@
       "group": "sex",
       "needs": [
         "female",
-        "pair"
+        "pair",
+        "yuri"
       ],
       "zh": "磨鏡"
     },
@@ -8223,9 +8230,7 @@
       ],
       "mutex": "underwear_top",
       "bind": [],
-      "implies": [
-        "bra"
-      ],
+      "implies": [],
       "layer": "garment",
       "era": [
         "modern"
@@ -8243,9 +8248,7 @@
       ],
       "mutex": "underwear_bottom",
       "bind": [],
-      "implies": [
-        "panties"
-      ],
+      "implies": [],
       "layer": "garment",
       "era": [
         "modern"
@@ -9996,13 +9999,12 @@
         "flash",
         "sex"
       ],
-      "mutex": null,
+      "mutex": "weather",
       "bind": [],
       "implies": [],
       "layer": "normal",
       "era": [
-        "edo",
-        "modern"
+        "any"
       ],
       "group": "weather",
       "zh": "櫻花"
@@ -11821,9 +11823,8 @@
     {
       "tag": "female pubic hair",
       "section": "feature",
-      "gate": "any",
+      "gate": "female",
       "heat": [
-        "tease",
         "flash",
         "sex"
       ],
@@ -11835,6 +11836,9 @@
         "any"
       ],
       "group": "body_f",
+      "needs": [
+        "female"
+      ],
       "zh": "女性陰毛"
     },
     {
@@ -11924,9 +11928,11 @@
         "flash",
         "sex"
       ],
-      "mutex": null,
+      "mutex": "hair_style",
       "bind": [],
-      "implies": [],
+      "implies": [
+        "hair bun"
+      ],
       "layer": "normal",
       "era": [
         "any"
@@ -13698,10 +13704,7 @@
       ],
       "mutex": "clothes_action",
       "bind": [],
-      "implies": [
-        "one-piece swimsuit",
-        "swimsuit"
-      ],
+      "implies": [],
       "layer": "normal",
       "era": [
         "modern"
@@ -15329,7 +15332,7 @@
     {
       "tag": "arm hair",
       "section": "feature",
-      "gate": "any",
+      "gate": "male",
       "heat": [
         "tease",
         "flash",
@@ -15343,12 +15346,15 @@
         "any"
       ],
       "group": "body_m",
+      "needs": [
+        "male"
+      ],
       "zh": "手臂毛"
     },
     {
       "tag": "leg hair",
       "section": "feature",
-      "gate": "any",
+      "gate": "male",
       "heat": [
         "tease",
         "flash",
@@ -15362,6 +15368,9 @@
         "any"
       ],
       "group": "body_m",
+      "needs": [
+        "male"
+      ],
       "zh": "腿毛"
     },
     {
@@ -19193,6 +19202,333 @@
       ],
       "group": "face",
       "zh": "緊張"
+    },
+    {
+      "tag": "upright straddle",
+      "section": "pose",
+      "gate": "any",
+      "heat": [
+        "sex"
+      ],
+      "mutex": "sex_act",
+      "bind": [],
+      "implies": [
+        "sex"
+      ],
+      "layer": "normal",
+      "era": [
+        "any"
+      ],
+      "group": "sex",
+      "needs": [
+        "pair",
+        "male",
+        "female"
+      ],
+      "zh": "對面坐位"
+    },
+    {
+      "tag": "reverse upright straddle",
+      "section": "pose",
+      "gate": "any",
+      "heat": [
+        "sex"
+      ],
+      "mutex": "sex_act",
+      "bind": [],
+      "implies": [
+        "sex"
+      ],
+      "layer": "normal",
+      "era": [
+        "any"
+      ],
+      "group": "sex",
+      "needs": [
+        "pair",
+        "male",
+        "female"
+      ],
+      "zh": "背面坐位"
+    },
+    {
+      "tag": "reverse suspended congress",
+      "section": "pose",
+      "gate": "any",
+      "heat": [
+        "sex"
+      ],
+      "mutex": "sex_act",
+      "bind": [],
+      "implies": [
+        "sex"
+      ],
+      "layer": "normal",
+      "era": [
+        "any"
+      ],
+      "group": "sex",
+      "needs": [
+        "pair",
+        "male"
+      ],
+      "zh": "背面懸空"
+    },
+    {
+      "tag": "piledriver (sex)",
+      "section": "pose",
+      "gate": "any",
+      "heat": [
+        "sex"
+      ],
+      "mutex": "sex_act",
+      "bind": [],
+      "implies": [
+        "sex"
+      ],
+      "layer": "normal",
+      "era": [
+        "any"
+      ],
+      "group": "sex",
+      "needs": [
+        "pair",
+        "male",
+        "female"
+      ],
+      "zh": "打樁機體位"
+    },
+    {
+      "tag": "boy on top",
+      "section": "pose",
+      "gate": "male",
+      "heat": [
+        "sex"
+      ],
+      "mutex": "sex_act",
+      "bind": [],
+      "implies": [
+        "sex"
+      ],
+      "layer": "normal",
+      "era": [
+        "any"
+      ],
+      "group": "sex",
+      "needs": [
+        "pair",
+        "male"
+      ],
+      "zh": "男上"
+    },
+    {
+      "tag": "thigh sex",
+      "section": "pose",
+      "gate": "any",
+      "heat": [
+        "sex"
+      ],
+      "mutex": "sex_act",
+      "bind": [],
+      "implies": [
+        "sex"
+      ],
+      "layer": "normal",
+      "era": [
+        "any"
+      ],
+      "group": "sex",
+      "needs": [
+        "pair",
+        "male",
+        "female"
+      ],
+      "zh": "股交"
+    },
+    {
+      "tag": "frottage",
+      "section": "pose",
+      "gate": "any",
+      "heat": [
+        "sex"
+      ],
+      "mutex": "sex_act",
+      "bind": [],
+      "implies": [
+        "sex"
+      ],
+      "layer": "normal",
+      "era": [
+        "any"
+      ],
+      "group": "sex",
+      "needs": [
+        "pair"
+      ],
+      "zh": "互相摩擦"
+    },
+    {
+      "tag": "reverse spitroast",
+      "section": "pose",
+      "gate": "any",
+      "heat": [
+        "sex"
+      ],
+      "mutex": "sex_act",
+      "bind": [],
+      "implies": [
+        "sex"
+      ],
+      "layer": "normal",
+      "era": [
+        "any"
+      ],
+      "group": "sex",
+      "needs": [
+        "pair",
+        "male"
+      ],
+      "zh": "反向兩端夾擊"
+    },
+    {
+      "tag": "petite",
+      "section": "feature",
+      "gate": "female",
+      "heat": [
+        "tease",
+        "flash",
+        "sex"
+      ],
+      "mutex": "height",
+      "bind": [],
+      "implies": [],
+      "layer": "normal",
+      "era": [
+        "any"
+      ],
+      "group": "body_f",
+      "needs": [
+        "female"
+      ],
+      "zh": "嬌小"
+    },
+    {
+      "tag": "flat chest",
+      "section": "feature",
+      "gate": "female",
+      "heat": [
+        "tease",
+        "flash",
+        "sex"
+      ],
+      "mutex": "breast_size",
+      "bind": [],
+      "implies": [
+        "small breasts"
+      ],
+      "layer": "normal",
+      "era": [
+        "any"
+      ],
+      "group": "body_f",
+      "needs": [
+        "female"
+      ],
+      "zh": "平胸"
+    },
+    {
+      "tag": "kokod",
+      "section": "feature",
+      "gate": "female",
+      "heat": [
+        "tease",
+        "flash",
+        "sex"
+      ],
+      "mutex": "height",
+      "bind": [],
+      "implies": [
+        "petite",
+        "flat chest",
+        "small breasts"
+      ],
+      "layer": "normal",
+      "era": [
+        "any"
+      ],
+      "group": "body_f",
+      "needs": [
+        "female"
+      ],
+      "zh": "矮小胸小"
+    },
+    {
+      "tag": "short male",
+      "section": "feature",
+      "gate": "male",
+      "heat": [
+        "tease",
+        "flash",
+        "sex"
+      ],
+      "mutex": "height_m",
+      "bind": [],
+      "implies": [],
+      "layer": "normal",
+      "era": [
+        "any"
+      ],
+      "group": "body_m",
+      "needs": [
+        "male"
+      ],
+      "zh": "矮個男性"
+    },
+    {
+      "tag": "tall male",
+      "section": "feature",
+      "gate": "male",
+      "heat": [
+        "tease",
+        "flash",
+        "sex"
+      ],
+      "mutex": "height_m",
+      "bind": [],
+      "implies": [],
+      "layer": "normal",
+      "era": [
+        "any"
+      ],
+      "group": "body_m",
+      "needs": [
+        "male"
+      ],
+      "zh": "高個男性"
+    },
+    {
+      "tag": "kkob",
+      "section": "feature",
+      "gate": "male",
+      "heat": [
+        "tease",
+        "flash",
+        "sex"
+      ],
+      "mutex": "height_m",
+      "bind": [],
+      "implies": [
+        "short male"
+      ],
+      "layer": "normal",
+      "era": [
+        "any"
+      ],
+      "group": "body_m",
+      "needs": [
+        "male"
+      ],
+      "zh": "矮小"
     },
     {
       "tag": "soft breasts",

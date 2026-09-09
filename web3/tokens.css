@@ -20,6 +20,7 @@
   --color-ban: oklch(50% 0.04 280);
   --color-danger: oklch(64% 0.18 20);
   --color-ok: oklch(72% 0.12 145);
+  --color-weight: oklch(82% 0.14 210);
 
   --font-display: "Yusei Magic", "Microsoft JhengHei", sans-serif;
   --font-body: "Zen Kaku Gothic New", "Segoe UI", sans-serif;

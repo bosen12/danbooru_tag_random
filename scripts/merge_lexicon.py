@@ -275,6 +275,7 @@ IMPLIES = {
     "restaurant": ["indoors"],
     "park bench": ["outdoors"],
     "bamboo forest": ["outdoors"],
+    "cherry blossoms": ["outdoors"],
     "cowgirl position": ["sex"],
     "reverse cowgirl position": ["sex"],
     "doggystyle": ["sex"],
@@ -299,10 +300,27 @@ IMPLIES = {
     "mmf threesome": ["threesome", "sex"],
     "ffm threesome": ["threesome", "sex"],
     "squatting cowgirl position": ["cowgirl position", "sex"],
+    "upright straddle": ["sex"],
+    "reverse upright straddle": ["sex"],
+    "reverse suspended congress": ["sex"],
+    "piledriver (sex)": ["sex"],
+    "boy on top": ["sex"],
+    "thigh sex": ["sex"],
+    "frottage": ["sex"],
+    "reverse spitroast": ["sex"],
     "fat man": ["fat"],
     "obese": ["fat"],
     "nerd": ["otaku"],
     "coke-bottle glasses": ["glasses"],
+    "high ponytail": ["ponytail"],
+    "side ponytail": ["ponytail"],
+    "twin braids": ["braid"],
+    "single braid": ["braid"],
+    "single hair bun": ["hair bun"],
+    "double bun": ["hair bun"],
+    "flat chest": ["small breasts"],
+    "kokod": ["petite", "flat chest", "small breasts"],
+    "kkob": ["short male"],
 }
 
 RECLASS = {
@@ -328,7 +346,14 @@ RECLASS = {
     "toned male": {"mutex": "male_build"},
     "bara": {"mutex": "male_build"},
     "bald": {"mutex": "hair_length"},
+    "tall female": {"mutex": "height", "gate": "female"},
+    "cherry blossoms": {"mutex": "weather", "era": ["any"]},
+    "tall male": {"mutex": "height_m", "gate": "male"},
+    "short male": {"mutex": "height_m", "gate": "male"},
     "male pubic hair": {"gate": "male", "heat": ["flash", "sex"]},
+    "female pubic hair": {"gate": "female", "heat": ["flash", "sex"]},
+    "arm hair": {"gate": "male"},
+    "leg hair": {"gate": "male"},
     "side-tie bikini bottom": {"mutex": "bottom", "section": "clothing", "layer": "garment"},
     "shoulder armor": {"mutex": None, "layer": "accessory", "section": "clothing"},
     "underwear": {"mutex": None},
@@ -371,6 +396,21 @@ EXPRESSION = {
     "come hither",
 }
 
+HAIR_STYLE_MUTEX = {
+    "ponytail",
+    "high ponytail",
+    "side ponytail",
+    "twintails",
+    "braid",
+    "twin braids",
+    "single braid",
+    "hime cut",
+    "hair bun",
+    "double bun",
+    "single hair bun",
+    "drill hair",
+}
+
 # Engine reads stamped needs / mutex. Add new sex acts here, not in engine.js.
 SEX_ACT = {
     "vaginal",
@@ -408,6 +448,14 @@ SEX_ACT = {
     "perpendicular paizuri",
     "vaginal object insertion",
     "imminent fellatio",
+    "upright straddle",
+    "reverse upright straddle",
+    "reverse suspended congress",
+    "piledriver (sex)",
+    "boy on top",
+    "thigh sex",
+    "frottage",
+    "reverse spitroast",
 }
 
 NEEDS_MALE = {
@@ -444,6 +492,15 @@ NEEDS_MALE = {
     "prone bone",
     "spitroast",
     "double penetration",
+    "arm hair",
+    "leg hair",
+    "upright straddle",
+    "reverse upright straddle",
+    "reverse suspended congress",
+    "piledriver (sex)",
+    "boy on top",
+    "thigh sex",
+    "reverse spitroast",
 }
 
 NEEDS_FEMALE = {
@@ -469,11 +526,17 @@ NEEDS_FEMALE = {
     "gigantic breasts",
     "medium breasts",
     "small breasts",
+    "flat chest",
     "sagging breasts",
     "nipples",
     "areolae",
     "milf",
     "mature female",
+    "female pubic hair",
+    "upright straddle",
+    "reverse upright straddle",
+    "piledriver (sex)",
+    "thigh sex",
 }
 
 NEEDS_PAIR = {
@@ -482,6 +545,7 @@ NEEDS_PAIR = {
     "kissing",
     "french kiss",
     "looking at another",
+    "eye contact",
     "hug from behind",
     "sitting on lap",
     "spitroast",
@@ -500,6 +564,18 @@ NEEDS_PAIR = {
     "paizuri",
     "handjob",
     "facesitting",
+    "tribadism",
+    "upright straddle",
+    "reverse upright straddle",
+    "reverse suspended congress",
+    "piledriver (sex)",
+    "boy on top",
+    "thigh sex",
+    "frottage",
+    "reverse spitroast",
+}
+
+YURI_ONLY = {
     "tribadism",
 }
 
@@ -528,6 +604,10 @@ def apply_relations(tag: str, implies: list[str], bind: list[str], mutex, sectio
                 im.append(x)
     for suf in SUFFIX_PARENT:
         if tag != suf and tag.endswith(" " + suf):
+            if tag.startswith("no "):
+                continue
+            if section != "clothing":
+                continue
             if suf not in im:
                 im.append(suf)
     if tag.endswith(" kimono") and tag != "kimono":
@@ -540,7 +620,7 @@ def apply_relations(tag: str, implies: list[str], bind: list[str], mutex, sectio
             im.append("yukata")
         if "japanese clothes" not in bind:
             bind = list(bind) + ["japanese clothes"]
-    if "one-piece swimsuit" in tag and tag != "one-piece swimsuit":
+    if section == "clothing" and "one-piece swimsuit" in tag and tag != "one-piece swimsuit":
         if "one-piece swimsuit" not in im:
             im.append("one-piece swimsuit")
         if "swimsuit" not in im:
@@ -554,6 +634,8 @@ def apply_relations(tag: str, implies: list[str], bind: list[str], mutex, sectio
         im = [x for x in im if x not in ("indoors", "outdoors", "day", "night")]
     if tag in EXPRESSION:
         mutex = "expression"
+    if tag in HAIR_STYLE_MUTEX:
+        mutex = "hair_style"
     return im, bind, mutex, section, gate, layer, heat, era, needs
 
 
@@ -652,7 +734,7 @@ def norm(item: dict) -> dict | None:
     bind = [str(x).replace("_", " ") for x in (item.get("bind") or [])]
     implies = [str(x).replace("_", " ") for x in (item.get("implies") or [])]
     layer = item.get("layer") or "normal"
-    needs = [str(x) for x in (item.get("needs") or []) if x in {"female", "male", "pair"}]
+    needs = [str(x) for x in (item.get("needs") or []) if x in {"female", "male", "pair", "yuri"}]
     implies, bind, mutex, section, gate, layer, heat, era, needs = apply_relations(
         tag, implies, bind, mutex, section, gate, layer, heat, era, needs
     )
@@ -667,6 +749,9 @@ def norm(item: dict) -> dict | None:
     if tag in NEEDS_PAIR and "pair" not in seen_needs:
         needs.append("pair")
         seen_needs.add("pair")
+    if tag in YURI_ONLY and "yuri" not in seen_needs:
+        needs.append("yuri")
+        seen_needs.add("yuri")
     mutex_extra: list[str] = []
     if tag in SEX_ACT:
         if mutex and mutex != "sex_act":
@@ -680,7 +765,7 @@ def norm(item: dict) -> dict | None:
         mutex = None
     if tag in ERA_OF:
         era = list(ERA_OF[tag])
-    needs = [x for x in needs if x in {"female", "male", "pair"}]
+    needs = [x for x in needs if x in {"female", "male", "pair", "yuri"}]
     heat = widen_heat(tag, section, mutex, layer, heat)
     out = {
         "tag": tag,
@@ -759,6 +844,127 @@ def extra_quality_boost_tags() -> list[dict]:
             "zh": zh[tag],
         }
         for tag in ("absurdres", "highres", "very aesthetic")
+    ]
+
+
+def extra_kokod_tags() -> list[dict]:
+    """Adult petite, small bust."""
+    return [
+        {
+            "tag": "petite",
+            "section": "feature",
+            "gate": "female",
+            "heat": list(HEATS),
+            "mutex": "height",
+            "bind": [],
+            "implies": [],
+            "layer": "normal",
+            "era": ["any"],
+            "needs": ["female"],
+            "zh": "嬌小",
+        },
+        {
+            "tag": "flat chest",
+            "section": "feature",
+            "gate": "female",
+            "heat": list(HEATS),
+            "mutex": "breast_size",
+            "bind": [],
+            "implies": ["small breasts"],
+            "layer": "normal",
+            "era": ["any"],
+            "needs": ["female"],
+            "zh": "平胸",
+        },
+        {
+            "tag": "kokod",
+            "section": "feature",
+            "gate": "female",
+            "heat": list(HEATS),
+            "mutex": "height",
+            "bind": [],
+            "implies": ["petite", "flat chest", "small breasts"],
+            "layer": "normal",
+            "era": ["any"],
+            "needs": ["female"],
+            "zh": "矮小胸小",
+        },
+    ]
+
+
+def extra_kkob_tags() -> list[dict]:
+    """Adult short male. Not a child tag."""
+    return [
+        {
+            "tag": "short male",
+            "section": "feature",
+            "gate": "male",
+            "heat": list(HEATS),
+            "mutex": "height_m",
+            "bind": [],
+            "implies": [],
+            "layer": "normal",
+            "era": ["any"],
+            "needs": ["male"],
+            "zh": "矮個男性",
+        },
+        {
+            "tag": "tall male",
+            "section": "feature",
+            "gate": "male",
+            "heat": list(HEATS),
+            "mutex": "height_m",
+            "bind": [],
+            "implies": [],
+            "layer": "normal",
+            "era": ["any"],
+            "needs": ["male"],
+            "zh": "高個男性",
+        },
+        {
+            "tag": "kkob",
+            "section": "feature",
+            "gate": "male",
+            "heat": list(HEATS),
+            "mutex": "height_m",
+            "bind": [],
+            "implies": ["short male"],
+            "layer": "normal",
+            "era": ["any"],
+            "needs": ["male"],
+            "zh": "矮小",
+        },
+    ]
+
+
+def extra_sex_position_tags() -> list[dict]:
+    """Verified Danbooru sex positions missing from harvest parts."""
+    sex = ["sex"]
+
+    def P(tag, needs, gate="any", zh=""):
+        return {
+            "tag": tag,
+            "section": "pose",
+            "gate": gate,
+            "heat": sex,
+            "mutex": "sex_act",
+            "bind": [],
+            "implies": ["sex"],
+            "layer": "normal",
+            "era": ["any"],
+            "needs": list(needs),
+            "zh": zh,
+        }
+
+    return [
+        P("upright straddle", ["pair", "male", "female"], zh="對面坐位"),
+        P("reverse upright straddle", ["pair", "male", "female"], zh="背面坐位"),
+        P("reverse suspended congress", ["pair", "male"], zh="背面懸空"),
+        P("piledriver (sex)", ["pair", "male", "female"], zh="打樁機體位"),
+        P("boy on top", ["pair", "male"], gate="male", zh="男上"),
+        P("thigh sex", ["pair", "male", "female"], zh="股交"),
+        P("frottage", ["pair"], zh="互相摩擦"),
+        P("reverse spitroast", ["pair", "male"], zh="反向兩端夾擊"),
     ]
 
 
@@ -1010,6 +1216,9 @@ def main() -> None:
     rows.extend(extra_race_tags())
     rows.extend(extra_male_look_tags())
     rows.extend(extra_shot_face_tags())
+    rows.extend(extra_sex_position_tags())
+    rows.extend(extra_kokod_tags())
+    rows.extend(extra_kkob_tags())
     rows.extend(extra_breast_feel_tags())
     rows.extend(extra_style_tags())
     rows.extend(extra_quality_boost_tags())
