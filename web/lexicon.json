@@ -7100,6 +7100,8 @@
       "section": "clothing",
       "gate": "any",
       "heat": [
+        "tease",
+        "flash",
         "sex"
       ],
       "mutex": "nudity",
@@ -7117,6 +7119,8 @@
       "section": "clothing",
       "gate": "any",
       "heat": [
+        "tease",
+        "flash",
         "sex"
       ],
       "mutex": "nudity",

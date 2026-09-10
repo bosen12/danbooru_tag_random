@@ -104,7 +104,12 @@
           <div class="row">
             <button type="button" class="chip-toggle" id="draw-job" aria-pressed="false">抽職業</button>
           </div>
-          <p class="hint">開了每張抽一種職業，並帶配套衣服。關了只靠釘選。</p>
+          <div class="row" id="scene-modes">
+            <button type="button" class="chip-toggle" data-scene-mode="normal" aria-pressed="true">正常</button>
+            <button type="button" class="chip-toggle" data-scene-mode="diverse" aria-pressed="false">多元</button>
+            <button type="button" class="chip-toggle" data-scene-mode="weird" aria-pressed="false">奇葩</button>
+          </div>
+          <p class="hint">抽職業：每張一種職業並帶衣服。正常＝現實高機率、不抽男人人種。多元＝只鎖場景配對與物理。奇葩＝只鎖物理。</p>
         </fieldset>
 
         <fieldset class="heat step">

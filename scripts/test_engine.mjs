@@ -14,7 +14,10 @@ import {
   identityPins,
   isIdentityItem,
   heatMismatches,
+  itemFitsHeats,
   sanitizeSettings,
+  SCENE_MODES,
+  sceneModeOf,
   indexLexicon,
   labelOf,
   missingPins,
@@ -623,6 +626,8 @@ function eraDraws(era, n = 60, seed0 = 9000) {
   s.girl = true;
   s.boy = false;
   s.eras = ["medieval"];
+  s.lockScene = false;
+  s.sceneMode = "weird";
   const pinned = applyPin(lex, new Set(), new Set(), "bikini").pinned;
   let modern = 0;
   let missingAnchor = 0;
@@ -748,7 +753,10 @@ function eraDraws(era, n = 60, seed0 = 9000) {
   ok("bed allows tease", has("bed", "tease"));
   ok("torii allows sex", has("torii", "sex"));
   ok("wet hair allows sex", has("wet hair", "sex"));
-  ok("nude is not a tease outfit", !has("nude", "tease"));
+  ok("nude allows tease", has("nude", "tease"));
+  ok("nude allows flash", has("nude", "flash"));
+  ok("nude allows sex", has("nude", "sex"));
+  ok("completely nude allows tease", has("completely nude", "tease"));
   ok("sex toy stays sex-only", JSON.stringify(lex.byTag.get("sex toy")?.heat) === '["sex"]');
   ok("ahegao stays sex-only", JSON.stringify(lex.byTag.get("ahegao")?.heat) === '["sex"]');
 }
@@ -758,6 +766,11 @@ function eraDraws(era, n = 60, seed0 = 9000) {
   ok("sex-only does not clash with micro bikini", !heatMismatches(lex, pinned, ["sex"]).includes("micro bikini"));
   ok("sex-only does not clash with undressing", !heatMismatches(lex, applyPin(lex, new Set(), new Set(), "undressing").pinned, ["sex"]).includes("undressing"));
   ok("tease-only clash lists fellatio", heatMismatches(lex, applyPin(lex, new Set(), new Set(), "fellatio").pinned, ["tease"]).includes("fellatio"));
+  ok("tease-only does not clash with nude", !heatMismatches(lex, applyPin(lex, new Set(), new Set(), "nude").pinned, ["tease"]).includes("nude"));
+  ok("activity-only does not clash with nude", !heatMismatches(lex, applyPin(lex, new Set(), new Set(), "nude").pinned, ["activity"]).includes("nude"));
+  ok("shopping is available in activity-only", itemFitsHeats(lex.byTag.get("shopping"), ["activity"]));
+  ok("bathing is available in activity-only", itemFitsHeats(lex.byTag.get("bathing"), ["activity"]));
+  ok("cowgirl is not available in activity-only", !itemFitsHeats(lex.byTag.get("cowgirl position"), ["activity"]));
 }
 
 {
@@ -895,6 +908,8 @@ const MODERN_ONLY = [
   s.girl = true;
   s.boy = false;
   s.eras = ["medieval"];
+  s.lockScene = false;
+  s.sceneMode = "weird";
   const pinned = applyPin(lex, new Set(), new Set(), "sports bra").pinned;
   let chair = 0;
   let missingBra = 0;
@@ -1077,6 +1092,7 @@ function indoorOutdoorClash(have) {
   s.eras = ["modern"];
   s.heats = ["tease"];
   s.weights = { tease: 1, flash: 0, sex: 0 };
+  s.sceneMode = "diverse";
   let races = 0;
   let clash = 0;
   let girlGob = 0;
@@ -1214,6 +1230,8 @@ function indoorOutdoorClash(have) {
   s.eras = ["modern"];
   s.heats = ["flash"];
   s.weights = { tease: 0, flash: 1, sex: 0 };
+  s.lockScene = false;
+  s.sceneMode = "weird";
   const nude = [];
   const noGarment = [];
   const noAct = [];
@@ -1710,7 +1728,7 @@ function indoorOutdoorClash(have) {
   ok("panty pull names panty", actionGarmentKeys("panty pull").includes("panty"));
   ok("dress pull names dress", actionGarmentKeys("dress pull").includes("dress"));
   ok("downblouse names blouse", actionGarmentKeys("downblouse").includes("blouse"));
-  eq("undressing fits a hoodie", actionFitsClothes("undressing", ["hoodie"]), 1);
+  eq("undressing fits a hoodie", actionFitsClothes("undressing", ["hoodie"]), 2);
   eq("dress pull does not fit a hoodie", actionFitsClothes("dress pull", ["hoodie"]), 0);
   eq("dress pull fits sundress", actionFitsClothes("dress pull", ["sundress"]), 2);
   eq("pants pull does not fit cheerleader", actionFitsClothes("pants pull", ["cheerleader"]), 0);
@@ -1721,6 +1739,22 @@ function indoorOutdoorClash(have) {
   eq("hand in panties does not fit no panties", actionFitsClothes("hand in panties", ["no panties"]), 0);
   eq("shirt lift fits white shirt", actionFitsClothes("shirt lift", ["white shirt"]), 2);
   eq("downblouse does not fit cheerleader", actionFitsClothes("downblouse", ["cheerleader"]), 0);
+  eq("through clothes does not fit nude", actionFitsClothes("masturbation through clothes", ["nude"]), 0);
+  eq("through clothes does not fit empty", actionFitsClothes("masturbation through clothes", []), 0);
+  eq("through clothes does not fit towel only", actionFitsClothes("masturbation through clothes", ["towel"]), 0);
+  eq("through clothes fits a shirt", actionFitsClothes("masturbation through clothes", ["white shirt"]), 2);
+  eq("upskirt does not fit nude", actionFitsClothes("upskirt", ["nude"]), 0);
+  eq("upskirt fits a skirt", actionFitsClothes("upskirt", ["miniskirt"]), 2);
+  eq("undressing does not fit nude", actionFitsClothes("undressing", ["nude"]), 0);
+  eq("clothes lift does not fit nude", actionFitsClothes("clothes lift", ["nude"]), 0);
+  eq("clothes lift fits a shirt", actionFitsClothes("clothes lift", ["white shirt"]), 2);
+  eq("flashing does not fit nude", actionFitsClothes("flashing", ["nude"]), 0);
+  eq("cameltoe does not fit nude", actionFitsClothes("cameltoe", ["nude"]), 0);
+  eq("clothed sex does not fit nude", actionFitsClothes("clothed sex", ["nude"]), 0);
+  eq("covering breasts still fits nude", actionFitsClothes("covering breasts", ["nude"]), 1);
+  eq("adjusting clothes does not fit nude", actionFitsClothes("adjusting clothes", ["nude"]), 0);
+  eq("clothes tug does not fit nude", actionFitsClothes("clothes tug", ["nude"]), 0);
+  eq("adjusting clothes fits a shirt", actionFitsClothes("adjusting clothes", ["white shirt"]), 2);
   const s = settings();
   s.girl = true;
   s.boy = false;
@@ -2529,6 +2563,443 @@ function indoorOutdoorClash(have) {
     if (d.people === 1 && TWO_PERSON.some((t) => h.has(t))) coupleOnSolo += 1;
   }
   eq("girl-only sex never leftover two-person acts", coupleOnSolo, 0);
+}
+
+{
+  const s = settings();
+  s.girl = true;
+  s.boy = false;
+  s.heats = ["sex"];
+  s.weights = { activity: 0, tease: 0, flash: 0, sex: 1 };
+  s.eras = ["modern"];
+  s.counts.pose = 12;
+  let pin = applyPin(lex, new Set(), new Set(), "1girl").pinned;
+  pin = applyPin(lex, pin, new Set(), "nude").pinned;
+  let through = 0;
+  let noSolo = 0;
+  for (let i = 0; i < 40; i++) {
+    const d = drawOne(lex, s, pin, new Set(), mulberry32(148000 + i), 148000 + i);
+    const h = tagsOf(d);
+    if (h.has("masturbation through clothes")) through += 1;
+    if (
+      !h.has("masturbation") &&
+      !h.has("female masturbation") &&
+      !h.has("fingering")
+    ) {
+      noSolo += 1;
+    }
+  }
+  eq("nude solo sex never through-clothes", through, 0);
+  eq("nude solo sex still has a masturbation tag", noSolo, 0);
+  const CLOTHES_ONLY = [
+    "masturbation through clothes",
+    "clothes lift",
+    "clothes pull",
+    "clothing aside",
+    "undressing",
+    "upskirt",
+    "cameltoe",
+    "wedgie",
+    "flashing",
+    "strap slip",
+    "areola slip",
+    "nipple slip",
+    "one breast out",
+    "erection under clothes",
+    "bulge",
+    "clothed sex",
+    "paizuri under clothes",
+    "clothed female nude male",
+    "adjusting clothes",
+    "clothes tug",
+  ];
+  let clothesOnNude = 0;
+  for (let i = 0; i < 40; i++) {
+    const d = drawOne(lex, s, pin, new Set(), mulberry32(149000 + i), 149000 + i);
+    const h = tagsOf(d);
+    if (CLOTHES_ONLY.some((t) => h.has(t))) clothesOnNude += 1;
+  }
+  eq("nude solo sex never clothes-only acts", clothesOnNude, 0);
+  const flash = settings();
+  flash.girl = true;
+  flash.boy = false;
+  flash.heats = ["flash"];
+  flash.weights = { activity: 0, tease: 0, flash: 1, sex: 0 };
+  flash.eras = ["modern"];
+  let flashBad = 0;
+  for (let i = 0; i < 40; i++) {
+    const d = drawOne(lex, flash, pin, new Set(), mulberry32(150000 + i), 150000 + i);
+    const h = tagsOf(d);
+    if (CLOTHES_ONLY.some((t) => h.has(t))) flashBad += 1;
+  }
+  eq("nude flash never clothes-only acts", flashBad, 0);
+  const tease = settings();
+  tease.girl = true;
+  tease.boy = false;
+  tease.heats = ["tease"];
+  tease.weights = { activity: 0, tease: 1, flash: 0, sex: 0 };
+  tease.eras = ["modern"];
+  tease.counts.pose = 12;
+  let teaseBad = 0;
+  for (let i = 0; i < 40; i++) {
+    const d = drawOne(lex, tease, pin, new Set(), mulberry32(151000 + i), 151000 + i);
+    const h = tagsOf(d);
+    if (CLOTHES_ONLY.some((t) => h.has(t))) teaseBad += 1;
+  }
+  eq("nude tease never clothes-only acts", teaseBad, 0);
+}
+
+{
+  const s = settings();
+  s.girl = true;
+  s.boy = false;
+  s.heats = ["activity"];
+  s.weights = { activity: 1, tease: 0, flash: 0, sex: 0 };
+  s.eras = ["modern"];
+  s.counts.pose = 10;
+  s.counts.env = 6;
+  const pinOut = applyPin(lex, new Set(), new Set(), "outdoors").pinned;
+  const indoorPlace = ["living room", "bathroom", "bedroom", "office", "classroom", "kitchen"];
+  let indoorOnOut = 0;
+  for (let i = 0; i < 40; i++) {
+    const h = tagsOf(drawOne(lex, s, pinOut, new Set(), mulberry32(152000 + i), 152000 + i));
+    if (indoorPlace.some((t) => h.has(t))) indoorOnOut += 1;
+  }
+  eq("pin outdoors never auto indoor places", indoorOnOut, 0);
+  const pinIn = applyPin(lex, new Set(), new Set(), "indoors").pinned;
+  const outdoorAct = ["camping", "picnic", "hiking", "sunbathing", "open-air bath", "beach"];
+  let outOnIn = 0;
+  for (let i = 0; i < 40; i++) {
+    const h = tagsOf(drawOne(lex, s, pinIn, new Set(), mulberry32(153000 + i), 153000 + i));
+    if (outdoorAct.some((t) => h.has(t))) outOnIn += 1;
+  }
+  eq("pin indoors never auto outdoor activities/places", outOnIn, 0);
+  const sex = settings();
+  sex.girl = true;
+  sex.boy = true;
+  sex.heats = ["tease"];
+  sex.weights = { activity: 0, tease: 1, flash: 0, sex: 0 };
+  sex.eras = ["modern"];
+  const pinSex = applyPin(lex, new Set(), new Set(), "cowgirl position").pinned;
+  const DAILY = ["shopping", "driving", "cooking", "studying", "karaoke", "hiking", "camping"];
+  let dailyOnSex = 0;
+  for (let i = 0; i < 40; i++) {
+    const h = tagsOf(drawOne(lex, sex, pinSex, new Set(), mulberry32(154000 + i), 154000 + i));
+    if (DAILY.some((t) => h.has(t))) dailyOnSex += 1;
+  }
+  eq("pinned sex act does not auto daily activity", dailyOnSex, 0);
+}
+
+{
+  const pinHead = applyPin(lex, new Set(), new Set(), "shower head");
+  ok("shower head pin walks to shower place", pinHead.pinned.has("shower (place)"));
+  ok("shower head pin walks to indoors", pinHead.pinned.has("indoors"));
+  const s = settings();
+  s.girl = true;
+  s.boy = false;
+  s.heats = ["tease"];
+  s.weights = { activity: 0, tease: 1, flash: 0, sex: 0 };
+  s.eras = ["modern"];
+  s.counts.env = 6;
+  let out = 0;
+  for (let i = 0; i < 40; i++) {
+    const h = tagsOf(drawOne(lex, s, pinHead.pinned, new Set(), mulberry32(155000 + i), 155000 + i));
+    if (h.has("outdoors")) out += 1;
+  }
+  eq("pin shower head never auto outdoors", out, 0);
+}
+
+{
+  const s = settings();
+  s.girl = true;
+  s.boy = false;
+  s.heats = ["activity"];
+  s.weights = { activity: 1, tease: 0, flash: 0, sex: 0 };
+  s.eras = ["modern"];
+  const pinSleep = applyPin(lex, new Set(), new Set(), "sleeping").pinned;
+  const AWAKE = [
+    "eating",
+    "hiking",
+    "swimming",
+    "cooking",
+    "reading",
+    "dancing",
+    "picnic",
+    "stretching",
+    "yoga",
+    "studying",
+    "sunbathing",
+    "smoking",
+    "drinking",
+    "floating",
+    "bathing",
+    "showering",
+  ];
+  let awake = 0;
+  for (let i = 0; i < 40; i++) {
+    const h = tagsOf(drawOne(lex, s, pinSleep, new Set(), mulberry32(156000 + i), 156000 + i));
+    if (AWAKE.some((t) => h.has(t))) awake += 1;
+  }
+  eq("sleeping never auto awake activities", awake, 0);
+  const pinSeiza = applyPin(lex, new Set(), new Set(), "seiza").pinned;
+  const MOVE = ["swimming", "horseback riding", "riding bicycle", "hiking", "wading"];
+  let move = 0;
+  for (let i = 0; i < 40; i++) {
+    const h = tagsOf(drawOne(lex, s, pinSeiza, new Set(), mulberry32(157000 + i), 157000 + i));
+    if (MOVE.some((t) => h.has(t))) move += 1;
+  }
+  eq("seiza never auto moving activities", move, 0);
+  const pinHof = applyPin(lex, new Set(), new Set(), "head out of frame").pinned;
+  const FACE = ["looking at viewer", "smile", "wink", "ahegao", "closed eyes", "facial", "cum in mouth"];
+  let face = 0;
+  const tease = settings();
+  tease.girl = true;
+  tease.boy = false;
+  tease.heats = ["tease"];
+  tease.weights = { activity: 0, tease: 1, flash: 0, sex: 0 };
+  tease.eras = ["modern"];
+  for (let i = 0; i < 40; i++) {
+    const h = tagsOf(drawOne(lex, tease, pinHof, new Set(), mulberry32(158000 + i), 158000 + i));
+    if (FACE.some((t) => h.has(t))) face += 1;
+  }
+  eq("head out of frame never auto face tags", face, 0);
+  const sexS = settings();
+  sexS.girl = true;
+  sexS.boy = true;
+  sexS.heats = ["sex"];
+  sexS.weights = { activity: 0, tease: 0, flash: 0, sex: 1 };
+  sexS.eras = ["modern"];
+  sexS.sceneMode = "diverse";
+  let sexFace = 0;
+  for (let i = 0; i < 40; i++) {
+    const h = tagsOf(drawOne(lex, sexS, pinHof, new Set(), mulberry32(180000 + i), 180000 + i));
+    if (["facial", "cum in mouth", "closed eyes"].some((t) => h.has(t))) sexFace += 1;
+  }
+  eq("head out of frame never auto facial/cum in mouth", sexFace, 0);
+  const pinClosed = applyPin(lex, new Set(), new Set(), "closed eyes").pinned;
+  let hofAfter = 0;
+  for (let i = 0; i < 40; i++) {
+    const h = tagsOf(drawOne(lex, tease, pinClosed, new Set(), mulberry32(181000 + i), 181000 + i));
+    if (h.has("head out of frame") || h.has("lower body")) hofAfter += 1;
+  }
+  eq("closed eyes never auto faceless camera", hofAfter, 0);
+  const pinDay = applyPin(lex, new Set(), new Set(), "day").pinned;
+  let stars = 0;
+  for (let i = 0; i < 40; i++) {
+    const h = tagsOf(drawOne(lex, tease, pinDay, new Set(), mulberry32(159000 + i), 159000 + i));
+    if (h.has("starry sky") || h.has("moonlight")) stars += 1;
+  }
+  eq("day never auto starry sky or moonlight", stars, 0);
+  const pinSun = applyPin(lex, new Set(), new Set(), "sunbathing").pinned;
+  let nightSun = 0;
+  for (let i = 0; i < 40; i++) {
+    const h = tagsOf(drawOne(lex, tease, pinSun, new Set(), mulberry32(175000 + i), 175000 + i));
+    if (h.has("night") || h.has("starry sky") || h.has("moonlight")) nightSun += 1;
+  }
+  eq("sunbathing never auto night/starry/moonlight", nightSun, 0);
+  const pinNight = applyPin(lex, new Set(), new Set(), "night").pinned;
+  let dayNight = 0;
+  for (let i = 0; i < 40; i++) {
+    const h = tagsOf(drawOne(lex, tease, pinNight, new Set(), mulberry32(176000 + i), 176000 + i));
+    if (h.has("sunlight") || h.has("sunbathing") || h.has("blue sky")) dayNight += 1;
+  }
+  eq("night never auto sunlight/sunbathing/blue sky", dayNight, 0);
+  const pinBlue = applyPin(lex, new Set(), new Set(), "blue sky").pinned;
+  let blueStars = 0;
+  for (let i = 0; i < 40; i++) {
+    const h = tagsOf(drawOne(lex, tease, pinBlue, new Set(), mulberry32(182000 + i), 182000 + i));
+    if (h.has("starry sky") || h.has("moonlight") || h.has("night")) blueStars += 1;
+  }
+  eq("blue sky never auto starry/moonlight/night", blueStars, 0);
+  const pinMoon = applyPin(lex, new Set(), new Set(), "moonlight").pinned;
+  let moonDay = 0;
+  for (let i = 0; i < 40; i++) {
+    const h = tagsOf(drawOne(lex, tease, pinMoon, new Set(), mulberry32(183000 + i), 183000 + i));
+    if (h.has("orange sky") || h.has("blue sky") || h.has("sunlight")) moonDay += 1;
+  }
+  eq("moonlight never auto orange/blue sky or sunlight", moonDay, 0);
+  const pinDrive = applyPin(lex, new Set(), new Set(), "driving").pinned;
+  const actS = settings();
+  actS.girl = true;
+  actS.boy = false;
+  actS.heats = ["activity"];
+  actS.weights = { activity: 1, tease: 0, flash: 0, sex: 0 };
+  actS.eras = ["modern"];
+  actS.sceneMode = "diverse";
+  let groundDrive = 0;
+  for (let i = 0; i < 40; i++) {
+    const h = tagsOf(drawOne(lex, actS, pinDrive, new Set(), mulberry32(177000 + i), 177000 + i));
+    if (["all fours", "crawling", "top-down bottom-up"].some((t) => h.has(t))) groundDrive += 1;
+  }
+  eq("driving never auto ground body", groundDrive, 0);
+  let lieDrive = 0;
+  for (let i = 0; i < 40; i++) {
+    const h = tagsOf(drawOne(lex, actS, pinDrive, new Set(), mulberry32(184000 + i), 184000 + i));
+    if (["on stomach", "on back", "on side", "sleeping"].some((t) => h.has(t))) lieDrive += 1;
+  }
+  eq("driving never auto lying/sleeping body", lieDrive, 0);
+  const pinSleep2 = applyPin(lex, new Set(), new Set(), "sleeping").pinned;
+  let wash = 0;
+  for (let i = 0; i < 40; i++) {
+    const h = tagsOf(drawOne(lex, actS, pinSleep2, new Set(), mulberry32(178000 + i), 178000 + i));
+    if (h.has("washing body") || h.has("partially submerged")) wash += 1;
+  }
+  eq("sleeping never auto washing body", wash, 0);
+}
+
+{
+  eq("sceneMode defaults normal", defaultSettings(data).sceneMode, "normal");
+  eq("lockScene defaults on", defaultSettings(data).lockScene, true);
+  eq("sanitize lockScene false becomes weird", sanitizeSettings({ lockScene: false }, data).sceneMode, "weird");
+  eq("sanitize sceneMode diverse", sanitizeSettings({ sceneMode: "diverse" }, data).sceneMode, "diverse");
+  eq("sceneModeOf weird", sceneModeOf({ sceneMode: "weird" }), "weird");
+  ok("SCENE_MODES has three", SCENE_MODES.length === 3);
+  const s = settings();
+  s.girl = true;
+  s.boy = false;
+  s.heats = ["activity"];
+  s.weights = { activity: 1, tease: 0, flash: 0, sex: 0 };
+  s.eras = ["modern"];
+  s.lockScene = true;
+  s.counts.env = 6;
+  const pinSwim = applyPin(lex, new Set(), new Set(), "swimming").pinned;
+  const WATER = ["pool", "poolside", "pool ladder", "beach", "ocean", "underwater", "bathtub", "bathroom", "shower (place)", "onsen", "ofuro", "sento", "open-air bath", "bubble bath", "bath"];
+  let dry = 0;
+  for (let i = 0; i < 40; i++) {
+    const h = tagsOf(drawOne(lex, s, pinSwim, new Set(), mulberry32(160000 + i), 160000 + i));
+    if (!WATER.some((t) => h.has(t))) dry += 1;
+  }
+  eq("lockScene swimming always has water place", dry, 0);
+  const pinLiv = applyPin(lex, new Set(), new Set(), "living room").pinned;
+  let wet = 0;
+  for (let i = 0; i < 40; i++) {
+    const h = tagsOf(drawOne(lex, s, pinLiv, new Set(), mulberry32(161000 + i), 161000 + i));
+    if (["swimming", "wading", "horseback riding", "hiking"].some((t) => h.has(t))) wet += 1;
+  }
+  eq("lockScene living room never swim/horse/hike", wet, 0);
+  const pinOfuro = applyPin(lex, new Set(), new Set(), "ofuro").pinned;
+  let shoes = 0;
+  for (let i = 0; i < 40; i++) {
+    const h = tagsOf(drawOne(lex, s, pinOfuro, new Set(), mulberry32(162000 + i), 162000 + i));
+    if (["geta", "zouri", "boots", "sneakers"].some((t) => h.has(t))) shoes += 1;
+  }
+  eq("lockScene ofuro never outdoor shoes", shoes, 0);
+  const pinBath = applyPin(lex, new Set(), new Set(), "bathing").pinned;
+  let castle = 0;
+  const med = { ...s, eras: ["medieval"] };
+  for (let i = 0; i < 40; i++) {
+    const h = tagsOf(drawOne(lex, med, pinBath, new Set(), mulberry32(163000 + i), 163000 + i));
+    if (h.has("castle")) castle += 1;
+  }
+  eq("lockScene bathing never castle", castle, 0);
+  const pinPicnic = applyPin(lex, new Set(), new Set(), "picnic").pinned;
+  let under = 0;
+  for (let i = 0; i < 40; i++) {
+    const h = tagsOf(drawOne(lex, s, pinPicnic, new Set(), mulberry32(164000 + i), 164000 + i));
+    if (h.has("underwater") || h.has("ocean") || h.has("pool")) under += 1;
+  }
+  eq("lockScene picnic never underwater/ocean/pool", under, 0);
+}
+
+{
+  const s = settings();
+  s.girl = true;
+  s.boy = false;
+  s.heats = ["activity"];
+  s.weights = { activity: 1, tease: 0, flash: 0, sex: 0 };
+  s.eras = ["modern"];
+  s.lockScene = true;
+  const pinCrawl = applyPin(lex, new Set(), new Set(), "crawling").pinned;
+  let picnic = 0;
+  for (let i = 0; i < 40; i++) {
+    const h = tagsOf(drawOne(lex, s, pinCrawl, new Set(), mulberry32(165000 + i), 165000 + i));
+    if (h.has("picnic") || h.has("eating")) picnic += 1;
+  }
+  eq("crawling never auto picnic/eating", picnic, 0);
+  const pinDance = applyPin(lex, new Set(), new Set(), "dancing").pinned;
+  let study = 0;
+  for (let i = 0; i < 40; i++) {
+    const h = tagsOf(drawOne(lex, s, pinDance, new Set(), mulberry32(166000 + i), 166000 + i));
+    if (h.has("studying") || h.has("writing") || h.has("reading")) study += 1;
+  }
+  eq("dancing never auto studying/writing/reading", study, 0);
+  const pinSquat = applyPin(lex, new Set(), new Set(), "squatting").pinned;
+  let horse = 0;
+  for (let i = 0; i < 40; i++) {
+    const h = tagsOf(drawOne(lex, s, pinSquat, new Set(), mulberry32(167000 + i), 167000 + i));
+    if (h.has("horseback riding")) horse += 1;
+  }
+  eq("squatting never auto horseback riding", horse, 0);
+  const pinFloat = applyPin(lex, new Set(), new Set(), "floating").pinned;
+  const PLANTED = ["crawling", "all fours", "squatting", "standing", "kneeling", "on one knee", "seiza", "wariza", "indian style", "dancing"];
+  let planted = 0;
+  for (let i = 0; i < 40; i++) {
+    const h = tagsOf(drawOne(lex, s, pinFloat, new Set(), mulberry32(168000 + i), 168000 + i));
+    if (PLANTED.some((t) => h.has(t))) planted += 1;
+  }
+  eq("floating never auto planted body poses", planted, 0);
+  const pinGames = applyPin(lex, new Set(), new Set(), "playing games").pinned;
+  let fours = 0;
+  for (let i = 0; i < 40; i++) {
+    const h = tagsOf(drawOne(lex, s, pinGames, new Set(), mulberry32(170000 + i), 170000 + i));
+    if (h.has("all fours") || h.has("crawling") || h.has("top-down bottom-up")) fours += 1;
+  }
+  eq("playing games never auto ground body", fours, 0);
+  const pinDance2 = applyPin(lex, new Set(), new Set(), "dancing").pinned;
+  let yoga = 0;
+  for (let i = 0; i < 40; i++) {
+    const h = tagsOf(drawOne(lex, s, pinDance2, new Set(), mulberry32(171000 + i), 171000 + i));
+    if (h.has("yoga") || h.has("stretching")) yoga += 1;
+  }
+  eq("dancing never auto yoga/stretching", yoga, 0);
+}
+
+{
+  const s = settings();
+  s.girl = false;
+  s.boy = true;
+  s.heats = ["tease"];
+  s.weights = { activity: 0, tease: 1, flash: 0, sex: 0 };
+  s.eras = ["modern"];
+  s.sceneMode = "normal";
+  s.lockScene = true;
+  let race = 0;
+  for (let i = 0; i < 40; i++) {
+    const h = tagsOf(drawOne(lex, s, new Set(), new Set(), mulberry32(172000 + i), 172000 + i));
+    if ([...h].some((t) => lex.byTag.get(t)?.mutex === "race")) race += 1;
+  }
+  eq("normal mode never auto male race", race, 0);
+  const pinDoc = applyPin(lex, new Set(), new Set(), "doctor").pinned;
+  s.drawJob = true;
+  let bath = 0;
+  for (let i = 0; i < 40; i++) {
+    const h = tagsOf(drawOne(lex, s, pinDoc, new Set(), mulberry32(173000 + i), 173000 + i));
+    if (["sento", "ofuro", "onsen", "bathroom", "bathtub"].some((t) => h.has(t))) bath += 1;
+  }
+  eq("normal doctor never auto bath place", bath, 0);
+  const pinGuitar = applyPin(lex, new Set(), new Set(), "playing guitar").pinned;
+  const lock = settings();
+  lock.girl = true;
+  lock.boy = false;
+  lock.heats = ["activity"];
+  lock.weights = { activity: 1, tease: 0, flash: 0, sex: 0 };
+  lock.eras = ["modern"];
+  lock.sceneMode = "diverse";
+  lock.lockScene = true;
+  lock.counts.env = 6;
+  let guitarBath = 0;
+  for (let i = 0; i < 40; i++) {
+    const h = tagsOf(drawOne(lex, lock, pinGuitar, new Set(), mulberry32(174000 + i), 174000 + i));
+    if (["bathtub", "ofuro", "sento", "bathroom", "shower (place)"].some((t) => h.has(t))) guitarBath += 1;
+  }
+  eq("lockScene guitar never bath place", guitarBath, 0);
+  const pinCook = applyPin(lex, new Set(), new Set(), "cooking").pinned;
+  let dryCook = 0;
+  for (let i = 0; i < 40; i++) {
+    const h = tagsOf(drawOne(lex, lock, pinCook, new Set(), mulberry32(179000 + i), 179000 + i));
+    if (h.has("cooking") && !h.has("kitchen")) dryCook += 1;
+  }
+  eq("lockScene cooking always has kitchen", dryCook, 0);
 }
 
 {

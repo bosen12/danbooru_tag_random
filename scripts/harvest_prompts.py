@@ -549,7 +549,7 @@ def classify(tag: str) -> dict | None:
         section = "clothing"
         mutex = "nudity"
         layer = "skin"
-        heat = ["sex"]
+        heat = list(HEATS)
     elif tag.endswith(" dress") or tag.endswith(" swimsuit") or tag.endswith(" uniform") or has_any_tok(tag, CLOTH_ONE):
         section = "clothing"
         mutex = "onepiece"

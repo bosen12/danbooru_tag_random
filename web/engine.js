@@ -42,6 +42,376 @@ const SEX_OK_ACTIVITY = new Set([
   "floating",
   "shared bathing",
 ]);
+
+const STILL_BODY = new Set(["sleeping", "lying", "on back", "on stomach", "on side", "reclining"]);
+const LOCKED_SIT = new Set(["seiza", "wariza", "indian style"]);
+const GROUND_BODY = new Set(["all fours", "crawling", "top-down bottom-up"]);
+const MOVE_ACT = new Set([
+  "swimming",
+  "wading",
+  "hiking",
+  "horseback riding",
+  "riding bicycle",
+  "playing sports",
+  "exercising",
+  "training",
+  "dancing",
+  "carrying",
+  "cooking",
+  "cleaning",
+  "fishing",
+]);
+const AWAKE_ACT = new Set([
+  ...MOVE_ACT,
+  "eating",
+  "reading",
+  "drawing (action)",
+  "painting (action)",
+  "singing",
+  "karaoke",
+  "shopping",
+  "driving",
+  "writing",
+  "picnic",
+  "playing games",
+  "playing video games",
+  "playing guitar",
+  "selfie",
+  "talking on phone",
+  "taking picture",
+  "stretching",
+  "yoga",
+  "studying",
+  "sunbathing",
+  "smoking",
+  "drinking",
+  "floating",
+  "bathing",
+  "showering",
+  "shared bathing",
+]);
+const FACELESS_CAM = new Set(["head out of frame", "lower body"]);
+const FACE_NEED_TAGS = new Set(["closed eyes", "facial", "cum in mouth", "cum on face"]);
+const DAY_MARK = new Set(["day", "sunrise", "sunlight", "sunbathing", "blue sky", "orange sky"]);
+const NIGHT_MARK = new Set(["night", "starry sky", "moonlight"]);
+const SLEEP_BAD_POSE = new Set(["washing body", "partially submerged"]);
+
+function usedMutexTags(used, lex, mutex) {
+  const s = new Set();
+  for (const t of used) {
+    if (lex.byTag.get(t)?.mutex === mutex) s.add(t);
+  }
+  return s;
+}
+
+function activityFitsBody(act, body) {
+  if (body.has("sleeping") && AWAKE_ACT.has(act)) return false;
+  if (
+    body.has("dancing") &&
+    act !== "dancing" &&
+    (MOVE_ACT.has(act) ||
+      act === "reading" ||
+      act === "eating" ||
+      act === "picnic" ||
+      act === "playing games" ||
+      act === "playing video games" ||
+      act === "drawing (action)" ||
+      act === "painting (action)" ||
+      act === "playing guitar" ||
+      act === "floating" ||
+      act === "studying" ||
+      act === "writing" ||
+      act === "drinking" ||
+      act === "yoga" ||
+      act === "stretching" ||
+      act === "sunbathing" ||
+      act === "smoking")
+  ) {
+    return false;
+  }
+  if ([...body].some((t) => STILL_BODY.has(t)) && MOVE_ACT.has(act)) return false;
+  if (
+    act === "driving" &&
+    [...body].some((t) => t === "on stomach" || t === "on back" || t === "on side" || t === "sleeping" || GROUND_BODY.has(t))
+  ) {
+    return false;
+  }
+  if ([...body].some((t) => LOCKED_SIT.has(t)) && MOVE_ACT.has(act)) return false;
+  if (
+    [...body].some((t) => GROUND_BODY.has(t)) &&
+    (MOVE_ACT.has(act) ||
+      act === "eating" ||
+      act === "picnic" ||
+      act === "reading" ||
+      act === "drawing (action)" ||
+      act === "painting (action)" ||
+      act === "playing guitar" ||
+      act === "studying" ||
+      act === "writing" ||
+      act === "drinking" ||
+      act === "playing games" ||
+      act === "playing video games" ||
+      act === "floating" ||
+      act === "driving" ||
+      act === "sunbathing")
+  ) {
+    return false;
+  }
+  if (
+    act === "floating" &&
+    [...body].some(
+      (t) =>
+        GROUND_BODY.has(t) ||
+        LOCKED_SIT.has(t) ||
+        t === "squatting" ||
+        t === "kneeling" ||
+        t === "on one knee" ||
+        t === "standing" ||
+        t === "dancing"
+    )
+  ) {
+    return false;
+  }
+  if (
+    act === "horseback riding" &&
+    (body.has("standing") ||
+      body.has("squatting") ||
+      body.has("kneeling") ||
+      body.has("on one knee") ||
+      [...body].some((t) => STILL_BODY.has(t) || LOCKED_SIT.has(t) || GROUND_BODY.has(t)))
+  ) {
+    return false;
+  }
+  return true;
+}
+
+const WATER_PLACE = new Set([
+  "pool",
+  "poolside",
+  "beach",
+  "ocean",
+  "underwater",
+  "lotus pond",
+  "onsen",
+  "bath",
+  "bathroom",
+  "bathtub",
+  "shower (place)",
+  "sento",
+  "ofuro",
+  "open-air bath",
+  "bubble bath",
+]);
+const WATER_ACT = new Set(["swimming", "wading", "floating", "fishing", "bathing", "showering", "shared bathing"]);
+const BATH_PLACE = new Set([
+  "onsen",
+  "bath",
+  "bathroom",
+  "bathtub",
+  "shower (place)",
+  "sento",
+  "ofuro",
+  "open-air bath",
+  "bubble bath",
+  "sauna",
+]);
+const BATH_ACT = new Set(["bathing", "showering", "shared bathing"]);
+const BATH_BAD_CLOTHES = new Set([
+  "geta",
+  "zouri",
+  "boots",
+  "sneakers",
+  "shoes",
+  "hakama",
+  "armor",
+  "plate armor",
+  "suit",
+  "necktie",
+  "blazer",
+  "japanese armor",
+  "sandals",
+]);
+
+function isBathBadCloth(tag) {
+  if (BATH_BAD_CLOTHES.has(tag)) return true;
+  if (/\barmor\b/.test(tag)) return true;
+  if (/\bsuit\b/.test(tag)) return true;
+  return false;
+}
+const INDOOR_ROOM = new Set([
+  "bedroom",
+  "bed",
+  "hotel room",
+  "love hotel",
+  "kitchen",
+  "living room",
+  "office",
+  "classroom",
+  "library",
+  "changing room",
+  "locker room",
+  "train",
+  "train interior",
+  "car interior",
+  "elevator",
+  "hallway",
+  "cafe",
+  "bar (place)",
+  "fitting room",
+  "restaurant",
+  "clinic",
+  "hospital",
+  "great hall",
+  "mansion",
+  "palace",
+  "futon",
+  "couch",
+]);
+const INDOOR_PROP = new Set(["shoji", "carpet", "curtains", "bed sheet", "window"]);
+const SPORT_PLACE = new Set(["fitness gym", "school gym", "park", "beach", "courtyard", "poolside", "rooftop", "pool"]);
+const DRIVE_PLACE = new Set(["car", "car interior", "street", "city", "cityscape", "alley"]);
+
+function usedPlaces(used, lex) {
+  const s = new Set();
+  for (const t of used) {
+    const it = lex.byTag.get(t);
+    if (it && (it.mutex === "place" || it.group === "place")) s.add(t);
+  }
+  return s;
+}
+
+function usedActs(used, lex) {
+  const s = new Set();
+  for (const t of used) {
+    if (lex.byTag.get(t)?.mutex === "activity") s.add(t);
+  }
+  return s;
+}
+
+const FISH_PLACE = new Set(["beach", "ocean", "lotus pond", "poolside", "pool"]);
+const INDOOR_FURN = new Set(["on bed", "on chair", "office chair", "gaming chair", "swivel chair"]);
+const JOB_PLACE = {
+  "office lady": new Set(["office"]),
+  salaryman: new Set(["office"]),
+  nurse: new Set(["clinic", "hospital"]),
+  doctor: new Set(["clinic", "hospital"]),
+  teacher: new Set(["classroom", "library", "school gym"]),
+  waitress: new Set(["restaurant", "cafe", "bar (place)"]),
+  barista: new Set(["cafe", "restaurant"]),
+  policewoman: new Set(["street", "city", "cityscape", "alley", "office"]),
+};
+const PRIVATE_SEX_PLACE = new Set([
+  "bedroom",
+  "hotel room",
+  "love hotel",
+  "bath",
+  "bathroom",
+  "bathtub",
+  "shower (place)",
+  "ofuro",
+  "onsen",
+  "sento",
+  "open-air bath",
+  "bubble bath",
+  "changing room",
+  "locker room",
+  "living room",
+]);
+
+export const SCENE_MODES = ["normal", "diverse", "weird"];
+export const SCENE_MODE_LABELS = { normal: "正常", diverse: "多元", weird: "奇葩" };
+
+export function sceneModeOf(settings) {
+  const m = settings && settings.sceneMode;
+  if (SCENE_MODES.includes(m)) return m;
+  if (settings && settings.lockScene === false) return "weird";
+  return "normal";
+}
+
+function lockSceneOn(settings) {
+  const m = sceneModeOf(settings);
+  if (m === "weird") return false;
+  if (m === "normal" || m === "diverse") return true;
+  return settings.lockScene !== false;
+}
+
+function realisticOn(settings) {
+  return sceneModeOf(settings) === "normal";
+}
+
+function usedJobs(used, lex) {
+  const s = new Set();
+  for (const t of used) {
+    if (lex.byTag.get(t)?.mutex === "job") s.add(t);
+  }
+  return s;
+}
+
+function placeFitsJob(place, jobs) {
+  if (!jobs.size) return true;
+  for (const j of jobs) {
+    const ok = JOB_PLACE[j];
+    if (ok && !ok.has(place)) return false;
+  }
+  return true;
+}
+
+function placeFitsActs(place, acts, realistic = false) {
+  if (!acts.size) return true;
+  if (acts.has("fishing")) return FISH_PLACE.has(place);
+  if ([...acts].some((a) => WATER_ACT.has(a))) return WATER_PLACE.has(place);
+  if (acts.has("horseback riding")) return !INDOOR_ROOM.has(place) && !BATH_PLACE.has(place);
+  if (acts.has("driving")) return DRIVE_PLACE.has(place);
+  if (acts.has("cooking")) return place === "kitchen";
+  if (acts.has("picnic")) {
+    return (
+      !INDOOR_ROOM.has(place) &&
+      !BATH_PLACE.has(place) &&
+      place !== "underwater" &&
+      place !== "ocean" &&
+      place !== "pool"
+    );
+  }
+  if (acts.has("camping")) {
+    return (
+      ["forest", "park", "bamboo forest", "garden", "ruins"].includes(place) ||
+      (!INDOOR_ROOM.has(place) && place !== "cityscape" && place !== "city" && place !== "street" && !BATH_PLACE.has(place))
+    );
+  }
+  if (acts.has("playing sports") || acts.has("exercising") || acts.has("training")) return SPORT_PLACE.has(place);
+  if (acts.has("hiking")) return !INDOOR_ROOM.has(place) && !BATH_PLACE.has(place);
+  if (acts.has("karaoke")) {
+    if (realistic) return place === "bar (place)" || place === "living room";
+    return place !== "elevator" && !BATH_PLACE.has(place);
+  }
+  if (acts.has("playing guitar")) return !BATH_PLACE.has(place);
+  if (acts.has("playing video games") || acts.has("playing games")) return !BATH_PLACE.has(place);
+  if (acts.has("shopping")) return !BATH_PLACE.has(place) && place !== "bedroom";
+  if (acts.has("sunbathing")) return !INDOOR_ROOM.has(place) && !BATH_PLACE.has(place);
+  if (acts.has("studying") || acts.has("writing")) return !BATH_PLACE.has(place) && place !== "bar (place)";
+  return true;
+}
+
+function actFitsPlaces(act, places, realistic = false) {
+  if (!places.size) return true;
+  return [...places].every((p) => placeFitsActs(p, new Set([act]), realistic));
+}
+
+function jobPlacesOf(jobs) {
+  const s = new Set();
+  for (const j of jobs) {
+    for (const p of JOB_PLACE[j] || []) s.add(p);
+  }
+  return s;
+}
+
+function isBathScene(used) {
+  for (const t of used) {
+    if (BATH_PLACE.has(t) || BATH_ACT.has(t)) return true;
+  }
+  return false;
+}
+
 export const ERAS = [
   "modern",
   "ancient_china",
@@ -178,6 +548,24 @@ export function indexLexicon(data) {
   return { data, byTag, bySection, mutexOf, siblings, byMutex, byGroup };
 }
 
+function implyChain(lex, tag) {
+  const out = [];
+  const seen = new Set();
+  const q = [tag];
+  while (q.length) {
+    const cur = q.shift();
+    const item = lex.byTag.get(cur);
+    if (!item) continue;
+    for (const d of [...(item.implies || []), ...(item.bind || [])]) {
+      if (seen.has(d) || d === tag) continue;
+      seen.add(d);
+      out.push(d);
+      q.push(d);
+    }
+  }
+  return out;
+}
+
 export function mutexSiblings(lex, tag) {
   const cached = lex.siblings && lex.siblings.get(tag);
   if (cached) return cached;
@@ -215,7 +603,7 @@ export function applyPin(lex, pinned, userBanned, tag) {
       nextPin.add(b);
       nextBan.delete(b);
     }
-    for (const i of item.implies || []) {
+    for (const i of implyChain(lex, tag)) {
       nextPin.add(i);
       nextBan.delete(i);
       for (const sib of mutexSiblings(lex, i)) nextPin.delete(sib);
@@ -413,10 +801,19 @@ function ensureCast(parts, settings, ctx) {
   return out;
 }
 
-function heatOk(item, heat) {
+export function itemFitsHeats(item, heats) {
+  if (!item) return false;
   const hs = item.heat && item.heat.length ? item.heat : MIXED_HEATS;
-  if (heat === "activity") return hs.includes("tease") || hs.includes("activity");
-  return hs.includes(heat);
+  const enabled = HEATS.filter((h) => (heats || []).includes(h));
+  if (!enabled.length) return true;
+  return enabled.some((h) => {
+    if (h === "activity") return hs.includes("tease") || hs.includes("activity");
+    return hs.includes(h);
+  });
+}
+
+function heatOk(item, heat) {
+  return itemFitsHeats(item, [heat]);
 }
 
 const HISTORICAL = new Set(["ancient_china", "ancient_greece", "medieval", "edo"]);
@@ -628,8 +1025,7 @@ export function heatMismatches(lex, pinned, heats) {
   for (const t of pinned) {
     const item = lex.byTag.get(t);
     if (!item) continue;
-    const hs = item.heat && item.heat.length ? item.heat : MIXED_HEATS;
-    if (!hs.some((h) => enabled.includes(h))) out.push(t);
+    if (!itemFitsHeats(item, enabled)) out.push(t);
   }
   return out;
 }
@@ -682,12 +1078,14 @@ function makeCommit(lex, used, mutexTaken, banned, era) {
   return function commit(tag) {
     if (!tag || used.has(tag) || banned.has(tag)) return false;
     if (mutexBusy(lex, mutexTaken, tag)) return false;
-    for (const d of dependents(lex, tag)) {
-      if (banned.has(d) || used.has(d) || !depAllowed(lex, d, era)) continue;
+    const deps = implyChain(lex, tag);
+    for (const d of deps) {
+      if (used.has(d) || !depAllowed(lex, d, era)) continue;
+      if (banned.has(d)) return false;
       if (mutexOccupants(lex, mutexTaken, d).some((occ) => !parentChild(lex, occ, d))) return false;
     }
     occupy(tag);
-    for (const d of dependents(lex, tag)) {
+    for (const d of deps) {
       if (banned.has(d) || used.has(d) || !depAllowed(lex, d, era)) continue;
       if (mutexBusy(lex, mutexTaken, d) && !parentChild(lex, tag, d)) continue;
       occupy(d);
@@ -758,7 +1156,37 @@ export function actionGarmentKeys(actionTag) {
   const toks = new Set(tagTokens(actionTag));
   const keys = GARMENT_KEYS.filter((g) => toks.has(g));
   if (/blouse/.test(actionTag) && !keys.includes("blouse")) keys.push("blouse");
+  if (/upskirt/.test(actionTag)) {
+    if (!keys.includes("skirt")) keys.push("skirt");
+    if (!keys.includes("dress")) keys.push("dress");
+  }
+  if (/(cameltoe|wedgie)/.test(actionTag) && !keys.includes("panty")) keys.push("panty");
   return keys;
+}
+
+export function needsBodyClothes(actionTag) {
+  const t = String(actionTag || "").toLowerCase();
+  return (
+    /through clothes|under clothes/.test(t) ||
+    t === "clothed sex" ||
+    t === "clothed female nude male" ||
+    t === "clothes lift" ||
+    t === "clothes pull" ||
+    t === "clothing aside" ||
+    t === "undressing" ||
+    t === "upskirt" ||
+    t === "cameltoe" ||
+    t === "wedgie" ||
+    t === "strap slip" ||
+    t === "areola slip" ||
+    t === "nipple slip" ||
+    t === "one breast out" ||
+    t === "flashing" ||
+    t === "erection under clothes" ||
+    t === "bulge" ||
+    t === "adjusting clothes" ||
+    t === "clothes tug"
+  );
 }
 
 export function clothingWearsKey(clothingTag, key) {
@@ -772,14 +1200,40 @@ export function clothingWearsKey(clothingTag, key) {
   });
 }
 
+const CLOTHES_ACCESSORY = new Set([
+  "towel",
+  "belt",
+  "earrings",
+  "kanzashi",
+  "necklace",
+  "bracelet",
+  "choker",
+  "ring",
+  "hairband",
+  "hair ornament",
+]);
+
+function wornBodyGarments(clothingTags) {
+  return (clothingTags || []).filter((t) => {
+    if (!t || t.startsWith("no ") || t === "nude" || t === "completely nude") return false;
+    if (CLOTHES_ACCESSORY.has(t)) return false;
+    return GARMENT_KEYS.some((k) => k !== "towel" && clothingWearsKey(t, k));
+  });
+}
+
 export function actionFitsClothes(actionTag, clothingTags) {
-  const keys = actionGarmentKeys(actionTag);
-  if (!keys.length) return 1;
   const worn = (clothingTags || []).filter(Boolean);
+  const keys = actionGarmentKeys(actionTag);
+  if (needsBodyClothes(actionTag)) {
+    if (worn.some((t) => t === "nude" || t === "completely nude")) return 0;
+    if (keys.length) return keys.some((k) => worn.some((c) => clothingWearsKey(c, k))) ? 2 : 0;
+    return wornBodyGarments(worn).length ? 2 : 0;
+  }
+  if (!keys.length) return 1;
   return keys.some((k) => worn.some((c) => clothingWearsKey(c, k))) ? 2 : 0;
 }
 
-function takeFromPool(pool, count, rand, commit, prefer) {
+function takeFromPool(pool, count, rand, commit, prefer, allow) {
   let buckets;
   if (Array.isArray(prefer) && prefer.length) {
     const seen = new Set();
@@ -803,13 +1257,14 @@ function takeFromPool(pool, count, rand, commit, prefer) {
   for (const bucket of buckets) {
     for (const item of shuffle(bucket, rand)) {
       if (n >= count) break;
+      if (allow && !allow(item)) continue;
       if (commit(item.tag)) n += 1;
     }
     if (n >= count) break;
   }
 }
 
-export function reconcile(lex, used, female, male, people, pinned = new Set()) {
+export function reconcile(lex, used, female, male, people, pinned = new Set(), lockScene = true) {
   const order = { subject: 0, feature: 1, clothing: 2, pose: 3, env: 4 };
   const items = [...used].map(
     (t) => lex.byTag.get(t) || { tag: t, section: "env", layer: "normal" }
@@ -871,6 +1326,10 @@ export function reconcile(lex, used, female, male, people, pinned = new Set()) {
         (i.mutex !== "top" && i.mutex !== "bottom") ||
         i.layer === "accessory"
     );
+  }
+
+  if (lockScene && keep.some((i) => BATH_PLACE.has(i.tag) || BATH_ACT.has(i.tag))) {
+    keep = keep.filter((i) => pinned.has(i.tag) || !isBathBadCloth(i.tag));
   }
 
   if (people > 1) keep = keep.filter((i) => i.tag !== "solo" || pinned.has("solo"));
@@ -954,15 +1413,9 @@ export function drawOne(lex, settings, pinned, userBanned, rand, seed) {
     if (item) {
       for (const g of extraMutex(item)) mutexTaken.set(g, tag);
       for (const d of dependents(lex, tag)) {
-        if (used.has(d)) continue;
         if (banned.has(d) && !pinned.has(d)) continue;
-        if (!pinned.has(d) && !depAllowed(lex, d, era)) continue;
-        if (mutexBusy(lex, mutexTaken, d) && !pinned.has(d) && !parentChild(lex, tag, d)) {
-          continue;
-        }
-        used.add(d);
-        const di = lex.byTag.get(d);
-        if (di) for (const g of extraMutex(di)) mutexTaken.set(g, d);
+        if (!pinned.has(d) && era && !depAllowed(lex, d, era)) continue;
+        forcePin(d);
       }
     }
   };
@@ -987,6 +1440,24 @@ export function drawOne(lex, settings, pinned, userBanned, rand, seed) {
     }
     return actionFitsClothes(item.tag, cloth);
   };
+  const wearsBodyClothes = () => {
+    if (
+      someUsed(
+        (it) =>
+          it.tag === "nude" ||
+          it.tag === "completely nude" ||
+          (it.section === "clothing" && it.layer === "skin")
+      )
+    ) {
+      return false;
+    }
+    return someUsed(
+      (it) =>
+        it.section === "clothing" &&
+        it.layer === "garment" &&
+        (it.mutex === "onepiece" || it.mutex === "top" || it.mutex === "bottom")
+    );
+  };
   const allow = (item) => {
     if (banned.has(item.tag) || used.has(item.tag)) return false;
     if (!heatOk(item, heat) || !eraOk(item, era) || !gateOk(item, female, male)) return false;
@@ -997,6 +1468,70 @@ export function drawOne(lex, settings, pinned, userBanned, rand, seed) {
       actionFitsWorn(item) === 0
     ) {
       return false;
+    }
+    if (needsBodyClothes(item.tag) && !wearsBodyClothes()) return false;
+    if (item.mutex === "activity" && !activityFitsBody(item.tag, usedMutexTags(used, lex, "body_pose"))) return false;
+    if (item.mutex === "body_pose") {
+      const acts = usedActs(used, lex);
+      for (const a of acts) {
+        if (!activityFitsBody(a, new Set([item.tag]))) return false;
+      }
+    }
+    const needsFace =
+      item.mutex === "gaze" ||
+      item.mutex === "expression" ||
+      item.group === "face" ||
+      FACE_NEED_TAGS.has(item.tag);
+    if (needsFace && [...used].some((t) => FACELESS_CAM.has(t))) return false;
+    if (FACELESS_CAM.has(item.tag)) {
+      for (const t of used) {
+        const it = lex.byTag.get(t);
+        if (
+          it &&
+          (it.mutex === "gaze" ||
+            it.mutex === "expression" ||
+            it.group === "face" ||
+            FACE_NEED_TAGS.has(t))
+        ) {
+          return false;
+        }
+      }
+    }
+    if (NIGHT_MARK.has(item.tag) && [...used].some((t) => DAY_MARK.has(t) || t === "sunset")) return false;
+    if (DAY_MARK.has(item.tag) && [...used].some((t) => NIGHT_MARK.has(t))) return false;
+    if (used.has("sleeping") && SLEEP_BAD_POSE.has(item.tag)) return false;
+    if (lockSceneOn(settings)) {
+      const acts = usedActs(used, lex);
+      const places = usedPlaces(used, lex);
+      const real = realisticOn(settings);
+      if ((item.mutex === "place" || item.group === "place") && !placeFitsActs(item.tag, acts, real)) return false;
+      if (item.mutex === "activity" && !actFitsPlaces(item.tag, places, real)) return false;
+      if (item.section === "clothing" && isBathScene(used) && isBathBadCloth(item.tag)) return false;
+      if (used.has("outdoors") && INDOOR_PROP.has(item.tag)) return false;
+      if (used.has("outdoors") && item.tag === "on bed") return false;
+      if (used.has("indoors") && item.tag === "starry sky") return false;
+      if (INDOOR_FURN.has(item.tag) && [...used].some((t) => t === "underwater" || t === "ocean" || t === "pool")) {
+        return false;
+      }
+    }
+    if (realisticOn(settings)) {
+      if (item.mutex === "race" && !pinned.has(item.tag)) return false;
+      const jobs = usedJobs(used, lex);
+      if ((item.mutex === "place" || item.group === "place") && !placeFitsJob(item.tag, jobs)) {
+        return false;
+      }
+      if (item.mutex === "activity") {
+        const jp = jobPlacesOf(jobs);
+        if (jp.size && !actFitsPlaces(item.tag, jp, true)) return false;
+      }
+      if (
+        heat === "sex" &&
+        (item.mutex === "place" || item.group === "place") &&
+        !jobs.size &&
+        !PRIVATE_SEX_PLACE.has(item.tag)
+      ) {
+        return false;
+      }
     }
     for (const g of extraMutex(item)) {
       if (mutexTaken.has(g)) return false;
@@ -1052,7 +1587,7 @@ export function drawOne(lex, settings, pinned, userBanned, rand, seed) {
     if (section === "clothing") prefer = clothingPrefer;
     else if (section === "env") prefer = (item) => eraSpecific(item, era) && item.mutex;
     else if (section === "pose") prefer = posePrefer;
-    takeFromPool(pool, need, rand, commit, prefer);
+    takeFromPool(pool, need, rand, commit, prefer, allow);
   };
 
   const stampAnchors = (section) => {
@@ -1060,6 +1595,7 @@ export function drawOne(lex, settings, pinned, userBanned, rand, seed) {
       const item = lex.byTag.get(t);
       if (!item || item.section !== section) continue;
       if (used.has(t) || banned.has(t)) continue;
+      if (!allow(item)) continue;
       commit(t);
     }
   };
@@ -1078,7 +1614,7 @@ export function drawOne(lex, settings, pinned, userBanned, rand, seed) {
       if (section === "clothing") prefer = clothingPrefer;
       else if (section === "env") prefer = (item) => eraSpecific(item, era);
     }
-    takeFromPool(pool, 1, rand, commit, prefer);
+    takeFromPool(pool, 1, rand, commit, prefer, allow);
   };
 
   const fillGroup = (section, groupName) => {
@@ -1087,7 +1623,7 @@ export function drawOne(lex, settings, pinned, userBanned, rand, seed) {
     const pool = (indexed || lex.bySection[section].filter((item) => item.group === groupName)).filter(
       (item) => allow(item)
     );
-    takeFromPool(pool, 1, rand, commit);
+    takeFromPool(pool, 1, rand, commit, null, allow);
   };
 
   fillSlot("feature", "hair_length");
@@ -1097,7 +1633,7 @@ export function drawOne(lex, settings, pinned, userBanned, rand, seed) {
     fillGroup("feature", "hair_style");
   }
   if (female) fillSlot("feature", "breast_size");
-  if (male && rand() < 0.38) fillSlot("feature", "race");
+  if (male && !realisticOn(settings) && rand() < 0.38) fillSlot("feature", "race");
   if (settings.drawJob) fillSlot("feature", "job");
   fill("feature", (item) => {
     if (item.mutex === "race") return false;
@@ -1114,7 +1650,7 @@ export function drawOne(lex, settings, pinned, userBanned, rand, seed) {
         (item.layer === "skin" ||
           (item.layer === "garment" && (item.mutex === "onepiece" || item.mutex === "top" || item.mutex === "bottom")))
     );
-    takeFromPool(cover, 1, rand, commit, clothingPrefer);
+    takeFromPool(cover, 1, rand, commit, clothingPrefer, allow);
   }
   const gotNude = someUsed((it) => it.section === "clothing" && it.layer === "skin");
   const hasBodyGarment = () =>
@@ -1144,7 +1680,7 @@ export function drawOne(lex, settings, pinned, userBanned, rand, seed) {
           item.layer === "garment" &&
           (item.mutex === "onepiece" || item.mutex === "top" || item.mutex === "bottom")
       );
-      takeFromPool(pool, 1, rand, commit, clothingPrefer);
+      takeFromPool(pool, 1, rand, commit, clothingPrefer, allow);
     }
     fill("clothing", (item) => {
       if (item.layer === "skin") return false;
@@ -1170,17 +1706,18 @@ export function drawOne(lex, settings, pinned, userBanned, rand, seed) {
     const acts = lex.bySection.pose.filter(
       (item) => allow(item) && (item.mutex === "sex_act" || item.tag === "sex")
     );
-    takeFromPool(acts, 1, rand, commit);
+    takeFromPool(acts, 1, rand, commit, null, allow);
   }
   if (heat === "sex" && people === 1) {
     const acts = lex.bySection.pose.filter((item) => allow(item) && soloSex(item.tag));
-    takeFromPool(acts, 1, rand, commit);
+    takeFromPool(acts, 1, rand, commit, null, allow);
   }
   fillSlot("pose", "body_pose");
   fillSlot("pose", "camera");
   fillSlot("pose", "gaze");
   fillSlot("pose", "expression");
-  if (heat !== "sex") fillSlot("pose", "activity");
+  const hasSexAct = someUsed((it) => it.mutex === "sex_act" || it.tag === "sex");
+  if (heat !== "sex" && !hasSexAct) fillSlot("pose", "activity");
   if (heat === "flash") {
     const hasAct = someUsed((it) => it.mutex === "clothes_action" || it.group === "flash");
     if (!hasAct) {
@@ -1195,7 +1732,7 @@ export function drawOne(lex, settings, pinned, userBanned, rand, seed) {
   }
   fill("pose", (item) => {
     if (people >= 2 && soloSex(item.tag)) return false;
-    if (heat === "sex" && item.mutex === "activity" && !SEX_OK_ACTIVITY.has(item.tag)) return false;
+    if ((heat === "sex" || hasSexAct) && item.mutex === "activity" && !SEX_OK_ACTIVITY.has(item.tag)) return false;
     return true;
   });
   stampAnchors("env");
@@ -1204,7 +1741,27 @@ export function drawOne(lex, settings, pinned, userBanned, rand, seed) {
   fillSlot("env", "day_night");
   fill("env");
 
-  const kept = reconcile(lex, used, female, male, people, pinned);
+  if (lockSceneOn(settings)) {
+    const places = usedPlaces(used, lex);
+    const real = realisticOn(settings);
+    const needsPlace = (act) =>
+      act === "cooking" ||
+      act === "driving" ||
+      WATER_ACT.has(act) ||
+      act === "horseback riding" ||
+      act === "playing sports" ||
+      act === "exercising" ||
+      act === "training";
+    for (const t of [...used]) {
+      if (pinned.has(t)) continue;
+      const it = lex.byTag.get(t);
+      if (!it || it.mutex !== "activity") continue;
+      if (!actFitsPlaces(t, places, real)) used.delete(t);
+      else if (!places.size && needsPlace(t)) used.delete(t);
+    }
+  }
+
+  const kept = reconcile(lex, used, female, male, people, pinned, lockSceneOn(settings));
 
   const quality = lex.data.quality.slice();
   const style = [];
@@ -1284,6 +1841,8 @@ export function defaultSettings(data) {
     eras: d.eras ? [...d.eras] : [...ERAS],
     samePerson: false,
     drawJob: false,
+    lockScene: true,
+    sceneMode: "normal",
   };
 }
 
@@ -1309,6 +1868,8 @@ export function sanitizeSettings(raw, data) {
     }
   }
   const eras = Array.isArray(raw.eras) ? raw.eras.filter((e) => ERAS.includes(e)) : [];
+  let sceneMode = SCENE_MODES.includes(raw.sceneMode) ? raw.sceneMode : null;
+  if (!sceneMode) sceneMode = raw.lockScene === false ? "weird" : "normal";
   return {
     n: Math.max(1, Math.min(10, Number(raw.n) || base.n)),
     width: Math.max(256, Math.min(2048, Number(raw.width) || base.width)),
@@ -1322,6 +1883,8 @@ export function sanitizeSettings(raw, data) {
     eras: eras.length ? eras : [...base.eras],
     samePerson: raw.samePerson === true,
     drawJob: raw.drawJob === true,
+    sceneMode,
+    lockScene: sceneMode !== "weird",
   };
 }
 

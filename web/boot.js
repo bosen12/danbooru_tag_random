@@ -5,6 +5,7 @@ import {
   cycleTag,
   defaultSettings,
   drawOne,
+  sceneModeOf,
   identityPins,
   isIdentityItem,
   sanitizeSettings,
@@ -17,6 +18,7 @@ import {
   ERA_LABELS,
   eraMismatches,
   heatMismatches,
+  itemFitsHeats,
   FEMALE_COUNT,
   indexLexicon,
   labelOf,
@@ -293,6 +295,13 @@ function syncDrawJob() {
   btn.setAttribute("aria-pressed", settings.drawJob ? "true" : "false");
 }
 
+function syncSceneMode() {
+  const mode = sceneModeOf(settings);
+  document.querySelectorAll("[data-scene-mode]").forEach((btn) => {
+    btn.setAttribute("aria-pressed", btn.dataset.sceneMode === mode ? "true" : "false");
+  });
+}
+
 function renderPresets() {
   const box = $("presets");
   if (!box || !lex) return;
@@ -431,9 +440,7 @@ function fitsEra(item) {
 }
 
 function fitsHeat(item) {
-  const hs = item.heat;
-  if (!hs || !hs.length) return true;
-  return hs.some((h) => settings.heats.includes(h));
+  return itemFitsHeats(item, settings.heats);
 }
 
 function sortItems(list) {
@@ -1895,6 +1902,15 @@ function bindUi() {
       saveStore();
     });
   }
+  document.querySelectorAll("[data-scene-mode]").forEach((btn) => {
+    btn.addEventListener("click", () => {
+      const mode = btn.dataset.sceneMode;
+      settings.sceneMode = mode;
+      settings.lockScene = mode !== "weird";
+      syncSceneMode();
+      saveStore();
+    });
+  });
   const presetBox = $("presets");
   if (presetBox) {
     presetBox.addEventListener("click", (e) => {
@@ -2012,6 +2028,7 @@ async function main() {
   syncSizeButtons();
   syncHeat();
   syncDrawJob();
+  syncSceneMode();
   renderPresets();
   renderEras();
   renderCats();

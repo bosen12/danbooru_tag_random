@@ -840,6 +840,8 @@ def apply_relations(tag: str, implies: list[str], bind: list[str], mutex, sectio
 def widen_heat(tag: str, section: str, mutex, layer: str, heat: list[str]) -> list[str]:
     """Outfits, places, sitting, looking, and clothes-moves are not a heat."""
     heat = [h for h in heat if h in HEATS] or list(HEATS)
+    if tag in {"nude", "completely nude"}:
+        return list(HEATS)
     if section == "clothing" and layer != "skin" and tag not in CLOTHING_STATE:
         return list(HEATS)
     if section == "env" and tag != "cum pool":
