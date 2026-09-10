@@ -499,6 +499,42 @@ function isBathScene(used) {
   return false;
 }
 
+function isSwimScene(used) {
+  for (const t of used) {
+    if (t === "pool" || t === "poolside" || t === "beach" || t === "ocean" || t === "underwater") return true;
+    if (t === "swimming" || t === "wading") return true;
+  }
+  return false;
+}
+
+function isSwimClothItem(item) {
+  if (!item || item.section !== "clothing") return false;
+  if (item.layer === "skin" || item.layer === "accessory") return true;
+  if (item.tag === "wet clothes") return true;
+  if (/\b(swimsuit|bikini)\b/.test(item.tag)) return true;
+  if ((item.implies || []).some((d) => /\b(swimsuit|bikini)\b/.test(d))) return true;
+  return false;
+}
+
+function pinnedNonSwimGarment(used, pinned, lex) {
+  for (const t of pinned) {
+    const it = lex.byTag.get(t);
+    if (it && it.section === "clothing" && it.layer === "garment" && !isSwimClothItem(it)) return true;
+  }
+  return false;
+}
+
+function swimwearLocked(used, pinned, lex, era, realistic) {
+  return realistic && isSwimScene(used) && !pinnedNonSwimGarment(used, pinned, lex);
+}
+
+function garmentOkForSwim(item, era) {
+  if (isSwimClothItem(item)) return true;
+  if (/\barmor\b/.test(item.tag) || /\bsuit\b/.test(item.tag)) return false;
+  if (era === "modern") return false;
+  return true;
+}
+
 export const ERAS = [
   "modern",
   "ancient_china",
@@ -751,8 +787,37 @@ export const BUILTIN_PRESETS = [
   { id: "police", name: "女警", tags: ["policewoman"] },
 ];
 
-export function applyPresetTags(lex, tags) {
+export function applyPresetTags(lex, tags, existing = new Set()) {
+  const presetMutex = new Set();
+  const seen = new Set();
+  const mark = (tag) => {
+    if (seen.has(tag)) return;
+    seen.add(tag);
+    const item = lex.byTag.get(tag);
+    if (!item) return;
+    for (const g of extraMutex(item)) presetMutex.add(g);
+    for (const d of [...(item.implies || []), ...(item.bind || [])]) mark(d);
+  };
+  for (const t of tags || []) mark(t);
+  const clearsClothes = [...seen].some((t) => {
+    const it = lex.byTag.get(t);
+    if (!it) return false;
+    return (
+      it.section === "env" ||
+      it.section === "clothing" ||
+      it.mutex === "place" ||
+      it.mutex === "activity" ||
+      it.mutex === "job"
+    );
+  });
   let pinned = new Set();
+  for (const t of existing) {
+    const item = lex.byTag.get(t);
+    if (!item) continue;
+    if (clearsClothes && item.section === "clothing" && item.layer === "garment") continue;
+    if ([...extraMutex(item)].some((g) => presetMutex.has(g))) continue;
+    pinned.add(t);
+  }
   let banned = new Set();
   for (const tag of tags || []) {
     if (!lex.byTag.has(tag)) continue;
@@ -1652,6 +1717,15 @@ export function drawOne(lex, settings, pinned, userBanned, rand, seed) {
         }
       }
       if (item.tag === "outdoors" && [...jobPlacesOf(jobs)].some((p) => INDOOR_ROOM.has(p))) return false;
+      if (
+        swimwearLocked(used, pinned, lex, era, true) &&
+        item.section === "clothing" &&
+        item.layer === "garment" &&
+        !garmentOkForSwim(item, era) &&
+        !pinned.has(item.tag)
+      ) {
+        return false;
+      }
     }
     for (const g of extraMutex(item)) {
       if (mutexTaken.has(g)) return false;
@@ -1883,6 +1957,14 @@ export function drawOne(lex, settings, pinned, userBanned, rand, seed) {
       if (!it || it.mutex !== "activity") continue;
       if (!actFitsPlaces(t, places, real)) used.delete(t);
       else if (!places.size && needsPlace(t)) used.delete(t);
+    }
+  }
+
+  if (swimwearLocked(used, pinned, lex, era, realisticOn(settings))) {
+    for (const t of [...used]) {
+      if (pinned.has(t)) continue;
+      const it = lex.byTag.get(t);
+      if (it && it.section === "clothing" && it.layer === "garment" && !garmentOkForSwim(it, era)) used.delete(t);
     }
   }
 

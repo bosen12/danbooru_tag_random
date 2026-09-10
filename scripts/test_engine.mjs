@@ -3185,6 +3185,19 @@ function indoorOutdoorClash(have) {
 {
   ok("builtin presets exist", BUILTIN_PRESETS.length >= 4);
   const ol = BUILTIN_PRESETS.find((p) => p.id === "ol-office");
+  const haveBoobs = applyPin(lex, new Set(), new Set(), "huge breasts").pinned;
+  ok("huge breasts pin sticks", haveBoobs.has("huge breasts"));
+  const pool = BUILTIN_PRESETS.find((p) => p.id === "pool");
+  const merged = applyPresetTags(lex, pool.tags, haveBoobs);
+  ok("pool preset keeps huge breasts", merged.has("huge breasts"));
+  ok("pool preset pins pool", merged.has("pool"));
+  ok("pool preset pins swimming", merged.has("swimming"));
+  const haveRoom = applyPin(lex, haveBoobs, new Set(), "living room").pinned;
+  const merged2 = applyPresetTags(lex, pool.tags, haveRoom);
+  ok("pool preset drops living room", !merged2.has("living room") && merged2.has("huge breasts"));
+  const haveDress = applyPin(lex, haveBoobs, new Set(), "evening gown").pinned;
+  const merged3 = applyPresetTags(lex, pool.tags, haveDress);
+  ok("pool preset drops evening gown", !merged3.has("evening gown") && merged3.has("huge breasts"));
   const olPins = applyPresetTags(lex, ol.tags);
   ok("OL preset pins office lady", olPins.has("office lady"));
   ok("OL preset pins pantyhose", olPins.has("pantyhose"));
@@ -3193,6 +3206,30 @@ function indoorOutdoorClash(have) {
   const onsenPins = applyPresetTags(lex, onsen.tags);
   ok("onsen preset pins onsen", onsenPins.has("onsen"));
   ok("onsen preset pins bathing", onsenPins.has("bathing"));
+  const s = settings();
+  s.girl = true;
+  s.boy = false;
+  s.heats = ["activity"];
+  s.weights = { activity: 1, tease: 0, flash: 0, sex: 0 };
+  s.eras = ["modern"];
+  s.sceneMode = "normal";
+  s.lockScene = true;
+  s.counts = { subject: 10, feature: 10, pose: 10, clothing: 10, env: 10 };
+  const pinPool = applyPresetTags(lex, pool.tags, new Set());
+  let badCloth = 0;
+  for (let i = 0; i < 40; i++) {
+    const d = drawOne(lex, s, pinPool, new Set(), mulberry32(198000 + i), 198000 + i);
+    const cloth = d.sections.clothing.filter((t) => {
+      const it = lex.byTag.get(t);
+      if (!it || it.section !== "clothing" || it.layer !== "garment") return false;
+      if (it.tag === "wet clothes") return false;
+      if (/\b(swimsuit|bikini)\b/.test(it.tag)) return false;
+      if ((it.implies || []).some((x) => /\b(swimsuit|bikini)\b/.test(x))) return false;
+      return true;
+    });
+    if (cloth.length) badCloth += 1;
+  }
+  eq("normal pool preset never auto office/armor garments", badCloth, 0);
   const cleaned = sanitizePinPresets(
     [
       { name: "  我的OL  ", tags: ["office lady", "not-a-tag"] },

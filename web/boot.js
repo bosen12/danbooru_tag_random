@@ -331,7 +331,7 @@ function renderPresets() {
 }
 
 function applyNamedPreset(tags) {
-  pinned = applyPresetTags(lex, tags);
+  pinned = applyPresetTags(lex, tags, pinned);
   afterPin();
   speak("已套用釘選組合");
 }
