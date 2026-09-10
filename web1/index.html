@@ -105,14 +105,18 @@
         </div>
         <fieldset class="heat">
           <legend>尺度</legend>
-          <p class="hint">可勾多個。誘惑／走光會抽活動；性愛不抽逛街開車。混合＝三種都開。</p>
+          <p class="hint">可勾多個。只勾活動＝日常。混合＝誘惑＋走光＋性愛。</p>
           <div class="row" id="heats">
             <button type="button" class="chip-toggle" data-heat="mixed" aria-pressed="true">混合</button>
+            <button type="button" class="chip-toggle" data-heat="activity" aria-pressed="false">活動</button>
             <button type="button" class="chip-toggle" data-heat="tease" aria-pressed="false">誘惑</button>
             <button type="button" class="chip-toggle" data-heat="flash" aria-pressed="false">走光</button>
             <button type="button" class="chip-toggle" data-heat="sex" aria-pressed="false">性愛</button>
           </div>
           <p class="hint clash" id="heat-clash" hidden></p>
+          <div class="row">
+            <button type="button" class="chip-toggle" id="draw-job" aria-pressed="false">抽職業</button>
+          </div>
         </fieldset>
         <fieldset class="heat">
           <legend>時代</legend>
@@ -132,7 +136,9 @@
         <div class="row">
           <button type="button" class="ghost" id="clear-pins">清掉上片</button>
           <button type="button" class="ghost" id="clear-weights">清掉權重</button>
+          <button type="button" class="ghost" id="save-preset">存上片</button>
         </div>
+        <div class="row" id="presets"></div>
       </aside>
 
       <section class="sheet" id="stage">

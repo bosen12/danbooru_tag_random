@@ -1,10 +1,11 @@
 /** Tag-case draw: cast → heat → era → gated pools → commit mutex/bind/imply → reconcile. */
 
-export const HEATS = ["tease", "flash", "sex"];
+export const HEATS = ["activity", "tease", "flash", "sex"];
+export const MIXED_HEATS = ["tease", "flash", "sex"];
 
 export function toggleHeat(heats, heat) {
   const on = new Set((heats || []).filter((h) => HEATS.includes(h)));
-  if (heat === "mixed") return HEATS.slice();
+  if (heat === "mixed") return MIXED_HEATS.slice();
   if (!HEATS.includes(heat)) return HEATS.filter((h) => on.has(h));
   if (on.has(heat)) {
     if (on.size <= 1) return HEATS.filter((h) => on.has(h));
@@ -17,18 +18,18 @@ export function toggleHeat(heats, heat) {
 
 export function heatPresetOf(heats) {
   const h = HEATS.filter((x) => (heats || []).includes(x));
-  if (h.length === 3) return "mixed";
+  if (h.length === 3 && MIXED_HEATS.every((x) => h.includes(x))) return "mixed";
   if (h.length === 1) return h[0];
   return "custom";
 }
 
 export function weightsForHeats(heats, heatWeights) {
   const h = HEATS.filter((x) => (heats || []).includes(x));
-  if (!h.length) return { tease: 1, flash: 0, sex: 0 };
-  if (h.length === 3 && heatWeights && heatWeights.mixed) {
-    return { tease: 0, flash: 0, sex: 0, ...heatWeights.mixed };
+  if (!h.length) return { activity: 0, tease: 1, flash: 0, sex: 0 };
+  if (h.length === 3 && MIXED_HEATS.every((x) => h.includes(x)) && heatWeights && heatWeights.mixed) {
+    return { activity: 0, tease: 0, flash: 0, sex: 0, ...heatWeights.mixed };
   }
-  const w = { tease: 0, flash: 0, sex: 0 };
+  const w = { activity: 0, tease: 0, flash: 0, sex: 0 };
   const share = 1 / h.length;
   for (const x of h) w[x] = share;
   return w;
@@ -264,6 +265,46 @@ export function identityPins(lex, positive) {
   return pinned;
 }
 
+export const BUILTIN_PRESETS = [
+  { id: "ol-office", name: "OL 辦公室", tags: ["office lady", "office"] },
+  { id: "onsen", name: "溫泉", tags: ["onsen", "bathing"] },
+  { id: "pool", name: "泳池", tags: ["pool", "swimming"] },
+  { id: "beach", name: "海邊", tags: ["beach"] },
+  { id: "classroom", name: "教室", tags: ["classroom", "school uniform"] },
+  { id: "nurse", name: "護士", tags: ["nurse"] },
+  { id: "maid", name: "女僕", tags: ["maid"] },
+  { id: "police", name: "女警", tags: ["policewoman"] },
+];
+
+export function applyPresetTags(lex, tags) {
+  let pinned = new Set();
+  let banned = new Set();
+  for (const tag of tags || []) {
+    if (!lex.byTag.has(tag)) continue;
+    const next = applyPin(lex, pinned, banned, tag);
+    pinned = next.pinned;
+    banned = next.userBanned;
+  }
+  return pinned;
+}
+
+export function sanitizePinPresets(raw, lex) {
+  if (!Array.isArray(raw)) return [];
+  const out = [];
+  const seen = new Set();
+  for (const p of raw) {
+    if (!p || typeof p.name !== "string") continue;
+    const name = p.name.trim().slice(0, 20);
+    if (!name || seen.has(name)) continue;
+    const tags = knownTags(lex, Array.isArray(p.tags) ? p.tags : []);
+    if (!tags.length) continue;
+    seen.add(name);
+    out.push({ name, tags });
+    if (out.length >= 16) break;
+  }
+  return out;
+}
+
 export function applyClear(pinned, userBanned, tag) {
   const nextPin = new Set(pinned);
   const nextBan = new Set(userBanned);
@@ -373,7 +414,9 @@ function ensureCast(parts, settings, ctx) {
 }
 
 function heatOk(item, heat) {
-  return (item.heat || HEATS).includes(heat);
+  const hs = item.heat && item.heat.length ? item.heat : MIXED_HEATS;
+  if (heat === "activity") return hs.includes("tease") || hs.includes("activity");
+  return hs.includes(heat);
 }
 
 const HISTORICAL = new Set(["ancient_china", "ancient_greece", "medieval", "edo"]);
@@ -450,7 +493,7 @@ function pinContext(lex, pinned) {
       needFemale = true;
       need2Female = true;
     }
-    heatLists.push(item.heat && item.heat.length ? item.heat : HEATS);
+    heatLists.push(item.heat && item.heat.length ? item.heat : MIXED_HEATS);
     const e = erasOf(item);
     if (e) eraLists.push(e);
   }
@@ -585,7 +628,7 @@ export function heatMismatches(lex, pinned, heats) {
   for (const t of pinned) {
     const item = lex.byTag.get(t);
     if (!item) continue;
-    const hs = item.heat && item.heat.length ? item.heat : HEATS;
+    const hs = item.heat && item.heat.length ? item.heat : MIXED_HEATS;
     if (!hs.some((h) => enabled.includes(h))) out.push(t);
   }
   return out;
@@ -1055,7 +1098,12 @@ export function drawOne(lex, settings, pinned, userBanned, rand, seed) {
   }
   if (female) fillSlot("feature", "breast_size");
   if (male && rand() < 0.38) fillSlot("feature", "race");
-  fill("feature", (item) => item.mutex !== "race");
+  if (settings.drawJob) fillSlot("feature", "job");
+  fill("feature", (item) => {
+    if (item.mutex === "race") return false;
+    if (item.mutex === "job" && !settings.drawJob) return false;
+    return true;
+  });
 
   const clothingPinned = someUsed((it, t) => it.section === "clothing" && pinned.has(t));
   const nudePinned = someUsed((it) => it.section === "clothing" && it.layer === "skin");
@@ -1235,6 +1283,7 @@ export function defaultSettings(data) {
     weights: { ...data.heatWeights[d.heatPreset] },
     eras: d.eras ? [...d.eras] : [...ERAS],
     samePerson: false,
+    drawJob: false,
   };
 }
 
@@ -1272,6 +1321,7 @@ export function sanitizeSettings(raw, data) {
     weights,
     eras: eras.length ? eras : [...base.eras],
     samePerson: raw.samePerson === true,
+    drawJob: raw.drawJob === true,
   };
 }
 

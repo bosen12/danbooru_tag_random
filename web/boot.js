@@ -9,6 +9,7 @@ import {
   isIdentityItem,
   sanitizeSettings,
   HEATS,
+  MIXED_HEATS,
   toggleHeat,
   heatPresetOf,
   weightsForHeats,
@@ -31,6 +32,9 @@ import {
   insertTriggerAfterCast,
   randomSeed,
   tagState,
+  BUILTIN_PRESETS,
+  applyPresetTags,
+  sanitizePinPresets,
 } from "./engine.js";
 import {
   currentLorasPayload,
@@ -44,7 +48,7 @@ const SECTIONS = [
   { id: "quality", title: "畫質與風格", hint: "固定畫質每張都帶。風格預設不進，釘了才進" },
   { id: "subject", title: "人數", hint: "跟左欄走。只開女就不會看到男生的字" },
   { id: "feature", title: "長相", hint: "髮、眼、身材。有男時可抽種族，同類只一個" },
-  { id: "pose", title: "姿勢", hint: "先身體和鏡頭。誘惑／走光會抽一格活動；性愛補體位、不抽逛街開車" },
+  { id: "pose", title: "姿勢", hint: "先身體和鏡頭。活動／誘惑／走光會抽一格活動；性愛補體位、不抽逛街開車" },
   { id: "clothing", title: "服裝", hint: "時代服裝分開。顏色變體靠在父類旁邊" },
   { id: "env", title: "場景", hint: "先室內外、晝夜、地點" },
 ];
@@ -74,6 +78,7 @@ const btnByTag = new Map();
 const userOpen = new Set(["sec-quality"]);
 let lastIdent = new Set();
 let paintPrev = { pin: new Set(), auto: new Set(), user: new Set() };
+let userPresets = [];
 
 const $ = (id) => document.getElementById(id);
 
@@ -93,6 +98,7 @@ function saveStore() {
       pinned: [...pinned],
       userBanned: [...userBanned],
       tagWeights: Object.fromEntries(tagWeights),
+      pinPresets: userPresets,
     })
   );
 }
@@ -191,7 +197,7 @@ function renderEras() {
   updateEraClash();
 }
 
-const HEAT_LABELS = { tease: "誘惑", flash: "走光", sex: "性愛" };
+const HEAT_LABELS = { activity: "活動", tease: "誘惑", flash: "走光", sex: "性愛" };
 
 function updateHeatClash() {
   const note = $("heat-clash");
@@ -272,13 +278,53 @@ function syncHeat() {
   const box = $("heats");
   if (!box) return;
   const on = new Set(settings.heats || []);
-  const all = HEATS.every((h) => on.has(h));
+  const all = MIXED_HEATS.every((h) => on.has(h)) && !on.has("activity");
   for (const btn of box.querySelectorAll(".chip-toggle")) {
     const h = btn.dataset.heat;
     const pressed = h === "mixed" ? all : on.has(h);
     btn.setAttribute("aria-pressed", pressed ? "true" : "false");
   }
   updateHeatClash();
+}
+
+function syncDrawJob() {
+  const btn = $("draw-job");
+  if (!btn) return;
+  btn.setAttribute("aria-pressed", settings.drawJob ? "true" : "false");
+}
+
+function renderPresets() {
+  const box = $("presets");
+  if (!box || !lex) return;
+  const frag = document.createDocumentFragment();
+  for (const p of BUILTIN_PRESETS) {
+    const btn = document.createElement("button");
+    btn.type = "button";
+    btn.className = "chip-toggle";
+    btn.dataset.preset = p.id;
+    btn.textContent = p.name;
+    frag.append(btn);
+  }
+  userPresets.forEach((p, i) => {
+    const btn = document.createElement("button");
+    btn.type = "button";
+    btn.className = "chip-toggle preset-user";
+    btn.dataset.user = String(i);
+    btn.append(document.createTextNode(p.name));
+    const x = document.createElement("span");
+    x.className = "preset-x";
+    x.setAttribute("aria-label", "刪除");
+    x.textContent = "×";
+    btn.append(x);
+    frag.append(btn);
+  });
+  box.replaceChildren(frag);
+}
+
+function applyNamedPreset(tags) {
+  pinned = applyPresetTags(lex, tags);
+  afterPin();
+  speak("已套用釘選組合");
 }
 
 function pickHeat(h) {
@@ -1841,6 +1887,58 @@ function bindUi() {
     userBanned = new Set();
     afterPin();
   });
+  const drawJobBtn = $("draw-job");
+  if (drawJobBtn) {
+    drawJobBtn.addEventListener("click", () => {
+      settings.drawJob = !settings.drawJob;
+      syncDrawJob();
+      saveStore();
+    });
+  }
+  const presetBox = $("presets");
+  if (presetBox) {
+    presetBox.addEventListener("click", (e) => {
+      const x = e.target.closest(".preset-x");
+      if (x) {
+        const wrap = x.closest("[data-user]");
+        const i = Number(wrap && wrap.dataset.user);
+        if (Number.isInteger(i) && i >= 0) {
+          userPresets = userPresets.filter((_, j) => j !== i);
+          saveStore();
+          renderPresets();
+        }
+        return;
+      }
+      const builtin = e.target.closest("[data-preset]");
+      if (builtin) {
+        const p = BUILTIN_PRESETS.find((x) => x.id === builtin.dataset.preset);
+        if (p) applyNamedPreset(p.tags);
+        return;
+      }
+      const user = e.target.closest("[data-user]");
+      if (user) {
+        const i = Number(user.dataset.user);
+        const p = userPresets[i];
+        if (p) applyNamedPreset(p.tags);
+      }
+    });
+  }
+  const savePreset = $("save-preset");
+  if (savePreset) {
+    savePreset.addEventListener("click", () => {
+      const tags = [...pinned];
+      if (!tags.length) {
+        speak("先釘幾個字再存");
+        return;
+      }
+      const name = window.prompt("組合名稱", "");
+      if (name == null) return;
+      userPresets = sanitizePinPresets([...userPresets, { name, tags }], lex);
+      saveStore();
+      renderPresets();
+      speak("已存釘選組合");
+    });
+  }
   const clearW = $("clear-weights");
   if (clearW) {
     clearW.addEventListener("click", () => {
@@ -1896,6 +1994,7 @@ async function main() {
   const saved = loadStore();
   if (saved.settings) settings = sanitizeSettings(saved.settings, data);
   if (Array.isArray(saved.pinned)) pinned = new Set(knownTags(lex, saved.pinned));
+  userPresets = sanitizePinPresets(saved.pinPresets, lex);
   if (Array.isArray(saved.userBanned)) userBanned = new Set(knownTags(lex, saved.userBanned));
   if (saved.tagWeights && typeof saved.tagWeights === "object") {
     tagWeights = new Map(
@@ -1912,6 +2011,8 @@ async function main() {
   renderCounts();
   syncSizeButtons();
   syncHeat();
+  syncDrawJob();
+  renderPresets();
   renderEras();
   renderCats();
   renderTray();

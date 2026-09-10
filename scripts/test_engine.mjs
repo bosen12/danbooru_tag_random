@@ -37,6 +37,9 @@ import {
   MALE_COUNT,
   hasFemale,
   hasMale,
+  applyPresetTags,
+  BUILTIN_PRESETS,
+  sanitizePinPresets,
 } from "../web/engine.js";
 
 const ROOT = join(dirname(fileURLToPath(import.meta.url)), "..");
@@ -2406,9 +2409,13 @@ function indoorOutdoorClash(have) {
   eq("toggleHeat cannot drop the last scale", toggleHeat(["tease"], "tease"), ["tease"]);
   eq("toggleHeat drops one of three", toggleHeat(["tease", "flash", "sex"], "sex"), ["tease", "flash"]);
   eq("toggleHeat mixed selects all", toggleHeat(["tease"], "mixed"), ["tease", "flash", "sex"]);
+  eq("toggleHeat adds activity", toggleHeat(["tease"], "activity"), ["activity", "tease"]);
+  eq("toggleHeat mixed drops activity", toggleHeat(["activity"], "mixed"), ["tease", "flash", "sex"]);
   eq("heatPresetOf one is that heat", heatPresetOf(["sex"]), "sex");
+  eq("heatPresetOf activity is activity", heatPresetOf(["activity"]), "activity");
   eq("heatPresetOf two is custom", heatPresetOf(["tease", "sex"]), "custom");
   eq("heatPresetOf three is mixed", heatPresetOf(["tease", "flash", "sex"]), "mixed");
+  eq("heatPresetOf all four is custom", heatPresetOf(["activity", "tease", "flash", "sex"]), "custom");
   const pairW = weightsForHeats(["tease", "flash"]);
   eq("two heats split weight", pairW.tease, 0.5);
   eq("two heats leave the third at 0", pairW.sex, 0);
@@ -2451,6 +2458,126 @@ function indoorOutdoorClash(have) {
   }
   ok("tease heat usually draws one activity", withAct >= 32, `activity=${withAct}/40`);
   eq("tease heat does not draw a sex act", withSexAct, 0);
+}
+
+{
+  const s = settings();
+  s.girl = true;
+  s.boy = false;
+  s.heats = ["activity"];
+  s.heatPreset = "activity";
+  s.weights = { activity: 1, tease: 0, flash: 0, sex: 0 };
+  s.eras = ["modern"];
+  let withAct = 0;
+  let withSexAct = 0;
+  let withFlash = 0;
+  for (let i = 0; i < 40; i++) {
+    const h = tagsOf(drawOne(lex, s, new Set(), new Set(), mulberry32(144000 + i), 144000 + i));
+    if ([...h].some((t) => lex.byTag.get(t)?.mutex === "activity")) withAct += 1;
+    if ([...h].some((t) => lex.byTag.get(t)?.mutex === "sex_act")) withSexAct += 1;
+    if ([...h].some((t) => lex.byTag.get(t)?.mutex === "clothes_action")) withFlash += 1;
+  }
+  ok("activity heat usually draws one activity", withAct >= 32, `activity=${withAct}/40`);
+  eq("activity heat does not draw a sex act", withSexAct, 0);
+  eq("activity heat does not draw clothes-off", withFlash, 0);
+  ok(
+    "cowgirl clashes with activity-only",
+    heatMismatches(lex, new Set(["cowgirl position"]), ["activity"]).includes("cowgirl position")
+  );
+}
+
+{
+  for (const tag of [
+    "amazon position",
+    "spooning",
+    "footjob",
+    "anilingus",
+    "suspended congress",
+    "sex from behind",
+    "grabbing another's breast",
+    "grabbing another's ass",
+    "grabbing another's hair",
+    "guided breast grab",
+  ]) {
+    ok(`${tag} needs pair`, (lex.byTag.get(tag)?.needs || []).includes("pair"));
+  }
+  ok("object insertion stays solo-ok", !((lex.byTag.get("object insertion")?.needs || []).includes("pair")));
+  const s = settings();
+  s.girl = true;
+  s.boy = false;
+  s.heats = ["sex"];
+  s.weights = { activity: 0, tease: 0, flash: 0, sex: 1 };
+  s.eras = ["modern"];
+  s.counts.pose = 12;
+  const TWO_PERSON = [
+    "amazon position",
+    "spooning",
+    "footjob",
+    "anilingus",
+    "grabbing another's breast",
+    "grabbing another's ass",
+    "grabbing another's hair",
+    "guided breast grab",
+    "groping",
+    "kiss",
+    "hug",
+  ];
+  let coupleOnSolo = 0;
+  for (let i = 0; i < 50; i++) {
+    const d = drawOne(lex, s, new Set(), new Set(), mulberry32(145000 + i), 145000 + i);
+    const h = tagsOf(d);
+    if (d.people === 1 && TWO_PERSON.some((t) => h.has(t))) coupleOnSolo += 1;
+  }
+  eq("girl-only sex never leftover two-person acts", coupleOnSolo, 0);
+}
+
+{
+  eq("drawJob defaults off", defaultSettings(data).drawJob, false);
+  eq("sanitize keeps drawJob on", sanitizeSettings({ drawJob: true }, data).drawJob, true);
+  const off = settings();
+  off.girl = true;
+  off.boy = false;
+  off.heats = ["tease"];
+  off.weights = { activity: 0, tease: 1, flash: 0, sex: 0 };
+  off.eras = ["modern"];
+  off.drawJob = false;
+  let jobsOff = 0;
+  for (let i = 0; i < 40; i++) {
+    const h = tagsOf(drawOne(lex, off, new Set(), new Set(), mulberry32(146000 + i), 146000 + i));
+    if ([...h].some((t) => lex.byTag.get(t)?.mutex === "job")) jobsOff += 1;
+  }
+  eq("drawJob off does not auto-draw a job", jobsOff, 0);
+  const on = { ...off, drawJob: true };
+  let jobsOn = 0;
+  for (let i = 0; i < 40; i++) {
+    const h = tagsOf(drawOne(lex, on, new Set(), new Set(), mulberry32(147000 + i), 147000 + i));
+    if ([...h].some((t) => lex.byTag.get(t)?.mutex === "job")) jobsOn += 1;
+  }
+  ok("drawJob on usually draws a job", jobsOn >= 32, `jobs=${jobsOn}/40`);
+}
+
+{
+  ok("builtin presets exist", BUILTIN_PRESETS.length >= 4);
+  const ol = BUILTIN_PRESETS.find((p) => p.id === "ol-office");
+  const olPins = applyPresetTags(lex, ol.tags);
+  ok("OL preset pins office lady", olPins.has("office lady"));
+  ok("OL preset pins pantyhose", olPins.has("pantyhose"));
+  ok("OL preset pins office", olPins.has("office"));
+  const onsen = BUILTIN_PRESETS.find((p) => p.id === "onsen");
+  const onsenPins = applyPresetTags(lex, onsen.tags);
+  ok("onsen preset pins onsen", onsenPins.has("onsen"));
+  ok("onsen preset pins bathing", onsenPins.has("bathing"));
+  const cleaned = sanitizePinPresets(
+    [
+      { name: "  我的OL  ", tags: ["office lady", "not-a-tag"] },
+      { name: "", tags: ["nurse"] },
+      { tags: ["maid"] },
+    ],
+    lex
+  );
+  eq("sanitize preset name trimmed", cleaned[0].name, "我的OL");
+  ok("sanitize drops unknown tags", cleaned[0].tags.includes("office lady") && !cleaned[0].tags.includes("not-a-tag"));
+  eq("sanitize drops nameless presets", cleaned.length, 1);
 }
 
 if (failed) {

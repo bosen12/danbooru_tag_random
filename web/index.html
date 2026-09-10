@@ -92,14 +92,19 @@
 
         <fieldset class="heat step">
           <legend><span class="num">2</span> 尺度</legend>
-          <p class="hint">可勾多個。每張從勾的裡面骰一種。誘惑／走光會抽一格活動；性愛不抽逛街開車。混合＝三種都開。至少留一個。</p>
+          <p class="hint">可勾多個。只勾活動＝日常（購物、煮飯、游泳），沒有走光或做愛。誘惑／走光也會抽一格活動；性愛不抽逛街開車。混合＝誘惑＋走光＋性愛。至少留一個。</p>
           <div class="row" id="heats">
             <button type="button" class="chip-toggle" data-heat="mixed" aria-pressed="true">混合</button>
+            <button type="button" class="chip-toggle" data-heat="activity" aria-pressed="false">活動</button>
             <button type="button" class="chip-toggle" data-heat="tease" aria-pressed="false">誘惑</button>
             <button type="button" class="chip-toggle" data-heat="flash" aria-pressed="false">走光</button>
             <button type="button" class="chip-toggle" data-heat="sex" aria-pressed="false">性愛</button>
           </div>
           <p class="hint clash" id="heat-clash" hidden></p>
+          <div class="row">
+            <button type="button" class="chip-toggle" id="draw-job" aria-pressed="false">抽職業</button>
+          </div>
+          <p class="hint">開了每張抽一種職業，並帶配套衣服。關了只靠釘選。</p>
         </fieldset>
 
         <fieldset class="heat step">
@@ -124,7 +129,10 @@
         <div class="row">
           <button type="button" class="ghost" id="clear-pins">清除釘選</button>
           <button type="button" class="ghost" id="clear-weights">清除權重</button>
+          <button type="button" class="ghost" id="save-preset">存目前釘選</button>
         </div>
+        <p class="hint">釘選組合。點一下套用（會換掉目前釘選）。自訂的按 × 刪。</p>
+        <div class="row" id="presets"></div>
       </aside>
 
       <main class="stage" id="stage">

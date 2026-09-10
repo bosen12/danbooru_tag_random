@@ -581,6 +581,10 @@ SEX_ACT = {
     "object insertion",
 }
 
+SOLO_SEX_ACT = {
+    "object insertion",
+}
+
 NEEDS_MALE = {
     "fellatio",
     "deepthroat",
@@ -695,6 +699,10 @@ NEEDS_PAIR = {
     "breast sucking",
     "guided penetration",
     "imminent penetration",
+    "grabbing another's breast",
+    "grabbing another's ass",
+    "grabbing another's hair",
+    "guided breast grab",
     "threesome",
     "group sex",
     "mmf threesome",
@@ -939,6 +947,9 @@ def norm(item: dict) -> dict | None:
         needs.append("female")
         seen_needs.add("female")
     if tag in NEEDS_PAIR and "pair" not in seen_needs:
+        needs.append("pair")
+        seen_needs.add("pair")
+    if tag in SEX_ACT and tag not in SOLO_SEX_ACT and "pair" not in seen_needs:
         needs.append("pair")
         seen_needs.add("pair")
     if tag in NEEDS_GROUP and "group" not in seen_needs:

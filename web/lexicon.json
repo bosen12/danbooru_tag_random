@@ -5842,7 +5842,8 @@
       "group": "sex",
       "needs": [
         "male",
-        "female"
+        "female",
+        "pair"
       ],
       "zh": "隔衣乳交"
     },
@@ -5886,7 +5887,8 @@
       ],
       "group": "sex",
       "needs": [
-        "male"
+        "male",
+        "pair"
       ],
       "zh": "深喉"
     },
@@ -5952,6 +5954,9 @@
         "any"
       ],
       "group": "sex",
+      "needs": [
+        "pair"
+      ],
       "zh": "足交"
     },
     {
@@ -6035,7 +6040,8 @@
       "group": "sex",
       "needs": [
         "male",
-        "female"
+        "female",
+        "pair"
       ],
       "zh": "陰道插入"
     },
@@ -6057,7 +6063,8 @@
       ],
       "group": "sex",
       "needs": [
-        "male"
+        "male",
+        "pair"
       ],
       "zh": "肛交"
     },
@@ -6154,7 +6161,8 @@
       ],
       "group": "sex",
       "needs": [
-        "male"
+        "male",
+        "pair"
       ],
       "zh": "站立後入"
     },
@@ -6247,6 +6255,9 @@
         "any"
       ],
       "group": "sex",
+      "needs": [
+        "pair"
+      ],
       "zh": "女上位壓制"
     },
     {
@@ -6268,6 +6279,9 @@
         "any"
       ],
       "group": "sex",
+      "needs": [
+        "pair"
+      ],
       "zh": "湯匙體位"
     },
     {
@@ -6289,7 +6303,8 @@
       ],
       "group": "sex",
       "needs": [
-        "male"
+        "male",
+        "pair"
       ],
       "zh": "俯臥後入"
     },
@@ -6311,7 +6326,8 @@
       ],
       "group": "sex",
       "needs": [
-        "male"
+        "male",
+        "pair"
       ],
       "zh": "從後插入"
     },
@@ -7007,7 +7023,8 @@
       ],
       "group": "sex",
       "needs": [
-        "male"
+        "male",
+        "pair"
       ],
       "zh": "強制口交"
     },
@@ -7026,6 +7043,9 @@
         "any"
       ],
       "group": "sex",
+      "needs": [
+        "pair"
+      ],
       "zh": "舔肛"
     },
     {
@@ -7047,7 +7067,8 @@
       ],
       "group": "sex",
       "needs": [
-        "male"
+        "male",
+        "pair"
       ],
       "zh": "鎖頸體位"
     },
@@ -7069,6 +7090,9 @@
         "any"
       ],
       "group": "sex",
+      "needs": [
+        "pair"
+      ],
       "zh": "懸空體位"
     },
     {
@@ -12300,7 +12324,8 @@
       ],
       "group": "body_f",
       "needs": [
-        "female"
+        "female",
+        "pair"
       ],
       "zh": "抓別人的胸"
     },
@@ -15785,6 +15810,9 @@
         "any"
       ],
       "group": "other",
+      "needs": [
+        "pair"
+      ],
       "zh": "抓別人頭髮"
     },
     {
@@ -16358,7 +16386,8 @@
       ],
       "group": "body_f",
       "needs": [
-        "female"
+        "female",
+        "pair"
       ],
       "zh": "引導抓胸"
     },
@@ -16552,7 +16581,8 @@
       ],
       "group": "body_f",
       "needs": [
-        "female"
+        "female",
+        "pair"
       ],
       "zh": "抓別人的臀"
     },

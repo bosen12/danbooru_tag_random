@@ -263,6 +263,30 @@ input[type="number"] {
   border-color: var(--color-ink);
 }
 
+.preset-user {
+  gap: 0.35rem;
+  display: inline-flex;
+  align-items: center;
+}
+
+.preset-x {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 1.1rem;
+  height: 1.1rem;
+  margin-left: 0.1rem;
+  border-radius: 999px;
+  font-size: 0.85em;
+  line-height: 1;
+  opacity: 0.7;
+}
+
+.preset-x:hover {
+  opacity: 1;
+  background: color-mix(in oklab, currentColor 18%, transparent);
+}
+
 .seg:active,
 .chip-toggle:active,
 .tag:active,
