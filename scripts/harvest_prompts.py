@@ -417,6 +417,14 @@ def era_for(tag: str) -> list[str]:
         return ["ancient_china"]
     if has_any_tok(tag, ("toga", "chiton", "peplos")) or "laurel" in tag:
         return ["ancient_greece"]
+    if tag in {"temple", "pagoda", "east asian architecture"}:
+        return ["ancient_china", "edo"]
+    if tag == "chinese architecture":
+        return ["ancient_china"]
+    if tag == "torii":
+        return ["edo"]
+    if tag == "shrine":
+        return ["edo", "modern"]
     if has_any_tok(tag, ("armor", "chainmail", "cloak", "castle")):
         return ["medieval", "edo"] if has_any_tok(tag, ("japan", "japanese", "samurai")) else ["medieval"]
     if has_any_tok(tag, ("victorian", "corset", "waistcoat")) or "top hat" in tag:
@@ -518,7 +526,7 @@ def classify(tag: str) -> dict | None:
             heat = ["sex"]
             needs = ["pair", "female"]
             gate = "female"
-    elif has_any_tok(tag, ("kiss", "hug")) or tag in {"holding hands", "eye contact", "face to face"}:
+    elif has_any_tok(tag, ("kiss", "hug")) or tag in {"holding hands", "eye contact", "face to face", "cuddling"}:
         section = "pose"
         needs = ["pair"]
     elif tag.startswith("looking ") or tag in {"eye contact"}:
@@ -527,7 +535,7 @@ def classify(tag: str) -> dict | None:
     elif tag in {"from above", "from below", "from behind", "from side", "cowboy shot", "upper body", "lower body", "full body", "close-up", "portrait", "profile", "pov crotch"}:
         section = "pose"
         mutex = "camera"
-    elif tag in {"sitting", "standing", "lying", "kneeling", "on back", "on side", "on stomach", "all fours", "squatting", "walking", "running", "on bed", "straddling"} or tag.startswith("leaning"):
+    elif tag in {"sitting", "standing", "lying", "kneeling", "on back", "on side", "on stomach", "all fours", "squatting", "walking", "running"} or tag.startswith("leaning"):
         section = "pose"
         mutex = "body_pose"
     elif tag in {"smile", "open mouth", "closed mouth", "ahegao", "tongue out", "naughty face", "heavy breathing"}:
@@ -611,8 +619,8 @@ def classify(tag: str) -> dict | None:
         section = "env"
         mutex = "lighting"
     elif tag in {"on bed", "on chair", "on floor", "on sofa"}:
-        section = "pose"
-        mutex = "body_pose"
+        section = "env"
+        mutex = "furniture"
     elif has_tok(tag, "chair"):
         section = "env"
     elif has_any_tok(tag, ENV_PLACE) or tag in {"pillow", "bed sheet", "curtains", "window", "carpet", "tree", "water", "sky", "blue sky", "orange sky", "bush", "bamboo forest", "park bench", "restaurant"}:

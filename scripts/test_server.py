@@ -11,15 +11,19 @@ sys.path.insert(0, str(Path(__file__).resolve().parents[1]))
 from server import (  # noqa: E402
     Handler,
     allowed_client,
+    build_workflow,
     comfy_view_query,
+    convert_loras,
     first_image_src,
     image_error_code,
+    inject_lora,
     mask_ws,
     parse_allow_nets,
     parse_comfy_binary,
     sse,
     ws_frame,
 )
+from lora_scan import preview_path, strip_angle_tags  # noqa: E402
 
 failed = 0
 
@@ -98,6 +102,44 @@ ok("cgnat high allowed", allowed_client("100.127.255.254", nets))
 ok("wifi blocked", not allowed_client("192.168.1.101", nets))
 ok("hotspot blocked", not allowed_client("192.168.137.1", nets))
 ok("wsl blocked", not allowed_client("172.17.64.1", nets))
+
+ok("convert empty", convert_loras(None) == [])
+ok("convert skips blank file", convert_loras([{"folder": "style", "file": ""}]) == [])
+ok(
+    "convert max two",
+    len(convert_loras([
+        {"folder": "style", "file": "a.safetensors"},
+        {"folder": "Character", "file": "b.safetensors"},
+        {"folder": "illus", "file": "c.safetensors"},
+    ])) == 2,
+)
+ok(
+    "convert subfolder uses backslash",
+    convert_loras([{"folder": "Character/other", "file": "x.safetensors", "strength": 0.5}])
+    == [(r"Character\other\x.safetensors", 0.5)],
+)
+ok("strip angle tags", strip_angle_tags("foo, <lora:bar:1>, baz") == "foo, baz")
+ok("preview rejects slash in file", preview_path("style", "a/b.png") is None)
+ok("preview rejects dotdot folder", preview_path("style/../Character", "a.png") is None)
+ok("preview rejects unknown category", preview_path("not-a-folder", "a.png") is None)
+
+wf = build_workflow("1girl", 1024, 1024, 1, [{"folder": "style", "file": "a.safetensors", "strength": 0.8}])
+loaders = [n for n in wf.values() if n.get("class_type") == "LoraLoader"]
+ok("workflow injects one lora", len(loaders) == 1)
+ok("lora name has backslash", loaders[0]["inputs"]["lora_name"] == r"style\a.safetensors")
+ok("sampler model is lora not ckpt", wf["35"]["inputs"]["model"][0] != "13")
+ok("vae still ckpt", wf["85"]["inputs"]["vae"] == ["13", 2])
+ok("clip encode uses lora", wf["36"]["inputs"]["clip"][0] != "13")
+
+wf2 = {"13": {"class_type": "CheckpointLoaderSimple", "inputs": {"ckpt_name": "x"}}}
+wf2["36"] = {"class_type": "CLIPTextEncode", "inputs": {"text": "a", "clip": ["13", 1]}}
+inject_lora(wf2, r"style\a.safetensors", 0.8)
+inject_lora(wf2, r"Character\b.safetensors", 0.6)
+lora_ids = [nid for nid, n in wf2.items() if n.get("class_type") == "LoraLoader"]
+ok("two loras chained", len(lora_ids) == 2)
+first, second = lora_ids
+ok("second lora eats ckpt", wf2[second]["inputs"]["model"] == ["13", 0])
+ok("first lora eats second", wf2[first]["inputs"]["model"] == [second, 0])
 ok("cgnat below blocked", not allowed_client("100.63.255.255", nets))
 ok("mapped tailscale allowed", allowed_client("::ffff:100.79.212.103", nets))
 ok("mapped wifi blocked", not allowed_client("::ffff:192.168.1.101", nets))

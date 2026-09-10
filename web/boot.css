@@ -48,6 +48,29 @@ a {
   top: var(--space-3);
 }
 
+.mast-tools {
+  display: flex;
+  align-items: center;
+  gap: var(--space-2);
+  flex: none;
+  min-width: 0;
+}
+
+.mast-tools .ghost {
+  flex: none;
+}
+
+.keys-btn {
+  width: 36px;
+  min-height: 36px;
+  padding: 0;
+  display: grid;
+  place-items: center;
+  font-family: var(--font-outlier);
+  font-size: 15px;
+  font-weight: 600;
+}
+
 .live {
   position: absolute;
   width: 1px;
@@ -685,6 +708,23 @@ input[type="number"] {
 
 .shot-img.is-on {
   opacity: 1;
+}
+
+.card.is-done .shot {
+  cursor: zoom-in;
+}
+.card.is-done .shot:hover .shot-img.is-on {
+  transform: scale(1.03);
+}
+.card.is-done .shot .shot-img {
+  transition:
+    opacity var(--dur-move) var(--ease-out),
+    transform var(--dur-ui) var(--ease-out);
+}
+@media (prefers-reduced-motion: reduce) {
+  .card.is-done .shot:hover .shot-img.is-on {
+    transform: none;
+  }
 }
 
 .shot .skel.is-behind {

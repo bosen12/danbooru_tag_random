@@ -13,9 +13,10 @@ GROUP_ORDER = {
         "race",
         "skin",
         "makeup",
+        "job",
         "other",
     ],
-    "pose": ["body", "camera", "gaze", "face", "tease", "flash", "sex", "other"],
+    "pose": ["body", "camera", "gaze", "face", "tease", "flash", "sex", "activity", "other"],
     "clothing": [
         "nude",
         "era",
@@ -29,7 +30,7 @@ GROUP_ORDER = {
         "fabric",
         "acc",
     ],
-    "env": ["inout", "place", "time", "weather", "sky", "light", "other"],
+    "env": ["inout", "place", "furniture", "time", "weather", "sky", "light", "other"],
 }
 
 GROUP_ZH = {
@@ -54,7 +55,9 @@ GROUP_ZH = {
     "tease": "誘惑",
     "flash": "走光",
     "sex": "性愛",
+    "activity": "活動",
     "makeup": "妝容",
+    "job": "職業",
     "nude": "裸身",
     "era": "時代服裝",
     "onepiece": "連身／套裝",
@@ -68,6 +71,7 @@ GROUP_ZH = {
     "acc": "飾品",
     "inout": "室內外",
     "place": "地點",
+    "furniture": "坐臥面",
     "time": "晝夜",
     "weather": "天氣",
     "sky": "天空",
@@ -313,7 +317,7 @@ def assign_group(item: dict) -> str:
     gate = item.get("gate") or "any"
 
     if sec == "quality":
-        if tag in {"absurdres", "highres", "very aesthetic"}:
+        if tag in {"absurdres", "highres", "very aesthetic", "highly aesthetic", "newest"}:
             return "boost"
         return "style"
 
@@ -325,6 +329,8 @@ def assign_group(item: dict) -> str:
         return "extra"
 
     if sec == "feature":
+        if mx == "job":
+            return "job"
         if mx == "race" or tag == "monster boy":
             return "race"
         if mx == "male_build" or tag in {
@@ -350,9 +356,9 @@ def assign_group(item: dict) -> str:
             return "hair_style"
         if tag in MAKEUP:
             return "makeup"
-        if mx == "height" or tag in {"kokod", "tall female", "petite"}:
+        if mx == "height" or tag in {"loli", "tall female", "petite"}:
             return "body_f"
-        if mx == "height_m" or tag in {"kkob", "tall male", "short male"}:
+        if mx == "height_m" or tag in {"shota", "tall male", "short male"}:
             return "body_m"
         if mx == "breast_size" or gate == "female" and any(
             k in tag
@@ -400,10 +406,12 @@ def assign_group(item: dict) -> str:
             return "camera"
         if mx == "gaze":
             return "gaze"
-        if tag in FACE:
+        if mx == "expression" or tag in FACE:
             return "face"
         if mx == "clothes_action":
             return "flash"
+        if mx == "activity":
+            return "activity"
         if mx == "sex_act" or tag in SEX or heat == ["sex"]:
             return "sex"
         if "flash" in heat and "tease" not in heat:
@@ -463,6 +471,8 @@ def assign_group(item: dict) -> str:
             return "inout"
         if mx == "place":
             return "place"
+        if mx == "furniture":
+            return "furniture"
         if mx == "day_night":
             return "time"
         if mx == "weather" or tag in {"cherry blossoms"}:

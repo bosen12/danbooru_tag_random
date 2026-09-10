@@ -12,6 +12,7 @@ import random
 import socket
 import struct
 import sys
+import threading
 import time
 import uuid
 import urllib.error
@@ -19,6 +20,8 @@ import urllib.parse
 import urllib.request
 from http.server import BaseHTTPRequestHandler, ThreadingHTTPServer
 from pathlib import Path
+
+import lora_scan
 
 ROOT = Path(__file__).resolve().parent
 WEB = (ROOT / os.environ.get("WEB_DIR", "web")).resolve()
@@ -77,6 +80,18 @@ SAMPLER = "euler_ancestral"
 SCHEDULER = "normal"
 SEED_MAX = 0xFFFFFFFFFFFFFFFF
 
+# LoRA Manager（獨立埠 7861）點「送到 workflow」時 POST /api/lora-push。
+# 單一格、版本號遞增、最新覆蓋前一個。epoch 每次啟動都換，避免瀏覽器記住的舊 ver
+# 在伺服器重啟後把新推送當成已看過。跟 flux2klein/darkroom/preview_ui.py 同一套。
+_LORA_PUSH = {"ver": 0, "data": None}
+_LORA_PUSH_LOCK = threading.Lock()
+_LORA_PUSH_EPOCH = uuid.uuid4().hex
+_LORA_CORS = {
+    "Access-Control-Allow-Origin": "*",
+    "Access-Control-Allow-Methods": "POST, GET, OPTIONS",
+    "Access-Control-Allow-Headers": "Content-Type",
+}
+
 
 def comfy_base() -> str:
     env = os.environ.get("COMFY_API", "").strip()
@@ -133,8 +148,65 @@ def ping() -> dict:
     return val
 
 
-def build_workflow(positive: str, width: int, height: int, seed: int) -> dict:
-    return {
+def convert_loras(loras_in) -> list:
+    """前端 [{folder, file, strength}] → [(lora_name, strength), …]，最多兩筆。
+
+    ComfyUI 的 lora_name 是全部用反斜線的相對路徑。folder 可能是 Character/other
+    這種 POSIX 路徑，混用正反斜線會整批 400。"""
+    if not isinstance(loras_in, list):
+        return []
+    out = []
+    for lora in loras_in[:2]:
+        lora = lora or {}
+        if not lora.get("file"):
+            continue
+        folder = (lora.get("folder") or "").replace("/", "\\")
+        lname = (folder + "\\" + lora["file"]) if folder else lora["file"]
+        try:
+            strength = float(lora.get("strength", 0.8))
+        except (TypeError, ValueError):
+            strength = 0.8
+        out.append((lname, strength))
+    return out
+
+
+def inject_lora(wf: dict, lora_name: str, strength: float) -> None:
+    """插入一個 LoraLoader：把吃 checkpoint model([_,0])/clip([_,1]) 的節點改接到它。
+
+    VAE([_,2]) 不動。連呼叫兩次會自動疊成 ckpt → LoRA2 → LoRA1 → 其餘。"""
+    ckpt = None
+    for nid, n in wf.items():
+        if isinstance(n, dict) and n.get("class_type") == "CheckpointLoaderSimple":
+            ckpt = str(nid)
+            break
+    if ckpt is None:
+        return
+    lid = "201"
+    while lid in wf:
+        lid = str(int(lid) + 1)
+    wf[lid] = {
+        "class_type": "LoraLoader",
+        "inputs": {
+            "lora_name": lora_name,
+            "strength_model": float(strength),
+            "strength_clip": float(strength),
+            "model": [ckpt, 0],
+            "clip": [ckpt, 1],
+        },
+    }
+    for nid, n in wf.items():
+        if nid == lid or not isinstance(n, dict):
+            continue
+        for k, v in (n.get("inputs") or {}).items():
+            if isinstance(v, list) and len(v) == 2 and str(v[0]) == ckpt:
+                if v[1] == 0:
+                    n["inputs"][k] = [lid, 0]
+                elif v[1] == 1:
+                    n["inputs"][k] = [lid, 1]
+
+
+def build_workflow(positive: str, width: int, height: int, seed: int, loras=None) -> dict:
+    wf = {
         "13": {
             "class_type": "CheckpointLoaderSimple",
             "inputs": {"ckpt_name": CKPT},
@@ -178,6 +250,9 @@ def build_workflow(positive: str, width: int, height: int, seed: int) -> dict:
             },
         },
     }
+    for lora_name, strength in convert_loras(loras):
+        inject_lora(wf, lora_name, strength)
+    return wf
 
 
 def wait_done(prompt_id: str, timeout: float = 600) -> dict:
@@ -441,7 +516,7 @@ def gen_events(payload: dict):
     if seed is None or seed == "":
         seed = random.randint(0, SEED_MAX)
     seed = int(seed) & SEED_MAX
-    wf = build_workflow(positive, width, height, seed)
+    wf = build_workflow(positive, width, height, seed, payload.get("loras"))
     yield ("queued", {"seed": seed, "width": width, "height": height})
     try:
         yield from gen_via_ws(width, height, seed, positive, wf)
@@ -469,7 +544,7 @@ def gen(payload: dict) -> dict:
     if seed is None or seed == "":
         seed = random.randint(0, SEED_MAX)
     seed = int(seed) & SEED_MAX
-    wf = build_workflow(positive, width, height, seed)
+    wf = build_workflow(positive, width, height, seed, payload.get("loras"))
     prompt_id = api("POST", "/prompt", {"prompt": wf}, timeout=60)["prompt_id"]
     hist = wait_done(prompt_id)
     image = first_image_src(hist)
@@ -492,14 +567,88 @@ class Handler(BaseHTTPRequestHandler):
     def log_message(self, fmt: str, *args) -> None:
         sys.stderr.write("%s - %s\n" % (self.address_string(), fmt % args))
 
-    def _json(self, code: int, obj: dict) -> None:
+    def _json(self, code: int, obj: dict, extra=None) -> None:
         blob = json.dumps(obj, ensure_ascii=False).encode("utf-8")
         self.send_response(code)
         self.send_header("Content-Type", "application/json; charset=utf-8")
         self.send_header("Content-Length", str(len(blob)))
         self.send_header("Cache-Control", "no-store")
+        for k, v in (extra or {}).items():
+            self.send_header(k, v)
         self.end_headers()
         self.wfile.write(blob)
+
+    def _bytes(self, code: int, body: bytes, mime: str, extra=None) -> None:
+        self.send_response(code)
+        self.send_header("Content-Type", mime)
+        self.send_header("Content-Length", str(len(body)))
+        for k, v in (extra or {}).items():
+            self.send_header(k, v)
+        self.end_headers()
+        self.wfile.write(body)
+
+    def _serve_loras(self) -> None:
+        self._json(200, lora_scan.list_loras())
+
+    def _serve_lora_preview(self) -> None:
+        qs = urllib.parse.parse_qs(urllib.parse.urlparse(self.path).query)
+
+        def one(key: str, default: str = "") -> str:
+            vals = qs.get(key) or [default]
+            return vals[0] if vals else default
+
+        p = lora_scan.preview_path(one("folder"), one("file"))
+        if p is None:
+            self._json(404, {"ok": False, "error": "not found"})
+            return
+        fn = p.name.lower()
+        if fn.endswith(".mp4"):
+            mime = "video/mp4"
+        elif fn.endswith(".webm"):
+            mime = "video/webm"
+        elif fn.endswith(".webp"):
+            mime = "image/webp"
+        elif fn.endswith(".png"):
+            mime = "image/png"
+        elif fn.endswith(".jpg") or fn.endswith(".jpeg"):
+            mime = "image/jpeg"
+        else:
+            mime = "application/octet-stream"
+        try:
+            raw = p.read_bytes()
+        except OSError as exc:
+            self._json(502, {"ok": False, "error": str(exc)})
+            return
+        extra = {"Cache-Control": "private, max-age=86400"}
+        if lora_scan.is_video_preview(p.name):
+            extra["Accept-Ranges"] = "bytes"
+        self._bytes(200, raw, mime, extra)
+
+    def _serve_lora_push_get(self) -> None:
+        qs = urllib.parse.parse_qs(urllib.parse.urlparse(self.path).query)
+        try:
+            since = int((qs.get("since") or ["0"])[0] or 0)
+        except ValueError:
+            since = 0
+        with _LORA_PUSH_LOCK:
+            ver, data = _LORA_PUSH["ver"], _LORA_PUSH["data"]
+        out = {"ver": ver, "epoch": _LORA_PUSH_EPOCH}
+        if ver > since:
+            out["data"] = data
+        self._json(200, out, _LORA_CORS)
+
+    def _serve_lora_push_post(self, payload: dict) -> None:
+        folder = str(payload.get("folder") or "").strip()
+        name = str(payload.get("name") or "").strip()
+        if not name:
+            self._json(400, {"error": "缺少 name"}, _LORA_CORS)
+            return
+        with _LORA_PUSH_LOCK:
+            _LORA_PUSH["ver"] += 1
+            _LORA_PUSH["data"] = {"folder": folder, "name": name}
+            ver = _LORA_PUSH["ver"]
+        print(f"[lora-push] {folder}/{name} (ver={ver})", flush=True)
+        self._json(200, {"ok": True, "ver": ver}, _LORA_CORS)
 
     def _allowed(self) -> bool:
         if allowed_client(self.client_address[0]):
@@ -650,6 +799,15 @@ class Handler(BaseHTTPRequestHandler):
         if path == "/api/image":
             self._serve_comfy_image()
             return
+        if path == "/api/loras":
+            self._serve_loras()
+            return
+        if path == "/api/lora-preview":
+            self._serve_lora_preview()
+            return
+        if path == "/api/lora-push":
+            self._serve_lora_push_get()
+            return
         self._serve_static(True)
 
     def do_POST(self) -> None:
@@ -683,7 +841,25 @@ class Handler(BaseHTTPRequestHandler):
             except Exception as exc:
                 self._json(500, {"ok": False, "error": str(exc)})
             return
+        if path == "/api/lora-push":
+            self._serve_lora_push_post(payload)
+            return
         self._json(404, {"ok": False, "error": "not found"})
+
+    def do_OPTIONS(self) -> None:
+        if not self._allowed():
+            return
+        path = urllib.parse.urlparse(self.path).path
+        if path == "/api/lora-push":
+            self.send_response(204)
+            for k, v in _LORA_CORS.items():
+                self.send_header(k, v)
+            self.send_header("Content-Length", "0")
+            self.end_headers()
+            return
+        self.send_response(404)
+        self.send_header("Content-Length", "0")
+        self.end_headers()
 
 
 def checkpoints() -> list[str]:
@@ -717,6 +893,7 @@ def main() -> None:
     print(f"排字匣  http://{host}:{port}   畫面 {WEB.name}   Comfy {comfy_base()}")
     print("allow    " + ",".join(str(n) for n in ALLOW_NETS))
     print(f"ckpt     {CKPT}")
+    print(f"loras    {lora_scan.LORA_ROOT}")
     check_ckpt()
     httpd.serve_forever()
 

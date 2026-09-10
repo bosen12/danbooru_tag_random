@@ -1,6 +1,46 @@
 /** Tag-case draw: cast → heat → era → gated pools → commit mutex/bind/imply → reconcile. */
 
-const HEATS = ["tease", "flash", "sex"];
+export const HEATS = ["tease", "flash", "sex"];
+
+export function toggleHeat(heats, heat) {
+  const on = new Set((heats || []).filter((h) => HEATS.includes(h)));
+  if (heat === "mixed") return HEATS.slice();
+  if (!HEATS.includes(heat)) return HEATS.filter((h) => on.has(h));
+  if (on.has(heat)) {
+    if (on.size <= 1) return HEATS.filter((h) => on.has(h));
+    on.delete(heat);
+  } else {
+    on.add(heat);
+  }
+  return HEATS.filter((h) => on.has(h));
+}
+
+export function heatPresetOf(heats) {
+  const h = HEATS.filter((x) => (heats || []).includes(x));
+  if (h.length === 3) return "mixed";
+  if (h.length === 1) return h[0];
+  return "custom";
+}
+
+export function weightsForHeats(heats, heatWeights) {
+  const h = HEATS.filter((x) => (heats || []).includes(x));
+  if (!h.length) return { tease: 1, flash: 0, sex: 0 };
+  if (h.length === 3 && heatWeights && heatWeights.mixed) {
+    return { tease: 0, flash: 0, sex: 0, ...heatWeights.mixed };
+  }
+  const w = { tease: 0, flash: 0, sex: 0 };
+  const share = 1 / h.length;
+  for (const x of h) w[x] = share;
+  return w;
+}
+const SEX_OK_ACTIVITY = new Set([
+  "bathing",
+  "showering",
+  "swimming",
+  "wading",
+  "floating",
+  "shared bathing",
+]);
 export const ERAS = [
   "modern",
   "ancient_china",
@@ -177,6 +217,7 @@ export function applyPin(lex, pinned, userBanned, tag) {
     for (const i of item.implies || []) {
       nextPin.add(i);
       nextBan.delete(i);
+      for (const sib of mutexSiblings(lex, i)) nextPin.delete(sib);
     }
   }
   return { pinned: nextPin, userBanned: nextBan };
@@ -286,6 +327,51 @@ export function personCount(cast) {
   return n;
 }
 
+const FEMALE_SEQ = ["1girl", "2girls", "3girls", "4girls"];
+const MALE_SEQ = ["1boy", "2boys", "3boys"];
+
+function genderCount(cast, female) {
+  const keys = female ? FEMALE_COUNT : MALE_COUNT;
+  let n = 0;
+  for (const t of cast) {
+    if (keys.has(t)) n += COUNT_NUM[t] || 0;
+  }
+  return n;
+}
+
+function bumpGender(parts, female, want) {
+  const seq = female ? FEMALE_SEQ : MALE_SEQ;
+  const extra = female ? "multiple girls" : "multiple boys";
+  if (genderCount(parts, female) >= want) return parts;
+  const pick = seq.find((t) => COUNT_NUM[t] >= want) || seq[seq.length - 1];
+  return [...parts.filter((t) => t !== extra && !seq.includes(t)), pick];
+}
+
+function ensureCast(parts, settings, ctx) {
+  let out = parts.slice();
+  if (ctx.needFemale && !hasFemale(out)) out.push("1girl");
+  if (ctx.needMale && !hasMale(out)) out.push("1boy");
+  if (ctx.need2Female) out = bumpGender(out, true, 2);
+  if (ctx.need2Male) out = bumpGender(out, false, 2);
+  const min = ctx.needCrowd ? 4 : ctx.needGroup ? 3 : ctx.needPair ? 2 : 1;
+  const canGirl = settings.girl !== false;
+  const canBoy = settings.boy !== false;
+  let guard = 0;
+  while (personCount(out) < min && guard++ < 6) {
+    const g = genderCount(out, true);
+    const b = genderCount(out, false);
+    if (canGirl && canBoy) {
+      if (g === 0) out.push("1girl");
+      else if (b === 0) out.push("1boy");
+      else if (g <= b) out = bumpGender(out, true, g + 1);
+      else out = bumpGender(out, false, b + 1);
+    } else if (canGirl) out = bumpGender(out, true, g + 1);
+    else if (canBoy) out = bumpGender(out, false, b + 1);
+    else break;
+  }
+  return out;
+}
+
 function heatOk(item, heat) {
   return (item.heat || HEATS).includes(heat);
 }
@@ -320,11 +406,15 @@ function gateOk(item, female, male) {
   return true;
 }
 
-function castOk(item, female, male, people) {
+function castOk(item, female, male, people, girls = 0, boys = 0) {
   const needs = item.needs || [];
   if (needs.includes("pair") && people < 2) return false;
+  if (needs.includes("group") && people < 3) return false;
+  if (needs.includes("crowd") && people < 4) return false;
   if (needs.includes("male") && !male) return false;
   if (needs.includes("female") && !female) return false;
+  if (needs.includes("2male") && boys < 2) return false;
+  if (needs.includes("2female") && girls < 2) return false;
   if (needs.includes("yuri") && male) return false;
   return true;
 }
@@ -333,6 +423,10 @@ function pinContext(lex, pinned) {
   let needFemale = false;
   let needMale = false;
   let needPair = false;
+  let needGroup = false;
+  let needCrowd = false;
+  let need2Male = false;
+  let need2Female = false;
   const heatLists = [];
   const eraLists = [];
   for (const tag of pinned) {
@@ -346,11 +440,21 @@ function pinContext(lex, pinned) {
       needMale = true;
     }
     if (needs.includes("pair")) needPair = true;
+    if (needs.includes("group")) needGroup = true;
+    if (needs.includes("crowd")) needCrowd = true;
+    if (needs.includes("2male")) {
+      needMale = true;
+      need2Male = true;
+    }
+    if (needs.includes("2female")) {
+      needFemale = true;
+      need2Female = true;
+    }
     heatLists.push(item.heat && item.heat.length ? item.heat : HEATS);
     const e = erasOf(item);
     if (e) eraLists.push(e);
   }
-  return { needFemale, needMale, needPair, heatLists, eraLists };
+  return { needFemale, needMale, needPair, needGroup, needCrowd, need2Male, need2Female, heatLists, eraLists };
 }
 
 function intersectOrUnion(lists) {
@@ -370,6 +474,7 @@ function intersectOrUnion(lists) {
 
 function chooseCast(lex, settings, pinned, banned, rand, ctx) {
   ctx = ctx || pinContext(lex, pinned);
+  const povLock = pinned.has("pov") || pinned.has("pov crotch");
   const forced = [];
   for (const t of ["1girl", "2girls", "3girls", "4girls", "1boy", "2boys", "3boys"]) {
     if (pinned.has(t) && !banned.has(t)) forced.push(t);
@@ -377,6 +482,12 @@ function chooseCast(lex, settings, pinned, banned, rand, ctx) {
   let parts;
   if (forced.length) {
     parts = [...forced];
+  } else if (povLock) {
+    let girl = settings.girl;
+    let boy = settings.boy;
+    if (ctx.needFemale) girl = true;
+    if (boy && !girl) parts = ["1boy"];
+    else parts = ["1girl"];
   } else {
     let girl = settings.girl;
     let boy = settings.boy;
@@ -405,15 +516,9 @@ function chooseCast(lex, settings, pinned, banned, rand, ctx) {
     const key = pickWeighted(usable, rand) || (girl || !boy ? "1girl" : "1boy");
     parts = key.split(",").map((s) => s.trim());
   }
-  if (ctx.needFemale && !hasFemale(parts)) parts.push("1girl");
-  if (ctx.needMale && !hasMale(parts)) parts.push("1boy");
-  if (ctx.needPair && personCount(parts) < 2) {
-    if (!hasFemale(parts)) parts.push("1girl");
-    if (!hasMale(parts)) parts.push("1boy");
-    if (personCount(parts) < 2) parts.push("1girl");
-  }
+  if (!povLock) parts = ensureCast(parts, settings, ctx);
   const n = personCount(parts);
-  if (n === 1 && !banned.has("solo") && !ctx.needPair) parts.push("solo");
+  if (n === 1 && !banned.has("solo") && (!ctx.needPair || povLock)) parts.push("solo");
   if (n > 1) parts = parts.filter((t) => t !== "solo");
   if (pinned.has("solo") && n > 1 && !ctx.needPair) {
     parts = parts.filter(
@@ -495,6 +600,17 @@ function mutexBusy(lex, mutexTaken, tag) {
   return false;
 }
 
+function mutexOccupants(lex, mutexTaken, tag) {
+  const item = lex.byTag.get(tag);
+  const out = [];
+  if (!item) return out;
+  for (const g of extraMutex(item)) {
+    const old = mutexTaken.get(g);
+    if (old && old !== tag) out.push(old);
+  }
+  return out;
+}
+
 function dependents(lex, tag) {
   const item = lex.byTag.get(tag);
   if (!item) return [];
@@ -525,7 +641,7 @@ function makeCommit(lex, used, mutexTaken, banned, era) {
     if (mutexBusy(lex, mutexTaken, tag)) return false;
     for (const d of dependents(lex, tag)) {
       if (banned.has(d) || used.has(d) || !depAllowed(lex, d, era)) continue;
-      if (mutexBusy(lex, mutexTaken, d) && !parentChild(lex, tag, d)) return false;
+      if (mutexOccupants(lex, mutexTaken, d).some((occ) => !parentChild(lex, occ, d))) return false;
     }
     occupy(tag);
     for (const d of dependents(lex, tag)) {
@@ -667,7 +783,12 @@ export function reconcile(lex, used, female, male, people, pinned = new Set()) {
     for (const g of extraMutex(item)) taken.set(g, item.tag);
   }
   for (const item of rest) {
-    if (!castOk(item, female, male, people) && item.section !== "subject") continue;
+    if (
+      !castOk(item, female, male, people, genderCount(used, true), genderCount(used, false)) &&
+      item.section !== "subject"
+    ) {
+      continue;
+    }
     let ok = true;
     for (const g of extraMutex(item)) {
       if (taken.has(g) && taken.get(g) !== item.tag && !parentChild(lex, taken.get(g), item.tag)) {
@@ -826,7 +947,7 @@ export function drawOne(lex, settings, pinned, userBanned, rand, seed) {
   const allow = (item) => {
     if (banned.has(item.tag) || used.has(item.tag)) return false;
     if (!heatOk(item, heat) || !eraOk(item, era) || !gateOk(item, female, male)) return false;
-    if (!castOk(item, female, male, people)) return false;
+    if (!castOk(item, female, male, people, genderCount(used, true), genderCount(used, false))) return false;
     if (used.has("bald") && (item.mutex === "hair_color" || item.group === "hair_style")) return false;
     if (
       (item.mutex === "clothes_action" || item.group === "flash") &&
@@ -903,9 +1024,12 @@ export function drawOne(lex, settings, pinned, userBanned, rand, seed) {
   const fillSlot = (section, mutexName, preferOverride) => {
     if (mutexTaken.has(mutexName)) return;
     const indexed = lex.byMutex && lex.byMutex.get(section + ":" + mutexName);
-    const pool = (indexed || lex.bySection[section].filter((item) => item.mutex === mutexName)).filter(
+    let pool = (indexed || lex.bySection[section].filter((item) => item.mutex === mutexName)).filter(
       (item) => allow(item)
     );
+    if (section === "pose" && mutexName === "camera" && people >= 2) {
+      pool = pool.filter((item) => item.tag !== "pov" && item.tag !== "pov crotch");
+    }
     let prefer = preferOverride;
     if (prefer == null) {
       if (section === "clothing") prefer = clothingPrefer;
@@ -988,22 +1112,6 @@ export function drawOne(lex, settings, pinned, userBanned, rand, seed) {
     });
   }
 
-  fillSlot("pose", "body_pose");
-  fillSlot("pose", "camera");
-  fillSlot("pose", "gaze");
-  fillSlot("pose", "expression");
-  if (heat === "flash") {
-    const hasAct = someUsed((it) => it.mutex === "clothes_action" || it.group === "flash");
-    if (!hasAct) {
-      fillSlot("pose", "clothes_action", [
-        (item) => actionFitsWorn(item) === 2,
-        (item) => actionFitsWorn(item) === 1,
-      ]);
-      if (!someUsed((it) => it.mutex === "clothes_action" || it.group === "flash")) {
-        fillGroup("pose", "flash");
-      }
-    }
-  }
   const soloSex = (tag) =>
     tag === "masturbation" ||
     tag === "female masturbation" ||
@@ -1020,7 +1128,28 @@ export function drawOne(lex, settings, pinned, userBanned, rand, seed) {
     const acts = lex.bySection.pose.filter((item) => allow(item) && soloSex(item.tag));
     takeFromPool(acts, 1, rand, commit);
   }
-  fill("pose", (item) => !(people >= 2 && soloSex(item.tag)));
+  fillSlot("pose", "body_pose");
+  fillSlot("pose", "camera");
+  fillSlot("pose", "gaze");
+  fillSlot("pose", "expression");
+  if (heat !== "sex") fillSlot("pose", "activity");
+  if (heat === "flash") {
+    const hasAct = someUsed((it) => it.mutex === "clothes_action" || it.group === "flash");
+    if (!hasAct) {
+      fillSlot("pose", "clothes_action", [
+        (item) => actionFitsWorn(item) === 2,
+        (item) => actionFitsWorn(item) === 1,
+      ]);
+      if (!someUsed((it) => it.mutex === "clothes_action" || it.group === "flash")) {
+        fillGroup("pose", "flash");
+      }
+    }
+  }
+  fill("pose", (item) => {
+    if (people >= 2 && soloSex(item.tag)) return false;
+    if (heat === "sex" && item.mutex === "activity" && !SEX_OK_ACTIVITY.has(item.tag)) return false;
+    return true;
+  });
   stampAnchors("env");
   fillSlot("env", "place");
   fillSlot("env", "in_out");
@@ -1121,11 +1250,9 @@ export function sanitizeSettings(raw, data) {
   const girl = raw.girl === true || raw.girl === false ? raw.girl : base.girl;
   const boy = raw.boy === true || raw.boy === false ? raw.boy : base.boy;
   const heats = Array.isArray(raw.heats) ? raw.heats.filter((h) => HEATS.includes(h)) : [];
-  const heatPreset =
-    raw.heatPreset === "custom" || (data.heatWeights && data.heatWeights[raw.heatPreset])
-      ? raw.heatPreset
-      : base.heatPreset;
-  const weights = { ...(data.heatWeights[heatPreset] || base.weights) };
+  const selected = heats.length ? HEATS.filter((h) => heats.includes(h)) : [...base.heats];
+  const heatPreset = heatPresetOf(selected);
+  const weights = weightsForHeats(selected, data.heatWeights);
   if (raw.weights && typeof raw.weights === "object") {
     for (const h of HEATS) {
       const w = Number(raw.weights[h]);
@@ -1140,7 +1267,7 @@ export function sanitizeSettings(raw, data) {
     counts,
     girl: girl || boy ? girl : true,
     boy: girl || boy ? boy : true,
-    heats: heats.length ? heats : [...base.heats],
+    heats: selected,
     heatPreset,
     weights,
     eras: eras.length ? eras : [...base.eras],
@@ -1170,6 +1297,25 @@ export function formatWeighted(tag, weight) {
   const n = Math.round((Number(weight) || 1) * 10) / 10;
   if (n === 1) return tag;
   return `(${tag}:${formatWeight(n)})`;
+}
+
+const CAST_PREFIX = new Set([...FEMALE_COUNT, ...MALE_COUNT, "solo", "adult"]);
+
+export function insertTriggerAfterCast(positive, trigger) {
+  const trig = String(trigger || "").trim();
+  const pos = String(positive || "").trim();
+  if (!trig) return pos;
+  if (!pos) return trig;
+  const parts = pos.split(",").map((s) => s.trim()).filter(Boolean);
+  const extra = trig.split(",").map((s) => s.trim()).filter(Boolean);
+  let i = 0;
+  while (i < parts.length) {
+    const { tag } = parseWeighted(parts[i]);
+    if (!CAST_PREFIX.has(tag)) break;
+    i += 1;
+  }
+  parts.splice(i, 0, ...extra);
+  return parts.join(", ");
 }
 
 export function nextTagWeight(weight) {

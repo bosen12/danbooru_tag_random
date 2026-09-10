@@ -8,6 +8,10 @@ import {
   identityPins,
   isIdentityItem,
   sanitizeSettings,
+  HEATS,
+  toggleHeat,
+  heatPresetOf,
+  weightsForHeats,
   ERAS,
   ERA_LABELS,
   eraMismatches,
@@ -24,15 +28,23 @@ import {
   parseWeighted,
   formatWeighted,
   formatWeight,
+  insertTriggerAfterCast,
   randomSeed,
   tagState,
 } from "./engine.js";
+import {
+  currentLorasPayload,
+  currentTriggerText,
+  handleLoraKeys,
+  initLoraPicker,
+  isLoraUiOpen,
+} from "./lora.js";
 
 const SECTIONS = [
   { id: "quality", title: "畫質與風格", hint: "固定畫質每張都帶。風格預設不進，釘了才進" },
   { id: "subject", title: "人數", hint: "跟左欄走。只開女就不會看到男生的字" },
   { id: "feature", title: "長相", hint: "髮、眼、身材。有男時可抽種族，同類只一個" },
-  { id: "pose", title: "姿勢", hint: "先身體和鏡頭，尺度對上才補走光／性愛" },
+  { id: "pose", title: "姿勢", hint: "先身體和鏡頭。誘惑／走光會抽一格活動；性愛補體位、不抽逛街開車" },
   { id: "clothing", title: "服裝", hint: "時代服裝分開。顏色變體靠在父類旁邊" },
   { id: "env", title: "場景", hint: "先室內外、晝夜、地點" },
 ];
@@ -259,26 +271,21 @@ function syncSamePerson() {
 function syncHeat() {
   const box = $("heats");
   if (!box) return;
-  const exclusive = settings.heats.length === 1 ? settings.heats[0] : null;
+  const on = new Set(settings.heats || []);
+  const all = HEATS.every((h) => on.has(h));
   for (const btn of box.querySelectorAll(".chip-toggle")) {
     const h = btn.dataset.heat;
-    const on = h === "mixed" ? !exclusive : exclusive === h;
-    btn.setAttribute("aria-pressed", on ? "true" : "false");
+    const pressed = h === "mixed" ? all : on.has(h);
+    btn.setAttribute("aria-pressed", pressed ? "true" : "false");
   }
   updateHeatClash();
 }
 
 function pickHeat(h) {
-  if (h === "mixed") {
-    settings.heatPreset = "mixed";
-    settings.heats = ["tease", "flash", "sex"];
-    settings.weights = { ...(lex.data.heatWeights.mixed || { tease: 0.3, flash: 0.3, sex: 0.4 }) };
-  } else {
-    settings.heatPreset = h;
-    settings.heats = [h];
-    settings.weights = { tease: 0, flash: 0, sex: 0 };
-    settings.weights[h] = 1;
-  }
+  const next = toggleHeat(settings.heats, h);
+  settings.heats = next;
+  settings.heatPreset = heatPresetOf(next);
+  settings.weights = weightsForHeats(next, lex.data.heatWeights);
   syncHeat();
   saveStore();
   renderCats("heat");
@@ -1203,6 +1210,13 @@ function fillCard(el, job, err) {
     }
   }
   if (skel) skel.remove();
+  const shot = el.querySelector(".shot");
+  if (shot) {
+    shot.setAttribute("role", "button");
+    shot.tabIndex = 0;
+    shot.title = "放大查看";
+    shot.setAttribute("aria-label", "放大查看這張圖");
+  }
   let meta = el.querySelector(".meta");
   if (!meta) {
     meta = document.createElement("div");
@@ -1236,6 +1250,204 @@ function fillCard(el, job, err) {
       "）";
     meta.append(warn);
   }
+}
+
+const REDUCE_MOTION = matchMedia("(prefers-reduced-motion: reduce)").matches;
+
+function overlayOpen(el) {
+  if (!el) return;
+  el._closeGen = (el._closeGen || 0) + 1;
+  delete el.dataset.closing;
+  el.classList.remove("is-closing");
+  el.inert = false;
+  el.classList.add("open");
+  document.body.style.overflow = "hidden";
+}
+function overlayClose(el, onDone) {
+  if (!el || !el.classList.contains("open") || el.dataset.closing === "1") return;
+  const gen = (el._closeGen = (el._closeGen || 0) + 1);
+  el.dataset.closing = "1";
+  el.classList.add("is-closing");
+  el.inert = true;
+  const ms = REDUCE_MOTION ? 0 : 180;
+  setTimeout(() => {
+    if (el._closeGen !== gen) return;
+    delete el.dataset.closing;
+    el.classList.remove("open", "is-closing");
+    if (
+      !$("shot-viewer")?.classList.contains("open") &&
+      !$("lora-modal")?.classList.contains("open") &&
+      !$("shortcuts-overlay")?.classList.contains("open")
+    ) {
+      document.body.style.overflow = "";
+    }
+    if (onDone) onDone();
+  }, ms);
+}
+
+function ensureViewer() {
+  if ($("shot-viewer")) return;
+  const ov = document.createElement("div");
+  ov.id = "shot-viewer";
+  ov.className = "shot-viewer";
+  ov.inert = true;
+  ov.setAttribute("role", "dialog");
+  ov.setAttribute("aria-modal", "true");
+  ov.setAttribute("aria-label", "放大圖片");
+  ov.innerHTML = `
+    <div class="shot-viewer-inner" id="shot-viewer-inner">
+      <button type="button" class="shot-viewer-close" id="shot-viewer-close" aria-label="關閉 (Esc)">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" aria-hidden="true"><line x1="6" y1="6" x2="18" y2="18"/><line x1="18" y1="6" x2="6" y2="18"/></svg>
+      </button>
+      <button type="button" class="shot-viewer-nav prev" id="shot-viewer-prev" aria-label="上一張">‹</button>
+      <button type="button" class="shot-viewer-nav next" id="shot-viewer-next" aria-label="下一張">›</button>
+      <div class="shot-viewer-stage"><img id="shot-viewer-img" alt=""></div>
+      <div class="shot-viewer-info" id="shot-viewer-info"></div>
+    </div>`;
+  document.body.appendChild(ov);
+  ov.addEventListener("click", (e) => {
+    if (e.target.id === "shot-viewer") closeViewer();
+  });
+  $("shot-viewer-close").addEventListener("click", closeViewer);
+  $("shot-viewer-prev").addEventListener("click", (e) => {
+    e.stopPropagation();
+    navViewer(-1);
+  });
+  $("shot-viewer-next").addEventListener("click", (e) => {
+    e.stopPropagation();
+    navViewer(1);
+  });
+}
+
+function doneCards() {
+  return [...document.querySelectorAll("#results .card.is-done")].filter((c) => c.querySelector(".shot-img.is-on"));
+}
+
+function loraSummary(card) {
+  let loras = [];
+  try {
+    loras = JSON.parse(card.dataset.loras || "[]");
+  } catch {
+    loras = [];
+  }
+  if (!loras.length) return "無";
+  return loras
+    .map((l) => {
+      const name = (l.file || "").replace(/\.safetensors$/i, "");
+      const str = l.strength != null ? `@${Number(l.strength).toFixed(2)}` : "";
+      return (l.folder ? l.folder + "/" : "") + name + str;
+    })
+    .join("、");
+}
+
+let VIEW_INDEX = -1;
+let VIEW_RETURN = null;
+
+function fillViewer(card) {
+  const img = card.querySelector(".shot-img");
+  const vImg = $("shot-viewer-img");
+  vImg.src = img.src;
+  vImg.alt = img.alt || "生成圖";
+  const info = $("shot-viewer-info");
+  const rows = [
+    ["seed", card.dataset.seed || "—"],
+    ["時代", ERA_LABELS[card.dataset.era] || card.dataset.era || "—"],
+    ["LoRA", loraSummary(card)],
+    ["觸發詞", card.dataset.trigger || "無"],
+  ];
+  info.replaceChildren();
+  for (const [k, v] of rows) {
+    const row = document.createElement("div");
+    row.className = "gi-row";
+    const kk = document.createElement("span");
+    kk.className = "gi-k";
+    kk.textContent = k;
+    const vv = document.createElement("span");
+    vv.className = "gi-v";
+    vv.textContent = v;
+    row.append(kk, vv);
+    info.append(row);
+  }
+  const posLab = document.createElement("div");
+  posLab.className = "gi-k";
+  posLab.textContent = "POS";
+  const pos = document.createElement("div");
+  pos.className = "shot-viewer-pos";
+  pos.textContent = card.dataset.positive || "";
+  const copy = document.createElement("button");
+  copy.type = "button";
+  copy.className = "shot-viewer-copy";
+  copy.textContent = "複製 POS";
+  copy.addEventListener("click", async () => {
+    await navigator.clipboard.writeText(card.dataset.positive || "");
+    speak("已複製 POS");
+    copy.textContent = "已複製";
+    setTimeout(() => {
+      copy.textContent = "複製 POS";
+    }, 1200);
+  });
+  info.append(posLab, pos, copy);
+  const list = doneCards();
+  const n = list.length;
+  $("shot-viewer-prev").hidden = n < 2;
+  $("shot-viewer-next").hidden = n < 2;
+}
+
+function openViewer(card) {
+  if (!card || !card.classList.contains("is-done")) return;
+  ensureViewer();
+  const list = doneCards();
+  VIEW_INDEX = list.indexOf(card);
+  if (VIEW_INDEX < 0) return;
+  VIEW_RETURN = document.activeElement;
+  fillViewer(card);
+  overlayOpen($("shot-viewer"));
+  $("shot-viewer-close").focus();
+}
+
+function closeViewer() {
+  overlayClose($("shot-viewer"), () => {
+    const el = VIEW_RETURN;
+    VIEW_RETURN = null;
+    if (el && el.focus) el.focus();
+  });
+}
+
+function navViewer(dir) {
+  const list = doneCards();
+  if (list.length < 2) return;
+  VIEW_INDEX = (VIEW_INDEX + dir + list.length) % list.length;
+  fillViewer(list[VIEW_INDEX]);
+}
+
+function isViewerOpen() {
+  const el = $("shot-viewer");
+  return !!(el && el.classList.contains("open") && el.dataset.closing !== "1");
+}
+
+function isTyping() {
+  const el = document.activeElement;
+  return !!el && (/^(input|textarea|select)$/i.test(el.tagName) || el.isContentEditable);
+}
+
+function handleViewerKeys(e) {
+  if (!isViewerOpen()) return false;
+  if (e.key === "Escape" || e.key === "Enter") {
+    e.preventDefault();
+    closeViewer();
+    return true;
+  }
+  if (e.key === "ArrowLeft") {
+    e.preventDefault();
+    navViewer(-1);
+    return true;
+  }
+  if (e.key === "ArrowRight") {
+    e.preventDefault();
+    navViewer(1);
+    return true;
+  }
+  return true;
 }
 
 async function streamGen(body, onEvent, signal) {
@@ -1339,7 +1551,11 @@ async function runBatch() {
     card.dataset.bare = drawn.positive;
     card.dataset.pinsAtDraw = JSON.stringify([...pinned]);
     const pos = weightedPos(drawn.positive);
-    card.dataset.positive = pos;
+    const trigger = currentTriggerText();
+    const sent = insertTriggerAfterCast(pos, trigger);
+    card.dataset.positive = sent;
+    card.dataset.trigger = trigger;
+    card.dataset.loras = JSON.stringify(currentLorasPayload());
     if (settings.samePerson && i > 0) {
       card.dataset.same = "1";
       const shot = card.querySelector(".shot");
@@ -1350,11 +1566,11 @@ async function runBatch() {
         shot.append(mark);
       }
     }
-    showPos(drawn.positive);
-    setPosLine(card, drawn.positive);
+    showPos(sent);
+    setPosLine(card, sent);
     setLive(card, { status: `抽好了，生圖 ${i + 1}/${n}…` });
     const extra = {
-      positive: pos,
+      positive: sent,
       era: drawn.era,
       eraClash: drawn.eraClash,
     };
@@ -1362,10 +1578,11 @@ async function runBatch() {
       let finished = false;
       await streamGen(
         {
-          positive: pos,
+          positive: sent,
           width: settings.width,
           height: settings.height,
           seed: seedNum,
+          loras: currentLorasPayload(),
         },
         (event, data) => {
           if (event === "queued") {
@@ -1463,9 +1680,23 @@ function bindUi() {
   }
   $("results").addEventListener("click", (e) => {
     if (onWeightClick(e)) return;
+    if (e.target.closest(".copy")) return;
+    const card = e.target.closest(".card.is-done");
+    if (card && e.target.closest(".shot")) {
+      openViewer(card);
+      return;
+    }
     const span = e.target.closest(".pos span[data-tag]");
     if (!span || span.dataset.locked === "1") return;
     onTagClick(span.dataset.tag);
+  });
+  $("results").addEventListener("keydown", (e) => {
+    if (e.key !== "Enter" && e.key !== " ") return;
+    const shot = e.target.closest(".card.is-done .shot");
+    if (!shot) return;
+    e.preventDefault();
+    e.stopPropagation();
+    openViewer(shot.closest(".card"));
   });
   const onTagWheel = (e) => {
     const hit = e.target.closest(".w-ctl");
@@ -1578,11 +1809,20 @@ function bindUi() {
     renderCats("search");
   });
   document.addEventListener("keydown", (e) => {
-    if (e.key !== "/" || e.ctrlKey || e.metaKey || e.altKey) return;
-    const el = e.target;
-    if (el && (el.tagName === "INPUT" || el.tagName === "TEXTAREA" || el.isContentEditable)) return;
-    e.preventDefault();
-    $("q").focus();
+    if (e.ctrlKey || e.metaKey || e.altKey) return;
+    if (handleViewerKeys(e)) return;
+    if (handleLoraKeys(e)) return;
+    if (isTyping()) return;
+    if (e.key === "/") {
+      e.preventDefault();
+      $("q").focus();
+      return;
+    }
+    if (e.key === "Enter") {
+      if (isLoraUiOpen() || isViewerOpen() || running) return;
+      e.preventDefault();
+      runBatch();
+    }
   });
   $("view-filters").addEventListener("click", (e) => {
     const btn = e.target.closest("[data-view]");
@@ -1676,6 +1916,7 @@ async function main() {
   renderCats();
   renderTray();
   bindUi();
+  initLoraPicker();
   ping();
   setInterval(ping, 15000);
 }

@@ -54,14 +54,10 @@ NEGATIVE = (
     "bar censor, mosaic censoring, text, watermark, signature, username, logo, "
     "speech bubble, bad anatomy, bad hands, extra fingers, fused fingers, missing "
     "fingers, extra limbs, deformed, disfigured, ugly, blurry, jpeg artifacts, "
-    "3d, realistic, photorealistic, loli, shota, teen, child"
+    "3d, realistic, photorealistic"
 )
 
 BANNED = {
-    "loli",
-    "shota",
-    "child",
-    "teen",
     "toddler",
     "underage",
     "kid",
@@ -204,6 +200,56 @@ ERA_OF = {
     "bodysuit": _M,
     "power armor": _M,
     "detached collar": _MV,
+    "showering": _M,
+    "shower head": _M,
+    "innertube": _M,
+    "sento": ["edo", "modern"],
+    "ofuro": ["edo", "modern"],
+    "open-air bath": ["edo", "modern"],
+    "bubble bath": _M,
+    "shopping": _M,
+    "karaoke": _M,
+    "playing video games": _M,
+    "talking on phone": _M,
+    "selfie": _M,
+    "driving": _M,
+    "riding bicycle": _M,
+    "taking picture": _MV,
+    "nurse": _M,
+    "doctor": _M,
+    "office lady": _M,
+    "salaryman": _M,
+    "policewoman": _M,
+    "waitress": _M,
+    "barista": _M,
+    "flight attendant": _M,
+    "idol": _M,
+    "teacher": _M,
+    "nurse cap": _M,
+    "idol clothes": _M,
+    "blazer": _M,
+    "condom": _M,
+    "used condom": _M,
+    "dildo": _M,
+    "recording": _M,
+    "chikan": _M,
+    "fitness gym": _M,
+    "school gym": _M,
+    "locker room": _M,
+    "locker": _M,
+    "hospital": _M,
+    "clinic": _M,
+    "stethoscope": _M,
+    "clipboard": _M,
+    "microphone": _M,
+    "sportswear": _M,
+    "helmet": _M,
+    "temple": ["ancient_china", "edo"],
+    "pagoda": ["ancient_china", "edo"],
+    "torii": ["edo"],
+    "shrine": ["edo", "modern"],
+    "chinese architecture": ["ancient_china"],
+    "east asian architecture": ["ancient_china", "edo"],
 }
 
 # Variant → parent so they coexist (mutex siblings skip parent/child).
@@ -319,9 +365,80 @@ IMPLIES = {
     "single hair bun": ["hair bun"],
     "double bun": ["hair bun"],
     "flat chest": ["small breasts"],
-    "kokod": ["petite", "flat chest", "small breasts"],
-    "kkob": ["short male"],
+    "loli": ["petite", "flat chest", "small breasts"],
+    "shota": ["short male"],
+    "pov": ["looking at viewer"],
+    "pov crotch": ["looking at viewer"],
+    "showering": ["shower (place)", "indoors"],
+    "washing hair": ["wet hair"],
+    "shared bathing": ["bathing"],
+    "mixed-sex bathing": ["bathing"],
+    "ofuro": ["bath", "indoors"],
+    "sento": ["bath", "indoors"],
+    "bubble bath": ["bath", "indoors"],
+    "open-air bath": ["outdoors"],
+    "shower head": ["shower (place)"],
+    "karaoke": ["singing"],
+    "playing video games": ["playing games"],
+    "picnic": ["outdoors", "eating"],
+    "fishing": ["outdoors"],
+    "camping": ["outdoors"],
+    "hiking": ["outdoors"],
+    "sunbathing": ["outdoors"],
+    "office lady": ["pantyhose", "pencil skirt"],
+    "nurse": ["nurse cap"],
+    "doctor": ["lab coat", "stethoscope"],
+    "salaryman": ["suit", "necktie"],
+    "policewoman": ["police uniform"],
+    "waitress": ["apron"],
+    "idol": ["idol clothes"],
+    "teacher": ["blazer"],
+    "gangbang": ["group sex", "sex"],
+    "dildo": ["sex toy"],
+    "breastfeeding": ["lactation"],
+    "full-length mirror": ["mirror"],
+    "used condom": ["condom"],
+    "object insertion": ["sex"],
+    "locker room": ["indoors"],
+    "fitness gym": ["indoors"],
+    "school gym": ["indoors"],
+    "hospital": ["indoors"],
+    "clinic": ["indoors"],
+    "straddling": ["sitting"],
+    "sitting on lap": ["sitting"],
+    "jack-o' challenge": ["all fours"],
+    "standing on one leg": ["standing"],
 }
+
+# Sex act → canonical body pose. Not the same mutex: doggystyle + all fours is valid.
+SEX_POSE_BODY = {
+    "doggystyle": "all fours",
+    "standing doggystyle": "standing",
+    "standing sex": "standing",
+    "full nelson": "standing",
+    "suspended congress": "standing",
+    "reverse suspended congress": "standing",
+    "missionary": "on back",
+    "mating press": "on back",
+    "piledriver (sex)": "on back",
+    "prone bone": "on stomach",
+    "spooning": "on side",
+    "cowgirl position": "sitting",
+    "reverse cowgirl position": "sitting",
+    "girl on top": "sitting",
+    "upright straddle": "sitting",
+    "reverse upright straddle": "sitting",
+    "squatting cowgirl position": "squatting",
+    "69": "lying",
+    "facesitting": "sitting",
+}
+for _act, _pose in SEX_POSE_BODY.items():
+    _im = list(IMPLIES.get(_act) or ["sex"])
+    if "sex" not in _im:
+        _im.append("sex")
+    if _pose not in _im:
+        _im.append(_pose)
+    IMPLIES[_act] = _im
 
 RECLASS = {
     "dress shirt": {"mutex": "top", "gate": "any", "section": "clothing", "layer": "garment"},
@@ -337,8 +454,11 @@ RECLASS = {
     "looking at another": {"needs": ["pair"]},
     "clothed male nude female": {"needs": ["pair", "female", "male"]},
     "clothed female nude male": {"needs": ["pair", "female", "male"]},
-    "mmf threesome": {"needs": ["pair", "female", "male"]},
-    "ffm threesome": {"needs": ["pair", "female", "male"]},
+    "office lady": {"mutex": "job"},
+    "on bed": {"section": "env", "mutex": "furniture"},
+    "on chair": {"section": "env", "mutex": "furniture"},
+    "on floor": {"section": "env", "mutex": "furniture"},
+    "on sofa": {"section": "env", "mutex": "furniture"},
     "plump": {"mutex": "male_build"},
     "skinny": {"mutex": "male_build"},
     "muscular": {"mutex": "male_build"},
@@ -357,7 +477,7 @@ RECLASS = {
     "side-tie bikini bottom": {"mutex": "bottom", "section": "clothing", "layer": "garment"},
     "shoulder armor": {"mutex": None, "layer": "accessory", "section": "clothing"},
     "underwear": {"mutex": None},
-    "holding sex toy": {"mutex": None},
+    "holding sex toy": {"mutex": None, "needs": []},
     "after paizuri": {"mutex": None},
     "after fellatio": {"mutex": None},
     "implied sex": {"mutex": None},
@@ -394,6 +514,8 @@ EXPRESSION = {
     "embarrassed",
     "shy",
     "come hither",
+    "furrowed brow",
+    "dazed",
 }
 
 HAIR_STYLE_MUTEX = {
@@ -456,6 +578,7 @@ SEX_ACT = {
     "thigh sex",
     "frottage",
     "reverse spitroast",
+    "object insertion",
 }
 
 NEEDS_MALE = {
@@ -501,6 +624,9 @@ NEEDS_MALE = {
     "boy on top",
     "thigh sex",
     "reverse spitroast",
+    "mmf threesome",
+    "ffm threesome",
+    "salaryman",
 }
 
 NEEDS_FEMALE = {
@@ -537,6 +663,16 @@ NEEDS_FEMALE = {
     "reverse upright straddle",
     "piledriver (sex)",
     "thigh sex",
+    "mmf threesome",
+    "ffm threesome",
+    "lactation",
+    "pink nipples",
+    "breastfeeding",
+    "nurse",
+    "waitress",
+    "policewoman",
+    "flight attendant",
+    "idol",
 }
 
 NEEDS_PAIR = {
@@ -546,8 +682,23 @@ NEEDS_PAIR = {
     "french kiss",
     "looking at another",
     "eye contact",
+    "hug",
+    "cuddling",
+    "straddling",
     "hug from behind",
     "sitting on lap",
+    "pinned down",
+    "lifting person",
+    "happy sex",
+    "breast grab",
+    "ass grab",
+    "breast sucking",
+    "guided penetration",
+    "imminent penetration",
+    "threesome",
+    "group sex",
+    "mmf threesome",
+    "ffm threesome",
     "spitroast",
     "double penetration",
     "69",
@@ -573,7 +724,46 @@ NEEDS_PAIR = {
     "thigh sex",
     "frottage",
     "reverse spitroast",
+    "washing another's back",
+    "shared bathing",
+    "netorare",
+    "cheating (relationship)",
+    "groping",
+    "chikan",
+    "breastfeeding",
+    "carrying",
+    "size difference",
+    "gangbang",
+    "afterglow",
 }
+
+NEEDS_GROUP = {
+    "threesome",
+    "group sex",
+    "mmf threesome",
+    "ffm threesome",
+    "spitroast",
+    "reverse spitroast",
+    "double penetration",
+    "gangbang",
+}
+
+NEEDS_CROWD = {
+    "gangbang",
+}
+
+NEEDS_2MALE = {
+    "mmf threesome",
+    "spitroast",
+    "reverse spitroast",
+    "double penetration",
+}
+
+NEEDS_2FEMALE = {
+    "ffm threesome",
+}
+
+NEED_KEYS = {"female", "male", "pair", "yuri", "group", "crowd", "2male", "2female"}
 
 YURI_ONLY = {
     "tribadism",
@@ -652,7 +842,9 @@ def widen_heat(tag: str, section: str, mutex, layer: str, heat: list[str]) -> li
         return heat
     if mutex == "sex_act" or tag in SEX_ACT or tag in POSE_CLIMAX:
         return heat
-    if mutex in {"body_pose", "camera", "gaze", "expression"}:
+    if mutex in {"body_pose", "camera", "gaze", "expression", "activity"}:
+        if tag in {"sleeping", "dancing"}:
+            return [h for h in HEATS if h != "sex"]
         return list(HEATS)
     if mutex == "clothes_action":
         keep = set(heat) | {"flash", "sex"}
@@ -734,7 +926,7 @@ def norm(item: dict) -> dict | None:
     bind = [str(x).replace("_", " ") for x in (item.get("bind") or [])]
     implies = [str(x).replace("_", " ") for x in (item.get("implies") or [])]
     layer = item.get("layer") or "normal"
-    needs = [str(x) for x in (item.get("needs") or []) if x in {"female", "male", "pair", "yuri"}]
+    needs = [str(x) for x in (item.get("needs") or []) if x in NEED_KEYS]
     implies, bind, mutex, section, gate, layer, heat, era, needs = apply_relations(
         tag, implies, bind, mutex, section, gate, layer, heat, era, needs
     )
@@ -749,6 +941,18 @@ def norm(item: dict) -> dict | None:
     if tag in NEEDS_PAIR and "pair" not in seen_needs:
         needs.append("pair")
         seen_needs.add("pair")
+    if tag in NEEDS_GROUP and "group" not in seen_needs:
+        needs.append("group")
+        seen_needs.add("group")
+    if tag in NEEDS_CROWD and "crowd" not in seen_needs:
+        needs.append("crowd")
+        seen_needs.add("crowd")
+    if tag in NEEDS_2MALE and "2male" not in seen_needs:
+        needs.append("2male")
+        seen_needs.add("2male")
+    if tag in NEEDS_2FEMALE and "2female" not in seen_needs:
+        needs.append("2female")
+        seen_needs.add("2female")
     if tag in YURI_ONLY and "yuri" not in seen_needs:
         needs.append("yuri")
         seen_needs.add("yuri")
@@ -765,7 +969,7 @@ def norm(item: dict) -> dict | None:
         mutex = None
     if tag in ERA_OF:
         era = list(ERA_OF[tag])
-    needs = [x for x in needs if x in {"female", "male", "pair", "yuri"}]
+    needs = [x for x in needs if x in NEED_KEYS]
     heat = widen_heat(tag, section, mutex, layer, heat)
     out = {
         "tag": tag,
@@ -797,57 +1001,72 @@ def norm(item: dict) -> dict | None:
 
 
 def extra_style_tags() -> list[dict]:
-    """Optional look. Pin to add; never auto-drawn."""
-    zh = {
-        "cel shading": "賽璐璐上色",
-        "anime coloring": "動畫上色",
-        "flat color": "平塗",
-        "clean lines": "乾淨線條",
-    }
+    """Optional look. Pin to add; never auto-drawn.
+
+    coloring：上色／媒材互斥。line_weight：線條粗細。era_style：年代畫風。
+    drop shadow 可跟平塗／賽璐璐疊，不加 mutex。"""
+    rows = [
+        ("cel shading", "賽璐璐上色", "coloring"),
+        ("anime coloring", "動畫上色", "coloring"),
+        ("flat color", "平塗", "coloring"),
+        ("watercolor (medium)", "水彩", "coloring"),
+        ("screentones", "網點", "coloring"),
+        ("webtoon", "條漫", "coloring"),
+        ("lineart", "線稿", "coloring"),
+        ("monochrome", "單色", "coloring"),
+        ("clean lines", "乾淨線條", "line_weight"),
+        ("thick outlines", "粗線", "line_weight"),
+        ("1990s (style)", "1990s 畫風", "era_style"),
+        ("2000s (style)", "2000s 畫風", "era_style"),
+        ("retro artstyle", "復古畫風", "era_style"),
+        ("drop shadow", "平塗陰影", None),
+    ]
     return [
         {
             "tag": tag,
             "section": "quality",
             "gate": "any",
             "heat": list(HEATS),
-            "mutex": None,
+            "mutex": mutex,
             "bind": [],
             "implies": [],
             "layer": "normal",
             "era": ["any"],
             "needs": [],
-            "zh": zh[tag],
+            "zh": zh,
         }
-        for tag in ("cel shading", "anime coloring", "flat color", "clean lines")
+        for tag, zh, mutex in rows
     ]
 
 
 def extra_quality_boost_tags() -> list[dict]:
     """Optional. WAI does not need these on every card."""
-    zh = {
-        "absurdres": "超高解析",
-        "highres": "高解析",
-        "very aesthetic": "非常有美感",
-    }
+    rows = [
+        ("absurdres", "超高解析", None),
+        ("highres", "高解析", None),
+        ("very aesthetic", "非常有美感", "aesthetic"),
+        ("highly aesthetic", "極有美感", "aesthetic"),
+        ("newest", "最新風", None),
+    ]
     return [
         {
             "tag": tag,
             "section": "quality",
             "gate": "any",
             "heat": list(HEATS),
-            "mutex": None,
+            "mutex": mutex,
             "bind": [],
             "implies": [],
             "layer": "normal",
             "era": ["any"],
             "needs": [],
-            "zh": zh[tag],
+            "zh": zh,
         }
-        for tag in ("absurdres", "highres", "very aesthetic")
+        for tag, zh, mutex in rows
     ]
 
 
-def extra_kokod_tags() -> list[dict]:
+def extra_loli_tags() -> list[dict]:
     """Adult petite, small bust."""
     return [
         {
@@ -877,7 +1096,7 @@ def extra_kokod_tags() -> list[dict]:
             "zh": "平胸",
         },
         {
-            "tag": "kokod",
+            "tag": "loli",
             "section": "feature",
             "gate": "female",
             "heat": list(HEATS),
@@ -887,12 +1106,12 @@ def extra_kokod_tags() -> list[dict]:
             "layer": "normal",
             "era": ["any"],
             "needs": ["female"],
-            "zh": "矮小胸小",
+            "zh": "蘿莉",
         },
     ]
 
 
-def extra_kkob_tags() -> list[dict]:
+def extra_shota_tags() -> list[dict]:
     """Adult short male. Not a child tag."""
     return [
         {
@@ -922,7 +1141,7 @@ def extra_kkob_tags() -> list[dict]:
             "zh": "高個男性",
         },
         {
-            "tag": "kkob",
+            "tag": "shota",
             "section": "feature",
             "gate": "male",
             "heat": list(HEATS),
@@ -932,7 +1151,7 @@ def extra_kkob_tags() -> list[dict]:
             "layer": "normal",
             "era": ["any"],
             "needs": ["male"],
-            "zh": "矮小",
+            "zh": "正太",
         },
     ]
 
@@ -965,6 +1184,264 @@ def extra_sex_position_tags() -> list[dict]:
         P("thigh sex", ["pair", "male", "female"], zh="股交"),
         P("frottage", ["pair"], zh="互相摩擦"),
         P("reverse spitroast", ["pair", "male"], zh="反向兩端夾擊"),
+    ]
+
+
+def extra_bath_tags() -> list[dict]:
+    """Bathing, showering, swimming, onsen-side activities and places."""
+    all_h = list(HEATS)
+    edo_mod = ["edo", "modern"]
+
+    def pose(tag, mutex="activity", implies=None, needs=None, era=None, zh=""):
+        return {
+            "tag": tag,
+            "section": "pose",
+            "gate": "any",
+            "heat": all_h,
+            "mutex": mutex,
+            "bind": [],
+            "implies": implies or [],
+            "layer": "normal",
+            "era": era or ["any"],
+            "needs": needs or [],
+            "zh": zh,
+        }
+
+    def env(tag, mutex="place", implies=None, era=None, zh=""):
+        return {
+            "tag": tag,
+            "section": "env",
+            "gate": "any",
+            "heat": all_h,
+            "mutex": mutex,
+            "bind": [],
+            "implies": implies or [],
+            "layer": "normal",
+            "era": era or ["any"],
+            "zh": zh,
+        }
+
+    def cloth(tag, era=None, zh=""):
+        return {
+            "tag": tag,
+            "section": "clothing",
+            "gate": "any",
+            "heat": all_h,
+            "mutex": None,
+            "bind": [],
+            "implies": [],
+            "layer": "accessory",
+            "era": era or ["any"],
+            "zh": zh,
+        }
+
+    return [
+        pose("bathing", zh="泡澡"),
+        pose("showering", implies=["shower (place)", "indoors"], era=["modern"], zh="淋浴"),
+        pose("swimming", zh="游泳"),
+        pose("wading", zh="涉水"),
+        pose("floating", zh="漂浮"),
+        pose("partially submerged", mutex=None, zh="半沒入水中"),
+        pose("washing hair", mutex=None, implies=["wet hair"], zh="洗頭"),
+        pose("washing body", mutex=None, zh="洗身體"),
+        pose("washing another's back", mutex=None, needs=["pair"], zh="洗別人的背"),
+        pose("splashing", mutex=None, zh="潑水"),
+        pose("after bathing", mutex=None, zh="浴後"),
+        pose("shared bathing", needs=["pair"], implies=["bathing"], zh="共浴"),
+        env("sento", implies=["bath", "indoors"], era=edo_mod, zh="錢湯"),
+        env("ofuro", implies=["bath", "indoors"], era=edo_mod, zh="日式浴桶"),
+        env("open-air bath", implies=["outdoors"], era=edo_mod, zh="露天風呂"),
+        env("bubble bath", implies=["bath", "indoors"], era=["modern"], zh="泡泡浴"),
+        env("shower head", mutex=None, implies=["shower (place)"], era=["modern"], zh="蓮蓬頭"),
+        env("soap bubbles", mutex=None, zh="肥皂泡"),
+        cloth("towel", zh="毛巾"),
+        cloth("innertube", era=["modern"], zh="泳圈"),
+    ]
+
+
+def extra_activity_tags() -> list[dict]:
+    """Daily Danbooru activities. Same mutex as bathing so a scene has one main act."""
+    all_h = list(HEATS)
+    modern = ["modern"]
+
+    def A(tag, implies=None, era=None, zh=""):
+        return {
+            "tag": tag,
+            "section": "pose",
+            "gate": "any",
+            "heat": all_h,
+            "mutex": "activity",
+            "bind": [],
+            "implies": implies or [],
+            "layer": "normal",
+            "era": era or ["any"],
+            "needs": [],
+            "zh": zh,
+        }
+
+    return [
+        A("eating", zh="吃東西"),
+        A("drinking", zh="喝東西"),
+        A("reading", zh="閱讀"),
+        A("cooking", zh="料理"),
+        A("shopping", era=modern, zh="購物"),
+        A("singing", zh="唱歌"),
+        A("karaoke", implies=["singing"], era=modern, zh="卡拉OK"),
+        A("playing guitar", zh="彈吉他"),
+        A("playing games", zh="玩遊戲"),
+        A("playing video games", implies=["playing games"], era=modern, zh="打電動"),
+        A("playing sports", zh="做運動"),
+        A("studying", zh="讀書"),
+        A("writing", zh="寫字"),
+        A("drawing (action)", zh="畫畫"),
+        A("painting (action)", zh="繪畫"),
+        A("stretching", zh="伸展"),
+        A("yoga", zh="瑜伽"),
+        A("exercising", zh="鍛鍊"),
+        A("training", zh="訓練"),
+        A("fishing", implies=["outdoors"], zh="釣魚"),
+        A("camping", implies=["outdoors"], zh="露營"),
+        A("picnic", implies=["outdoors", "eating"], zh="野餐"),
+        A("hiking", implies=["outdoors"], zh="健行"),
+        A("sunbathing", implies=["outdoors"], zh="日光浴"),
+        A("smoking", zh="吸菸"),
+        A("cleaning", zh="打掃"),
+        A("talking on phone", era=modern, zh="講電話"),
+        A("selfie", era=modern, zh="自拍"),
+        A("taking picture", era=["modern", "victorian"], zh="拍照"),
+        A("driving", era=modern, zh="開車"),
+        A("horseback riding", zh="騎馬"),
+        A("riding bicycle", era=modern, zh="騎腳踏車"),
+    ]
+
+
+def extra_job_scene_tags() -> list[dict]:
+    """Jobs with signature clothes, plus remaining high-value Danbooru scene tags."""
+    all_h = list(HEATS)
+    modern = ["modern"]
+    sex = ["sex"]
+
+    def job(tag, implies=None, needs=None, gate="any", zh=""):
+        return {
+            "tag": tag,
+            "section": "feature",
+            "gate": gate,
+            "heat": all_h,
+            "mutex": "job",
+            "bind": [],
+            "implies": implies or [],
+            "layer": "normal",
+            "era": modern,
+            "needs": needs or [],
+            "zh": zh,
+        }
+
+    def pose(tag, mutex=None, implies=None, needs=None, heat=None, era=None, zh=""):
+        return {
+            "tag": tag,
+            "section": "pose",
+            "gate": "any",
+            "heat": list(heat or all_h),
+            "mutex": mutex,
+            "bind": [],
+            "implies": implies or [],
+            "layer": "normal",
+            "era": era or ["any"],
+            "needs": needs or [],
+            "zh": zh,
+        }
+
+    def feat(tag, mutex=None, needs=None, heat=None, zh=""):
+        return {
+            "tag": tag,
+            "section": "feature",
+            "gate": "female" if needs and "female" in needs else "any",
+            "heat": list(heat or all_h),
+            "mutex": mutex,
+            "bind": [],
+            "implies": [],
+            "layer": "normal",
+            "era": ["any"],
+            "needs": needs or [],
+            "zh": zh,
+        }
+
+    def env(tag, mutex="place", implies=None, era=None, zh=""):
+        return {
+            "tag": tag,
+            "section": "env",
+            "gate": "any",
+            "heat": all_h,
+            "mutex": mutex,
+            "bind": [],
+            "implies": implies or [],
+            "layer": "normal",
+            "era": era or modern,
+            "zh": zh,
+        }
+
+    def cloth(tag, mutex=None, layer="accessory", implies=None, gate="any", heat=None, zh=""):
+        return {
+            "tag": tag,
+            "section": "clothing",
+            "gate": gate,
+            "heat": list(heat or all_h),
+            "mutex": mutex,
+            "bind": [],
+            "implies": implies or [],
+            "layer": layer,
+            "era": modern,
+            "zh": zh,
+        }
+
+    return [
+        job("nurse", implies=["nurse cap"], needs=["female"], gate="female", zh="護士"),
+        job("doctor", implies=["lab coat", "stethoscope"], zh="醫生"),
+        job("teacher", implies=["blazer"], zh="老師"),
+        job("waitress", implies=["apron"], needs=["female"], gate="female", zh="女侍"),
+        job("barista", zh="咖啡師"),
+        job("salaryman", implies=["suit", "necktie"], needs=["male"], gate="male", zh="上班族"),
+        job("policewoman", implies=["police uniform"], needs=["female"], gate="female", zh="女警"),
+        job("flight attendant", needs=["female"], gate="female", zh="空服員"),
+        job("idol", implies=["idol clothes"], needs=["female"], gate="female", zh="偶像"),
+        cloth("nurse cap", layer="accessory", gate="female", zh="護士帽"),
+        cloth("idol clothes", mutex="onepiece", layer="garment", gate="female", zh="偶像服"),
+        cloth("blazer", mutex="outer", layer="garment", zh="西裝外套"),
+        cloth("sportswear", layer="garment", zh="運動服"),
+        cloth("helmet", zh="頭盔"),
+        cloth("microphone", zh="麥克風"),
+        cloth("stethoscope", zh="聽診器"),
+        cloth("clipboard", zh="寫字夾板"),
+        cloth("condom", heat=sex, zh="保險套"),
+        cloth("used condom", implies=["condom"], heat=sex, zh="用過的保險套"),
+        cloth("dildo", implies=["sex toy"], heat=sex, zh="假陽具"),
+        pose("gangbang", implies=["group sex", "sex"], needs=["pair"], heat=sex, zh="輪姦"),
+        pose("netorare", needs=["pair"], zh="NTR"),
+        pose("cheating (relationship)", needs=["pair"], zh="外遇"),
+        pose("groping", needs=["pair"], zh="亂摸"),
+        pose("chikan", needs=["pair"], heat=["flash", "sex"], era=modern, zh="癡漢"),
+        pose("voyeurism", zh="偷窺"),
+        pose("recording", era=modern, zh="錄影"),
+        pose("object insertion", mutex="sex_act", implies=["sex"], needs=["female"], heat=sex, zh="異物插入"),
+        pose("breastfeeding", needs=["pair", "female"], implies=["lactation"], zh="哺乳"),
+        pose("afterglow", needs=["pair"], heat=sex, zh="餘韻"),
+        pose("carrying", mutex="activity", needs=["pair"], zh="抱著"),
+        pose("against window", zh="靠窗"),
+        pose("trembling", zh="發抖"),
+        pose("looking around", mutex="gaze", zh="東張西望"),
+        pose("furrowed brow", mutex="expression", zh="皺眉"),
+        pose("dazed", mutex="expression", zh="恍神"),
+        feat("pink nipples", needs=["female"], zh="粉紅乳頭"),
+        feat("lactation", needs=["female"], heat=["flash", "sex"], zh="泌乳"),
+        feat("size difference", needs=["pair"], zh="體格差"),
+        env("fitness gym", implies=["indoors"], zh="健身房"),
+        env("school gym", implies=["indoors"], zh="學校體育館"),
+        env("hospital", implies=["indoors"], zh="醫院"),
+        env("clinic", implies=["indoors"], zh="診所"),
+        env("locker", mutex=None, zh="置物櫃"),
+        env("mirror", mutex=None, era=["any"], zh="鏡子"),
+        env("full-length mirror", mutex=None, implies=["mirror"], era=["any"], zh="全身鏡"),
+        env("tissue box", mutex=None, zh="面紙盒"),
     ]
 
 
@@ -1217,8 +1694,11 @@ def main() -> None:
     rows.extend(extra_male_look_tags())
     rows.extend(extra_shot_face_tags())
     rows.extend(extra_sex_position_tags())
-    rows.extend(extra_kokod_tags())
-    rows.extend(extra_kkob_tags())
+    rows.extend(extra_bath_tags())
+    rows.extend(extra_activity_tags())
+    rows.extend(extra_job_scene_tags())
+    rows.extend(extra_loli_tags())
+    rows.extend(extra_shota_tags())
     rows.extend(extra_breast_feel_tags())
     rows.extend(extra_style_tags())
     rows.extend(extra_quality_boost_tags())
@@ -1307,7 +1787,7 @@ def main() -> None:
         "eraAnchors": ERA_ANCHORS,
         "zh": {t: old_zh[t] for t in (
             "masterpiece", "best quality", "amazing quality",
-            "absurdres", "highres", "very aesthetic",
+            "absurdres", "highres", "very aesthetic", "highly aesthetic", "newest",
             "nsfw", "explicit", "soft lighting",
         ) if t in old_zh},
         "tags": unique,
