@@ -91,10 +91,33 @@ const AWAKE_ACT = new Set([
   "shared bathing",
 ]);
 const FACELESS_CAM = new Set(["head out of frame", "lower body"]);
-const FACE_NEED_TAGS = new Set(["closed eyes", "facial", "cum in mouth", "cum on face"]);
+const FACE_NEED_TAGS = new Set(["closed eyes", "facial", "cum in mouth", "cum on face", "licking penis"]);
+const BED_PLACE = new Set(["bedroom", "bed", "hotel room", "love hotel", "futon"]);
+const SKY_EXTRA = new Set(["sky", "blue sky", "orange sky"]);
 const DAY_MARK = new Set(["day", "sunrise", "sunlight", "sunbathing", "blue sky", "orange sky"]);
 const NIGHT_MARK = new Set(["night", "starry sky", "moonlight"]);
-const SLEEP_BAD_POSE = new Set(["washing body", "partially submerged"]);
+const SLEEP_BAD_POSE = new Set(["washing body", "partially submerged", "washing hair", "splashing"]);
+const EYE_EXTRA = new Set(["wink", "empty eyes", "sparkling eyes", "half-closed eyes", "rolling eyes"]);
+const MOUTH_EXTRA = new Set([
+  "open mouth",
+  "clenched teeth",
+  "biting own lip",
+  "tongue out",
+  "parted lips",
+  "licking lips",
+  "drooling",
+]);
+const OUTDOOR_LEFTOVER = new Set([
+  "tree",
+  "bush",
+  "sky",
+  "blue sky",
+  "orange sky",
+  "starry sky",
+  "snow",
+  "water",
+  "cherry blossoms",
+]);
 
 function usedMutexTags(used, lex, mutex) {
   const s = new Set();
@@ -267,7 +290,17 @@ const INDOOR_ROOM = new Set([
   "futon",
   "couch",
 ]);
-const INDOOR_PROP = new Set(["shoji", "carpet", "curtains", "bed sheet", "window"]);
+const INDOOR_PROP = new Set([
+  "shoji",
+  "carpet",
+  "curtains",
+  "bed sheet",
+  "window",
+  "tatami",
+  "office chair",
+  "gaming chair",
+  "swivel chair",
+]);
 const SPORT_PLACE = new Set(["fitness gym", "school gym", "park", "beach", "courtyard", "poolside", "rooftop", "pool"]);
 const DRIVE_PLACE = new Set(["car", "car interior", "street", "city", "cityscape", "alley"]);
 
@@ -290,6 +323,50 @@ function usedActs(used, lex) {
 
 const FISH_PLACE = new Set(["beach", "ocean", "lotus pond", "poolside", "pool"]);
 const INDOOR_FURN = new Set(["on bed", "on chair", "office chair", "gaming chair", "swivel chair"]);
+const DESK_PLACE = new Set(["library", "bedroom", "living room", "cafe", "classroom", "office", "park bench", "garden", "shrine", "pavilion"]);
+const HOME_PLACE = new Set(["bedroom", "living room", "hotel room", "futon"]);
+const MEAL_PLACE = new Set(["restaurant", "cafe", "kitchen", "living room", "park", "garden", "beach", "courtyard"]);
+const ACT_PLACE = {
+  bathing: new Set([...BATH_PLACE]),
+  showering: new Set(["bathroom", "shower (place)"]),
+  swimming: new Set(["pool", "ocean", "beach", "underwater"]),
+  wading: new Set(["beach", "ocean", "pool", "poolside", "lotus pond"]),
+  floating: new Set(["pool", "ocean", "bathtub", "ofuro", "onsen", "open-air bath", "bubble bath"]),
+  "shared bathing": new Set(["onsen", "sento", "ofuro", "open-air bath", "bath"]),
+  eating: MEAL_PLACE,
+  drinking: new Set(["cafe", "bar (place)", "restaurant", "kitchen", "living room"]),
+  reading: DESK_PLACE,
+  cooking: new Set(["kitchen"]),
+  shopping: new Set(["street", "city", "cityscape", "fitting room"]),
+  singing: new Set(["living room", "bar (place)", "park", "rooftop"]),
+  karaoke: new Set(["bar (place)", "living room"]),
+  "playing guitar": new Set(["bedroom", "living room", "park", "rooftop", "balcony", "garden"]),
+  "playing games": HOME_PLACE,
+  "playing video games": HOME_PLACE,
+  "playing sports": SPORT_PLACE,
+  studying: DESK_PLACE,
+  writing: DESK_PLACE,
+  "drawing (action)": new Set(["bedroom", "living room", "classroom", "cafe", "park", "garden"]),
+  "painting (action)": new Set(["bedroom", "living room", "garden", "park", "courtyard", "pavilion"]),
+  dancing: new Set(["living room", "park", "rooftop", "school gym", "bar (place)", "fitness gym"]),
+  stretching: new Set(["bedroom", "living room", "fitness gym", "park", "rooftop", "beach"]),
+  yoga: new Set(["bedroom", "living room", "fitness gym", "park", "rooftop", "beach"]),
+  exercising: SPORT_PLACE,
+  training: SPORT_PLACE,
+  fishing: FISH_PLACE,
+  camping: new Set(["forest", "park", "bamboo forest", "garden", "ruins"]),
+  picnic: new Set(["park", "garden", "beach", "forest", "courtyard"]),
+  hiking: new Set(["forest", "park", "bamboo forest", "garden"]),
+  sunbathing: new Set(["beach", "poolside", "rooftop", "balcony", "park"]),
+  smoking: new Set(["balcony", "rooftop", "street", "alley", "bar (place)", "cafe"]),
+  cleaning: new Set(["living room", "kitchen", "bedroom", "bathroom", "hallway"]),
+  "talking on phone": new Set(["living room", "bedroom", "street", "office", "cafe", "balcony"]),
+  selfie: new Set(["living room", "bedroom", "park", "beach", "cafe", "rooftop"]),
+  "taking picture": new Set(["park", "garden", "beach", "street", "shrine", "cafe"]),
+  driving: DRIVE_PLACE,
+  "horseback riding": new Set(["forest", "park", "garden", "courtyard", "ruins"]),
+  "riding bicycle": new Set(["street", "park", "city", "alley"]),
+};
 const JOB_PLACE = {
   "office lady": new Set(["office"]),
   salaryman: new Set(["office"]),
@@ -358,6 +435,16 @@ function placeFitsJob(place, jobs) {
 
 function placeFitsActs(place, acts, realistic = false) {
   if (!acts.size) return true;
+  if (realistic) {
+    let listed = 0;
+    for (const a of acts) {
+      const ok = ACT_PLACE[a];
+      if (!ok) continue;
+      listed += 1;
+      if (!ok.has(place)) return false;
+    }
+    if (listed === acts.size) return true;
+  }
   if (acts.has("fishing")) return FISH_PLACE.has(place);
   if ([...acts].some((a) => WATER_ACT.has(a))) return WATER_PLACE.has(place);
   if (acts.has("horseback riding")) return !INDOOR_ROOM.has(place) && !BATH_PLACE.has(place);
@@ -1500,6 +1587,37 @@ export function drawOne(lex, settings, pinned, userBanned, rand, seed) {
     if (NIGHT_MARK.has(item.tag) && [...used].some((t) => DAY_MARK.has(t) || t === "sunset")) return false;
     if (DAY_MARK.has(item.tag) && [...used].some((t) => NIGHT_MARK.has(t))) return false;
     if (used.has("sleeping") && SLEEP_BAD_POSE.has(item.tag)) return false;
+    if (EYE_EXTRA.has(item.tag) && [...used].some((t) => EYE_EXTRA.has(t))) return false;
+    if (MOUTH_EXTRA.has(item.tag) && [...used].some((t) => MOUTH_EXTRA.has(t))) return false;
+    if (used.has("sleeping") && (EYE_EXTRA.has(item.tag) || MOUTH_EXTRA.has(item.tag))) return false;
+    if (used.has("closed eyes")) {
+      if (EYE_EXTRA.has(item.tag) || item.mutex === "gaze") return false;
+      for (const d of item.implies || []) {
+        if (lex.byTag.get(d)?.mutex === "gaze") return false;
+      }
+    }
+    if (
+      (used.has("closed mouth") || used.has("covering own mouth")) &&
+      MOUTH_EXTRA.has(item.tag)
+    ) {
+      return false;
+    }
+    if ((item.tag === "closed mouth" || item.tag === "covering own mouth") && [...used].some((t) => MOUTH_EXTRA.has(t))) {
+      return false;
+    }
+    if (SKY_EXTRA.has(item.tag) && [...used].some((t) => SKY_EXTRA.has(t))) return false;
+    if ((item.tag === "on bed" || item.tag === "bed sheet") && usedPlaces(used, lex).size && ![...usedPlaces(used, lex)].some((p) => BED_PLACE.has(p))) {
+      return false;
+    }
+    if (
+      (item.tag === "partially submerged" || item.tag === "splashing" || item.tag === "washing body") &&
+      usedPlaces(used, lex).size &&
+      ![...usedPlaces(used, lex)].some((p) => WATER_PLACE.has(p) || BATH_PLACE.has(p))
+    ) {
+      return false;
+    }
+    if (used.has("indoors") && OUTDOOR_LEFTOVER.has(item.tag)) return false;
+    if (used.has("outdoors") && INDOOR_PROP.has(item.tag)) return false;
     if (lockSceneOn(settings)) {
       const acts = usedActs(used, lex);
       const places = usedPlaces(used, lex);
@@ -1524,14 +1642,16 @@ export function drawOne(lex, settings, pinned, userBanned, rand, seed) {
         const jp = jobPlacesOf(jobs);
         if (jp.size && !actFitsPlaces(item.tag, jp, true)) return false;
       }
-      if (
-        heat === "sex" &&
-        (item.mutex === "place" || item.group === "place") &&
-        !jobs.size &&
-        !PRIVATE_SEX_PLACE.has(item.tag)
-      ) {
-        return false;
+      if (heat === "sex" && (item.mutex === "place" || item.group === "place") && !jobs.size) {
+        const acts = usedActs(used, lex);
+        const water = [...acts].some((a) => WATER_ACT.has(a) || BATH_ACT.has(a));
+        if (water) {
+          if (!WATER_PLACE.has(item.tag) && !BATH_PLACE.has(item.tag)) return false;
+        } else if (!PRIVATE_SEX_PLACE.has(item.tag)) {
+          return false;
+        }
       }
+      if (item.tag === "outdoors" && [...jobPlacesOf(jobs)].some((p) => INDOOR_ROOM.has(p))) return false;
     }
     for (const g of extraMutex(item)) {
       if (mutexTaken.has(g)) return false;
@@ -1577,7 +1697,7 @@ export function drawOne(lex, settings, pinned, userBanned, rand, seed) {
   };
 
   const fill = (section, extraFilter) => {
-    const want = Math.max(0, Math.min(40, Number(counts[section]) || 0));
+    const want = Math.max(0, Math.min(10, Number(counts[section]) || 0));
     const need = want - countSection(section);
     if (need <= 0) return;
     const pool = lex.bySection[section].filter(
@@ -1730,13 +1850,17 @@ export function drawOne(lex, settings, pinned, userBanned, rand, seed) {
       }
     }
   }
-  fill("pose", (item) => {
-    if (people >= 2 && soloSex(item.tag)) return false;
-    if ((heat === "sex" || hasSexAct) && item.mutex === "activity" && !SEX_OK_ACTIVITY.has(item.tag)) return false;
-    return true;
-  });
   stampAnchors("env");
   fillSlot("env", "place");
+  if (realisticOn(settings) && !usedPlaces(used, lex).size) {
+    for (const a of usedActs(used, lex)) {
+      for (const p of ACT_PLACE[a] || []) {
+        const item = lex.byTag.get(p);
+        if (item && allow(item) && commit(p)) break;
+      }
+      if (usedPlaces(used, lex).size) break;
+    }
+  }
   fillSlot("env", "in_out");
   fillSlot("env", "day_night");
   fill("env");
@@ -1745,6 +1869,7 @@ export function drawOne(lex, settings, pinned, userBanned, rand, seed) {
     const places = usedPlaces(used, lex);
     const real = realisticOn(settings);
     const needsPlace = (act) =>
+      !!ACT_PLACE[act] ||
       act === "cooking" ||
       act === "driving" ||
       WATER_ACT.has(act) ||
@@ -1760,6 +1885,12 @@ export function drawOne(lex, settings, pinned, userBanned, rand, seed) {
       else if (!places.size && needsPlace(t)) used.delete(t);
     }
   }
+
+  fill("pose", (item) => {
+    if (people >= 2 && soloSex(item.tag)) return false;
+    if ((heat === "sex" || hasSexAct) && item.mutex === "activity" && !SEX_OK_ACTIVITY.has(item.tag)) return false;
+    return true;
+  });
 
   const kept = reconcile(lex, used, female, male, people, pinned, lockSceneOn(settings));
 
@@ -1853,7 +1984,7 @@ export function sanitizeSettings(raw, data) {
   const incoming = raw.counts && typeof raw.counts === "object" ? raw.counts : {};
   for (const key of Object.keys(counts)) {
     if (incoming[key] === undefined || incoming[key] === null) continue;
-    counts[key] = Math.max(0, Math.min(20, Number(incoming[key]) || 0));
+    counts[key] = Math.max(0, Math.min(10, Number(incoming[key]) || 0));
   }
   const girl = raw.girl === true || raw.girl === false ? raw.girl : base.girl;
   const boy = raw.boy === true || raw.boy === false ? raw.boy : base.boy;

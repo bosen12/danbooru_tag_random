@@ -134,10 +134,10 @@ function renderCounts() {
     const input = document.createElement("input");
     input.type = "number";
     input.min = "0";
-    input.max = "20";
+    input.max = "10";
     input.value = String(settings.counts[key] ?? 0);
     input.addEventListener("change", () => {
-      settings.counts[key] = Math.max(0, Math.min(20, Number(input.value) || 0));
+      settings.counts[key] = Math.max(0, Math.min(10, Number(input.value) || 0));
       saveStore();
     });
     const off = document.createElement("button");

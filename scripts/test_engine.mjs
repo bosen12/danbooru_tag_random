@@ -1323,7 +1323,7 @@ function indoorOutdoorClash(have) {
   ok("junk width falls back", dirty.width === 1024);
   ok("negative height clamps to 256", dirty.height === 256);
   eq("junk feature count is 0", dirty.counts.feature, 0);
-  ok("huge pose count clamps to 20", dirty.counts.pose === 20);
+  ok("huge pose count clamps to 10", dirty.counts.pose === 10);
   eq("missing count keys keep defaults", dirty.counts.subject, data.defaults.counts.subject);
   ok("junk heats fall back", dirty.heats.length > 0 && dirty.heats.every((h) => ["tease", "flash", "sex"].includes(h)));
   ok("junk eras fall back", dirty.eras.length > 0 && dirty.eras.every((e) => ERAS.includes(e)));
@@ -2783,6 +2783,105 @@ function indoorOutdoorClash(have) {
     if (h.has("head out of frame") || h.has("lower body")) hofAfter += 1;
   }
   eq("closed eyes never auto faceless camera", hofAfter, 0);
+}
+
+{
+  const fat = settings();
+  fat.girl = true;
+  fat.boy = false;
+  fat.heats = ["tease"];
+  fat.weights = { activity: 0, tease: 1, flash: 0, sex: 0 };
+  fat.eras = ["modern"];
+  fat.sceneMode = "normal";
+  fat.counts = { subject: 10, feature: 10, pose: 10, clothing: 10, env: 10 };
+  const EYE = ["wink", "empty eyes", "sparkling eyes", "half-closed eyes", "rolling eyes"];
+  const MOUTH = ["open mouth", "clenched teeth", "biting own lip", "tongue out", "parted lips", "licking lips", "drooling"];
+  let twoEye = 0;
+  let twoMouth = 0;
+  for (let i = 0; i < 40; i++) {
+    const h = tagsOf(drawOne(lex, fat, new Set(), new Set(), mulberry32(190000 + i), 190000 + i));
+    if (EYE.filter((t) => h.has(t)).length > 1) twoEye += 1;
+    if (MOUTH.filter((t) => h.has(t)).length > 1) twoMouth += 1;
+  }
+  eq("pose10 never two leftover eye extras", twoEye, 0);
+  eq("pose10 never two leftover mouth extras", twoMouth, 0);
+  const pinSleepFat = applyPin(lex, new Set(), new Set(), "sleeping").pinned;
+  fat.heats = ["activity"];
+  fat.weights = { activity: 1, tease: 0, flash: 0, sex: 0 };
+  let sleepFace = 0;
+  for (let i = 0; i < 40; i++) {
+    const h = tagsOf(drawOne(lex, fat, pinSleepFat, new Set(), mulberry32(191000 + i), 191000 + i));
+    if ([...EYE, ...MOUTH].some((t) => h.has(t))) sleepFace += 1;
+  }
+  eq("sleeping pose10 never leftover eye/mouth extras", sleepFace, 0);
+  const pinLivFat = applyPin(lex, new Set(), new Set(), "living room").pinned;
+  let skyIn = 0;
+  for (let i = 0; i < 40; i++) {
+    const h = tagsOf(drawOne(lex, fat, pinLivFat, new Set(), mulberry32(192000 + i), 192000 + i));
+    if (["tree", "bush", "sky", "blue sky", "orange sky", "snow", "cherry blossoms"].some((t) => h.has(t))) {
+      skyIn += 1;
+    }
+  }
+  eq("indoors env10 never outdoor leftover sky/tree", skyIn, 0);
+  const weird = { ...fat, sceneMode: "weird", lockScene: false, heats: ["tease"], weights: { activity: 0, tease: 1, flash: 0, sex: 0 } };
+  let weirdSky = 0;
+  for (let i = 0; i < 40; i++) {
+    const h = tagsOf(drawOne(lex, weird, pinLivFat, new Set(), mulberry32(193000 + i), 193000 + i));
+    if (["tree", "bush", "sky", "blue sky", "orange sky", "starry sky", "cherry blossoms"].some((t) => h.has(t))) {
+      weirdSky += 1;
+    }
+  }
+  eq("weird indoors env10 never outdoor leftover", weirdSky, 0);
+  const pinKit = applyPin(lex, new Set(), new Set(), "kitchen").pinned;
+  let bedKit = 0;
+  let wetKit = 0;
+  for (let i = 0; i < 40; i++) {
+    const h = tagsOf(drawOne(lex, fat, pinKit, new Set(), mulberry32(194000 + i), 194000 + i));
+    if (h.has("on bed") || h.has("bed sheet")) bedKit += 1;
+    if (h.has("partially submerged") || h.has("splashing") || h.has("washing body")) wetKit += 1;
+  }
+  eq("kitchen pose10 never on bed leftover", bedKit, 0);
+  eq("kitchen pose10 never water leftovers", wetKit, 0);
+  const pinClosed2 = applyPin(lex, new Set(), new Set(), "closed eyes").pinned;
+  let spark = 0;
+  for (let i = 0; i < 40; i++) {
+    const h = tagsOf(drawOne(lex, fat, pinClosed2, new Set(), mulberry32(195000 + i), 195000 + i));
+    if (["sparkling eyes", "wink", "empty eyes", "looking at viewer", "looking ahead"].some((t) => h.has(t))) spark += 1;
+  }
+  eq("closed eyes never leftover sparkle/wink/gaze", spark, 0);
+  const pinOl = applyPin(lex, new Set(), new Set(), "office lady").pinned;
+  const ol = { ...fat, heats: ["tease"], weights: { activity: 0, tease: 1, flash: 0, sex: 0 }, eras: ["modern"], drawJob: true };
+  let olOut = 0;
+  for (let i = 0; i < 40; i++) {
+    const h = tagsOf(drawOne(lex, ol, pinOl, new Set(), mulberry32(196000 + i), 196000 + i));
+    if (h.has("outdoors")) olOut += 1;
+  }
+  eq("normal office lady never auto outdoors", olOut, 0);
+  const pinSwimSex = applyPin(lex, new Set(), new Set(), "swimming").pinned;
+  const swimSex = settings();
+  swimSex.girl = true;
+  swimSex.boy = false;
+  swimSex.heats = ["sex"];
+  swimSex.weights = { activity: 0, tease: 0, flash: 0, sex: 1 };
+  swimSex.eras = ["victorian"];
+  swimSex.sceneMode = "normal";
+  swimSex.counts = { subject: 10, feature: 10, pose: 10, clothing: 10, env: 10 };
+  const WATER2 = ["pool", "beach", "ocean", "underwater", "poolside"];
+  let drySwim = 0;
+  for (let i = 0; i < 40; i++) {
+    const h = tagsOf(drawOne(lex, swimSex, pinSwimSex, new Set(), mulberry32(197000 + i), 197000 + i));
+    if (!WATER2.some((t) => h.has(t))) drySwim += 1;
+  }
+  eq("normal sex+pin swimming still has water place", drySwim, 0);
+}
+
+{
+  const tease = settings();
+  tease.girl = true;
+  tease.boy = false;
+  tease.heats = ["tease"];
+  tease.weights = { activity: 0, tease: 1, flash: 0, sex: 0 };
+  tease.eras = ["modern"];
   const pinDay = applyPin(lex, new Set(), new Set(), "day").pinned;
   let stars = 0;
   for (let i = 0; i < 40; i++) {
@@ -2848,6 +2947,11 @@ function indoorOutdoorClash(have) {
 }
 
 {
+  eq("sanitize clamps counts to 10", sanitizeSettings({ counts: { pose: 99, env: 15 } }, data).counts.pose, 10);
+  eq("sanitize clamps env count to 10", sanitizeSettings({ counts: { env: 15 } }, data).counts.env, 10);
+}
+
+{
   eq("sceneMode defaults normal", defaultSettings(data).sceneMode, "normal");
   eq("lockScene defaults on", defaultSettings(data).lockScene, true);
   eq("sanitize lockScene false becomes weird", sanitizeSettings({ lockScene: false }, data).sceneMode, "weird");
@@ -2899,6 +3003,15 @@ function indoorOutdoorClash(have) {
     if (h.has("underwater") || h.has("ocean") || h.has("pool")) under += 1;
   }
   eq("lockScene picnic never underwater/ocean/pool", under, 0);
+  const pinPark = applyPin(lex, new Set(), new Set(), "park").pinned;
+  let indoorLeftover = 0;
+  for (let i = 0; i < 40; i++) {
+    const h = tagsOf(drawOne(lex, s, pinPark, new Set(), mulberry32(189000 + i), 189000 + i));
+    if (["tatami", "office chair", "gaming chair", "swivel chair", "shoji", "carpet"].some((t) => h.has(t))) {
+      indoorLeftover += 1;
+    }
+  }
+  eq("lockScene park never indoor floor/office chair", indoorLeftover, 0);
 }
 
 {
@@ -3000,6 +3113,48 @@ function indoorOutdoorClash(have) {
     if (h.has("cooking") && !h.has("kitchen")) dryCook += 1;
   }
   eq("lockScene cooking always has kitchen", dryCook, 0);
+}
+
+{
+  const s = settings();
+  s.girl = true;
+  s.boy = false;
+  s.heats = ["activity"];
+  s.weights = { activity: 1, tease: 0, flash: 0, sex: 0 };
+  s.sceneMode = "normal";
+  s.lockScene = true;
+  s.counts.env = 6;
+  const pinStudy = applyPin(lex, new Set(), new Set(), "studying").pinned;
+  const med = { ...s, eras: ["medieval"] };
+  let studyCastle = 0;
+  for (let i = 0; i < 40; i++) {
+    const h = tagsOf(drawOne(lex, med, pinStudy, new Set(), mulberry32(185000 + i), 185000 + i));
+    if (["castle", "beach", "onsen", "ocean", "underwater"].some((t) => h.has(t))) studyCastle += 1;
+  }
+  eq("normal studying never castle/beach/onsen", studyCastle, 0);
+  const pinVg = applyPin(lex, new Set(), new Set(), "playing video games").pinned;
+  const mod = { ...s, eras: ["modern"] };
+  let vgOut = 0;
+  for (let i = 0; i < 40; i++) {
+    const h = tagsOf(drawOne(lex, mod, pinVg, new Set(), mulberry32(186000 + i), 186000 + i));
+    if (["beach", "castle", "onsen", "street", "forest", "ocean"].some((t) => h.has(t))) vgOut += 1;
+  }
+  eq("normal video games never outdoor/bath places", vgOut, 0);
+  const pinEat = applyPin(lex, new Set(), new Set(), "eating").pinned;
+  let eatWet = 0;
+  for (let i = 0; i < 40; i++) {
+    const h = tagsOf(drawOne(lex, mod, pinEat, new Set(), mulberry32(187000 + i), 187000 + i));
+    if (["shower (place)", "underwater", "ocean", "pool"].some((t) => h.has(t))) eatWet += 1;
+  }
+  eq("normal eating never shower/underwater/pool", eatWet, 0);
+  const pinRead = applyPin(lex, new Set(), new Set(), "reading").pinned;
+  const READ_OK = ["library", "bedroom", "living room", "cafe", "classroom", "park bench", "garden", "shrine", "pavilion", "office"];
+  let readMiss = 0;
+  for (let i = 0; i < 40; i++) {
+    const h = tagsOf(drawOne(lex, mod, pinRead, new Set(), mulberry32(188000 + i), 188000 + i));
+    if (!READ_OK.some((t) => h.has(t))) readMiss += 1;
+  }
+  eq("normal reading always has a reading place", readMiss, 0);
 }
 
 {
