@@ -3230,6 +3230,57 @@ function indoorOutdoorClash(have) {
     if (cloth.length) badCloth += 1;
   }
   eq("normal pool preset never auto office/armor garments", badCloth, 0);
+
+  function presetBad(id, seed, isBad) {
+    const p = BUILTIN_PRESETS.find((x) => x.id === id);
+    const pin = applyPresetTags(lex, p.tags, new Set());
+    let n = 0;
+    for (let i = 0; i < 40; i++) {
+      const d = drawOne(lex, s, pin, new Set(), mulberry32(seed + i), seed + i);
+      const cloth = d.sections.clothing.filter((t) => {
+        const it = lex.byTag.get(t);
+        if (!it || it.layer !== "garment") return false;
+        return isBad(it.tag);
+      });
+      if (cloth.length) n += 1;
+    }
+    return n;
+  }
+  eq(
+    "normal onsen never auto armor/suit/sneakers",
+    presetBad("onsen", 199000, (t) => /\b(armor|suit|sneakers|boots|geta)\b/.test(t)),
+    0
+  );
+  eq(
+    "normal classroom never auto swimsuit/armor/maid",
+    presetBad("classroom", 200000, (t) => /\b(swimsuit|bikini|armor|maid)\b/.test(t)),
+    0
+  );
+  eq(
+    "normal OL never auto swimsuit/armor/maid",
+    presetBad("ol-office", 201000, (t) => /\b(swimsuit|bikini|armor|maid|hakama)\b/.test(t)),
+    0
+  );
+  eq(
+    "normal nurse never auto swimsuit/armor/maid",
+    presetBad("nurse", 202000, (t) => /\b(swimsuit|bikini|armor|maid|hakama)\b/.test(t)),
+    0
+  );
+  eq(
+    "normal maid never auto swimsuit/armor/school uniform",
+    presetBad("maid", 203000, (t) => /\b(swimsuit|bikini|armor|school uniform|police)\b/.test(t)),
+    0
+  );
+  eq(
+    "normal police never auto swimsuit/maid/hakama",
+    presetBad("police", 204000, (t) => /\b(swimsuit|bikini|maid|hakama|armor)\b/.test(t)),
+    0
+  );
+  eq(
+    "normal beach never auto armor/suit",
+    presetBad("beach", 205000, (t) => /\b(armor|suit|hakama)\b/.test(t) && !/\b(swimsuit|bikini)\b/.test(t)),
+    0
+  );
   const cleaned = sanitizePinPresets(
     [
       { name: "  我的OL  ", tags: ["office lady", "not-a-tag"] },

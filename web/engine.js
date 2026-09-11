@@ -91,7 +91,14 @@ const AWAKE_ACT = new Set([
   "shared bathing",
 ]);
 const FACELESS_CAM = new Set(["head out of frame", "lower body"]);
-const FACE_NEED_TAGS = new Set(["closed eyes", "facial", "cum in mouth", "cum on face", "licking penis"]);
+const FACE_NEED_TAGS = new Set([
+  "closed eyes",
+  "facial",
+  "cum in mouth",
+  "cum on face",
+  "licking penis",
+  "covering own mouth",
+]);
 const BED_PLACE = new Set(["bedroom", "bed", "hotel room", "love hotel", "futon"]);
 const SKY_EXTRA = new Set(["sky", "blue sky", "orange sky"]);
 const DAY_MARK = new Set(["day", "sunrise", "sunlight", "sunbathing", "blue sky", "orange sky"]);
@@ -533,6 +540,50 @@ function garmentOkForSwim(item, era) {
   if (/\barmor\b/.test(item.tag) || /\bsuit\b/.test(item.tag)) return false;
   if (era === "modern") return false;
   return true;
+}
+
+function sceneClothKind(used) {
+  if (isSwimScene(used)) return "swim";
+  if (isBathScene(used)) return "bath";
+  if (used.has("office lady") || used.has("salaryman") || used.has("office")) return "office";
+  if (used.has("nurse")) return "nurse";
+  if (used.has("maid")) return "maid";
+  if (used.has("policewoman") || used.has("police uniform")) return "police";
+  if (used.has("classroom") || used.has("school uniform")) return "school";
+  if (used.has("kitchen") || used.has("cooking")) return "kitchen";
+  return null;
+}
+
+const SCENE_BAD_CLOTH = {
+  office: /\b(swimsuit|bikini|armor|hakama|maid|kimono|yukata|cheerleader)\b/,
+  school: /\b(swimsuit|bikini|armor|maid|evening gown|police uniform)\b/,
+  nurse: /\b(swimsuit|bikini|armor|maid|school uniform|evening gown|hakama|police)\b/,
+  maid: /\b(swimsuit|bikini|armor|school uniform|police|evening gown|hakama)\b/,
+  police: /\b(swimsuit|bikini|maid|school swimsuit|evening gown|hakama|armor)\b/,
+  kitchen: /\b(swimsuit|bikini|armor|evening gown|hakama|maid|police)\b/,
+};
+
+function garmentOkForKind(item, kind, era) {
+  if (!item || item.section !== "clothing") return true;
+  if (item.layer === "skin" || item.layer === "accessory") return true;
+  if (kind === "swim") return garmentOkForSwim(item, era);
+  if (kind === "bath") return !isBathBadCloth(item.tag);
+  const re = SCENE_BAD_CLOTH[kind];
+  if (re && re.test(item.tag)) return false;
+  return true;
+}
+
+function sceneClothLocked(used, pinned, lex, era, realistic) {
+  if (!realistic) return null;
+  const kind = sceneClothKind(pinned);
+  if (!kind) return null;
+  for (const t of pinned) {
+    const it = lex.byTag.get(t);
+    if (it && it.section === "clothing" && it.layer === "garment" && !garmentOkForKind(it, kind, era)) {
+      return null;
+    }
+  }
+  return kind;
 }
 
 export const ERAS = [
@@ -1717,14 +1768,17 @@ export function drawOne(lex, settings, pinned, userBanned, rand, seed) {
         }
       }
       if (item.tag === "outdoors" && [...jobPlacesOf(jobs)].some((p) => INDOOR_ROOM.has(p))) return false;
-      if (
-        swimwearLocked(used, pinned, lex, era, true) &&
-        item.section === "clothing" &&
-        item.layer === "garment" &&
-        !garmentOkForSwim(item, era) &&
-        !pinned.has(item.tag)
-      ) {
-        return false;
+      {
+        const kind = sceneClothLocked(used, pinned, lex, era, true);
+        if (
+          kind &&
+          item.section === "clothing" &&
+          item.layer === "garment" &&
+          !garmentOkForKind(item, kind, era) &&
+          !pinned.has(item.tag)
+        ) {
+          return false;
+        }
       }
     }
     for (const g of extraMutex(item)) {
@@ -1960,11 +2014,16 @@ export function drawOne(lex, settings, pinned, userBanned, rand, seed) {
     }
   }
 
-  if (swimwearLocked(used, pinned, lex, era, realisticOn(settings))) {
-    for (const t of [...used]) {
-      if (pinned.has(t)) continue;
-      const it = lex.byTag.get(t);
-      if (it && it.section === "clothing" && it.layer === "garment" && !garmentOkForSwim(it, era)) used.delete(t);
+  {
+    const kind = sceneClothLocked(used, pinned, lex, era, realisticOn(settings));
+    if (kind) {
+      for (const t of [...used]) {
+        if (pinned.has(t)) continue;
+        const it = lex.byTag.get(t);
+        if (it && it.section === "clothing" && it.layer === "garment" && !garmentOkForKind(it, kind, era)) {
+          used.delete(t);
+        }
+      }
     }
   }
 
