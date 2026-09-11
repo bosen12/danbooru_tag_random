@@ -35,20 +35,77 @@
   font-family: var(--font-body, inherit);
 }
 
-#lora-pick-btn {
-  max-width: 260px;
+#lora-pick-btn,
+#ckpt-pick-btn {
+  max-width: min(220px, 100%);
   overflow: hidden;
   text-overflow: ellipsis;
   white-space: nowrap;
+}
+#lora-pick-btn {
+  flex: 0 0 auto;
+}
+#ckpt-pick-btn {
+  flex: 1 1 auto;
+  min-width: 5rem;
+  max-width: min(180px, 100%);
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+}
+#lora-pick-btn .gen-pick-label,
+#ckpt-pick-btn .gen-pick-label {
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+#ckpt-pick-btn .ckpt-gear {
+  display: inline-flex;
+  width: 15px;
+  height: 15px;
+  flex: none;
+}
+#ckpt-pick-btn .ckpt-gear svg {
+  width: 15px;
+  height: 15px;
 }
 #lora-pick-btn img {
   vertical-align: -3px;
   margin-right: 6px;
   border-radius: 3px;
 }
-#lora-pick-btn.has {
+#lora-pick-btn.has,
+#ckpt-pick-btn.has {
   border-color: var(--color-accent);
   color: var(--color-ink);
+}
+.ckpt-modal .lora-modal-inner {
+  width: min(860px, 95vw);
+  height: min(680px, 88vh);
+  grid-template-columns: 320px 1fr;
+}
+.ckpt-cur-hint {
+  margin: 0 0 14px;
+  font-size: 12.5px;
+  color: var(--dim);
+}
+.ckpt-mgr-inline {
+  margin: 16px 0 0;
+}
+.ckpt-head {
+  padding: 16px 16px 8px;
+  padding-right: 48px;
+}
+.ckpt-head-title {
+  font-size: 15px;
+  font-weight: 650;
+  color: var(--ink);
+}
+.ckpt-head-hint {
+  margin: 6px 0 0;
+  font-size: 12px;
+  color: var(--faint);
+  line-height: 1.45;
 }
 
 .lora-modal {
@@ -983,12 +1040,27 @@
   }
 }
 
+@media (max-width: 900px) {
+  #lora-pick-btn,
+  #ckpt-pick-btn {
+    min-height: 36px;
+    padding: 0 10px;
+  }
+  #lora-pick-btn {
+    max-width: none;
+  }
+  #ckpt-pick-btn {
+    flex: 0 1 auto;
+    max-width: 6.25rem;
+  }
+}
 @media (max-width: 760px) {
   .lora-modal {
     padding: 12px;
     align-items: flex-end;
   }
-  .lora-modal-inner {
+  .lora-modal-inner,
+  .ckpt-modal .lora-modal-inner {
     grid-template-columns: 1fr;
     height: auto;
     max-height: calc(100dvh - 24px - env(safe-area-inset-top) - env(safe-area-inset-bottom));

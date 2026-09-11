@@ -9,17 +9,21 @@ from pathlib import Path
 
 sys.path.insert(0, str(Path(__file__).resolve().parents[1]))
 from server import (  # noqa: E402
+    CKPT,
     Handler,
     allowed_client,
     build_workflow,
+    ckpt_preview_path,
     comfy_view_query,
     convert_loras,
     first_image_src,
     image_error_code,
     inject_lora,
+    list_ckpts,
     mask_ws,
     parse_allow_nets,
     parse_comfy_binary,
+    resolve_ckpt,
     sse,
     ws_frame,
 )
@@ -145,6 +149,24 @@ ok("mapped tailscale allowed", allowed_client("::ffff:100.79.212.103", nets))
 ok("mapped wifi blocked", not allowed_client("::ffff:192.168.1.101", nets))
 ok("garbage blocked", not allowed_client("not-an-ip", nets))
 ok("allow-all env", allowed_client("192.168.1.101", parse_allow_nets("0.0.0.0/0")))
+
+import tempfile
+
+td = Path(tempfile.mkdtemp())
+(td / "alpha.safetensors").write_bytes(b"x")
+(td / "beta.safetensors").write_bytes(b"x")
+(td / "alpha.png").write_bytes(b"png")
+(td / "notes.txt").write_text("no")
+found = list_ckpts(td, "illurtrious")
+ok("list skips non-ckpt", [x["file"] for x in found] == ["alpha.safetensors", "beta.safetensors"])
+ok("list ckpt_name prefix", found[0]["ckpt_name"] == r"illurtrious\alpha.safetensors")
+ok("list preview next to weights", found[0]["preview"] == "alpha.png")
+ok("resolve by file", resolve_ckpt("beta.safetensors", found) == r"illurtrious\beta.safetensors")
+ok("resolve by full name", resolve_ckpt(r"illurtrious\beta.safetensors", found) == r"illurtrious\beta.safetensors")
+ok("resolve rejects parent", resolve_ckpt(r"..\evil.safetensors", found) == resolve_ckpt(None, found))
+ok("preview rejects slash", ckpt_preview_path("a/b.png", td) is None)
+ok("preview rejects dotdot", ckpt_preview_path("..", td) is None)
+ok("preview allows sibling png", ckpt_preview_path("alpha.png", td) is not None)
 
 
 class _Client:

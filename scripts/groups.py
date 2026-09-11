@@ -305,6 +305,14 @@ SEX = {
     "thigh sex",
     "frottage",
     "reverse spitroast",
+    "rape",
+    "orgy",
+    "bondage",
+    "bdsm",
+    "restrained",
+    "free use",
+    "prostitution",
+    "pet play",
 }
 
 

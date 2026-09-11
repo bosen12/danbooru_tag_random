@@ -22,6 +22,19 @@ const GEN_LORA_SLOT_SCOPE = [
   { cat: "all", subfolder: "" },
 ];
 
+const CKPT_STORE = "yz-ckpt";
+let GEN_CKPTS = null;
+let GEN_CKPT = "";
+try {
+  GEN_CKPT = localStorage.getItem(CKPT_STORE) || "";
+} catch {
+  GEN_CKPT = "";
+}
+
+export function currentCkpt() {
+  return GEN_CKPT || "";
+}
+
 function curSlot() {
   return GEN_LORA_SLOTS[GEN_ACTIVE_SLOT];
 }
@@ -865,6 +878,20 @@ function ensureDom() {
     btn.innerHTML = `<span class="gen-pick-label">選 LoRA</span>`;
     tools.insertBefore(btn, tools.firstChild);
   }
+  if (!$("ckpt-pick-btn") && tools) {
+    const btn = document.createElement("button");
+    btn.type = "button";
+    btn.className = "ghost";
+    btn.id = "ckpt-pick-btn";
+    btn.title = "設定：底模";
+    btn.setAttribute("aria-haspopup", "dialog");
+    btn.setAttribute("aria-label", "設定底模");
+    btn.innerHTML = `<span class="ckpt-gear" aria-hidden="true"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="3"/><path d="M19.4 15a1.7 1.7 0 0 0 .3 1.8l.1.1a2 2 0 1 1-2.8 2.8l-.1-.1a1.7 1.7 0 0 0-1.8-.3 1.7 1.7 0 0 0-1 1.5V21a2 2 0 0 1-4 0v-.2a1.7 1.7 0 0 0-1-1.5 1.7 1.7 0 0 0-1.8.3l-.1.1a2 2 0 1 1-2.8-2.8l.1-.1a1.7 1.7 0 0 0 .3-1.8 1.7 1.7 0 0 0-1.5-1H3a2 2 0 0 1 0-4h.2a1.7 1.7 0 0 0 1.5-1 1.7 1.7 0 0 0-.3-1.8l-.1-.1a2 2 0 1 1 2.8-2.8l.1.1a1.7 1.7 0 0 0 1.8.3H9a1.7 1.7 0 0 0 1-1.5V3a2 2 0 0 1 4 0v.2a1.7 1.7 0 0 0 1 1.5 1.7 1.7 0 0 0 1.8-.3l.1-.1a2 2 0 1 1 2.8 2.8l-.1.1a1.7 1.7 0 0 0-.3 1.8V9c.3.6.9 1 1.5 1H21a2 2 0 0 1 0 4h-.2a1.7 1.7 0 0 0-1.5 1z"/></svg></span><span class="gen-pick-label">設定</span>`;
+    const loraBtn = $("lora-pick-btn");
+    if (loraBtn && loraBtn.nextSibling) tools.insertBefore(btn, loraBtn.nextSibling);
+    else if (loraBtn) loraBtn.after(btn);
+    else tools.insertBefore(btn, tools.firstChild);
+  }
   if (!$("keys-btn") && tools) {
     const k = document.createElement("button");
     k.type = "button";
@@ -909,6 +936,38 @@ function ensureDom() {
       </div>`;
     document.body.appendChild(modal);
   }
+  if (!$("ckpt-modal")) {
+    const modal = document.createElement("div");
+    modal.id = "ckpt-modal";
+    modal.className = "lora-modal ckpt-modal";
+    modal.inert = true;
+    modal.setAttribute("role", "dialog");
+    modal.setAttribute("aria-modal", "true");
+    modal.setAttribute("aria-labelledby", "ckpt-head-title");
+    modal.innerHTML = `
+      <div class="lora-modal-inner">
+        <button class="lora-modal-close" id="ckpt-modal-close" aria-label="關閉 (Esc)" title="關閉 (Esc)">${ICON_CLOSE}</button>
+        <div class="lm-left ckpt-pane">
+          <div class="ckpt-head">
+            <div class="ckpt-head-title" id="ckpt-head-title">底模</div>
+            <p class="ckpt-head-hint">只掃 illurtrious 資料夾。點左邊換一顆，生圖用目前這顆。</p>
+          </div>
+          <div class="lm-search-wrap">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><circle cx="11" cy="11" r="7"/><path d="m21 21-4.3-4.3"/></svg>
+            <input type="search" id="ckpt-search" placeholder="搜尋底模…" autocomplete="off" spellcheck="false">
+          </div>
+          <div id="ckpt-list" class="lm-list"></div>
+          <a class="lm-manager-link" id="ckpt-manager-link" href="#" target="_blank" rel="noopener">
+            <img src="data:image/png;base64,${LORA_MGR_LOGO_B64}" alt="" width="16" height="16">用 LoRA Manager 管理（新分頁）
+          </a>
+        </div>
+        <div class="lm-right">
+          <div class="lm-right-head">目前選擇</div>
+          <div id="ckpt-current" class="lm-current"></div>
+        </div>
+      </div>`;
+    document.body.appendChild(modal);
+  }
   if (!$("lora-tarot")) {
     const ov = document.createElement("div");
     ov.id = "lora-tarot";
@@ -944,8 +1003,9 @@ function ensureDom() {
           <p>焦點在輸入框時不會觸發。Esc 只關最上面那層。</p>
         </div>
         <div class="shortcut-group">
-          <h3>LoRA</h3>
+          <h3>LoRA／底模</h3>
           <div class="shortcut-row"><div class="shortcut-keys"><span class="kbd">L</span></div><div class="shortcut-desc">開選 LoRA 大面板</div></div>
+          <div class="shortcut-row"><div class="shortcut-keys"><span class="kbd">M</span></div><div class="shortcut-desc">開設定（底模）</div></div>
           <div class="shortcut-row"><div class="shortcut-keys"><span class="kbd">1</span><span class="kbd">2</span></div><div class="shortcut-desc">面板開著時切 LoRA 1／LoRA 2</div></div>
           <div class="shortcut-row"><div class="shortcut-keys"><span class="kbd">/</span></div><div class="shortcut-desc">面板開著搜 LoRA，否則搜詞庫</div></div>
         </div>
@@ -979,7 +1039,12 @@ export function closeHelp() {
 }
 
 export function isLoraUiOpen() {
-  return overlayIsOpen("lora-tarot") || overlayIsOpen("lora-modal") || overlayIsOpen("shortcuts-overlay");
+  return (
+    overlayIsOpen("lora-tarot") ||
+    overlayIsOpen("lora-modal") ||
+    overlayIsOpen("ckpt-modal") ||
+    overlayIsOpen("shortcuts-overlay")
+  );
 }
 
 export function handleLoraKeys(e) {
@@ -997,6 +1062,20 @@ export function handleLoraKeys(e) {
     if (e.key === "Escape" || e.key === "Enter") {
       e.preventDefault();
       closeLoraTarot();
+    }
+    return true;
+  }
+  if (overlayIsOpen("ckpt-modal")) {
+    if (e.key === "Escape") {
+      e.preventDefault();
+      closeCkptModal();
+      return true;
+    }
+    if (typing) return true;
+    if (e.key === "/") {
+      e.preventDefault();
+      $("ckpt-search")?.focus();
+      return true;
     }
     return true;
   }
@@ -1039,19 +1118,208 @@ export function handleLoraKeys(e) {
     openLoraModal();
     return true;
   }
+  if ((e.key === "m" || e.key === "M") && !typing) {
+    e.preventDefault();
+    openCkptModal();
+    return true;
+  }
   return false;
+}
+
+function ckptPreviewUrl(c) {
+  return `/api/ckpt-preview?file=${encodeURIComponent(c.preview)}`;
+}
+
+function renderCkptBtn() {
+  const btn = $("ckpt-pick-btn");
+  if (!btn) return;
+  const lab = btn.querySelector(".gen-pick-label");
+  if (!lab) return;
+  const cur = (GEN_CKPTS || []).find((c) => c.ckpt_name === GEN_CKPT);
+  lab.textContent = cur ? cur.title : GEN_CKPT ? GEN_CKPT.split("\\").pop().replace(/\.safetensors$/i, "") : "設定";
+  btn.classList.toggle("has", !!GEN_CKPT);
+  btn.title = cur ? `設定 · 底模 ${cur.title}` : "設定：底模";
+  btn.setAttribute("aria-expanded", overlayIsOpen("ckpt-modal") ? "true" : "false");
+}
+
+function renderCkptCurrent() {
+  const box = $("ckpt-current");
+  if (!box) return;
+  box.replaceChildren();
+  const cur = (GEN_CKPTS || []).find((c) => c.ckpt_name === GEN_CKPT);
+  if (!cur) {
+    const none = document.createElement("div");
+    none.className = "lm-none";
+    none.textContent = (GEN_CKPTS || []).length ? "還沒選底模——從左邊清單點一個" : "這個資料夾沒有 checkpoint";
+    box.appendChild(none);
+    return;
+  }
+  const head = document.createElement("div");
+  head.className = "lm-cur-head";
+  if (cur.preview) {
+    const img = document.createElement("img");
+    img.alt = "";
+    img.decoding = "async";
+    img.src = ckptPreviewUrl(cur);
+    head.appendChild(img);
+  } else {
+    const ph = document.createElement("span");
+    ph.className = "ph";
+    head.appendChild(ph);
+  }
+  const meta = document.createElement("div");
+  const t = document.createElement("div");
+  t.className = "lm-cur-title";
+  t.textContent = cur.title || cur.file;
+  const f = document.createElement("div");
+  f.className = "lm-cur-folder";
+  f.textContent = cur.ckpt_name;
+  meta.append(t, f);
+  head.appendChild(meta);
+  box.appendChild(head);
+  const hint = document.createElement("p");
+  hint.className = "ckpt-cur-hint";
+  hint.textContent = "生圖會用這顆底模。";
+  box.appendChild(hint);
+  if (cur.preview) {
+    const pv = document.createElement("div");
+    pv.className = "lm-preview";
+    const img = document.createElement("img");
+    img.alt = "";
+    img.decoding = "async";
+    img.src = ckptPreviewUrl(cur);
+    pv.appendChild(img);
+    box.appendChild(pv);
+  }
+  const mgr = document.createElement("a");
+  mgr.className = "lm-manager-link ckpt-mgr-inline";
+  mgr.target = "_blank";
+  mgr.rel = "noopener";
+  mgr.href = `${LORA_MGR_ORIGIN}/loras`;
+  mgr.innerHTML = `<img src="data:image/png;base64,${LORA_MGR_LOGO_B64}" alt="" width="16" height="16">在 LoRA Manager 開（新分頁）`;
+  box.appendChild(mgr);
+}
+
+async function fetchCkpts() {
+  if (GEN_CKPTS !== null) return GEN_CKPTS;
+  try {
+    const data = await fetch("/api/checkpoints").then((r) => r.json());
+    GEN_CKPTS = data.items || [];
+    const names = new Set(GEN_CKPTS.map((c) => c.ckpt_name));
+    if (GEN_CKPT && !names.has(GEN_CKPT)) GEN_CKPT = "";
+    if (!GEN_CKPT && data.current && names.has(data.current)) GEN_CKPT = data.current;
+    if (!GEN_CKPT && GEN_CKPTS.length) {
+      const wai = GEN_CKPTS.find((c) => /waiIllustriousSDXL_v170/i.test(c.file));
+      GEN_CKPT = (wai || GEN_CKPTS[0]).ckpt_name;
+    }
+    try {
+      if (GEN_CKPT) localStorage.setItem(CKPT_STORE, GEN_CKPT);
+    } catch {
+      /* ignore */
+    }
+  } catch (e) {
+    GEN_CKPTS = null;
+    toast("底模清單載入失敗：" + e.message, true);
+    renderCkptBtn();
+    return [];
+  }
+  renderCkptBtn();
+  renderCkptCurrent();
+  return GEN_CKPTS;
+}
+
+function selectCkpt(c) {
+  GEN_CKPT = c.ckpt_name;
+  try {
+    localStorage.setItem(CKPT_STORE, GEN_CKPT);
+  } catch {
+    /* ignore */
+  }
+  renderCkptBtn();
+  renderCkptCurrent();
+  renderCkptList($("ckpt-search")?.value);
+  toast(`底模已換成「${c.title || c.file}」`);
+}
+
+function renderCkptList(filter) {
+  const box = $("ckpt-list");
+  if (!box) return;
+  const q = (filter || "").toLowerCase().trim();
+  let items = GEN_CKPTS || [];
+  if (q) items = items.filter((c) => (c.title || "").toLowerCase().includes(q) || c.file.toLowerCase().includes(q));
+  box.replaceChildren();
+  if (!items.length) {
+    const empty = document.createElement("div");
+    empty.className = "lora-empty";
+    empty.textContent = GEN_CKPTS && GEN_CKPTS.length ? "找不到底模" : "這個資料夾沒有 checkpoint";
+    box.appendChild(empty);
+    return;
+  }
+  for (const c of items) {
+    const row = document.createElement("button");
+    row.type = "button";
+    row.className = "lora-row" + (c.ckpt_name === GEN_CKPT ? " on" : "");
+    if (c.ckpt_name === GEN_CKPT) row.setAttribute("aria-current", "true");
+    if (c.preview) {
+      const img = document.createElement("img");
+      img.alt = "";
+      img.decoding = "async";
+      img.src = ckptPreviewUrl(c);
+      row.appendChild(img);
+    } else {
+      const ph = document.createElement("span");
+      ph.className = "ph";
+      row.appendChild(ph);
+    }
+    const rn = document.createElement("span");
+    rn.className = "rn";
+    const rt = document.createElement("span");
+    rt.className = "rt";
+    rt.textContent = c.title || c.file;
+    const rf = document.createElement("span");
+    rf.className = "rf";
+    rf.textContent = c.file;
+    rn.append(rt, rf);
+    row.appendChild(rn);
+    row.addEventListener("click", () => selectCkpt(c));
+    box.appendChild(row);
+  }
+}
+
+async function openCkptModal() {
+  overlayOpen($("ckpt-modal"));
+  renderCkptBtn();
+  const list = $("ckpt-list");
+  if (list && GEN_CKPTS === null) list.innerHTML = '<div class="lora-empty">載入中…</div>';
+  await fetchCkpts();
+  renderCkptList($("ckpt-search")?.value);
+  renderCkptCurrent();
+  $("ckpt-search")?.focus();
+}
+function closeCkptModal() {
+  fadeCloseOverlay($("ckpt-modal"), null, () => renderCkptBtn());
 }
 
 export function initLoraPicker() {
   ensureDom();
   const mgr = $("lm-manager-link");
   if (mgr) mgr.href = `${LORA_MGR_ORIGIN}/loras`;
+  const ckptMgr = $("ckpt-manager-link");
+  if (ckptMgr) ckptMgr.href = `${LORA_MGR_ORIGIN}/loras`;
   renderGenCurrent();
+  renderCkptBtn();
+  fetchCkpts();
 
   $("lora-pick-btn").addEventListener("click", () => {
     hideLoraPreviewTip();
     openLoraModal();
   });
+  $("ckpt-pick-btn")?.addEventListener("click", () => openCkptModal());
+  $("ckpt-modal-close")?.addEventListener("click", closeCkptModal);
+  $("ckpt-modal")?.addEventListener("click", (e) => {
+    if (e.target.id === "ckpt-modal") closeCkptModal();
+  });
+  $("ckpt-search")?.addEventListener("input", () => renderCkptList($("ckpt-search").value));
   $("lora-pick-btn").addEventListener("mouseenter", () => showLoraPreviewTip($("lora-pick-btn")));
   $("lora-pick-btn").addEventListener("mouseleave", hideLoraPreviewTip);
   $("lora-modal-close").addEventListener("click", closeLoraModal);

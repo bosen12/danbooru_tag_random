@@ -386,6 +386,14 @@ IMPLIES = {
     "hiking": ["outdoors"],
     "sunbathing": ["outdoors"],
     "office lady": ["pantyhose", "pencil skirt"],
+    "basketball court": ["outdoors", "basketball (object)"],
+    "tennis court": ["outdoors", "tennis ball"],
+    "soccer field": ["outdoors", "soccer ball"],
+    "baseball stadium": ["outdoors", "baseball (object)"],
+    "bowling alley": ["indoors", "bowling ball"],
+    "ski slope": ["outdoors", "snow"],
+    "rape": ["sex"],
+    "orgy": ["group sex", "sex"],
     "nurse": ["nurse cap"],
     "doctor": ["lab coat", "stethoscope"],
     "salaryman": ["suit", "necktie"],
@@ -1693,6 +1701,177 @@ def extra_era_tags() -> list[dict]:
     ]
 
 
+def extra_expand_tags() -> list[dict]:
+    """Places, jobs, sports courts/balls/uniforms, and sex-heat tags from special_prompts."""
+    all_h = list(HEATS)
+    modern = ["modern"]
+    sex = ["sex"]
+
+    def job(tag, implies=None, needs=None, gate="any", zh=""):
+        return {
+            "tag": tag,
+            "section": "feature",
+            "gate": gate,
+            "heat": all_h,
+            "mutex": "job",
+            "bind": [],
+            "implies": implies or [],
+            "layer": "normal",
+            "era": modern,
+            "needs": needs or [],
+            "zh": zh,
+        }
+
+    def pose(tag, mutex=None, implies=None, needs=None, heat=None, era=None, zh=""):
+        return {
+            "tag": tag,
+            "section": "pose",
+            "gate": "any",
+            "heat": list(heat or all_h),
+            "mutex": mutex,
+            "bind": [],
+            "implies": implies or [],
+            "layer": "normal",
+            "era": era or ["any"],
+            "needs": needs or [],
+            "zh": zh,
+        }
+
+    def env(tag, mutex="place", implies=None, era=None, zh=""):
+        return {
+            "tag": tag,
+            "section": "env",
+            "gate": "any",
+            "heat": all_h,
+            "mutex": mutex,
+            "bind": [],
+            "implies": implies or [],
+            "layer": "normal",
+            "era": era or modern,
+            "zh": zh,
+        }
+
+    def cloth(tag, mutex=None, layer="accessory", implies=None, gate="any", heat=None, zh=""):
+        return {
+            "tag": tag,
+            "section": "clothing",
+            "gate": gate,
+            "heat": list(heat or all_h),
+            "mutex": mutex,
+            "bind": [],
+            "implies": implies or [],
+            "layer": layer,
+            "era": modern,
+            "zh": zh,
+        }
+
+    def feat(tag, mutex=None, needs=None, heat=None, gate="any", zh=""):
+        return {
+            "tag": tag,
+            "section": "feature",
+            "gate": gate,
+            "heat": list(heat or all_h),
+            "mutex": mutex,
+            "bind": [],
+            "implies": [],
+            "layer": "normal",
+            "era": ["any"],
+            "needs": needs or [],
+            "zh": zh,
+        }
+
+    out = [
+        env("airplane interior", implies=["indoors"], zh="機艙"),
+        env("airport", implies=["outdoors"], zh="機場"),
+        env("cockpit", implies=["indoors"], zh="駕駛艙"),
+        env("bus interior", implies=["indoors"], zh="公車內"),
+        env("movie theater", implies=["indoors"], zh="電影院"),
+        env("amusement park", implies=["outdoors"], zh="遊樂園"),
+        env("ferris wheel", implies=["outdoors"], zh="摩天輪"),
+        env("zoo", implies=["outdoors"], zh="動物園"),
+        env("convenience store", implies=["indoors"], zh="便利商店"),
+        env("supermarket", implies=["indoors"], zh="超市"),
+        env("internet cafe", implies=["indoors"], zh="網咖"),
+        env("dormitory", implies=["indoors"], zh="宿舍"),
+        env("prison", implies=["indoors"], zh="監獄"),
+        env("construction site", implies=["outdoors"], zh="工地"),
+        env("casino", implies=["indoors"], zh="賭場"),
+        env("nightclub", implies=["indoors"], zh="夜店"),
+        env("laboratory", implies=["indoors"], zh="實驗室"),
+        env("church", implies=["indoors"], zh="教堂"),
+        env("dojo", implies=["indoors"], zh="道場"),
+        env("farm", implies=["outdoors"], zh="農場"),
+        env("barn", implies=["indoors"], zh="穀倉"),
+        env("rice paddy", implies=["outdoors"], zh="稻田"),
+        env("parking lot", implies=["outdoors"], zh="停車場"),
+        env("mountain", implies=["outdoors"], era=["any"], zh="山"),
+        env("waterfall", implies=["outdoors"], era=["any"], zh="瀑布"),
+        env("stadium", implies=["outdoors"], zh="體育場"),
+        env("golf course", implies=["outdoors"], zh="高爾夫球場"),
+        env("izakaya", implies=["indoors"], zh="居酒屋"),
+        env("tavern", implies=["indoors"], era=["any"], zh="酒館"),
+        env("ryokan", implies=["indoors"], era=["edo", "modern"], zh="旅館"),
+        env("tent", implies=["outdoors"], zh="帳篷"),
+        env("campfire", mutex=None, implies=["outdoors"], zh="營火"),
+        env("karaoke box", implies=["indoors"], zh="KTV包廂"),
+        env("night market", implies=["outdoors"], zh="夜市"),
+        env("food stall", implies=["outdoors"], zh="小吃攤"),
+        env("apartment", implies=["indoors"], zh="公寓"),
+        env("basketball court", implies=["outdoors", "basketball (object)"], zh="籃球場"),
+        env("tennis court", implies=["outdoors", "tennis ball"], zh="網球場"),
+        env("soccer field", implies=["outdoors", "soccer ball"], zh="足球場"),
+        env("baseball stadium", implies=["outdoors", "baseball (object)"], zh="棒球場"),
+        env("bowling alley", implies=["indoors", "bowling ball"], zh="保齡球館"),
+        env("boxing ring", implies=["indoors"], zh="拳擊台"),
+        env("running track", implies=["outdoors"], zh="跑道"),
+        env("sports court", implies=["outdoors"], zh="綜合球場"),
+        env("ski slope", implies=["outdoors", "snow"], zh="滑雪道"),
+        env("bunk bed", mutex="furniture", implies=["indoors"], zh="雙層床"),
+        env("basketball (object)", mutex="sport_ball", zh="籃球"),
+        env("soccer ball", mutex="sport_ball", zh="足球"),
+        env("tennis ball", mutex="sport_ball", zh="網球"),
+        env("volleyball (object)", mutex="sport_ball", zh="排球"),
+        env("baseball (object)", mutex="sport_ball", zh="棒球"),
+        env("bowling ball", mutex="sport_ball", zh="保齡球"),
+        env("golf ball", mutex="sport_ball", zh="高爾夫球"),
+        env("tennis racket", mutex="sport_prop", zh="網球拍"),
+        env("baseball bat", mutex="sport_prop", zh="球棒"),
+        env("golf club", mutex="sport_prop", zh="高爾夫球桿"),
+        job("firefighter", zh="消防員"),
+        job("scientist", implies=["lab coat"], zh="科學家"),
+        job("farmer", zh="農夫"),
+        job("construction worker", implies=["hard hat"], zh="工人"),
+        job("janitor", zh="清潔工"),
+        job("race queen", needs=["female"], gate="female", zh="賽車女郎"),
+        job("soldier", implies=["military uniform"], zh="軍人"),
+        pose("jogging", mutex="activity", implies=["outdoors"], era=modern, zh="慢跑"),
+        pose("skiing", mutex="activity", implies=["outdoors", "snow"], era=modern, zh="滑雪"),
+        pose("diving", mutex="activity", zh="潛水"),
+        pose("weightlifting", mutex="activity", era=modern, zh="重訓"),
+        pose("rape", needs=["pair"], heat=sex, zh="強姦"),
+        pose("orgy", needs=["pair"], heat=sex, implies=["group sex", "sex"], zh="群交"),
+        pose("bondage", heat=sex, zh="束縛"),
+        pose("bdsm", heat=sex, zh="BDSM"),
+        pose("restrained", heat=sex, zh="被拘束"),
+        pose("free use", needs=["pair"], heat=sex, zh="自由使用"),
+        pose("prostitution", needs=["pair"], heat=sex, zh="賣淫"),
+        pose("pet play", heat=sex, zh="寵物扮演"),
+        cloth("soccer uniform", mutex="onepiece", layer="garment", implies=["sportswear"], zh="足球服"),
+        cloth("baseball uniform", mutex="onepiece", layer="garment", implies=["sportswear"], zh="棒球服"),
+        cloth("tennis uniform", mutex="onepiece", layer="garment", implies=["sportswear"], zh="網球服"),
+        cloth("volleyball uniform", mutex="onepiece", layer="garment", implies=["sportswear"], zh="排球服"),
+        cloth("buruma", mutex="bottom", layer="garment", zh="體操褲"),
+        cloth("santa costume", mutex="onepiece", layer="garment", zh="聖誕裝"),
+        cloth("handcuffs", layer="accessory", heat=sex, zh="手銬"),
+        cloth("leash", layer="accessory", zh="牽繩"),
+        cloth("bodypaint", layer="skin", zh="人體彩繪"),
+        feat("bride", needs=["female"], gate="female", zh="新娘"),
+        feat("gyaru", needs=["female"], gate="female", zh="辣妹"),
+        feat("small penis", needs=["male"], gate="male", heat=sex, zh="小陰莖"),
+    ]
+    return out
+
+
 def main() -> None:
     rows: list[dict] = []
     for path in sorted(PARTS.glob("*.json")):
@@ -1710,6 +1889,7 @@ def main() -> None:
     rows.extend(extra_bath_tags())
     rows.extend(extra_activity_tags())
     rows.extend(extra_job_scene_tags())
+    rows.extend(extra_expand_tags())
     rows.extend(extra_loli_tags())
     rows.extend(extra_shota_tags())
     rows.extend(extra_breast_feel_tags())

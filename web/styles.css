@@ -26,7 +26,8 @@ body {
   display: flex;
   align-items: center;
   gap: var(--space-3);
-  min-width: 0;
+  flex: 0 0 auto;
+  min-width: min-content;
   margin: 0;
 }
 
@@ -46,8 +47,7 @@ body {
   font-size: var(--text-xl);
   letter-spacing: -0.03em;
   line-height: 1.05;
-  min-width: 0;
-  overflow-wrap: anywhere;
+  white-space: nowrap;
 }
 
 .wordmark-copy span {
@@ -59,15 +59,18 @@ body {
   text-transform: uppercase;
   color: var(--color-muted);
   margin-top: 4px;
+  white-space: nowrap;
 }
 
 .ping {
+  position: relative;
   font-size: var(--text-sm);
   color: var(--color-muted);
   display: flex;
   align-items: center;
   gap: var(--space-2);
   font-variant-numeric: tabular-nums;
+  flex: 0 0 auto;
 }
 
 .ping i {
@@ -236,7 +239,7 @@ input[type="search"] {
 .tags.nested {
   display: flex;
   flex-wrap: wrap;
-  gap: 6px;
+  gap: 10px 12px;
 }
 
 .tag {
@@ -322,7 +325,8 @@ input[type="search"] {
   animation: rise-flagship var(--dur-move) var(--ease-out) both;
 }
 
-.card.is-fail {
+.card.is-fail,
+.card.is-skip {
   min-height: 0;
 }
 
@@ -382,6 +386,8 @@ input[type="search"] {
     padding-bottom: calc(var(--dock) + env(safe-area-inset-bottom, 0px) + var(--space-4));
   }
   .mast {
+    flex-wrap: wrap;
+    row-gap: var(--space-2);
     padding-top: max(var(--space-3), env(safe-area-inset-top, 0px));
     padding-left: max(var(--space-3), env(safe-area-inset-left, 0px));
     padding-right: max(var(--space-3), env(safe-area-inset-right, 0px));
@@ -434,6 +440,13 @@ input[type="search"] {
   }
   .wordmark-copy {
     font-size: var(--text-lg);
+  }
+  .ping span {
+    position: absolute;
+    width: 1px;
+    height: 1px;
+    overflow: hidden;
+    clip: rect(0 0 0 0);
   }
 }
 

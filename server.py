@@ -29,6 +29,24 @@ SHARED = (ROOT / "web").resolve()
 CKPT = os.environ.get(
     "COMFY_CKPT", r"illurtrious\waiIllustriousSDXL_v170.safetensors"
 )
+CKPT_DIR = Path(
+    os.environ.get(
+        "COMFY_CKPT_DIR",
+        r"C:\ComfyUI\ComfyUI_windows_portable_nvidia\ComfyUI_windows_portable\ComfyUI\models\checkpoints\illurtrious",
+    )
+)
+CKPT_PREFIX = os.environ.get("COMFY_CKPT_PREFIX", "illurtrious")
+CKPT_EXTS = {".safetensors", ".ckpt", ".pt"}
+CKPT_PREVIEW_EXTS = (
+    ".preview.png",
+    ".preview.jpeg",
+    ".preview.jpg",
+    ".preview.webp",
+    ".png",
+    ".jpg",
+    ".jpeg",
+    ".webp",
+)
 def _negative() -> str:
     path = SHARED / "lexicon.json"
     if not path.is_file():
@@ -205,11 +223,12 @@ def inject_lora(wf: dict, lora_name: str, strength: float) -> None:
                     n["inputs"][k] = [lid, 1]
 
 
-def build_workflow(positive: str, width: int, height: int, seed: int, loras=None) -> dict:
+def build_workflow(positive: str, width: int, height: int, seed: int, loras=None, ckpt=None) -> dict:
+    ckpt_name = resolve_ckpt(ckpt)
     wf = {
         "13": {
             "class_type": "CheckpointLoaderSimple",
-            "inputs": {"ckpt_name": CKPT},
+            "inputs": {"ckpt_name": ckpt_name},
         },
         "36": {
             "class_type": "CLIPTextEncode",
@@ -426,12 +445,12 @@ def ws_connect(http_base: str, client_id: str, timeout: float = 30) -> Ws:
     return Ws(sock, rest)
 
 
-def _job(seed: int, width: int, height: int, positive: str, image: str) -> dict:
+def _job(seed: int, width: int, height: int, positive: str, image: str, ckpt: str | None = None) -> dict:
     return {
         "ok": True,
         "image": image,
         "seed": seed,
-        "ckpt": CKPT,
+        "ckpt": ckpt or CKPT,
         "width": width,
         "height": height,
         "positive": positive,
@@ -461,7 +480,7 @@ def gen_via_ws(width: int, height: int, seed: int, positive: str, wf: dict):
                 if hist and prompt_id in hist:
                     image = first_image_src(hist[prompt_id])
                     if image:
-                        yield ("done", _job(seed, width, height, positive, image))
+                        yield ("done", _job(seed, width, height, positive, image, wf["13"]["inputs"].get("ckpt_name")))
                         return
                 continue
             if op == 8:
@@ -498,7 +517,7 @@ def gen_via_ws(width: int, height: int, seed: int, positive: str, wf: dict):
                 if hist and prompt_id in hist:
                     image = first_image_src(hist[prompt_id])
                     if image:
-                        yield ("done", _job(seed, width, height, positive, image))
+                        yield ("done", _job(seed, width, height, positive, image, wf["13"]["inputs"].get("ckpt_name")))
                         return
         raise TimeoutError(prompt_id)
     finally:
@@ -516,7 +535,7 @@ def gen_events(payload: dict):
     if seed is None or seed == "":
         seed = random.randint(0, SEED_MAX)
     seed = int(seed) & SEED_MAX
-    wf = build_workflow(positive, width, height, seed, payload.get("loras"))
+    wf = build_workflow(positive, width, height, seed, payload.get("loras"), payload.get("ckpt"))
     yield ("queued", {"seed": seed, "width": width, "height": height})
     try:
         yield from gen_via_ws(width, height, seed, positive, wf)
@@ -544,7 +563,7 @@ def gen(payload: dict) -> dict:
     if seed is None or seed == "":
         seed = random.randint(0, SEED_MAX)
     seed = int(seed) & SEED_MAX
-    wf = build_workflow(positive, width, height, seed, payload.get("loras"))
+    wf = build_workflow(positive, width, height, seed, payload.get("loras"), payload.get("ckpt"))
     prompt_id = api("POST", "/prompt", {"prompt": wf}, timeout=60)["prompt_id"]
     hist = wait_done(prompt_id)
     image = first_image_src(hist)
@@ -554,7 +573,7 @@ def gen(payload: dict) -> dict:
         "ok": True,
         "image": image,
         "seed": seed,
-        "ckpt": CKPT,
+        "ckpt": wf["13"]["inputs"].get("ckpt_name") or CKPT,
         "width": width,
         "height": height,
         "positive": positive,
@@ -589,6 +608,41 @@ class Handler(BaseHTTPRequestHandler):
 
     def _serve_loras(self) -> None:
         self._json(200, lora_scan.list_loras())
+
+    def _serve_checkpoints(self) -> None:
+        items = list_ckpts()
+        self._json(
+            200,
+            {
+                "ok": True,
+                "dir": str(CKPT_DIR),
+                "current": resolve_ckpt(None, items),
+                "items": items,
+            },
+        )
+
+    def _serve_ckpt_preview(self) -> None:
+        qs = urllib.parse.parse_qs(urllib.parse.urlparse(self.path).query)
+        fn = ((qs.get("file") or [""])[0] or "")
+        p = ckpt_preview_path(fn)
+        if p is None:
+            self._json(404, {"ok": False, "error": "not found"})
+            return
+        low = p.name.lower()
+        if low.endswith(".webp"):
+            mime = "image/webp"
+        elif low.endswith(".png"):
+            mime = "image/png"
+        elif low.endswith(".jpg") or low.endswith(".jpeg"):
+            mime = "image/jpeg"
+        else:
+            mime = "application/octet-stream"
+        try:
+            raw = p.read_bytes()
+        except OSError as exc:
+            self._json(502, {"ok": False, "error": str(exc)})
+            return
+        self._bytes(200, raw, mime, {"Cache-Control": "private, max-age=86400"})
 
     def _serve_lora_preview(self) -> None:
         qs = urllib.parse.parse_qs(urllib.parse.urlparse(self.path).query)
@@ -802,6 +856,12 @@ class Handler(BaseHTTPRequestHandler):
         if path == "/api/loras":
             self._serve_loras()
             return
+        if path == "/api/checkpoints":
+            self._serve_checkpoints()
+            return
+        if path == "/api/ckpt-preview":
+            self._serve_ckpt_preview()
+            return
         if path == "/api/lora-preview":
             self._serve_lora_preview()
             return
@@ -860,6 +920,79 @@ class Handler(BaseHTTPRequestHandler):
         self.send_response(404)
         self.send_header("Content-Length", "0")
         self.end_headers()
+
+
+def list_ckpts(root: Path | None = None, prefix: str | None = None) -> list[dict]:
+    """Scan the Illustrious checkpoint folder. Comfy ckpt_name is prefix\\file."""
+    folder = Path(root) if root is not None else CKPT_DIR
+    pre = CKPT_PREFIX if prefix is None else prefix
+    items = []
+    if not folder.is_dir():
+        return items
+    try:
+        names = list(folder.iterdir())
+    except OSError:
+        return items
+    for p in sorted(names, key=lambda x: x.name.lower()):
+        if not p.is_file() or p.suffix.lower() not in CKPT_EXTS:
+            continue
+        if p.name.startswith("."):
+            continue
+        stem = p.stem
+        preview = ""
+        for ext in CKPT_PREVIEW_EXTS:
+            cand = folder / (stem + ext)
+            if cand.is_file():
+                preview = cand.name
+                break
+        items.append(
+            {
+                "file": p.name,
+                "ckpt_name": f"{pre}\\{p.name}",
+                "title": stem,
+                "preview": preview,
+            }
+        )
+    return items
+
+
+def resolve_ckpt(name: str | None, items: list | None = None) -> str:
+    """Only allow files from the Illustrious folder. Unknown names fall back to default."""
+    pool = items if items is not None else list_ckpts()
+    allowed = {}
+    for it in pool:
+        key = str(it.get("ckpt_name") or "").replace("/", "\\")
+        fn = str(it.get("file") or "")
+        if key:
+            allowed[key] = key
+        if fn:
+            allowed[fn] = key or fn
+    fallback = str(CKPT).replace("/", "\\")
+    if not name:
+        return allowed.get(fallback, fallback)
+    raw = str(name).replace("/", "\\").strip()
+    parts = [p for p in raw.split("\\") if p]
+    if not parts or any(p in (".", "..") for p in parts) or raw.startswith("\\"):
+        return allowed.get(fallback, fallback)
+    if raw in allowed:
+        return allowed[raw]
+    if parts[-1] in allowed:
+        return allowed[parts[-1]]
+    return allowed.get(fallback, fallback)
+
+
+def ckpt_preview_path(fn: str, root: Path | None = None) -> Path | None:
+    if not fn or "/" in fn or "\\" in fn or fn in (".", "..") or ".." in fn:
+        return None
+    folder = (Path(root) if root is not None else CKPT_DIR).resolve()
+    p = (folder / fn).resolve()
+    try:
+        p.relative_to(folder)
+    except ValueError:
+        return None
+    if not p.is_file():
+        return None
+    return p
 
 
 def checkpoints() -> list[str]:

@@ -28,17 +28,22 @@ import {
   mulberry32,
   applyTagWeights,
   stepTagWeight,
+  clampTagWeight,
+  TAG_WEIGHT_PRESETS,
   parseWeighted,
   formatWeighted,
   formatWeight,
   insertTriggerAfterCast,
+  settleGenCard,
   randomSeed,
   tagState,
   BUILTIN_PRESETS,
-  applyPresetTags,
   sanitizePinPresets,
+  presetActive,
+  togglePresetTags,
 } from "./engine.js";
 import {
+  currentCkpt,
   currentLorasPayload,
   currentTriggerText,
   handleLoraKeys,
@@ -71,8 +76,10 @@ let pinned = new Set();
 let userBanned = new Set();
 let tagWeights = new Map();
 let aborting = false;
+let skipping = false;
 let running = false;
 let genAbort = null;
+let jobAbort = null;
 let viewMode = "all";
 let eraOnly = true;
 let lastPositive = "";
@@ -312,6 +319,7 @@ function renderPresets() {
     btn.className = "chip-toggle";
     btn.dataset.preset = p.id;
     btn.textContent = p.name;
+    btn.setAttribute("aria-pressed", presetActive(lex, p.tags, pinned) ? "true" : "false");
     frag.append(btn);
   }
   userPresets.forEach((p, i) => {
@@ -319,6 +327,7 @@ function renderPresets() {
     btn.type = "button";
     btn.className = "chip-toggle preset-user";
     btn.dataset.user = String(i);
+    btn.setAttribute("aria-pressed", presetActive(lex, p.tags, pinned) ? "true" : "false");
     btn.append(document.createTextNode(p.name));
     const x = document.createElement("span");
     x.className = "preset-x";
@@ -330,10 +339,26 @@ function renderPresets() {
   box.replaceChildren(frag);
 }
 
+function syncPresets() {
+  const box = $("presets");
+  if (!box || !lex) return;
+  for (const btn of box.querySelectorAll("[data-preset]")) {
+    const p = BUILTIN_PRESETS.find((x) => x.id === btn.dataset.preset);
+    btn.setAttribute("aria-pressed", p && presetActive(lex, p.tags, pinned) ? "true" : "false");
+  }
+  for (const btn of box.querySelectorAll("[data-user]")) {
+    const i = Number(btn.dataset.user);
+    const p = userPresets[i];
+    btn.setAttribute("aria-pressed", p && presetActive(lex, p.tags, pinned) ? "true" : "false");
+  }
+}
+
 function applyNamedPreset(tags) {
-  pinned = applyPresetTags(lex, tags, pinned);
+  const on = presetActive(lex, tags, pinned);
+  const others = [...BUILTIN_PRESETS.map((p) => p.tags), ...userPresets.map((p) => p.tags)];
+  pinned = togglePresetTags(lex, tags, pinned, others);
   afterPin();
-  speak("已套用釘選組合");
+  speak(on ? "已取消釘選組合" : "已套用釘選組合");
 }
 
 function pickHeat(h) {
@@ -540,53 +565,167 @@ function tagWeightOf(tag) {
   return Number.isFinite(w) && w > 0 ? Math.round(w * 10) / 10 : 1;
 }
 
-function ensureWeightCtl(el) {
-  let ctl = el.querySelector(":scope > .w-ctl");
-  if (!ctl) {
-    ctl = document.createElement("span");
-    ctl.className = "w-ctl";
-    const minus = document.createElement("span");
-    minus.className = "w-btn";
-    minus.dataset.w = "-1";
-    minus.setAttribute("role", "button");
-    minus.setAttribute("aria-label", "降低權重");
-    minus.textContent = "−";
-    const mark = document.createElement("b");
-    mark.className = "w";
-    const plus = document.createElement("span");
-    plus.className = "w-btn";
-    plus.dataset.w = "1";
-    plus.setAttribute("role", "button");
-    plus.setAttribute("aria-label", "提高權重");
-    plus.textContent = "+";
-    ctl.append(minus, mark, plus);
-    el.append(ctl);
-  }
-  if (!el.querySelector(":scope > .w-flag")) {
-    const flag = document.createElement("b");
+function ensureWeightFlag(el) {
+  el.querySelector(":scope > .w-ctl")?.remove();
+  let flag = el.querySelector(":scope > .w-flag");
+  if (!flag) {
+    flag = document.createElement("span");
     flag.className = "w-flag";
+    flag.setAttribute("role", "button");
+    flag.setAttribute("aria-haspopup", "dialog");
     el.append(flag);
   }
-  return ctl;
+  return flag;
 }
 
 function paintWeightMark(el, tag) {
   const w = tagWeightOf(tag);
   const shown = formatWeighted(tag, w);
   el.dataset.en = shown;
-  const ctl = ensureWeightCtl(el);
-  const mark = ctl.querySelector(".w");
-  const flag = el.querySelector(":scope > .w-flag");
+  const flag = ensureWeightFlag(el);
   const shownW = formatWeight(w);
-  mark.textContent = shownW;
   flag.textContent = shownW;
+  flag.setAttribute("aria-label", `調整權重，目前 ${shownW}`);
+  flag.title = `權重 ${shownW} · 點開調整`;
   if (w === 1) {
     if (el.dataset.weight) delete el.dataset.weight;
   } else {
     el.dataset.weight = shownW;
   }
-  const base = isFixedTag(tag) ? tag : "點一下釘選／關掉";
-  el.title = `${base} · 停上去用 −＋調權重 · 目前 ${shownW}`;
+  const base = isFixedTag(tag) ? tag : "點文字釘選／關掉";
+  el.title = `${base} · 點右上角數字調權重 · 目前 ${shownW}`;
+}
+
+let weightPopTag = "";
+let weightPopAnchor = null;
+
+function ensureWeightPop() {
+  let pop = $("w-pop");
+  if (pop) return pop;
+  pop = document.createElement("div");
+  pop.id = "w-pop";
+  pop.className = "w-pop";
+  pop.tabIndex = -1;
+  pop.setAttribute("role", "dialog");
+  pop.setAttribute("aria-hidden", "true");
+  pop.setAttribute("aria-label", "調整權重");
+  pop.innerHTML = `
+    <div class="w-pop-kicker">權重</div>
+    <div class="w-pop-name" id="w-pop-name"></div>
+    <div class="w-pop-en" id="w-pop-en"></div>
+    <div class="w-pop-meter">
+      <button type="button" class="w-pop-step" data-w-step="-1" aria-label="降低 0.1">−</button>
+      <div class="w-pop-val" id="w-pop-val" aria-live="polite">1.0</div>
+      <button type="button" class="w-pop-step" data-w-step="1" aria-label="提高 0.1">+</button>
+    </div>
+    <div class="w-pop-presets" id="w-pop-presets"></div>
+    <button type="button" class="w-pop-reset" id="w-pop-reset">恢復 1.0</button>`;
+  const presets = pop.querySelector("#w-pop-presets");
+  for (const p of TAG_WEIGHT_PRESETS) {
+    const b = document.createElement("button");
+    b.type = "button";
+    b.className = "w-pop-preset";
+    b.dataset.wSet = String(p);
+    b.textContent = formatWeight(p);
+    presets.appendChild(b);
+  }
+  pop.addEventListener("click", (e) => {
+    e.stopPropagation();
+    const tag = weightPopTag;
+    if (!tag) return;
+    const step = e.target.closest("[data-w-step]");
+    if (step) {
+      onTagWeight(tag, Number(step.dataset.wStep) < 0 ? -1 : 1);
+      return;
+    }
+    const preset = e.target.closest("[data-w-set]");
+    if (preset) {
+      setTagWeight(tag, Number(preset.dataset.wSet));
+      return;
+    }
+    if (e.target.closest("#w-pop-reset")) setTagWeight(tag, 1);
+  });
+  document.body.appendChild(pop);
+  return pop;
+}
+
+function weightPopOpen() {
+  const pop = $("w-pop");
+  return !!(pop && pop.classList.contains("is-open"));
+}
+
+function paintWeightPop() {
+  const pop = $("w-pop");
+  if (!pop || !weightPopTag) return;
+  const w = tagWeightOf(weightPopTag);
+  const shownW = formatWeight(w);
+  const name = $("w-pop-name");
+  const en = $("w-pop-en");
+  const val = $("w-pop-val");
+  if (name) name.textContent = lex ? labelOf(lex, weightPopTag) : weightPopTag;
+  if (en) en.textContent = weightPopTag;
+  if (val) val.textContent = shownW;
+  for (const b of pop.querySelectorAll("[data-w-set]")) {
+    b.setAttribute("aria-pressed", Number(b.dataset.wSet) === w ? "true" : "false");
+  }
+  const reset = $("w-pop-reset");
+  if (reset) reset.hidden = w === 1;
+  if (weightPopAnchor) placeWeightPop(weightPopAnchor);
+}
+
+function placeWeightPop(anchor) {
+  const pop = $("w-pop");
+  if (!pop || !anchor) return;
+  const r = anchor.getBoundingClientRect();
+  const pad = 8;
+  const dock = document.querySelector(".dock");
+  const dockH = dock ? Math.ceil(dock.getBoundingClientRect().height) : 0;
+  const pw = pop.offsetWidth || 220;
+  const ph = pop.offsetHeight || 180;
+  let left = r.right - pw;
+  if (left < pad) left = r.left;
+  if (left + pw > window.innerWidth - pad) left = window.innerWidth - pw - pad;
+  const floor = window.innerHeight - pad - dockH;
+  let top = r.bottom + 8;
+  let origin = "top right";
+  if (top + ph > floor) {
+    top = r.top - ph - 8;
+    origin = "bottom right";
+  }
+  if (top < pad) top = pad;
+  pop.style.left = `${Math.max(pad, left)}px`;
+  pop.style.top = `${top}px`;
+  pop.style.transformOrigin = origin;
+}
+
+function openWeightPop(host) {
+  const tag = host?.dataset?.tag;
+  if (!tag) return;
+  const pop = ensureWeightPop();
+  document.querySelectorAll(".is-w-open").forEach((el) => el.classList.remove("is-w-open"));
+  host.classList.add("is-w-open");
+  weightPopTag = tag;
+  weightPopAnchor = host.querySelector(":scope > .w-flag") || host;
+  pop.setAttribute("aria-hidden", "false");
+  paintWeightPop();
+  placeWeightPop(weightPopAnchor);
+  const open = () => {
+    pop.classList.add("is-open");
+    placeWeightPop(weightPopAnchor);
+    pop.focus({ preventScroll: true });
+  };
+  if (reduceMotion()) open();
+  else requestAnimationFrame(open);
+}
+
+function closeWeightPop() {
+  const pop = $("w-pop");
+  if (!pop || !pop.classList.contains("is-open")) return;
+  pop.classList.remove("is-open");
+  pop.setAttribute("aria-hidden", "true");
+  document.querySelectorAll(".is-w-open").forEach((el) => el.classList.remove("is-w-open"));
+  weightPopTag = "";
+  weightPopAnchor = null;
 }
 
 function paintTrayChip(btn, tag, auto) {
@@ -649,7 +788,7 @@ function renderTray() {
     if (count) count.textContent = "";
     return;
   }
-  if (count) count.textContent = lastPositive ? `${tags.length} 個 · 點釘／關 · −＋或捲動調權重` : `${pinned.size} 個`;
+  if (count) count.textContent = lastPositive ? `${tags.length} 個 · 點文字釘／關 · 點數字調權重` : `${pinned.size} 個`;
   const prev = [...box.querySelectorAll(":scope > .tag")];
   const same = prev.length === tags.length && prev.every((el, i) => el.dataset.tag === tags[i]);
   if (same) {
@@ -1031,6 +1170,7 @@ function afterPin() {
   updateEraClash();
   updateHeatClash();
   syncCast();
+  syncPresets();
   const auto = autoBannedFromPins(lex, pinned);
   for (const span of document.querySelectorAll(".pos span[data-tag]")) {
     if (span.dataset.locked === "1") continue;
@@ -1068,14 +1208,19 @@ function refreshWeights() {
   }
 }
 
-function onTagWeight(tag, dir = 1) {
+function setTagWeight(tag, value) {
   if (!tag) return;
-  const next = stepTagWeight(tagWeightOf(tag), dir);
+  const next = clampTagWeight(value);
   if (next === 1) tagWeights.delete(tag);
   else tagWeights.set(tag, next);
   refreshWeights();
-  const zh = labelOf(lex, tag);
-  speak(`${zh} 權重 ${formatWeight(next)}`);
+  paintWeightPop();
+  speak(`${labelOf(lex, tag)} 權重 ${formatWeight(next)}`);
+}
+
+function onTagWeight(tag, dir = 1) {
+  if (!tag) return;
+  setTagWeight(tag, stepTagWeight(tagWeightOf(tag), dir));
 }
 
 function onTagClick(tag) {
@@ -1134,7 +1279,7 @@ function cardSkeleton(width, height) {
   el.className = "card is-wait";
   el.style.setProperty("--shot-w", String(width || 1024));
   el.style.setProperty("--shot-h", String(height || 1024));
-  el.innerHTML = `<div class="shot"><div class="skel" aria-hidden="true"></div><img class="shot-img" alt="" width="${width || 1024}" height="${height || 1024}"><div class="meter" hidden><i></i><span></span></div></div><div class="meta"><div class="bar">排隊中…</div><div class="pos"></div></div>`;
+  el.innerHTML = `<div class="shot"><div class="skel" aria-hidden="true"></div><img class="shot-img" alt="" width="${width || 1024}" height="${height || 1024}"><div class="meter" hidden><i></i><span></span></div><button type="button" class="skip-shot" aria-label="跳過這張，接著下一張" title="跳過這張"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" aria-hidden="true"><line x1="6" y1="6" x2="18" y2="18"/><line x1="18" y1="6" x2="6" y2="18"/></svg></button></div><div class="meta"><div class="bar">排隊中…</div><div class="pos"></div></div>`;
   return el;
 }
 
@@ -1187,7 +1332,12 @@ function setLive(el, ev) {
   }
 }
 
+function endGenCard(el) {
+  el.classList.remove("is-gen");
+}
+
 function failCard(el, err) {
+  endGenCard(el);
   el.classList.remove("is-wait", "is-done");
   el.classList.add("is-fail");
   hideMeter(el);
@@ -1218,7 +1368,21 @@ function failCard(el, err) {
   }
 }
 
+function skipCard(el) {
+  if (el.classList.contains("is-skip")) return;
+  endGenCard(el);
+  el.classList.remove("is-wait", "is-done", "is-fail");
+  el.classList.add("is-skip");
+  hideMeter(el);
+  const bar = el.querySelector(".bar");
+  if (!bar) return;
+  const bits = ["已跳過"];
+  if (el.dataset.seed) bits.push("seed " + el.dataset.seed);
+  bar.textContent = bits.join(" · ");
+}
+
 function fillCard(el, job, err) {
+  endGenCard(el);
   el.classList.remove("is-wait");
   if (err) {
     failCard(el, err);
@@ -1547,10 +1711,22 @@ async function streamGen(body, onEvent, signal) {
   }
 }
 
+function skipCurrentGen() {
+  if (!running || aborting || skipping) return;
+  skipping = true;
+  speak("跳過這張");
+  try {
+    jobAbort?.abort();
+  } catch {
+    /* ignore */
+  }
+}
+
 async function runBatch() {
   if (running) return;
   running = true;
   aborting = false;
+  skipping = false;
   genAbort = new AbortController();
   $("go").disabled = true;
   $("go").setAttribute("aria-busy", "true");
@@ -1627,8 +1803,21 @@ async function runBatch() {
       era: drawn.era,
       eraClash: drawn.eraClash,
     };
+    skipping = false;
+    jobAbort = new AbortController();
+    card.classList.add("is-gen");
+    const stopJob = () => {
+      try {
+        jobAbort?.abort();
+      } catch {
+        /* ignore */
+      }
+    };
+    if (genAbort.signal.aborted) stopJob();
+    else genAbort.signal.addEventListener("abort", stopJob, { once: true });
     try {
       let finished = false;
+      let hadError = false;
       await streamGen(
         {
           positive: sent,
@@ -1636,6 +1825,7 @@ async function runBatch() {
           height: settings.height,
           seed: seedNum,
           loras: currentLorasPayload(),
+          ckpt: currentCkpt(),
         },
         (event, data) => {
           if (event === "queued") {
@@ -1653,18 +1843,38 @@ async function runBatch() {
             setLive(card, { image: data.image, status: "預覽…" });
           } else if (event === "done") {
             finished = true;
-            fillCard(card, { ...data, ...extra });
+            if (skipping) skipCard(card);
+            else fillCard(card, { ...data, ...extra });
           } else if (event === "error") {
             finished = true;
-            failCard(card, String(data.error || "Comfy 報錯"));
+            hadError = true;
+            if (skipping) skipCard(card);
+            else failCard(card, String(data.error || "Comfy 報錯"));
           }
         },
-        genAbort.signal
+        jobAbort.signal
       );
-      if (!finished) throw new Error("生圖中斷");
+      const kind = settleGenCard({ aborting, skipping, finished, hadError });
+      if (kind === "skip") skipCard(card);
+      else if (kind === "interrupt") throw new Error("生圖中斷");
     } catch (err) {
-      if (aborting || err.name === "AbortError") failCard(card, "已取消");
+      const kind = settleGenCard({ aborting, skipping, errName: err.name, finished: false });
+      if (kind === "skip") skipCard(card);
+      else if (kind === "cancel") failCard(card, "已取消");
       else failCard(card, String(err.message || err));
+    } finally {
+      genAbort.signal.removeEventListener("abort", stopJob);
+      endGenCard(card);
+      const skipNow = skipping;
+      skipping = false;
+      jobAbort = null;
+      if (skipNow) {
+        try {
+          await fetch("/api/interrupt", { method: "POST", body: "{}" });
+        } catch {
+          /* ignore */
+        }
+      }
     }
   }
 
@@ -1672,27 +1882,26 @@ async function runBatch() {
   $("go").disabled = false;
   $("go").removeAttribute("aria-busy");
   $("cancel").hidden = true;
-  if (!aborting) speak(`完成 ${n} 張`);
+  if (!aborting) {
+    const done = cards.filter((c) => c.classList.contains("is-done")).length;
+    const skipped = cards.filter((c) => c.classList.contains("is-skip")).length;
+    if (skipped) speak(`完成 ${done} 張，跳過 ${skipped} 張`);
+    else speak(`完成 ${n} 張`);
+  }
 }
 
 function bindUi() {
   const tagSel = ".tag[data-tag], .pos span[data-tag]";
   const onWeightClick = (e) => {
-    const host = e.target.closest(tagSel);
+    const flag = e.target.closest(".w-flag");
+    if (!flag) return false;
+    const host = flag.closest(tagSel);
     if (!host || !host.dataset.tag) return false;
-    const btn = e.target.closest("[data-w]");
-    if (btn) {
-      e.preventDefault();
-      e.stopPropagation();
-      onTagWeight(host.dataset.tag, Number(btn.dataset.w) < 0 ? -1 : 1);
-      return true;
-    }
-    if (e.target.closest(".w-ctl")) {
-      e.preventDefault();
-      e.stopPropagation();
-      return true;
-    }
-    return false;
+    e.preventDefault();
+    e.stopPropagation();
+    if (weightPopTag === host.dataset.tag && weightPopOpen()) closeWeightPop();
+    else openWeightPop(host);
+    return true;
   };
   $("cats").addEventListener("click", (e) => {
     if (onWeightClick(e)) return;
@@ -1732,6 +1941,12 @@ function bindUi() {
     });
   }
   $("results").addEventListener("click", (e) => {
+    if (e.target.closest(".skip-shot")) {
+      e.preventDefault();
+      e.stopPropagation();
+      skipCurrentGen();
+      return;
+    }
     if (onWeightClick(e)) return;
     if (e.target.closest(".copy")) return;
     const card = e.target.closest(".card.is-done");
@@ -1751,26 +1966,42 @@ function bindUi() {
     e.stopPropagation();
     openViewer(shot.closest(".card"));
   });
-  const onTagWheel = (e) => {
-    const hit = e.target.closest(".w-ctl");
-    const el = e.target.closest(tagSel);
-    if (!hit || !el || !el.dataset.tag) return;
-    e.preventDefault();
-    onTagWeight(el.dataset.tag, e.deltaY > 0 ? -1 : 1);
-  };
-  $("cats").addEventListener("wheel", onTagWheel, { passive: false });
-  if (trayPins) trayPins.addEventListener("wheel", onTagWheel, { passive: false });
-  $("results").addEventListener("wheel", onTagWheel, { passive: false });
-  const onTagKey = (e) => {
-    if (e.key !== "ArrowUp" && e.key !== "ArrowDown") return;
-    const el = e.target.closest(tagSel);
-    if (!el || !el.dataset.tag) return;
-    e.preventDefault();
-    onTagWeight(el.dataset.tag, e.key === "ArrowUp" ? 1 : -1);
-  };
-  $("cats").addEventListener("keydown", onTagKey);
-  if (trayPins) trayPins.addEventListener("keydown", onTagKey);
-  $("results").addEventListener("keydown", onTagKey);
+  document.addEventListener("pointerdown", (e) => {
+    const pop = $("w-pop");
+    if (!pop || !pop.classList.contains("is-open")) return;
+    if (pop.contains(e.target) || e.target.closest(".w-flag")) return;
+    closeWeightPop();
+  });
+  document.addEventListener("keydown", (e) => {
+    const pop = $("w-pop");
+    if (!pop || !pop.classList.contains("is-open") || !weightPopTag) return;
+    if (e.key === "Escape") {
+      e.preventDefault();
+      e.stopImmediatePropagation();
+      closeWeightPop();
+      return;
+    }
+    if (isTyping()) return;
+    if (e.key === "Enter") {
+      e.preventDefault();
+      e.stopImmediatePropagation();
+      closeWeightPop();
+      return;
+    }
+    if (e.key === "ArrowUp" || e.key === "+" || e.key === "=") {
+      e.preventDefault();
+      e.stopImmediatePropagation();
+      onTagWeight(weightPopTag, 1);
+      return;
+    }
+    if (e.key === "ArrowDown" || e.key === "-") {
+      e.preventDefault();
+      e.stopImmediatePropagation();
+      onTagWeight(weightPopTag, -1);
+    }
+  });
+  window.addEventListener("scroll", closeWeightPop, true);
+  window.addEventListener("resize", closeWeightPop);
   $("n").addEventListener("change", () => {
     settings.n = Math.max(1, Math.min(10, Number($("n").value) || 1));
     syncSamePerson();
@@ -1960,6 +2191,7 @@ function bindUi() {
     clearW.addEventListener("click", () => {
       tagWeights = new Map();
       refreshWeights();
+      paintWeightPop();
       speak("權重已清掉");
     });
   }
