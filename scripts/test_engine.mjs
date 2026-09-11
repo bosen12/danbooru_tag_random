@@ -2773,9 +2773,16 @@ function indoorOutdoorClash(have) {
   let sexFace = 0;
   for (let i = 0; i < 40; i++) {
     const h = tagsOf(drawOne(lex, sexS, pinHof, new Set(), mulberry32(180000 + i), 180000 + i));
-    if (["facial", "cum in mouth", "closed eyes"].some((t) => h.has(t))) sexFace += 1;
+    if (["facial", "cum in mouth", "closed eyes", "looking at penis"].some((t) => h.has(t))) sexFace += 1;
   }
   eq("head out of frame never auto facial/cum in mouth", sexFace, 0);
+  let lookPenis = 0;
+  const boyHof = { ...sexS, girl: false, boy: true };
+  for (let i = 0; i < 40; i++) {
+    const h = tagsOf(drawOne(lex, boyHof, pinHof, new Set(), mulberry32(245000 + i), 245000 + i));
+    if ([...h].some((t) => t === "looking at penis" || /^looking /.test(t))) lookPenis += 1;
+  }
+  eq("head out of frame never auto looking at penis", lookPenis, 0);
   const pinClosed = applyPin(lex, new Set(), new Set(), "closed eyes").pinned;
   let hofAfter = 0;
   for (let i = 0; i < 40; i++) {
@@ -2873,6 +2880,46 @@ function indoorOutdoorClash(have) {
     if (!WATER2.some((t) => h.has(t))) drySwim += 1;
   }
   eq("normal sex+pin swimming still has water place", drySwim, 0);
+}
+
+{
+  const s = settings();
+  s.girl = true;
+  s.boy = false;
+  s.heats = ["activity"];
+  s.weights = { activity: 1, tease: 0, flash: 0, sex: 0 };
+  s.eras = ["modern"];
+  s.sceneMode = "normal";
+  s.counts = { subject: 10, feature: 10, pose: 10, clothing: 10, env: 10 };
+  const pinSwim = applyPin(lex, new Set(), new Set(), "swimming").pinned;
+  let plant = 0;
+  for (let i = 0; i < 40; i++) {
+    const h = tagsOf(drawOne(lex, s, pinSwim, new Set(), mulberry32(206000 + i), 206000 + i));
+    if (["standing", "squatting", "kneeling", "on one knee"].some((t) => h.has(t))) plant += 1;
+  }
+  eq("swimming never auto standing/squatting/kneeling", plant, 0);
+  const pinHof2 = applyPin(lex, new Set(), new Set(), "head out of frame").pinned;
+  const tease = { ...s, heats: ["tease"], weights: { activity: 0, tease: 1, flash: 0, sex: 0 } };
+  let hofMouth = 0;
+  for (let i = 0; i < 40; i++) {
+    const h = tagsOf(drawOne(lex, tease, pinHof2, new Set(), mulberry32(207000 + i), 207000 + i));
+    if (["french kiss", "finger to mouth", "eating", "covering own mouth"].some((t) => h.has(t))) hofMouth += 1;
+  }
+  eq("head out of frame never auto mouth acts", hofMouth, 0);
+  const pinSleep3 = applyPin(lex, new Set(), new Set(), "sleeping").pinned;
+  let sleepLook = 0;
+  for (let i = 0; i < 40; i++) {
+    const h = tagsOf(drawOne(lex, s, pinSleep3, new Set(), mulberry32(208000 + i), 208000 + i));
+    if ([...h].some((t) => t.startsWith("looking ") || t === "kissing")) sleepLook += 1;
+  }
+  eq("sleeping never auto looking/kissing leftovers", sleepLook, 0);
+  const boyN = { ...s, girl: false, boy: true, heats: ["tease"], weights: { activity: 0, tease: 1, flash: 0, sex: 0 } };
+  let raceMale = 0;
+  for (let i = 0; i < 40; i++) {
+    const h = tagsOf(drawOne(lex, boyN, new Set(), new Set(), mulberry32(209000 + i), 209000 + i));
+    if (h.has("dark-skinned male")) raceMale += 1;
+  }
+  eq("normal mode never auto dark-skinned male", raceMale, 0);
 }
 
 {
@@ -3248,7 +3295,7 @@ function indoorOutdoorClash(have) {
   }
   eq(
     "normal onsen never auto armor/suit/sneakers",
-    presetBad("onsen", 199000, (t) => /\b(armor|suit|sneakers|boots|geta)\b/.test(t)),
+    presetBad("onsen", 199000, (t) => /\b(armor|suit|sneakers|boots|geta|idol clothes|latex)\b/.test(t)),
     0
   );
   eq(
@@ -3263,7 +3310,7 @@ function indoorOutdoorClash(have) {
   );
   eq(
     "normal nurse never auto swimsuit/armor/maid",
-    presetBad("nurse", 202000, (t) => /\b(swimsuit|bikini|armor|maid|hakama)\b/.test(t)),
+    presetBad("nurse", 202000, (t) => /\b(swimsuit|bikini|armor|maid|hakama|serafuku)\b/.test(t)),
     0
   );
   eq(
@@ -3281,6 +3328,267 @@ function indoorOutdoorClash(have) {
     presetBad("beach", 205000, (t) => /\b(armor|suit|hakama)\b/.test(t) && !/\b(swimsuit|bikini)\b/.test(t)),
     0
   );
+  eq(
+    "normal onsen never auto gym/swimsuit/coat/sportswear",
+    presetBad("onsen", 220000, (t) =>
+      /\b(gym uniform|swimsuit|bikini|lab coat|sports bra|evening gown|necktie|hoodie|shirt)\b/.test(t) ||
+      /fishnet/.test(t) ||
+      /\bcoat\b/.test(t)
+    ),
+    0
+  );
+  eq(
+    "normal classroom never auto lab coat/fishnets/sneakers/cheerleader",
+    presetBad("classroom", 221000, (t) => /\b(lab coat|fishnets|sneakers|cheerleader|yoga pants)\b/.test(t) || /fishnet/.test(t)),
+    0
+  );
+  eq(
+    "normal OL never auto track jacket/wet clothes/police hat garments",
+    presetBad("ol-office", 222000, (t) => /\b(track jacket|wet clothes|gym uniform|cheerleader)\b/.test(t)),
+    0
+  );
+  eq(
+    "normal nurse never auto wedding dress/latex/thong/bodysuit",
+    presetBad("nurse", 223000, (t) => /\b(wedding dress|latex|thong|sports bra|bodysuit)\b/.test(t)),
+    0
+  );
+  eq(
+    "normal maid never auto track jacket/sneakers/thong/fishnets",
+    presetBad("maid", 224000, (t) => /\b(track jacket|sneakers|thong|fishnets|latex)\b/.test(t) || /fishnet/.test(t)),
+    0
+  );
+  {
+    const pinMaid = applyPresetTags(lex, BUILTIN_PRESETS.find((p) => p.id === "maid").tags, new Set());
+    let maidPlace = 0;
+    const MAID_OK = ["mansion", "kitchen", "living room", "bedroom", "hotel room", "palace"];
+    for (let i = 0; i < 40; i++) {
+      const h = tagsOf(drawOne(lex, s, pinMaid, new Set(), mulberry32(225000 + i), 225000 + i));
+      const places = [...h].filter((t) => lex.byTag.get(t)?.mutex === "place" || lex.byTag.get(t)?.group === "place");
+      if (places.length && !places.some((p) => MAID_OK.includes(p))) maidPlace += 1;
+    }
+    eq("normal maid preset stays in maid places", maidPlace, 0);
+    const jobOn = { ...s, drawJob: true, heats: ["tease"], weights: { activity: 0, tease: 1, flash: 0, sex: 0 } };
+    let otherJob = 0;
+    for (let i = 0; i < 40; i++) {
+      const h = tagsOf(drawOne(lex, jobOn, pinMaid, new Set(), mulberry32(226000 + i), 226000 + i));
+      if ([...h].some((t) => lex.byTag.get(t)?.mutex === "job")) otherJob += 1;
+    }
+    eq("pin maid never auto another job", otherJob, 0);
+    const pinOnsen = applyPresetTags(lex, BUILTIN_PRESETS.find((p) => p.id === "onsen").tags, new Set());
+    let bathChair = 0;
+    for (let i = 0; i < 40; i++) {
+      const h = tagsOf(drawOne(lex, s, pinOnsen, new Set(), mulberry32(227000 + i), 227000 + i));
+      if (["gaming chair", "office chair", "swivel chair"].some((t) => h.has(t))) bathChair += 1;
+    }
+    eq("normal onsen never auto office/gaming chairs", bathChair, 0);
+    const pinDrive = applyPin(lex, new Set(), new Set(), "driving").pinned;
+    let driveBody = 0;
+    for (let i = 0; i < 40; i++) {
+      const h = tagsOf(drawOne(lex, s, pinDrive, new Set(), mulberry32(228000 + i), 228000 + i));
+      if (["standing", "squatting", "kneeling", "on one knee", "sleeping", "all fours"].some((t) => h.has(t))) {
+        driveBody += 1;
+      }
+    }
+    eq("driving never auto planted/ground body", driveBody, 0);
+    const pinHof3 = applyPin(lex, new Set(), new Set(), "head out of frame").pinned;
+    const teaseHof = { ...s, heats: ["tease"], weights: { activity: 0, tease: 1, flash: 0, sex: 0 } };
+    let hofSelfie = 0;
+    for (let i = 0; i < 40; i++) {
+      const h = tagsOf(drawOne(lex, teaseHof, pinHof3, new Set(), mulberry32(229000 + i), 229000 + i));
+      if (h.has("selfie") || h.has("taking picture")) hofSelfie += 1;
+    }
+    eq("head out of frame never auto selfie/taking picture", hofSelfie, 0);
+    const sexHof = { ...s, girl: true, boy: true, heats: ["sex"], weights: { activity: 0, tease: 0, flash: 0, sex: 1 } };
+    let hof69 = 0;
+    for (let i = 0; i < 40; i++) {
+      const h = tagsOf(drawOne(lex, sexHof, pinHof3, new Set(), mulberry32(230000 + i), 230000 + i));
+      if (["69", "kissing", "french kiss"].some((t) => h.has(t))) hof69 += 1;
+    }
+    eq("head out of frame never auto 69/kissing", hof69, 0);
+    const pinSleep4 = applyPin(lex, new Set(), new Set(), "sleeping").pinned;
+    let sleepGest = 0;
+    for (let i = 0; i < 40; i++) {
+      const h = tagsOf(drawOne(lex, s, pinSleep4, new Set(), mulberry32(231000 + i), 231000 + i));
+      if (
+        ["ojou-sama pose", "paizuri gesture", "reaching towards viewer", "heart hands", "v", "recording"].some((t) =>
+          h.has(t)
+        )
+      ) {
+        sleepGest += 1;
+      }
+    }
+    eq("sleeping never auto awake leftover gestures", sleepGest, 0);
+    const pinPolice = applyPresetTags(lex, BUILTIN_PRESETS.find((p) => p.id === "police").tags, new Set());
+    const policeSex = {
+      ...s,
+      heats: ["sex"],
+      weights: { activity: 0, tease: 0, flash: 0, sex: 1 },
+    };
+    let policePublic = 0;
+    for (let i = 0; i < 40; i++) {
+      const h = tagsOf(drawOne(lex, policeSex, pinPolice, new Set(), mulberry32(232000 + i), 232000 + i));
+      if (["street", "city", "cityscape", "alley", "park", "beach"].some((t) => h.has(t))) policePublic += 1;
+    }
+    eq("normal police sex never auto public outdoor place", policePublic, 0);
+    function presetAcc(id, seed, isBad) {
+      const p = BUILTIN_PRESETS.find((x) => x.id === id);
+      const pin = applyPresetTags(lex, p.tags, new Set());
+      let n = 0;
+      for (let i = 0; i < 40; i++) {
+        const d = drawOne(lex, s, pin, new Set(), mulberry32(seed + i), seed + i);
+        if (d.sections.clothing.some((t) => isBad(t))) n += 1;
+      }
+      return n;
+    }
+    eq(
+      "normal onsen never auto police/nurse hat or beach umbrella",
+      presetAcc("onsen", 233000, (t) => /\b(police hat|nurse cap|beach umbrella|helmet|innertube)\b/.test(t) || t === "hat" || t === "umbrella"),
+      0
+    );
+    eq(
+      "normal pool never auto necktie/microphone/clipboard",
+      presetAcc("pool", 234000, (t) => /\b(necktie|microphone|clipboard|handbag|hard hat|helmet)\b/.test(t)),
+      0
+    );
+    eq(
+      "normal beach never auto necktie/hard hat/microphone",
+      presetAcc("beach", 235000, (t) => /\b(necktie|hard hat|microphone|helmet)\b/.test(t)),
+      0
+    );
+    eq(
+      "normal police never auto innertube/stethoscope/nurse cap",
+      presetAcc("police", 236000, (t) => /\b(innertube|stethoscope|nurse cap|hard hat|helmet)\b/.test(t)),
+      0
+    );
+    const pinHofRead = applyPin(lex, new Set(), new Set(), "head out of frame").pinned;
+    let hofRead = 0;
+    for (let i = 0; i < 40; i++) {
+      const h = tagsOf(drawOne(lex, s, pinHofRead, new Set(), mulberry32(237000 + i), 237000 + i));
+      if (["reading", "studying", "writing", "washing hair", "adjusting hair", "cunnilingus", "oral"].some((t) => h.has(t))) hofRead += 1;
+    }
+    eq("head out of frame never auto reading/washing hair/oral", hofRead, 0);
+    const pinOffice = applyPin(lex, new Set(), new Set(), "office").pinned;
+    let washOffice = 0;
+    for (let i = 0; i < 40; i++) {
+      const h = tagsOf(drawOne(lex, s, pinOffice, new Set(), mulberry32(238000 + i), 238000 + i));
+      if (h.has("washing hair") || h.has("washing another's back") || h.has("washing body")) washOffice += 1;
+    }
+    eq("office never auto washing hair/body without water", washOffice, 0);
+    const pinSleep5 = applyPin(lex, new Set(), new Set(), "sleeping").pinned;
+    let sleepExpr = 0;
+    for (let i = 0; i < 40; i++) {
+      const h = tagsOf(drawOne(lex, s, pinSleep5, new Set(), mulberry32(239000 + i), 239000 + i));
+      if (["come hither", "scared", "angry", "naughty face", "ahegao"].some((t) => h.has(t))) sleepExpr += 1;
+    }
+    eq("sleeping never auto awake expressions", sleepExpr, 0);
+    const pinCrawl = applyPin(lex, new Set(), new Set(), "crawling").pinned;
+    let crawlChair = 0;
+    for (let i = 0; i < 40; i++) {
+      const h = tagsOf(drawOne(lex, s, pinCrawl, new Set(), mulberry32(240000 + i), 240000 + i));
+      if (h.has("on chair")) crawlChair += 1;
+    }
+    eq("crawling never auto on chair", crawlChair, 0);
+    const pinSit = applyPin(lex, new Set(), new Set(), "sitting").pinned;
+    let sitContra = 0;
+    for (let i = 0; i < 40; i++) {
+      const h = tagsOf(drawOne(lex, s, pinSit, new Set(), mulberry32(241000 + i), 241000 + i));
+      if (h.has("contrapposto")) sitContra += 1;
+    }
+    eq("sitting never auto contrapposto", sitContra, 0);
+    let hofHead = 0;
+    const sexHof2 = { ...s, girl: true, boy: true, heats: ["sex"], weights: { activity: 0, tease: 0, flash: 0, sex: 1 } };
+    for (let i = 0; i < 40; i++) {
+      const h = tagsOf(drawOne(lex, sexHof2, pinHofRead, new Set(), mulberry32(242000 + i), 242000 + i));
+      if (h.has("head tilt") || h.has("after fellatio") || h.has("after paizuri")) hofHead += 1;
+    }
+    eq("head out of frame never auto head tilt/after fellatio", hofHead, 0);
+    const pinSeiza2 = applyPin(lex, new Set(), new Set(), "seiza").pinned;
+    let seizaLegs = 0;
+    for (let i = 0; i < 40; i++) {
+      const h = tagsOf(drawOne(lex, s, pinSeiza2, new Set(), mulberry32(243000 + i), 243000 + i));
+      if (h.has("legs up")) seizaLegs += 1;
+    }
+    eq("seiza never auto legs up", seizaLegs, 0);
+    eq(
+      "normal onsen never auto high heels",
+      presetAcc("onsen", 244000, (t) => t === "high heels"),
+      0
+    );
+    eq(
+      "normal onsen never auto gloves/belt/bag",
+      presetAcc("onsen", 246000, (t) => /\b(gloves|belt|bag|cravat|bonnet)\b/.test(t)),
+      0
+    );
+    eq(
+      "normal pool never auto elbow gloves",
+      presetAcc("pool", 247000, (t) => /\bgloves\b/.test(t)),
+      0
+    );
+    eq(
+      "normal pool never auto belt/bag",
+      presetAcc("pool", 251000, (t) => /\b(belt|bag)\b/.test(t)),
+      0
+    );
+    let hofKiss = 0;
+    const teaseHof2 = { ...s, heats: ["tease"], weights: { activity: 0, tease: 1, flash: 0, sex: 0 }, eras: ["medieval"] };
+    for (let i = 0; i < 40; i++) {
+      const h = tagsOf(drawOne(lex, teaseHof2, pinHofRead, new Set(), mulberry32(248000 + i), 248000 + i));
+      if (["closed mouth", "kiss", "breast focus"].some((t) => h.has(t))) hofKiss += 1;
+    }
+    eq("head out of frame never auto kiss/closed mouth/breast focus", hofKiss, 0);
+    const pinCookMed = applyPin(lex, new Set(), new Set(), "cooking").pinned;
+    const medCook = { ...s, eras: ["medieval"] };
+    const COOK_OK = ["kitchen", "great hall", "castle", "palace"];
+    let cookOut = 0;
+    for (let i = 0; i < 40; i++) {
+      const h = tagsOf(drawOne(lex, medCook, pinCookMed, new Set(), mulberry32(249000 + i), 249000 + i));
+      if (h.has("cooking") && !COOK_OK.some((t) => h.has(t))) cookOut += 1;
+    }
+    eq("medieval cooking always has an indoor cook place", cookOut, 0);
+    const flashS = { ...s, heats: ["flash"], weights: { activity: 0, tease: 0, flash: 1, sex: 0 }, eras: ["victorian"] };
+    let flashSleep = 0;
+    for (let i = 0; i < 40; i++) {
+      const h = tagsOf(drawOne(lex, flashS, new Set(), new Set(), mulberry32(250000 + i), 250000 + i));
+      if (h.has("sleeping")) flashSleep += 1;
+    }
+    eq("flash never auto sleeping", flashSleep, 0);
+    let hofPhone = 0;
+    for (let i = 0; i < 40; i++) {
+      const h = tagsOf(drawOne(lex, s, pinHofRead, new Set(), mulberry32(252000 + i), 252000 + i));
+      if (h.has("talking on phone") || h.has("breast sucking")) hofPhone += 1;
+    }
+    eq("head out of frame never auto phone/breast sucking", hofPhone, 0);
+    const pinKneel = applyPin(lex, new Set(), new Set(), "kneeling").pinned;
+    let kneelChair = 0;
+    for (let i = 0; i < 40; i++) {
+      const h = tagsOf(drawOne(lex, s, pinKneel, new Set(), mulberry32(253000 + i), 253000 + i));
+      if (h.has("on chair")) kneelChair += 1;
+    }
+    eq("kneeling never auto on chair", kneelChair, 0);
+    const ARMS = ["arms behind back", "arms behind head", "crossed arms", "heart hands", "v", "reaching towards viewer"];
+    let twoArms = 0;
+    for (let i = 0; i < 40; i++) {
+      const h = tagsOf(drawOne(lex, s, new Set(), new Set(), mulberry32(254000 + i), 254000 + i));
+      if (ARMS.filter((t) => h.has(t)).length > 1) twoArms += 1;
+    }
+    eq("pose10 never two leftover arm extras", twoArms, 0);
+    function busyArms(pinTag, seed) {
+      const pin = applyPin(lex, new Set(), new Set(), pinTag).pinned;
+      let n = 0;
+      for (let i = 0; i < 40; i++) {
+        const h = tagsOf(drawOne(lex, s, pin, new Set(), mulberry32(seed + i), seed + i));
+        if (ARMS.some((t) => h.has(t))) n += 1;
+      }
+      return n;
+    }
+    eq("playing guitar never auto busy-arm leftovers", busyArms("playing guitar", 255000), 0);
+    eq("talking on phone never auto busy-arm leftovers", busyArms("talking on phone", 256000), 0);
+    eq("writing never auto busy-arm leftovers", busyArms("writing", 257000), 0);
+    eq("cooking never auto busy-arm leftovers", busyArms("cooking", 258000), 0);
+    eq("eating never auto busy-arm leftovers", busyArms("eating", 259000), 0);
+    eq("drawing never auto busy-arm leftovers", busyArms("drawing (action)", 260000), 0);
+    eq("crawling never auto busy-arm leftovers", busyArms("crawling", 261000), 0);
+  }
   const cleaned = sanitizePinPresets(
     [
       { name: "  我的OL  ", tags: ["office lady", "not-a-tag"] },
