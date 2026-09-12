@@ -1,0 +1,85 @@
+/** 生圖佇列：背景永遠預先生好下一題。只管網路，不懂遊戲規則。 */
+
+export const GEN_WIDTH = 832;
+export const GEN_HEIGHT = 1216;
+export const MAX_ATTEMPTS = 20;
+
+export async function* sseEvents(res) {
+  const reader = res.body.getReader();
+  const decoder = new TextDecoder();
+  let buf = "";
+  for (;;) {
+    const { value, done } = await reader.read();
+    if (done) break;
+    buf += decoder.decode(value, { stream: true });
+    let at;
+    while ((at = buf.indexOf("\n\n")) !== -1) {
+      const chunk = buf.slice(0, at);
+      buf = buf.slice(at + 2);
+      let event = "message";
+      const data = [];
+      for (const line of chunk.split("\n")) {
+        if (line.startsWith("event:")) event = line.slice(6).trim();
+        else if (line.startsWith("data:")) data.push(line.slice(5).trim());
+      }
+      if (data.length) yield { event, data: JSON.parse(data.join("\n")) };
+    }
+  }
+}
+
+export async function generate(positive, opts = {}) {
+  const { onEvent, signal, fetchImpl = fetch } = opts;
+  const res = await fetchImpl("/api/gen", {
+    method: "POST",
+    headers: { "Content-Type": "application/json", Accept: "text/event-stream" },
+    body: JSON.stringify({ positive, width: GEN_WIDTH, height: GEN_HEIGHT }),
+    signal,
+  });
+  if (!res.ok) throw new Error("gen HTTP " + res.status);
+  for await (const { event, data } of sseEvents(res)) {
+    if (onEvent) onEvent(event, data);
+    if (event === "error") throw new Error(data.error || "gen failed");
+    if (event === "done") return data;
+  }
+  throw new Error("gen stream ended without a result");
+}
+
+export function createQueue(opts) {
+  const { makeRound, onEvent, generateImpl = generate } = opts;
+  let pending = null;
+
+  async function build() {
+    let lastErr = null;
+    for (let i = 0; i < MAX_ATTEMPTS; i++) {
+      const round = makeRound();
+      if (!round) continue; // 組不出題，重抽。沒花到 GPU。
+      try {
+        const job = await generateImpl(round.draw.positive, { onEvent });
+        return { ...round, image: job.image, seed: job.seed };
+      } catch (err) {
+        lastErr = err; // 生圖失敗不是玩家的錯，換一題再來
+      }
+    }
+    throw lastErr || new Error(`queue: 連續 ${MAX_ATTEMPTS} 次都沒生出題目`);
+  }
+
+  function fill() {
+    if (!pending) pending = build();
+    return pending;
+  }
+
+  return {
+    prime() {
+      fill();
+    },
+    async take() {
+      const ready = fill();
+      pending = null;
+      try {
+        return await ready;
+      } finally {
+        fill(); // 拿走一題就立刻補下一題，這就是「預抽 1」
+      }
+    },
+  };
+}

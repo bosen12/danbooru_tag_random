@@ -1,0 +1,63 @@
+<!DOCTYPE html>
+<html lang="zh-Hant">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover" />
+    <meta name="theme-color" content="#2a1814" />
+    <title>猜字棚 · 看圖猜 tag</title>
+    <link rel="icon" href="logo.svg" type="image/svg+xml" />
+    <link rel="preload" href="lexicon.json" as="fetch" crossorigin />
+    <link rel="modulepreload" href="engine.js" />
+    <link rel="preconnect" href="https://fonts.googleapis.com" />
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+    <link
+      rel="stylesheet"
+      href="https://fonts.googleapis.com/css2?family=Bricolage+Grotesque:opsz,wght@12..96,700;12..96,800&family=IBM+Plex+Mono:wght@400&family=IBM+Plex+Sans:wght@400;500&display=swap"
+      media="print"
+      onload="this.media='all'"
+    />
+    <link rel="stylesheet" href="tokens.css" />
+    <link rel="stylesheet" href="game.css" />
+  </head>
+  <body>
+    <main class="stage">
+      <section id="gate" class="card">
+        <h1 class="title">猜字棚</h1>
+        <p class="lede">抽一組 tag 生圖，蔽掉三個。從十二個候選裡挖出來。答錯扣一條命。</p>
+        <fieldset class="heats">
+          <legend>尺度</legend>
+          <div id="heat" class="heat-row"></div>
+        </fieldset>
+        <button id="start" class="btn btn-go" type="button">開始</button>
+        <p id="gate-note" class="note"></p>
+        <p class="records">最高分 <b id="best">0</b> · 最長連勝 <b id="best-streak">0</b></p>
+      </section>
+
+      <section id="play" class="card" hidden>
+        <div class="shot-wrap">
+          <img id="shot" class="shot" alt="這一題的圖" />
+          <div id="progress" class="progress"></div>
+        </div>
+        <div class="hud">
+          <span id="lives" class="lives"></span>
+          <span class="stat">分數 <b id="score">0</b></span>
+          <span class="stat">連勝 <b id="streak">0</b></span>
+          <button id="skip" class="btn btn-quiet" type="button">跳過這題</button>
+        </div>
+        <div id="choices" class="choices"></div>
+      </section>
+
+      <section id="over" class="card" hidden>
+        <h2 class="title">結束</h2>
+        <p class="records">分數 <b id="final-score">0</b> · 最長連勝 <b id="final-streak">0</b></p>
+        <div id="answers" class="answers"></div>
+        <pre id="positive" class="positive"></pre>
+        <div class="row">
+          <button id="copy" class="btn btn-quiet" type="button">複製 POS</button>
+          <button id="again" class="btn btn-go" type="button">再來</button>
+        </div>
+      </section>
+    </main>
+    <script type="module" src="main.js"></script>
+  </body>
+</html>

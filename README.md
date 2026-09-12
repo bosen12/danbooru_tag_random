@@ -56,6 +56,7 @@ Windows 可以在檔案總管直接雙擊 `.bat`（不要用記事本打開）�
 | `start-darkroom.bat` | 暗房：上面放大機井，右邊機盤，下面詞庫 | http://127.0.0.1:8788 |
 | `start-typefloor.bat` | 活字樓：抽屜撿字、右邊校樣付印 | http://127.0.0.1:8789 |
 | `start-stall.bat` | 抽籤棚：衣繩拍立得、櫃檯抽籤 | http://127.0.0.1:8790 |
+| `start-game.bat` | 猜字棚：看圖猜 tag 的遊戲 | http://127.0.0.1:8791 |
 | `start_lora_manager.bat` | LoRA Manager（獨立埠，從 flux2klein 啟動） | http://127.0.0.1:7861/loras |
 
 任何系統都可以直接跑（macOS / Linux 只有這條路）：
