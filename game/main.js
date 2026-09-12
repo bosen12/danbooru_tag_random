@@ -30,6 +30,14 @@ function show(name) {
 let devNow = 0;
 let devRaf = 0;
 let devFuse = 0;
+let turnTimer = 0;
+
+/** 一個回合同時只准有一件排定中的事。第三個答對會排下一張，
+ *  緊接著的第三次答錯會排結束——兩件都跑的話，結束畫面後面會開始顯影下一張。 */
+function later(fn, ms) {
+  window.clearTimeout(turnTimer);
+  turnTimer = window.setTimeout(fn, ms);
+}
 
 function setDev(value) {
   devNow = Math.max(0, Math.min(1, value));
@@ -171,7 +179,7 @@ function renderChoices() {
 function pinAnswer(btn, tag) {
   const from = btn.getBoundingClientRect();
 
-  const pin = document.createElement("div");
+  const pin = document.createElement("li");
   pin.className = "pin";
 
   const zh = document.createElement("span");
@@ -208,7 +216,7 @@ function flashFog() {
 /* ── 一回合 ───────────────────────────────────────── */
 
 function pick(btn, choice) {
-  if (btn.disabled || run.waiting) return;
+  if (btn.disabled || run.waiting || run.done) return;
   btn.disabled = true;
 
   if (choice.correct) {
@@ -220,7 +228,7 @@ function pick(btn, choice) {
     if (run.found === run.round.question.answers.length) {
       if (run.clean) run.streak += 1;
       renderCounters();
-      window.setTimeout(nextRound, calm.matches ? 200 : 900);
+      later(nextRound, calm.matches ? 200 : 900);
     }
     return;
   }
@@ -232,10 +240,14 @@ function pick(btn, choice) {
   renderSheets();
   renderCounters();
   flashFog();
-  if (run.lives <= 0) window.setTimeout(finish, calm.matches ? 200 : 560);
+  if (run.lives <= 0) {
+    run.done = true;
+    later(finish, calm.matches ? 200 : 560);
+  }
 }
 
 async function nextRound() {
+  if (run.done) return;
   run.waiting = true;
   run.awaiting = true;
   run.live = false;
@@ -323,6 +335,7 @@ function renderDial() {
 }
 
 async function start() {
+  window.clearTimeout(turnTimer);
   run = {
     lives: SHEETS,
     score: 0,
@@ -333,7 +346,9 @@ async function start() {
     waiting: true,
     awaiting: false,
     live: false,
+    done: false,
   };
+  room.classList.add("is-board");
   // 佇列只建一次。上一局結束時背景已經生好一張了，「再曝一張」直接接手。
   if (!queue) queue = createQueue({ makeRound, onEvent: onGenEvent });
   show("play");
@@ -343,7 +358,7 @@ async function start() {
 }
 
 function skip() {
-  if (!run || run.waiting) return;
+  if (!run || run.waiting || run.done) return;
   run.streak = 0;
   renderCounters();
   nextRound();

@@ -17,13 +17,13 @@
     <link rel="stylesheet" href="game.css" />
   </head>
   <body>
-    <div class="room">
-      <!-- 相紙。顯影就發生在這裡。 -->
+    <div class="room" id="room">
+      <!-- 相紙。整張都看得到，不裁。顯影就發生在這裡。 -->
       <div class="print" id="print">
         <img id="shot" class="print-img" alt="" />
         <div class="print-grain" aria-hidden="true"></div>
-        <div class="print-vignette" aria-hidden="true"></div>
-        <div class="print-pins" id="pins" aria-hidden="true"></div>
+        <div class="print-edge" aria-hidden="true"></div>
+        <p class="develop-note" id="progress" role="status"></p>
       </div>
 
       <section class="screen screen-gate" id="gate">
@@ -48,6 +48,7 @@
         </div>
       </section>
 
+      <!-- 記事欄。靠在安全燈照到的牆上，不壓在相紙上。 -->
       <section class="screen screen-play" id="play" hidden>
         <header class="hud">
           <div class="sheets" id="lives" aria-label="剩餘相紙"></div>
@@ -57,12 +58,9 @@
           </div>
         </header>
 
-        <p class="develop-note" id="progress" role="status"></p>
-
-        <footer class="tray">
-          <div class="choices" id="choices"></div>
-          <button class="ghost skip" id="skip" type="button">換一張</button>
-        </footer>
+        <ul class="notes" id="pins" aria-label="已定影的答案"></ul>
+        <div class="choices" id="choices"></div>
+        <button class="ghost skip" id="skip" type="button">換一張</button>
       </section>
 
       <section class="screen screen-over" id="over" hidden>

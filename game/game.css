@@ -3,6 +3,9 @@
  * 安全燈是琥珀色，相紙基底是冷的，這兩件事決定了整個色票。
  * 對錯不用紅綠燈：答對是「定影」（燒到白、變銳），答錯是「起霧」（糊掉、灰掉）。
  * 全站只花一次動態預算——顯影。其餘安靜。
+ *
+ * 版面是台面式：相紙擺左邊，整張都看得到、不裁也不遮；
+ * 記事欄靠在右邊被安全燈照到的牆上。
  */
 
 /* 顯影進度。0 = 還在霧裡，1 = 定影。
@@ -28,7 +31,8 @@
   --face-mono: "DM Mono", ui-monospace, "Cascadia Mono", monospace;
   --face-han: "PingFang TC", "Noto Sans TC", "Microsoft JhengHei", "Hiragino Sans", sans-serif;
 
-  --gut: clamp(20px, 4.5vw, 56px);
+  --gut: clamp(18px, 3.4vw, 48px);
+  --gap: clamp(22px, 3vw, 46px);
   --ease: cubic-bezier(0.2, 0.8, 0.2, 1);
   --ease-fog: cubic-bezier(0.4, 0, 0.6, 1);
 }
@@ -63,18 +67,20 @@ body {
   height: 100dvh;
   width: 100%;
   overflow: hidden;
+
+  /* 相紙是正方形，邊長取「高度放得下」跟「寬度別霸佔太多」的較小值。 */
+  --board: min(calc(100dvh - var(--gut) * 2), 56vw);
 }
 
-/* 安全燈。燈泡在畫面外，只有它照到的那片牆看得見。
- * 相紙還在霧裡時透出來，定影後被照片蓋過去——房間本來就該是這樣。 */
+/* 安全燈。燈泡在畫面外，只有它照到的那片牆看得見。記事欄就寫在這片牆上。 */
 .room::before {
   content: "";
   position: absolute;
   inset: 0;
   pointer-events: none;
   background:
-    radial-gradient(58% 68% at 104% 38%, oklch(64% 0.17 48 / 0.3) 0%, transparent 62%),
-    radial-gradient(90% 60% at 86% 8%, oklch(64% 0.17 48 / 0.12) 0%, transparent 70%);
+    radial-gradient(58% 68% at 104% 38%, oklch(64% 0.17 48 / 0.26) 0%, transparent 62%),
+    radial-gradient(90% 60% at 86% 8%, oklch(64% 0.17 48 / 0.1) 0%, transparent 70%);
 }
 
 /* ── 相紙 ───────────────────────────────────────────── */
@@ -85,16 +91,23 @@ body {
   --dev: 0;
 }
 
+/* 曝過第一張之後就進台面模式，相紙定位到左邊那一格。 */
+.room.is-board .print {
+  inset: var(--gut) auto auto var(--gut);
+  width: var(--board);
+  height: var(--board);
+}
+
 .print-img {
   width: 100%;
   height: 100%;
-  object-fit: cover;
-  object-position: center 30%;
+  /* 整張圖。不裁。 */
+  object-fit: contain;
   display: block;
   opacity: calc(0.18 + var(--dev) * 0.82);
   filter: blur(calc((1 - var(--dev)) * 38px)) saturate(calc(0.1 + var(--dev) * 0.9))
     contrast(calc(0.5 + var(--dev) * 0.5)) brightness(calc(0.45 + var(--dev) * 0.55));
-  transform: scale(calc(1.06 - var(--dev) * 0.06));
+  transform: scale(calc(1.04 - var(--dev) * 0.04));
 }
 
 .print-img:not([src]) {
@@ -102,80 +115,50 @@ body {
 }
 
 .print.is-spent .print-img {
-  filter: grayscale(1) brightness(0.32) contrast(0.85);
-  opacity: 0.3;
+  filter: grayscale(1) brightness(0.42) contrast(0.85);
+  opacity: 0.42;
   transition: filter 900ms var(--ease), opacity 900ms var(--ease);
 }
 
-/* 顆粒。靜態一張 turbulence，不動，只是質感。 */
+/* 顆粒。靜態一張 turbulence，不動，只是質感。跟著顯影一起浮出來。 */
 .print-grain {
   position: absolute;
   inset: 0;
   pointer-events: none;
-  opacity: 0.22;
+  opacity: calc(var(--dev) * 0.2);
   mix-blend-mode: overlay;
   background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='160' height='160'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.9' numOctaves='3'/%3E%3C/filter%3E%3Crect width='160' height='160' filter='url(%23n)' opacity='0.5'/%3E%3C/svg%3E");
 }
 
-.print-vignette {
+/* 相紙的邊。一條髮絲線加一點落影，讓它是一張擺在檯面上的紙，不是網頁區塊。 */
+.print-edge {
   position: absolute;
   inset: 0;
   pointer-events: none;
-  background:
-    radial-gradient(120% 85% at 50% 28%, transparent 34%, oklch(9% 0.01 40 / 0.78) 100%),
-    linear-gradient(
-      to bottom,
-      oklch(9% 0.01 40 / 0.78) 0%,
-      transparent 18%,
-      transparent 46%,
-      oklch(9% 0.01 40 / 0.35) 72%,
-      oklch(9% 0.01 40 / 0.72) 100%
-    );
+  opacity: calc(var(--dev) * 0.85);
+  box-shadow: inset 0 0 0 1px oklch(72% 0.01 250 / 0.16), 0 24px 70px -20px oklch(0% 0 0 / 0.85);
 }
 
-/* 答對的字定影後來這裡。印樣邊上的說明欄，不壓在人身上。 */
-.print-pins {
+.room:not(.is-board) .print-edge {
+  display: none;
+}
+
+.develop-note {
   position: absolute;
-  left: var(--gut);
-  top: calc(var(--gut) + 52px);
-  display: flex;
-  flex-direction: column;
-  gap: 11px;
-  pointer-events: none;
-}
-
-.pin {
-  position: relative;
-  display: flex;
-  align-items: baseline;
-  gap: 10px;
-  padding-left: 20px;
-  color: var(--fixed);
-  text-shadow: 0 1px 3px oklch(9% 0.01 40), 0 2px 18px oklch(9% 0.01 40 / 0.95);
-  white-space: nowrap;
-}
-
-.pin::before {
-  content: "";
-  position: absolute;
-  left: 0;
-  top: 0.62em;
-  width: 12px;
-  height: 1px;
-  background: var(--safelight);
-}
-
-.pin-zh {
-  font-size: clamp(17px, 2.1vw, 23px);
-  letter-spacing: 0.06em;
-}
-
-.pin-en {
+  inset: auto 0 0 0;
+  margin: 0;
+  padding: 12px;
+  text-align: center;
   font-family: var(--face-mono);
-  font-size: 11px;
+  font-size: 12px;
   font-weight: 300;
+  letter-spacing: 0.22em;
   color: var(--safelight);
-  letter-spacing: 0.04em;
+  text-shadow: 0 1px 10px var(--ink);
+}
+
+.develop-note:empty {
+  visibility: hidden;
 }
 
 /* ── 螢幕 ───────────────────────────────────────────── */
@@ -185,6 +168,12 @@ body {
   inset: 0;
   display: flex;
   flex-direction: column;
+}
+
+/* 台面模式下，所有內容讓開左邊那張相紙。 */
+.room.is-board .screen-play,
+.room.is-board .screen-over {
+  padding-left: calc(var(--gut) + var(--board) + var(--gap));
 }
 
 .eyebrow {
@@ -342,18 +331,22 @@ body {
   font-weight: 400;
 }
 
-/* ── 遊玩 ───────────────────────────────────────────── */
+/* ── 遊玩：右牆上的記事欄 ───────────────────────────── */
 
 .screen-play {
-  justify-content: space-between;
+  justify-content: flex-start;
+  gap: clamp(14px, 2.2vh, 28px);
   padding: var(--gut);
+  overflow-y: auto;
 }
 
 .hud {
   display: flex;
-  align-items: flex-start;
+  align-items: center;
   justify-content: space-between;
   gap: 20px;
+  flex: none;
+  max-width: 34rem;
 }
 
 .sheets {
@@ -401,54 +394,62 @@ body {
   font-variant-numeric: tabular-nums;
 }
 
-.develop-note {
+/* 答對的字定影後升到這裡。這一欄就是你這張照片的筆記。 */
+.notes {
+  list-style: none;
   margin: 0;
-  text-align: center;
-  font-family: var(--face-mono);
-  font-size: 12px;
-  font-weight: 300;
-  letter-spacing: 0.22em;
-  color: var(--safelight);
-  min-height: 1.4em;
-}
-
-.develop-note:empty {
-  visibility: hidden;
-}
-
-.tray {
-  position: relative;
+  padding: 0;
+  max-width: 34rem;
   display: flex;
   flex-direction: column;
-  align-items: center;
-  gap: 16px;
-  margin: 0 calc(var(--gut) * -1) calc(var(--gut) * -1);
-  padding: 30px var(--gut) 14px;
+  gap: 9px;
+  flex: none;
 }
 
-/* 放大機沒對到焦的那一段。壓黑會吃掉畫面下半的衣服跟姿勢，離焦不會。 */
-.tray::before {
+.notes:empty {
+  display: none;
+}
+
+.pin {
+  position: relative;
+  display: flex;
+  align-items: baseline;
+  gap: 10px;
+  padding-left: 20px;
+  color: var(--fixed);
+  white-space: nowrap;
+}
+
+.pin::before {
   content: "";
   position: absolute;
-  inset: 0;
-  pointer-events: none;
-  backdrop-filter: blur(22px) brightness(0.34) saturate(0.72);
-  -webkit-backdrop-filter: blur(22px) brightness(0.34) saturate(0.72);
-  mask-image: linear-gradient(to bottom, transparent 0%, black 46%);
-  -webkit-mask-image: linear-gradient(to bottom, transparent 0%, black 46%);
+  left: 0;
+  top: 0.62em;
+  width: 12px;
+  height: 1px;
+  background: var(--safelight);
 }
 
-.tray > * {
-  position: relative;
+.pin-zh {
+  font-size: clamp(17px, 1.9vw, 22px);
+  letter-spacing: 0.06em;
 }
 
-/* 候選字。不是按鈕框，是浮在相紙上的字。 */
+.pin-en {
+  font-family: var(--face-mono);
+  font-size: 11px;
+  font-weight: 300;
+  color: var(--safelight);
+  letter-spacing: 0.04em;
+}
+
+/* 候選字。沒有框、沒有底色，就是寫在牆上的字。 */
 .choices {
-  display: flex;
-  flex-wrap: wrap;
-  justify-content: center;
-  gap: 2px 4px;
-  max-width: 62rem;
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 2px clamp(10px, 1.6vw, 24px);
+  align-content: start;
+  max-width: 34rem;
 }
 
 .choice {
@@ -457,15 +458,15 @@ body {
   border: 0;
   border-radius: 2px;
   font: inherit;
-  font-size: clamp(17px, 2.2vw, 25px);
-  letter-spacing: 0.07em;
+  font-size: clamp(16px, 1.8vw, 23px);
+  letter-spacing: 0.06em;
+  text-align: left;
   color: var(--silver);
-  padding: 11px 16px;
-  min-height: 46px;
+  padding: 9px 10px;
+  min-height: 44px;
   cursor: pointer;
   opacity: 0;
   transform: translateY(9px);
-  text-shadow: 0 1px 16px oklch(9% 0.01 40 / 0.95);
   transition: color 200ms var(--ease), opacity 200ms var(--ease);
 }
 
@@ -491,22 +492,22 @@ body {
 
 .choice:focus-visible {
   outline: 1px solid var(--safelight);
-  outline-offset: 3px;
+  outline-offset: 2px;
 }
 
-/* 定影：字已經飛到照片上了，托盤只留一道琥珀痕跡，不再發亮。 */
+/* 定影：字已經升到記事欄了，這裡只留一道琥珀痕跡。 */
 .choice[data-state="fixed"] {
   color: var(--silver-2);
-  opacity: 0.55;
+  opacity: 0.5;
   cursor: default;
   box-shadow: inset 0 -1px 0 var(--safelight);
 }
 
-/* 起霧：糊掉、灰掉、退場。 */
+/* 起霧：離焦、灰掉，但還讀得出來——玩家得知道自己已經排除過什麼。 */
 .choice[data-state="fogged"] {
   color: var(--fog);
-  filter: blur(3.5px);
-  opacity: 0.34;
+  filter: blur(1.6px);
+  opacity: 0.42;
   cursor: default;
   transition: color 520ms var(--ease-fog), filter 520ms var(--ease-fog),
     opacity 520ms var(--ease-fog);
@@ -522,7 +523,7 @@ body {
   font-weight: 300;
   letter-spacing: 0.2em;
   color: var(--silver-2);
-  padding: 10px 14px;
+  padding: 10px 12px;
   min-height: 44px;
   cursor: pointer;
   transition: color 180ms var(--ease);
@@ -537,13 +538,19 @@ body {
   outline-offset: 2px;
 }
 
+.skip {
+  align-self: flex-start;
+  flex: none;
+  margin-left: -12px;
+}
+
 /* 印壞一張的瞬間：邊緣被安全燈刷一下。 */
 .room.is-fogging::after {
   content: "";
   position: absolute;
   inset: 0;
   pointer-events: none;
-  box-shadow: inset 0 0 120px 10px oklch(64% 0.17 48 / 0.4);
+  box-shadow: inset 0 0 120px 10px oklch(64% 0.17 48 / 0.36);
   animation: fog-flash 420ms var(--ease-fog) both;
 }
 
@@ -565,12 +572,6 @@ body {
   justify-content: flex-start;
   padding: var(--gut);
   overflow-y: auto;
-  background: linear-gradient(
-    to right,
-    oklch(9% 0.01 40 / 0.94) 0%,
-    oklch(9% 0.01 40 / 0.86) 46%,
-    oklch(9% 0.01 40 / 0.5) 100%
-  );
 }
 
 .over-body {
@@ -665,7 +666,7 @@ body {
 }
 
 .pos {
-  margin: 26px 0 0;
+  margin: 22px 0 0;
 }
 
 .pos summary {
@@ -692,7 +693,7 @@ body {
   color: var(--silver-2);
   white-space: pre-wrap;
   word-break: break-word;
-  max-height: 22vh;
+  max-height: 20vh;
   overflow-y: auto;
 }
 
@@ -707,25 +708,37 @@ body {
   margin: 0;
 }
 
-/* ── 窄螢幕 ─────────────────────────────────────────── */
+/* ── 窄螢幕：相紙在上，記事欄在下 ───────────────────── */
 
-@media (max-width: 620px) {
-  .dial-step {
-    padding: 12px 11px 10px;
-    font-size: 13px;
-    letter-spacing: 0.06em;
+@media (max-width: 900px) {
+  .room {
+    --board: min(calc(100vw - var(--gut) * 2), 52dvh);
+  }
+
+  .room.is-board .print {
+    inset: var(--gut) auto auto 50%;
+    transform: translateX(-50%);
+  }
+
+  .room.is-board .screen-play,
+  .room.is-board .screen-over {
+    padding-left: var(--gut);
+    padding-top: calc(var(--gut) + var(--board) + clamp(12px, 2vh, 22px));
   }
 
   .choices {
-    gap: 0 2px;
+    grid-template-columns: repeat(3, minmax(0, 1fr));
+    gap: 0 6px;
   }
 
   .choice {
-    padding: 10px 11px;
+    padding: 9px 6px;
   }
+}
 
-  .tray {
-    padding-top: 22px;
+@media (max-width: 560px) {
+  .choices {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
   }
 
   .pin-en {
