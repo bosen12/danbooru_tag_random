@@ -4,6 +4,17 @@ import {
   supportCandidateAllowed,
   validateSupportShadow,
 } from "./shadow-validator.js";
+import {
+  SPORT_ACT_PLACE,
+  SPORT_BUTTONS,
+  SPORT_IDENTITY,
+  SPORT_MOVE_ACTS,
+  SPORT_NEUTRAL_GEAR,
+  SPORT_PRESETS,
+  sportIdsOf,
+  sportPresetTags,
+  sportTagAllowed,
+} from "./sports.js";
 
 export const HEATS = ["activity", "tease", "flash", "sex"];
 export const MIXED_HEATS = ["tease", "flash", "sex"];
@@ -51,6 +62,19 @@ const SEX_OK_ACTIVITY = new Set([
 const STILL_BODY = new Set(["sleeping", "lying", "on back", "on stomach", "on side", "reclining"]);
 const LOCKED_SIT = new Set(["seiza", "wariza", "indian style"]);
 const GROUND_BODY = new Set(["all fours", "crawling", "top-down bottom-up"]);
+// 這些運動坐著或跪著都做不了。射箭不在裡面 —— 跪射是合理的姿勢。
+const SEATED_BAD_SPORT = new Set([
+  "playing sports",
+  "training",
+  "exercising",
+  "tennis",
+  "soccer",
+  "badminton",
+  "table tennis",
+  "boxing",
+  "track and field",
+  "golf",
+]);
 const MOVE_ACT = new Set([
   "swimming",
   "hiking",
@@ -73,6 +97,10 @@ const STAND_OK_MOVE = new Set([
   "hiking",
   "skiing",
 ]);
+for (const act of SPORT_MOVE_ACTS) {
+  MOVE_ACT.add(act);
+  STAND_OK_MOVE.add(act);
+}
 const AWAKE_ACT = new Set([
   ...MOVE_ACT,
   "fishing",
@@ -318,10 +346,7 @@ function activityFitsBody(act, body) {
     return false;
   }
   if ([...body].some((t) => STILL_BODY.has(t) || LOCKED_SIT.has(t)) && act === "shopping") return false;
-  if (
-    (act === "playing sports" || act === "training" || act === "exercising") &&
-    (body.has("sitting") || body.has("kneeling"))
-  ) {
+  if (SEATED_BAD_SPORT.has(act) && (body.has("sitting") || body.has("kneeling"))) {
     return false;
   }
   if (
@@ -668,6 +693,10 @@ const ACT_PLACE = {
   "horseback riding": new Set(["forest", "park", "garden", "courtyard", "ruins"]),
   "riding bicycle": new Set(["street", "park", "city", "alley"]),
 };
+// 從 sports.js 補進新運動的場地，免得射箭掉進臥室、自行車掉到床上。
+for (const [act, places] of Object.entries(SPORT_ACT_PLACE)) {
+  ACT_PLACE[act] = new Set([...(ACT_PLACE[act] || []), ...places]);
+}
 const ACT_PROP = {
   "playing guitar": ["guitar"],
   reading: ["book"],
@@ -706,70 +735,31 @@ const JOB_PLACE = {
   soldier: new Set(["ruins", "street", "city", "forest"]),
 };
 const RAPE_BAD_PLACE = new Set(["classroom", "bedroom", "living room", "kitchen", "bed", "futon"]);
-const SPORT_BALL = new Set([
-  "basketball (object)",
-  "soccer ball",
-  "tennis ball",
-  "volleyball (object)",
-  "baseball (object)",
-  "bowling ball",
-  "golf ball",
-]);
-const SPORT_PROP = new Set(["tennis racket", "baseball bat", "golf club"]);
-const SPORT_UNIFORMS = new Set([
-  "basketball uniform",
-  "soccer uniform",
-  "baseball uniform",
-  "tennis uniform",
-  "volleyball uniform",
-]);
-const SPORT_KIT = {
-  "basketball court": { balls: ["basketball (object)"], wear: ["basketball uniform"], locked: true },
-  "tennis court": { balls: ["tennis ball"], wear: ["tennis uniform"], props: ["tennis racket"], locked: true },
-  "soccer field": { balls: ["soccer ball"], wear: ["soccer uniform"], locked: true },
-  "baseball stadium": { balls: ["baseball (object)"], wear: ["baseball uniform"], props: ["baseball bat"], locked: true },
-  "bowling alley": { balls: ["bowling ball"], locked: true },
-  "golf course": { balls: ["golf ball"], props: ["golf club"], locked: true },
-  "running track": { wear: ["track uniform"], locked: true },
-  "boxing ring": { locked: true },
-  "ski slope": { locked: true },
-};
+// 運動互斥全部從 web/sports.js 那份單一資料來源算出來。以前這裡自己列球、球拍、
+// 制服和 SPORT_KIT 四份清單，改一個地方就會跟其他三份失同步。
+//
+// 判斷方式是「運動身分」：每個帶身分的 tag 記著哪些運動用得到它，場上所有這種 tag
+// 的交集如果空了就是混到別的運動。所以 tennis racket + tennis ball 本來就共存
+// （兩個都只屬於網球），但 basketball court + soccer ball 交集是空的，擋掉。
+// 球鞋、運動服這類通用裝備不帶身分，不會害任何運動互斥。
+const SPORT_VENUES = new Set();
+const SPORT_ACTS = new Set();
+for (const p of SPORT_PRESETS) {
+  for (const v of p.venue || []) SPORT_VENUES.add(v);
+  if (p.activity) SPORT_ACTS.add(p.activity);
+}
+
 function sportFieldOf(used) {
   for (const t of used) {
-    if (SPORT_KIT[t]) return t;
+    if (SPORT_VENUES.has(t)) return t;
   }
   return null;
 }
-function sportKitOf(used) {
-  if (used.has("skiing")) return SPORT_KIT["ski slope"];
-  const field = sportFieldOf(used);
-  if (field) return SPORT_KIT[field];
-  for (const t of used) {
-    for (const kit of Object.values(SPORT_KIT)) {
-      if (!kit.locked) continue;
-      if ((kit.balls || []).includes(t) || (kit.wear || []).includes(t) || (kit.props || []).includes(t)) return kit;
-    }
-  }
-  return null;
-}
+
 function sportKitOk(item, used) {
-  const check = (kit, tag) => {
-    if (!kit || !kit.locked) return true;
-    if (SPORT_BALL.has(tag) && !(kit.balls || []).includes(tag)) return false;
-    if (SPORT_PROP.has(tag) && !(kit.props || []).includes(tag)) return false;
-    if (SPORT_UNIFORMS.has(tag) && !(kit.wear || []).includes(tag)) return false;
-    return true;
-  };
-  const usedKit = sportKitOf(used);
-  if (usedKit && !check(usedKit, item.tag)) return false;
-  const itemKit = SPORT_KIT[item.tag] || sportKitOf(new Set([item.tag]));
-  if (itemKit && itemKit.locked) {
-    for (const t of used) {
-      if (!check(itemKit, t)) return false;
-    }
-  }
-  return true;
+  return sportTagAllowed(item.tag, used);
 }
+
 const PRIVATE_SEX_PLACE = new Set([
   "bedroom",
   "hotel room",
@@ -985,7 +975,7 @@ function sceneClothKind(used) {
   if (used.has("karaoke") || used.has("karaoke box") || used.has("singing")) return "indoor";
   if (
     sportFieldOf(used) ||
-    used.has("playing sports") ||
+    [...used].some((t) => SPORT_ACTS.has(t)) ||
     used.has("fitness gym") ||
     used.has("school gym") ||
     used.has("exercising") ||
@@ -1441,11 +1431,16 @@ export const BUILTIN_PRESETS = [
   { id: "xmas", name: "聖誕", tags: ["santa costume"] },
   { id: "ski", name: "滑雪", tags: ["skiing"] },
   { id: "dojo", name: "道場", tags: ["dojo"] },
-  { id: "hoops", name: "籃球場", tags: ["basketball court"] },
-  { id: "tennis", name: "網球場", tags: ["tennis court"] },
-  { id: "soccer", name: "足球場", tags: ["soccer field"] },
-  { id: "baseball", name: "棒球場", tags: ["baseball stadium"] },
-  { id: "track", name: "田徑場", tags: ["running track"] },
+  // 運動組合全部由 web/sports.js 產生：按鈕寫運動名稱，一次帶進活動、場地、器材、服裝。
+  ...SPORT_BUTTONS.map((p) => ({
+    id: p.id,
+    name: p.name,
+    tags: sportPresetTags(p),
+    // core 是「這套的識別性成員」。球鞋、運動服這種跨運動通用的裝備不算，
+    // 否則換到網球之後籃球會因為共用球鞋而一直顯示半亮。
+    core: sportPresetTags(p).filter((t) => !SPORT_NEUTRAL_GEAR.has(t)),
+    sport: true,
+  })),
 ];
 
 export function applyPresetTags(lex, tags, existing = new Set()) {
@@ -1502,10 +1497,38 @@ export function presetOwnedTags(lex, tags) {
   return seen;
 }
 
-export function presetActive(lex, tags, pinned) {
+/**
+ * "on" 全在、"mixed" 只剩一部分、"off" 一個都不在。
+ *
+ * core 是選填的「識別性成員」清單：只要 core 一個都不在就算 off，即使還有共用
+ * 裝備留著。這樣換運動之後舊運動不會因為共用球鞋而一直顯示半亮。
+ */
+export function presetState(lex, tags, pinned, core) {
   const need = (tags || []).filter((t) => lex.byTag.has(t));
-  if (!need.length) return false;
-  return need.every((t) => pinned.has(t));
+  if (!need.length) return "off";
+  if (Array.isArray(core) && core.length) {
+    const anyCore = core.some((t) => lex.byTag.has(t) && pinned.has(t));
+    if (!anyCore) return "off";
+  }
+  let have = 0;
+  for (const t of need) if (pinned.has(t)) have += 1;
+  if (!have) return "off";
+  return have === need.length ? "on" : "mixed";
+}
+
+export function presetActive(lex, tags, pinned, core) {
+  return presetState(lex, tags, pinned, core) === "on";
+}
+
+/**
+ * 使用者自己釘了互相矛盾的運動時回報一下。專案既有政策是保留明確釘選並顯示 warning，
+ * 不靜默刪掉使用者要的東西 —— 這裡只負責講，不動 pinned。
+ */
+export function sportPinWarnings(lex, pinned) {
+  const ids = sportIdsOf(pinned);
+  if (ids === null || ids.size > 0) return [];
+  const tags = [...pinned].filter((t) => SPORT_IDENTITY.has(t));
+  return tags.length > 1 ? [{ kind: "sport", tags }] : [];
 }
 
 export function clearPresetTags(lex, tags, existing = new Set()) {
@@ -3339,9 +3362,8 @@ export function drawOne(lex, settings, pinned, userBanned, rand, seed) {
     if (lockSceneOn(settings) && !sportKitOk(item, used)) return false;
     if (
       lockSceneOn(settings) &&
-      (SPORT_BALL.has(item.tag) || SPORT_PROP.has(item.tag) || item.tag === "golf course") &&
-      !sportKitOf(used) &&
-      !SPORT_KIT[item.tag]
+      (item.mutex === "sport_ball" || item.mutex === "sport_prop") &&
+      sportIdsOf(used) === null
     ) {
       return false;
     }

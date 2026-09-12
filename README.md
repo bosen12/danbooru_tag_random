@@ -241,6 +241,54 @@ bot 要先加進該頻道並給發文權限，否則 Telegram 會回 `chat not f
 
 左欄有現成釘選組合（OL 辦公室、溫泉、泳池…）。點一下會換掉目前釘選。「存目前釘選」可自訂，按 × 刪。
 
+### 運動組合
+
+底下自成一組的 13 顆按鈕，寫的是**運動**不是場地：籃球、網球、足球、棒球、排球、羽球、桌球、游泳、拳擊、田徑、高爾夫、自行車、射箭。
+
+點一下，整套一次進「必進這張圖」——活動、場地、器材、服裝一起。例如按「籃球」會進：
+
+| 運動 | 必進 POS |
+|------|----------|
+| 籃球 | `playing sports` `basketball court` `basketball (object)` `basketball uniform` `sneakers` |
+| 網球 | `tennis` `tennis court` `tennis racket` `tennis ball` `tennis uniform` `sneakers` |
+| 足球 | `soccer` `soccer field` `soccer ball` `soccer uniform` `cleats` |
+| 棒球 | `playing sports` `baseball stadium` `baseball (object)` `baseball bat` `baseball uniform` `baseball cap` `cleats` |
+| 排球 | `playing sports` `sports court` `volleyball (object)` `volleyball uniform` `knee pads` `sneakers` |
+| 羽球 | `badminton` `sports court` `badminton racket` `shuttlecock` `sportswear` `sneakers` |
+| 桌球 | `table tennis` `table tennis paddle` `table tennis ball` `sportswear` `sneakers` |
+| 游泳 | `swimming` `pool` `competition swimsuit` `swim cap` `goggles` |
+| 拳擊 | `boxing` `boxing ring` `boxing gloves` `boxing shorts` |
+| 田徑 | `track and field` `running track` `track uniform` `sneakers` |
+| 高爾夫 | `golf` `golf course` `golf club` `golf ball` `sportswear` |
+| 自行車 | `riding bicycle` `bicycle` `bicycle helmet` `sportswear` `sneakers` |
+| 射箭 | `archery` `bow (weapon)` `arrow (projectile)` `sportswear` |
+
+**每個字都可以單獨拿掉。** 在「必進這張圖」點掉其中一個（例如球鞋），就只有那一個不再必進，其他照舊，而且**不會被自動加回來**——重新整理、存讀檔、preset 同步都不會。preset 不是綁死的包裹。
+
+注意：在必進區點掉一個字**只是取消必進，不等於封鎖**。那個字之後仍然可能被隨機抽到。真的不想看到它，要到下面的詞庫把它封鎖。
+
+按鈕有三種狀態：
+
+| 狀態 | 樣子 | 再點一下會 |
+|------|------|-----------|
+| 整套都在 | 實心 | 把整套拿掉（你自己另外釘的字留著） |
+| 只剩一部分 | 斜線底紋＋「·部分」 | 補齊整套 |
+| 一個都沒有 | 空心 | 套用整套 |
+
+partial 狀態重新整理之後還在。換到另一個運動時，上一個運動的場地、制服、球具會清掉，但髮色、瞳色、身材這類身份釘選會留著；球鞋這種跨運動共用的裝備不會讓舊運動一直顯示半亮。
+
+**抽牌時的運動互斥**靠「運動身分」判斷：每個帶身分的 tag 記著哪些運動用得到它，場上所有這種 tag 的交集空了就擋掉。所以 `tennis racket` + `tennis ball` 本來就共存（兩個都只屬於網球），但籃球場不會混進足球；球鞋、運動服這類通用裝備不帶身分，不會害任何運動互斥。
+
+規則全部寫在 [`web/sports.js`](web/sports.js) 一個檔案裡，`BUILTIN_PRESETS`、互斥判斷、活動場地、測試案例都從它算出來，不會有幾份清單互相失同步的問題。
+
+所有 tag 都經 Danbooru 官方 API 核實（`category=0`、`post_count>0`、非 deprecated）。要重新核實：
+
+```bash
+node scripts/verify_danbooru_tags.mjs
+```
+
+刻意不用的：`basketball`／`baseball`（deprecated）、`volleyball`（已 alias）、`volleyball court`／`cycling`／`golf uniform`／`tennis shoes`／`archery range`／`ice rink`（post_count 0）、`baseball glove`（alias，正解 `baseball mitt`）、`arrow`／`yumi`（deprecated）。`basketball (sport)` 那三個雖然有效，但是 2026 年才建立，WAI Illustrious 的舊 Danbooru 語彙吃不到，所以不用。
+
 ### 時代
 
 決定這張圖的年代和場景。

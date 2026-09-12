@@ -49,9 +49,19 @@ import {
   BUILTIN_PRESETS,
   sanitizePinPresets,
   presetActive,
+  presetState,
+  sportPinWarnings,
   clearPresetTags,
   togglePresetTags,
 } from "../web/engine.js";
+import {
+  SPORT_BUTTONS,
+  SPORT_BY_ID,
+  SPORT_IDENTITY,
+  SPORT_PRESETS,
+  sportOwnedTags,
+  sportPresetTags,
+} from "../web/sports.js";
 import {
   supportCandidateAllowed,
   validateSupportShadow,
@@ -4017,8 +4027,11 @@ function indoorOutdoorClash(have) {
   const rapeIt = lex.byTag.get("rape");
   ok("rape is sex-heat only", !!(rapeIt && (rapeIt.heat || []).includes("sex") && !(rapeIt.heat || []).includes("activity")));
   eq("rape is not an activity mutex", rapeIt && rapeIt.mutex, null);
+  // 場地不再 imply 球具：Danbooru 是「畫面看得到什麼才標什麼」，有球場不代表有球。
+  // 這條 implies 會害使用者從必進 POS 移掉球之後又被自動加回來。
   const bb = applyPin(lex, new Set(), new Set(), "basketball court").pinned;
-  ok("basketball court implies basketball", bb.has("basketball (object)"));
+  ok("basketball court does not imply the ball", !bb.has("basketball (object)"));
+  ok("basketball court still implies outdoors", bb.has("outdoors"));
   const sN = settings();
   sN.girl = true;
   sN.boy = true;
@@ -4442,11 +4455,12 @@ function indoorOutdoorClash(have) {
   const sJob = { ...s, drawJob: true };
   const pinKit = applyPin(lex, new Set(), new Set(), "kitchen").pinned;
   let kitMaid = 0;
-  for (let i = 0; i < 80; i++) {
+  // maid 在這組設定下本來就稀有（約 0.9%），80 個 seed 的窗口太容易整段落空。
+  for (let i = 0; i < 400; i++) {
     const h = tagsOf(drawOne(lex, sJob, pinKit, new Set(), mulberry32(440840 + i), 440840 + i));
     if (h.has("maid")) kitMaid += 1;
   }
-  ok("pinned kitchen can still draw maid", kitMaid > 0, `maid=${kitMaid}/80`);
+  ok("pinned kitchen can still draw maid", kitMaid > 0, `maid=${kitMaid}/400`);
   eq("diverse eating fits classroom", placeFitsActs("classroom", new Set(["eating"]), false), true);
   eq("normal eating does not fit classroom", placeFitsActs("classroom", new Set(["eating"]), true), false);
   const pinEat = applyPin(lex, new Set(), new Set(), "eating").pinned;
@@ -4733,7 +4747,8 @@ function indoorOutdoorClash(have) {
     42,
   );
   eq("shadow integration keeps seed 42 POS byte-identical", shadowIntegrationDraw.positive,
-    "1girl, solo, adult, very short hair, grey eyes, grey hair, bangs, large breasts, soft breasts, natural breasts, wet, thigh strap, hanging breasts, pleated skirt, skirt, turtleneck sweater, sweater, open coat, coat, no panties, fingering, on one knee, extreme close-up, close-up, looking back, expressionless, soft lighting, modern, locker room, indoors, night, nsfw, explicit, masterpiece, best quality, amazing quality");
+    // 詞庫新增 24 個運動 tag 之後抽牌序列必然改變，這份金標是 2026-09-13 重新產生的。
+    "1girl, solo, adult, very short hair, grey eyes, grey hair, bangs, large breasts, soft breasts, natural breasts, wet, thigh strap, hanging breasts, serafuku, school uniform, track jacket, jacket, cleats, pantyhose, female masturbation, sitting, wide shot, looking at viewer, come hither, licking lips, soft lighting, modern, living room, indoors, night, nsfw, explicit, masterpiece, best quality, amazing quality");
   ok("drawOne exposes shadow diagnostics", Array.isArray(shadowIntegrationDraw.shadowViolations));
 
   const eatProneShadow = validateSupportShadow({
@@ -4972,6 +4987,222 @@ function indoorOutdoorClash(have) {
   eq("n is no longer capped at 10", sanitizeSettings({ n: 50 }, data).n, 50);
   eq("n still floors at 1", sanitizeSettings({ n: 0 }, data).n, defaultSettings(data).n);
   eq("n rejects negatives", sanitizeSettings({ n: -4 }, data).n, 1);
+}
+
+
+// --- 運動釘選組合 ---------------------------------------------------------
+{
+  const byId = (id) => BUILTIN_PRESETS.find((p) => p.id === id);
+  const tagsOfPreset = (id) => sportPresetTags(SPORT_BY_ID.get(id));
+  const pinSet = (tags) => applyPresetTags(lex, tags, new Set());
+  const drawWith = (pins, seed) => {
+    const s = settings();
+    return drawOne(lex, s, pins, new Set(), mulberry32(seed), seed);
+  };
+
+  // 1) 按鈕顯示運動名稱，不是場地名稱
+  eq("hoops preset is named 籃球", byId("hoops")?.name, "籃球");
+  eq("tennis preset is named 網球", byId("tennis")?.name, "網球");
+  eq("soccer preset is named 足球", byId("soccer")?.name, "足球");
+  eq("baseball preset is named 棒球", byId("baseball")?.name, "棒球");
+  eq("track preset is named 田徑", byId("track")?.name, "田徑");
+  ok("no preset is still named after a venue",
+    !BUILTIN_PRESETS.some((p) => /球場$|田徑場$/.test(p.name)),
+    BUILTIN_PRESETS.filter((p) => /球場$|田徑場$/.test(p.name)).map((p) => p.name).join(","));
+
+  // 2) 每個運動：tag 都在 lexicon、整套進得去、再點一次整套出來、不動無關釘選
+  for (const p of SPORT_BUTTONS) {
+    const tags = sportPresetTags(p);
+    const missing = tags.filter((t) => !lex.byTag.has(t));
+    eq(`${p.name} tags all exist in lexicon`, missing, []);
+
+    const preset = byId(p.id);
+    ok(`${p.name} has a builtin preset button`, !!preset, `id=${p.id}`);
+    if (!preset) continue;
+    eq(`${p.name} preset tags come from SPORT_PRESETS`, preset.tags, tags);
+
+    const base = new Set(["huge breasts", "blue eyes", "long hair"]);
+    const on = togglePresetTags(lex, tags, base);
+    const notPinned = tags.filter((t) => !on.has(t));
+    eq(`${p.name} pins its whole kit`, notPinned, []);
+    ok(`${p.name} keeps identity pins`,
+      on.has("huge breasts") && on.has("blue eyes") && on.has("long hair"));
+    eq(`${p.name} reads as fully on`, presetState(lex, tags, on), "on");
+
+    const off = togglePresetTags(lex, tags, on);
+    const stillThere = tags.filter((t) => off.has(t));
+    eq(`${p.name} second click drops its whole kit`, stillThere, []);
+    ok(`${p.name} second click keeps identity pins`,
+      off.has("huge breasts") && off.has("blue eyes") && off.has("long hair"));
+    eq(`${p.name} reads as off`, presetState(lex, tags, off), "off");
+  }
+
+  // 3) partial：單獨拿掉一項，不能被任何東西自動加回來
+  {
+    const tags = tagsOfPreset("hoops");
+    let pins = togglePresetTags(lex, tags, new Set(["huge breasts"]));
+    ok("basketball kit starts complete", presetState(lex, tags, pins) === "on");
+
+    pins = applyClear(pins, new Set(), "basketball uniform").pinned;
+    ok("removed uniform is gone", !pins.has("basketball uniform"));
+    ok("removing uniform keeps the court", pins.has("basketball court"));
+    ok("removing uniform keeps the ball", pins.has("basketball (object)"));
+    eq("partial kit reads as mixed", presetState(lex, tags, pins), "mixed");
+
+    // 重新整理 / 存讀檔都不可以把它加回來
+    const resynced = knownTags(lex, [...pins]);
+    ok("sanitising pins does not resurrect the uniform", !resynced.includes("basketball uniform"));
+    const reloaded = applyPresetTags(lex, [...pins], new Set());
+    ok("rebuilding pins does not resurrect the uniform", !reloaded.has("basketball uniform"));
+    ok("rebuilding pins keeps the court", reloaded.has("basketball court"));
+
+    // regression：場地不可以靠 implies 把球和制服拖回來
+    const courtOnly = applyPresetTags(lex, ["basketball court"], new Set());
+    ok("court alone does not imply the ball", !courtOnly.has("basketball (object)"));
+    ok("court alone does not imply the uniform", !courtOnly.has("basketball uniform"));
+    const tennisCourtOnly = applyPresetTags(lex, ["tennis court"], new Set());
+    ok("tennis court alone does not imply the ball", !tennisCourtOnly.has("tennis ball"));
+    const fieldOnly = applyPresetTags(lex, ["soccer field"], new Set());
+    ok("soccer field alone does not imply the ball", !fieldOnly.has("soccer ball"));
+    const stadiumOnly = applyPresetTags(lex, ["baseball stadium"], new Set());
+    ok("baseball stadium alone does not imply the ball", !stadiumOnly.has("baseball (object)"));
+    const alleyOnly = applyPresetTags(lex, ["bowling alley"], new Set());
+    ok("bowling alley alone does not imply the ball", !alleyOnly.has("bowling ball"));
+
+    // 再點一次才補回來
+    const refilled = togglePresetTags(lex, tags, pins);
+    ok("clicking the partial preset restores the uniform", refilled.has("basketball uniform"));
+    eq("restored kit reads as on", presetState(lex, tags, refilled), "on");
+    ok("restoring keeps the unrelated pin", refilled.has("huge breasts"));
+
+    // 移除必進 POS 不等於 ban
+    ok("removing from the kit does not ban the tag",
+      !applyClear(pins, new Set(), "basketball uniform").userBanned.has("basketball uniform"));
+  }
+
+  // 4) 換運動：清掉上一個運動的場地／制服／球具，保留身份
+  {
+    const hoops = tagsOfPreset("hoops");
+    const tennis = tagsOfPreset("tennis");
+    const all = BUILTIN_PRESETS.map((p) => p.tags);
+    let pins = togglePresetTags(lex, hoops, new Set(["huge breasts", "blue eyes"]), all);
+    pins = togglePresetTags(lex, tennis, pins, all);
+    ok("switching sports drops the old court", !pins.has("basketball court"));
+    ok("switching sports drops the old ball", !pins.has("basketball (object)"));
+    ok("switching sports drops the old uniform", !pins.has("basketball uniform"));
+    const missing = tennis.filter((t) => !pins.has(t));
+    eq("switching sports pins the new kit", missing, []);
+    ok("switching sports keeps identity", pins.has("huge breasts") && pins.has("blue eyes"));
+
+    // 共用裝備（球鞋）不該讓舊運動一直顯示半亮：識別性成員一個都不在就是 off。
+    const hoopsBtn = BUILTIN_PRESETS.find((x) => x.id === "hoops");
+    ok("shared sneakers alone does not keep basketball half-lit",
+      pins.has("sneakers") && presetState(lex, hoops, pins, hoopsBtn.core) === "off",
+      `state=${presetState(lex, hoops, pins, hoopsBtn.core)} sneakers=${pins.has("sneakers")}`);
+    // 但真的少一件的時候還是要是 mixed
+    let partial = togglePresetTags(lex, hoops, new Set(), all);
+    partial = applyClear(partial, new Set(), "sneakers").pinned;
+    eq("dropping one kit member still reads as mixed",
+      presetState(lex, hoops, partial, hoopsBtn.core), "mixed");
+    ok("core excludes shared gear", !hoopsBtn.core.includes("sneakers") && hoopsBtn.core.includes("basketball court"));
+  }
+
+  // 5) 抽牌互斥：釘一個運動，跑固定 seed，不可以混進別的運動
+  {
+    const foreignOf = (id) => {
+      const mine = sportOwnedTags(SPORT_BY_ID.get(id));
+      const out = new Set();
+      for (const [tag, ids] of SPORT_IDENTITY) {
+        if (mine.has(tag)) continue;
+        if (ids.has(id)) continue;
+        out.add(tag);
+      }
+      return out;
+    };
+    for (const p of SPORT_BUTTONS) {
+      const tags = sportPresetTags(p);
+      const pins = pinSet(tags);
+      const foreign = foreignOf(p.id);
+      const leaks = new Map();
+      for (let i = 0; i < 120; i++) {
+        const seed = 770000 + i;
+        const d = drawWith(pins, seed);
+        for (const t of d.positive.split(", ")) {
+          const tag = t.trim();
+          if (foreign.has(tag)) leaks.set(tag, (leaks.get(tag) || 0) + 1);
+        }
+      }
+      eq(`${p.name} never mixes in another sport`, [...leaks.keys()].sort(), []);
+    }
+  }
+
+  // 6) 點名案例
+  {
+    const has = (id, tag, n = 120) => {
+      const pins = pinSet(tagsOfPreset(id));
+      for (let i = 0; i < n; i++) {
+        const d = drawWith(pins, 781000 + i);
+        if (d.positive.split(", ").some((t) => t.trim() === tag)) return true;
+      }
+      return false;
+    };
+    ok("basketball never draws a soccer ball", !has("hoops", "soccer ball"));
+    ok("basketball never draws a tennis ball", !has("hoops", "tennis ball"));
+    ok("tennis never draws a badminton racket", !has("tennis", "badminton racket"));
+    ok("tennis never draws a basketball", !has("tennis", "basketball (object)"));
+    ok("table tennis never draws a tennis racket", !has("tabletennis", "tennis racket"));
+    ok("swimming never draws sneakers", !has("swim", "sneakers"));
+    ok("swimming never draws boots", !has("swim", "boots"));
+    ok("swimming never draws high heels", !has("swim", "high heels"));
+    ok("cycling never lands in a bedroom", !has("cycling", "bedroom"));
+    ok("cycling never lands in a bathroom", !has("cycling", "bathroom"));
+    ok("cycling never lands on a bed", !has("cycling", "on bed"));
+
+    const baseballKit = sportPresetTags(SPORT_BY_ID.get("baseball"));
+    ok("baseball does not force both bat and mitt",
+      baseballKit.includes("baseball bat") && !baseballKit.includes("baseball mitt"));
+    ok("baseball mitt is only an optional extra",
+      (SPORT_BY_ID.get("baseball").optionalEquipment || []).includes("baseball mitt"));
+    ok("volleyball does not use volleyball court",
+      !sportPresetTags(SPORT_BY_ID.get("volleyball")).includes("volleyball court"));
+    const bad = sportPresetTags(SPORT_BY_ID.get("badminton"));
+    ok("badminton always has racket and shuttlecock",
+      bad.includes("badminton racket") && bad.includes("shuttlecock"));
+    const tt = sportPresetTags(SPORT_BY_ID.get("tabletennis"));
+    ok("table tennis uses the paddle, not a tennis racket",
+      tt.includes("table tennis paddle") && !tt.includes("tennis racket"));
+    const arc = sportPresetTags(SPORT_BY_ID.get("archery"));
+    ok("archery uses arrow (projectile), not the deprecated arrow",
+      arc.includes("arrow (projectile)") && !arc.includes("arrow"));
+    ok("archery does not use yumi", !arc.includes("yumi"));
+
+    // 沒有任何 preset 用到禁用清單上的 tag
+    const banned = new Set(["basketball", "baseball", "volleyball", "volleyball court",
+      "baseball glove", "cycling", "golf uniform", "tennis shoes", "archery range",
+      "ice rink", "arrow", "yumi"]);
+    const used = new Set();
+    for (const p of SPORT_PRESETS) {
+      for (const t of [...sportPresetTags(p), ...(p.optionalEquipment || [])]) {
+        if (banned.has(t)) used.add(t);
+      }
+    }
+    eq("no preset uses a deprecated or empty tag", [...used], []);
+  }
+
+  // 7) 使用者自己釘兩個互斥運動：保留，並且回報 warning，不靜默刪除
+  {
+    let pins = new Set();
+    for (const t of ["basketball court", "tennis racket"]) {
+      pins = applyPin(lex, pins, new Set(), t).pinned;
+    }
+    ok("explicit cross-sport pins are both kept",
+      pins.has("basketball court") && pins.has("tennis racket"));
+    const d = drawWith(pins, 790001);
+    const got = new Set(d.positive.split(", ").map((t) => t.trim()));
+    ok("explicit cross-sport pins survive the draw",
+      got.has("basketball court") && got.has("tennis racket"));
+    ok("cross-sport pins are reported", sportPinWarnings(lex, pins).length > 0);
+  }
 }
 
 if (failed) {

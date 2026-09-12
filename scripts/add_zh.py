@@ -96,6 +96,30 @@ ZH = {
     "playing games": "玩遊戲",
     "playing video games": "打電動",
     "playing sports": "做運動",
+    "tennis": "打網球",
+    "soccer": "踢足球",
+    "badminton": "打羽球",
+    "table tennis": "打桌球",
+    "boxing": "拳擊",
+    "track and field": "田徑",
+    "golf": "打高爾夫",
+    "archery": "射箭",
+    "badminton racket": "羽球拍",
+    "shuttlecock": "羽球",
+    "table tennis paddle": "桌球拍",
+    "table tennis ball": "桌球",
+    "baseball mitt": "棒球手套",
+    "bow (weapon)": "弓",
+    "arrow (projectile)": "箭",
+    "bicycle": "腳踏車",
+    "cleats": "釘鞋",
+    "boxing shorts": "拳擊短褲",
+    "boxing gloves": "拳擊手套",
+    "baseball cap": "棒球帽",
+    "bicycle helmet": "自行車安全帽",
+    "swim cap": "泳帽",
+    "goggles": "蛙鏡",
+    "knee pads": "護膝",
     "studying": "讀書",
     "writing": "寫字",
     "drawing (action)": "畫畫",
@@ -1169,8 +1193,14 @@ def main() -> None:
     for item in data["tags"]:
         zh = auto_zh(item["tag"])
         if not zh:
-            missing.append(item["tag"])
-            zh = item["tag"]
+            # merge_lexicon.py 很多 tag 是直接寫 zh= 進去的。這裡沒有更好的答案時
+            # 要留著它，不然每重建一次就把上百個中文標籤洗成英文。
+            existing = (item.get("zh") or "").strip()
+            if existing and existing != item["tag"]:
+                zh = existing
+            else:
+                missing.append(item["tag"])
+                zh = item["tag"]
         item["zh"] = zh
     data["zh"] = {
         t: ZH[t]

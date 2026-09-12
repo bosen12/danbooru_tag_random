@@ -39,7 +39,7 @@ import {
   tagState,
   BUILTIN_PRESETS,
   sanitizePinPresets,
-  presetActive,
+  presetState,
   togglePresetTags,
 } from "./engine.js";
 import {
@@ -327,25 +327,57 @@ function syncSceneMode() {
   });
 }
 
+// aria-pressed 有三態：整套都在是 true、完全沒有是 false、只剩一部分是 mixed。
+// mixed 的時候再按一次會把缺的補回來。
+function paintPresetBtn(btn, tags, core) {
+  const state = presetState(lex, tags, pinned, core);
+  btn.setAttribute("aria-pressed", state === "on" ? "true" : state === "mixed" ? "mixed" : "false");
+  btn.classList.toggle("is-mixed", state === "mixed");
+  if (state === "mixed") btn.title = "只剩一部分，按一下補齊整套";
+  else btn.removeAttribute("title");
+}
+
+function makePresetBtn(p) {
+  const btn = document.createElement("button");
+  btn.type = "button";
+  btn.className = "chip-toggle";
+  btn.dataset.preset = p.id;
+  btn.textContent = p.name;
+  paintPresetBtn(btn, p.tags, p.core);
+  return btn;
+}
+
 function renderPresets() {
   const box = $("presets");
   if (!box || !lex) return;
   const frag = document.createDocumentFragment();
   for (const p of BUILTIN_PRESETS) {
-    const btn = document.createElement("button");
-    btn.type = "button";
-    btn.className = "chip-toggle";
-    btn.dataset.preset = p.id;
-    btn.textContent = p.name;
-    btn.setAttribute("aria-pressed", presetActive(lex, p.tags, pinned) ? "true" : "false");
-    frag.append(btn);
+    if (p.sport) continue;
+    frag.append(makePresetBtn(p));
+  }
+  // 運動有 13 個，自己一組並且可以換行，不然左欄會被擠爆。
+  const sports = BUILTIN_PRESETS.filter((p) => p.sport);
+  if (sports.length) {
+    const group = document.createElement("div");
+    group.className = "preset-group";
+    const label = document.createElement("span");
+    label.className = "preset-group-label";
+    label.id = "preset-group-sport";
+    label.textContent = "運動";
+    const row = document.createElement("div");
+    row.className = "preset-group-row";
+    row.setAttribute("role", "group");
+    row.setAttribute("aria-labelledby", label.id);
+    for (const p of sports) row.append(makePresetBtn(p));
+    group.append(label, row);
+    frag.append(group);
   }
   userPresets.forEach((p, i) => {
     const btn = document.createElement("button");
     btn.type = "button";
     btn.className = "chip-toggle preset-user";
     btn.dataset.user = String(i);
-    btn.setAttribute("aria-pressed", presetActive(lex, p.tags, pinned) ? "true" : "false");
+    paintPresetBtn(btn, p.tags);
     btn.append(document.createTextNode(p.name));
     const x = document.createElement("span");
     x.className = "preset-x";
@@ -362,21 +394,25 @@ function syncPresets() {
   if (!box || !lex) return;
   for (const btn of box.querySelectorAll("[data-preset]")) {
     const p = BUILTIN_PRESETS.find((x) => x.id === btn.dataset.preset);
-    btn.setAttribute("aria-pressed", p && presetActive(lex, p.tags, pinned) ? "true" : "false");
+    if (p) paintPresetBtn(btn, p.tags, p.core);
+    else btn.setAttribute("aria-pressed", "false");
   }
   for (const btn of box.querySelectorAll("[data-user]")) {
     const i = Number(btn.dataset.user);
     const p = userPresets[i];
-    btn.setAttribute("aria-pressed", p && presetActive(lex, p.tags, pinned) ? "true" : "false");
+    if (p) paintPresetBtn(btn, p.tags);
+    else btn.setAttribute("aria-pressed", "false");
   }
 }
 
-function applyNamedPreset(tags) {
-  const on = presetActive(lex, tags, pinned);
+function applyNamedPreset(tags, core) {
+  const was = presetState(lex, tags, pinned, core);
   const others = [...BUILTIN_PRESETS.map((p) => p.tags), ...userPresets.map((p) => p.tags)];
   pinned = togglePresetTags(lex, tags, pinned, others);
   afterPin();
-  speak(on ? "已取消釘選組合" : "已套用釘選組合");
+  if (was === "on") speak("已取消釘選組合");
+  else if (was === "mixed") speak("已補齊整套");
+  else speak("已套用釘選組合");
 }
 
 function pickHeat(h) {
@@ -2171,7 +2207,16 @@ function bindUi() {
       if (onWeightClick(e)) return;
       const btn = e.target.closest(".tag[data-tag]");
       if (!btn || btn.disabled || btn.dataset.locked === "1") return;
-      onTagClick(btn.dataset.tag);
+      const tag = btn.dataset.tag;
+      // 在「必進這張圖」裡點掉一個字 = 取消必進，不是封鎖它。之後它仍然可以被隨機
+      // 抽到。要封鎖請到下面的詞庫點第二下，這裡不替使用者決定。
+      if (pinned.has(tag)) {
+        ({ pinned, userBanned } = applyClear(pinned, userBanned, tag));
+        afterPin();
+        speak(`已取消必進：${labelOf(lex, tag)}`);
+        return;
+      }
+      onTagClick(tag);
     });
   }
   $("results").addEventListener("click", (e) => {
@@ -2406,7 +2451,7 @@ function bindUi() {
       const builtin = e.target.closest("[data-preset]");
       if (builtin) {
         const p = BUILTIN_PRESETS.find((x) => x.id === builtin.dataset.preset);
-        if (p) applyNamedPreset(p.tags);
+        if (p) applyNamedPreset(p.tags, p.core);
         return;
       }
       const user = e.target.closest("[data-user]");

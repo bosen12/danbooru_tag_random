@@ -1913,3 +1913,59 @@ input[type="number"] {
     transform: none;
   }
 }
+
+/* —— 運動釘選組合：三態按鈕 ＋ 自成一組可換行 —— */
+
+/* 只剩一部分：用斜線底紋和硃砂邊，一眼看得出跟「整套都在」不同。 */
+.chip-toggle[aria-pressed="mixed"] {
+  border-color: var(--color-accent);
+  color: var(--color-ink);
+  background: repeating-linear-gradient(
+    -45deg,
+    color-mix(in oklab, var(--color-accent) 22%, transparent) 0 6px,
+    transparent 6px 12px
+  );
+}
+
+.chip-toggle[aria-pressed="mixed"]::after {
+  content: "·部分";
+  margin-left: 0.35em;
+  font-size: var(--text-xs);
+  color: var(--color-accent);
+  letter-spacing: 0.04em;
+}
+
+.preset-group {
+  display: flex;
+  align-items: baseline;
+  gap: var(--space-2);
+  flex: 1 1 100%;
+  min-width: 0;
+  padding-top: var(--space-1);
+  border-top: var(--rule) solid var(--color-rule);
+}
+
+.preset-group-label {
+  flex: 0 0 auto;
+  font-size: var(--text-xs);
+  color: var(--color-neutral);
+  letter-spacing: 0.08em;
+  padding-top: 8px;
+}
+
+.preset-group-row {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--space-2);
+  min-width: 0;
+}
+
+@media (max-width: 640px) {
+  .preset-group {
+    flex-direction: column;
+    align-items: stretch;
+  }
+  .preset-group-label {
+    padding-top: 0;
+  }
+}
