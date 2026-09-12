@@ -134,7 +134,7 @@ node scripts/test_engine.mjs
 python scripts/test_server.py
 ```
 
-Windows 也可以雙擊 `test.bat`（兩個都跑）。`test_engine.mjs` 測抽牌與互斥對帳，`test_server.py` 測網段白名單和 Comfy 代理，都不需要開 ComfyUI。
+Windows 也可以雙擊 `test.bat` 跑完整套件。它會依序驗證抽牌與互斥、猜 tag 遊戲、support shadow、r42 gold 對齊，以及伺服器網段白名單與 Comfy 代理；都不需要開 ComfyUI。
 
 ## 授權
 

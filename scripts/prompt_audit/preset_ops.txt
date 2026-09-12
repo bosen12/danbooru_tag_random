@@ -1,0 +1,109 @@
+preset_ops2 n=18
+
+#1 boobs+pool mode=normal heats=activity era=modern pin=[huge breasts, pool, outdoors, swimming]
+  job=[] act=[swimming] body=[squatting]
+  env=[soft lighting, pool, outdoors, modern, evening, ceiling light, soap bubbles, film grain, depth of field, chromatic aberration, chair] cloth=[school swimsuit, one-piece swimsuit, swimsuit, wet clothes, red collar, collar, navel piercing, barefoot, belt, innertube, towel]
+  pose=[swimming, squatting, close-up, looking to the side, pout, parted lips, sparkling eyes, contrapposto, paizuri gesture, pointing at viewer]
+  POS: 1girl, solo, adult, huge breasts, soft breasts, natural breasts, pixie cut, aqua eyes, multicolored hair, double bun, hair bun, breast bondage, collarbone, hair over shoulder, teeth, school swimsuit, one-piece swimsuit, swimsuit, wet clothes, red collar, collar, navel piercing, barefoot, belt, innertube, towel, swimming, squatting, close-up, looking to the side, pout, parted lips, sparkling eyes, contrapposto, paizuri gesture, pointing at viewer, soft lighting, pool, outdoors, modern, evening, ceiling light, soap bubbles, film grain, depth of field, chromatic aberration, chair, nsfw, explicit, masterpiece, best quality, amazing quality
+
+#2 boobs+pool mode=normal heats=tease era=modern pin=[huge breasts, pool, outdoors, swimming]
+  job=[] act=[swimming] body=[kneeling]
+  env=[soft lighting, pool, outdoors, modern, dusk, city lights, tissue box, soap bubbles, rain, film grain, locker] cloth=[string bikini, bikini, wet clothes, blue necktie, necktie, tassel earrings, earrings, condom, detached collar, collar, brown belt, black gloves, gloves, cross necklace, necklace]
+  pose=[swimming, kneeling, dutch angle, looking at mirror, happy, smile, parted lips, wink, adjusting hair, contrapposto]
+  POS: 2girls, adult, huge breasts, soft breasts, natural breasts, short hair, red eyes, blonde hair, bangs, breast press, very dark skin, dark skin, hair over one eye, tsurime, breast bondage, string bikini, bikini, wet clothes, blue necktie, necktie, tassel earrings, earrings, condom, detached collar, collar, brown belt, black gloves, gloves, cross necklace, necklace, swimming, kneeling, dutch angle, looking at mirror, happy, smile, parted lips, wink, adjusting hair, contrapposto, soft lighting, pool, outdoors, modern, dusk, city lights, tissue box, soap bubbles, rain, film grain, locker, nsfw, explicit, masterpiece, best quality, amazing quality
+
+#3 boobs+pool mode=normal heats=sex era=modern pin=[huge breasts, pool, outdoors, swimming]
+  job=[] act=[swimming] body=[sitting]
+  env=[soft lighting, pool, outdoors, modern, evening, city lights, water, fog, sky, starry sky, tissue box] cloth=[micro bikini, bikini, wet clothes, stethoscope, umbrella, blue necktie, necktie, ring, black necktie, clipboard, sex toy]
+  pose=[swimming, female masturbation, sitting, close-up, looking at breasts, expressionless, empty eyes, biting own lip, moaning, orgasm]
+  POS: 1girl, solo, adult, huge breasts, soft breasts, natural breasts, very short hair, glowing eyes, silver hair, bangs, curvy, curly hair, ass ripple, female pubic hair, tan, micro bikini, bikini, wet clothes, stethoscope, umbrella, blue necktie, necktie, ring, black necktie, clipboard, sex toy, swimming, female masturbation, sitting, close-up, looking at breasts, expressionless, empty eyes, biting own lip, moaning, orgasm, soft lighting, pool, outdoors, modern, evening, city lights, water, fog, sky, starry sky, tissue box, nsfw, explicit, masterpiece, best quality, amazing quality
+
+#4 boobs+pool mode=normal heats=tease+flash+sex era=modern pin=[huge breasts, pool, outdoors, swimming]
+  job=[] act=[swimming] body=[squatting]
+  env=[soft lighting, pool, outdoors, modern, sunrise, lamp, chromatic aberration, soap bubbles, tissue box, fog, chair] cloth=[side-tie bikini bottom, wet clothes, detached collar, collar, condom, glasses, bracelet, bare shoulders, innertube, black bowtie, bowtie, bead necklace, necklace]
+  pose=[swimming, squatting, lower body, crossed legs, arms behind back, arched back, voyeurism, adjusting hair, one knee up, against wall]
+  POS: 1girl, solo, adult, huge breasts, soft breasts, natural breasts, pixie cut, amber eyes, blue hair, braid, narrow waist, sagging breasts, plump, breasts out, wide hips, side-tie bikini bottom, wet clothes, detached collar, collar, condom, glasses, bracelet, bare shoulders, innertube, black bowtie, bowtie, bead necklace, necklace, swimming, squatting, lower body, crossed legs, arms behind back, arched back, voyeurism, adjusting hair, one knee up, against wall, soft lighting, pool, outdoors, modern, sunrise, lamp, chromatic aberration, soap bubbles, tissue box, fog, chair, nsfw, explicit, masterpiece, best quality, amazing quality
+
+#5 boobs+ol-office mode=normal heats=activity era=modern pin=[huge breasts, office lady, pantyhose, pencil skirt, skirt, office, indoors]
+  job=[office lady] act=[writing] body=[sitting]
+  env=[soft lighting, office, indoors, modern, evening, lamp, soap bubbles, on chair, full-length mirror, mirror, office chair, rain] cloth=[pantyhose, pencil skirt, skirt, t-shirt, fishnets, thong, naked coat, coat, bra visible through clothes, sneakers, navel piercing]
+  pose=[sitting, facing away, looking to the side, naughty face, writing, biting own lip, sparkling eyes, hand on own chest, adjusting hair, v]
+  POS: 1girl, solo, adult, huge breasts, office lady, long hair, amber eyes, blue hair, twin braids, braid, natural breasts, soft breasts, eyelashes, pantyhose, pencil skirt, skirt, t-shirt, fishnets, thong, naked coat, coat, bra visible through clothes, sneakers, navel piercing, sitting, facing away, looking to the side, naughty face, writing, biting own lip, sparkling eyes, hand on own chest, adjusting hair, v, soft lighting, office, indoors, modern, evening, lamp, soap bubbles, on chair, full-length mirror, mirror, office chair, rain, nsfw, explicit, masterpiece, best quality, amazing quality
+
+#6 boobs+onsen mode=normal heats=activity era=modern pin=[huge breasts, onsen, indoors, bathing]
+  job=[] act=[bathing] body=[on one knee]
+  env=[soft lighting, onsen, indoors, modern, sunrise, city lights, on chair, rain, office chair, carpet, swivel chair] cloth=[sleeveless shirt, shirt, pencil skirt, skirt, open jacket, jacket, bra visible through clothes, kneehighs, thong, fishnets, tassel earrings, earrings, beach umbrella]
+  pose=[bathing, on one knee, profile, sideways glance, smile, sparkling eyes, parted lips, one knee up, hands on own breasts, washing hair]
+  POS: 1girl, solo, adult, huge breasts, soft breasts, natural breasts, pixie cut, amber eyes, brown hair, curly hair, thigh strap, wet, gradient hair, double bun, hair bun, wide hips, wet hair, sleeveless shirt, shirt, pencil skirt, skirt, open jacket, jacket, bra visible through clothes, kneehighs, thong, fishnets, tassel earrings, earrings, beach umbrella, bathing, on one knee, profile, sideways glance, smile, sparkling eyes, parted lips, one knee up, hands on own breasts, washing hair, soft lighting, onsen, indoors, modern, sunrise, city lights, on chair, rain, office chair, carpet, swivel chair, nsfw, explicit, masterpiece, best quality, amazing quality
+
+#7 boobs+pool mode=normal heats=activity era=modern pin=[huge breasts, pool, outdoors, swimming]
+  job=[] act=[swimming] body=[sitting]
+  env=[soft lighting, pool, outdoors, modern, dusk, lamp, rain, pillow, water, mirror, chromatic aberration] cloth=[competition swimsuit, one-piece swimsuit, swimsuit, wet clothes, used condom, condom, jewelry, elbow gloves, gloves, choker, hair ornament, necktie]
+  pose=[swimming, sitting, profile, looking at viewer, scared, sparkling eyes, open mouth, spread cleavage, hand in pocket, clothes tug]
+  POS: 1girl, solo, adult, huge breasts, soft breasts, natural breasts, short hair, amber eyes, blonde hair, blunt bangs, pink nipples, breast lift, arm under breasts, tareme, milf, mature female, competition swimsuit, one-piece swimsuit, swimsuit, wet clothes, used condom, condom, jewelry, elbow gloves, gloves, choker, hair ornament, necktie, swimming, sitting, profile, looking at viewer, scared, sparkling eyes, open mouth, spread cleavage, hand in pocket, clothes tug, soft lighting, pool, outdoors, modern, dusk, lamp, rain, pillow, water, mirror, chromatic aberration, nsfw, explicit, masterpiece, best quality, amazing quality
+
+#8 boobs+beach mode=normal heats=activity era=modern pin=[huge breasts, beach, outdoors]
+  job=[] act=[sunbathing] body=[lying]
+  env=[soft lighting, beach, outdoors, modern, evening, ceiling light, neon lights, locker, snow, bokeh, pillow] cloth=[slingshot swimsuit, swimsuit, wet clothes, nurse cap, gloves, police hat, hat, hoop earrings, earrings, cross necklace, necklace, beach umbrella, umbrella]
+  pose=[lying, wide shot, looking at mirror, expressionless, sunbathing, clenched teeth, wink, leaning back, index fingers together, arms behind head]
+  POS: 2girls, adult, huge breasts, soft breasts, natural breasts, medium hair, grey eyes, black hair, high ponytail, ponytail, messy hair, guided breast grab, saliva, tsurime, slingshot swimsuit, swimsuit, wet clothes, nurse cap, gloves, police hat, hat, hoop earrings, earrings, cross necklace, necklace, beach umbrella, umbrella, lying, wide shot, looking at mirror, expressionless, sunbathing, clenched teeth, wink, leaning back, index fingers together, arms behind head, soft lighting, beach, outdoors, modern, evening, ceiling light, neon lights, locker, snow, bokeh, pillow, nsfw, explicit, masterpiece, best quality, amazing quality
+
+#9 boobs+classroom mode=normal heats=activity era=modern pin=[huge breasts, classroom, indoors, school uniform]
+  job=[] act=[studying] body=[on stomach]
+  env=[soft lighting, classroom, indoors, modern, evening, lamp, overcast, carpet, film grain, neon lights, depth of field] cloth=[school uniform, t-shirt, jeans, pants, open jacket, jacket, pantyhose, sneakers, bra visible through clothes, latex, thong, bare shoulders]
+  pose=[on stomach, extreme close-up, close-up, looking to the side, smug, studying, wink, open mouth, adjusting clothes, against glass]
+  POS: 1girl, solo, adult, huge breasts, soft breasts, natural breasts, pixie cut, red eyes, orange hair, bangs, hair flower, pregnant, messy hair, double bun, hair bun, ass, school uniform, t-shirt, jeans, pants, open jacket, jacket, pantyhose, sneakers, bra visible through clothes, latex, thong, bare shoulders, on stomach, extreme close-up, close-up, looking to the side, smug, studying, wink, open mouth, adjusting clothes, against glass, soft lighting, classroom, indoors, modern, evening, lamp, overcast, carpet, film grain, neon lights, depth of field, nsfw, explicit, masterpiece, best quality, amazing quality
+
+#10 boobs+nurse mode=normal heats=activity era=modern pin=[huge breasts, nurse, nurse cap]
+  job=[nurse] act=[] body=[seiza]
+  env=[soft lighting, modern, hospital, indoors, sunset, lamp, carpet, tissue box, mirror, chromatic aberration, pillow] cloth=[nurse cap, sleeveless dress, dress, bra visible through clothes, track jacket, jacket, sneakers, kneehighs, thong, fishnets, hair ornament]
+  pose=[seiza, portrait, looking at mirror, dazed, half-closed eyes, licking lips, contrapposto, against glass, spread cleavage, leaning forward]
+  POS: 1girl, solo, adult, huge breasts, soft breasts, natural breasts, nurse, bob cut, glowing eyes, pink hair, ponytail, pale skin, very dark skin, dark skin, messy hair, bouncing breasts, nurse cap, sleeveless dress, dress, bra visible through clothes, track jacket, jacket, sneakers, kneehighs, thong, fishnets, hair ornament, seiza, portrait, looking at mirror, dazed, half-closed eyes, licking lips, contrapposto, against glass, spread cleavage, leaning forward, soft lighting, modern, hospital, indoors, sunset, lamp, carpet, tissue box, mirror, chromatic aberration, pillow, nsfw, explicit, masterpiece, best quality, amazing quality
+
+#11 boobs+maid mode=normal heats=activity era=modern pin=[huge breasts, maid]
+  job=[] act=[smoking] body=[seiza]
+  env=[soft lighting, modern, cafe, indoors, dusk, ceiling light, soap bubbles, bokeh, locker, overcast, chair] cloth=[maid, lab coat, coat, garter belt, sneakers, latex, bra visible through clothes, thong, stud earrings, earrings, brown belt, hard hat, hat]
+  pose=[seiza, close-up, looking back, scared, smoking, clenched teeth, sparkling eyes, crossed arms, washing hair, washing another's back]
+  POS: 3girls, adult, huge breasts, soft breasts, natural breasts, short hair, yellow eyes, blue hair, braid, guided breast grab, ahoge, colored inner hair, breast lift, breast bondage, wet hair, maid, lab coat, coat, garter belt, sneakers, latex, bra visible through clothes, thong, stud earrings, earrings, brown belt, hard hat, hat, seiza, close-up, looking back, scared, smoking, clenched teeth, sparkling eyes, crossed arms, washing hair, washing another's back, soft lighting, modern, cafe, indoors, dusk, ceiling light, soap bubbles, bokeh, locker, overcast, chair, nsfw, explicit, masterpiece, best quality, amazing quality
+
+#12 boobs+police mode=normal heats=activity era=modern pin=[huge breasts, policewoman, police uniform]
+  job=[policewoman] act=[] body=[on one knee]
+  env=[soft lighting, modern, office, indoors, dusk, city lights, carpet, overcast, tissue box, swivel chair, on chair] cloth=[police uniform, track jacket, jacket, pantyhose, thong, latex, bra visible through clothes, sneakers, navel piercing, red collar, collar, nurse cap]
+  pose=[on one knee, portrait, looking at breasts, naughty face, licking lips, empty eyes, reaching towards viewer, head tilt, beckoning, index fingers together]
+  POS: 1girl, solo, adult, huge breasts, natural breasts, policewoman, absurdly long hair, yellow eyes, pink hair, swept bangs, messy hair, soft breasts, tan, curly hair, police uniform, track jacket, jacket, pantyhose, thong, latex, bra visible through clothes, sneakers, navel piercing, red collar, collar, nurse cap, on one knee, portrait, looking at breasts, naughty face, licking lips, empty eyes, reaching towards viewer, head tilt, beckoning, index fingers together, soft lighting, modern, office, indoors, dusk, city lights, carpet, overcast, tissue box, swivel chair, on chair, nsfw, explicit, masterpiece, best quality, amazing quality
+
+#13 pool-normal mode=normal heats=activity era=modern pin=[pool, outdoors, swimming]
+  job=[] act=[swimming] body=[on one knee]
+  env=[soft lighting, pool, outdoors, modern, day, lamp, soap bubbles, full-length mirror, mirror, overcast, tissue box, bokeh] cloth=[school swimsuit, one-piece swimsuit, swimsuit, wet clothes, cross necklace, necklace, tassel earrings, earrings, umbrella, condom, black gloves, gloves, detached collar, collar]
+  pose=[swimming, on one knee, from side, looking to the side, crying, wink, biting own lip, holding hands, finger to mouth, kiss]
+  POS: 2girls, adult, medium hair, blue eyes, purple hair, hair over shoulder, medium breasts, soft breasts, natural breasts, hair scrunchie, floating hair, saliva, side ponytail, ponytail, hair between eyes, tears, school swimsuit, one-piece swimsuit, swimsuit, wet clothes, cross necklace, necklace, tassel earrings, earrings, umbrella, condom, black gloves, gloves, detached collar, collar, swimming, on one knee, from side, looking to the side, crying, wink, biting own lip, holding hands, finger to mouth, kiss, soft lighting, pool, outdoors, modern, day, lamp, soap bubbles, full-length mirror, mirror, overcast, tissue box, bokeh, nsfw, explicit, masterpiece, best quality, amazing quality
+
+#14 pool-normal mode=normal heats=sex era=modern pin=[pool, outdoors, swimming]
+  job=[] act=[swimming] body=[sitting]
+  env=[soft lighting, pool, outdoors, modern, day, lamp, chair, locker, bush, rain, film grain] cloth=[micro bikini, bikini, wet clothes, clipboard, elbow gloves, gloves, glasses, dildo, sex toy, black bowtie, bowtie, black collar, collar, stethoscope]
+  pose=[swimming, fingering, sitting, wide shot, sideways glance, sleepy, wink, orgasm, parted lips, aroused]
+  POS: 1girl, solo, adult, medium hair, yellow eyes, orange hair, sidelocks, medium breasts, soft breasts, natural breasts, hair between eyes, thigh strap, colored inner hair, body freckles, very dark skin, dark skin, micro bikini, bikini, wet clothes, clipboard, elbow gloves, gloves, glasses, dildo, sex toy, black bowtie, bowtie, black collar, collar, stethoscope, swimming, fingering, sitting, wide shot, sideways glance, sleepy, wink, orgasm, parted lips, aroused, soft lighting, pool, outdoors, modern, day, lamp, chair, locker, bush, rain, film grain, nsfw, explicit, masterpiece, best quality, amazing quality
+
+#15 pool-diverse mode=diverse heats=activity era=modern pin=[pool, outdoors, swimming]
+  job=[] act=[swimming] body=[squatting]
+  env=[soft lighting, pool, outdoors, modern, sunset, lamp, chromatic aberration, snow, locker, blue sky, soap bubbles] cloth=[blouse, short shorts, shorts, thong, kneehighs, blazer, fishnets, bra visible through clothes, sneakers, cross necklace, necklace, black bowtie, bowtie]
+  pose=[swimming, squatting, from behind, looking at viewer, smug, licking lips, empty eyes, after bathing, groping, leaning forward]
+  POS: 2girls, adult, bob cut, aqua eyes, green hair, messy hair, large breasts, soft breasts, natural breasts, breast press, parted bangs, shiny skin, twin braids, braid, makeup, blouse, short shorts, shorts, thong, kneehighs, blazer, fishnets, bra visible through clothes, sneakers, cross necklace, necklace, black bowtie, bowtie, swimming, squatting, from behind, looking at viewer, smug, licking lips, empty eyes, after bathing, groping, leaning forward, soft lighting, pool, outdoors, modern, sunset, lamp, chromatic aberration, snow, locker, blue sky, soap bubbles, nsfw, explicit, masterpiece, best quality, amazing quality
+
+#16 pool-diverse mode=diverse heats=sex era=modern pin=[pool, outdoors, swimming]
+  job=[] act=[swimming] body=[sitting]
+  env=[soft lighting, pool, outdoors, modern, sunrise, ceiling light, orange sky, snow, mirror, chair, soap bubbles] cloth=[shirt tucked in, shirt, pleated skirt, skirt, fishnet thighhighs, thighhighs, naked coat, coat, latex, panties aside, sports bra, bra, sneakers, bare shoulders]
+  pose=[swimming, masturbation through clothes, sitting, lower body, cum on breasts, cum on body, cum, female masturbation, holding sex toy, cumdrip]
+  POS: 1girl, solo, adult, long hair, yellow eyes, white hair, high ponytail, ponytail, huge breasts, soft breasts, natural breasts, bags under eyes, hair over shoulder, parted bangs, swept bangs, shirt tucked in, shirt, pleated skirt, skirt, fishnet thighhighs, thighhighs, naked coat, coat, latex, panties aside, sports bra, bra, sneakers, bare shoulders, swimming, masturbation through clothes, sitting, lower body, cum on breasts, cum on body, cum, female masturbation, holding sex toy, cumdrip, soft lighting, pool, outdoors, modern, sunrise, ceiling light, orange sky, snow, mirror, chair, soap bubbles, nsfw, explicit, masterpiece, best quality, amazing quality
+
+#17 pool-weird mode=weird heats=activity era=modern pin=[pool, outdoors, swimming]
+  job=[] act=[swimming] body=[kneeling]
+  env=[soft lighting, pool, outdoors, modern, night, lamp, chair, locker, overcast, full-length mirror, mirror, neon lights] cloth=[police uniform, pantyhose, open cardigan, cardigan, sneakers, bra visible through clothes, fishnets, thong, blue necktie, necktie, innertube, necklace]
+  pose=[swimming, kneeling, dutch angle, looking at breasts, surprised, parted lips, sparkling eyes, adjusting clothes, groping, ojou-sama pose]
+  POS: 2girls, adult, medium hair, glowing eyes, green hair, sidelocks, large breasts, soft breasts, natural breasts, shiny skin, drill hair, breasts squeezed together, bangs, very dark skin, dark skin, police uniform, pantyhose, open cardigan, cardigan, sneakers, bra visible through clothes, fishnets, thong, blue necktie, necktie, innertube, necklace, swimming, kneeling, dutch angle, looking at breasts, surprised, parted lips, sparkling eyes, adjusting clothes, groping, ojou-sama pose, soft lighting, pool, outdoors, modern, night, lamp, chair, locker, overcast, full-length mirror, mirror, neon lights, nsfw, explicit, masterpiece, best quality, amazing quality
+
+#18 pool-weird mode=weird heats=sex era=modern pin=[pool, outdoors, swimming]
+  job=[] act=[swimming] body=[kneeling]
+  env=[soft lighting, pool, outdoors, modern, night, ceiling light, steam, sky, chair, on chair, starry sky] cloth=[blouse, pencil skirt, skirt, fishnets, lab coat, coat, sports bra, bra, fishnet thighhighs, thighhighs, thong, sneakers, ring, dildo, sex toy]
+  pose=[swimming, fingering, kneeling, upper body, looking to the side, dazed, open mouth, panting, orgasm, rolling eyes]
+  POS: 1girl, solo, adult, very long hair, glowing eyes, red hair, drill hair, large breasts, soft breasts, pubic hair, lipstick, natural breasts, wet, blouse, pencil skirt, skirt, fishnets, lab coat, coat, sports bra, bra, fishnet thighhighs, thighhighs, thong, sneakers, ring, dildo, sex toy, swimming, fingering, kneeling, upper body, looking to the side, dazed, open mouth, panting, orgasm, rolling eyes, soft lighting, pool, outdoors, modern, night, ceiling light, steam, sky, chair, on chair, starry sky, nsfw, explicit, masterpiece, best quality, amazing quality
