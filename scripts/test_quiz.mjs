@@ -5,11 +5,15 @@ import { dirname, join } from "path";
 import { fileURLToPath } from "url";
 import { defaultSettings, drawOne, indexLexicon, mulberry32 } from "../web/engine.js";
 import {
+  ANSWER_COUNT,
   ANSWER_SECTIONS,
+  CHOICE_COUNT,
   DISTRACTORS_PER_ANSWER,
   banlistFrom,
   drawnTags,
   eligibleAnswers,
+  makeQuestion,
+  related,
 } from "../game/quiz.js";
 
 const ROOT = join(dirname(fileURLToPath(import.meta.url)), "..");
@@ -107,6 +111,58 @@ const sample = draws(200);
   }
   ok("kneeling is eligible when nothing is banned", base > 0, `base=${base}/200`);
   ok("banning the tag removes it", gone === 0, `gone=${gone}`);
+}
+
+{
+  const s = settings();
+  const N = 400;
+  let nulls = 0;
+  let badCount = 0;
+  let badSection = 0;
+  let dupTag = 0;
+  let notDrawn = 0;
+  let distractorDrawn = 0;
+  let distractorRelated = 0;
+  let answerRelated = 0;
+
+  for (let i = 0; i < N; i++) {
+    const seed = 20000 + i;
+    const draw = drawOne(lex, s, new Set(), new Set(), mulberry32(seed), seed);
+    const q = makeQuestion(lex, draw, mulberry32(seed), banlist);
+    if (!q) {
+      nulls += 1;
+      continue;
+    }
+    const drawn = drawnTags(draw);
+    if (q.answers.length !== ANSWER_COUNT || q.choices.length !== CHOICE_COUNT) badCount += 1;
+    if (q.choices.filter((c) => c.correct).length !== ANSWER_COUNT) badCount += 1;
+    if (new Set(q.answers.map((a) => a.section)).size !== ANSWER_COUNT) badSection += 1;
+    if (new Set(q.choices.map((c) => c.tag)).size !== CHOICE_COUNT) dupTag += 1;
+    for (const a of q.answers) if (!drawn.has(a.tag)) notDrawn += 1;
+    for (const c of q.choices.filter((c) => !c.correct)) {
+      if (drawn.has(c.tag)) distractorDrawn += 1;
+      if (q.answers.some((a) => related(lex, a.tag, c.tag))) distractorRelated += 1;
+    }
+    for (const a of q.answers) {
+      for (const b of q.answers) {
+        if (a.tag !== b.tag && related(lex, a.tag, b.tag)) answerRelated += 1;
+      }
+    }
+  }
+
+  ok("null is a safety valve, not the norm", nulls / N < 0.02, `nulls=${nulls}/${N}`);
+  ok("3 answers, 12 choices, 3 of them correct", badCount === 0, `bad=${badCount}`);
+  ok("answers span 3 distinct sections", badSection === 0, `bad=${badSection}`);
+  ok("no tag appears twice among the 12 choices", dupTag === 0, `bad=${dupTag}`);
+  ok("answers are tags the image actually drew", notDrawn === 0, `bad=${notDrawn}`);
+  ok("no distractor was drawn in the image", distractorDrawn === 0, `bad=${distractorDrawn}`);
+  ok("no distractor relates to any answer", distractorRelated === 0, `bad=${distractorRelated}`);
+  ok("answers do not relate to each other", answerRelated === 0, `bad=${answerRelated}`);
+
+  const draw = drawOne(lex, s, new Set(), new Set(), mulberry32(77), 77);
+  const a = makeQuestion(lex, draw, mulberry32(77), banlist);
+  const b = makeQuestion(lex, draw, mulberry32(77), banlist);
+  ok("the same seed gives the identical question", JSON.stringify(a) === JSON.stringify(b));
 }
 
 if (failed) {
