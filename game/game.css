@@ -1,0 +1,258 @@
+/* 沿用 web/tokens.css 的暗色印刷風。這裡只放遊戲特有的東西。 */
+
+* {
+  box-sizing: border-box;
+}
+
+body {
+  margin: 0;
+  background: var(--color-paper);
+  color: var(--color-ink);
+  font-family: var(--font-body);
+  font-size: var(--text-base);
+  line-height: 1.5;
+}
+
+.stage {
+  max-width: 880px;
+  margin: 0 auto;
+  padding: var(--space-5) var(--space-4) var(--space-7);
+}
+
+.card {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-4);
+}
+
+.title {
+  font-family: var(--font-display);
+  font-size: var(--text-2xl);
+  font-weight: 800;
+  margin: 0;
+  letter-spacing: -0.02em;
+}
+
+.lede,
+.note,
+.records {
+  margin: 0;
+  color: var(--color-muted);
+  font-size: var(--text-sm);
+}
+
+.note:empty {
+  display: none;
+}
+
+.records b {
+  color: var(--color-accent-2);
+  font-family: var(--font-outlier);
+}
+
+.heats {
+  border: var(--rule) solid var(--color-rule);
+  border-radius: var(--radius);
+  padding: var(--space-3);
+  margin: 0;
+}
+
+.heats legend {
+  color: var(--color-neutral);
+  font-size: var(--text-xs);
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  padding: 0 var(--space-2);
+}
+
+.heat-row,
+.row {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--space-2);
+}
+
+.btn {
+  font: inherit;
+  color: var(--color-ink);
+  background: var(--color-chip);
+  border: var(--rule) solid var(--color-rule);
+  border-radius: var(--radius);
+  padding: var(--space-2) var(--space-4);
+  min-height: 44px;
+  cursor: pointer;
+  transition: background var(--dur-micro) var(--ease-out),
+    border-color var(--dur-micro) var(--ease-out);
+}
+
+.btn:hover {
+  background: var(--color-paper-3);
+}
+
+.btn:focus-visible {
+  outline: 2px solid var(--color-focus);
+  outline-offset: 2px;
+}
+
+.btn[aria-pressed="true"] {
+  border-color: var(--color-accent);
+  color: var(--color-accent-2);
+}
+
+.btn-go {
+  background: var(--color-accent);
+  border-color: var(--color-accent);
+  color: var(--color-paper);
+  font-weight: 500;
+  align-self: flex-start;
+}
+
+.btn-go:disabled {
+  opacity: 0.5;
+  cursor: default;
+}
+
+.btn-quiet {
+  background: transparent;
+  color: var(--color-muted);
+}
+
+.shot-wrap {
+  position: relative;
+  aspect-ratio: 832 / 1216;
+  max-height: 62vh;
+  background: var(--color-paper-2);
+  border: var(--rule) solid var(--color-rule);
+  border-radius: var(--radius);
+  overflow: hidden;
+  display: grid;
+  place-items: center;
+}
+
+.shot {
+  width: 100%;
+  height: 100%;
+  object-fit: contain;
+  display: block;
+}
+
+.shot:not([src]) {
+  visibility: hidden;
+}
+
+.progress {
+  position: absolute;
+  inset: auto 0 0 0;
+  padding: var(--space-2) var(--space-3);
+  background: color-mix(in oklch, var(--color-paper) 78%, transparent);
+  color: var(--color-muted);
+  font-family: var(--font-outlier);
+  font-size: var(--text-xs);
+  text-align: center;
+}
+
+.progress:empty {
+  display: none;
+}
+
+.hud {
+  display: flex;
+  align-items: center;
+  gap: var(--space-4);
+  flex-wrap: wrap;
+}
+
+.hud .btn-quiet {
+  margin-left: auto;
+}
+
+.stat {
+  color: var(--color-neutral);
+  font-size: var(--text-sm);
+}
+
+.stat b {
+  color: var(--color-ink);
+  font-family: var(--font-outlier);
+}
+
+.lives {
+  font-family: var(--font-outlier);
+  color: var(--color-accent);
+  letter-spacing: 0.2em;
+}
+
+.choices {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(140px, 1fr));
+  gap: var(--space-2);
+}
+
+.choice[data-state="hit"] {
+  border-color: var(--color-ok);
+  color: var(--color-ok);
+}
+
+.choice[data-state="miss"] {
+  border-color: var(--color-danger);
+  color: var(--color-danger);
+  text-decoration: line-through;
+}
+
+.choice[disabled] {
+  cursor: default;
+  opacity: 0.75;
+}
+
+.answers {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-2);
+}
+
+.answer {
+  display: flex;
+  gap: var(--space-3);
+  align-items: baseline;
+  border-bottom: var(--rule) solid var(--color-rule);
+  padding-bottom: var(--space-2);
+}
+
+.answer .zh {
+  color: var(--color-ink);
+}
+
+.answer .en {
+  color: var(--color-neutral);
+  font-family: var(--font-outlier);
+  font-size: var(--text-sm);
+}
+
+.answer .sec {
+  margin-left: auto;
+  color: var(--color-neutral);
+  font-size: var(--text-xs);
+  text-transform: uppercase;
+  letter-spacing: 0.08em;
+}
+
+.positive {
+  margin: 0;
+  padding: var(--space-3);
+  background: var(--color-paper-2);
+  border: var(--rule) solid var(--color-rule);
+  border-radius: var(--radius);
+  color: var(--color-muted);
+  font-family: var(--font-outlier);
+  font-size: var(--text-xs);
+  white-space: pre-wrap;
+  word-break: break-word;
+  max-height: 30vh;
+  overflow-y: auto;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .btn {
+    transition: none;
+  }
+}
