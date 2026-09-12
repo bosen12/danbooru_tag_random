@@ -793,7 +793,8 @@ input[type="number"] {
   display: none;
 }
 
-.skip-shot {
+.skip-shot,
+.redo-shot {
   position: absolute;
   top: 8px;
   right: 8px;
@@ -822,7 +823,8 @@ input[type="number"] {
     background var(--dur-micro) var(--ease-out),
     color var(--dur-micro) var(--ease-out);
 }
-.skip-shot svg {
+.skip-shot svg,
+.redo-shot svg {
   width: 16px;
   height: 16px;
 }
@@ -850,22 +852,42 @@ input[type="number"] {
   color: var(--color-paper);
   transform: scale(1.06);
 }
-.skip-shot:active {
+.skip-shot:active,
+.redo-shot:active {
   transform: scale(0.94);
 }
-.skip-shot:focus-visible {
+.skip-shot:focus-visible,
+.redo-shot:focus-visible {
   outline: 2px solid var(--color-focus);
   outline-offset: 2px;
 }
+.card.is-done .redo-shot {
+  display: grid;
+}
+.card.is-done .shot:hover .redo-shot,
+.card.is-done .shot:focus-within .redo-shot,
+.card.is-done .redo-shot:focus-visible {
+  opacity: 1;
+  pointer-events: auto;
+  transform: scale(1);
+}
+.redo-shot:hover,
+.redo-shot:focus-visible {
+  background: color-mix(in oklab, var(--color-accent, oklch(72% 0.12 70)) 78%, var(--color-ink));
+  color: var(--color-paper);
+  transform: scale(1.06);
+}
 @media (hover: none) {
-  .card.is-gen .skip-shot {
+  .card.is-gen .skip-shot,
+  .card.is-done .redo-shot {
     opacity: 1;
     pointer-events: auto;
     transform: scale(1);
   }
 }
 @media (max-width: 760px) {
-  .skip-shot {
+  .skip-shot,
+  .redo-shot {
     width: 44px;
     height: 44px;
     top: 10px;

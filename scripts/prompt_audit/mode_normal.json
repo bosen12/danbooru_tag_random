@@ -1,0 +1,2508 @@
+[
+  {
+    "id": 1,
+    "heats": [
+      "flash"
+    ],
+    "era": "modern",
+    "girl": true,
+    "boy": true,
+    "drawJob": false,
+    "sceneMode": "normal",
+    "people": 2,
+    "pinned": [],
+    "job": [],
+    "activity": [
+      "camping"
+    ],
+    "sex": [],
+    "body": [
+      "sleeping"
+    ],
+    "camera": [
+      "profile"
+    ],
+    "pose": [
+      "sleeping",
+      "profile",
+      "looking to the side",
+      "angry",
+      "camping",
+      "shirt pull"
+    ],
+    "env": [
+      "soft lighting",
+      "outdoors",
+      "modern",
+      "car",
+      "night",
+      "ceiling light",
+      "tree"
+    ],
+    "clothing": [
+      "wet shirt",
+      "shirt",
+      "high-waist skirt",
+      "skirt",
+      "lab coat",
+      "coat",
+      "pantyhose"
+    ],
+    "positive": "1girl, 1boy, adult, bald, violet eyes, flat chest, small breasts, soft breasts, natural breasts, grabbing own breast, mole, adam's apple, sweat, wet shirt, shirt, high-waist skirt, skirt, lab coat, coat, pantyhose, sleeping, profile, looking to the side, angry, camping, shirt pull, soft lighting, outdoors, modern, car, night, ceiling light, tree, nsfw, explicit, masterpiece, best quality, amazing quality"
+  },
+  {
+    "id": 2,
+    "heats": [
+      "activity"
+    ],
+    "era": "medieval",
+    "girl": true,
+    "boy": false,
+    "drawJob": true,
+    "sceneMode": "normal",
+    "people": 2,
+    "pinned": [],
+    "job": [],
+    "activity": [
+      "bathing"
+    ],
+    "sex": [],
+    "body": [
+      "dancing"
+    ],
+    "camera": [
+      "cowboy shot"
+    ],
+    "pose": [
+      "dancing",
+      "cowboy shot",
+      "looking back",
+      "naughty face",
+      "bathing",
+      "empty eyes"
+    ],
+    "env": [
+      "soft lighting",
+      "beach",
+      "outdoors",
+      "dusk",
+      "bush",
+      "backlighting",
+      "starry sky"
+    ],
+    "clothing": [
+      "cloak",
+      "tight clothes",
+      "necklace"
+    ],
+    "positive": "2girls, adult, bob cut, orange eyes, blue hair, hair bun, huge breasts, soft breasts, natural breasts, two-tone hair, curly hair, grabbing another's breast, cloak, tight clothes, necklace, dancing, cowboy shot, looking back, naughty face, bathing, empty eyes, soft lighting, beach, outdoors, dusk, bush, backlighting, starry sky, nsfw, explicit, masterpiece, best quality, amazing quality"
+  },
+  {
+    "id": 3,
+    "heats": [
+      "tease"
+    ],
+    "era": "ancient_china",
+    "girl": true,
+    "boy": false,
+    "drawJob": true,
+    "sceneMode": "normal",
+    "people": 1,
+    "pinned": [],
+    "job": [],
+    "activity": [
+      "bathing"
+    ],
+    "sex": [],
+    "body": [
+      "dancing"
+    ],
+    "camera": [
+      "upper body"
+    ],
+    "pose": [
+      "dancing",
+      "upper body",
+      "looking away",
+      "scared",
+      "bathing",
+      "empty eyes"
+    ],
+    "env": [
+      "soft lighting",
+      "lotus pond",
+      "outdoors",
+      "night",
+      "fog",
+      "sky",
+      "starry sky"
+    ],
+    "clothing": [
+      "chinese clothes",
+      "pelvic curtain",
+      "wet clothes",
+      "black belt"
+    ],
+    "positive": "1girl, solo, adult, very short hair, red eyes, blue hair, ponytail, medium breasts, soft breasts, natural breasts, hair between eyes, arm under breasts, bangs, chinese clothes, pelvic curtain, wet clothes, black belt, dancing, upper body, looking away, scared, bathing, empty eyes, soft lighting, lotus pond, outdoors, night, fog, sky, starry sky, nsfw, explicit, masterpiece, best quality, amazing quality"
+  },
+  {
+    "id": 4,
+    "heats": [
+      "flash"
+    ],
+    "era": "medieval",
+    "girl": true,
+    "boy": false,
+    "drawJob": true,
+    "sceneMode": "normal",
+    "people": 2,
+    "pinned": [],
+    "job": [],
+    "activity": [
+      "playing games"
+    ],
+    "sex": [],
+    "body": [
+      "seiza"
+    ],
+    "camera": [
+      "from outside"
+    ],
+    "pose": [
+      "seiza",
+      "from outside",
+      "eye contact",
+      "crying",
+      "playing games",
+      "self fondling"
+    ],
+    "env": [
+      "soft lighting",
+      "castle",
+      "outdoors",
+      "sunset",
+      "tree",
+      "dim lighting",
+      "film grain"
+    ],
+    "clothing": [
+      "armor",
+      "cloak",
+      "tight clothes",
+      "boots",
+      "brown belt"
+    ],
+    "positive": "2girls, adult, very short hair, aqua eyes, black hair, twintails, small breasts, soft breasts, natural breasts, wavy hair, huge nipples, breasts apart, tears, armor, cloak, tight clothes, boots, brown belt, seiza, from outside, eye contact, crying, playing games, self fondling, soft lighting, castle, outdoors, sunset, tree, dim lighting, film grain, nsfw, explicit, masterpiece, best quality, amazing quality"
+  },
+  {
+    "id": 5,
+    "heats": [
+      "activity"
+    ],
+    "era": "victorian",
+    "girl": true,
+    "boy": false,
+    "drawJob": true,
+    "sceneMode": "normal",
+    "people": 1,
+    "pinned": [],
+    "job": [],
+    "activity": [
+      "reading"
+    ],
+    "sex": [],
+    "body": [
+      "sitting"
+    ],
+    "camera": [
+      "from outside"
+    ],
+    "pose": [
+      "sitting",
+      "from outside",
+      "looking away",
+      "sleepy",
+      "reading",
+      "empty eyes"
+    ],
+    "env": [
+      "soft lighting",
+      "victorian",
+      "mansion",
+      "indoors",
+      "sunrise",
+      "lamp",
+      "depth of field"
+    ],
+    "clothing": [
+      "blouse",
+      "pencil skirt",
+      "skirt",
+      "garter belt",
+      "cloak",
+      "sandals"
+    ],
+    "positive": "1girl, solo, adult, very short hair, aqua eyes, multicolored hair, double bun, hair bun, flat chest, small breasts, soft breasts, natural breasts, mature female, milf, blouse, pencil skirt, skirt, garter belt, cloak, sandals, sitting, from outside, looking away, sleepy, reading, empty eyes, soft lighting, victorian, mansion, indoors, sunrise, lamp, depth of field, nsfw, explicit, masterpiece, best quality, amazing quality"
+  },
+  {
+    "id": 6,
+    "heats": [
+      "activity",
+      "sex"
+    ],
+    "era": "ancient_greece",
+    "girl": false,
+    "boy": true,
+    "drawJob": false,
+    "sceneMode": "normal",
+    "people": 1,
+    "pinned": [],
+    "job": [],
+    "activity": [
+      "drawing (action)"
+    ],
+    "sex": [],
+    "body": [
+      "on stomach"
+    ],
+    "camera": [
+      "straight-on"
+    ],
+    "pose": [
+      "on stomach",
+      "straight-on",
+      "looking ahead",
+      "crying",
+      "drawing (action)",
+      "licking lips"
+    ],
+    "env": [
+      "soft lighting",
+      "colonnade",
+      "outdoors",
+      "night",
+      "moonlight",
+      "tree",
+      "mirror"
+    ],
+    "clothing": [
+      "ancient greek clothes",
+      "himation",
+      "revealing clothes",
+      "sandals",
+      "o-ring"
+    ],
+    "positive": "1boy, solo, adult, bob cut, glowing eyes, purple hair, braid, shota, short male, mole under eye, swept bangs, gradient hair, tears, ancient greek clothes, himation, revealing clothes, sandals, o-ring, on stomach, straight-on, looking ahead, crying, drawing (action), licking lips, soft lighting, colonnade, outdoors, night, moonlight, tree, mirror, nsfw, explicit, masterpiece, best quality, amazing quality"
+  },
+  {
+    "id": 7,
+    "heats": [
+      "sex"
+    ],
+    "era": "ancient_greece",
+    "girl": true,
+    "boy": true,
+    "drawJob": false,
+    "sceneMode": "normal",
+    "people": 3,
+    "pinned": [],
+    "job": [],
+    "activity": [],
+    "sex": [
+      "69"
+    ],
+    "body": [
+      "lying"
+    ],
+    "camera": [
+      "over shoulder"
+    ],
+    "pose": [
+      "69",
+      "sex",
+      "lying",
+      "over shoulder",
+      "sideways glance",
+      "frown"
+    ],
+    "env": [
+      "soft lighting",
+      "bath",
+      "indoors",
+      "sunset",
+      "fog",
+      "on bed",
+      "blue sky"
+    ],
+    "clothing": [
+      "toga",
+      "ancient greek clothes",
+      "himation",
+      "tight clothes"
+    ],
+    "positive": "2girls, 1boy, adult, bald, red eyes, huge breasts, soft breasts, natural breasts, mole under eye, condom on penis, tall male, hair over one eye, breasts squeezed together, toga, ancient greek clothes, himation, tight clothes, 69, sex, lying, over shoulder, sideways glance, frown, soft lighting, bath, indoors, sunset, fog, on bed, blue sky, nsfw, explicit, masterpiece, best quality, amazing quality"
+  },
+  {
+    "id": 8,
+    "heats": [
+      "activity",
+      "sex"
+    ],
+    "era": "modern",
+    "girl": true,
+    "boy": false,
+    "drawJob": false,
+    "sceneMode": "normal",
+    "people": 1,
+    "pinned": [],
+    "job": [],
+    "activity": [
+      "painting (action)"
+    ],
+    "sex": [],
+    "body": [
+      "reclining"
+    ],
+    "camera": [
+      "over shoulder"
+    ],
+    "pose": [
+      "reclining",
+      "over shoulder",
+      "looking at breasts",
+      "sad",
+      "painting (action)",
+      "sparkling eyes"
+    ],
+    "env": [
+      "soft lighting",
+      "modern",
+      "fitness gym",
+      "indoors",
+      "sunrise",
+      "spotlight",
+      "locker"
+    ],
+    "clothing": [
+      "shirt tucked in",
+      "shirt",
+      "side-tie bikini bottom",
+      "open jacket",
+      "jacket",
+      "thong"
+    ],
+    "positive": "1girl, solo, adult, medium hair, blue eyes, aqua hair, single hair bun, hair bun, gigantic breasts, soft breasts, natural breasts, teeth, tanlines, shirt tucked in, shirt, side-tie bikini bottom, open jacket, jacket, thong, reclining, over shoulder, looking at breasts, sad, painting (action), sparkling eyes, soft lighting, modern, fitness gym, indoors, sunrise, spotlight, locker, nsfw, explicit, masterpiece, best quality, amazing quality"
+  },
+  {
+    "id": 9,
+    "heats": [
+      "activity",
+      "sex"
+    ],
+    "era": "medieval",
+    "girl": true,
+    "boy": false,
+    "drawJob": false,
+    "sceneMode": "normal",
+    "people": 1,
+    "pinned": [],
+    "job": [],
+    "activity": [
+      "bathing"
+    ],
+    "sex": [],
+    "body": [
+      "on back"
+    ],
+    "camera": [
+      "cowboy shot"
+    ],
+    "pose": [
+      "on back",
+      "cowboy shot",
+      "looking at viewer",
+      "smile",
+      "bathing",
+      "parted lips"
+    ],
+    "env": [
+      "soft lighting",
+      "bath",
+      "indoors",
+      "evening",
+      "cherry blossoms",
+      "full-length mirror",
+      "mirror",
+      "chair"
+    ],
+    "clothing": [
+      "cloak",
+      "revealing clothes",
+      "tooth necklace",
+      "necklace"
+    ],
+    "positive": "1girl, solo, adult, bob cut, orange eyes, grey hair, hair bun, small breasts, soft breasts, natural breasts, pale skin, eyelashes, breast rest, cloak, revealing clothes, tooth necklace, necklace, on back, cowboy shot, looking at viewer, smile, bathing, parted lips, soft lighting, bath, indoors, evening, cherry blossoms, full-length mirror, mirror, chair, nsfw, explicit, masterpiece, best quality, amazing quality"
+  },
+  {
+    "id": 10,
+    "heats": [
+      "activity",
+      "tease",
+      "flash"
+    ],
+    "era": "ancient_china",
+    "girl": false,
+    "boy": true,
+    "drawJob": true,
+    "sceneMode": "normal",
+    "people": 1,
+    "pinned": [],
+    "job": [],
+    "activity": [
+      "smoking"
+    ],
+    "sex": [],
+    "body": [
+      "crawling"
+    ],
+    "camera": [
+      "from above"
+    ],
+    "pose": [
+      "crawling",
+      "from above",
+      "looking back",
+      "naughty face",
+      "smoking",
+      "half-closed eyes"
+    ],
+    "env": [
+      "soft lighting",
+      "chinese architecture",
+      "outdoors",
+      "evening",
+      "tree",
+      "overcast",
+      "dim lighting"
+    ],
+    "clothing": [
+      "chinese clothes",
+      "sandals",
+      "revealing clothes",
+      "bare shoulders",
+      "sash"
+    ],
+    "positive": "1boy, solo, adult, bob cut, pink eyes, red hair, drill hair, plump, sweat, beard, tattoo, chinese clothes, sandals, revealing clothes, bare shoulders, sash, crawling, from above, looking back, naughty face, smoking, half-closed eyes, soft lighting, chinese architecture, outdoors, evening, tree, overcast, dim lighting, nsfw, explicit, masterpiece, best quality, amazing quality"
+  },
+  {
+    "id": 11,
+    "heats": [
+      "tease",
+      "sex"
+    ],
+    "era": "victorian",
+    "girl": true,
+    "boy": false,
+    "drawJob": false,
+    "sceneMode": "normal",
+    "people": 1,
+    "pinned": [],
+    "job": [],
+    "activity": [],
+    "sex": [],
+    "body": [
+      "squatting"
+    ],
+    "camera": [
+      "wide shot"
+    ],
+    "pose": [
+      "female masturbation",
+      "squatting",
+      "wide shot",
+      "looking at mirror",
+      "sleepy",
+      "empty eyes"
+    ],
+    "env": [
+      "soft lighting",
+      "victorian",
+      "living room",
+      "indoors",
+      "night",
+      "lamp",
+      "mirror"
+    ],
+    "clothing": [
+      "pencil skirt",
+      "skirt",
+      "unbuttoned shirt",
+      "shirt",
+      "cloak",
+      "kneehighs"
+    ],
+    "positive": "1girl, solo, adult, very long hair, violet eyes, multicolored hair, straight hair, medium breasts, soft breasts, natural breasts, petite, breast rest, armpits, pencil skirt, skirt, unbuttoned shirt, shirt, cloak, kneehighs, female masturbation, squatting, wide shot, looking at mirror, sleepy, empty eyes, soft lighting, victorian, living room, indoors, night, lamp, mirror, nsfw, explicit, masterpiece, best quality, amazing quality"
+  },
+  {
+    "id": 12,
+    "heats": [
+      "tease",
+      "flash",
+      "sex"
+    ],
+    "era": "medieval",
+    "girl": false,
+    "boy": true,
+    "drawJob": false,
+    "sceneMode": "normal",
+    "people": 1,
+    "pinned": [],
+    "job": [],
+    "activity": [
+      "playing games"
+    ],
+    "sex": [],
+    "body": [
+      "squatting"
+    ],
+    "camera": [
+      "from side"
+    ],
+    "pose": [
+      "squatting",
+      "from side",
+      "looking to the side",
+      "surprised",
+      "playing games",
+      "empty eyes"
+    ],
+    "env": [
+      "soft lighting",
+      "castle",
+      "outdoors",
+      "evening",
+      "mirror",
+      "sky",
+      "water"
+    ],
+    "clothing": [
+      "armor",
+      "cloak",
+      "tight clothes",
+      "sandals",
+      "ring"
+    ],
+    "positive": "1boy, solo, adult, medium hair, aqua eyes, multicolored hair, wavy hair, hair over shoulder, hair scrunchie, midriff, shiny skin, armor, cloak, tight clothes, sandals, ring, squatting, from side, looking to the side, surprised, playing games, empty eyes, soft lighting, castle, outdoors, evening, mirror, sky, water, nsfw, explicit, masterpiece, best quality, amazing quality"
+  },
+  {
+    "id": 13,
+    "heats": [
+      "activity"
+    ],
+    "era": "modern",
+    "girl": true,
+    "boy": true,
+    "drawJob": false,
+    "sceneMode": "normal",
+    "people": 1,
+    "pinned": [],
+    "job": [],
+    "activity": [
+      "painting (action)"
+    ],
+    "sex": [],
+    "body": [
+      "seiza"
+    ],
+    "camera": [
+      "head out of frame"
+    ],
+    "pose": [
+      "seiza",
+      "head out of frame",
+      "painting (action)",
+      "trembling",
+      "reaching towards viewer",
+      "voyeurism"
+    ],
+    "env": [
+      "soft lighting",
+      "modern",
+      "living room",
+      "indoors",
+      "day",
+      "lamp",
+      "fog"
+    ],
+    "clothing": [
+      "see-through shirt",
+      "shirt",
+      "high-waist pants",
+      "pants",
+      "briefs",
+      "naked coat",
+      "coat"
+    ],
+    "positive": "1boy, solo, adult, short hair, pink eyes, blonde hair, messy hair, hair flower, saliva, bags under eyes, curly hair, see-through shirt, shirt, high-waist pants, pants, briefs, naked coat, coat, seiza, head out of frame, painting (action), trembling, reaching towards viewer, voyeurism, soft lighting, modern, living room, indoors, day, lamp, fog, nsfw, explicit, masterpiece, best quality, amazing quality"
+  },
+  {
+    "id": 14,
+    "heats": [
+      "activity",
+      "flash"
+    ],
+    "era": "ancient_china",
+    "girl": true,
+    "boy": false,
+    "drawJob": true,
+    "sceneMode": "normal",
+    "people": 1,
+    "pinned": [],
+    "job": [],
+    "activity": [
+      "drinking"
+    ],
+    "sex": [],
+    "body": [
+      "wariza"
+    ],
+    "camera": [
+      "head out of frame"
+    ],
+    "pose": [
+      "wariza",
+      "head out of frame",
+      "drinking",
+      "covering breasts",
+      "spread legs",
+      "ass visible through thighs"
+    ],
+    "env": [
+      "soft lighting",
+      "chinese architecture",
+      "outdoors",
+      "sunset",
+      "soap bubbles",
+      "full-length mirror",
+      "mirror",
+      "candlelight"
+    ],
+    "clothing": [
+      "chinese clothes",
+      "pelvic curtain",
+      "sandals",
+      "tight clothes",
+      "choker"
+    ],
+    "positive": "1girl, solo, adult, pixie cut, glowing eyes, purple hair, high ponytail, ponytail, huge breasts, natural breasts, pink nails, soft breasts, chinese clothes, pelvic curtain, sandals, tight clothes, choker, wariza, head out of frame, drinking, covering breasts, spread legs, ass visible through thighs, soft lighting, chinese architecture, outdoors, sunset, soap bubbles, full-length mirror, mirror, candlelight, nsfw, explicit, masterpiece, best quality, amazing quality"
+  },
+  {
+    "id": 15,
+    "heats": [
+      "sex"
+    ],
+    "era": "modern",
+    "girl": true,
+    "boy": true,
+    "drawJob": false,
+    "sceneMode": "normal",
+    "people": 2,
+    "pinned": [],
+    "job": [],
+    "activity": [],
+    "sex": [
+      "doggystyle"
+    ],
+    "body": [
+      "all fours"
+    ],
+    "camera": [
+      "straight-on"
+    ],
+    "pose": [
+      "doggystyle",
+      "sex",
+      "all fours",
+      "straight-on",
+      "looking away",
+      "serious"
+    ],
+    "env": [
+      "soft lighting",
+      "modern",
+      "changing room",
+      "indoors",
+      "night",
+      "city lights",
+      "rain"
+    ],
+    "clothing": [
+      "off shoulder",
+      "high-waist skirt",
+      "skirt",
+      "no bra",
+      "lab coat",
+      "coat",
+      "kneehighs"
+    ],
+    "positive": "1girl, 1boy, adult, long hair, blue eyes, silver hair, messy hair, flat chest, small breasts, soft breasts, natural breasts, veiny penis, blunt bangs, off shoulder, high-waist skirt, skirt, no bra, lab coat, coat, kneehighs, doggystyle, sex, all fours, straight-on, looking away, serious, soft lighting, modern, changing room, indoors, night, city lights, rain, nsfw, explicit, masterpiece, best quality, amazing quality"
+  },
+  {
+    "id": 16,
+    "heats": [
+      "tease",
+      "flash",
+      "sex"
+    ],
+    "era": "victorian",
+    "girl": false,
+    "boy": true,
+    "drawJob": true,
+    "sceneMode": "normal",
+    "people": 1,
+    "pinned": [],
+    "job": [],
+    "activity": [
+      "taking picture"
+    ],
+    "sex": [],
+    "body": [
+      "all fours"
+    ],
+    "camera": [
+      "fisheye"
+    ],
+    "pose": [
+      "all fours",
+      "fisheye",
+      "looking to the side",
+      "serious",
+      "taking picture",
+      "grinding"
+    ],
+    "env": [
+      "soft lighting",
+      "victorian",
+      "mansion",
+      "indoors",
+      "sunrise",
+      "lamp",
+      "bush"
+    ],
+    "clothing": [
+      "business suit",
+      "cloak",
+      "sandals",
+      "revealing clothes",
+      "black collar",
+      "collar"
+    ],
+    "positive": "1boy, solo, adult, bald, brown eyes, body freckles, toned male, toned, blush, facial hair, closed eyes, dark skin, business suit, cloak, sandals, revealing clothes, black collar, collar, all fours, fisheye, looking to the side, serious, taking picture, grinding, soft lighting, victorian, mansion, indoors, sunrise, lamp, bush, nsfw, explicit, masterpiece, best quality, amazing quality"
+  },
+  {
+    "id": 17,
+    "heats": [
+      "tease"
+    ],
+    "era": "modern",
+    "girl": true,
+    "boy": true,
+    "drawJob": false,
+    "sceneMode": "normal",
+    "people": 2,
+    "pinned": [],
+    "job": [],
+    "activity": [
+      "camping"
+    ],
+    "sex": [],
+    "body": [
+      "sleeping"
+    ],
+    "camera": [
+      "from above"
+    ],
+    "pose": [
+      "sleeping",
+      "from above",
+      "sideways glance",
+      "surprised",
+      "camping",
+      "biting own lip"
+    ],
+    "env": [
+      "soft lighting",
+      "outdoors",
+      "modern",
+      "pool",
+      "night",
+      "city lights",
+      "pillow"
+    ],
+    "clothing": [
+      "power armor",
+      "lab coat",
+      "coat",
+      "fishnets",
+      "sports bra",
+      "bra",
+      "boxers"
+    ],
+    "positive": "1girl, 1boy, adult, bob cut, purple eyes, aqua hair, high ponytail, ponytail, small breasts, soft breasts, natural breasts, shiny skin, mature female, milf, power armor, lab coat, coat, fishnets, sports bra, bra, boxers, sleeping, from above, sideways glance, surprised, camping, biting own lip, soft lighting, outdoors, modern, pool, night, city lights, pillow, nsfw, explicit, masterpiece, best quality, amazing quality"
+  },
+  {
+    "id": 18,
+    "heats": [
+      "tease",
+      "flash"
+    ],
+    "era": "edo",
+    "girl": true,
+    "boy": false,
+    "drawJob": true,
+    "sceneMode": "normal",
+    "people": 1,
+    "pinned": [],
+    "job": [],
+    "activity": [
+      "studying"
+    ],
+    "sex": [],
+    "body": [
+      "seiza"
+    ],
+    "camera": [
+      "pov"
+    ],
+    "pose": [
+      "seiza",
+      "pov",
+      "looking at viewer",
+      "dazed",
+      "studying",
+      "parted lips"
+    ],
+    "env": [
+      "soft lighting",
+      "east asian architecture",
+      "outdoors",
+      "dusk",
+      "bokeh",
+      "fog",
+      "water"
+    ],
+    "clothing": [
+      "japanese clothes",
+      "hakama",
+      "zouri",
+      "haori",
+      "tight clothes"
+    ],
+    "positive": "1girl, solo, adult, short hair, blue eyes, green hair, drill hair, huge breasts, soft breasts, natural breasts, tall female, arms under breasts, toned, japanese clothes, hakama, zouri, haori, tight clothes, seiza, pov, looking at viewer, dazed, studying, parted lips, soft lighting, east asian architecture, outdoors, dusk, bokeh, fog, water, nsfw, explicit, masterpiece, best quality, amazing quality"
+  },
+  {
+    "id": 19,
+    "heats": [
+      "tease"
+    ],
+    "era": "modern",
+    "girl": true,
+    "boy": false,
+    "drawJob": false,
+    "sceneMode": "normal",
+    "people": 1,
+    "pinned": [],
+    "job": [],
+    "activity": [
+      "picnic",
+      "eating"
+    ],
+    "sex": [],
+    "body": [
+      "indian style"
+    ],
+    "camera": [
+      "from outside"
+    ],
+    "pose": [
+      "indian style",
+      "from outside",
+      "looking up",
+      "crying",
+      "picnic",
+      "eating"
+    ],
+    "env": [
+      "soft lighting",
+      "outdoors",
+      "modern",
+      "rooftop",
+      "sunset",
+      "ceiling light",
+      "snow"
+    ],
+    "clothing": [
+      "gym uniform",
+      "track jacket",
+      "jacket",
+      "sneakers",
+      "latex",
+      "sports bra",
+      "bra"
+    ],
+    "positive": "1girl, solo, adult, very long hair, grey eyes, aqua hair, bangs, gigantic breasts, soft breasts, natural breasts, breast press, gradient hair, saliva, tears, gym uniform, track jacket, jacket, sneakers, latex, sports bra, bra, indian style, from outside, looking up, crying, picnic, eating, soft lighting, outdoors, modern, rooftop, sunset, ceiling light, snow, nsfw, explicit, masterpiece, best quality, amazing quality"
+  },
+  {
+    "id": 20,
+    "heats": [
+      "activity",
+      "flash"
+    ],
+    "era": "ancient_china",
+    "girl": true,
+    "boy": false,
+    "drawJob": false,
+    "sceneMode": "normal",
+    "people": 2,
+    "pinned": [],
+    "job": [],
+    "activity": [
+      "floating"
+    ],
+    "sex": [],
+    "body": [
+      "reclining"
+    ],
+    "camera": [
+      "from outside"
+    ],
+    "pose": [
+      "reclining",
+      "from outside",
+      "looking ahead",
+      "crying",
+      "floating",
+      "parted lips"
+    ],
+    "env": [
+      "soft lighting",
+      "lotus pond",
+      "outdoors",
+      "dusk",
+      "chromatic aberration",
+      "sunlight",
+      "mirror"
+    ],
+    "clothing": [
+      "chinese clothes",
+      "pelvic curtain",
+      "boots",
+      "wet clothes",
+      "hairpin"
+    ],
+    "positive": "2girls, adult, absurdly long hair, pink eyes, purple hair, side ponytail, ponytail, small breasts, soft breasts, natural breasts, hair flower, long legs, tears, chinese clothes, pelvic curtain, boots, wet clothes, hairpin, reclining, from outside, looking ahead, crying, floating, parted lips, soft lighting, lotus pond, outdoors, dusk, chromatic aberration, sunlight, mirror, nsfw, explicit, masterpiece, best quality, amazing quality"
+  },
+  {
+    "id": 21,
+    "heats": [
+      "tease"
+    ],
+    "era": "edo",
+    "girl": false,
+    "boy": true,
+    "drawJob": false,
+    "sceneMode": "normal",
+    "people": 1,
+    "pinned": [],
+    "job": [],
+    "activity": [
+      "painting (action)"
+    ],
+    "sex": [],
+    "body": [
+      "squatting"
+    ],
+    "camera": [
+      "portrait"
+    ],
+    "pose": [
+      "squatting",
+      "portrait",
+      "looking back",
+      "expressionless",
+      "painting (action)",
+      "parted lips"
+    ],
+    "env": [
+      "soft lighting",
+      "shrine",
+      "outdoors",
+      "dusk",
+      "tree",
+      "candle",
+      "bush"
+    ],
+    "clothing": [
+      "japanese clothes",
+      "hakama",
+      "zouri",
+      "fundoshi",
+      "haori"
+    ],
+    "positive": "1boy, solo, adult, very short hair, violet eyes, brown hair, blunt bangs, collarbone, hair over shoulder, obese, fat, teeth, japanese clothes, hakama, zouri, fundoshi, haori, squatting, portrait, looking back, expressionless, painting (action), parted lips, soft lighting, shrine, outdoors, dusk, tree, candle, bush, nsfw, explicit, masterpiece, best quality, amazing quality"
+  },
+  {
+    "id": 22,
+    "heats": [
+      "tease",
+      "flash",
+      "sex"
+    ],
+    "era": "ancient_china",
+    "girl": true,
+    "boy": false,
+    "drawJob": false,
+    "sceneMode": "normal",
+    "people": 1,
+    "pinned": [],
+    "job": [],
+    "activity": [],
+    "sex": [],
+    "body": [
+      "all fours"
+    ],
+    "camera": [
+      "from above"
+    ],
+    "pose": [
+      "female masturbation",
+      "all fours",
+      "from above",
+      "looking at breasts",
+      "shy",
+      "drooling"
+    ],
+    "env": [
+      "soft lighting",
+      "bedroom",
+      "indoors",
+      "sunrise",
+      "bush",
+      "overcast",
+      "blue sky"
+    ],
+    "clothing": [
+      "ruqun",
+      "hanfu",
+      "chinese clothes",
+      "clothes between breasts",
+      "boots"
+    ],
+    "positive": "1girl, solo, adult, pixie cut, amber eyes, brown hair, swept bangs, gigantic breasts, soft breasts, natural breasts, milf, mature female, thick thighs, ponytail, ruqun, hanfu, chinese clothes, clothes between breasts, boots, female masturbation, all fours, from above, looking at breasts, shy, drooling, soft lighting, bedroom, indoors, sunrise, bush, overcast, blue sky, nsfw, explicit, masterpiece, best quality, amazing quality"
+  },
+  {
+    "id": 23,
+    "heats": [
+      "tease",
+      "flash"
+    ],
+    "era": "ancient_greece",
+    "girl": true,
+    "boy": false,
+    "drawJob": false,
+    "sceneMode": "normal",
+    "people": 1,
+    "pinned": [],
+    "job": [],
+    "activity": [
+      "smoking"
+    ],
+    "sex": [],
+    "body": [
+      "top-down bottom-up"
+    ],
+    "camera": [
+      "lower body"
+    ],
+    "pose": [
+      "top-down bottom-up",
+      "lower body",
+      "smoking",
+      "between thighs",
+      "hand on own ass",
+      "spread pussy"
+    ],
+    "env": [
+      "soft lighting",
+      "colonnade",
+      "outdoors",
+      "evening",
+      "bush",
+      "starry sky",
+      "sky"
+    ],
+    "clothing": [
+      "ancient greek clothes",
+      "himation",
+      "revealing clothes",
+      "shoes",
+      "black collar",
+      "collar"
+    ],
+    "positive": "1girl, solo, adult, very long hair, orange eyes, purple hair, parted bangs, huge breasts, soft breasts, natural breasts, female pubic hair, two-tone hair, sidelocks, ancient greek clothes, himation, revealing clothes, shoes, black collar, collar, top-down bottom-up, lower body, smoking, between thighs, hand on own ass, spread pussy, soft lighting, colonnade, outdoors, evening, bush, starry sky, sky, nsfw, explicit, masterpiece, best quality, amazing quality"
+  },
+  {
+    "id": 24,
+    "heats": [
+      "tease",
+      "flash"
+    ],
+    "era": "modern",
+    "girl": true,
+    "boy": true,
+    "drawJob": true,
+    "sceneMode": "normal",
+    "people": 2,
+    "pinned": [],
+    "job": [
+      "waitress"
+    ],
+    "activity": [
+      "talking on phone"
+    ],
+    "sex": [],
+    "body": [
+      "on stomach"
+    ],
+    "camera": [
+      "from behind"
+    ],
+    "pose": [
+      "on stomach",
+      "from behind",
+      "looking at mirror",
+      "light smile",
+      "smile",
+      "talking on phone"
+    ],
+    "env": [
+      "soft lighting",
+      "modern",
+      "cafe",
+      "indoors",
+      "sunrise",
+      "ceiling light",
+      "carpet"
+    ],
+    "clothing": [
+      "apron",
+      "open cardigan",
+      "cardigan",
+      "kneehighs",
+      "boxers",
+      "latex"
+    ],
+    "positive": "1girl, 1boy, adult, pixie cut, heterochromia, brown hair, high ponytail, ponytail, small breasts, soft breasts, natural breasts, waitress, thick eyebrows, apron, open cardigan, cardigan, kneehighs, boxers, latex, on stomach, from behind, looking at mirror, light smile, smile, talking on phone, soft lighting, modern, cafe, indoors, sunrise, ceiling light, carpet, nsfw, explicit, masterpiece, best quality, amazing quality"
+  },
+  {
+    "id": 25,
+    "heats": [
+      "activity"
+    ],
+    "era": "ancient_greece",
+    "girl": false,
+    "boy": true,
+    "drawJob": true,
+    "sceneMode": "normal",
+    "people": 1,
+    "pinned": [],
+    "job": [],
+    "activity": [
+      "eating"
+    ],
+    "sex": [],
+    "body": [
+      "indian style"
+    ],
+    "camera": [
+      "dutch angle"
+    ],
+    "pose": [
+      "indian style",
+      "dutch angle",
+      "looking ahead",
+      "sleepy",
+      "eating",
+      "half-closed eyes"
+    ],
+    "env": [
+      "soft lighting",
+      "colonnade",
+      "outdoors",
+      "night",
+      "rain",
+      "candle",
+      "sky"
+    ],
+    "clothing": [
+      "ancient greek clothes",
+      "himation",
+      "shoes",
+      "revealing clothes",
+      "belt"
+    ],
+    "positive": "1boy, solo, adult, pixie cut, blue eyes, red hair, side ponytail, ponytail, thick eyebrows, closed eyes, adam's apple, ancient greek clothes, himation, shoes, revealing clothes, belt, indian style, dutch angle, looking ahead, sleepy, eating, half-closed eyes, soft lighting, colonnade, outdoors, night, rain, candle, sky, nsfw, explicit, masterpiece, best quality, amazing quality"
+  },
+  {
+    "id": 26,
+    "heats": [
+      "activity",
+      "tease",
+      "flash"
+    ],
+    "era": "ancient_china",
+    "girl": true,
+    "boy": false,
+    "drawJob": true,
+    "sceneMode": "normal",
+    "people": 1,
+    "pinned": [],
+    "job": [],
+    "activity": [
+      "camping"
+    ],
+    "sex": [],
+    "body": [
+      "dancing"
+    ],
+    "camera": [
+      "lower body"
+    ],
+    "pose": [
+      "dancing",
+      "lower body",
+      "camping",
+      "one knee up",
+      "against glass",
+      "leaning back"
+    ],
+    "env": [
+      "soft lighting",
+      "outdoors",
+      "chinese architecture",
+      "sunrise",
+      "pillow",
+      "cinematic lighting",
+      "fog"
+    ],
+    "clothing": [
+      "chinese clothes",
+      "pelvic curtain",
+      "wet clothes",
+      "sandals",
+      "ring"
+    ],
+    "positive": "1girl, solo, adult, pixie cut, yellow eyes, aqua hair, ponytail, large breasts, soft breasts, natural breasts, dark skin, wavy hair, muscular, chinese clothes, pelvic curtain, wet clothes, sandals, ring, dancing, lower body, camping, one knee up, against glass, leaning back, soft lighting, outdoors, chinese architecture, sunrise, pillow, cinematic lighting, fog, nsfw, explicit, masterpiece, best quality, amazing quality"
+  },
+  {
+    "id": 27,
+    "heats": [
+      "tease"
+    ],
+    "era": "victorian",
+    "girl": true,
+    "boy": false,
+    "drawJob": true,
+    "sceneMode": "normal",
+    "people": 1,
+    "pinned": [],
+    "job": [],
+    "activity": [
+      "cleaning"
+    ],
+    "sex": [],
+    "body": [
+      "standing"
+    ],
+    "camera": [
+      "from below"
+    ],
+    "pose": [
+      "standing",
+      "from below",
+      "looking back",
+      "sad",
+      "cleaning",
+      "sparkling eyes"
+    ],
+    "env": [
+      "soft lighting",
+      "victorian",
+      "great hall",
+      "indoors",
+      "evening",
+      "lamp",
+      "cherry blossoms"
+    ],
+    "clothing": [
+      "wedding dress",
+      "dress",
+      "garter belt",
+      "cloak",
+      "boots"
+    ],
+    "positive": "1girl, solo, adult, medium hair, amber eyes, brown hair, ponytail, medium breasts, soft breasts, natural breasts, pink nipples, ahoge, breasts, wedding dress, dress, garter belt, cloak, boots, standing, from below, looking back, sad, cleaning, sparkling eyes, soft lighting, victorian, great hall, indoors, evening, lamp, cherry blossoms, nsfw, explicit, masterpiece, best quality, amazing quality"
+  },
+  {
+    "id": 28,
+    "heats": [
+      "activity",
+      "flash"
+    ],
+    "era": "edo",
+    "girl": false,
+    "boy": true,
+    "drawJob": false,
+    "sceneMode": "normal",
+    "people": 2,
+    "pinned": [],
+    "job": [],
+    "activity": [
+      "cleaning"
+    ],
+    "sex": [],
+    "body": [
+      "standing"
+    ],
+    "camera": [
+      "full body"
+    ],
+    "pose": [
+      "standing",
+      "full body",
+      "averting eyes",
+      "come hither",
+      "cleaning",
+      "m legs",
+      "spread legs"
+    ],
+    "env": [
+      "soft lighting",
+      "torii",
+      "outdoors",
+      "dusk",
+      "shadow",
+      "overcast",
+      "blue sky"
+    ],
+    "clothing": [
+      "japanese clothes",
+      "hakama",
+      "haori",
+      "fundoshi",
+      "zouri"
+    ],
+    "positive": "2boys, adult, very long hair, violet eyes, pink hair, side ponytail, ponytail, scar, tareme, shota, short male, japanese clothes, hakama, haori, fundoshi, zouri, standing, full body, averting eyes, come hither, cleaning, m legs, spread legs, soft lighting, torii, outdoors, dusk, shadow, overcast, blue sky, nsfw, explicit, masterpiece, best quality, amazing quality"
+  },
+  {
+    "id": 29,
+    "heats": [
+      "activity",
+      "sex"
+    ],
+    "era": "modern",
+    "girl": true,
+    "boy": false,
+    "drawJob": false,
+    "sceneMode": "normal",
+    "people": 1,
+    "pinned": [],
+    "job": [],
+    "activity": [],
+    "sex": [],
+    "body": [
+      "on side"
+    ],
+    "camera": [
+      "close-up"
+    ],
+    "pose": [
+      "fingering",
+      "on side",
+      "close-up",
+      "sideways glance",
+      "crying",
+      "parted lips"
+    ],
+    "env": [
+      "soft lighting",
+      "modern",
+      "hotel room",
+      "indoors",
+      "sunset",
+      "lamp",
+      "rain"
+    ],
+    "clothing": [
+      "naked apron",
+      "sneakers",
+      "no bra",
+      "garter belt",
+      "open jacket",
+      "jacket"
+    ],
+    "positive": "1girl, solo, adult, very long hair, grey eyes, brown hair, parted hair, huge breasts, soft breasts, natural breasts, toned, pink nails, muscular, tears, naked apron, sneakers, no bra, garter belt, open jacket, jacket, fingering, on side, close-up, sideways glance, crying, parted lips, soft lighting, modern, hotel room, indoors, sunset, lamp, rain, nsfw, explicit, masterpiece, best quality, amazing quality"
+  },
+  {
+    "id": 30,
+    "heats": [
+      "flash"
+    ],
+    "era": "medieval",
+    "girl": true,
+    "boy": false,
+    "drawJob": false,
+    "sceneMode": "normal",
+    "people": 3,
+    "pinned": [],
+    "job": [],
+    "activity": [
+      "stretching"
+    ],
+    "sex": [],
+    "body": [
+      "on back"
+    ],
+    "camera": [
+      "lower body"
+    ],
+    "pose": [
+      "on back",
+      "lower body",
+      "stretching",
+      "between thighs",
+      "hand on own crotch",
+      "ass grab"
+    ],
+    "env": [
+      "soft lighting",
+      "castle",
+      "outdoors",
+      "evening",
+      "sky",
+      "blue sky",
+      "chromatic aberration"
+    ],
+    "clothing": [
+      "armor",
+      "cloak",
+      "boots",
+      "revealing clothes",
+      "umbrella"
+    ],
+    "positive": "3girls, adult, short hair, green eyes, blue hair, messy hair, flat chest, small breasts, soft breasts, natural breasts, breast lift, loli, petite, armor, cloak, boots, revealing clothes, umbrella, on back, lower body, stretching, between thighs, hand on own crotch, ass grab, soft lighting, castle, outdoors, evening, sky, blue sky, chromatic aberration, nsfw, explicit, masterpiece, best quality, amazing quality"
+  },
+  {
+    "id": 31,
+    "heats": [
+      "sex"
+    ],
+    "era": "modern",
+    "girl": true,
+    "boy": false,
+    "drawJob": false,
+    "sceneMode": "normal",
+    "people": 2,
+    "pinned": [],
+    "job": [],
+    "activity": [],
+    "sex": [
+      "69"
+    ],
+    "body": [
+      "lying"
+    ],
+    "camera": [
+      "cowboy shot"
+    ],
+    "pose": [
+      "69",
+      "sex",
+      "lying",
+      "cowboy shot",
+      "looking down",
+      "surprised"
+    ],
+    "env": [
+      "soft lighting",
+      "modern",
+      "sento",
+      "bath",
+      "indoors",
+      "day",
+      "lamp"
+    ],
+    "clothing": [
+      "long skirt",
+      "skirt",
+      "wet shirt",
+      "shirt",
+      "track jacket",
+      "jacket"
+    ],
+    "positive": "2girls, adult, very short hair, yellow eyes, blue hair, drill hair, medium breasts, soft breasts, natural breasts, tsurime, thigh gap, thighs, long skirt, skirt, wet shirt, shirt, track jacket, jacket, 69, sex, lying, cowboy shot, looking down, surprised, soft lighting, modern, sento, bath, indoors, day, lamp, nsfw, explicit, masterpiece, best quality, amazing quality"
+  },
+  {
+    "id": 32,
+    "heats": [
+      "tease"
+    ],
+    "era": "modern",
+    "girl": true,
+    "boy": false,
+    "drawJob": true,
+    "sceneMode": "normal",
+    "people": 3,
+    "pinned": [],
+    "job": [
+      "doctor"
+    ],
+    "activity": [
+      "writing"
+    ],
+    "sex": [],
+    "body": [
+      "on side"
+    ],
+    "camera": [
+      "from behind"
+    ],
+    "pose": [
+      "on side",
+      "from behind",
+      "looking to the side",
+      "serious",
+      "writing",
+      "open mouth"
+    ],
+    "env": [
+      "soft lighting",
+      "modern",
+      "hospital",
+      "indoors",
+      "night",
+      "ceiling light",
+      "chair"
+    ],
+    "clothing": [
+      "lab coat",
+      "stethoscope",
+      "coat",
+      "see-through shirt",
+      "shirt"
+    ],
+    "positive": "3girls, adult, bob cut, blue eyes, pink hair, ahoge, large breasts, soft breasts, doctor, natural breasts, size difference, lab coat, stethoscope, coat, see-through shirt, shirt, on side, from behind, looking to the side, serious, writing, open mouth, soft lighting, modern, hospital, indoors, night, ceiling light, chair, nsfw, explicit, masterpiece, best quality, amazing quality"
+  },
+  {
+    "id": 33,
+    "heats": [
+      "tease",
+      "flash"
+    ],
+    "era": "victorian",
+    "girl": true,
+    "boy": false,
+    "drawJob": false,
+    "sceneMode": "normal",
+    "people": 1,
+    "pinned": [],
+    "job": [],
+    "activity": [
+      "cleaning"
+    ],
+    "sex": [],
+    "body": [
+      "kneeling"
+    ],
+    "camera": [
+      "pov"
+    ],
+    "pose": [
+      "kneeling",
+      "pov",
+      "looking at viewer",
+      "shy",
+      "cleaning",
+      "open mouth"
+    ],
+    "env": [
+      "soft lighting",
+      "victorian",
+      "bathroom",
+      "indoors",
+      "day",
+      "lamp",
+      "overcast"
+    ],
+    "clothing": [
+      "corset",
+      "pencil skirt",
+      "skirt",
+      "kneehighs",
+      "cloak"
+    ],
+    "positive": "1girl, solo, adult, very long hair, aqua eyes, black hair, blunt bangs, huge breasts, soft breasts, natural breasts, ass ripple, breasts out, hair bun, corset, pencil skirt, skirt, kneehighs, cloak, kneeling, pov, looking at viewer, shy, cleaning, open mouth, soft lighting, victorian, bathroom, indoors, day, lamp, overcast, nsfw, explicit, masterpiece, best quality, amazing quality"
+  },
+  {
+    "id": 34,
+    "heats": [
+      "activity",
+      "tease"
+    ],
+    "era": "medieval",
+    "girl": true,
+    "boy": false,
+    "drawJob": false,
+    "sceneMode": "normal",
+    "people": 2,
+    "pinned": [],
+    "job": [],
+    "activity": [
+      "sunbathing"
+    ],
+    "sex": [],
+    "body": [
+      "wariza"
+    ],
+    "camera": [
+      "straight-on"
+    ],
+    "pose": [
+      "wariza",
+      "straight-on",
+      "looking at another",
+      "smile",
+      "sunbathing",
+      "wink"
+    ],
+    "env": [
+      "soft lighting",
+      "outdoors",
+      "castle",
+      "evening",
+      "sunlight",
+      "sky",
+      "soap bubbles"
+    ],
+    "clothing": [
+      "armor",
+      "cloak",
+      "sandals",
+      "revealing clothes",
+      "hoop earrings",
+      "earrings"
+    ],
+    "positive": "2girls, adult, bob cut, aqua eyes, brown hair, parted hair, medium breasts, soft breasts, natural breasts, muscular, cleavage, unaligned breasts, armor, cloak, sandals, revealing clothes, hoop earrings, earrings, wariza, straight-on, looking at another, smile, sunbathing, wink, soft lighting, outdoors, castle, evening, sunlight, sky, soap bubbles, nsfw, explicit, masterpiece, best quality, amazing quality"
+  },
+  {
+    "id": 35,
+    "heats": [
+      "activity"
+    ],
+    "era": "modern",
+    "girl": true,
+    "boy": false,
+    "drawJob": false,
+    "sceneMode": "normal",
+    "people": 1,
+    "pinned": [],
+    "job": [],
+    "activity": [
+      "karaoke",
+      "singing"
+    ],
+    "sex": [],
+    "body": [
+      "on stomach"
+    ],
+    "camera": [
+      "dutch angle"
+    ],
+    "pose": [
+      "on stomach",
+      "dutch angle",
+      "sideways glance",
+      "light smile",
+      "smile",
+      "karaoke",
+      "singing"
+    ],
+    "env": [
+      "soft lighting",
+      "modern",
+      "bar (place)",
+      "indoors",
+      "sunset",
+      "spotlight",
+      "tree"
+    ],
+    "clothing": [
+      "blouse",
+      "pleated skirt",
+      "skirt",
+      "lab coat",
+      "coat",
+      "latex",
+      "thong"
+    ],
+    "positive": "1girl, solo, adult, bob cut, brown eyes, purple hair, ponytail, large breasts, soft breasts, natural breasts, wet, mole, curly hair, blouse, pleated skirt, skirt, lab coat, coat, latex, thong, on stomach, dutch angle, sideways glance, light smile, smile, karaoke, singing, soft lighting, modern, bar (place), indoors, sunset, spotlight, tree, nsfw, explicit, masterpiece, best quality, amazing quality"
+  },
+  {
+    "id": 36,
+    "heats": [
+      "activity",
+      "tease",
+      "flash"
+    ],
+    "era": "ancient_greece",
+    "girl": true,
+    "boy": false,
+    "drawJob": true,
+    "sceneMode": "normal",
+    "people": 1,
+    "pinned": [],
+    "job": [],
+    "activity": [
+      "bathing"
+    ],
+    "sex": [],
+    "body": [
+      "dancing"
+    ],
+    "camera": [
+      "dutch angle"
+    ],
+    "pose": [
+      "dancing",
+      "dutch angle",
+      "looking down",
+      "dazed",
+      "bathing",
+      "between breasts"
+    ],
+    "env": [
+      "soft lighting",
+      "bath",
+      "indoors",
+      "night",
+      "pillar",
+      "pillow",
+      "on chair"
+    ],
+    "clothing": [
+      "ancient greek clothes",
+      "himation",
+      "revealing clothes",
+      "jewelry"
+    ],
+    "positive": "1girl, solo, adult, absurdly long hair, yellow eyes, black hair, ponytail, small breasts, soft breasts, natural breasts, tanlines, milf, mature female, inverted nipples, ancient greek clothes, himation, revealing clothes, jewelry, dancing, dutch angle, looking down, dazed, bathing, between breasts, soft lighting, bath, indoors, night, pillar, pillow, on chair, nsfw, explicit, masterpiece, best quality, amazing quality"
+  },
+  {
+    "id": 37,
+    "heats": [
+      "flash",
+      "sex"
+    ],
+    "era": "ancient_china",
+    "girl": true,
+    "boy": false,
+    "drawJob": false,
+    "sceneMode": "normal",
+    "people": 3,
+    "pinned": [],
+    "job": [],
+    "activity": [],
+    "sex": [
+      "girl on top"
+    ],
+    "body": [
+      "sitting"
+    ],
+    "camera": [
+      "from behind"
+    ],
+    "pose": [
+      "girl on top",
+      "sex",
+      "sitting",
+      "from behind",
+      "looking away",
+      "furrowed brow"
+    ],
+    "env": [
+      "soft lighting",
+      "bedroom",
+      "indoors",
+      "sunset",
+      "backlighting",
+      "on bed",
+      "blue sky"
+    ],
+    "clothing": [
+      "dudou",
+      "chinese clothes",
+      "revealing clothes",
+      "shoes",
+      "towel"
+    ],
+    "positive": "3girls, adult, very long hair, aqua eyes, aqua hair, messy hair, gigantic breasts, soft breasts, natural breasts, thick eyebrows, parted hair, tan, dudou, chinese clothes, revealing clothes, shoes, towel, girl on top, sex, sitting, from behind, looking away, furrowed brow, soft lighting, bedroom, indoors, sunset, backlighting, on bed, blue sky, nsfw, explicit, masterpiece, best quality, amazing quality"
+  },
+  {
+    "id": 38,
+    "heats": [
+      "activity"
+    ],
+    "era": "modern",
+    "girl": true,
+    "boy": false,
+    "drawJob": false,
+    "sceneMode": "normal",
+    "people": 1,
+    "pinned": [],
+    "job": [],
+    "activity": [
+      "writing"
+    ],
+    "sex": [],
+    "body": [
+      "reclining"
+    ],
+    "camera": [
+      "pov crotch"
+    ],
+    "pose": [
+      "reclining",
+      "pov crotch",
+      "looking at viewer",
+      "angry",
+      "writing",
+      "biting own lip"
+    ],
+    "env": [
+      "soft lighting",
+      "modern",
+      "beach towel",
+      "outdoors",
+      "night",
+      "city lights",
+      "bokeh"
+    ],
+    "clothing": [
+      "nightgown",
+      "kneehighs",
+      "bra visible through clothes",
+      "fishnets",
+      "open cardigan",
+      "cardigan"
+    ],
+    "positive": "1girl, solo, adult, long hair, purple eyes, white hair, hair over shoulder, medium breasts, soft breasts, natural breasts, tan, red nails, bangs, nightgown, kneehighs, bra visible through clothes, fishnets, open cardigan, cardigan, reclining, pov crotch, looking at viewer, angry, writing, biting own lip, soft lighting, modern, beach towel, outdoors, night, city lights, bokeh, nsfw, explicit, masterpiece, best quality, amazing quality"
+  },
+  {
+    "id": 39,
+    "heats": [
+      "activity",
+      "tease",
+      "flash"
+    ],
+    "era": "victorian",
+    "girl": true,
+    "boy": true,
+    "drawJob": false,
+    "sceneMode": "normal",
+    "people": 1,
+    "pinned": [],
+    "job": [],
+    "activity": [
+      "taking picture"
+    ],
+    "sex": [],
+    "body": [
+      "crawling"
+    ],
+    "camera": [
+      "upper body"
+    ],
+    "pose": [
+      "crawling",
+      "upper body",
+      "looking at viewer",
+      "scared",
+      "taking picture",
+      "half-closed eyes"
+    ],
+    "env": [
+      "soft lighting",
+      "victorian",
+      "mansion",
+      "indoors",
+      "night",
+      "lamp",
+      "depth of field"
+    ],
+    "clothing": [
+      "blouse",
+      "pencil skirt",
+      "skirt",
+      "garter belt",
+      "cloak",
+      "revealing clothes"
+    ],
+    "positive": "1girl, solo, adult, absurdly long hair, amber eyes, aqua hair, drill hair, small breasts, soft breasts, natural breasts, swept bangs, very dark skin, dark skin, breast rest, blouse, pencil skirt, skirt, garter belt, cloak, revealing clothes, crawling, upper body, looking at viewer, scared, taking picture, half-closed eyes, soft lighting, victorian, mansion, indoors, night, lamp, depth of field, nsfw, explicit, masterpiece, best quality, amazing quality"
+  },
+  {
+    "id": 40,
+    "heats": [
+      "activity",
+      "sex"
+    ],
+    "era": "edo",
+    "girl": true,
+    "boy": false,
+    "drawJob": false,
+    "sceneMode": "normal",
+    "people": 1,
+    "pinned": [],
+    "job": [],
+    "activity": [],
+    "sex": [],
+    "body": [
+      "on stomach"
+    ],
+    "camera": [
+      "full body"
+    ],
+    "pose": [
+      "fingering",
+      "on stomach",
+      "full body",
+      "looking away",
+      "angry",
+      "drooling"
+    ],
+    "env": [
+      "soft lighting",
+      "sento",
+      "bath",
+      "indoors",
+      "night",
+      "candlelight",
+      "fog"
+    ],
+    "clothing": [
+      "miko",
+      "japanese clothes",
+      "haori",
+      "open clothes"
+    ],
+    "positive": "1girl, solo, adult, long hair, glowing eyes, red hair, twin braids, braid, large breasts, soft breasts, natural breasts, female pubic hair, breasts on glass, miko, japanese clothes, haori, open clothes, fingering, on stomach, full body, looking away, angry, drooling, soft lighting, sento, bath, indoors, night, candlelight, fog, nsfw, explicit, masterpiece, best quality, amazing quality"
+  },
+  {
+    "id": 41,
+    "heats": [
+      "tease",
+      "flash",
+      "sex"
+    ],
+    "era": "victorian",
+    "girl": false,
+    "boy": true,
+    "drawJob": false,
+    "sceneMode": "normal",
+    "people": 1,
+    "pinned": [],
+    "job": [],
+    "activity": [
+      "bathing"
+    ],
+    "sex": [],
+    "body": [
+      "dancing"
+    ],
+    "camera": [
+      "portrait"
+    ],
+    "pose": [
+      "dancing",
+      "portrait",
+      "looking at viewer",
+      "pout",
+      "bathing",
+      "covering crotch"
+    ],
+    "env": [
+      "soft lighting",
+      "victorian",
+      "bathroom",
+      "indoors",
+      "sunset",
+      "lamp",
+      "mirror"
+    ],
+    "clothing": [
+      "cloak",
+      "revealing clothes",
+      "belt"
+    ],
+    "positive": "1boy, solo, adult, long hair, pink eyes, multicolored hair, wavy hair, very dark skin, dark skin, scar, looking at penis, goatee, cloak, revealing clothes, belt, dancing, portrait, looking at viewer, pout, bathing, covering crotch, soft lighting, victorian, bathroom, indoors, sunset, lamp, mirror, nsfw, explicit, masterpiece, best quality, amazing quality"
+  },
+  {
+    "id": 42,
+    "heats": [
+      "tease",
+      "sex"
+    ],
+    "era": "ancient_china",
+    "girl": true,
+    "boy": false,
+    "drawJob": true,
+    "sceneMode": "normal",
+    "people": 1,
+    "pinned": [],
+    "job": [],
+    "activity": [],
+    "sex": [],
+    "body": [
+      "lying"
+    ],
+    "camera": [
+      "cowboy shot"
+    ],
+    "pose": [
+      "female masturbation",
+      "lying",
+      "cowboy shot",
+      "looking at viewer",
+      "frown",
+      "open mouth"
+    ],
+    "env": [
+      "soft lighting",
+      "bedroom",
+      "indoors",
+      "evening",
+      "on bed",
+      "steam",
+      "bush"
+    ],
+    "clothing": [
+      "pelvic curtain",
+      "chinese clothes",
+      "sandals",
+      "see-through clothes",
+      "hoop earrings",
+      "earrings"
+    ],
+    "positive": "1girl, solo, adult, pixie cut, yellow eyes, blonde hair, hair over shoulder, medium breasts, soft breasts, natural breasts, pale skin, covered nipples, ass, pelvic curtain, chinese clothes, sandals, see-through clothes, hoop earrings, earrings, female masturbation, lying, cowboy shot, looking at viewer, frown, open mouth, soft lighting, bedroom, indoors, evening, on bed, steam, bush, nsfw, explicit, masterpiece, best quality, amazing quality"
+  },
+  {
+    "id": 43,
+    "heats": [
+      "flash"
+    ],
+    "era": "modern",
+    "girl": true,
+    "boy": true,
+    "drawJob": true,
+    "sceneMode": "normal",
+    "people": 2,
+    "pinned": [],
+    "job": [
+      "doctor"
+    ],
+    "activity": [
+      "playing guitar"
+    ],
+    "sex": [],
+    "body": [
+      "seiza"
+    ],
+    "camera": [
+      "dutch angle"
+    ],
+    "pose": [
+      "seiza",
+      "dutch angle",
+      "averting eyes",
+      "crying",
+      "playing guitar",
+      "swimsuit aside"
+    ],
+    "env": [
+      "soft lighting",
+      "modern",
+      "hospital",
+      "indoors",
+      "day",
+      "spotlight",
+      "cherry blossoms"
+    ],
+    "clothing": [
+      "lab coat",
+      "stethoscope",
+      "coat",
+      "school swimsuit",
+      "one-piece swimsuit",
+      "swimsuit"
+    ],
+    "positive": "1girl, 1boy, adult, absurdly long hair, orange eyes, brown hair, twin braids, braid, gigantic breasts, soft breasts, natural breasts, doctor, breasts on table, tears, lab coat, stethoscope, coat, school swimsuit, one-piece swimsuit, swimsuit, seiza, dutch angle, averting eyes, crying, playing guitar, swimsuit aside, soft lighting, modern, hospital, indoors, day, spotlight, cherry blossoms, nsfw, explicit, masterpiece, best quality, amazing quality"
+  },
+  {
+    "id": 44,
+    "heats": [
+      "flash",
+      "sex"
+    ],
+    "era": "medieval",
+    "girl": false,
+    "boy": true,
+    "drawJob": false,
+    "sceneMode": "normal",
+    "people": 1,
+    "pinned": [],
+    "job": [],
+    "activity": [
+      "camping"
+    ],
+    "sex": [],
+    "body": [
+      "on stomach"
+    ],
+    "camera": [
+      "full body"
+    ],
+    "pose": [
+      "on stomach",
+      "full body",
+      "looking at viewer",
+      "angry",
+      "camping",
+      "exhibitionism"
+    ],
+    "env": [
+      "soft lighting",
+      "outdoors",
+      "castle",
+      "sunrise",
+      "cinematic lighting",
+      "on chair",
+      "rain"
+    ],
+    "clothing": [
+      "armor",
+      "cloak",
+      "sandals",
+      "tight clothes",
+      "bracelet"
+    ],
+    "positive": "1boy, solo, adult, bob cut, red eyes, white hair, straight hair, gradient hair, armpits, body blush, facial hair, armor, cloak, sandals, tight clothes, bracelet, on stomach, full body, looking at viewer, angry, camping, exhibitionism, soft lighting, outdoors, castle, sunrise, cinematic lighting, on chair, rain, nsfw, explicit, masterpiece, best quality, amazing quality"
+  },
+  {
+    "id": 45,
+    "heats": [
+      "flash"
+    ],
+    "era": "ancient_china",
+    "girl": false,
+    "boy": true,
+    "drawJob": false,
+    "sceneMode": "normal",
+    "people": 1,
+    "pinned": [],
+    "job": [],
+    "activity": [
+      "yoga"
+    ],
+    "sex": [],
+    "body": [
+      "all fours"
+    ],
+    "camera": [
+      "straight-on"
+    ],
+    "pose": [
+      "all fours",
+      "straight-on",
+      "looking ahead",
+      "crying",
+      "yoga",
+      "grinding"
+    ],
+    "env": [
+      "soft lighting",
+      "chinese architecture",
+      "outdoors",
+      "day",
+      "chair",
+      "window light",
+      "film grain"
+    ],
+    "clothing": [
+      "chinese clothes",
+      "boots",
+      "wet clothes",
+      "stud earrings",
+      "earrings",
+      "red collar",
+      "collar"
+    ],
+    "positive": "1boy, solo, adult, long hair, amber eyes, grey hair, swept bangs, ponytail, stubble, long eyelashes, blunt bangs, tears, chinese clothes, boots, wet clothes, stud earrings, earrings, red collar, collar, all fours, straight-on, looking ahead, crying, yoga, grinding, soft lighting, chinese architecture, outdoors, day, chair, window light, film grain, nsfw, explicit, masterpiece, best quality, amazing quality"
+  },
+  {
+    "id": 46,
+    "heats": [
+      "activity",
+      "tease"
+    ],
+    "era": "ancient_china",
+    "girl": true,
+    "boy": true,
+    "drawJob": true,
+    "sceneMode": "normal",
+    "people": 1,
+    "pinned": [],
+    "job": [],
+    "activity": [
+      "eating"
+    ],
+    "sex": [],
+    "body": [
+      "indian style"
+    ],
+    "camera": [
+      "from outside"
+    ],
+    "pose": [
+      "indian style",
+      "from outside",
+      "looking ahead",
+      "embarrassed",
+      "eating",
+      "open mouth"
+    ],
+    "env": [
+      "soft lighting",
+      "chinese architecture",
+      "outdoors",
+      "night",
+      "sky",
+      "soap bubbles",
+      "chair"
+    ],
+    "clothing": [
+      "chinese clothes",
+      "pelvic curtain",
+      "revealing clothes",
+      "boots",
+      "animal collar",
+      "collar"
+    ],
+    "positive": "1girl, solo, adult, absurdly long hair, pink eyes, orange hair, bangs, flat chest, small breasts, soft breasts, natural breasts, eyeshadow, tongue, chinese clothes, pelvic curtain, revealing clothes, boots, animal collar, collar, indian style, from outside, looking ahead, embarrassed, eating, open mouth, soft lighting, chinese architecture, outdoors, night, sky, soap bubbles, chair, nsfw, explicit, masterpiece, best quality, amazing quality"
+  },
+  {
+    "id": 47,
+    "heats": [
+      "activity",
+      "tease",
+      "flash"
+    ],
+    "era": "ancient_greece",
+    "girl": true,
+    "boy": true,
+    "drawJob": false,
+    "sceneMode": "normal",
+    "people": 1,
+    "pinned": [],
+    "job": [],
+    "activity": [
+      "yoga"
+    ],
+    "sex": [],
+    "body": [
+      "reclining"
+    ],
+    "camera": [
+      "fisheye"
+    ],
+    "pose": [
+      "reclining",
+      "fisheye",
+      "looking away",
+      "scared",
+      "yoga",
+      "open mouth"
+    ],
+    "env": [
+      "soft lighting",
+      "ruins",
+      "outdoors",
+      "dusk",
+      "rain",
+      "chromatic aberration",
+      "blue sky"
+    ],
+    "clothing": [
+      "ancient greek clothes",
+      "himation",
+      "revealing clothes",
+      "boots",
+      "black belt"
+    ],
+    "positive": "1girl, solo, adult, very long hair, grey eyes, orange hair, straight hair, large breasts, soft breasts, natural breasts, hair bun, hanging breasts, closed eyes, ancient greek clothes, himation, revealing clothes, boots, black belt, reclining, fisheye, looking away, scared, yoga, open mouth, soft lighting, ruins, outdoors, dusk, rain, chromatic aberration, blue sky, nsfw, explicit, masterpiece, best quality, amazing quality"
+  },
+  {
+    "id": 48,
+    "heats": [
+      "sex"
+    ],
+    "era": "edo",
+    "girl": true,
+    "boy": false,
+    "drawJob": true,
+    "sceneMode": "normal",
+    "people": 1,
+    "pinned": [],
+    "job": [],
+    "activity": [],
+    "sex": [],
+    "body": [
+      "all fours"
+    ],
+    "camera": [
+      "from behind"
+    ],
+    "pose": [
+      "fingering",
+      "all fours",
+      "from behind",
+      "looking down",
+      "pout",
+      "sparkling eyes"
+    ],
+    "env": [
+      "soft lighting",
+      "ofuro",
+      "bath",
+      "indoors",
+      "sunrise",
+      "chromatic aberration",
+      "window light"
+    ],
+    "clothing": [
+      "miko",
+      "japanese clothes",
+      "haori",
+      "tight clothes"
+    ],
+    "positive": "1girl, solo, adult, absurdly long hair, blue eyes, green hair, high ponytail, ponytail, huge breasts, soft breasts, natural breasts, blunt bangs, wet hair, miko, japanese clothes, haori, tight clothes, fingering, all fours, from behind, looking down, pout, sparkling eyes, soft lighting, ofuro, bath, indoors, sunrise, chromatic aberration, window light, nsfw, explicit, masterpiece, best quality, amazing quality"
+  },
+  {
+    "id": 49,
+    "heats": [
+      "tease"
+    ],
+    "era": "ancient_china",
+    "girl": false,
+    "boy": true,
+    "drawJob": true,
+    "sceneMode": "normal",
+    "people": 1,
+    "pinned": [],
+    "job": [],
+    "activity": [
+      "sunbathing"
+    ],
+    "sex": [],
+    "body": [
+      "on side"
+    ],
+    "camera": [
+      "from outside"
+    ],
+    "pose": [
+      "on side",
+      "from outside",
+      "sideways glance",
+      "light smile",
+      "smile",
+      "sunbathing"
+    ],
+    "env": [
+      "soft lighting",
+      "outdoors",
+      "chinese architecture",
+      "day",
+      "bush",
+      "cinematic lighting",
+      "bokeh"
+    ],
+    "clothing": [
+      "chinese clothes",
+      "sandals",
+      "tight clothes",
+      "animal collar",
+      "collar",
+      "belt"
+    ],
+    "positive": "1boy, solo, adult, absurdly long hair, pink eyes, brown hair, double bun, hair bun, manboobs, very dark skin, dark skin, tongue, chinese clothes, sandals, tight clothes, animal collar, collar, belt, on side, from outside, sideways glance, light smile, smile, sunbathing, soft lighting, outdoors, chinese architecture, day, bush, cinematic lighting, bokeh, nsfw, explicit, masterpiece, best quality, amazing quality"
+  },
+  {
+    "id": 50,
+    "heats": [
+      "activity",
+      "flash"
+    ],
+    "era": "medieval",
+    "girl": true,
+    "boy": false,
+    "drawJob": false,
+    "sceneMode": "normal",
+    "people": 2,
+    "pinned": [],
+    "job": [],
+    "activity": [
+      "camping"
+    ],
+    "sex": [],
+    "body": [
+      "top-down bottom-up"
+    ],
+    "camera": [
+      "from side"
+    ],
+    "pose": [
+      "top-down bottom-up",
+      "from side",
+      "looking at breasts",
+      "furrowed brow",
+      "camping",
+      "licking lips"
+    ],
+    "env": [
+      "soft lighting",
+      "outdoors",
+      "castle",
+      "sunrise",
+      "orange sky",
+      "sky",
+      "blue sky"
+    ],
+    "clothing": [
+      "armor",
+      "cloak",
+      "wet clothes",
+      "sandals",
+      "belt"
+    ],
+    "positive": "2girls, adult, medium hair, blue eyes, blue hair, high ponytail, ponytail, huge breasts, soft breasts, natural breasts, freckles, tanlines, armor, cloak, wet clothes, sandals, belt, top-down bottom-up, from side, looking at breasts, furrowed brow, camping, licking lips, soft lighting, outdoors, castle, sunrise, orange sky, sky, blue sky, nsfw, explicit, masterpiece, best quality, amazing quality"
+  }
+]

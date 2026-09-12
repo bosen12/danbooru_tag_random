@@ -80,6 +80,7 @@ let skipping = false;
 let running = false;
 let genAbort = null;
 let jobAbort = null;
+let redoQueue = [];
 let viewMode = "all";
 let eraOnly = true;
 let lastPositive = "";
@@ -1279,7 +1280,7 @@ function cardSkeleton(width, height) {
   el.className = "card is-wait";
   el.style.setProperty("--shot-w", String(width || 1024));
   el.style.setProperty("--shot-h", String(height || 1024));
-  el.innerHTML = `<div class="shot"><div class="skel" aria-hidden="true"></div><img class="shot-img" alt="" width="${width || 1024}" height="${height || 1024}"><div class="meter" hidden><i></i><span></span></div><button type="button" class="skip-shot" aria-label="跳過這張，接著下一張" title="跳過這張"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" aria-hidden="true"><line x1="6" y1="6" x2="18" y2="18"/><line x1="18" y1="6" x2="6" y2="18"/></svg></button></div><div class="meta"><div class="bar">排隊中…</div><div class="pos"></div></div>`;
+  el.innerHTML = `<div class="shot"><div class="skel" aria-hidden="true"></div><img class="shot-img" alt="" width="${width || 1024}" height="${height || 1024}"><div class="meter" hidden><i></i><span></span></div><button type="button" class="skip-shot" aria-label="跳過這張，接著下一張" title="跳過這張"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" aria-hidden="true"><line x1="6" y1="6" x2="18" y2="18"/><line x1="18" y1="6" x2="6" y2="18"/></svg></button><button type="button" class="redo-shot" aria-label="重新生成這張" title="重新生成"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M21 12a9 9 0 1 1-2.6-6.3"/><polyline points="21 3 21 9 15 9"/></svg></button></div><div class="meta"><div class="bar">排隊中…</div><div class="pos"></div></div>`;
   return el;
 }
 
@@ -1722,6 +1723,189 @@ function skipCurrentGen() {
   }
 }
 
+function ensureMeter(el) {
+  if (!el || el.querySelector(".meter")) return;
+  const shot = el.querySelector(".shot");
+  if (!shot) return;
+  const meter = document.createElement("div");
+  meter.className = "meter";
+  meter.hidden = true;
+  meter.innerHTML = "<i></i><span></span>";
+  const skip = shot.querySelector(".skip-shot");
+  if (skip) shot.insertBefore(meter, skip);
+  else shot.append(meter);
+}
+
+function cancelRedoQueue() {
+  const pending = redoQueue.splice(0, redoQueue.length);
+  for (const card of pending) failCard(card, "已取消");
+}
+
+function resetCardForRedo(el) {
+  el.classList.remove("is-done", "is-fail", "is-skip", "is-img-fail", "is-gen");
+  el.classList.add("is-wait");
+  const shot = el.querySelector(".shot");
+  if (shot) {
+    shot.removeAttribute("role");
+    shot.removeAttribute("tabIndex");
+    shot.removeAttribute("title");
+    shot.removeAttribute("aria-label");
+  }
+  ensureMeter(el);
+  const bar = el.querySelector(".bar");
+  if (bar) bar.textContent = "排隊中…";
+}
+
+function queueRedo(card) {
+  if (!card || !card.dataset.positive) return;
+  if (card.classList.contains("is-gen")) return;
+  if (redoQueue.includes(card)) return;
+  resetCardForRedo(card);
+  setLive(card, { status: "排隊中…" });
+  if (running) {
+    redoQueue.push(card);
+    speak("已排到下一張");
+    return;
+  }
+  speak("重新生成");
+  runRedoSolo(card);
+}
+
+async function drainRedoQueue() {
+  while (redoQueue.length && !aborting) {
+    const card = redoQueue.shift();
+    if (!card || !card.dataset.positive) continue;
+    await regenerateCard(card);
+  }
+}
+
+async function streamCardJob(card, seedNum, extra) {
+  skipping = false;
+  jobAbort = new AbortController();
+  card.classList.add("is-gen");
+  card.classList.remove("is-wait");
+  const stopJob = () => {
+    try {
+      jobAbort?.abort();
+    } catch {
+      /* ignore */
+    }
+  };
+  if (genAbort.signal.aborted) stopJob();
+  else genAbort.signal.addEventListener("abort", stopJob, { once: true });
+  try {
+    let finished = false;
+    let hadError = false;
+    await streamGen(
+      {
+        positive: extra.positive,
+        width: settings.width,
+        height: settings.height,
+        seed: seedNum,
+        loras: extra.loras || currentLorasPayload(),
+        ckpt: extra.ckpt || currentCkpt(),
+      },
+      (event, data) => {
+        if (event === "queued") {
+          setLive(card, { status: `排隊中 · seed ${data.seed || seedNum}` });
+        } else if (event === "progress") {
+          const max = data.max || 25;
+          const value = data.value || 0;
+          setLive(card, {
+            status: `繪製 ${value}/${max}`,
+            value,
+            max,
+          });
+        } else if (event === "preview") {
+          setLive(card, { image: data.image, status: "預覽…" });
+        } else if (event === "done") {
+          finished = true;
+          if (skipping) skipCard(card);
+          else fillCard(card, { ...data, ...extra });
+        } else if (event === "error") {
+          finished = true;
+          hadError = true;
+          if (skipping) skipCard(card);
+          else failCard(card, String(data.error || "Comfy 報錯"));
+        }
+      },
+      jobAbort.signal
+    );
+    const kind = settleGenCard({ aborting, skipping, finished, hadError });
+    if (kind === "skip") skipCard(card);
+    else if (kind === "interrupt") throw new Error("生圖中斷");
+  } catch (err) {
+    const kind = settleGenCard({ aborting, skipping, errName: err.name, finished: false });
+    if (kind === "skip") skipCard(card);
+    else if (kind === "cancel") failCard(card, "已取消");
+    else failCard(card, String(err.message || err));
+  } finally {
+    genAbort.signal.removeEventListener("abort", stopJob);
+    endGenCard(card);
+    const skipNow = skipping;
+    skipping = false;
+    jobAbort = null;
+    if (skipNow) {
+      try {
+        await fetch("/api/interrupt", { method: "POST", body: "{}" });
+      } catch {
+        /* ignore */
+      }
+    }
+  }
+}
+
+async function regenerateCard(card) {
+  const seedNum = randomSeed();
+  card.dataset.seed = String(seedNum);
+  let loras = currentLorasPayload();
+  try {
+    if (card.dataset.loras) loras = JSON.parse(card.dataset.loras);
+  } catch {
+    /* keep current */
+  }
+  const extra = {
+    positive: card.dataset.positive,
+    era: card.dataset.era,
+    eraClash: [],
+    loras,
+    ckpt: card.dataset.ckpt || currentCkpt(),
+  };
+  showPos(extra.positive);
+  setLive(card, { status: "重新生成…" });
+  await streamCardJob(card, seedNum, extra);
+}
+
+async function runRedoSolo(card) {
+  if (running) {
+    if (!redoQueue.includes(card)) redoQueue.push(card);
+    return;
+  }
+  const pingNow = await fetch("/api/ping").then((r) => r.json()).catch(() => ({ ok: false }));
+  if (!pingNow.ok) {
+    speak("ComfyUI 連不上，先開本機 8188");
+    failCard(card, "ComfyUI 連不上");
+    return;
+  }
+  running = true;
+  aborting = false;
+  skipping = false;
+  genAbort = new AbortController();
+  $("go").disabled = true;
+  $("go").setAttribute("aria-busy", "true");
+  $("cancel").hidden = false;
+  try {
+    await regenerateCard(card);
+    await drainRedoQueue();
+  } finally {
+    if (aborting) cancelRedoQueue();
+    running = false;
+    $("go").disabled = false;
+    $("go").removeAttribute("aria-busy");
+    $("cancel").hidden = true;
+  }
+}
+
 async function runBatch() {
   if (running) return;
   running = true;
@@ -1761,6 +1945,14 @@ async function runBatch() {
     if (aborting) {
       speak("已取消");
       for (let j = i; j < cards.length; j++) failCard(cards[j], "已取消");
+      cancelRedoQueue();
+      break;
+    }
+    if (!aborting) await drainRedoQueue();
+    if (aborting) {
+      speak("已取消");
+      for (let j = i; j < cards.length; j++) failCard(cards[j], "已取消");
+      cancelRedoQueue();
       break;
     }
     speak(`生圖 ${i + 1}/${n}`);
@@ -1785,6 +1977,7 @@ async function runBatch() {
     card.dataset.positive = sent;
     card.dataset.trigger = trigger;
     card.dataset.loras = JSON.stringify(currentLorasPayload());
+    card.dataset.ckpt = currentCkpt() || "";
     if (settings.samePerson && i > 0) {
       card.dataset.same = "1";
       const shot = card.querySelector(".shot");
@@ -1798,85 +1991,17 @@ async function runBatch() {
     showPos(sent);
     setPosLine(card, sent);
     setLive(card, { status: `抽好了，生圖 ${i + 1}/${n}…` });
-    const extra = {
+    await streamCardJob(card, seedNum, {
       positive: sent,
       era: drawn.era,
       eraClash: drawn.eraClash,
-    };
-    skipping = false;
-    jobAbort = new AbortController();
-    card.classList.add("is-gen");
-    const stopJob = () => {
-      try {
-        jobAbort?.abort();
-      } catch {
-        /* ignore */
-      }
-    };
-    if (genAbort.signal.aborted) stopJob();
-    else genAbort.signal.addEventListener("abort", stopJob, { once: true });
-    try {
-      let finished = false;
-      let hadError = false;
-      await streamGen(
-        {
-          positive: sent,
-          width: settings.width,
-          height: settings.height,
-          seed: seedNum,
-          loras: currentLorasPayload(),
-          ckpt: currentCkpt(),
-        },
-        (event, data) => {
-          if (event === "queued") {
-            setLive(card, { status: `排隊中 · seed ${data.seed || seedNum}` });
-          } else if (event === "progress") {
-            const max = data.max || 25;
-            const value = data.value || 0;
-            setLive(card, {
-              status: `繪製 ${value}/${max}`,
-              value,
-              max,
-            });
-            speak(`生圖 ${i + 1}/${n} · ${value}/${max}`);
-          } else if (event === "preview") {
-            setLive(card, { image: data.image, status: "預覽…" });
-          } else if (event === "done") {
-            finished = true;
-            if (skipping) skipCard(card);
-            else fillCard(card, { ...data, ...extra });
-          } else if (event === "error") {
-            finished = true;
-            hadError = true;
-            if (skipping) skipCard(card);
-            else failCard(card, String(data.error || "Comfy 報錯"));
-          }
-        },
-        jobAbort.signal
-      );
-      const kind = settleGenCard({ aborting, skipping, finished, hadError });
-      if (kind === "skip") skipCard(card);
-      else if (kind === "interrupt") throw new Error("生圖中斷");
-    } catch (err) {
-      const kind = settleGenCard({ aborting, skipping, errName: err.name, finished: false });
-      if (kind === "skip") skipCard(card);
-      else if (kind === "cancel") failCard(card, "已取消");
-      else failCard(card, String(err.message || err));
-    } finally {
-      genAbort.signal.removeEventListener("abort", stopJob);
-      endGenCard(card);
-      const skipNow = skipping;
-      skipping = false;
-      jobAbort = null;
-      if (skipNow) {
-        try {
-          await fetch("/api/interrupt", { method: "POST", body: "{}" });
-        } catch {
-          /* ignore */
-        }
-      }
-    }
+      loras: currentLorasPayload(),
+      ckpt: currentCkpt(),
+    });
+    if (!aborting) await drainRedoQueue();
   }
+  if (!aborting) await drainRedoQueue();
+  if (aborting) cancelRedoQueue();
 
   running = false;
   $("go").disabled = false;
@@ -1947,6 +2072,12 @@ function bindUi() {
       skipCurrentGen();
       return;
     }
+    if (e.target.closest(".redo-shot")) {
+      e.preventDefault();
+      e.stopPropagation();
+      queueRedo(e.target.closest(".card"));
+      return;
+    }
     if (onWeightClick(e)) return;
     if (e.target.closest(".copy")) return;
     const card = e.target.closest(".card.is-done");
@@ -1960,6 +2091,7 @@ function bindUi() {
   });
   $("results").addEventListener("keydown", (e) => {
     if (e.key !== "Enter" && e.key !== " ") return;
+    if (e.target.closest(".redo-shot") || e.target.closest(".skip-shot")) return;
     const shot = e.target.closest(".card.is-done .shot");
     if (!shot) return;
     e.preventDefault();
@@ -2198,6 +2330,7 @@ function bindUi() {
   $("go").addEventListener("click", runBatch);
   $("cancel").addEventListener("click", async () => {
     aborting = true;
+    cancelRedoQueue();
     speak("取消中…");
     try {
       genAbort?.abort();

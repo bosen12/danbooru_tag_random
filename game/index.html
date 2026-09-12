@@ -17,7 +17,7 @@
     <link rel="stylesheet" href="game.css" />
   </head>
   <body>
-    <div class="room" id="room">
+    <main class="room" id="room">
       <!-- 相紙。整張都看得到，不裁。顯影就發生在這裡。 -->
       <div class="print" id="print">
         <img id="shot" class="print-img" alt="" />
@@ -29,8 +29,9 @@
       <section class="screen screen-gate" id="gate">
         <h1 class="wordmark">猜字棚</h1>
         <div class="gate-body">
-          <p class="eyebrow">排字匣 · 第五間</p>
-          <p class="tagline">三張相紙。<br />在它定影之前，說出你看見的。</p>
+          <p class="tagline">
+            排字匣的第五間。三張相紙。<br />在它定影之前，說出你看見的。
+          </p>
 
           <div class="dial" id="heat" role="group" aria-label="尺度"></div>
 
@@ -53,8 +54,8 @@
         <header class="hud">
           <div class="sheets" id="lives" aria-label="剩餘相紙"></div>
           <div class="counters">
-            <span class="counter"><i>分</i><b id="score">0</b></span>
-            <span class="counter"><i>連</i><b id="streak">0</b></span>
+            <span class="counter"><span>分</span><b id="score">0</b></span>
+            <span class="counter"><span>連</span><b id="streak">0</b></span>
           </div>
         </header>
 
@@ -65,8 +66,8 @@
 
       <section class="screen screen-over" id="over" hidden>
         <div class="over-body">
-          <p class="eyebrow">相紙用完了</p>
-          <p class="final"><b id="final-score">0</b><i>分</i></p>
+          <h2 class="over-title">相紙用完了</h2>
+          <p class="final"><b id="final-score">0</b><span>分</span></p>
           <p class="over-sub">最長連勝 <b id="final-streak">0</b></p>
 
           <ol class="sheet-list" id="answers"></ol>
@@ -84,7 +85,7 @@
           </div>
         </div>
       </section>
-    </div>
+    </main>
 
     <script type="module" src="main.js"></script>
   </body>

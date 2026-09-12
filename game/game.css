@@ -1,41 +1,19 @@
-/* 猜字棚 · 暗房
- *
- * 安全燈是琥珀色，相紙基底是冷的，這兩件事決定了整個色票。
- * 對錯不用紅綠燈：答對是「定影」（燒到白、變銳），答錯是「起霧」（糊掉、灰掉）。
- * 全站只花一次動態預算——顯影。其餘安靜。
- *
+/* Hallmark · macrostructure: Photographic · genre: atmospheric
+ * theme: custom · vibe: "darkroom safelight, print fixing, cold paper"
+ * paper: oklch(9% 0.01 40) · accent: oklch(64% 0.17 48)
+ * display: Bodoni Moda · body: PingFang TC / Noto Sans TC · outlier: DM Mono
+ * axes: dark / classical-serif / warm-amber · studied: no · context: user-provided
+ * nav: none · footer: none · enrichment: none — the generated print IS the content
+ * deviation: the print is contained, not full-bleed. Photographic wants edge-to-edge,
+ *            but the brief requires the whole frame visible, so it keeps its margins.
+ */
+@import url("tokens.css");
+
+/* 對錯不用紅綠燈：答對是「定影」（燒到白、變銳），答錯是「起霧」（糊掉、灰掉）。
  * 版面是台面式：相紙擺左邊，整張都看得到、不裁也不遮；
  * 記事欄靠在右邊被安全燈照到的牆上。
+ * 動態只花在顯影一處。atmospheric 只准淡入，所以沒有任何位移進場。
  */
-
-/* 顯影進度。0 = 還在霧裡，1 = 定影。
- * 註冊成數字是為了型別安全；補間由 main.js 的 rAF 驅動——
- * Chromium 不會替自訂屬性建立 CSS transition，宣告了也不會跑。 */
-@property --dev {
-  syntax: "<number>";
-  inherits: true;
-  initial-value: 0;
-}
-
-:root {
-  --ink: oklch(9% 0.01 40);
-  --ink-2: oklch(13% 0.012 40);
-  --safelight: oklch(64% 0.17 48);
-  --safelight-dim: oklch(42% 0.09 48);
-  --fixed: oklch(97% 0.008 85);
-  --silver: oklch(72% 0.01 250);
-  --silver-2: oklch(52% 0.01 250);
-  --fog: oklch(36% 0.006 250);
-
-  --face-display: "Bodoni Moda", "Times New Roman", serif;
-  --face-mono: "DM Mono", ui-monospace, "Cascadia Mono", monospace;
-  --face-han: "PingFang TC", "Noto Sans TC", "Microsoft JhengHei", "Hiragino Sans", sans-serif;
-
-  --gut: clamp(18px, 3.4vw, 48px);
-  --gap: clamp(22px, 3vw, 46px);
-  --ease: cubic-bezier(0.2, 0.8, 0.2, 1);
-  --ease-fog: cubic-bezier(0.4, 0, 0.6, 1);
-}
 
 /* 螢幕切換靠 [hidden]，但下面有元素設了 display，所以要壓過去。 */
 [hidden] {
@@ -46,24 +24,28 @@
   box-sizing: border-box;
 }
 
+/* gate 34：兩軸都用 clip，不用 hidden——clip 不會另建捲動容器。
+ * 必須兩軸一起：規範規定 clip 配上另一軸的 hidden 時，clip 會被算成 hidden。
+ * 這是滿版應用，縱向本來也不該捲；內層畫面各自有 overflow-y: auto。 */
 html,
 body {
+  overflow: clip;
   height: 100%;
 }
 
 body {
   margin: 0;
-  background: var(--ink);
-  color: var(--silver);
-  font-family: var(--face-han);
-  font-size: 16px;
+  background: var(--color-paper);
+  color: var(--color-muted);
+  font-family: var(--font-body);
+  font-size: var(--text-base);
   line-height: 1.5;
-  overflow: hidden;
   -webkit-font-smoothing: antialiased;
 }
 
 .room {
   position: relative;
+  display: block;
   height: 100dvh;
   width: 100%;
   overflow: hidden;
@@ -72,15 +54,16 @@ body {
   --board: min(calc(100dvh - var(--gut) * 2), 56vw);
 }
 
-/* 安全燈。燈泡在畫面外，只有它照到的那片牆看得見。記事欄就寫在這片牆上。 */
+/* 安全燈。燈泡在畫面外，只有它照到的那片牆看得見。記事欄就寫在這片牆上。
+ * atmospheric 允許兩道暖色光暈、各約 20–30% 面積、不動（gate 23/29 的豁免）。 */
 .room::before {
   content: "";
   position: absolute;
   inset: 0;
   pointer-events: none;
   background:
-    radial-gradient(58% 68% at 104% 38%, oklch(64% 0.17 48 / 0.26) 0%, transparent 62%),
-    radial-gradient(90% 60% at 86% 8%, oklch(64% 0.17 48 / 0.1) 0%, transparent 70%);
+    radial-gradient(52% 62% at 104% 38%, var(--bloom-near) 0%, transparent 62%),
+    radial-gradient(86% 56% at 88% 8%, var(--bloom-far) 0%, transparent 70%);
 }
 
 /* ── 相紙 ───────────────────────────────────────────── */
@@ -117,7 +100,7 @@ body {
 .print.is-spent .print-img {
   filter: grayscale(1) brightness(0.42) contrast(0.85);
   opacity: 0.42;
-  transition: filter 900ms var(--ease), opacity 900ms var(--ease);
+  transition: filter var(--dur-spent) var(--ease-out), opacity var(--dur-spent) var(--ease-out);
 }
 
 /* 顆粒。靜態一張 turbulence，不動，只是質感。跟著顯影一起浮出來。 */
@@ -136,7 +119,7 @@ body {
   inset: 0;
   pointer-events: none;
   opacity: calc(var(--dev) * 0.85);
-  box-shadow: inset 0 0 0 1px oklch(72% 0.01 250 / 0.16), 0 24px 70px -20px oklch(0% 0 0 / 0.85);
+  box-shadow: inset 0 0 0 var(--rule) var(--print-rule), 0 24px 70px -20px var(--print-shade);
 }
 
 .room:not(.is-board) .print-edge {
@@ -147,14 +130,14 @@ body {
   position: absolute;
   inset: auto 0 0 0;
   margin: 0;
-  padding: 12px;
+  padding: var(--space-3);
   text-align: center;
-  font-family: var(--face-mono);
-  font-size: 12px;
+  font-family: var(--font-outlier);
+  font-size: var(--text-sm);
   font-weight: 300;
   letter-spacing: 0.22em;
-  color: var(--safelight);
-  text-shadow: 0 1px 10px var(--ink);
+  color: var(--color-accent);
+  text-shadow: 0 1px 10px var(--color-paper);
 }
 
 .develop-note:empty {
@@ -176,23 +159,14 @@ body {
   padding-left: calc(var(--gut) + var(--board) + var(--gap));
 }
 
-.eyebrow {
-  margin: 0;
-  font-family: var(--face-mono);
-  font-size: 11px;
-  font-weight: 400;
-  letter-spacing: 0.34em;
-  text-transform: uppercase;
-  color: var(--safelight);
-}
-
 /* ── 開場 ───────────────────────────────────────────── */
 
+/* gate 44a：底部留白 ≥ 1.3× 頂部，畫面才不會浮著。 */
 .screen-gate {
   flex-direction: row;
   align-items: stretch;
-  gap: clamp(28px, 6vw, 80px);
-  padding: var(--gut);
+  gap: clamp(32px, 6vw, 80px);
+  padding: var(--gut) var(--gut) calc(var(--gut) * 1.4);
 }
 
 /* 招牌直排。其他四間叫暗房、活字樓、抽籤棚——這裡也是一間店。 */
@@ -200,69 +174,81 @@ body {
   margin: 0;
   flex: none;
   writing-mode: vertical-rl;
-  font-family: var(--face-han);
+  font-family: var(--font-body);
   font-weight: 500;
-  font-size: clamp(46px, 8.5vw, 104px);
+  font-size: var(--text-display);
   line-height: 1;
   letter-spacing: 0.12em;
-  color: var(--fixed);
-  border-left: 1px solid var(--safelight);
-  padding-left: clamp(14px, 2vw, 26px);
+  color: var(--color-ink);
+  border-left: var(--rule) solid var(--color-accent);
+  padding-left: clamp(16px, 2vw, 24px);
   align-self: center;
+  overflow-wrap: anywhere;
+  min-width: 0;
 }
 
 .gate-body {
   align-self: flex-end;
-  max-width: 42ch;
+  max-width: var(--measure-gate);
   padding-bottom: clamp(4px, 2vh, 24px);
 }
 
 .tagline {
-  margin: 16px 0 0;
-  font-size: clamp(15px, 1.6vw, 18px);
+  margin: 0;
+  font-size: var(--text-lede);
   line-height: 1.85;
-  color: var(--silver);
+  color: var(--color-muted);
 }
 
 .dial {
   display: flex;
-  gap: 4px;
-  margin: 30px 0 0;
+  gap: var(--space-1);
+  margin: var(--space-6) 0 0;
 }
 
 .dial-step {
   appearance: none;
   background: none;
   border: 0;
-  border-top: 1px solid oklch(52% 0.01 250 / 0.35);
-  padding: 12px 20px 10px;
+  border-top: var(--rule) solid var(--rule-quiet);
+  padding: var(--space-3) var(--space-5);
   min-height: 44px;
   font: inherit;
-  font-size: 14px;
+  font-size: var(--text-base);
   letter-spacing: 0.14em;
   white-space: nowrap;
-  color: var(--silver-2);
+  color: var(--color-neutral);
   cursor: pointer;
-  transition: color 180ms var(--ease), border-color 180ms var(--ease);
+  transition: color var(--dur-micro) var(--ease-out),
+    border-color var(--dur-micro) var(--ease-out);
 }
 
 .dial-step:hover {
-  color: var(--silver);
+  color: var(--color-muted);
+}
+
+.dial-step:focus-visible {
+  outline: 2px solid var(--color-focus);
+  outline-offset: 3px;
+}
+
+.dial-step:active {
+  color: var(--color-ink);
 }
 
 .dial-step[aria-pressed="true"] {
-  color: var(--fixed);
-  border-top-color: var(--safelight);
+  color: var(--color-ink);
+  border-top-color: var(--color-accent);
 }
 
 .expose {
   appearance: none;
-  margin: 28px 0 0;
+  margin: var(--space-6) 0 0;
   padding: 0;
   background: none;
   border: 0;
   font: inherit;
-  color: var(--fixed);
+  color: var(--color-ink);
   cursor: pointer;
   display: inline-flex;
   align-items: center;
@@ -271,63 +257,73 @@ body {
 
 .expose-label {
   position: relative;
-  font-size: 20px;
+  font-size: var(--text-expose);
   letter-spacing: 0.42em;
   padding-right: 0.42em;
 }
 
+/* gate 35：裝飾線 1–2px、離基線 1–2px。 */
 .expose-label::after {
   content: "";
   position: absolute;
   left: 0;
   right: 0.42em;
-  bottom: -9px;
+  bottom: -2px;
   height: 2px;
-  background: var(--safelight);
+  background: var(--color-accent);
   transform-origin: left;
   transform: scaleX(1);
-  transition: transform 320ms var(--ease);
+  transition: transform var(--dur-ui) var(--ease-out);
 }
 
 .expose:hover .expose-label::after {
   transform: scaleX(1.18);
 }
 
+.expose:focus-visible {
+  outline: 2px solid var(--color-focus);
+  outline-offset: 4px;
+}
+
+.expose:active .expose-label {
+  color: var(--color-muted);
+}
+
 .expose:disabled {
-  color: var(--fog);
+  color: var(--color-fog);
   cursor: default;
 }
 
 .expose:disabled .expose-label::after {
-  background: var(--fog);
+  background: var(--color-fog);
   transform: scaleX(1);
 }
 
 .gate-note {
-  margin: 20px 0 0;
-  font-family: var(--face-mono);
-  font-size: 12px;
-  color: var(--safelight);
+  margin: var(--space-5) 0 0;
+  font-family: var(--font-outlier);
+  font-size: var(--text-sm);
+  color: var(--color-accent);
   min-height: 1.2em;
 }
 
 .ledger {
   display: flex;
   align-items: center;
-  margin: 34px 0 0;
-  font-family: var(--face-mono);
-  font-size: 11px;
+  margin: var(--space-6) 0 0;
+  font-family: var(--font-outlier);
+  font-size: var(--text-xs);
   font-weight: 300;
   letter-spacing: 0.16em;
-  color: var(--silver-2);
+  color: var(--color-neutral);
 }
 
 .ledger-gap {
-  width: 28px;
+  width: var(--space-6);
 }
 
 .ledger b {
-  color: var(--silver);
+  color: var(--color-muted);
   font-weight: 400;
 }
 
@@ -335,7 +331,7 @@ body {
 
 .screen-play {
   justify-content: flex-start;
-  gap: clamp(14px, 2.2vh, 28px);
+  gap: clamp(16px, 2.2vh, 32px);
   padding: var(--gut);
   overflow-y: auto;
 }
@@ -344,53 +340,53 @@ body {
   display: flex;
   align-items: center;
   justify-content: space-between;
-  gap: 20px;
+  gap: var(--space-5);
   flex: none;
-  max-width: 34rem;
+  max-width: var(--col-notes);
 }
 
 .sheets {
   display: flex;
-  gap: 6px;
+  gap: var(--space-2);
 }
 
 .sheet {
-  width: 15px;
-  height: 21px;
-  background: var(--silver);
-  transition: background 420ms var(--ease), transform 420ms var(--ease), opacity 420ms var(--ease);
+  width: var(--sheet-w);
+  height: var(--sheet-h);
+  background: var(--color-muted);
+  transition: background var(--dur-sheet) var(--ease-out),
+    transform var(--dur-sheet) var(--ease-out), opacity var(--dur-sheet) var(--ease-out);
 }
 
 .sheet[data-spent="true"] {
-  background: var(--fog);
+  background: var(--color-fog);
   opacity: 0.45;
   transform: rotate(-7deg) translateY(3px) scaleY(0.82);
 }
 
 .counters {
   display: flex;
-  gap: 22px;
-  font-family: var(--face-mono);
+  gap: var(--space-5);
+  font-family: var(--font-outlier);
 }
 
 .counter {
   display: flex;
   align-items: baseline;
-  gap: 7px;
+  gap: var(--space-2);
 }
 
-.counter i {
-  font-style: normal;
-  font-family: var(--face-han);
-  font-size: 11px;
+.counter span {
+  font-family: var(--font-body);
+  font-size: var(--text-xs);
   letter-spacing: 0.2em;
-  color: var(--silver);
+  color: var(--color-muted);
 }
 
 .counter b {
-  font-size: 21px;
+  font-size: var(--text-lg);
   font-weight: 400;
-  color: var(--fixed);
+  color: var(--color-ink);
   font-variant-numeric: tabular-nums;
 }
 
@@ -399,10 +395,10 @@ body {
   list-style: none;
   margin: 0;
   padding: 0;
-  max-width: 34rem;
+  max-width: var(--col-notes);
   display: flex;
   flex-direction: column;
-  gap: 9px;
+  gap: var(--space-3);
   flex: none;
 }
 
@@ -414,9 +410,9 @@ body {
   position: relative;
   display: flex;
   align-items: baseline;
-  gap: 10px;
-  padding-left: 20px;
-  color: var(--fixed);
+  gap: var(--space-3);
+  padding-left: var(--space-5);
+  color: var(--color-ink);
   white-space: nowrap;
 }
 
@@ -425,21 +421,21 @@ body {
   position: absolute;
   left: 0;
   top: 0.62em;
-  width: 12px;
-  height: 1px;
-  background: var(--safelight);
+  width: var(--space-3);
+  height: var(--rule);
+  background: var(--color-accent);
 }
 
 .pin-zh {
-  font-size: clamp(17px, 1.9vw, 22px);
+  font-size: var(--text-pin);
   letter-spacing: 0.06em;
 }
 
 .pin-en {
-  font-family: var(--face-mono);
-  font-size: 11px;
+  font-family: var(--font-outlier);
+  font-size: var(--text-xs);
   font-weight: 300;
-  color: var(--safelight);
+  color: var(--color-accent);
   letter-spacing: 0.04em;
 }
 
@@ -447,70 +443,91 @@ body {
 .choices {
   display: grid;
   grid-template-columns: repeat(2, minmax(0, 1fr));
-  gap: 2px clamp(10px, 1.6vw, 24px);
+  gap: var(--space-1) clamp(12px, 1.6vw, 24px);
   align-content: start;
-  max-width: 34rem;
+  max-width: var(--col-notes);
 }
 
 .choice {
   appearance: none;
   background: none;
   border: 0;
-  border-radius: 2px;
+  border-radius: var(--radius);
   font: inherit;
-  font-size: clamp(16px, 1.8vw, 23px);
+  font-size: var(--text-choice);
   letter-spacing: 0.06em;
   text-align: left;
-  color: var(--silver);
-  padding: 9px 10px;
+  color: var(--color-muted);
+  padding: var(--space-2) var(--space-3);
   min-height: 44px;
   cursor: pointer;
   opacity: 0;
-  transform: translateY(9px);
-  transition: color 200ms var(--ease), opacity 200ms var(--ease);
+  transition: color var(--dur-ui) var(--ease-out), opacity var(--dur-ui) var(--ease-out);
 }
 
+/* atmospheric：只准淡入，不准位移。 */
 .choice.is-in {
-  animation: choice-in 460ms var(--ease) both;
+  animation: fade-in 460ms var(--ease-out) both;
   animation-delay: var(--in-delay, 0ms);
 }
 
-@keyframes choice-in {
+@keyframes fade-in {
   from {
     opacity: 0;
-    transform: translateY(9px);
   }
   to {
     opacity: 1;
-    transform: none;
+  }
+}
+
+/* 英文註解：滑鼠有 title，觸控沒有。粗指標裝置直接把它寫出來。 */
+.choice-en {
+  display: none;
+}
+
+@media (pointer: coarse) {
+  .choice-en {
+    display: block;
+    font-family: var(--font-outlier);
+    font-size: var(--text-nano);
+    font-weight: 300;
+    letter-spacing: 0.02em;
+    color: var(--color-neutral);
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
   }
 }
 
 .choice:hover {
-  color: var(--fixed);
+  color: var(--color-ink);
 }
 
 .choice:focus-visible {
-  outline: 1px solid var(--safelight);
+  outline: 2px solid var(--color-focus);
   outline-offset: 2px;
+}
+
+.choice:active {
+  color: var(--color-ink);
 }
 
 /* 定影：字已經升到記事欄了，這裡只留一道琥珀痕跡。 */
 .choice[data-state="fixed"] {
-  color: var(--silver-2);
-  opacity: 0.5;
+  color: var(--color-neutral);
+  opacity: 0.6;
   cursor: default;
-  box-shadow: inset 0 -1px 0 var(--safelight);
+  box-shadow: inset 0 -1px 0 var(--color-accent);
 }
 
 /* 起霧：離焦、灰掉，但還讀得出來——玩家得知道自己已經排除過什麼。 */
 .choice[data-state="fogged"] {
-  color: var(--fog);
+  color: var(--color-fog);
   filter: blur(1.6px);
   opacity: 0.42;
   cursor: default;
-  transition: color 520ms var(--ease-fog), filter 520ms var(--ease-fog),
-    opacity 520ms var(--ease-fog);
+  transition: color var(--dur-fog) var(--ease-fog), filter var(--dur-fog) var(--ease-fog),
+    opacity var(--dur-fog) var(--ease-fog);
 }
 
 .ghost {
@@ -518,30 +535,34 @@ body {
   background: none;
   border: 0;
   font: inherit;
-  font-family: var(--face-mono);
-  font-size: 11px;
+  font-family: var(--font-outlier);
+  font-size: var(--text-xs);
   font-weight: 300;
   letter-spacing: 0.2em;
-  color: var(--silver-2);
-  padding: 10px 12px;
+  color: var(--color-neutral);
+  padding: var(--space-3);
   min-height: 44px;
   cursor: pointer;
-  transition: color 180ms var(--ease);
+  transition: color var(--dur-micro) var(--ease-out);
 }
 
 .ghost:hover {
-  color: var(--silver);
+  color: var(--color-muted);
 }
 
 .ghost:focus-visible {
-  outline: 1px solid var(--safelight);
+  outline: 2px solid var(--color-focus);
   outline-offset: 2px;
+}
+
+.ghost:active {
+  color: var(--color-ink);
 }
 
 .skip {
   align-self: flex-start;
   flex: none;
-  margin-left: -12px;
+  margin-left: calc(var(--space-3) * -1);
 }
 
 /* 印壞一張的瞬間：邊緣被安全燈刷一下。 */
@@ -550,7 +571,7 @@ body {
   position: absolute;
   inset: 0;
   pointer-events: none;
-  box-shadow: inset 0 0 120px 10px oklch(64% 0.17 48 / 0.36);
+  box-shadow: inset 0 0 120px 10px var(--flash-fog);
   animation: fog-flash 420ms var(--ease-fog) both;
 }
 
@@ -575,122 +596,127 @@ body {
 }
 
 .over-body {
-  max-width: 54ch;
+  max-width: var(--measure-over);
   margin: auto 0;
-  animation: rise 620ms var(--ease) both;
+  animation: fade-in var(--dur-rise) var(--ease-out) both;
 }
 
-@keyframes rise {
-  from {
-    opacity: 0;
-    transform: translateY(16px);
-  }
-  to {
-    opacity: 1;
-    transform: none;
-  }
+.over-title {
+  margin: 0;
+  font-family: var(--font-outlier);
+  font-size: var(--text-xs);
+  font-weight: 400;
+  letter-spacing: 0.34em;
+  text-transform: uppercase;
+  color: var(--color-accent);
 }
 
 .final {
   display: flex;
   align-items: baseline;
-  gap: 12px;
-  margin: 10px 0 0;
+  gap: var(--space-3);
+  margin: var(--space-3) 0 0;
 }
 
 .final b {
-  font-family: var(--face-display);
+  font-family: var(--font-display);
   font-weight: 400;
-  font-size: clamp(46px, 8.5vw, 92px);
+  font-size: var(--text-score);
   line-height: 1;
-  color: var(--fixed);
+  color: var(--color-ink);
   font-variant-numeric: lining-nums;
+  overflow-wrap: anywhere;
+  min-width: 0;
 }
 
-.final i {
-  font-style: normal;
-  font-size: 13px;
+.final span {
+  font-size: var(--text-sm);
   letter-spacing: 0.3em;
-  color: var(--silver-2);
+  color: var(--color-neutral);
 }
 
 .over-sub {
-  margin: 4px 0 0;
-  font-family: var(--face-mono);
-  font-size: 12px;
+  margin: var(--space-1) 0 0;
+  font-family: var(--font-outlier);
+  font-size: var(--text-sm);
   letter-spacing: 0.16em;
-  color: var(--silver-2);
+  color: var(--color-neutral);
 }
 
 .over-sub b {
-  color: var(--silver);
+  color: var(--color-muted);
   font-weight: 400;
 }
 
 .sheet-list {
   list-style: none;
-  margin: 24px 0 0;
+  margin: var(--space-5) 0 0;
   padding: 0;
-  border-top: 1px solid oklch(52% 0.01 250 / 0.22);
+  border-top: var(--rule) solid var(--rule-hair);
 }
 
 .sheet-row {
   display: flex;
   align-items: baseline;
-  gap: 14px;
-  padding: 11px 0;
-  border-bottom: 1px solid oklch(52% 0.01 250 / 0.22);
+  gap: var(--space-4);
+  padding: var(--space-3) 0;
+  border-bottom: var(--rule) solid var(--rule-hair);
 }
 
 .sheet-zh {
-  font-size: 19px;
+  font-size: var(--text-md);
   letter-spacing: 0.05em;
-  color: var(--fixed);
+  color: var(--color-ink);
 }
 
 .sheet-en {
-  font-family: var(--face-display);
-  font-style: italic;
-  font-size: 15px;
-  color: var(--silver-2);
+  font-family: var(--font-outlier);
+  font-size: var(--text-sm);
+  font-weight: 300;
+  color: var(--color-neutral);
 }
 
 .sheet-sec {
   margin-left: auto;
-  font-family: var(--face-mono);
-  font-size: 10px;
+  font-family: var(--font-outlier);
+  font-size: var(--text-nano);
   font-weight: 300;
   letter-spacing: 0.2em;
   text-transform: uppercase;
-  color: var(--safelight-dim);
+  color: var(--color-neutral);
 }
 
 .pos {
-  margin: 22px 0 0;
+  margin: var(--space-5) 0 0;
 }
 
 .pos summary {
-  font-family: var(--face-mono);
-  font-size: 11px;
+  font-family: var(--font-outlier);
+  font-size: var(--text-xs);
   letter-spacing: 0.18em;
-  color: var(--silver-2);
+  color: var(--color-neutral);
   cursor: pointer;
-  padding: 6px 0;
+  padding: var(--space-2) 0;
 }
 
 .pos summary:hover {
-  color: var(--silver);
+  color: var(--color-muted);
+}
+
+.pos summary:focus-visible {
+  outline: 2px solid var(--color-focus);
+  outline-offset: 2px;
 }
 
 .pos pre {
-  margin: 12px 0 0;
-  padding: 14px 16px;
-  background: oklch(13% 0.012 40 / 0.8);
-  font-family: var(--face-mono);
-  font-size: 11px;
+  margin: var(--space-3) 0 0;
+  padding: var(--space-4);
+  background: var(--wash-panel);
+  font-family: var(--font-outlier);
+  font-size: var(--text-xs);
   font-weight: 300;
   line-height: 1.7;
-  color: var(--silver-2);
+  color: var(--color-neutral);
   white-space: pre-wrap;
   word-break: break-word;
   max-height: 20vh;
@@ -700,8 +726,8 @@ body {
 .over-actions {
   display: flex;
   align-items: center;
-  gap: 26px;
-  margin: 24px 0 0;
+  gap: var(--space-5);
+  margin: var(--space-5) 0 0;
 }
 
 .over-actions .expose {
@@ -723,26 +749,22 @@ body {
   .room.is-board .screen-play,
   .room.is-board .screen-over {
     padding-left: var(--gut);
-    padding-top: calc(var(--gut) + var(--board) + clamp(12px, 2vh, 22px));
+    padding-top: calc(var(--gut) + var(--board) + clamp(12px, 2vh, 24px));
   }
 
   .choices {
     grid-template-columns: repeat(3, minmax(0, 1fr));
-    gap: 0 6px;
+    gap: 0 var(--space-2);
   }
 
   .choice {
-    padding: 9px 6px;
+    padding: var(--space-2);
   }
 }
 
 @media (max-width: 560px) {
   .choices {
     grid-template-columns: repeat(2, minmax(0, 1fr));
-  }
-
-  .pin-en {
-    display: none;
   }
 }
 
@@ -755,7 +777,22 @@ body {
     opacity: calc(0.18 + var(--dev) * 0.82);
   }
 
-  .choice.is-in {
+  .print.is-spent .print-img,
+  .sheet,
+  .expose-label::after {
+    transition-duration: 1ms;
+  }
+
+  .sheet[data-spent="true"] {
+    transform: none;
+  }
+
+  .expose:hover .expose-label::after {
+    transform: scaleX(1);
+  }
+
+  .choice.is-in,
+  .over-body {
     animation-duration: 1ms;
     animation-delay: 0ms !important;
   }
@@ -765,10 +802,6 @@ body {
   }
 
   .room.is-fogging::after {
-    animation-duration: 1ms;
-  }
-
-  .over-body {
     animation-duration: 1ms;
   }
 }

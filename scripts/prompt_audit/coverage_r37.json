@@ -1,0 +1,39 @@
+{
+  "shoes": {
+    "normal": [],
+    "diverse": [],
+    "weird": [
+      "sneakers",
+      "high heels"
+    ]
+  },
+  "socks": {
+    "normal": [],
+    "diverse": []
+  },
+  "jewel": {
+    "normal": [],
+    "diverse": []
+  },
+  "acc": {
+    "normal": [
+      "hat"
+    ],
+    "diverse": [
+      "hat"
+    ],
+    "weird": [
+      "necktie",
+      "bowtie",
+      "hat",
+      "gloves",
+      "clipboard",
+      "choker"
+    ]
+  },
+  "missAct": [],
+  "actN": 42,
+  "actD": 43,
+  "actW": 42,
+  "actAll": 43
+}

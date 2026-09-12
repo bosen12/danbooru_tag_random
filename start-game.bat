@@ -6,8 +6,12 @@ set "PORT=8791"
 set "HOST=0.0.0.0"
 set "PYTHONUTF8=1"
 set "PY="
-where py >nul 2>&1 && set "PY=py -3"
-if not defined PY where python >nul 2>&1 && set "PY=python"
+python -c "import sys; raise SystemExit(sys.version_info.major != 3)" >nul 2>&1
+if not errorlevel 1 set "PY=python"
+if not defined PY (
+  py -3 -c "import sys; raise SystemExit(sys.version_info.major != 3)" >nul 2>&1
+  if not errorlevel 1 set "PY=py -3"
+)
 if not defined PY (
   echo Python 3 not found.
   echo Install Python and tick "Add python.exe to PATH".

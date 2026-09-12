@@ -1,0 +1,351 @@
+lock_r5 seed=993000 lockScene=true pinned=[] n=50
+
+#1 heats=activity+tease+flash era=victorian girl=false boy=true people=1 job=false
+  job=[] act=[painting (action)] sex=[] body=[on back] cam=[profile]
+  env=[soft lighting, victorian, mansion, indoors, night, lamp, full-length mirror, mirror]
+  cloth=[unbuttoned shirt, shirt, cloak, bottomless, sandals]
+  pose=[on back, profile, looking around, come hither, painting (action), covering crotch]
+  POS: 1boy, solo, adult, bald, red eyes, tanlines, scar, hair flower, dark-skinned male, dark skin, tears, floating hair, unbuttoned shirt, shirt, cloak, bottomless, sandals, on back, profile, looking around, come hither, painting (action), covering crotch, soft lighting, victorian, mansion, indoors, night, lamp, full-length mirror, mirror, nsfw, explicit, masterpiece, best quality, amazing quality
+
+#2 heats=activity+tease era=edo girl=true boy=false people=3 job=false
+  job=[] act=[stretching] sex=[] body=[indian style] cam=[extreme close-up, close-up]
+  env=[soft lighting, onsen, indoors, day, on chair, chromatic aberration, rain]
+  cloth=[japanese clothes, haori, wet clothes]
+  pose=[indian style, extreme close-up, close-up, looking away, scared, stretching]
+  POS: 3girls, adult, medium hair, orange eyes, pink hair, wavy hair, flat chest, small breasts, soft breasts, streaked hair, natural breasts, japanese clothes, haori, wet clothes, indian style, extreme close-up, close-up, looking away, scared, stretching, soft lighting, onsen, indoors, day, on chair, chromatic aberration, rain, nsfw, explicit, masterpiece, best quality, amazing quality
+
+#3 heats=flash era=edo girl=true boy=false people=1 job=true
+  job=[] act=[reading] sex=[] body=[sitting] cam=[full body]
+  env=[soft lighting, shrine, outdoors, sunset, film grain, shadow, steam]
+  cloth=[japanese clothes, hakama, zouri, haori, wet clothes]
+  pose=[sitting, full body, looking at breasts, sad, reading, bent over]
+  POS: 1girl, solo, adult, pixie cut, violet eyes, black hair, drill hair, gigantic breasts, soft breasts, natural breasts, swept bangs, thick eyebrows, mole on breast, japanese clothes, hakama, zouri, haori, wet clothes, sitting, full body, looking at breasts, sad, reading, bent over, soft lighting, shrine, outdoors, sunset, film grain, shadow, steam, nsfw, explicit, masterpiece, best quality, amazing quality
+
+#4 heats=activity+tease era=modern girl=true boy=false people=1 job=false
+  job=[] act=[eating] sex=[] body=[wariza] cam=[from outside]
+  env=[soft lighting, modern, office, indoors, dusk, lamp, tree]
+  cloth=[off-shoulder sweater, sweater, long skirt, skirt, track jacket, jacket, sneakers]
+  pose=[wariza, from outside, looking ahead, smug, eating, biting own lip]
+  POS: 1girl, solo, adult, absurdly long hair, aqua eyes, orange hair, parted hair, huge breasts, soft breasts, natural breasts, streaked hair, two-tone hair, blush, off-shoulder sweater, sweater, long skirt, skirt, track jacket, jacket, sneakers, wariza, from outside, looking ahead, smug, eating, biting own lip, soft lighting, modern, office, indoors, dusk, lamp, tree, nsfw, explicit, masterpiece, best quality, amazing quality
+
+#5 heats=tease+flash+sex era=medieval girl=true boy=false people=2 job=true
+  job=[] act=[] sex=[69] body=[lying] cam=[from below]
+  env=[soft lighting, castle, outdoors, sunset, full-length mirror, mirror, steam, soap bubbles]
+  cloth=[leather armor, armor, cloak, boots, clothes between breasts]
+  pose=[69, sex, lying, from below, looking to the side, nervous]
+  POS: 2girls, adult, long hair, amber eyes, aqua hair, ahoge, large breasts, soft breasts, natural breasts, breast suppress, breast lift, nipple piercing, leather armor, armor, cloak, boots, clothes between breasts, 69, sex, lying, from below, looking to the side, nervous, soft lighting, castle, outdoors, sunset, full-length mirror, mirror, steam, soap bubbles, nsfw, explicit, masterpiece, best quality, amazing quality
+
+#6 heats=sex era=ancient_china girl=true boy=false people=1 job=false
+  job=[] act=[] sex=[] body=[wariza] cam=[from above]
+  env=[soft lighting, chinese architecture, outdoors, evening, blue sky, chair, overcast]
+  cloth=[hanfu, chinese clothes, see-through clothes, boots, jewelry]
+  pose=[female masturbation, wariza, from above, averting eyes, scared, sparkling eyes]
+  POS: 1girl, solo, adult, absurdly long hair, purple eyes, pink hair, ponytail, huge breasts, soft breasts, thigh strap, gradient hair, natural breasts, hanfu, chinese clothes, see-through clothes, boots, jewelry, female masturbation, wariza, from above, averting eyes, scared, sparkling eyes, soft lighting, chinese architecture, outdoors, evening, blue sky, chair, overcast, nsfw, explicit, masterpiece, best quality, amazing quality
+
+#7 heats=tease+flash era=modern girl=true boy=false people=1 job=false
+  job=[] act=[reading] sex=[] body=[wariza] cam=[head out of frame]
+  env=[soft lighting, modern, futon, indoors, day, city lights, water]
+  cloth=[side-tie bikini bottom, off-shoulder sweater, sweater, track jacket, jacket, fishnets, sneakers]
+  pose=[wariza, head out of frame, reading, arched back, voyeurism, breast hold]
+  POS: 1girl, solo, adult, very long hair, red eyes, purple hair, double bun, hair bun, gigantic breasts, soft breasts, natural breasts, wide hips, petite, side-tie bikini bottom, off-shoulder sweater, sweater, track jacket, jacket, fishnets, sneakers, wariza, head out of frame, reading, arched back, voyeurism, breast hold, soft lighting, modern, futon, indoors, day, city lights, water, nsfw, explicit, masterpiece, best quality, amazing quality
+
+#8 heats=activity+flash era=ancient_greece girl=false boy=true people=1 job=false
+  job=[] act=[playing games] sex=[] body=[on stomach] cam=[head out of frame]
+  env=[soft lighting, ruins, outdoors, evening, backlighting, on bed, tree]
+  cloth=[ancient greek clothes, himation, boots, revealing clothes, bag]
+  pose=[on stomach, head out of frame, playing games, ass focus, exhibitionism, spread legs]
+  POS: 1boy, solo, adult, pixie cut, blue eyes, pink hair, curly hair, manboobs, goatee, condom on penis, hime cut, ancient greek clothes, himation, boots, revealing clothes, bag, on stomach, head out of frame, playing games, ass focus, exhibitionism, spread legs, soft lighting, ruins, outdoors, evening, backlighting, on bed, tree, nsfw, explicit, masterpiece, best quality, amazing quality
+
+#9 heats=tease era=edo girl=false boy=true people=1 job=false
+  job=[] act=[bathing] sex=[] body=[crawling] cam=[full body]
+  env=[soft lighting, onsen, indoors, day, steam, pillow, dim lighting]
+  cloth=[japanese clothes, haori, fundoshi]
+  pose=[crawling, full body, looking down, serious, bathing, sparkling eyes]
+  POS: 1boy, solo, adult, bald, brown eyes, centaur, monster boy, wet, shiny skin, ugly bastard, mole, japanese clothes, haori, fundoshi, crawling, full body, looking down, serious, bathing, sparkling eyes, soft lighting, onsen, indoors, day, steam, pillow, dim lighting, nsfw, explicit, masterpiece, best quality, amazing quality
+
+#10 heats=flash era=modern girl=true boy=true people=2 job=false
+  job=[] act=[painting (action)] sex=[] body=[sitting] cam=[straight-on]
+  env=[soft lighting, modern, car, outdoors, day, city lights, tree]
+  cloth=[underwear only, naked jacket, jacket, sports bra, bra, fishnet thighhighs, thighhighs, no panties]
+  pose=[sitting, straight-on, eye contact, expressionless, painting (action), leg lift]
+  POS: 1girl, 1boy, adult, pixie cut, heterochromia, multicolored hair, blunt bangs, huge breasts, soft breasts, natural breasts, fat man, fat, breast lift, penis on ass, underwear only, naked jacket, jacket, sports bra, bra, fishnet thighhighs, thighhighs, no panties, sitting, straight-on, eye contact, expressionless, painting (action), leg lift, soft lighting, modern, car, outdoors, day, city lights, tree, nsfw, explicit, masterpiece, best quality, amazing quality
+
+#11 heats=activity era=edo girl=true boy=false people=1 job=false
+  job=[] act=[camping] sex=[] body=[sleeping] cam=[from behind]
+  env=[soft lighting, outdoors, pagoda, sunrise, dim lighting, full-length mirror, mirror, chair]
+  cloth=[japanese clothes, hakama, zouri, haori, wet clothes]
+  pose=[sleeping, from behind, averting eyes, pout, camping, licking lips]
+  POS: 1girl, solo, adult, long hair, purple eyes, red hair, hime cut, medium breasts, soft breasts, natural breasts, breasts, pink nails, bangs, japanese clothes, hakama, zouri, haori, wet clothes, sleeping, from behind, averting eyes, pout, camping, licking lips, soft lighting, outdoors, pagoda, sunrise, dim lighting, full-length mirror, mirror, chair, nsfw, explicit, masterpiece, best quality, amazing quality
+
+#12 heats=activity era=modern girl=true boy=false people=1 job=false
+  job=[] act=[playing video games, playing games] sex=[] body=[indian style] cam=[fisheye]
+  env=[soft lighting, modern, city, outdoors, dusk, spotlight, overcast]
+  cloth=[turtleneck sweater, sweater, yoga pants, pants, open cardigan, cardigan, sports bra, bra]
+  pose=[indian style, fisheye, looking up, scared, playing video games, playing games]
+  POS: 1girl, solo, adult, very short hair, glowing eyes, purple hair, blunt bangs, large breasts, soft breasts, natural breasts, messy hair, sidelocks, arm under breasts, turtleneck sweater, sweater, yoga pants, pants, open cardigan, cardigan, sports bra, bra, indian style, fisheye, looking up, scared, playing video games, playing games, soft lighting, modern, city, outdoors, dusk, spotlight, overcast, nsfw, explicit, masterpiece, best quality, amazing quality
+
+#13 heats=tease+sex era=victorian girl=true boy=false people=2 job=false
+  job=[] act=[] sex=[object insertion] body=[kneeling] cam=[cowboy shot]
+  env=[soft lighting, victorian, mansion, indoors, evening, lamp, on bed]
+  cloth=[pencil skirt, skirt, naked shirt, shirt, kneehighs, cloak]
+  pose=[object insertion, sex, kneeling, cowboy shot, looking around, furrowed brow]
+  POS: 2girls, adult, bob cut, blue eyes, multicolored hair, sidelocks, medium breasts, soft breasts, natural breasts, ponytail, streaked hair, grabbing own breast, pencil skirt, skirt, naked shirt, shirt, kneehighs, cloak, object insertion, sex, kneeling, cowboy shot, looking around, furrowed brow, soft lighting, victorian, mansion, indoors, evening, lamp, on bed, nsfw, explicit, masterpiece, best quality, amazing quality
+
+#14 heats=flash era=ancient_greece girl=true boy=false people=2 job=false
+  job=[] act=[fishing] sex=[] body=[standing] cam=[portrait]
+  env=[soft lighting, outdoors, underwater, evening, on chair, steam, sunlight]
+  cloth=[ancient greek clothes, himation, wet clothes, sandals, black gloves, gloves]
+  pose=[standing, portrait, looking to the side, embarrassed, fishing, presenting ass]
+  POS: 2girls, adult, short hair, aqua eyes, white hair, side ponytail, ponytail, gigantic breasts, soft breasts, natural breasts, hair flower, breasts on table, ancient greek clothes, himation, wet clothes, sandals, black gloves, gloves, standing, portrait, looking to the side, embarrassed, fishing, presenting ass, soft lighting, outdoors, underwater, evening, on chair, steam, sunlight, nsfw, explicit, masterpiece, best quality, amazing quality
+
+#15 heats=flash+sex era=medieval girl=true boy=true people=3 job=true
+  job=[] act=[yoga] sex=[] body=[on side] cam=[lower body]
+  env=[soft lighting, castle, outdoors, sunset, sky, cherry blossoms, chair]
+  cloth=[armor, cloak, boots, wet clothes, belt]
+  pose=[on side, lower body, yoga, presenting ass, ass visible through thighs, between breasts]
+  POS: 2girls, 1boy, adult, very long hair, pink eyes, purple hair, twin braids, braid, huge breasts, soft breasts, natural breasts, dark skin, mole on breast, armor, cloak, boots, wet clothes, belt, on side, lower body, yoga, presenting ass, ass visible through thighs, between breasts, soft lighting, castle, outdoors, sunset, sky, cherry blossoms, chair, nsfw, explicit, masterpiece, best quality, amazing quality
+
+#16 heats=activity era=modern girl=false boy=true people=1 job=true
+  job=[barista] act=[studying] sex=[] body=[on side] cam=[from above]
+  env=[soft lighting, modern, restaurant, indoors, evening, city lights, swivel chair]
+  cloth=[high-waist pants, pants, vest, sneakers, male underwear]
+  pose=[on side, from above, averting eyes, furrowed brow, studying, wink]
+  POS: 1boy, solo, adult, medium hair, yellow eyes, orange hair, high ponytail, ponytail, barista, messy hair, midriff, high-waist pants, pants, vest, sneakers, male underwear, on side, from above, averting eyes, furrowed brow, studying, wink, soft lighting, modern, restaurant, indoors, evening, city lights, swivel chair, nsfw, explicit, masterpiece, best quality, amazing quality
+
+#17 heats=activity+tease era=modern girl=true boy=true people=2 job=false
+  job=[] act=[training] sex=[] body=[standing] cam=[full body]
+  env=[soft lighting, modern, school gym, indoors, sunrise, ceiling light, orange sky]
+  cloth=[track uniform, boxers, garter belt, naked jacket, jacket, bra visible through clothes]
+  pose=[standing, full body, sideways glance, pout, training, licking lips]
+  POS: 1girl, 1boy, adult, very long hair, green eyes, brown hair, blunt bangs, large breasts, soft breasts, natural breasts, saliva, breasts squeezed together, mature female, milf, track uniform, boxers, garter belt, naked jacket, jacket, bra visible through clothes, standing, full body, sideways glance, pout, training, licking lips, soft lighting, modern, school gym, indoors, sunrise, ceiling light, orange sky, nsfw, explicit, masterpiece, best quality, amazing quality
+
+#18 heats=activity era=modern girl=false boy=true people=1 job=true
+  job=[doctor] act=[floating] sex=[] body=[crawling] cam=[from side]
+  env=[soft lighting, modern, sento, bath, indoors, day, spotlight]
+  cloth=[lab coat, stethoscope, coat, shirt tucked in, shirt]
+  pose=[crawling, from side, sideways glance, dazed, floating, clenched teeth]
+  POS: 1boy, solo, adult, bob cut, purple eyes, green hair, blunt bangs, troll, monster boy, doctor, long legs, lab coat, stethoscope, coat, shirt tucked in, shirt, crawling, from side, sideways glance, dazed, floating, clenched teeth, soft lighting, modern, sento, bath, indoors, day, spotlight, nsfw, explicit, masterpiece, best quality, amazing quality
+
+#19 heats=tease era=edo girl=true boy=false people=1 job=false
+  job=[] act=[floating] sex=[] body=[squatting] cam=[portrait]
+  env=[soft lighting, onsen, indoors, evening, rain, moonlight, tatami]
+  cloth=[japanese clothes, haori, wet clothes]
+  pose=[squatting, portrait, looking away, come hither, floating, sparkling eyes]
+  POS: 1girl, solo, adult, pixie cut, heterochromia, green hair, blunt bangs, huge breasts, soft breasts, natural breasts, wavy hair, streaked hair, gradient hair, japanese clothes, haori, wet clothes, squatting, portrait, looking away, come hither, floating, sparkling eyes, soft lighting, onsen, indoors, evening, rain, moonlight, tatami, nsfw, explicit, masterpiece, best quality, amazing quality
+
+#20 heats=activity+tease+flash era=modern girl=false boy=true people=1 job=false
+  job=[] act=[writing] sex=[] body=[squatting] cam=[from outside]
+  env=[soft lighting, modern, sauna, indoors, night, city lights, overcast]
+  cloth=[ribbed sweater, sweater, high-waist pants, pants, open cardigan, cardigan, boxers]
+  pose=[squatting, from outside, looking at mirror, sleepy, writing, parted lips]
+  POS: 1boy, solo, adult, short hair, green eyes, orange hair, messy hair, adam's apple, goatee, mole under eye, two-tone hair, ribbed sweater, sweater, high-waist pants, pants, open cardigan, cardigan, boxers, squatting, from outside, looking at mirror, sleepy, writing, parted lips, soft lighting, modern, sauna, indoors, night, city lights, overcast, nsfw, explicit, masterpiece, best quality, amazing quality
+
+#21 heats=activity+flash era=modern girl=true boy=true people=1 job=false
+  job=[] act=[karaoke, singing] sex=[] body=[wariza] cam=[wide shot]
+  env=[soft lighting, modern, bubble bath, bath, indoors, day, city lights]
+  cloth=[bathrobe, latex, open jacket, jacket, bra visible through clothes]
+  pose=[wariza, wide shot, looking at mirror, come hither, karaoke, singing]
+  POS: 1girl, solo, adult, pixie cut, amber eyes, green hair, hair over shoulder, flat chest, small breasts, soft breasts, natural breasts, makeup, ahoge, bathrobe, latex, open jacket, jacket, bra visible through clothes, wariza, wide shot, looking at mirror, come hither, karaoke, singing, soft lighting, modern, bubble bath, bath, indoors, day, city lights, nsfw, explicit, masterpiece, best quality, amazing quality
+
+#22 heats=activity+tease+flash era=victorian girl=false boy=true people=1 job=true
+  job=[] act=[playing games] sex=[] body=[indian style] cam=[from outside]
+  env=[soft lighting, victorian, restaurant, indoors, evening, lamp, bush]
+  cloth=[business suit, cloak, tight clothes, shoes, towel]
+  pose=[indian style, from outside, looking back, scared, playing games, half-closed eyes]
+  POS: 1boy, solo, adult, medium hair, brown eyes, green hair, blunt bangs, closed eyes, tattoo, braid, mustache, business suit, cloak, tight clothes, shoes, towel, indian style, from outside, looking back, scared, playing games, half-closed eyes, soft lighting, victorian, restaurant, indoors, evening, lamp, bush, nsfw, explicit, masterpiece, best quality, amazing quality
+
+#23 heats=activity+tease+flash era=ancient_greece girl=false boy=true people=1 job=false
+  job=[] act=[wading] sex=[] body=[standing] cam=[wide shot]
+  env=[soft lighting, beach, outdoors, evening, fog, chromatic aberration, depth of field]
+  cloth=[ancient greek clothes, himation, shoes, revealing clothes, collar]
+  pose=[standing, wide shot, looking at mirror, expressionless, wading, licking lips]
+  POS: 1boy, solo, adult, bald, aqua eyes, fox boy, ugly bastard, skinny, sweat, scar, gradient hair, ancient greek clothes, himation, shoes, revealing clothes, collar, standing, wide shot, looking at mirror, expressionless, wading, licking lips, soft lighting, beach, outdoors, evening, fog, chromatic aberration, depth of field, nsfw, explicit, masterpiece, best quality, amazing quality
+
+#24 heats=tease era=ancient_greece girl=true boy=false people=1 job=true
+  job=[] act=[fishing] sex=[] body=[kneeling] cam=[upper body]
+  env=[soft lighting, outdoors, beach, night, candlelight, pillar, fog]
+  cloth=[ancient greek clothes, himation, wet clothes, boots, tassel earrings, earrings]
+  pose=[kneeling, upper body, looking around, sleepy, fishing, empty eyes]
+  POS: 1girl, solo, adult, long hair, blue eyes, green hair, parted hair, flat chest, small breasts, soft breasts, natural breasts, thighs, body freckles, ancient greek clothes, himation, wet clothes, boots, tassel earrings, earrings, kneeling, upper body, looking around, sleepy, fishing, empty eyes, soft lighting, outdoors, beach, night, candlelight, pillar, fog, nsfw, explicit, masterpiece, best quality, amazing quality
+
+#25 heats=activity+flash era=medieval girl=false boy=true people=1 job=false
+  job=[] act=[studying] sex=[] body=[standing] cam=[upper body]
+  env=[soft lighting, castle, outdoors, sunrise, film grain, water, blue sky]
+  cloth=[armor, cloak, shoes, wet clothes, tooth necklace, necklace]
+  pose=[standing, upper body, looking away, angry, studying, hand on own crotch]
+  POS: 1boy, solo, adult, bald, blue eyes, lizardman, monster boy, pale skin, wet, condom on penis, colored inner hair, armor, cloak, shoes, wet clothes, tooth necklace, necklace, standing, upper body, looking away, angry, studying, hand on own crotch, soft lighting, castle, outdoors, sunrise, film grain, water, blue sky, nsfw, explicit, masterpiece, best quality, amazing quality
+
+#26 heats=tease+flash era=victorian girl=true boy=false people=1 job=true
+  job=[] act=[drawing (action)] sex=[] body=[wariza] cam=[facing away]
+  env=[soft lighting, victorian, living room, indoors, night, lamp, chair]
+  cloth=[evening gown, dress, cloak, garter belt, tight clothes]
+  pose=[wariza, facing away, looking around, seductive smile, drawing (action), half-closed eyes]
+  POS: 1girl, solo, adult, medium hair, green eyes, pink hair, blunt bangs, gigantic breasts, soft breasts, natural breasts, breast suppress, pink nipples, tears, evening gown, dress, cloak, garter belt, tight clothes, wariza, facing away, looking around, seductive smile, drawing (action), half-closed eyes, soft lighting, victorian, living room, indoors, night, lamp, chair, nsfw, explicit, masterpiece, best quality, amazing quality
+
+#27 heats=activity era=edo girl=false boy=true people=1 job=true
+  job=[] act=[cooking] sex=[] body=[on one knee] cam=[profile]
+  env=[soft lighting, pagoda, outdoors, dusk, sky, on bed, shadow]
+  cloth=[japanese clothes, hakama, haori, zouri, fundoshi]
+  pose=[on one knee, profile, looking back, surprised, cooking, empty eyes]
+  POS: 1boy, solo, adult, medium hair, orange eyes, brown hair, ahoge, thick eyebrows, muscular male, muscular, hair bun, tareme, japanese clothes, hakama, haori, zouri, fundoshi, on one knee, profile, looking back, surprised, cooking, empty eyes, soft lighting, pagoda, outdoors, dusk, sky, on bed, shadow, nsfw, explicit, masterpiece, best quality, amazing quality
+
+#28 heats=tease+flash+sex era=modern girl=false boy=true people=1 job=true
+  job=[doctor] act=[] sex=[] body=[crawling] cam=[close-up]
+  env=[soft lighting, modern, city, outdoors, sunrise, ceiling light, blue sky]
+  cloth=[lab coat, stethoscope, coat, basketball uniform, latex]
+  pose=[male masturbation, crawling, close-up, looking up, angry, clenched teeth]
+  POS: 1boy, solo, adult, bob cut, red eyes, blue hair, single hair bun, hair bun, doctor, pale skin, parted bangs, lab coat, stethoscope, coat, basketball uniform, latex, male masturbation, crawling, close-up, looking up, angry, clenched teeth, soft lighting, modern, city, outdoors, sunrise, ceiling light, blue sky, nsfw, explicit, masterpiece, best quality, amazing quality
+
+#29 heats=sex era=edo girl=true boy=false people=1 job=false
+  job=[] act=[] sex=[] body=[standing] cam=[close-up]
+  env=[soft lighting, futon, indoors, night, rain, tatami, soap bubbles]
+  cloth=[open kimono, kimono, japanese clothes, haori, zouri]
+  pose=[masturbation, standing, close-up, looking away, serious, empty eyes]
+  POS: 1girl, solo, adult, medium hair, amber eyes, blonde hair, braid, small breasts, soft breasts, natural breasts, thick eyebrows, pink nails, makeup, open kimono, kimono, japanese clothes, haori, zouri, masturbation, standing, close-up, looking away, serious, empty eyes, soft lighting, futon, indoors, night, rain, tatami, soap bubbles, nsfw, explicit, masterpiece, best quality, amazing quality
+
+#30 heats=activity+tease+flash era=medieval girl=true boy=true people=2 job=false
+  job=[] act=[drinking] sex=[] body=[reclining] cam=[lower body]
+  env=[soft lighting, castle, outdoors, sunset, fog, sunlight, soap bubbles]
+  cloth=[armor, cloak, boots, revealing clothes, hoop earrings, earrings]
+  pose=[reclining, lower body, drinking, covering breasts, between breasts, self fondling]
+  POS: 1girl, 1boy, adult, very long hair, violet eyes, black hair, side ponytail, ponytail, flat chest, small breasts, soft breasts, natural breasts, fat, armor, cloak, boots, revealing clothes, hoop earrings, earrings, reclining, lower body, drinking, covering breasts, between breasts, self fondling, soft lighting, castle, outdoors, sunset, fog, sunlight, soap bubbles, nsfw, explicit, masterpiece, best quality, amazing quality
+
+#31 heats=tease+sex era=victorian girl=true boy=false people=1 job=true
+  job=[] act=[singing] sex=[] body=[squatting] cam=[extreme close-up, close-up]
+  env=[soft lighting, victorian, bar (place), indoors, night, lamp, on bed]
+  cloth=[maid, cloak, garter belt, revealing clothes, sandals]
+  pose=[squatting, extreme close-up, close-up, looking around, surprised, singing]
+  POS: 1girl, solo, adult, long hair, red eyes, red hair, ahoge, large breasts, soft breasts, natural breasts, tanlines, tongue, body freckles, maid, cloak, garter belt, revealing clothes, sandals, squatting, extreme close-up, close-up, looking around, surprised, singing, soft lighting, victorian, bar (place), indoors, night, lamp, on bed, nsfw, explicit, masterpiece, best quality, amazing quality
+
+#32 heats=tease+flash+sex era=ancient_china girl=true boy=false people=2 job=false
+  job=[] act=[playing games] sex=[] body=[all fours] cam=[over shoulder]
+  env=[soft lighting, chinese architecture, outdoors, dusk, chromatic aberration, moonlight, sky]
+  cloth=[chinese clothes, pelvic curtain, wet clothes, sandals, hair stick]
+  pose=[all fours, over shoulder, looking at another, come hither, playing games, ass visible through thighs]
+  POS: 2girls, adult, very short hair, yellow eyes, black hair, swept bangs, large breasts, soft breasts, natural breasts, gradient hair, nipple piercing, dark skin, chinese clothes, pelvic curtain, wet clothes, sandals, hair stick, all fours, over shoulder, looking at another, come hither, playing games, ass visible through thighs, soft lighting, chinese architecture, outdoors, dusk, chromatic aberration, moonlight, sky, nsfw, explicit, masterpiece, best quality, amazing quality
+
+#33 heats=tease+flash+sex era=modern girl=true boy=true people=1 job=false
+  job=[] act=[yoga] sex=[] body=[seiza] cam=[fisheye]
+  env=[soft lighting, modern, futon, indoors, dusk, spotlight, carpet]
+  cloth=[power armor, garter belt, sports bra, bra, fishnets, thong]
+  pose=[seiza, fisheye, looking to the side, come hither, yoga, licking lips]
+  POS: 1girl, solo, adult, very short hair, heterochromia, blonde hair, sidelocks, gigantic breasts, soft breasts, natural breasts, parted hair, colored inner hair, narrow waist, power armor, garter belt, sports bra, bra, fishnets, thong, seiza, fisheye, looking to the side, come hither, yoga, licking lips, soft lighting, modern, futon, indoors, dusk, spotlight, carpet, nsfw, explicit, masterpiece, best quality, amazing quality
+
+#34 heats=flash+sex era=victorian girl=true boy=true people=1 job=true
+  job=[] act=[cleaning] sex=[] body=[sitting] cam=[facing away]
+  env=[soft lighting, victorian, kitchen, indoors, dusk, lamp, full-length mirror, mirror]
+  cloth=[unbuttoned shirt, shirt, cloak, bottomless, see-through clothes]
+  pose=[sitting, facing away, looking at viewer, pout, cleaning, grinding]
+  POS: 1boy, solo, adult, very long hair, red eyes, white hair, high ponytail, ponytail, tattoo, steaming body, wavy hair, unbuttoned shirt, shirt, cloak, bottomless, see-through clothes, sitting, facing away, looking at viewer, pout, cleaning, grinding, soft lighting, victorian, kitchen, indoors, dusk, lamp, full-length mirror, mirror, nsfw, explicit, masterpiece, best quality, amazing quality
+
+#35 heats=tease+flash+sex era=modern girl=true boy=true people=2 job=true
+  job=[flight attendant] act=[carrying] sex=[] body=[kneeling] cam=[straight-on]
+  env=[soft lighting, modern, office, indoors, sunset, city lights, depth of field]
+  cloth=[vest, pleated skirt, skirt, lab coat, coat, sneakers, bra visible through clothes]
+  pose=[kneeling, straight-on, sideways glance, sad, carrying, between thighs]
+  POS: 2girls, adult, medium hair, red eyes, purple hair, sidelocks, gigantic breasts, soft breasts, natural breasts, flight attendant, lactation, ahoge, vest, pleated skirt, skirt, lab coat, coat, sneakers, bra visible through clothes, kneeling, straight-on, sideways glance, sad, carrying, between thighs, soft lighting, modern, office, indoors, sunset, city lights, depth of field, nsfw, explicit, masterpiece, best quality, amazing quality
+
+#36 heats=activity+flash era=medieval girl=true boy=false people=1 job=false
+  job=[] act=[writing] sex=[] body=[lying] cam=[full body]
+  env=[soft lighting, castle, outdoors, sunrise, cherry blossoms, dim lighting, chair]
+  cloth=[armor, cloak, sandals, open clothes, stud earrings, earrings]
+  pose=[lying, full body, sideways glance, expressionless, writing, between breasts]
+  POS: 1girl, solo, adult, bob cut, grey eyes, purple hair, single hair bun, hair bun, flat chest, small breasts, soft breasts, natural breasts, navel, armor, cloak, sandals, open clothes, stud earrings, earrings, lying, full body, sideways glance, expressionless, writing, between breasts, soft lighting, castle, outdoors, sunrise, cherry blossoms, dim lighting, chair, nsfw, explicit, masterpiece, best quality, amazing quality
+
+#37 heats=activity+tease+flash era=edo girl=true boy=true people=1 job=false
+  job=[] act=[yoga] sex=[] body=[dancing] cam=[from side]
+  env=[soft lighting, onsen, indoors, day, on chair, window light, fog]
+  cloth=[japanese clothes, haori, wet clothes]
+  pose=[dancing, from side, looking to the side, expressionless, yoga, empty eyes]
+  POS: 1girl, solo, adult, very long hair, aqua eyes, brown hair, straight hair, flat chest, small breasts, soft breasts, natural breasts, freckles, pink nails, japanese clothes, haori, wet clothes, dancing, from side, looking to the side, expressionless, yoga, empty eyes, soft lighting, onsen, indoors, day, on chair, window light, fog, nsfw, explicit, masterpiece, best quality, amazing quality
+
+#38 heats=flash era=ancient_china girl=true boy=false people=1 job=true
+  job=[] act=[writing] sex=[] body=[reclining] cam=[facing away]
+  env=[soft lighting, chinese architecture, outdoors, sunset, shadow, on bed, steam]
+  cloth=[chinese clothes, pelvic curtain, revealing clothes, shoes, bracelet]
+  pose=[reclining, facing away, looking down, frown, writing, m legs, spread legs]
+  POS: 1girl, solo, adult, bob cut, blue eyes, brown hair, sidelocks, small breasts, soft breasts, natural breasts, twintails, lipstick, pink nipples, chinese clothes, pelvic curtain, revealing clothes, shoes, bracelet, reclining, facing away, looking down, frown, writing, m legs, spread legs, soft lighting, chinese architecture, outdoors, sunset, shadow, on bed, steam, nsfw, explicit, masterpiece, best quality, amazing quality
+
+#39 heats=sex era=ancient_greece girl=true boy=true people=3 job=true
+  job=[] act=[] sex=[cunnilingus] body=[on side] cam=[from below]
+  env=[soft lighting, colonnade, outdoors, night, chromatic aberration, rain, film grain]
+  cloth=[chiton, ancient greek clothes, himation, open clothes, boots]
+  pose=[cunnilingus, oral, sex, on side, from below, eye contact, dazed]
+  POS: 2girls, 1boy, adult, bald, red eyes, medium breasts, soft breasts, natural breasts, naga, monster boy, long eyelashes, beard, penis out, chiton, ancient greek clothes, himation, open clothes, boots, cunnilingus, oral, sex, on side, from below, eye contact, dazed, soft lighting, colonnade, outdoors, night, chromatic aberration, rain, film grain, nsfw, explicit, masterpiece, best quality, amazing quality
+
+#40 heats=tease+flash era=ancient_china girl=false boy=true people=1 job=true
+  job=[] act=[yoga] sex=[] body=[on back] cam=[from above]
+  env=[soft lighting, chinese architecture, outdoors, dusk, on chair, fog, window light]
+  cloth=[chinese clothes, sandals, tight clothes, hat, umbrella]
+  pose=[on back, from above, looking away, light smile, smile, yoga, caught]
+  POS: 1boy, solo, adult, long hair, blue eyes, black hair, wavy hair, centaur, monster boy, facial hair, single hair bun, hair bun, chinese clothes, sandals, tight clothes, hat, umbrella, on back, from above, looking away, light smile, smile, yoga, caught, soft lighting, chinese architecture, outdoors, dusk, on chair, fog, window light, nsfw, explicit, masterpiece, best quality, amazing quality
+
+#41 heats=tease+flash+sex era=victorian girl=true boy=false people=2 job=true
+  job=[] act=[reading] sex=[] body=[wariza] cam=[over shoulder]
+  env=[soft lighting, victorian, kitchen, indoors, sunset, lamp, steam]
+  cloth=[business suit, kneehighs, cloak, sandals, revealing clothes]
+  pose=[wariza, over shoulder, looking at mirror, dazed, reading, leg lift]
+  POS: 2girls, adult, bob cut, glowing eyes, grey hair, ahoge, huge breasts, soft breasts, natural breasts, streaked hair, unaligned breasts, long eyelashes, business suit, kneehighs, cloak, sandals, revealing clothes, wariza, over shoulder, looking at mirror, dazed, reading, leg lift, soft lighting, victorian, kitchen, indoors, sunset, lamp, steam, nsfw, explicit, masterpiece, best quality, amazing quality
+
+#42 heats=tease+sex era=edo girl=false boy=true people=2 job=true
+  job=[] act=[] sex=[boy on top] body=[all fours] cam=[profile]
+  env=[soft lighting, pagoda, outdoors, night, starry sky, cinematic lighting, pillow]
+  cloth=[bath yukata, yukata, japanese clothes, fundoshi, geta]
+  pose=[boy on top, sex, all fours, profile, looking to the side, expressionless]
+  POS: 2boys, adult, long hair, blue eyes, aqua hair, sidelocks, double bun, hair bun, tsurime, dark skin, bags under eyes, bath yukata, yukata, japanese clothes, fundoshi, geta, boy on top, sex, all fours, profile, looking to the side, expressionless, soft lighting, pagoda, outdoors, night, starry sky, cinematic lighting, pillow, nsfw, explicit, masterpiece, best quality, amazing quality
+
+#43 heats=tease+sex era=victorian girl=true boy=false people=1 job=true
+  job=[] act=[stretching] sex=[] body=[all fours] cam=[pov]
+  env=[soft lighting, victorian, living room, indoors, evening, lamp, pillow]
+  cloth=[pencil skirt, skirt, corset, garter belt, cloak]
+  pose=[all fours, pov, looking at viewer, happy, smile, stretching]
+  POS: 1girl, solo, adult, bob cut, green eyes, multicolored hair, hair over shoulder, flat chest, small breasts, soft breasts, natural breasts, eyeshadow, messy hair, pencil skirt, skirt, corset, garter belt, cloak, all fours, pov, looking at viewer, happy, smile, stretching, soft lighting, victorian, living room, indoors, evening, lamp, pillow, nsfw, explicit, masterpiece, best quality, amazing quality
+
+#44 heats=flash+sex era=ancient_china girl=true boy=false people=1 job=true
+  job=[] act=[] sex=[] body=[squatting] cam=[from behind]
+  env=[soft lighting, chinese architecture, outdoors, evening, on bed, sunlight, chair]
+  cloth=[dudou, chinese clothes, boots, tight clothes, bare shoulders]
+  pose=[female masturbation, squatting, from behind, looking up, sleepy, clenched teeth]
+  POS: 1girl, solo, adult, very long hair, pink eyes, grey hair, side ponytail, ponytail, flat chest, small breasts, soft breasts, natural breasts, sweat, dudou, chinese clothes, boots, tight clothes, bare shoulders, female masturbation, squatting, from behind, looking up, sleepy, clenched teeth, soft lighting, chinese architecture, outdoors, evening, on bed, sunlight, chair, nsfw, explicit, masterpiece, best quality, amazing quality
+
+#45 heats=tease era=victorian girl=true boy=false people=1 job=false
+  job=[] act=[yoga] sex=[] body=[indian style] cam=[full body]
+  env=[soft lighting, victorian, bar (place), indoors, evening, lamp, steam]
+  cloth=[suit, kneehighs, cloak, revealing clothes, sandals]
+  pose=[indian style, full body, looking ahead, expressionless, yoga, parted lips]
+  POS: 1girl, solo, adult, pixie cut, purple eyes, grey hair, parted bangs, large breasts, soft breasts, natural breasts, wavy hair, plump, blunt bangs, suit, kneehighs, cloak, revealing clothes, sandals, indian style, full body, looking ahead, expressionless, yoga, parted lips, soft lighting, victorian, bar (place), indoors, evening, lamp, steam, nsfw, explicit, masterpiece, best quality, amazing quality
+
+#46 heats=activity+sex era=modern girl=false boy=true people=1 job=false
+  job=[] act=[] sex=[] body=[reclining] cam=[close-up]
+  env=[soft lighting, modern, rooftop, outdoors, evening, city lights, snow]
+  cloth=[track uniform, male underwear, sneakers, latex, naked jacket, jacket]
+  pose=[male masturbation, reclining, close-up, looking away, sad, open mouth]
+  POS: 1boy, solo, adult, bob cut, aqua eyes, brown hair, swept bangs, lizardman, monster boy, bangs, tattoo, track uniform, male underwear, sneakers, latex, naked jacket, jacket, male masturbation, reclining, close-up, looking away, sad, open mouth, soft lighting, modern, rooftop, outdoors, evening, city lights, snow, nsfw, explicit, masterpiece, best quality, amazing quality
+
+#47 heats=tease+sex era=ancient_china girl=true boy=true people=3 job=false
+  job=[] act=[] sex=[prone bone] body=[on stomach] cam=[portrait]
+  env=[soft lighting, chinese architecture, outdoors, sunrise, soap bubbles, water, sunlight]
+  cloth=[hanfu, chinese clothes, shoes, tight clothes, bare shoulders]
+  pose=[prone bone, sex, on stomach, portrait, looking away, surprised]
+  POS: 2girls, 1boy, adult, long hair, yellow eyes, black hair, twintails, gigantic breasts, soft breasts, natural breasts, mole under eye, wavy hair, tall male, hanfu, chinese clothes, shoes, tight clothes, bare shoulders, prone bone, sex, on stomach, portrait, looking away, surprised, soft lighting, chinese architecture, outdoors, sunrise, soap bubbles, water, sunlight, nsfw, explicit, masterpiece, best quality, amazing quality
+
+#48 heats=activity+tease+flash era=ancient_china girl=true boy=true people=1 job=true
+  job=[] act=[camping] sex=[] body=[seiza] cam=[extreme close-up, close-up]
+  env=[soft lighting, outdoors, chinese architecture, day, tree, bush, on chair]
+  cloth=[chinese clothes, sandals, wet clothes, stud earrings, earrings, o-ring]
+  pose=[seiza, extreme close-up, close-up, looking at mirror, angry, camping, m legs, spread legs]
+  POS: 1boy, solo, adult, very short hair, grey eyes, aqua hair, double bun, hair bun, floating hair, mole, tsurime, chinese clothes, sandals, wet clothes, stud earrings, earrings, o-ring, seiza, extreme close-up, close-up, looking at mirror, angry, camping, m legs, spread legs, soft lighting, outdoors, chinese architecture, day, tree, bush, on chair, nsfw, explicit, masterpiece, best quality, amazing quality
+
+#49 heats=tease era=edo girl=true boy=false people=3 job=false
+  job=[] act=[shared bathing, bathing] sex=[] body=[wariza] cam=[from outside]
+  env=[soft lighting, onsen, indoors, sunset, steam, sunlight, carpet]
+  cloth=[japanese clothes, haori, revealing clothes]
+  pose=[wariza, from outside, looking back, embarrassed, shared bathing, bathing]
+  POS: 3girls, adult, medium hair, red eyes, multicolored hair, ponytail, gigantic breasts, soft breasts, natural breasts, streaked hair, breasts on glass, red nails, japanese clothes, haori, revealing clothes, wariza, from outside, looking back, embarrassed, shared bathing, bathing, soft lighting, onsen, indoors, sunset, steam, sunlight, carpet, nsfw, explicit, masterpiece, best quality, amazing quality
+
+#50 heats=activity+sex era=ancient_china girl=true boy=false people=3 job=false
+  job=[] act=[] sex=[facesitting] body=[sitting] cam=[lower body]
+  env=[soft lighting, chinese architecture, outdoors, dusk, on bed, depth of field, backlighting]
+  cloth=[hanfu, chinese clothes, see-through clothes, shoes, hat]
+  pose=[facesitting, sex, sitting, lower body, after sex, public sex]
+  POS: 3girls, adult, very short hair, heterochromia, blonde hair, hair over shoulder, flat chest, small breasts, soft breasts, natural breasts, swept bangs, nail polish, hanfu, chinese clothes, see-through clothes, shoes, hat, facesitting, sex, sitting, lower body, after sex, public sex, soft lighting, chinese architecture, outdoors, dusk, on bed, depth of field, backlighting, nsfw, explicit, masterpiece, best quality, amazing quality

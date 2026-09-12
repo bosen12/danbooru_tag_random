@@ -164,12 +164,22 @@ function renderChoices() {
   const box = el("choices");
   box.replaceChildren();
   run.round.question.choices.forEach((choice, i) => {
+    const zh = labelOf(lex, choice.tag);
     const btn = document.createElement("button");
     btn.type = "button";
     btn.className = "choice is-in";
     btn.style.setProperty("--in-delay", `${i * 42}ms`);
-    btn.textContent = labelOf(lex, choice.tag);
     btn.title = choice.tag;
+    // 中英都進可存取名稱。滑鼠靠 title 看英文，觸控看 .choice-en，
+    // 讀屏則兩邊都拿得到——原本只有 title，觸控使用者什麼都沒有。
+    btn.setAttribute("aria-label", `${zh} ${choice.tag}`);
+    const zhEl = document.createElement("span");
+    zhEl.className = "choice-zh";
+    zhEl.textContent = zh;
+    const enEl = document.createElement("span");
+    enEl.className = "choice-en";
+    enEl.textContent = choice.tag;
+    btn.append(zhEl, enEl);
     btn.addEventListener("click", () => pick(btn, choice));
     box.append(btn);
   });
