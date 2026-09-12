@@ -16,6 +16,8 @@ import {
   heatMismatches,
   itemFitsHeats,
   sanitizeSettings,
+  sanitizeMustDraw,
+  MUST_MAX,
   SCENE_MODES,
   sceneModeOf,
   indexLexicon,
@@ -4276,6 +4278,168 @@ function indoorOutdoorClash(have) {
     if (h.has("frying pan") && !h.has("cooking")) panNoCook += 1;
   }
   eq("frying pan never without cooking", panNoCook, 0);
+}
+
+
+// --- 必抽 ------------------------------------------------------------------
+{
+  const groupCount = (drawn, section, group) => {
+    let n = 0;
+    for (const t of drawn.positive.split(", ")) {
+      const it = lex.byTag.get(t.trim());
+      if (it && it.section === section && it.group === group) n += 1;
+    }
+    return n;
+  };
+  const mutexCount = (drawn, name) => {
+    let n = 0;
+    for (const t of drawn.positive.split(", ")) {
+      const it = lex.byTag.get(t.trim());
+      if (it && it.mutex === name) n += 1;
+    }
+    return n;
+  };
+  const draw = (tweak, seed) => {
+    const s = settings();
+    tweak(s);
+    return drawOne(lex, s, new Set(), new Set(), mulberry32(seed), seed);
+  };
+
+  // 沒設必抽就什麼都沒變。
+  const plain = draw(() => {}, 90001);
+  eq("no mustDraw means empty report", plain.mustReport, []);
+
+  // 必抽 3 個誘惑：tease 池子有 57 個又不互斥，只開誘惑時每一張都該抽滿。
+  let teaseShort = 0;
+  for (let i = 0; i < 40; i++) {
+    const d = draw((s) => {
+      s.heats = ["tease"];
+      s.mustDraw = { "pose:tease": 3 };
+    }, 90100 + i);
+    if (groupCount(d, "pose", "tease") < 3) teaseShort += 1;
+  }
+  eq("must 3 tease always lands 3", teaseShort, 0);
+
+  const teaseOne = draw((s) => {
+    s.heats = ["tease"];
+    s.mustDraw = { "pose:tease": 3 };
+  }, 90100);
+  eq("must report counts what landed", teaseOne.mustReport, [
+    { key: "pose:tease", section: "pose", group: "tease", want: 3, got: 3 },
+  ]);
+
+  // 身體對不上時必抽要讓步，而且如實回報 —— 不硬湊出手在兩個地方的圖。
+  let honestWhenShort = 0;
+  let sawShort = 0;
+  for (let i = 0; i < 60; i++) {
+    const d = draw((s) => {
+      s.mustDraw = { "pose:tease": 3 };
+    }, 90100 + i);
+    const got = groupCount(d, "pose", "tease");
+    if (got < 3) sawShort += 1;
+    if (d.mustReport[0].got === got) honestWhenShort += 1;
+  }
+  eq("must report never lies", honestWhenShort, 60);
+  ok("sex acts really can crowd out a must pose", sawShort > 0, `sawShort=${sawShort}`);
+
+  // 互斥絕不破：髮色槽再怎麼必抽也只能有一個。
+  let hairClash = 0;
+  for (let i = 0; i < 40; i++) {
+    const d = draw((s) => {
+      s.mustDraw = { "feature:hair_color": 5 };
+    }, 90200 + i);
+    if (mutexCount(d, "hair_color") > 1) hairClash += 1;
+  }
+  eq("must never doubles a mutex slot", hairClash, 0);
+
+  // 必抽的權限大於時代：clothing:era 全是非現代衣，現代場也要抽得出來。
+  let eraGot = 0;
+  for (let i = 0; i < 40; i++) {
+    const d = draw((s) => {
+      s.eras = ["modern"];
+      s.mustDraw = { "clothing:era": 1 };
+    }, 90300 + i);
+    if (groupCount(d, "clothing", "era") >= 1) eraGot += 1;
+  }
+  eq("must beats era", eraGot, 40);
+
+  // 對照組：沒設必抽時，現代場不該冒出古裝。
+  let eraLeak = 0;
+  for (let i = 0; i < 40; i++) {
+    const d = draw((s) => {
+      s.eras = ["modern"];
+    }, 90300 + i);
+    if (groupCount(d, "clothing", "era") > 0) eraLeak += 1;
+  }
+  eq("era still walls off without must", eraLeak, 0);
+
+  // 尺度是硬牆：必抽不准繞過 heat 閘。只開誘惑時，只有 lexicon 自己標成誘惑也能用的
+  // 性愛字（例如 spooning）可以出現，heat 只寫 sex 的一律不准。
+  let heatLeak = 0;
+  let honest = 0;
+  for (let i = 0; i < 30; i++) {
+    const d = draw((s) => {
+      s.heats = ["tease"];
+      s.mustDraw = { "pose:sex": 2 };
+    }, 90400 + i);
+    for (const t of d.positive.split(", ")) {
+      const it = lex.byTag.get(t.trim());
+      if (!it || it.group !== "sex") continue;
+      const h = it.heat;
+      if (Array.isArray(h) && h.length && !h.includes(d.heat)) heatLeak += 1;
+    }
+    const r = d.mustReport[0];
+    if (r && r.got === groupCount(d, "pose", "sex")) honest += 1;
+  }
+  eq("must never bypasses the heat gate", heatLeak, 0);
+  eq("must report matches what actually landed", honest, 30);
+
+  // 女／男是硬牆：只開女時，必抽男體型拿不到任何 gate=male 的字。
+  // （muscular／plump／skinny 在 lexicon 裡是 gate=any，男女通用，不算漏。）
+  let maleLeak = 0;
+  for (let i = 0; i < 30; i++) {
+    const d = draw((s) => {
+      s.girl = true;
+      s.boy = false;
+      s.mustDraw = { "feature:body_m": 3 };
+    }, 90500 + i);
+    for (const t of d.positive.split(", ")) {
+      const it = lex.byTag.get(t.trim());
+      if (it && it.gate === "male") maleLeak += 1;
+    }
+  }
+  eq("must never bypasses the cast gate", maleLeak, 0);
+
+  // 已封鎖的字不會被必抽撿回來。
+  const banned = new Set(
+    lex.bySection.pose.filter((it) => it.group === "tease").map((it) => it.tag)
+  );
+  const allBanned = drawOne(
+    lex,
+    Object.assign(settings(), { mustDraw: { "pose:tease": 2 } }),
+    new Set(),
+    banned,
+    mulberry32(90600),
+    90600
+  );
+  eq("must respects user bans", groupCount(allBanned, "pose", "tease"), 0);
+
+  // 設定值清洗
+  eq("mustDraw drops quality", sanitizeMustDraw({ "quality:style": 2 }), {});
+  eq("mustDraw drops zero and negatives", sanitizeMustDraw({ "pose:tease": 0, "pose:sex": -3 }), {});
+  eq("mustDraw drops malformed keys", sanitizeMustDraw({ tease: 2, ":x": 1, "pose:": 1 }), {});
+  eq("mustDraw caps at MUST_MAX", sanitizeMustDraw({ "pose:tease": 999 }), { "pose:tease": MUST_MAX });
+  eq("mustDraw floors floats", sanitizeMustDraw({ "pose:tease": 2.9 }), { "pose:tease": 2 });
+  eq(
+    "sanitizeSettings keeps mustDraw",
+    sanitizeSettings({ mustDraw: { "pose:tease": 3 } }, data).mustDraw,
+    { "pose:tease": 3 }
+  );
+
+  // 一次幾張解除上限（無限抽會用到）
+  eq("n is no longer capped at 10", sanitizeSettings({ n: 50 }, data).n, 50);
+  eq("n still floors at 1", sanitizeSettings({ n: 0 }, data).n, defaultSettings(data).n);
+  eq("n rejects negatives", sanitizeSettings({ n: -4 }, data).n, 1);
 }
 
 if (failed) {

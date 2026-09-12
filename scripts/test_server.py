@@ -28,6 +28,8 @@ from server import (  # noqa: E402
     ws_frame,
 )
 from lora_scan import preview_path, strip_angle_tags  # noqa: E402
+import shutil  # noqa: E402
+import server  # noqa: E402
 
 failed = 0
 
@@ -188,6 +190,72 @@ ok(
 )
 loop = _Client("127.0.0.1")
 ok("loopback handler ok", Handler._allowed(loop) is True and loop.dumped is None)
+
+
+
+# --- Telegram -------------------------------------------------------------
+
+tg_dir = Path(tempfile.mkdtemp())
+server._tg.update({"token": "", "chatId": "", "enabled": False, "sent": 0, "failed": 0, "lastError": ""})
+server.TG_SECRETS = tg_dir / ".secrets" / "telegram.json"
+
+st = server.tg_apply_config({"token": "123456:SECRET-TOKEN", "chatId": "@chan", "enabled": True})
+ok("config saves", st["ok"] and st["configured"] and st["chatId"] == "@chan")
+ok("config hides token", "token" not in st and st["tokenTail"] == "…OKEN")
+ok("config never returns token body", "SECRET-TOKEN" not in json.dumps(st))
+ok("secrets file written", server.TG_SECRETS.is_file())
+ok(
+    "secrets file holds token",
+    json.loads(server.TG_SECRETS.read_text(encoding="utf-8"))["token"] == "123456:SECRET-TOKEN",
+)
+
+# 留空的 token 代表「沿用已存的」，不是「清掉」。
+st = server.tg_apply_config({"token": "", "chatId": "@other", "enabled": False})
+ok("blank token keeps old", server._tg["token"] == "123456:SECRET-TOKEN")
+ok("blank token updates rest", st["chatId"] == "@other" and st["enabled"] is False)
+
+ok("scrub hides token", server.tg_scrub("boom https://x/bot123456:SECRET-TOKEN/send") ==
+   "boom https://x/bot***/send")
+
+# 重讀檔案要拿回一樣的東西。
+server._tg.update({"token": "", "chatId": "", "enabled": False})
+server.tg_load()
+ok("reload restores", server._tg["token"] == "123456:SECRET-TOKEN" and server._tg["chatId"] == "@other")
+
+# caption：短的一則解決，長的把英文 POS 切出去。
+short = server.tg_caption({"seed": 7, "width": 1024, "height": 1024, "zh": "藍髮", "en": "blue hair"})
+ok("short caption one message", short == ("seed 7 · 1024x1024\n藍髮\nblue hair", ""))
+
+long_en = ", ".join(["long english tag"] * 120)
+cap, tail = server.tg_caption({"seed": 7, "width": 1024, "height": 1024, "zh": "藍髮", "en": long_en})
+ok("long caption splits", tail == long_en and len(cap) <= server.TG_CAPTION_MAX)
+ok("long caption keeps zh", cap == "seed 7 · 1024x1024\n藍髮")
+
+# 中文 POS 自己就爆掉時要截斷，不能超過上限。
+huge_zh = "字" * 3000
+cap, tail = server.tg_caption({"seed": 1, "zh": huge_zh, "en": "x"})
+ok("huge zh truncated", len(cap) <= server.TG_CAPTION_MAX and cap.endswith("…"))
+ok("huge zh still tails en", tail == "x")
+
+body, boundary = server.tg_multipart({"chat_id": "@chan", "caption": "hi"}, "a.png", b"\x89PNG", "image/png")
+ok("multipart boundary used", body.startswith(("--" + boundary).encode()))
+ok("multipart has chat_id", b'name="chat_id"' in body and b"@chan" in body)
+ok("multipart has caption", b'name="caption"' in body and b"hi" in body)
+ok("multipart has photo part", b'name="photo"; filename="a.png"' in body and b"\x89PNG" in body)
+ok("multipart closes", body.endswith(("--" + boundary + "--\r\n").encode()))
+
+# 路徑白名單：../ 這種進不了佇列。
+server._tg.update({"token": "t", "chatId": "@c", "enabled": True})
+ok("enqueue rejects bad name", server.tg_enqueue({"filename": "../etc/passwd"})["ok"] is False)
+ok("enqueue rejects empty name", server.tg_enqueue({"filename": ""})["ok"] is False)
+
+server._tg["enabled"] = False
+ok("enqueue refuses when off", server.tg_enqueue({"filename": "a.png"})["ok"] is False)
+server._tg.update({"token": "", "chatId": "", "enabled": True})
+ok("enqueue refuses unconfigured", server.tg_enqueue({"filename": "a.png"})["ok"] is False)
+
+server._tg.update({"token": "", "chatId": "", "enabled": False, "sent": 0, "failed": 0, "lastError": ""})
+shutil.rmtree(tg_dir, ignore_errors=True)
 
 if failed:
     print(f"\n{failed} failed")

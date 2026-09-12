@@ -50,6 +50,19 @@ import {
   initLoraPicker,
   isLoraUiOpen,
 } from "./lora.js";
+import {
+  beginRound,
+  clearLive,
+  countMade,
+  initInfinite,
+  isInfinite,
+  markLive,
+  placeCard,
+  stopInfinite,
+  wallHasCards,
+} from "./infinite.js";
+import { initTelegram, tgHandleKeys, tgSendCard, tgUiOpen } from "./telegram.js";
+import { initMustDraw, mustShortfall, mustStepper, syncMustDraw } from "./mustdraw.js";
 
 const SECTIONS = [
   { id: "quality", title: "畫質與風格", hint: "固定畫質每張都帶。風格預設不進，釘了才進" },
@@ -78,6 +91,9 @@ let tagWeights = new Map();
 let aborting = false;
 let skipping = false;
 let running = false;
+// 連續失敗幾張就把無限抽收掉。成功一張歸零。
+const FAIL_LIMIT = 3;
+let failStreak = 0;
 let genAbort = null;
 let jobAbort = null;
 let viewMode = "all";
@@ -1087,8 +1103,11 @@ function buildCats() {
       subHead.className = "sub-head";
       const h = document.createElement("h3");
       h.textContent = zhMap[g] || g;
-      subHead.append(h);
-      if (sec.id !== "quality" || g !== "fixed") subHead.append(closeAllBtn(zhMap[g] || g));
+      const acts = document.createElement("div");
+      acts.className = "sub-acts";
+      if (sec.id !== "quality") acts.append(mustStepper(sub, sec.id, g, zhMap[g] || g));
+      if (sec.id !== "quality" || g !== "fixed") acts.append(closeAllBtn(zhMap[g] || g));
+      subHead.append(h, acts);
       const box = document.createElement("div");
       box.className = "tags";
       const sorted = sortItems(buckets.get(g));
@@ -1722,6 +1741,49 @@ function skipCurrentGen() {
   }
 }
 
+// POS 的中文版本，送 Telegram 用。
+function posZh(positive) {
+  const out = [];
+  for (const part of String(positive || "").split(",")) {
+    const { tag } = parseWeighted(part);
+    if (tag) out.push(labelOf(lex, tag));
+  }
+  return out.join("、");
+}
+
+function paintMustWarn(card, report) {
+  const text = mustShortfall(report, (g) => (lex.data.groupZh || {})[g] || g);
+  if (!text) return;
+  const meta = card.querySelector(".meta");
+  if (!meta || meta.querySelector(".must-miss")) return;
+  const note = document.createElement("p");
+  note.className = "warn must-miss";
+  note.textContent = text + "（互斥或尺度擋住了，沒有硬湊）";
+  meta.append(note);
+}
+
+function finishBatch() {
+  running = false;
+  $("go").disabled = false;
+  $("go").removeAttribute("aria-busy");
+  $("cancel").hidden = true;
+}
+
+// 立刻斷：無限抽的「停」和左欄的「取消」共用這一條。
+function stopNow(reason) {
+  aborting = true;
+  stopInfinite(reason || "已停");
+  speak(reason || "取消中…");
+  try {
+    genAbort?.abort();
+  } catch {
+    /* ignore */
+  }
+  fetch("/api/interrupt", { method: "POST", body: "{}" }).catch(() => {
+    /* ignore */
+  });
+}
+
 async function runBatch() {
   if (running) return;
   running = true;
@@ -1732,35 +1794,32 @@ async function runBatch() {
   $("go").setAttribute("aria-busy", "true");
   $("cancel").hidden = false;
   pop($("go"));
-  const n = Math.max(1, Math.min(10, Number($("n").value) || 1));
+  const n = Math.max(1, Math.floor(Number($("n").value) || 1));
   settings.n = n;
   saveStore();
 
   const pingNow = await fetch("/api/ping").then((r) => r.json()).catch(() => ({ ok: false }));
   if (!pingNow.ok) {
     speak("ComfyUI 連不上，先開本機 8188");
-    running = false;
-    $("go").disabled = false;
-    $("go").removeAttribute("aria-busy");
-    $("cancel").hidden = true;
+    stopInfinite("Comfy 連不上");
+    finishBatch();
     return;
   }
 
-  $("results").replaceChildren();
-  $("results").scrollIntoView({ behavior: "smooth", block: "start" });
-  const cards = [];
-  for (let i = 0; i < n; i++) {
-    const c = cardSkeleton(settings.width, settings.height);
-    c.style.animationDelay = `${i * 50}ms`;
-    cards.push(c);
-    $("results").append(c);
-  }
+  beginRound();
+  // 八格牆是連續的：不再每輪清空。只有第一次抽才把畫面捲過去。
+  if (!wallHasCards()) $("results").scrollIntoView({ behavior: "smooth", block: "start" });
 
   let ident = new Set();
+  let done = 0;
+  let skipped = 0;
+  let failed = 0;
+  let lastErr = "";
+  let stoppedByFail = false;
+
   for (let i = 0; i < n; i++) {
     if (aborting) {
       speak("已取消");
-      for (let j = i; j < cards.length; j++) failCard(cards[j], "已取消");
       break;
     }
     speak(`生圖 ${i + 1}/${n}`);
@@ -1774,7 +1833,8 @@ async function runBatch() {
       lastIdent = ident;
       syncSamePerson();
     }
-    const card = cards[i];
+    const card = placeCard(cardSkeleton(settings.width, settings.height));
+    markLive(card);
     card.dataset.seed = String(drawn.seed);
     card.dataset.era = drawn.era || "";
     card.dataset.bare = drawn.positive;
@@ -1815,6 +1875,7 @@ async function runBatch() {
     };
     if (genAbort.signal.aborted) stopJob();
     else genAbort.signal.addEventListener("abort", stopJob, { once: true });
+    let shot = null;
     try {
       let finished = false;
       let hadError = false;
@@ -1844,12 +1905,16 @@ async function runBatch() {
           } else if (event === "done") {
             finished = true;
             if (skipping) skipCard(card);
-            else fillCard(card, { ...data, ...extra });
+            else {
+              shot = { ...data, ...extra };
+              fillCard(card, shot);
+            }
           } else if (event === "error") {
             finished = true;
             hadError = true;
+            lastErr = String(data.error || "Comfy 報錯");
             if (skipping) skipCard(card);
-            else failCard(card, String(data.error || "Comfy 報錯"));
+            else failCard(card, lastErr);
           }
         },
         jobAbort.signal
@@ -1861,10 +1926,14 @@ async function runBatch() {
       const kind = settleGenCard({ aborting, skipping, errName: err.name, finished: false });
       if (kind === "skip") skipCard(card);
       else if (kind === "cancel") failCard(card, "已取消");
-      else failCard(card, String(err.message || err));
+      else {
+        lastErr = String(err.message || err);
+        failCard(card, lastErr);
+      }
     } finally {
       genAbort.signal.removeEventListener("abort", stopJob);
       endGenCard(card);
+      clearLive(card);
       const skipNow = skipping;
       skipping = false;
       jobAbort = null;
@@ -1876,17 +1945,48 @@ async function runBatch() {
         }
       }
     }
+
+    if (card.classList.contains("is-done")) {
+      done += 1;
+      failStreak = 0;
+      paintMustWarn(card, drawn.mustReport);
+      if (shot) tgSendCard(card, shot, posZh(sent));
+    } else if (card.classList.contains("is-skip")) {
+      skipped += 1;
+    } else if (!aborting) {
+      failed += 1;
+      failStreak += 1;
+    }
+
+    // 連續三張失敗就收工，免得 Comfy 掛了還空轉一整晚。一次幾張已經沒有上限，
+    // 所以一般批次也適用 —— 但兩種情況都要明講，不能安靜地少抽一堆。
+    if (failStreak >= FAIL_LIMIT) {
+      stoppedByFail = true;
+      const why = lastErr || "Comfy 沒回";
+      if (stopInfinite(`連續 ${FAIL_LIMIT} 張失敗，已停`)) {
+        speak(`連續 ${FAIL_LIMIT} 張失敗，無限抽已停：${why}`);
+      } else {
+        speak(`連續 ${FAIL_LIMIT} 張失敗，剩下的 ${n - i - 1} 張不抽了：${why}`);
+      }
+      break;
+    }
   }
 
-  running = false;
-  $("go").disabled = false;
-  $("go").removeAttribute("aria-busy");
-  $("cancel").hidden = true;
-  if (!aborting) {
-    const done = cards.filter((c) => c.classList.contains("is-done")).length;
-    const skipped = cards.filter((c) => c.classList.contains("is-skip")).length;
-    if (skipped) speak(`完成 ${done} 張，跳過 ${skipped} 張`);
-    else speak(`完成 ${n} 張`);
+  countMade(done);
+  finishBatch();
+
+  if (!aborting && !stoppedByFail) {
+    const bits = [`完成 ${done} 張`];
+    if (skipped) bits.push(`跳過 ${skipped} 張`);
+    if (failed) bits.push(`失敗 ${failed} 張`);
+    speak(bits.join("，"));
+  }
+
+  // 還開著就接下一輪。用 setTimeout 排隊而不是遞迴，呼叫堆疊不會累積。
+  if (isInfinite() && !aborting) {
+    window.setTimeout(() => {
+      if (isInfinite() && !running) runBatch();
+    }, 0);
   }
 }
 
@@ -2095,15 +2195,21 @@ function bindUi() {
   document.addEventListener("keydown", (e) => {
     if (e.ctrlKey || e.metaKey || e.altKey) return;
     if (handleViewerKeys(e)) return;
+    if (tgHandleKeys(e)) return;
     if (handleLoraKeys(e)) return;
     if (isTyping()) return;
+    if (e.key === "i" || e.key === "I") {
+      e.preventDefault();
+      $("infinite")?.click();
+      return;
+    }
     if (e.key === "/") {
       e.preventDefault();
       $("q").focus();
       return;
     }
     if (e.key === "Enter") {
-      if (isLoraUiOpen() || isViewerOpen() || running) return;
+      if (isLoraUiOpen() || isViewerOpen() || tgUiOpen() || running) return;
       e.preventDefault();
       runBatch();
     }
@@ -2195,21 +2301,11 @@ function bindUi() {
       speak("權重已清掉");
     });
   }
-  $("go").addEventListener("click", runBatch);
-  $("cancel").addEventListener("click", async () => {
-    aborting = true;
-    speak("取消中…");
-    try {
-      genAbort?.abort();
-    } catch {
-      /* ignore */
-    }
-    try {
-      await fetch("/api/interrupt", { method: "POST", body: "{}" });
-    } catch {
-      /* ignore */
-    }
+  $("go").addEventListener("click", () => {
+    stopInfinite();
+    runBatch();
   });
+  $("cancel").addEventListener("click", () => stopNow("取消中…"));
 }
 
 function bootNote(text, cls) {
@@ -2262,11 +2358,29 @@ async function main() {
   syncDrawJob();
   syncSceneMode();
   renderPresets();
+  initMustDraw({
+    get: (key) => Number(settings.mustDraw?.[key]) || 0,
+    set: (key, n) => {
+      if (!settings.mustDraw || typeof settings.mustDraw !== "object") settings.mustDraw = {};
+      if (n > 0) settings.mustDraw[key] = n;
+      else delete settings.mustDraw[key];
+      saveStore();
+    },
+  });
   renderEras();
   renderCats();
   renderTray();
   bindUi();
   initLoraPicker();
+  initTelegram();
+  initInfinite({
+    onStart: () => {
+      failStreak = 0;
+      if (!running) runBatch();
+    },
+    onStop: () => stopNow("已停"),
+  });
+  syncMustDraw();
   ping();
   setInterval(ping, 15000);
 }

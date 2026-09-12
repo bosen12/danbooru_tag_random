@@ -2059,6 +2059,7 @@ function takeFromPool(pool, count, rand, commit, prefer, allow) {
     }
     if (n >= count) break;
   }
+  return n;
 }
 
 export function reconcile(lex, used, female, male, people, pinned = new Set(), lockScene = true) {
@@ -2265,9 +2266,10 @@ export function drawOne(lex, settings, pinned, userBanned, rand, seed) {
         (it.mutex === "onepiece" || it.mutex === "top" || it.mutex === "bottom")
     );
   };
-  const allow = (item) => {
+  const allow = (item, opts) => {
     if (banned.has(item.tag) || used.has(item.tag)) return false;
-    if (!heatOk(item, heat) || !eraOk(item, era) || !gateOk(item, female, male)) return false;
+    if (!heatOk(item, heat) || !gateOk(item, female, male)) return false;
+    if (!(opts && opts.skipEra) && !eraOk(item, era)) return false;
     if (!castOk(item, female, male, people, genderCount(used, true), genderCount(used, false))) return false;
     if (used.has("bald") && (item.mutex === "hair_color" || item.group === "hair_style" || item.group === "hair_color")) return false;
     if (item.tag === "bald" && someUsed((it) => it.group === "hair_color" || it.group === "hair_style")) return false;
@@ -3346,6 +3348,56 @@ export function drawOne(lex, settings, pinned, userBanned, rand, seed) {
     takeFromPool(pool, 1, rand, commit, null, allow);
   };
 
+  // 必抽：使用者在小分類旁指定「這一類至少要 N 個」。跑在骨架與通用補牌之前，
+  // 所以它佔到的名額會被 countSection() 算進去，left rail 的「每段抽幾個」自動扣掉。
+  // 權限比時代大（skipEra），但互斥、尺度、女／男、已關閉、已選都照擋 —— 互斥由
+  // commit() 的 mutexBusy() 把關，所以必抽 2 絕不會給出兩個互斥的 tag。
+  const mustWants = [];
+  // 必抽抽到的字（含它帶進來的相依字）要跟釘選一樣受保護，否則最後的 reconcile()
+  // 會被後committed 的字擠掉，性愛的全裸規則也會把必抽的衣服整排剝光。
+  const mustLocked = new Set();
+  const mustAllow = (item) => {
+    if (!allow(item, { skipEra: true })) return false;
+    // commit() 的 implyChain 只檢查時代，所以必抽有機會靠相依字把尺度／性別牆繞過去
+    // （例如 spooning 在誘惑也能用，但它 implies sex）。這裡先把整條鏈驗過再說。
+    for (const dep of implyChain(lex, item.tag)) {
+      const it = lex.byTag.get(dep);
+      if (!it) continue;
+      if (!heatOk(it, heat) || !gateOk(it, female, male)) return false;
+    }
+    return true;
+  };
+  const mustSpec =
+    settings.mustDraw && typeof settings.mustDraw === "object" ? settings.mustDraw : null;
+  if (mustSpec) {
+    for (const key of Object.keys(mustSpec)) {
+      const sep = key.indexOf(":");
+      if (sep <= 0) continue;
+      const section = key.slice(0, sep);
+      const group = key.slice(sep + 1);
+      const want = Math.max(0, Math.min(MUST_MAX, Math.floor(Number(mustSpec[key])) || 0));
+      if (!want || section === "quality" || !lex.bySection[section]) continue;
+      mustWants.push({ key, section, group, want });
+      let have = 0;
+      for (const t of used) {
+        const it = lex.byTag.get(t);
+        if (it && it.section === section && it.group === group) have += 1;
+      }
+      if (have >= want) continue;
+      const indexed = lex.byGroup && lex.byGroup.get(key);
+      const pool = (
+        indexed || lex.bySection[section].filter((item) => item.group === group)
+      ).filter((item) => mustAllow(item));
+      const before = new Set(used);
+      takeFromPool(pool, want - have, rand, commit, null, mustAllow);
+      for (const t of used) if (!before.has(t)) mustLocked.add(t);
+    }
+  }
+  // 「使用者明講要什麼」這一層，必抽比照釘選：場景服裝規則和最後的 reconcile 都讓路。
+  // sceneClothLocked() 本來就是這樣對待釘選的。真正的互斥、以及身體姿勢對不上（例如
+  // 性愛體位跟雙手抱胸）仍然照擋，抽不到就在 mustReport 如實回報。
+  const mustPins = () => (mustLocked.size ? new Set([...pinned, ...mustLocked]) : pinned);
+
   fillSlot("feature", "hair_length");
   fillSlot("feature", "eye_color");
   if (!used.has("bald")) {
@@ -3590,10 +3642,11 @@ export function drawOne(lex, settings, pinned, userBanned, rand, seed) {
   }
 
   {
-    const kind = sceneClothLocked(used, pinned, lex, era, lockSceneOn(settings));
+    const guard = mustPins();
+    const kind = sceneClothLocked(used, guard, lex, era, lockSceneOn(settings));
     if (kind) {
       for (const t of [...used]) {
-        if (pinned.has(t)) continue;
+        if (guard.has(t)) continue;
         const it = lex.byTag.get(t);
         if (
           it &&
@@ -3746,7 +3799,7 @@ export function drawOne(lex, settings, pinned, userBanned, rand, seed) {
     }
   }
 
-  const kept = reconcile(lex, used, female, male, people, pinned, lockSceneOn(settings));
+  const kept = reconcile(lex, used, female, male, people, mustPins(), lockSceneOn(settings));
 
   const quality = lex.data.quality.slice();
   const style = [];
@@ -3796,6 +3849,15 @@ export function drawOne(lex, settings, pinned, userBanned, rand, seed) {
     positive.push(t);
   }
 
+  const mustReport = mustWants.map(({ key, section, group, want }) => {
+    let got = 0;
+    for (const t of positive) {
+      const it = lex.byTag.get(t);
+      if (it && it.section === section && it.group === group) got += 1;
+    }
+    return { key, section, group, want, got };
+  });
+
   return {
     heat,
     era,
@@ -3803,12 +3865,30 @@ export function drawOne(lex, settings, pinned, userBanned, rand, seed) {
     male,
     people,
     seed,
+    mustReport,
     sections: { quality, style, subject, feature, pose, clothing, env, nsfw },
     positive: positive.join(", "),
     conflicts: contradictions(lex, positive),
     eraClash: eraMismatches(lex, pinned, era),
     heatClash: heatMismatches(lex, pinned, settings.heats),
   };
+}
+
+export const MUST_MAX = 20;
+
+// settings.mustDraw is keyed "section:group" -> how many that group must contribute.
+export function sanitizeMustDraw(raw) {
+  const out = {};
+  if (!raw || typeof raw !== "object") return out;
+  for (const key of Object.keys(raw)) {
+    const sep = key.indexOf(":");
+    if (sep <= 0 || sep === key.length - 1) continue;
+    if (key.slice(0, sep) === "quality") continue;
+    const n = Math.floor(Number(raw[key]));
+    if (!Number.isFinite(n) || n <= 0) continue;
+    out[key] = Math.min(MUST_MAX, n);
+  }
+  return out;
 }
 
 export function defaultSettings(data) {
@@ -3828,6 +3908,7 @@ export function defaultSettings(data) {
     drawJob: false,
     lockScene: true,
     sceneMode: "normal",
+    mustDraw: {},
   };
 }
 
@@ -3856,7 +3937,7 @@ export function sanitizeSettings(raw, data) {
   let sceneMode = SCENE_MODES.includes(raw.sceneMode) ? raw.sceneMode : null;
   if (!sceneMode) sceneMode = raw.lockScene === false ? "weird" : "normal";
   return {
-    n: Math.max(1, Math.min(10, Number(raw.n) || base.n)),
+    n: Math.max(1, Math.floor(Number(raw.n) || base.n)),
     width: Math.max(256, Math.min(2048, Number(raw.width) || base.width)),
     height: Math.max(256, Math.min(2048, Number(raw.height) || base.height)),
     counts,
@@ -3870,6 +3951,7 @@ export function sanitizeSettings(raw, data) {
     drawJob: raw.drawJob === true,
     sceneMode,
     lockScene: sceneMode !== "weird",
+    mustDraw: sanitizeMustDraw(raw.mustDraw),
   };
 }
 

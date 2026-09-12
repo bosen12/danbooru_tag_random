@@ -8,6 +8,7 @@ import ipaddress
 import json
 import mimetypes
 import os
+import queue
 import random
 import socket
 import struct
@@ -580,6 +581,264 @@ def gen(payload: dict) -> dict:
     }
 
 
+# --- Telegram: 把成圖投到頻道 ---------------------------------------------
+# token 只活在這支程式的記憶體和 .secrets/telegram.json 裡。/api/telegram/config
+# 的 GET 只回末四碼，前端拿不到 token 本體。上傳跑在背景執行緒，抽圖不等它。
+
+TG_API = os.environ.get("TELEGRAM_API", "https://api.telegram.org")
+TG_SECRETS = ROOT / ".secrets" / "telegram.json"
+TG_CAPTION_MAX = 1024
+TG_TEXT_MAX = 4096
+TG_GAP = 1.0  # 頻道大約 20 則/分鐘，每則之間隔一秒
+TG_RETRY_WAIT = 5.0
+
+_tg_lock = threading.Lock()
+_tg_queue: "queue.Queue[dict]" = queue.Queue()
+_tg_worker: threading.Thread | None = None
+_tg = {
+    "token": "",
+    "chatId": "",
+    "enabled": False,
+    "sent": 0,
+    "failed": 0,
+    "lastError": "",
+}
+
+
+def tg_load() -> None:
+    try:
+        raw = json.loads(TG_SECRETS.read_text(encoding="utf-8"))
+    except Exception:
+        return
+    if not isinstance(raw, dict):
+        return
+    with _tg_lock:
+        _tg["token"] = str(raw.get("token") or "")
+        _tg["chatId"] = str(raw.get("chatId") or "")
+        _tg["enabled"] = bool(raw.get("enabled"))
+
+
+def tg_save() -> None:
+    with _tg_lock:
+        body = {
+            "token": _tg["token"],
+            "chatId": _tg["chatId"],
+            "enabled": _tg["enabled"],
+        }
+    TG_SECRETS.parent.mkdir(parents=True, exist_ok=True)
+    TG_SECRETS.write_text(json.dumps(body, ensure_ascii=False, indent=2), encoding="utf-8")
+    try:
+        os.chmod(TG_SECRETS, 0o600)
+    except OSError:
+        pass  # Windows 上沒什麼效果，靠 .gitignore 擋 git
+
+
+def tg_tail(token: str) -> str:
+    t = str(token or "")
+    return ("…" + t[-4:]) if len(t) >= 4 else ("…" if t else "")
+
+
+def tg_scrub(text: str) -> str:
+    """別讓 urllib 的例外把含 token 的 URL 帶回前端。"""
+    out = str(text)
+    with _tg_lock:
+        token = _tg["token"]
+    if token:
+        out = out.replace(token, "***")
+    return out
+
+
+def tg_status() -> dict:
+    with _tg_lock:
+        return {
+            "ok": True,
+            "configured": bool(_tg["token"] and _tg["chatId"]),
+            "tokenTail": tg_tail(_tg["token"]),
+            "chatId": _tg["chatId"],
+            "enabled": bool(_tg["enabled"]),
+            "sent": _tg["sent"],
+            "failed": _tg["failed"],
+            "lastError": _tg["lastError"],
+            "queued": _tg_queue.qsize(),
+        }
+
+
+def tg_caption(job: dict) -> tuple[str, str]:
+    """回 (caption, 補發的文字)。caption 塞不下英文 POS 時，英文另發一則接在圖下面。"""
+    head_bits = []
+    if job.get("seed") is not None:
+        head_bits.append(f"seed {job['seed']}")
+    if job.get("width") and job.get("height"):
+        head_bits.append(f"{job['width']}x{job['height']}")
+    head = " · ".join(head_bits)
+    zh = str(job.get("zh") or "").strip()
+    en = str(job.get("en") or "").strip()
+
+    full = "\n".join([p for p in (head, zh, en) if p])
+    if len(full) <= TG_CAPTION_MAX:
+        return full, ""
+
+    short = "\n".join([p for p in (head, zh) if p])
+    if len(short) > TG_CAPTION_MAX:
+        short = short[: TG_CAPTION_MAX - 1] + "…"
+    return short, en
+
+
+def tg_multipart(fields: dict, filename: str, blob: bytes, mime: str) -> tuple[bytes, str]:
+    boundary = "----paiziCase" + uuid.uuid4().hex
+    sep = ("--" + boundary).encode("utf-8")
+    out = bytearray()
+    for key, val in fields.items():
+        out += sep + b"\r\n"
+        out += f'Content-Disposition: form-data; name="{key}"\r\n\r\n'.encode("utf-8")
+        out += str(val).encode("utf-8") + b"\r\n"
+    out += sep + b"\r\n"
+    out += (
+        f'Content-Disposition: form-data; name="photo"; filename="{filename}"\r\n'
+        f"Content-Type: {mime}\r\n\r\n"
+    ).encode("utf-8")
+    out += blob + b"\r\n"
+    out += sep + b"--\r\n"
+    return bytes(out), boundary
+
+
+def tg_call(method: str, body: bytes, ctype: str, timeout: float = 60) -> dict:
+    with _tg_lock:
+        token = _tg["token"]
+    if not token:
+        raise RuntimeError("沒有 bot token")
+    req = urllib.request.Request(
+        f"{TG_API}/bot{token}/{method}",
+        data=body,
+        headers={"Content-Type": ctype},
+        method="POST",
+    )
+    try:
+        with urllib.request.urlopen(req, timeout=timeout) as res:
+            return json.loads(res.read().decode("utf-8") or "{}")
+    except urllib.error.HTTPError as exc:
+        try:
+            got = json.loads(exc.read().decode("utf-8") or "{}")
+        except Exception:
+            got = {}
+        desc = got.get("description") or f"HTTP {exc.code}"
+        err = RuntimeError(f"{exc.code} {desc}")
+        err.tg_code = exc.code  # type: ignore[attr-defined]
+        raise err from None
+    except Exception as exc:
+        raise RuntimeError(tg_scrub(str(exc))) from None
+
+
+def tg_form(method: str, fields: dict, timeout: float = 30) -> dict:
+    body = urllib.parse.urlencode(fields).encode("utf-8")
+    return tg_call(method, body, "application/x-www-form-urlencoded", timeout)
+
+
+def tg_send_text(text: str, reply_to: int | None = None) -> dict:
+    with _tg_lock:
+        chat = _tg["chatId"]
+    fields = {"chat_id": chat, "text": text[:TG_TEXT_MAX], "disable_web_page_preview": "true"}
+    if reply_to:
+        fields["reply_to_message_id"] = str(reply_to)
+        fields["allow_sending_without_reply"] = "true"
+    return tg_form("sendMessage", fields)
+
+
+def tg_send_photo(job: dict) -> None:
+    q = comfy_view_query(
+        job.get("filename") or "",
+        job.get("subfolder") or "",
+        job.get("type") or "output",
+    )
+    if not q:
+        raise RuntimeError("bad image query")
+    blob = api("GET", f"/view?{q}", timeout=60)
+    if not isinstance(blob, (bytes, bytearray)):
+        raise RuntimeError("Comfy 沒給圖")
+    mime = "image/png"
+    if blob[:3] == b"\xff\xd8\xff":
+        mime = "image/jpeg"
+    elif blob[:4] == b"RIFF":
+        mime = "image/webp"
+    caption, tail = tg_caption(job)
+    with _tg_lock:
+        chat = _tg["chatId"]
+    body, boundary = tg_multipart(
+        {"chat_id": chat, "caption": caption},
+        str(job.get("filename") or "shot.png"),
+        bytes(blob),
+        mime,
+    )
+    got = tg_call("sendPhoto", body, f"multipart/form-data; boundary={boundary}")
+    if tail:
+        mid = ((got.get("result") or {}).get("message_id")) if isinstance(got, dict) else None
+        for i in range(0, len(tail), TG_TEXT_MAX):
+            tg_send_text(tail[i : i + TG_TEXT_MAX], mid)
+            mid = None
+
+
+def tg_pump() -> None:
+    while True:
+        job = _tg_queue.get()
+        try:
+            try:
+                tg_send_photo(job)
+            except RuntimeError as exc:
+                if getattr(exc, "tg_code", None) == 429:
+                    time.sleep(TG_RETRY_WAIT)
+                    tg_send_photo(job)
+                else:
+                    raise
+            with _tg_lock:
+                _tg["sent"] += 1
+                _tg["lastError"] = ""
+        except Exception as exc:  # worker 絕不能死
+            with _tg_lock:
+                _tg["failed"] += 1
+                _tg["lastError"] = tg_scrub(str(exc))[:300]
+        finally:
+            _tg_queue.task_done()
+        time.sleep(TG_GAP)
+
+
+def tg_start() -> None:
+    global _tg_worker
+    if _tg_worker and _tg_worker.is_alive():
+        return
+    _tg_worker = threading.Thread(target=tg_pump, name="telegram", daemon=True)
+    _tg_worker.start()
+
+
+def tg_enqueue(job: dict) -> dict:
+    with _tg_lock:
+        ready = bool(_tg["token"] and _tg["chatId"] and _tg["enabled"])
+    if not ready:
+        return {"ok": False, "error": "Telegram 還沒設定或沒開"}
+    if not comfy_view_query(
+        job.get("filename") or "", job.get("subfolder") or "", job.get("type") or "output"
+    ):
+        return {"ok": False, "error": "bad image query"}
+    tg_start()
+    _tg_queue.put(job)
+    return {"ok": True, "queued": _tg_queue.qsize()}
+
+
+def tg_apply_config(payload: dict) -> dict:
+    token = str(payload.get("token") or "").strip()
+    chat = str(payload.get("chatId") or "").strip()
+    with _tg_lock:
+        if token:
+            _tg["token"] = token
+        _tg["chatId"] = chat
+        if "enabled" in payload:
+            _tg["enabled"] = bool(payload.get("enabled"))
+    try:
+        tg_save()
+    except Exception as exc:
+        return {"ok": False, "error": tg_scrub(str(exc))}
+    return tg_status()
+
+
 class Handler(BaseHTTPRequestHandler):
     protocol_version = "HTTP/1.1"
 
@@ -868,6 +1127,9 @@ class Handler(BaseHTTPRequestHandler):
         if path == "/api/lora-push":
             self._serve_lora_push_get()
             return
+        if path == "/api/telegram/config":
+            self._json(200, tg_status())
+            return
         self._serve_static(True)
 
     def do_POST(self) -> None:
@@ -903,6 +1165,20 @@ class Handler(BaseHTTPRequestHandler):
             return
         if path == "/api/lora-push":
             self._serve_lora_push_post(payload)
+            return
+        if path == "/api/telegram/config":
+            self._json(200, tg_apply_config(payload))
+            return
+        if path == "/api/telegram":
+            if payload.get("test"):
+                # 測試是同步的：面板要當場看到 Telegram 回什麼。
+                try:
+                    tg_send_text("排字匣測試訊息。看得到這行就代表 token 和 chat id 都對了。")
+                    self._json(200, {"ok": True})
+                except Exception as exc:
+                    self._json(200, {"ok": False, "error": tg_scrub(str(exc))})
+                return
+            self._json(200, tg_enqueue(payload))
             return
         self._json(404, {"ok": False, "error": "not found"})
 
@@ -1022,11 +1298,15 @@ def check_ckpt() -> None:
 def main() -> None:
     host = os.environ.get("HOST", "127.0.0.1")
     port = int(os.environ.get("PORT", "8787"))
+    tg_load()
     httpd = ThreadingHTTPServer((host, port), Handler)
     print(f"排字匣  http://{host}:{port}   畫面 {WEB.name}   Comfy {comfy_base()}")
     print("allow    " + ",".join(str(n) for n in ALLOW_NETS))
     print(f"ckpt     {CKPT}")
     print(f"loras    {lora_scan.LORA_ROOT}")
+    st = tg_status()
+    if st["configured"]:
+        print(f"telegram {st['chatId']}  token {st['tokenTail']}  自動送 {'開' if st['enabled'] else '關'}")
     check_ckpt()
     httpd.serve_forever()
 

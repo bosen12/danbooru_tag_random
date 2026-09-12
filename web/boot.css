@@ -1390,3 +1390,504 @@ input[type="number"] {
     opacity: 1;
   }
 }
+
+/* ============================================================
+ * 無限抽 · 八格牆 · 必抽 · 送到 Telegram
+ * 四套版面共用這一份，顏色全走各自 tokens.css，所以換版面會自動換色。
+ * ============================================================ */
+
+/* —— 無限抽開關：跟「同一個人」同一個底盤，但走硃砂色，開著時會呼吸 —— */
+
+.same-switch.inf-switch {
+  position: relative;
+  overflow: hidden;
+  flex: 1 1 9rem;
+}
+
+.same-switch.inf-switch.is-on {
+  border-color: var(--color-accent);
+  background: color-mix(in oklab, var(--color-accent) 14%, var(--color-paper-2));
+}
+
+.same-switch.inf-switch.is-on .same-knob {
+  background: var(--color-accent);
+}
+
+.same-switch.inf-switch.is-on .same-copy strong {
+  color: var(--color-accent);
+  letter-spacing: 0.08em;
+}
+
+.same-switch.inf-switch.is-on .same-copy em {
+  color: var(--color-ink);
+  font-variant-numeric: tabular-nums;
+}
+
+/* 圓鈕跑到右邊後開始脈動，代表「還在跑」 */
+.same-switch.inf-switch.is-on .same-knob i {
+  animation: inf-pulse 1.6s var(--ease-in-out) infinite;
+}
+
+/* 底邊一條硃砂色細線來回掃，不吵但看得出來沒停 */
+.same-switch.inf-switch.is-on::after {
+  content: "";
+  position: absolute;
+  left: 0;
+  bottom: 0;
+  width: 40%;
+  height: 2px;
+  background: linear-gradient(90deg, transparent, var(--color-accent), transparent);
+  animation: inf-sweep 2.4s var(--ease-in-out) infinite;
+}
+
+@keyframes inf-pulse {
+  0%,
+  100% {
+    box-shadow: 0 0 0 0 color-mix(in oklab, var(--color-paper) 70%, transparent);
+  }
+  50% {
+    box-shadow: 0 0 0 4px color-mix(in oklab, var(--color-paper) 0%, transparent);
+  }
+}
+
+@keyframes inf-sweep {
+  0% {
+    transform: translateX(-100%);
+  }
+  100% {
+    transform: translateX(350%);
+  }
+}
+
+/* —— 八格牆：正在畫的那格亮邊，換進來的那張輕輕落下 —— */
+
+/* 用 outline 不用 border：暗房的卡片是 border:0，改邊框顏色看不出來，
+   而且 outline 不佔版面，不會擾動抽籤棚那排斜掛的卡。 */
+.card.is-live {
+  outline: 2px solid var(--color-accent);
+  outline-offset: -1px;
+  box-shadow: 0 10px 40px -22px var(--color-accent);
+}
+
+/* —— 必抽步進器 —— */
+
+.sub-acts {
+  display: flex;
+  align-items: center;
+  gap: var(--space-2);
+  flex: 0 0 auto;
+}
+
+.sub-head h3 {
+  transition: color var(--dur-ui) var(--ease-out);
+}
+
+/* 小分類被釘成必抽時，標題前長出一小條活字界尺 */
+.sub-head h3::before {
+  content: "";
+  display: inline-block;
+  width: 0;
+  height: 0.72em;
+  margin-right: 0;
+  vertical-align: -0.06em;
+  background: var(--color-accent);
+  transition:
+    width var(--dur-ui) var(--ease-out),
+    margin-right var(--dur-ui) var(--ease-out);
+}
+
+.sub.is-must .sub-head h3 {
+  color: var(--color-accent);
+}
+
+.sub.is-must .sub-head h3::before {
+  width: 3px;
+  margin-right: 6px;
+}
+
+.must {
+  display: inline-flex;
+  align-items: center;
+  border: var(--rule) solid transparent;
+  border-radius: var(--radius);
+  transition:
+    border-color var(--dur-ui) var(--ease-out),
+    background var(--dur-ui) var(--ease-out);
+}
+
+.must[data-on="1"] {
+  border-color: var(--color-accent);
+  background: color-mix(in oklab, var(--color-accent) 12%, transparent);
+}
+
+.must-add {
+  appearance: none;
+  font: inherit;
+  font-size: var(--text-xs);
+  letter-spacing: 0.06em;
+  min-height: 28px;
+  padding: 0 8px;
+  border: var(--rule) dashed var(--color-rule);
+  border-radius: var(--radius);
+  background: transparent;
+  color: var(--color-neutral);
+  cursor: pointer;
+  touch-action: manipulation;
+  transition:
+    color var(--dur-micro) var(--ease-out),
+    border-color var(--dur-micro) var(--ease-out);
+}
+
+.must-add:hover,
+.must-add:focus-visible {
+  color: var(--color-accent);
+  border-color: var(--color-accent);
+  border-style: solid;
+}
+
+.must-step {
+  appearance: none;
+  font: inherit;
+  font-size: var(--text-sm);
+  line-height: 1;
+  width: 26px;
+  min-height: 28px;
+  padding: 0;
+  border: 0;
+  background: transparent;
+  color: var(--color-accent);
+  cursor: pointer;
+  touch-action: manipulation;
+  transition: background var(--dur-micro) var(--ease-out);
+}
+
+.must-step:hover:not(:disabled) {
+  background: color-mix(in oklab, var(--color-accent) 22%, transparent);
+}
+
+.must-step:disabled {
+  opacity: 0.35;
+  cursor: default;
+}
+
+.must-n {
+  font-size: var(--text-xs);
+  font-weight: 500;
+  letter-spacing: 0.04em;
+  color: var(--color-accent);
+  font-variant-numeric: tabular-nums;
+  white-space: nowrap;
+  padding: 0 2px;
+}
+
+.card .warn.must-miss {
+  color: var(--color-accent-2);
+}
+
+/* —— 桅杆上的齒輪 —— */
+
+.tg-btn {
+  position: relative;
+  width: 44px;
+  padding: 0;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.tg-btn svg {
+  width: 18px;
+  height: 18px;
+}
+
+.tg-dot {
+  position: absolute;
+  top: 7px;
+  right: 7px;
+  width: 7px;
+  height: 7px;
+  border-radius: 99px;
+  background: transparent;
+  transition: background var(--dur-ui) var(--ease-out);
+}
+
+.tg-dot[data-on="1"] {
+  background: var(--color-ok);
+  box-shadow: 0 0 0 2px var(--color-paper);
+}
+
+/* 送出去的那張，圖角落蓋一枚紙飛機 */
+.tg-mark {
+  position: absolute;
+  right: var(--space-2);
+  bottom: var(--space-2);
+  z-index: 4;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 22px;
+  height: 22px;
+  border-radius: 99px;
+  color: var(--color-paper);
+  background: color-mix(in oklab, var(--color-ok) 88%, var(--color-paper));
+  animation: tg-land var(--dur-move) var(--ease-out) both;
+}
+
+.tg-mark svg {
+  width: 13px;
+  height: 13px;
+}
+
+@keyframes tg-land {
+  from {
+    opacity: 0;
+    transform: translate(6px, -6px) scale(0.8);
+  }
+  to {
+    opacity: 1;
+    transform: none;
+  }
+}
+
+/* —— Telegram 設定面板 —— */
+
+.tg-modal {
+  position: fixed;
+  inset: 0;
+  z-index: 150;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: var(--space-5);
+  padding-top: max(var(--space-5), env(safe-area-inset-top));
+  padding-bottom: max(var(--space-5), env(safe-area-inset-bottom));
+  background: color-mix(in oklab, var(--color-paper) 78%, transparent);
+  backdrop-filter: blur(6px);
+  opacity: 0;
+  visibility: hidden;
+  pointer-events: none;
+}
+
+.tg-modal.open {
+  opacity: 1;
+  visibility: visible;
+  pointer-events: auto;
+  transition: opacity var(--dur-ui) var(--ease-out);
+}
+
+.tg-modal.open.is-closing {
+  opacity: 0;
+  pointer-events: none;
+  transition: opacity var(--dur-micro) var(--ease-in);
+}
+
+.tg-inner {
+  width: min(520px, 100%);
+  max-height: 100%;
+  display: flex;
+  flex-direction: column;
+  background: var(--color-paper-2);
+  border: var(--rule) solid var(--color-rule);
+  border-radius: var(--radius);
+  box-shadow: 0 32px 90px -40px oklch(0% 0 0 / 0.9);
+  transform: translateY(10px) scale(0.985);
+  opacity: 0;
+}
+
+.tg-modal.open .tg-inner {
+  transform: none;
+  opacity: 1;
+  transition:
+    transform var(--dur-move) var(--ease-out),
+    opacity var(--dur-ui) var(--ease-out);
+}
+
+.tg-modal.open.is-closing .tg-inner {
+  transform: translateY(6px) scale(0.99);
+  opacity: 0;
+  transition:
+    transform var(--dur-micro) var(--ease-in),
+    opacity var(--dur-micro) var(--ease-in);
+}
+
+.tg-head {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: var(--space-3);
+  padding: var(--space-4) var(--space-4) var(--space-3);
+  border-bottom: var(--rule) solid var(--color-rule);
+}
+
+.tg-head h2 {
+  margin: 0;
+  font-family: var(--font-display);
+  font-size: var(--text-md);
+  line-height: 1.2;
+}
+
+.tg-state {
+  margin: var(--space-1) 0 0;
+  font-size: var(--text-xs);
+  color: var(--color-muted);
+  overflow-wrap: anywhere;
+}
+
+.tg-state[data-ok="1"] {
+  color: var(--color-ok);
+}
+
+.tg-close {
+  width: 38px;
+  min-height: 38px;
+  padding: 0;
+  flex: 0 0 auto;
+}
+
+.tg-body {
+  padding: var(--space-4);
+  overflow-y: auto;
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-4);
+}
+
+.tg-field {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-1);
+}
+
+.tg-field > span {
+  font-size: var(--text-sm);
+  color: var(--color-muted);
+}
+
+.tg-field input {
+  font: inherit;
+  font-family: var(--font-outlier);
+  font-size: var(--text-sm);
+  min-height: 44px;
+  padding: 0 var(--space-3);
+  border: var(--rule) solid var(--color-rule);
+  border-radius: var(--radius);
+  background: var(--color-paper);
+  color: var(--color-ink);
+}
+
+.tg-field input:focus-visible {
+  outline: 2px solid var(--color-focus);
+  outline-offset: 1px;
+}
+
+.tg-field em {
+  font-style: normal;
+  font-size: var(--text-xs);
+  color: var(--color-neutral);
+  line-height: 1.45;
+}
+
+.tg-field code {
+  font-family: var(--font-outlier);
+  color: var(--color-muted);
+}
+
+.same-switch.tg-switch {
+  flex: 1 1 auto;
+}
+
+.same-switch.tg-switch.is-on {
+  border-color: var(--color-ok);
+  background: color-mix(in oklab, var(--color-ok) 14%, var(--color-paper-2));
+}
+
+.same-switch.tg-switch.is-on .same-knob {
+  background: var(--color-ok);
+}
+
+.tg-actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--space-2);
+  align-items: center;
+}
+
+.tg-msg {
+  margin: 0;
+  min-height: 1.2em;
+  font-size: var(--text-xs);
+  color: var(--color-muted);
+  overflow-wrap: anywhere;
+}
+
+.tg-msg[data-kind="ok"] {
+  color: var(--color-ok);
+}
+
+.tg-msg[data-kind="err"] {
+  color: var(--color-danger);
+}
+
+.tg-stats {
+  display: grid;
+  grid-template-columns: auto 1fr;
+  gap: var(--space-1) var(--space-3);
+  margin: 0;
+  padding-top: var(--space-3);
+  border-top: var(--rule) solid var(--color-rule);
+  font-size: var(--text-xs);
+}
+
+.tg-stats dt {
+  color: var(--color-neutral);
+  white-space: nowrap;
+}
+
+.tg-stats dd {
+  margin: 0;
+  color: var(--color-ink);
+  font-variant-numeric: tabular-nums;
+  overflow-wrap: anywhere;
+}
+
+.tg-stats .tg-err {
+  color: var(--color-danger);
+}
+
+@media (max-width: 640px) {
+  .must-add,
+  .must-step {
+    min-height: 36px;
+  }
+
+  .must-step {
+    width: 34px;
+  }
+
+  .tg-inner {
+    width: 100%;
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .same-switch.inf-switch.is-on .same-knob i,
+  .same-switch.inf-switch.is-on::after {
+    animation: none;
+  }
+
+  .same-switch.inf-switch.is-on::after {
+    width: 100%;
+    opacity: 0.7;
+  }
+
+  .tg-mark {
+    animation: none;
+  }
+
+  .tg-inner,
+  .tg-modal.open .tg-inner,
+  .tg-modal.open.is-closing .tg-inner {
+    transition: none;
+    transform: none;
+  }
+}
