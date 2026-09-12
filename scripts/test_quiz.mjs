@@ -4,6 +4,7 @@ import { readFileSync } from "fs";
 import { dirname, join } from "path";
 import { fileURLToPath } from "url";
 import { defaultSettings, drawOne, indexLexicon, mulberry32 } from "../web/engine.js";
+import { emptyRecord, heatsFor, load, recordRun, sanitizeRecord, save, STORE_KEY } from "../game/store.js";
 import {
   ANSWER_COUNT,
   ANSWER_SECTIONS,
@@ -163,6 +164,56 @@ const sample = draws(200);
   const a = makeQuestion(lex, draw, mulberry32(77), banlist);
   const b = makeQuestion(lex, draw, mulberry32(77), banlist);
   ok("the same seed gives the identical question", JSON.stringify(a) === JSON.stringify(b));
+}
+
+{
+  ok("a fresh record is all zeroes on mixed",
+    JSON.stringify(emptyRecord()) === JSON.stringify({ best: 0, bestStreak: 0, heatPreset: "mixed" }));
+
+  const junk = sanitizeRecord({ best: "abc", bestStreak: -4, heatPreset: "banana" });
+  ok("garbage sanitizes to a usable record",
+    JSON.stringify(junk) === JSON.stringify({ best: 0, bestStreak: 0, heatPreset: "mixed" }), JSON.stringify(junk));
+  ok("null sanitizes too", JSON.stringify(sanitizeRecord(null)) === JSON.stringify(emptyRecord()));
+
+  const kept = sanitizeRecord({ best: 12.7, bestStreak: 3, heatPreset: "sex" });
+  ok("real values survive and floor",
+    JSON.stringify(kept) === JSON.stringify({ best: 12, bestStreak: 3, heatPreset: "sex" }), JSON.stringify(kept));
+
+  const one = recordRun(emptyRecord(), { score: 9, streak: 2 });
+  ok("a first run sets both records", one.best === 9 && one.bestStreak === 2, JSON.stringify(one));
+  const worse = recordRun(one, { score: 3, streak: 5 });
+  ok("only the better half of a run moves", worse.best === 9 && worse.bestStreak === 5, JSON.stringify(worse));
+  ok("recordRun keeps the heat preference",
+    recordRun({ ...one, heatPreset: "tease" }, { score: 1, streak: 1 }).heatPreset === "tease");
+
+  ok("mixed means three heats", JSON.stringify(heatsFor("mixed")) === JSON.stringify(["tease", "flash", "sex"]));
+  ok("a single preset means one heat", JSON.stringify(heatsFor("tease")) === JSON.stringify(["tease"]));
+
+  const mem = new Map();
+  const fake = {
+    getItem: (k) => (mem.has(k) ? mem.get(k) : null),
+    setItem: (k, v) => mem.set(k, v),
+  };
+  ok("loading empty storage gives a fresh record",
+    JSON.stringify(load(fake)) === JSON.stringify(emptyRecord()));
+  save(fake, { best: 5, bestStreak: 2, heatPreset: "flash" });
+  ok("what was saved comes back",
+    JSON.stringify(load(fake)) === JSON.stringify({ best: 5, bestStreak: 2, heatPreset: "flash" }), mem.get(STORE_KEY));
+  mem.set(STORE_KEY, "{not json");
+  ok("corrupt storage does not throw", JSON.stringify(load(fake)) === JSON.stringify(emptyRecord()));
+
+  const dead = {
+    getItem: () => {
+      throw new Error("blocked");
+    },
+    setItem: () => {
+      throw new Error("blocked");
+    },
+  };
+  ok("storage that throws does not take the game down",
+    JSON.stringify(load(dead)) === JSON.stringify(emptyRecord()));
+  save(dead, emptyRecord());
+  ok("saving into blocked storage is silent", true);
 }
 
 if (failed) {
