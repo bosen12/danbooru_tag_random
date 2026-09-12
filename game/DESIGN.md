@@ -34,7 +34,7 @@ start-game.bat      WEB_DIR=game  PORT=8791
 
 | 模組 | 做什麼 | 介面 | 依賴 |
 |---|---|---|---|
-| `quiz.js` | 把一次抽牌結果變成一道題 | `makeQuestion(lex, draw, rand, banlist) → {answers, choices} \| null` | 只有 `engine.js`，不碰 DOM、不碰網路 |
+| `quiz.js` | 把一次抽牌結果變成一道題 | `makeQuestion(lex, draw, rand, banlist) → {answers, choices} \| null` | **零 import**。只吃 `indexLexicon()` 的產物，不碰 DOM、不碰網路 |
 | `queue.js` | 維持背景有一題生好等著 | `start(settings)` / `next() → Promise<{draw, image}>` / `abort()` | 只有 `fetch`，不懂遊戲規則 |
 | `main.js` | 狀態機與畫面 | — | 前兩者 |
 
@@ -55,9 +55,16 @@ start-game.bat      WEB_DIR=game  PORT=8791
 
 一個 tag 要有資格當答案，必須：
 
-- 不在黑名單裡。黑名單 = `unguessable.json`（手動維護，擋 `soft lighting` 這種看不出來的）
-  加上 `ERAS`（`modern`、`medieval` 這些年代 tag 會出現在 `env`，但不是畫面上能指認的東西）
-- **至少有三個互斥同類**（`mutexSiblings`），且那些同類都不在這張圖抽中的 tag 裡
+- **至少有三個互斥同類**，且那些同類都不在這張圖抽中的 tag 裡
+- 不在 `unguessable.json` 的黑名單裡
+
+互斥同類直接讀 `indexLexicon()` 建好的 `lex.siblings`（`mutexSiblings()` 只是它的包裝），
+所以 `quiz.js` 一個 import 都不需要——這讓它在 node 測試裡能直接跑，不必處理
+`game/` 靠 server fallback 拿 `engine.js` 的路徑問題。
+
+「三個互斥同類」這條規則順帶解決了非視覺 tag：`soft lighting` 根本不是詞庫裡的 tag
+（`drawOne` 直接塞進每張圖的 `env`），`modern` 這類年代 tag 的 `mutex` 是 `null`，
+兩者的同類數都是 0，自動出局。所以黑名單是安全閥，不是主力——出到爛題再往裡面加。
 
 三個答案彼此不能有 `implies` / `bind` 關係，否則等於送分或重複。
 
@@ -111,7 +118,7 @@ Comfy 負擔最低，同時開排字匣生圖也不會互相搶。
 - 沒有任何干擾項出現在該圖抽中的 tag 裡（那會變成第二個正解）
 - 沒有任何干擾項跟任一正解有 `implies` / `bind` 關聯
 - 正解彼此無 `implies` / `bind` 關聯
-- 正解都不在黑名單裡
+- 正解都不在黑名單裡，且 `soft lighting` 永遠不會被選為正解或干擾項
 - 同一顆 seed 出的題完全一樣（洗牌吃 `rand`，不吃 `Math.random`）
 
 純函式不碰 Comfy，秒跑完。Comfy 整合、SSE 預覽、佇列時序靠手動開一局確認。
