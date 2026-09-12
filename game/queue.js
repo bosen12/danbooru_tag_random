@@ -1,7 +1,7 @@
 /** 生圖佇列：背景永遠預先生好下一題。只管網路，不懂遊戲規則。 */
 
-export const GEN_WIDTH = 832;
-export const GEN_HEIGHT = 1216;
+export const GEN_WIDTH = 1024;
+export const GEN_HEIGHT = 1024;
 export const MAX_ATTEMPTS = 20;
 
 export async function* sseEvents(res) {

@@ -17,7 +17,7 @@
 - 沒有 `package.json`，所以**不准引入任何 npm 套件**，測試也不行。
 - `quiz.js` **零 import**：只吃 `indexLexicon()` 的產物。這是它能在 node 測試裡跑的前提——`game/engine.js` 在檔案系統上不存在，只有 server 跑起來時才被 fallback 出來。
 - 介面中文，`<html lang="zh-Hant">`。tag 顯示中文，hover 出英文。
-- 圖片固定 **832×1216**，預抽深度 **1 題**。
+- 圖片固定 **1024×1024**，預抽深度 **1 題**。
 - 三條命、三個答案、十二個候選：`ANSWER_COUNT = 3`、`DISTRACTORS_PER_ANSWER = 3`、`CHOICE_COUNT = 12`。
 - 洗牌一律吃傳入的 `rand`，**不准用 `Math.random()`**——同一顆 seed 必須出一樣的題。
 - 新測試掛進 `test.bat`，跟 `test_engine.mjs` 並列。
@@ -632,7 +632,7 @@ git commit -m "Keep the best score and streak in the browser."
 **Interfaces:**
 - Consumes: 無（`makeRound` 跟 `generateImpl` 都從外面注入，所以測得動）
 - Produces:
-  - `GEN_WIDTH: 832`、`GEN_HEIGHT: 1216`、`MAX_ATTEMPTS: 20`
+  - `GEN_WIDTH: 1024`、`GEN_HEIGHT: 1024`、`MAX_ATTEMPTS: 20`
   - `sseEvents(res) → AsyncGenerator<{event: string, data: object}>`
   - `generate(positive, {onEvent, signal, fetchImpl}) → Promise<{ok, image, seed, positive, width, height, ckpt}>`
   - `createQueue({makeRound, onEvent, generateImpl}) → {prime(), take()}`
@@ -747,8 +747,8 @@ Expected: `ERR_MODULE_NOT_FOUND` — 找不到 `game/queue.js`。
 ```js
 /** 生圖佇列：背景永遠預先生好下一題。只管網路，不懂遊戲規則。 */
 
-export const GEN_WIDTH = 832;
-export const GEN_HEIGHT = 1216;
+export const GEN_WIDTH = 1024;
+export const GEN_HEIGHT = 1024;
 export const MAX_ATTEMPTS = 20;
 
 export async function* sseEvents(res) {
@@ -1056,7 +1056,7 @@ body {
 
 .shot-wrap {
   position: relative;
-  aspect-ratio: 832 / 1216;
+  aspect-ratio: 1 / 1;
   max-height: 62vh;
   background: var(--color-paper-2);
   border: var(--rule) solid var(--color-rule);

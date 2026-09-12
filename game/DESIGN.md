@@ -107,7 +107,9 @@ start-game.bat      WEB_DIR=game  PORT=8791
 開場一排按鈕選 heat（`tease` / `flash` / `sex` / `mixed`），預設 `mixed`，跟主工具的
 `heatPreset` 同一套語彙。其餘抽牌設定用 `defaultSettings()`，不另開介面。
 
-圖片固定 832×1216（直幅，人物構圖好看且比 1024² 快）。預抽深度 1 題——
+圖片固定 **1024×1024**。方形是 SDXL 的原生尺寸，也是 `lexicon.json` 的 `defaults`。
+而且在寬螢幕上 `object-fit: cover` 露得比直幅多——832×1216 只看得到 43%，方形是 62.5%，
+像素量卻幾乎一樣（101 萬 vs 105 萬），不會變慢。預抽深度 1 題——
 Comfy 負擔最低，同時開排字匣生圖也不會互相搶。
 
 ## 錯誤處理

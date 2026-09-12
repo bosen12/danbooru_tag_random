@@ -89,7 +89,7 @@ body {
   width: 100%;
   height: 100%;
   object-fit: cover;
-  object-position: center 22%;
+  object-position: center 30%;
   display: block;
   opacity: calc(0.18 + var(--dev) * 0.82);
   filter: blur(calc((1 - var(--dev)) * 38px)) saturate(calc(0.1 + var(--dev) * 0.9))
@@ -710,10 +710,6 @@ body {
 /* ── 窄螢幕 ─────────────────────────────────────────── */
 
 @media (max-width: 620px) {
-  .print-img {
-    object-position: center 18%;
-  }
-
   .dial-step {
     padding: 12px 11px 10px;
     font-size: 13px;
