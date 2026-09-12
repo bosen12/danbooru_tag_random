@@ -4,6 +4,7 @@ import { readFileSync } from "fs";
 import { dirname, join } from "path";
 import { fileURLToPath } from "url";
 import { defaultSettings, drawOne, indexLexicon, mulberry32 } from "../web/engine.js";
+import { createQueue, generate, sseEvents } from "../game/queue.js";
 import { emptyRecord, heatsFor, load, recordRun, sanitizeRecord, save, STORE_KEY } from "../game/store.js";
 import {
   ANSWER_COUNT,
@@ -214,6 +215,89 @@ const sample = draws(200);
     JSON.stringify(load(dead)) === JSON.stringify(emptyRecord()));
   save(dead, emptyRecord());
   ok("saving into blocked storage is silent", true);
+}
+
+{
+  function sseRes(frames, status = 200) {
+    const body = new ReadableStream({
+      start(c) {
+        const enc = new TextEncoder();
+        const all = frames
+          .map(([e, d]) => `event: ${e}
+data: ${JSON.stringify(d)}
+
+`)
+          .join("");
+        // 故意切在奇怪的位置，確認跨 chunk 的解析
+        for (let i = 0; i < all.length; i += 7) c.enqueue(enc.encode(all.slice(i, i + 7)));
+        c.close();
+      },
+    });
+    return { ok: status === 200, status, body };
+  }
+
+  const got = [];
+  for await (const ev of sseEvents(
+    sseRes([
+      ["queued", { seed: 5 }],
+      ["progress", { value: 3, max: 25 }],
+      ["done", { ok: true, image: "/api/image?x=1", seed: 5 }],
+    ])
+  )) {
+    got.push(ev.event);
+  }
+  ok("parses events split across chunk boundaries",
+    JSON.stringify(got) === JSON.stringify(["queued", "progress", "done"]), JSON.stringify(got));
+
+  const seen = [];
+  const job = await generate("1girl", {
+    fetchImpl: async () =>
+      sseRes([
+        ["progress", { value: 1, max: 25 }],
+        ["done", { ok: true, image: "/api/image?x=2", seed: 9 }],
+      ]),
+    onEvent: (e) => seen.push(e),
+  });
+  ok("generate resolves with the done payload", job.image === "/api/image?x=2" && job.seed === 9, JSON.stringify(job));
+  ok("generate reports progress on the way", seen.includes("progress"), JSON.stringify(seen));
+
+  let threw = null;
+  try {
+    await generate("1girl", { fetchImpl: async () => sseRes([["error", { error: "Comfy boom" }]]) });
+  } catch (err) {
+    threw = err;
+  }
+  ok("an error event rejects", threw !== null && /Comfy boom/.test(threw.message), String(threw));
+
+  let made = 0;
+  let gen = 0;
+  const q = createQueue({
+    makeRound: () => {
+      made += 1;
+      return made === 1 ? null : { draw: { positive: "t" + made }, n: made };
+    },
+    generateImpl: async () => {
+      gen += 1;
+      return { image: "/img" + gen, seed: gen };
+    },
+  });
+  const first = await q.take();
+  ok("a null round costs a makeRound call but no generation",
+    first.n === 2 && made === 3 && gen === 2, `n=${first.n} made=${made} gen=${gen}`);
+  const second = await q.take();
+  ok("the primed round comes back without a fresh wait", second.n === 3, `n=${second.n}`);
+
+  let tries = 0;
+  const flaky = createQueue({
+    makeRound: () => ({ draw: { positive: "x" } }),
+    generateImpl: async () => {
+      tries += 1;
+      if (tries < 3) throw new Error("comfy down");
+      return { image: "/ok", seed: 1 };
+    },
+  });
+  const round = await flaky.take();
+  ok("a failed generation retries instead of surfacing", round.image === "/ok" && tries >= 3, `tries=${tries}`);
 }
 
 if (failed) {
