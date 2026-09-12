@@ -4,6 +4,11 @@
   box-sizing: border-box;
 }
 
+/* .card 設了 display: flex，會蓋掉瀏覽器預設的 [hidden] { display: none }。 */
+[hidden] {
+  display: none !important;
+}
+
 body {
   margin: 0;
   background: var(--color-paper);
