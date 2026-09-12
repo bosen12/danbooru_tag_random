@@ -48,21 +48,31 @@ start-game.bat      WEB_DIR=game  PORT=8791
 
 ### 答案資格
 
-- 只從 `subject` / `feature` / `pose` / `clothing` / `env` 挑；`quality` / `style` / `nsfwTail` 不當答案
-- 不在 `unguessable.json` 裡。這份黑名單擋的是「圖上看不出來」的 tag（`soft lighting`、`masterpiece` 這類），手動維護
-- 三個答案優先落在三個不同 section；某 section 沒有合格 tag 時才允許重複，避免整題都在問衣服
-- 三個答案彼此不能有 `implies` 關係，否則等於送分或重複
+只從 `feature` / `pose` / `clothing` / `env` 四個 section 挑，三個答案落在三個不同 section。
+
+`subject` 不當答案——它只有 13 個 tag，而且幾乎每張圖都是 `1girl` + `solo`，猜了是送分。
+`quality` / `style` / `nsfwTail` 同樣不當答案，它們不是畫面內容。
+
+一個 tag 要有資格當答案，必須：
+
+- 不在黑名單裡。黑名單 = `unguessable.json`（手動維護，擋 `soft lighting` 這種看不出來的）
+  加上 `ERAS`（`modern`、`medieval` 這些年代 tag 會出現在 `env`，但不是畫面上能指認的東西）
+- **至少有三個互斥同類**（`mutexSiblings`），且那些同類都不在這張圖抽中的 tag 裡
+
+三個答案彼此不能有 `implies` / `bind` 關係，否則等於送分或重複。
 
 ### 干擾項
 
-優先取 `mutexSiblings(lex, answer)`。互斥代表不可能跟答案同時成立，所以保證是錯的。
-不足時從同 section 隨機補，但要排除：
+三個干擾項**全部**取自該答案的 `mutexSiblings`。互斥代表不可能跟答案同時成立，
+所以每一個都是保證錯的，不需要「同 section 隨機補」這條後備路徑。
 
-- 這張圖實際抽中的任何 tag（會變成第二個正解）
-- 與任一答案有 `implies` / `bind` 關係的 tag（語意上等於對）
-- 已經被選為其他候選的 tag
+實測 300 次真實抽牌，每一次都有至少三個 section 湊得出合格答案
+（平均可選數：`feature` 4.7、`pose` 4.9、`clothing` 3.6、`env` 2.2）。
+所以 `null` 是安全閥而不是常態。真的湊不滿就回 `null`，佇列丟掉重抽，玩家不會察覺。
 
-湊不滿十二個就回 `null`，佇列丟掉這題重抽。玩家不會察覺。
+最後一道檢查：任何干擾項都不能跟**任一個**答案有關聯。
+`mutexSiblings` 已經保證它跟自己那個答案無關，但跨答案的碰撞要另外擋，
+撞到就整題作廢回 `null`。
 
 ## 判定與計分
 
@@ -97,10 +107,12 @@ Comfy 負擔最低，同時開排字匣生圖也不會互相搶。
 新增 `scripts/test_quiz.mjs`，掛進 `test.bat` 的 node 段。餵真實 lexicon 跑幾百次出題，斷言：
 
 - 正解恰三個、候選恰十二個
-- 每個正解都在該圖實際抽中的 tag 裡
-- 沒有任何干擾項是正解，也沒有干擾項出現在該圖抽中的 tag 裡
-- 正解彼此無 `implies` 關係
-- 正解都不在 `unguessable.json` 裡
+- 每個正解都在該圖實際抽中的 tag 裡，且分屬三個不同 section
+- 沒有任何干擾項出現在該圖抽中的 tag 裡（那會變成第二個正解）
+- 沒有任何干擾項跟任一正解有 `implies` / `bind` 關聯
+- 正解彼此無 `implies` / `bind` 關聯
+- 正解都不在黑名單裡
+- 同一顆 seed 出的題完全一樣（洗牌吃 `rand`，不吃 `Math.random`）
 
 純函式不碰 Comfy，秒跑完。Comfy 整合、SSE 預覽、佇列時序靠手動開一局確認。
 
