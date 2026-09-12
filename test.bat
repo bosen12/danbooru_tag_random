@@ -24,6 +24,12 @@ if errorlevel 1 (
   pause
   exit /b 1
 )
+echo == quiz ==
+call node scripts\test_quiz.mjs
+if errorlevel 1 (
+  pause
+  exit /b 1
+)
 echo == server ==
 %PY% scripts\test_server.py
 if errorlevel 1 (
