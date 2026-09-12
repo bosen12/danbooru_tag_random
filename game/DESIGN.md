@@ -56,7 +56,8 @@ start-game.bat      WEB_DIR=game  PORT=8791
 一個 tag 要有資格當答案，必須：
 
 - **至少有三個互斥同類**，且那些同類都不在這張圖抽中的 tag 裡
-- 不在 `unguessable.json` 的黑名單裡
+- 不在 `unguessable.json` 的黑名單裡。黑名單有兩層：`tags` 擋單一 tag，
+  `groups` 擋整個 mutex 群組（用 `lex.mutexOf` 展開成 tag，所以其餘程式碼不用改）
 
 互斥同類直接讀 `indexLexicon()` 建好的 `lex.siblings`（`mutexSiblings()` 只是它的包裝），
 所以 `quiz.js` 一個 import 都不需要——這讓它在 node 測試裡能直接跑，不必處理
@@ -64,7 +65,16 @@ start-game.bat      WEB_DIR=game  PORT=8791
 
 「三個互斥同類」這條規則順帶解決了非視覺 tag：`soft lighting` 根本不是詞庫裡的 tag
 （`drawOne` 直接塞進每張圖的 `env`），`modern` 這類年代 tag 的 `mutex` 是 `null`，
-兩者的同類數都是 0，自動出局。所以黑名單是安全閥，不是主力——出到爛題再往裡面加。
+兩者的同類數都是 0，自動出局。
+
+**為什麼黑名單要能擋群組。** 干擾項全部來自同一個 mutex 群，所以群組裡要是塞了一堆
+近義詞，出來的題就是刁難而不是考驗。`day_night` 就是這種：六個成員裡
+傍晚／日落／日出／黃昏都是同一種暖光，人眼分不出來。擋掉整個群組一行解決，
+擋單一 tag 沒用——擋掉黃昏，下次就換傍晚當答案、黃昏當干擾項。
+
+其他常出題的群組實測都很健康：`hair_color`、`eye_color`、`body_pose`、`place`、
+`camera`、`top` / `bottom` / `onepiece` 的成員視覺上都分得開。`expression`、
+`breast_size`、`hair_length` 是漸層型（微笑 vs 淺笑），先留著，打到覺得煩再加進 `groups`。
 
 三個答案彼此不能有 `implies` / `bind` 關係，否則等於送分或重複。
 
