@@ -135,6 +135,27 @@ const AWAKE_ACT = new Set([
   "diving",
   "weightlifting",
 ]);
+/**
+ * 同一個概念的兩種寫法。詞庫兩個都留著是刻意的 —— 同一個概念有兩張抽獎券，
+ * 雙人情境要的就是這個加權 —— 但最後只該吐一個字出來。提示詞本來就超過 75 token，
+ * 同義詞佔兩格純粹是白費。
+ *
+ * 這裡只放真的是別名的。general/specific 的父子對（extreme close-up → close-up、
+ * high ponytail → ponytail）不算重複，Danbooru 本來就那樣疊，交給 parentChild()。
+ */
+const SYNONYM_GROUPS = [
+  new Set(["panting", "heavy breathing"]),
+  new Set(["kissing", "kiss"]),
+];
+
+function synonymClash(tag, used) {
+  for (const g of SYNONYM_GROUPS) {
+    if (!g.has(tag)) continue;
+    for (const t of used) if (t !== tag && g.has(t)) return true;
+  }
+  return false;
+}
+
 const FACELESS_CAM = new Set(["head out of frame", "lower body"]);
 const FACE_NEED_TAGS = new Set([
   "closed eyes",
@@ -2586,6 +2607,8 @@ export function drawOne(lex, settings, pinned, userBanned, rand, seed) {
   };
   allow = (item, opts) => {
     if (banned.has(item.tag) || used.has(item.tag)) return false;
+    // 同義詞只留一個。這條天生對稱 —— 不管誰先進場，後來那個都會被擋。
+    if (synonymClash(item.tag, used)) return false;
     // 裸手性愛是單人 sex 場景的主要可用活動；非運動情境不要隨機抽入拳擊手套
     // 把整個 sex_act 槽堵死。使用者或拳擊 preset 明確釘選時仍完整尊重。
     if (item.tag === "boxing gloves" && heat === "sex" && !pinned.has(item.tag)) return false;

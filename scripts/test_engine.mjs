@@ -6009,6 +6009,41 @@ function indoorOutdoorClash(have) {
   ok("父子相依：無關的忙手活動仍然互斥", clash === 0, why);
 }
 
+// --- 同一個概念不要吐兩個字 -------------------------------------------------
+// panting 和 heavy breathing 在 Danbooru 是別名，kiss 和 kissing 也是。詞庫兩個
+// 都留著是刻意的 —— 那等於給同一個概念兩張抽獎券，雙人情境要的就是這個加權。
+// 但最後只該吐一個字出來：提示詞本來就超過 75 token，同義詞佔兩格是白費。
+{
+  const s = defaultSettings(data);
+  s.girl = true;
+  s.boy = true;
+  s.heats = ["activity", "tease", "flash", "sex"];
+  s.counts = { subject: 10, feature: 10, pose: 10, clothing: 10, env: 10 };
+  const PAIRS = [
+    ["panting", "heavy breathing"],
+    ["kissing", "kiss"],
+  ];
+  const both = new Map();
+  const each = new Map();
+  for (let i = 1; i <= 3000; i++) {
+    const got = tagsOf(drawOne(lex, s, new Set(), new Set(), mulberry32(i), i));
+    for (const [a, b] of PAIRS) {
+      if (got.has(a)) each.set(a, (each.get(a) || 0) + 1);
+      if (got.has(b)) each.set(b, (each.get(b) || 0) + 1);
+      if (got.has(a) && got.has(b)) both.set(`${a}+${b}`, (both.get(`${a}+${b}`) || 0) + 1);
+    }
+  }
+  for (const [a, b] of PAIRS) {
+    ok(`同義詞：「${a}」和「${b}」不同時出現`, !both.get(`${a}+${b}`), `3000 張裡 ${both.get(`${a}+${b}`) || 0} 次`);
+    // 護欄：互斥不能把整個概念弄不見，兩個字加起來還是要抽得到。
+    ok(
+      `同義詞：「${a}」/「${b}」這個概念仍然抽得到`,
+      (each.get(a) || 0) + (each.get(b) || 0) > 0,
+      `${a} ${each.get(a) || 0} 次、${b} ${each.get(b) || 0} 次`
+    );
+  }
+}
+
 if (failed) {
   console.error(`\n${failed} failed`);
   process.exit(1);
