@@ -4374,6 +4374,16 @@ export function drawOne(lex, settings, pinned, userBanned, rand, seed) {
   };
 }
 
+/**
+ * 真的會吃「每段目標數」的段。左欄的輸入框照這份清單生成。
+ *
+ * 主體段刻意不在裡面：那一段整段就是卡司（人數、solo、adult），由 chooseCast()
+ * 依 castWeights 決定，drawOne() 從頭到尾沒有 fill("subject")。以前 UI 照樣為它
+ * 畫了一個輸入框，使用者從 0 調到 10 什麼都不會變。要改卡司請用左欄的男／女開關，
+ * 或直接把 1girl／2girls 這類字釘起來。
+ */
+export const QUOTA_SECTIONS = ["feature", "pose", "clothing", "env"];
+
 export const MUST_MAX = 20;
 
 // settings.mustDraw is keyed "section:group" -> how many that group must contribute.

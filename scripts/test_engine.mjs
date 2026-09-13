@@ -10,6 +10,7 @@ import {
   cycleTag,
   defaultSettings,
   contradictions,
+  QUOTA_SECTIONS,
   drawOne,
   ERAS,
   identityPins,
@@ -5904,6 +5905,62 @@ function indoorOutdoorClash(have) {
   for (const [pin, want] of [["tree", "outdoors"], ["tatami", "indoors"], ["against window", "indoors"]]) {
     ok(`in/out 護欄：釘「${pin}」仍抽得到「${want}」`, bothIn(pin, want) > 0);
   }
+}
+
+// --- 「每段目標數」只能列出真的吃這個數字的段 -------------------------------
+// counts.subject 從 0 到 10 一律給出同樣的結果：主體段整段就是卡司（人數、solo、
+// adult），由 chooseCast() 依 castWeights 決定，drawOne 從頭到尾沒有 fill("subject")。
+// 左欄卻為它畫了一個輸入框 —— 使用者調了半天什麼都不會變。
+//
+// 這條測試守的是雙向的：QUOTA_SECTIONS 列出的每一段都必須真的有反應，
+// 沒列出的每一段都必須真的沒反應。UI 由 QUOTA_SECTIONS 生成，所以兩邊不會再漂開。
+{
+  const countSettings = (want) => {
+    const s = defaultSettings(data);
+    s.girl = true;
+    s.boy = true;
+    s.heats = ["activity", "tease", "flash", "sex"];
+    for (const k of Object.keys(s.counts)) s.counts[k] = want;
+    return s;
+  };
+  const perSection = (want, n = 150, seed0 = 820000) => {
+    const s = countSettings(want);
+    const got = {};
+    for (let i = 0; i < n; i++) {
+      const drawn = drawOne(lex, s, new Set(), new Set(), mulberry32(seed0 + i), seed0 + i);
+      for (const t of tagsOf(drawn)) {
+        const sec = lex.byTag.get(t)?.section;
+        if (sec) got[sec] = (got[sec] || 0) + 1;
+      }
+    }
+    for (const k of Object.keys(got)) got[k] /= n;
+    return got;
+  };
+
+  const low = perSection(2);
+  const high = perSection(10);
+  const allSections = Object.keys(defaultSettings(data).counts);
+
+  for (const sec of allSections) {
+    const responds = (high[sec] || 0) > (low[sec] || 0) + 1;
+    const listed = QUOTA_SECTIONS.includes(sec);
+    ok(
+      `counts：「${sec}」${listed ? "列在 QUOTA_SECTIONS，就必須有反應" : "沒列進去，就必須真的沒反應"}`,
+      responds === listed,
+      `counts=2 得 ${(low[sec] || 0).toFixed(2)}，counts=10 得 ${(high[sec] || 0).toFixed(2)}`
+    );
+  }
+
+  ok(
+    "counts：主體段不列入（卡司由 chooseCast 決定，不吃 quota）",
+    !QUOTA_SECTIONS.includes("subject")
+  );
+  ok("counts：QUOTA_SECTIONS 不是空的", QUOTA_SECTIONS.length > 0);
+  ok(
+    "counts：QUOTA_SECTIONS 每一項都是真的 section",
+    QUOTA_SECTIONS.every((s) => allSections.includes(s)),
+    QUOTA_SECTIONS.join(", ")
+  );
 }
 
 if (failed) {

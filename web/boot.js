@@ -8,6 +8,7 @@ import {
   sceneModeOf,
   identityPins,
   isIdentityItem,
+  QUOTA_SECTIONS,
   sanitizeSettings,
   HEATS,
   MIXED_HEATS,
@@ -86,8 +87,9 @@ const SECTIONS = [
   { id: "env", title: "場景", hint: "先室內外、晝夜、地點" },
 ];
 
+// 只列真的吃這個數字的段，清單由 engine.js 的 QUOTA_SECTIONS 決定 —— 主體段是
+// 卡司，由 chooseCast 管，以前在這裡多畫了一個怎麼調都沒反應的輸入框。
 const COUNT_LABELS = {
-  subject: "主體",
   feature: "特徵",
   pose: "姿勢",
   clothing: "服裝",
@@ -208,7 +210,8 @@ async function ping() {
 function renderCounts() {
   const box = $("counts");
   box.replaceChildren();
-  for (const [key, label] of Object.entries(COUNT_LABELS)) {
+  for (const key of QUOTA_SECTIONS) {
+    const label = COUNT_LABELS[key] || key;
     const lab = document.createElement("span");
     lab.textContent = label;
     const input = document.createElement("input");
