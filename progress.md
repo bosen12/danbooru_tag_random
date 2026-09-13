@@ -1,5 +1,18 @@
 # Progress Log
 
+## Session: 2026-09-13 (深度審核收尾：reconcile／quota／weights)
+
+- 三方分工出事：Codex 與 Claude 同時改 `web/engine.js` 與 `scripts/test_engine.mjs`，一棵沒 commit 的樹。室內外那個洞需要兩半（Codex 的 `makeCommit` 讓 imply 鏈走 `allow()`、Claude 的反向 guard 在 `allow()` 裡擋下來），Claude 因為「單獨加沒用」把自己那半退掉，Codex 以為還在 —— `findings.md` 寫「全綠」，實際 12 條紅。停手時把測試 park 起來、事後獨立重跑才抓到。
+- 教訓：並行時先講好檔案邊界，或每完成一小段就 commit 當安全點。
+- reconcile() 孤兒檢查：7200 張 × 14 條前提規則，**零孤兒**（負面結果）。已收成 `scripts/test_draw_contracts.mjs`。
+- 權重／設定邊界：全零、NaN、負數、Infinity、字串、null、陣列、缺鍵全部健壯；`sanitizeSettings()` 是有效護欄。`heats: null` / `counts: null` 會讓 drawOne 丟 TypeError，但查過所有呼叫端（boot.js、game/main.js）都走得到 sanitize，**不可達**，不修。
+- quota 結構乾淨：各 section 只補一次（兩個 `fill("clothing")` 在 gotNude 的互斥分支），`fillSlot("pose","activity")` 三次呼叫都有 mutexTaken 早退。暗示字計入 quota 造成的超額（feature +21%、clothing +23%）已在 README 講明。
+- `counts.env` 修正在合併後的程式碼確認有效：4.31 → 6.04 → 8.12 → 10.19。
+- **未解**：`counts.subject` 從 0 到 10 一律 2.90，完全無作用 —— 和先前的 env 同一個形狀，屬產品語意問題，留給 Codex 裁決。
+- 第三次驗證「人工規格」的價值：孤兒檢查第一版自己錯三條（幫 pool ladder／beach towel 發明了 production 從未宣告的契約、水源漏掉 lotus pond）。若規格從原始碼反射就永遠發現不了。
+- 清掉 `.tmp_baseline_86a3a1b`（46MB，617 檔逐一比對與 86a3a1b 完全相同），並加 `.gitignore` 規則防止再被 `git add -A` 掃進去。
+- 驗收：十三支測試套件全綠。
+
 ## Session: 2026-09-13 (Codex 完成 Claude handoff：方向性與可達性)
 
 - normal/diverse 的明確 pin 場地＋運動器材衝突現在會提示但完整保留；weird 不提示。candidate gate 與 warning 共用 `sportIdsFitPlaces()`，並把既有 cross-sport warning 接到 UI。
