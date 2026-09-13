@@ -9,6 +9,7 @@ import {
   applyPin,
   cycleTag,
   defaultSettings,
+  contradictions,
   drawOne,
   ERAS,
   identityPins,
@@ -55,6 +56,7 @@ import {
   presetState,
   sportHeatWarnings,
   sportPinWarnings,
+  sportPlacePinWarnings,
   clearPresetTags,
   togglePresetTags,
 } from "../web/engine.js";
@@ -4756,8 +4758,8 @@ function indoorOutdoorClash(have) {
     42,
   );
   eq("shadow integration keeps seed 42 POS byte-identical", shadowIntegrationDraw.positive,
-    // 詞庫新增 24 個運動 tag 之後抽牌序列必然改變，這份金標是 2026-09-13 重新產生的。
-    "1girl, solo, adult, very short hair, grey eyes, grey hair, bangs, large breasts, soft breasts, natural breasts, wet, thigh strap, hanging breasts, serafuku, school uniform, track jacket, jacket, cleats, pantyhose, female masturbation, sitting, wide shot, looking at viewer, come hither, licking lips, soft lighting, modern, living room, indoors, night, nsfw, explicit, masterpiece, best quality, amazing quality");
+    // 衣著偏好從硬桶改成軟權重後 RNG 路徑刻意改變；這份金標是 2026-09-13 重新產生的。
+    "1girl, solo, adult, very short hair, grey eyes, grey hair, bangs, large breasts, soft breasts, natural breasts, wet, thigh strap, hanging breasts, naked towel, standing, cowboy shot, averting eyes, angry, fingering, aroused, soft lighting, modern, bubble bath, bath, indoors, night, nsfw, explicit, masterpiece, best quality, amazing quality");
   ok("drawOne exposes shadow diagnostics", Array.isArray(shadowIntegrationDraw.shadowViolations));
 
   const eatProneShadow = validateSupportShadow({
@@ -5436,6 +5438,45 @@ function indoorOutdoorClash(have) {
     ok("cross-sport pins are reported", sportPinWarnings(lex, pins).length > 0);
   }
 
+  // 7b) 使用者自己釘了「運動器材／活動 + 不相容場地」：保留，但正常／多元要提示。
+  {
+    const bad = new Set(["living room", "tennis racket"]);
+    ok(
+      "explicit gear/place conflict is reported in normal mode",
+      sportPlacePinWarnings(lex, bad, { sceneMode: "normal" }).length > 0
+    );
+    ok(
+      "explicit gear/place conflict is reported in diverse mode",
+      sportPlacePinWarnings(lex, bad, { sceneMode: "diverse" }).length > 0
+    );
+    eq(
+      "explicit gear/place conflict is allowed without warning in weird mode",
+      sportPlacePinWarnings(lex, bad, { sceneMode: "weird" }),
+      []
+    );
+    ok(
+      "generic sport activity/place conflict is reported",
+      sportPlacePinWarnings(
+        lex,
+        new Set(["living room", "playing sports"]),
+        { sceneMode: "normal" }
+      ).length > 0
+    );
+    for (const pins of [
+      ["tennis court", "tennis racket"],
+      ["school gym", "badminton racket"],
+      ["running track", "bicycle"],
+      ["school gym", "playing sports"],
+      ["living room", "sneakers"],
+    ]) {
+      eq(
+        `compatible/neutral explicit pins do not warn: ${pins.join(" + ")}`,
+        sportPlacePinWarnings(lex, new Set(pins), { sceneMode: "normal" }),
+        []
+      );
+    }
+  }
+
   // 8) Named preset provenance: only remove what that click actually added.
   {
     const cyclingPreset = byId("cycling");
@@ -5522,6 +5563,282 @@ function indoorOutdoorClash(have) {
       ok(`${id} scene props do not block fingering`, sawFingering > 0, `seen=${sawFingering}`);
     }
   }
+}
+
+// --- 暮光是日夜過渡，不屬於任何一側（Codex 裁決 2026-09-13）------------------
+// sunset / dusk 以前被當成白天側硬擋，而且只補了 dusk 的反向規則，於是
+//   - night market + sunset 漏出去（場地比時間早抽，反向規則不存在）
+//   - sunset + starry sky、dusk + moonlight 這類自然的光線過渡反而被擋掉
+// 正確模型是三類：嚴格白天(DAY_MARK) / 嚴格夜側(NIGHT_MARK) / 過渡(sunset,dusk)，
+// 過渡不參與硬互斥。sunset/dusk/night 本來就同屬 day_night 互斥，不必額外擋。
+{
+  // 環境詞要抽得動才驗得了 sky / light：正常模式不跑 fill("env")。
+  const envSettings = (mode) => {
+    const s = defaultSettings(data);
+    s.girl = true;
+    s.heats = ["activity", "tease", "flash", "sex"];
+    s.sceneMode = mode;
+    s.counts.env = 10;
+    return s;
+  };
+  const seenWith = (pin, want, mode = "weird", n = 300) => {
+    const s = envSettings(mode);
+    for (let i = 1; i <= n; i++) {
+      const got = tagsOf(drawOne(lex, s, new Set([pin]), new Set(), mulberry32(i), i));
+      if (got.has(want)) return i; // 回傳第一個命中的 seed，方便重播
+    }
+    return 0;
+  };
+
+  // 先證明這些字在這個設定下本來就抽得到，否則下面的斷言會空過。
+  ok("twilight control: starry sky 抽得到", seenWith("night", "starry sky") > 0);
+  ok("twilight control: night market 抽得到", seenWith("night", "night market") > 0);
+  ok("twilight control: dusk 抽得到", seenWith("outdoors", "dusk") > 0);
+
+  // 過渡時段和夜側可以共存，而且兩個方向都要通（換順序結果相同）。
+  for (const [pin, want] of [
+    ["night market", "sunset"],
+    ["night market", "dusk"],
+    ["starry sky", "sunset"],
+    ["starry sky", "dusk"],
+    ["moonlight", "sunset"],
+    ["moonlight", "dusk"],
+    ["sunset", "starry sky"],
+    ["dusk", "night market"],
+  ]) {
+    const seed = seenWith(pin, want);
+    ok(`twilight: 釘「${pin}」抽得到「${want}」`, seed > 0,
+      `weird / counts.env=10 / 全熱度，seed 1..300 一次都沒出現`);
+  }
+
+  // 嚴格白天 ↔ 嚴格夜側仍然對稱互斥，暮光的改動不能鬆到這裡。
+  for (const [pin, never] of [
+    ["night market", "day"],
+    ["night market", "sunlight"],
+    ["night market", "blue sky"],
+    ["night", "sunlight"],
+    ["night", "blue sky"],
+    ["day", "starry sky"],
+    ["day", "moonlight"],
+    ["blue sky", "night market"],
+  ]) {
+    const seed = seenWith(pin, never);
+    ok(`day/night: 釘「${pin}」不該抽到「${never}」`, seed === 0,
+      seed ? `seed=${seed} 抽出來了` : "");
+  }
+}
+
+// --- 環境段：counts.env 要真的有作用，且 era:["any"] 不能結構性餓死 -----------
+// （Codex 裁決 2026-09-13 第三輪）
+//
+// 兩個 bug 疊在一起：
+//   1. fill("env") 以前只在非正常模式跑，而正常模式是預設 —— 左欄「環境」那個
+//      數字在預設設定下 2/4/10 給出一模一樣的結果，等於死的 UI。
+//   2. fill() 給 env 的 prefer 是 (eraSpecific && mutex)，而 takeFromPool 的桶
+//      是「抽乾桶 0 才輪到桶 1」。lighting 只有一格，桶 0 一定先把它拿走，於是
+//      light 群裡 10 個 era:["any"] 的字機率恆為 0 —— 不是低，是零。
+//
+// 驗收刻意不鎖死比例：只驗「非零、明顯有差、零 hard conflict」。
+{
+  const envSettings = (over = {}) => {
+    const s = defaultSettings(data);
+    s.girl = true;
+    s.heats = ["activity", "tease", "flash", "sex"];
+    return Object.assign(s, over, { counts: Object.assign({ ...s.counts }, over.counts) });
+  };
+  const runEnv = (over, n = 300, seed0 = 77000) => {
+    const s = envSettings(over);
+    const out = [];
+    for (let i = 0; i < n; i++) {
+      out.push(drawOne(lex, s, new Set(), new Set(), mulberry32(seed0 + i), seed0 + i));
+    }
+    return out;
+  };
+  const envTagsOf = (drawn) =>
+    [...tagsOf(drawn)].filter((t) => lex.byTag.get(t)?.section === "env");
+  const avgEnv = (runs) => runs.reduce((n, d) => n + envTagsOf(d).length, 0) / runs.length;
+
+  const lightsOf = (runs, pick) => {
+    let n = 0;
+    for (const d of runs) {
+      for (const t of tagsOf(d)) {
+        const it = lex.byTag.get(t);
+        if (it && it.group === "light" && pick(it)) n += 1;
+      }
+    }
+    return n;
+  };
+  const eraAny = (it) => (it.era || []).includes("any");
+
+  // 1) 正常模式必須尊重「環境」目標數。不鎖死平均值，只要求明顯有差。
+  const lowN = runEnv({ sceneMode: "normal", counts: { env: 4 } });
+  const highN = runEnv({ sceneMode: "normal", counts: { env: 10 } });
+  const lo = avgEnv(lowN);
+  const hi = avgEnv(highN);
+  ok(
+    "env: 正常模式 counts.env=10 明顯多於 =4",
+    hi > lo + 1.5,
+    `env=4 平均 ${lo.toFixed(2)}，env=10 平均 ${hi.toFixed(2)}`
+  );
+
+  // 2) 多補出來的字不能是靠放寬 gate 換來的：hard invariant 必須全綠。
+  let clash = 0;
+  let firstClash = "";
+  for (const d of highN) {
+    const list = [...tagsOf(d)];
+    const bad = contradictions(lex, list);
+    if (bad.length) {
+      clash += 1;
+      if (!firstClash) firstClash = `seed ${d.seed}：${bad.map((x) => x.join(":")).join(" / ")}`;
+    }
+  }
+  ok("env: 正常模式高 env 不製造矛盾", clash === 0, firstClash);
+
+  // 室內外、日夜這兩條最容易被「多塞幾個」破壞，單獨再驗一次。
+  let envBad = 0;
+  let envBadWhy = "";
+  const DAY = new Set(["day", "sunrise", "sunlight", "sunbathing", "blue sky", "orange sky"]);
+  const NIGHT = new Set(["night", "starry sky", "moonlight", "night market"]);
+  for (const d of highN) {
+    const names = tagsOf(d);
+    const why = [];
+    if (names.has("indoors") && names.has("outdoors")) why.push("indoors+outdoors");
+    const dd = [...names].filter((t) => DAY.has(t));
+    const nn = [...names].filter((t) => NIGHT.has(t));
+    if (dd.length && nn.length) why.push(`${dd.join("+")} 撞 ${nn.join("+")}`);
+    if (why.length) {
+      envBad += 1;
+      if (!envBadWhy) envBadWhy = `seed ${d.seed}：${why.join("、")}`;
+    }
+  }
+  ok("env: 高 env 不打破室內外／日夜", envBad === 0, envBadWhy);
+
+  // 3) counts.env=0 仍要留下必要骨架（場地／室內外／時間），不是整段清空。
+  const zeroN = runEnv({ sceneMode: "normal", counts: { env: 0 } });
+  const hasBones = zeroN.every((d) => {
+    const groups = new Set(envTagsOf(d).map((t) => lex.byTag.get(t).group));
+    return groups.has("place") || groups.has("inout") || groups.has("time");
+  });
+  ok("env: counts.env=0 仍保留必要骨架", hasBones);
+
+  // 4) 同一個 era 裡，era 專屬和 era:["any"] 的燈光都要抽得到（都非零）。
+  const specHits = lightsOf(highN, (it) => !eraAny(it));
+  const anyHits = lightsOf(highN, eraAny);
+  ok("light: era 專屬燈光抽得到", specHits > 0, `${specHits} 次`);
+  ok(
+    "light: era:[any] 燈光抽得到（不再被硬排序餓死）",
+    anyHits > 0,
+    `era 專屬 ${specHits} 次，era=any ${anyHits} 次`
+  );
+
+  // 5) 古代不能冒出只屬於現代的燈光。
+  const MODERN_ONLY = ["spotlight", "neon lights", "ceiling light", "city lights"];
+  for (const era of ["ancient_china", "medieval", "edo"]) {
+    const runs = runEnv({ sceneMode: "normal", eras: [era], counts: { env: 10 } }, 200, 78000);
+    const leak = [];
+    for (const d of runs) {
+      for (const t of tagsOf(d)) if (MODERN_ONLY.includes(t)) leak.push(`${t}@${d.seed}`);
+    }
+    ok(`light: ${era} 不會漏出現代燈光`, leak.length === 0, leak.slice(0, 3).join(", "));
+  }
+}
+
+// --- 運動器材 × 場地：兩個方向都要擋（Codex 2026-09-13 第四輪四類護欄）-------
+// sportPlaceOk() 只在「候選是場地」時擋，所以「場地先定、器材後抽」整個繞過去 ——
+// 正常模式打開 env filler 之後，客廳就抽得到網球拍（網球服先進場給了運動身分，
+// 球拍再跟著合法進來）。sportGearPlaceOk() 補上反向。
+// 兩支都只看 SPORT_GEAR_IDENTITY（活動＋場地＋器材，**不含服裝**），所以
+// 穿網球服待在客廳可以，把球拍放進客廳不行。
+{
+  const sportSettings = (mode) => {
+    const s = defaultSettings(data);
+    s.girl = true;
+    s.boy = true;
+    s.heats = ["activity", "tease", "flash", "sex"];
+    s.sceneMode = mode;
+    s.lockScene = true;
+    s.counts = { subject: 10, feature: 10, pose: 10, clothing: 10, env: 10 };
+    return s;
+  };
+  const hits = (mode, pins, want, n = 200, seed0 = 600000) => {
+    const s = sportSettings(mode);
+    const pinned = new Set(pins);
+    let n1 = 0;
+    for (let i = 1; i <= n; i++) {
+      const got = tagsOf(drawOne(lex, s, pinned, new Set(), mulberry32(seed0 + i), seed0 + i));
+      if (got.has(want)) n1 += 1;
+    }
+    return n1;
+  };
+
+  // 護欄 1：場地先進、器材後抽 —— 正常與多元都不該漏。
+  for (const mode of ["normal", "diverse"]) {
+    for (const [place, gear] of [
+      ["living room", "tennis racket"],
+      ["kitchen", "golf club"],
+      ["classroom", "basketball (object)"],
+      ["bathroom", "bicycle"],
+    ]) {
+      const n = hits(mode, [place], gear);
+      ok(`gear/place ${mode}：釘「${place}」不該抽到「${gear}」`, n === 0, `${n}/200`);
+    }
+  }
+
+  // 護欄 2：器材先進、場地後抽 —— 反方向也要 0（sportPlaceOk 那半邊）。
+  for (const mode of ["normal", "diverse"]) {
+    for (const [gear, place] of [
+      ["tennis racket", "living room"],
+      ["golf club", "kitchen"],
+      ["bicycle", "bathroom"],
+    ]) {
+      const n = hits(mode, [gear], place);
+      ok(`gear/place ${mode}：釘「${gear}」不該抽到「${place}」`, n === 0, `${n}/200`);
+    }
+  }
+
+  // 護欄 3a：奇葩模式本來就放生，不該被這條規則綁住。
+  ok(
+    "gear/place 奇葩：釘「living room」仍抽得到「tennis racket」",
+    hits("weird", ["living room"], "tennis racket") > 0
+  );
+
+  // 護欄 3b：使用者明講要的組合，任何模式都不准靜默刪掉。
+  for (const mode of ["normal", "diverse", "weird"]) {
+    const s = sportSettings(mode);
+    const pinned = new Set(["living room", "tennis racket"]);
+    let kept = 0;
+    for (let i = 1; i <= 60; i++) {
+      const got = tagsOf(drawOne(lex, s, pinned, new Set(), mulberry32(610000 + i), 610000 + i));
+      if (got.has("living room") && got.has("tennis racket")) kept += 1;
+    }
+    ok(
+      `gear/place ${mode}：明確釘的「living room + tennis racket」不被刪`,
+      kept === 60,
+      `只留住 ${kept}/60`
+    );
+  }
+
+  // 護欄 4：共享相容不能被誤殺。
+  // school gym 同時是好幾種室內運動的場地；sports court 也是共享的；
+  // running track 收 track 和 cycling；而純運動服／球鞋是中性的，不該限制場地。
+  for (const [place, gear] of [
+    ["school gym", "volleyball (object)"],
+    ["school gym", "badminton racket"],
+    ["sports court", "tennis racket"],
+    ["running track", "bicycle"],
+    ["tennis court", "tennis racket"],
+  ]) {
+    const n = hits("normal", [place], gear);
+    ok(`gear/place 共享相容：釘「${place}」抽得到「${gear}」`, n > 0, `${n}/200`);
+  }
+  ok(
+    "gear/place：中性運動服不限制場地（釘 sneakers 仍抽得到 living room）",
+    hits("normal", ["sneakers"], "living room") > 0
+  );
+  ok(
+    "gear/place：中性運動服不限制場地（釘 sportswear 仍抽得到 kitchen）",
+    hits("normal", ["sportswear"], "kitchen") > 0
+  );
 }
 
 if (failed) {

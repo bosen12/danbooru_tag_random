@@ -4,10 +4,18 @@
 抽取邏輯盡量完美：引擎自動抽的活動／地點／姿勢／衣著不互相打架。釘選可自相衝突。正常＝現實高機率；多元＝場景＋物理；奇葩＝只物理。
 
 ## Next Step
-Phase 17：重跑完整測試、live Danbooru verifier、UI smoke，再做 pre-push review 與 commit/push。
+Phase 18：完成釘選場所警告、方向性 hard-rule 掃描、zero-hit 衣著族群分析，再跑完整驗證與 commit/push。
 
 ## Current Phase
-Phase 17
+Phase 18
+
+### Phase 18: Claude handoff 裁決後實作
+- [x] 共用運動—場所相容 helper，正常／多元顯示明確釘選衝突 warning；奇葩不警告
+- [x] 系統掃描所有 candidate-vs-used hard rules，依 A/B/C/S 分類並補 confirmed A 的雙向測試
+- [x] 分析 zero-hit 與 clothing family starvation；只修有固定重播證據的缺陷
+- [x] 全套 Node/Python/live verifier/UI smoke
+- [x] 檢查 diff、commit、push，回報與上一個 push 的行為／模擬差異
+- **Status:** done
 
 ### Phase 17: 運動 preset 一致性與無矛盾修正
 - [x] 無效／過新場地與完整 Danbooru inventory

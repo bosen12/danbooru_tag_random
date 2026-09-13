@@ -1,5 +1,44 @@
 # Progress Log
 
+## Session: 2026-09-13 (Codex 完成 Claude handoff：方向性與可達性)
+
+- normal/diverse 的明確 pin 場地＋運動器材衝突現在會提示但完整保留；weird 不提示。candidate gate 與 warning 共用 `sportIdsFitPlaces()`，並把既有 cross-sport warning 接到 UI。
+- 完成 A/B/C/S＋context/authority/phase 掃描；修正 in/out dependency bypass、indian style×amazon position、high heels×水上活動三個確定的單向 hard 漏洞。
+- `makeCommit()` 的依賴改用虛擬來源上下文驗證，恢復 nurse／doctor／scientist／construction worker 及其配件的自動可達性。
+- clothing prefer 從硬桶改為軟權重；fabric group 可自動抽，long sleeves×short sleeves 保持硬互斥。
+- 新增 `audit_tag_reachability.mjs`、`test_clothing_reachability.mjs`、`test_directional_rules.mjs` 並納入 `test.bat`。
+- 17,280 張同設定 A/B：zero-hit 138 -> 62（-76）；clothing 84 -> 8（-76）。探針只做診斷，不把 zero-hit 本身當失敗。
+- 2000 張 invariant audit：12 hard 全綠；soft 暮光夜景 36，僅統計。
+- 完整 engine（含新 12 個 in/out 重播）、2000 張 invariant、clothing reachability、directional rules、Node 其餘六套、Python server/live（含真 HTTP + fake Comfy websocket）全綠；本機 UI 的全部 module 回 200 並正常渲染。刻意改 RNG 分布後 seed-42 金標已更新且重跑通過。
+- 最終提交訊息：`Harden generation invariants and restore tag reachability`。
+
+## Session: 2026-09-13 (tag 抽取稽核：暮光／環境／燈光)
+
+- 三方流程：Opus 提案 → Codex 裁決 → Opus TDD 實作，三輪。全部寫在 `docs/review-request-tag-draw.md`。
+- 暮光：`sunset`/`dusk` 以前被當白天側硬擋卻只補了 dusk 的反向規則。Codex 裁定暮光是日夜過渡、兩側相容，刪掉額外硬擋。紅 5 條 → 19 條全綠。
+- 環境：`fill("env")` 以前只在非正常模式跑，而正常模式是預設 → 左欄「環境」2/4/10 給出一模一樣的結果，是死的控制項。改成無條件執行。
+- 燈光：`fill()` 給 env 的 prefer 是 `(eraSpecific && mutex)`，而 takeFromPool 是「抽乾桶 0 才輪到桶 1」，lighting 只有一格 → 10 個 `era:["any"]` 的字機率恆為 0。採 Codex 的丙案，只移除 env 的 prefer，不動通用 takeFromPool 與 clothing/pose 排序。
+- 打開 env filler 後既有測試 `normal living room never leftover water/sport env` 紅：`tennis uniform` 先進場給了運動身分，`tennis racket` 跟著合法進來。根因是 `sportPlaceOk()` 只在「候選是場地」時擋，反向不存在。新增對稱的 `sportGearPlaceOk()`（只看器材不看服裝，與既有註解語意一致）。
+- 新增 `scripts/audit_draw_invariants.mjs`：12 條 hard + 2 條 soft，規格人工維護不從原始碼 regex 反射，失敗訊息可一行重播。2000 張進 test.bat，20000 張手動深度模式。
+- 探針第一次跑出兩條 hard 紅燈，兩條都是規格寫錯不是 production 錯（sky+starry sky 是贅詞不是矛盾；水源清單漏了 underwater/open-air bath/bathing）。這正是 Codex 堅持人工規格的理由。
+- 更正：先前報的「40.7% tag 抽不到」是在預設設定下量的，過度歸因。修正後放寬設定重量為 151/1198 (12.6%)，未歸因 74。
+- `mustReport` 誠實性：4440 次對帳 0 錯誤，Codex 的第一順位風險不成立，但測試保留。
+- 觀察：今天三個 bug 形狀相同 —— 規則只寫單向，靠抽取順序碰巧補上。已向 Codex 提議做一輪「順序對調」專項掃描。
+- 驗收：十支測試套件 + 八支 module 逐支 import() 解析 + `git diff --check` 全綠。
+
+## Session: 2026-09-13 (無限抽卡死：三個缺陷)
+
+- 使用者回報無限抽整晚跑到一半自己停，「抽並生圖」按鈕在轉但不生圖。
+- 找到三個各自都能造成該症狀的缺陷：`runBatch()` 沒有 try/finally、`Ws.recv()` 逾時落在幀中間會永久錯位、前端 SSE 沒有任何逾時上限。
+- 三個都修並各自做過修正前／修正後的瀏覽器 A/B：舊版崩潰後永久轉圈零提示、舊版對死掉的伺服器 138 秒仍在等；新版按鈕放開、原因寫在狀態列、90 秒開槍算失敗。
+- 舊版 Ws 對切開的幀吐 `Python int too large to convert to C ssize_t` —— 長度欄位從 payload 讀出來的鐵證，已用整合測試固定住。
+- 順手：續跑不再靜默放棄、`POST /prompt` 失敗不再洩漏 websocket、Windows 的 `ConnectionAbortedError` 現在接得到（會送 `/interrupt`）、traceback 不再洗版、Telegram 佇列加上限、跳過鍵的競態。
+- 新增全域錯誤兜底（`window.onerror` / `unhandledrejection`），以前沒接住的例外完全無聲。
+- 新增 `scripts/test_server_live.py`：真的起 server.py + 假 ComfyUI（含 websocket handshake）跑完整 SSE，16 項；已進 `test.bat`。
+- 錯誤：用 heredoc 傳含反斜線的字串給 Python 會被吃掉一層，寫進 JS 的換行跳脫序列變成字串裡夾真換行。改用檔案 splice 或 Edit 工具。
+- 錯誤：`node --check` 對 ES module 靠不住 —— 上面那個語法錯誤它 exit 0，瀏覽器卻整支 module 不載入。改用 `node --experimental-vm-modules` 走真的 `import()`。
+- 驗證：九支測試 + 八支 module 逐支解析 + `git diff --check` 全綠。
+
 ## Session: 2026-09-13 (sports consistency consensus)
 
 - 讀取 Claude 對 `ab56d84` 的完整複核；六項技術問題取得共識。

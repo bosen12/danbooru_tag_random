@@ -44,6 +44,8 @@ import {
   prunePresetOwned,
   sanitizePresetOwned,
   sportHeatWarnings,
+  sportPinWarnings,
+  sportPlacePinWarnings,
   toggleNamedPreset,
 } from "./engine.js";
 import {
@@ -105,6 +107,11 @@ let running = false;
 // 連續失敗幾張就把無限抽收掉。成功一張歸零。
 const FAIL_LIMIT = 3;
 let failStreak = 0;
+// 伺服器在等 Comfy 的時候每 5 秒送一則心跳，所以這條 SSE 靜默這麼久就是死了。
+// 留寬一點是因為換底模那下可以整整安靜一分鐘。
+const STREAM_IDLE_MS = 90000;
+// /api/ping 走到底也只要八秒（伺服器那邊對 Comfy 的 timeout 就是 8）。
+const PING_TIMEOUT_MS = 10000;
 // 被取消／停過之後，下一次按抽圖要把八格牆先清掉重來，不要跟上一輪的殘局混在一起。
 let wallStale = false;
 let lastJobError = "";
@@ -150,10 +157,43 @@ function speak(text) {
   $("status").textContent = text;
 }
 
+// 沒接住的錯誤以前是完全靜默的：畫面凍住、按鈕一直轉，什麼線索都不留。
+// 至少要讓狀態列講一句，主控台留一份完整堆疊。
+function reportCrash(where, err) {
+  try {
+    console.error(`[${where}]`, err);
+  } catch {
+    /* ignore */
+  }
+  const msg = String((err && (err.message || err.reason || err)) || "未知錯誤");
+  try {
+    speak(`${where}：${msg.split(/[\r\n]/)[0].slice(0, 160)}`);
+  } catch {
+    /* ignore */
+  }
+}
+
+function watchForCrashes() {
+  window.addEventListener("error", (e) => reportCrash("頁面出錯", e.error || e.message));
+  window.addEventListener("unhandledrejection", (e) => reportCrash("背景工作出錯", e.reason));
+}
+
+// 有逾時的 Comfy 探活。原本用的是沒有上限的 fetch —— 伺服器一卡住，抽圖就停在
+// 第一行 await，按鈕轉圈、連一張卡片都還沒建出來。
+async function comfyUp() {
+  try {
+    const r = await fetch("/api/ping", { signal: AbortSignal.timeout(PING_TIMEOUT_MS) });
+    const j = await r.json();
+    return !!j.ok;
+  } catch {
+    return false;
+  }
+}
+
 async function ping() {
   const el = $("ping");
   try {
-    const r = await fetch("/api/ping");
+    const r = await fetch("/api/ping", { signal: AbortSignal.timeout(PING_TIMEOUT_MS) });
     const j = await r.json();
     el.dataset.ok = j.ok ? "1" : "0";
     el.querySelector("span").textContent = j.ok
@@ -184,7 +224,8 @@ function renderCounts() {
     off.type = "button";
     off.className = "ghost mini";
     off.textContent = "不補";
-    off.setAttribute("aria-label", `${label}不補`);
+    off.title = `${label}不額外補牌，必要骨架仍保留`;
+    off.setAttribute("aria-label", `${label}不額外補牌`);
     off.addEventListener("click", () => {
       settings.counts[key] = 0;
       input.value = "0";
@@ -260,6 +301,24 @@ function updateHeatClash() {
       "你同時釘了「" +
       handBlock[0].tags.map((t) => labelOf(lex, t)).join("、") +
       "」；拳擊手套會妨礙需要靈活手指的動作。明確釘選會保留，但建議拿掉其中一邊。";
+    return;
+  }
+  const sportBlock = sportPinWarnings(lex, pinned);
+  if (sportBlock.length) {
+    note.hidden = false;
+    note.textContent =
+      "你同時釘了「" +
+      sportBlock[0].tags.map((t) => labelOf(lex, t)).join("、") +
+      "」，它們屬於互斥的運動。明確釘選會保留，但自動抽牌不會再補衝突運動。";
+    return;
+  }
+  const placeBlock = sportPlacePinWarnings(lex, pinned, settings);
+  if (placeBlock.length) {
+    note.hidden = false;
+    note.textContent =
+      "你同時釘了「" +
+      placeBlock[0].tags.map((t) => labelOf(lex, t)).join("、") +
+      "」，運動器材／活動跟場地不相容。明確釘選會保留；可拿掉其中一邊，或切到奇葩模式。";
     return;
   }
   const clash = heatMismatches(lex, pinned, settings.heats);
@@ -1804,31 +1863,49 @@ async function streamGen(body, onEvent, signal) {
   const reader = res.body.getReader();
   const dec = new TextDecoder();
   let buf = "";
-  while (true) {
-    const { value, done } = await reader.read();
-    if (done) break;
-    buf += dec.decode(value, { stream: true });
-    buf = buf.replace(/\r\n/g, "\n");
-    let idx;
-    while ((idx = buf.indexOf("\n\n")) >= 0) {
-      const chunk = buf.slice(0, idx);
-      buf = buf.slice(idx + 2);
-      let event = "message";
-      const dataLines = [];
-      for (const line of chunk.split("\n")) {
-        if (line.startsWith("event:")) event = line.slice(6).trim();
-        else if (line.startsWith("data:")) dataLines.push(line.slice(5).trim());
+  try {
+    while (true) {
+      const { value, done } = await reader.read();
+      if (done) break;
+      buf += dec.decode(value, { stream: true });
+      buf = buf.replace(/\r\n/g, "\n");
+      let idx;
+      while ((idx = buf.indexOf("\n\n")) >= 0) {
+        const chunk = buf.slice(0, idx);
+        buf = buf.slice(idx + 2);
+        let event = "message";
+        const dataLines = [];
+        for (const line of chunk.split("\n")) {
+          if (line.startsWith("event:")) event = line.slice(6).trim();
+          else if (line.startsWith("data:")) dataLines.push(line.slice(5).trim());
+        }
+        if (!dataLines.length) continue;
+        let data;
+        try {
+          data = JSON.parse(dataLines.join(""));
+        } catch {
+          // 壞掉的一則不該賠掉整條串流 —— 下一則照收。
+          continue;
+        }
+        onEvent(event, data);
+        if (event === "done" || event === "error") return;
       }
-      if (!dataLines.length) continue;
-      const data = JSON.parse(dataLines.join(""));
-      onEvent(event, data);
-      if (event === "done" || event === "error") return;
+    }
+  } finally {
+    // 提早 return（收到 done）也要把 body 收掉，連線才還得回瀏覽器的連線池。
+    try {
+      await reader.cancel();
+    } catch {
+      /* ignore */
     }
   }
 }
 
 function skipCurrentGen() {
   if (!running || aborting || skipping) return;
+  // 兩張之間沒有正在跑的工作：這時把 skipping 立起來，只會被下一張在入口重設掉，
+  // 使用者聽到「跳過這張」卻什麼也沒跳。
+  if (!jobAbort) return;
   skipping = true;
   speak("跳過這張");
   try {
@@ -1954,11 +2031,24 @@ async function streamCardJob(card, seedNum, extra) {
       /* ignore */
     }
   };
+  // 看門狗。伺服器每 5 秒至少有一則心跳，所以靜默超過 STREAM_IDLE_MS 就是那條
+  // 執行緒真的死了。沒有這個，await reader.read() 會無限期等下去 —— 畫面上是
+  // 「抽並生圖」一直轉、進度條停在原地、沒有錯誤、失敗計數也不會動，整晚就這樣掛著。
+  let stalled = false;
+  let watchdog = 0;
+  const kick = () => {
+    window.clearTimeout(watchdog);
+    watchdog = window.setTimeout(() => {
+      stalled = true;
+      stopJob();
+    }, STREAM_IDLE_MS);
+  };
   if (genAbort.signal.aborted) stopJob();
   else genAbort.signal.addEventListener("abort", stopJob, { once: true });
   try {
     let finished = false;
     let hadError = false;
+    kick();
     await streamGen(
       {
         positive: extra.positive,
@@ -1969,6 +2059,7 @@ async function streamCardJob(card, seedNum, extra) {
         ckpt: extra.ckpt || currentCkpt(),
       },
       (event, data) => {
+        kick();
         if (event === "queued") {
           setLive(card, { status: `排隊中 · seed ${data.seed || seedNum}` });
         } else if (event === "progress") {
@@ -2002,20 +2093,27 @@ async function streamCardJob(card, seedNum, extra) {
     if (kind === "skip") skipCard(card);
     else if (kind === "interrupt") throw new Error("生圖中斷");
   } catch (err) {
-    const kind = settleGenCard({ aborting, skipping, errName: err.name, finished: false });
-    if (kind === "skip") skipCard(card);
-    else if (kind === "cancel") failCard(card, "已取消");
-    else {
-      lastJobError = String(err.message || err);
+    if (stalled) {
+      // 看門狗開的槍。算失敗（不是取消），連三張就會把無限抽收掉。
+      lastJobError = `Comfy 靜默超過 ${Math.round(STREAM_IDLE_MS / 1000)} 秒，這張放棄`;
       failCard(card, lastJobError);
+    } else {
+      const kind = settleGenCard({ aborting, skipping, errName: err.name, finished: false });
+      if (kind === "skip") skipCard(card);
+      else if (kind === "cancel") failCard(card, "已取消");
+      else {
+        lastJobError = String(err.message || err);
+        failCard(card, lastJobError);
+      }
     }
   } finally {
+    window.clearTimeout(watchdog);
     genAbort.signal.removeEventListener("abort", stopJob);
     endGenCard(card);
     const skipNow = skipping;
     skipping = false;
     jobAbort = null;
-    if (skipNow) {
+    if (skipNow || stalled) {
       try {
         await fetch("/api/interrupt", { method: "POST", body: "{}" });
       } catch {
@@ -2055,8 +2153,7 @@ async function runRedoSolo(card) {
     if (!redoQueue.includes(card)) redoQueue.push(card);
     return;
   }
-  const pingNow = await fetch("/api/ping").then((r) => r.json()).catch(() => ({ ok: false }));
-  if (!pingNow.ok) {
+  if (!(await comfyUp())) {
     speak("ComfyUI 連不上，先開本機 8188");
     failCard(card, "ComfyUI 連不上");
     return;
@@ -2090,127 +2187,140 @@ async function runBatch() {
   $("go").setAttribute("aria-busy", "true");
   $("cancel").hidden = false;
   pop($("go"));
-  const n = Math.max(1, Math.floor(Number($("n").value) || 1));
-  settings.n = n;
-  saveStore();
 
-  const pingNow = await fetch("/api/ping").then((r) => r.json()).catch(() => ({ ok: false }));
-  if (!pingNow.ok) {
-    speak("ComfyUI 連不上，先開本機 8188");
-    stopInfinite("Comfy 連不上");
-    finishBatch();
-    return;
-  }
-
-  // 上一輪是被取消掉的話，這次從乾淨的牆開始，不要留著半成品。
-  if (wallStale) {
-    resetWall();
-    wallStale = false;
-  }
-  beginRound();
-  // 八格牆平常是連續的：不再每輪清空。只有牆是空的才把畫面捲過去。
-  if (!wallHasCards()) $("results").scrollIntoView({ behavior: "smooth", block: "start" });
-
-  let ident = new Set();
+  // 這些要活在 try 外面，finally 才收得乾淨。
   let done = 0;
   let skipped = 0;
   let failed = 0;
   let stoppedByFail = false;
+  let crashed = false;
 
-  for (let i = 0; i < n; i++) {
-    if (aborting) {
-      speak("已取消");
-      cancelRedoQueue();
-      break;
+  // 整段包 try/finally。以前這裡是裸的 —— drawOne()、placeCard()、任何一處丟例外，
+  // finishBatch() 就永遠跑不到：running 卡在 true、「抽並生圖」永遠 disabled 又
+  // aria-busy（就是那個一直轉但不生圖的狀態）、無限抽的續跑也接不上，只能重整頁面。
+  try {
+    const n = Math.max(1, Math.floor(Number($("n").value) || 1));
+    settings.n = n;
+    saveStore();
+
+    if (!(await comfyUp())) {
+      speak("ComfyUI 連不上，先開本機 8188");
+      stopInfinite("Comfy 連不上");
+      return;
     }
-    await drainRedoQueue();
-    if (aborting) {
-      speak("已取消");
-      cancelRedoQueue();
-      break;
+
+    // 上一輪是被取消掉的話，這次從乾淨的牆開始，不要留著半成品。
+    if (wallStale) {
+      resetWall();
+      wallStale = false;
     }
-    speak(`生圖 ${i + 1}/${n}`);
-    const seedNum = randomSeed();
-    const rng = mulberry32(seedNum);
-    const pinForDraw =
-      settings.samePerson && ident.size ? new Set([...pinned, ...ident]) : pinned;
-    const drawn = drawOne(lex, settings, pinForDraw, userBanned, rng, seedNum);
-    if (settings.samePerson && ident.size === 0) {
-      ident = identityPins(lex, drawn.positive);
-      lastIdent = ident;
-      syncSamePerson();
-    }
-    // 卡片是現做的，不再預先建 n 張 —— 一次幾張已經沒有上限。
-    const card = placeCard(cardSkeleton(settings.width, settings.height));
-    markLive(card);
-    card.dataset.seed = String(drawn.seed);
-    card.dataset.era = drawn.era || "";
-    card.dataset.bare = drawn.positive;
-    card.dataset.pinsAtDraw = JSON.stringify([...pinned]);
-    const pos = weightedPos(drawn.positive);
-    const trigger = currentTriggerText();
-    const sent = insertTriggerAfterCast(pos, trigger);
-    card.dataset.positive = sent;
-    card.dataset.trigger = trigger;
-    card.dataset.loras = JSON.stringify(currentLorasPayload());
-    card.dataset.ckpt = currentCkpt() || "";
-    if (settings.samePerson && i > 0) {
-      card.dataset.same = "1";
-      const shot = card.querySelector(".shot");
-      if (shot && !shot.querySelector(".same-mark")) {
-        const mark = document.createElement("span");
-        mark.className = "same-mark";
-        mark.textContent = "同 #1";
-        shot.append(mark);
+    beginRound();
+    // 八格牆平常是連續的：不再每輪清空。只有牆是空的才把畫面捲過去。
+    if (!wallHasCards()) $("results").scrollIntoView({ behavior: "smooth", block: "start" });
+
+    let ident = new Set();
+
+    for (let i = 0; i < n; i++) {
+      if (aborting) {
+        speak("已取消");
+        cancelRedoQueue();
+        break;
       }
-    }
-    showPos(sent);
-    setPosLine(card, sent);
-    setLive(card, { status: `抽好了，生圖 ${i + 1}/${n}…` });
-    lastJobError = "";
-    await streamCardJob(card, seedNum, {
-      positive: sent,
-      era: drawn.era,
-      eraClash: drawn.eraClash,
-      loras: currentLorasPayload(),
-      ckpt: currentCkpt(),
-    });
-    clearLive(card);
-
-    if (card.classList.contains("is-done")) {
-      done += 1;
-      failStreak = 0;
-      paintMustWarn(card, drawn.mustReport);
-    } else if (card.classList.contains("is-skip")) {
-      skipped += 1;
-    } else if (!aborting) {
-      failed += 1;
-      failStreak += 1;
-    }
-
-    // 連續三張失敗就收工，免得 Comfy 掛了還空轉一整晚。一次幾張已經沒有上限，
-    // 所以一般批次也適用 —— 但兩種情況都要明講，不能安靜地少抽一堆。
-    if (failStreak >= FAIL_LIMIT) {
-      stoppedByFail = true;
-      const why = lastJobError || "Comfy 沒回";
-      cancelRedoQueue();
-      if (stopInfinite(`連續 ${FAIL_LIMIT} 張失敗，已停`)) {
-        speak(`連續 ${FAIL_LIMIT} 張失敗，無限抽已停：${why}`);
-      } else {
-        speak(`連續 ${FAIL_LIMIT} 張失敗，剩下的 ${n - i - 1} 張不抽了：${why}`);
+      await drainRedoQueue();
+      if (aborting) {
+        speak("已取消");
+        cancelRedoQueue();
+        break;
       }
-      break;
-    }
+      speak(`生圖 ${i + 1}/${n}`);
+      const seedNum = randomSeed();
+      const rng = mulberry32(seedNum);
+      const pinForDraw =
+        settings.samePerson && ident.size ? new Set([...pinned, ...ident]) : pinned;
+      const drawn = drawOne(lex, settings, pinForDraw, userBanned, rng, seedNum);
+      if (settings.samePerson && ident.size === 0) {
+        ident = identityPins(lex, drawn.positive);
+        lastIdent = ident;
+        syncSamePerson();
+      }
+      // 卡片是現做的，不再預先建 n 張 —— 一次幾張已經沒有上限。
+      const card = placeCard(cardSkeleton(settings.width, settings.height));
+      markLive(card);
+      card.dataset.seed = String(drawn.seed);
+      card.dataset.era = drawn.era || "";
+      card.dataset.bare = drawn.positive;
+      card.dataset.pinsAtDraw = JSON.stringify([...pinned]);
+      const pos = weightedPos(drawn.positive);
+      const trigger = currentTriggerText();
+      const sent = insertTriggerAfterCast(pos, trigger);
+      card.dataset.positive = sent;
+      card.dataset.trigger = trigger;
+      card.dataset.loras = JSON.stringify(currentLorasPayload());
+      card.dataset.ckpt = currentCkpt() || "";
+      if (settings.samePerson && i > 0) {
+        card.dataset.same = "1";
+        const shot = card.querySelector(".shot");
+        if (shot && !shot.querySelector(".same-mark")) {
+          const mark = document.createElement("span");
+          mark.className = "same-mark";
+          mark.textContent = "同 #1";
+          shot.append(mark);
+        }
+      }
+      showPos(sent);
+      setPosLine(card, sent);
+      setLive(card, { status: `抽好了，生圖 ${i + 1}/${n}…` });
+      lastJobError = "";
+      await streamCardJob(card, seedNum, {
+        positive: sent,
+        era: drawn.era,
+        eraClash: drawn.eraClash,
+        loras: currentLorasPayload(),
+        ckpt: currentCkpt(),
+      });
+      clearLive(card);
 
-    if (!aborting) await drainRedoQueue();
+      if (card.classList.contains("is-done")) {
+        done += 1;
+        failStreak = 0;
+        paintMustWarn(card, drawn.mustReport);
+      } else if (card.classList.contains("is-skip")) {
+        skipped += 1;
+      } else if (!aborting) {
+        failed += 1;
+        failStreak += 1;
+      }
+
+      // 連續三張失敗就收工，免得 Comfy 掛了還空轉一整晚。一次幾張已經沒有上限，
+      // 所以一般批次也適用 —— 但兩種情況都要明講，不能安靜地少抽一堆。
+      if (failStreak >= FAIL_LIMIT) {
+        stoppedByFail = true;
+        const why = lastJobError || "Comfy 沒回";
+        cancelRedoQueue();
+        if (stopInfinite(`連續 ${FAIL_LIMIT} 張失敗，已停`)) {
+          speak(`連續 ${FAIL_LIMIT} 張失敗，無限抽已停：${why}`);
+        } else {
+          speak(`連續 ${FAIL_LIMIT} 張失敗，剩下的 ${n - i - 1} 張不抽了：${why}`);
+        }
+        break;
+      }
+
+      if (!aborting) await drainRedoQueue();
+    }
+    if (!aborting && !stoppedByFail) await drainRedoQueue();
+    if (aborting) cancelRedoQueue();
+  } catch (err) {
+    crashed = true;
+    stoppedByFail = true;
+    cancelRedoQueue();
+    stopInfinite("抽圖出錯，已停");
+    reportCrash("抽圖中斷", err);
+  } finally {
+    countMade(done);
+    finishBatch();
   }
-  if (!aborting && !stoppedByFail) await drainRedoQueue();
-  if (aborting) cancelRedoQueue();
 
-  countMade(done);
-  finishBatch();
-
-  if (!aborting && !stoppedByFail) {
+  if (!crashed && !aborting && !stoppedByFail) {
     const bits = [`完成 ${done} 張`];
     if (skipped) bits.push(`跳過 ${skipped} 張`);
     if (failed) bits.push(`失敗 ${failed} 張`);
@@ -2218,11 +2328,25 @@ async function runBatch() {
   }
 
   // 還開著就接下一輪。用 setTimeout 排隊而不是遞迴，呼叫堆疊不會累積。
-  if (isInfinite() && !aborting) {
-    window.setTimeout(() => {
-      if (isInfinite() && !running) runBatch();
-    }, 0);
-  }
+  if (isInfinite() && !aborting) queueNextRound();
+}
+
+// 續跑。舊寫法是 `if (isInfinite() && !running) runBatch()` —— running 剛好還沒放掉
+// （有人在這個空檔按了單張重新生成）就直接放棄，開關還亮著「停」，但整晚不會再抽一張。
+// 現在會等，而且等不到就講清楚為什麼停。
+function queueNextRound(tries = 0) {
+  window.setTimeout(
+    () => {
+      if (!isInfinite() || aborting) return;
+      if (running) {
+        if (tries < 600) queueNextRound(tries + 1);
+        else stopInfinite("等不到上一張做完，已停");
+        return;
+      }
+      runBatch();
+    },
+    tries ? 500 : 0
+  );
 }
 
 function bindUi() {
@@ -2592,6 +2716,7 @@ function bootNote(text, cls) {
 }
 
 async function main() {
+  watchForCrashes();
   // lexicon.json is ~340 KB, so say something instead of showing an empty shell.
   const loading = bootNote("詞庫載入中…", "boot-load");
   let data;

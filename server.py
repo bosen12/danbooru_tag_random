@@ -372,35 +372,53 @@ def mask_ws(frame: bytes) -> tuple[int, bytes]:
     return opcode, data
 
 
+# 一張 1024 預覽 JPEG 大概幾百 KB。上限只是防呆：幀頭被讀錯位的時候，長度欄位
+# 會解出天文數字，沒有這道閘就會一路吞資料把記憶體吃光。
+WS_FRAME_MAX = 64 * 1024 * 1024
+
+
 class Ws:
     def __init__(self, sock: socket.socket, buf: bytes = b""):
         self.sock = sock
         self.buf = buf
 
-    def _read(self, n: int) -> bytes:
+    def _fill(self, n: int) -> None:
+        """把 buf 補到至少 n bytes。中途丟例外時 buf 原封不動，收到的那些照樣留著。"""
         while len(self.buf) < n:
             chunk = self.sock.recv(max(4096, n - len(self.buf)))
             if not chunk:
                 raise ConnectionError("ws closed")
             self.buf += chunk
-        out, self.buf = self.buf[:n], self.buf[n:]
-        return out
 
     def recv(self) -> tuple[int, bytes]:
-        b0 = self._read(1)[0]
-        b1 = self._read(1)[0]
-        opcode = b0 & 0x0F
+        # 整幀到齊才動 buf。舊版是一個 byte 一個 byte 從 buf 吃掉，socket.timeout
+        # 只要落在幀中間（大張預覽會跨好幾個 TCP segment，取樣時卡兩秒很常見），
+        # 已經吃掉的頭就永遠消失，之後每一幀都錯位解讀 —— 呼叫端接住逾時重來一次
+        # 也救不回來。現在逾時丟出去 buf 還是完整的，下次進來從同一個邊界再解一次。
+        self._fill(2)
+        b0, b1 = self.buf[0], self.buf[1]
         n = b1 & 0x7F
+        head = 2
         if n == 126:
-            n = struct.unpack(">H", self._read(2))[0]
+            self._fill(4)
+            n = struct.unpack(">H", self.buf[2:4])[0]
+            head = 4
         elif n == 127:
-            n = struct.unpack(">Q", self._read(8))[0]
-        if b1 & 0x80:
-            key = self._read(4)
-            data = bytes(c ^ key[i % 4] for i, c in enumerate(self._read(n)))
-        else:
-            data = self._read(n)
-        return opcode, data
+            self._fill(10)
+            n = struct.unpack(">Q", self.buf[2:10])[0]
+            head = 10
+        if n > WS_FRAME_MAX:
+            raise ConnectionError(f"ws frame too big: {n}")
+        masked = bool(b1 & 0x80)
+        if masked:
+            head += 4
+        self._fill(head + n)
+        frame, self.buf = self.buf[: head + n], self.buf[head + n :]
+        data = frame[head:]
+        if masked:
+            key = frame[head - 4 : head]
+            data = bytes(c ^ key[i % 4] for i, c in enumerate(data))
+        return b0 & 0x0F, data
 
     def send(self, data: bytes, opcode: int = 1) -> None:
         self.sock.sendall(ws_frame(data, opcode))
@@ -458,6 +476,10 @@ def _job(seed: int, width: int, height: int, positive: str, image: str, ckpt: st
     }
 
 
+# 單張圖的上限。超過就報錯收工，免得 Comfy 卡住的時候無限抽整晚空轉。
+GEN_TIMEOUT = float(os.environ.get("COMFY_GEN_TIMEOUT", "600"))
+
+
 class WsUnavailable(Exception):
     pass
 
@@ -468,11 +490,18 @@ def gen_via_ws(width: int, height: int, seed: int, positive: str, wf: dict):
         ws = ws_connect(comfy_base(), cid, timeout=20)
     except Exception as exc:
         raise WsUnavailable(str(exc)) from exc
-    posted = api("POST", "/prompt", {"prompt": wf, "client_id": cid}, timeout=60)
-    prompt_id = posted["prompt_id"]
-    t0 = time.time()
+    # POST /prompt 以前落在 try 外面：它一丟例外（Comfy 忙、顯存不夠、工作流被退件），
+    # 剛開好的 websocket 就沒人關，跑一整晚會把 socket 和 Comfy 的 client 一起積爆。
     try:
-        while time.time() - t0 < 600:
+        yield ("ping", {"stage": "connected"})
+        posted = api("POST", "/prompt", {"prompt": wf, "client_id": cid}, timeout=60)
+        prompt_id = (posted or {}).get("prompt_id")
+        if not prompt_id:
+            raise RuntimeError(f"Comfy 沒有回 prompt_id：{posted!r}"[:200])
+        yield ("ping", {"stage": "queued"})
+        t0 = time.time()
+        beat = t0
+        while time.time() - t0 < GEN_TIMEOUT:
             try:
                 ws.sock.settimeout(2.0)
                 op, data = ws.recv()
@@ -483,9 +512,21 @@ def gen_via_ws(width: int, height: int, seed: int, positive: str, wf: dict):
                     if image:
                         yield ("done", _job(seed, width, height, positive, image, wf["13"]["inputs"].get("ckpt_name")))
                         return
+                # 心跳：載模型的時候 Comfy 可以安靜一分鐘以上。沒有這一下，前端分不出
+                # 「還在載」和「伺服器這條執行緒卡死了」，寫也寫不出去的斷線也發現不了。
+                now = time.time()
+                if now - beat >= 5:
+                    beat = now
+                    yield ("ping", {"waited": round(now - t0, 1)})
                 continue
             if op == 8:
-                break
+                # 對面收線。先撈一次 history —— 圖可能已經存好了，只是收線比 executed 快。
+                hist = api("GET", f"/history/{prompt_id}", timeout=20)
+                image = first_image_src(hist[prompt_id]) if hist and prompt_id in hist else None
+                if image:
+                    yield ("done", _job(seed, width, height, positive, image, wf["13"]["inputs"].get("ckpt_name")))
+                    return
+                raise ConnectionError("Comfy 關掉了 websocket")
             if op == 9:
                 ws.send(data, 10)
                 continue
@@ -498,7 +539,11 @@ def gen_via_ws(width: int, height: int, seed: int, positive: str, wf: dict):
                 continue
             if op != 1:
                 continue
-            msg = json.loads(data.decode("utf-8"))
+            try:
+                msg = json.loads(data.decode("utf-8"))
+            except (ValueError, UnicodeDecodeError):
+                # 單一壞幀不值得賠掉整張圖：跳過，讓 history 輪詢去撿結果。
+                continue
             typ = msg.get("type")
             d = msg.get("data") or {}
             if typ == "progress":
@@ -520,7 +565,7 @@ def gen_via_ws(width: int, height: int, seed: int, positive: str, wf: dict):
                     if image:
                         yield ("done", _job(seed, width, height, positive, image, wf["13"]["inputs"].get("ckpt_name")))
                         return
-        raise TimeoutError(prompt_id)
+        raise TimeoutError(f"Comfy 超過 {GEN_TIMEOUT} 秒沒有產出（prompt {prompt_id}）")
     finally:
         ws.close()
 
@@ -591,6 +636,9 @@ TG_CAPTION_MAX = 1024
 TG_TEXT_MAX = 4096
 TG_GAP = 1.0  # 頻道大約 20 則/分鐘，每則之間隔一秒
 TG_RETRY_WAIT = 5.0
+# 佇列上限。Telegram 連不上的時候每一張要等 60 秒才失敗，而無限抽十秒就出一張 ——
+# 沒有上限就會一路積到記憶體爆掉，而且你按停之後它還要吐好幾個小時。
+TG_QUEUE_MAX = 200
 
 _tg_lock = threading.Lock()
 _tg_queue: "queue.Queue[dict]" = queue.Queue()
@@ -818,6 +866,9 @@ def tg_enqueue(job: dict) -> dict:
         job.get("filename") or "", job.get("subfolder") or "", job.get("type") or "output"
     ):
         return {"ok": False, "error": "bad image query"}
+    deep = _tg_queue.qsize()
+    if deep >= TG_QUEUE_MAX:
+        return {"ok": False, "error": f"Telegram 佇列塞住了（{deep} 張待送），這張不排"}
     tg_start()
     _tg_queue.put(job)
     return {"ok": True, "queued": _tg_queue.qsize()}
@@ -844,6 +895,15 @@ class Handler(BaseHTTPRequestHandler):
 
     def log_message(self, fmt: str, *args) -> None:
         sys.stderr.write("%s - %s\n" % (self.address_string(), fmt % args))
+
+    def handle_one_request(self) -> None:
+        try:
+            super().handle_one_request()
+        except (ConnectionError, TimeoutError):
+            # 瀏覽器取消還沒載完的圖是常態：八格牆換格、按停、關分頁都會。
+            # 不擋的話 socketserver 會為每一次噴一整篇 traceback，跑一整晚就把
+            # 真正該看的錯誤淹掉了。
+            self.close_connection = True
 
     def _json(self, code: int, obj: dict, extra=None) -> None:
         blob = json.dumps(obj, ensure_ascii=False).encode("utf-8")
@@ -977,13 +1037,29 @@ class Handler(BaseHTTPRequestHandler):
         self.send_header("Connection", "close")
         self.send_header("X-Accel-Buffering", "no")
         self.end_headers()
+        gone = False
         try:
             for event, data in events:
-                self.wfile.write(sse(event, data))
-                self.wfile.flush()
+                try:
+                    self.wfile.write(sse(event, data))
+                    self.wfile.flush()
+                except OSError:
+                    # 客戶端斷線。Windows 丟的是 ConnectionAbortedError(WinError 10053)，
+                    # 它和 BrokenPipeError／ConnectionResetError 是兄弟不是子類 —— 舊寫法
+                    # 接不到，於是 /interrupt 不會送，Comfy 繼續把沒人要的圖算完，
+                    # 佇列一路積起來，後面每一張都卡在「排隊中」。
+                    gone = True
+                    break
                 if event in ("done", "error"):
                     break
-        except (BrokenPipeError, ConnectionResetError):
+        finally:
+            # 明確關掉產生器，讓 gen_via_ws 的 finally 立刻把 websocket 收掉，
+            # 而不是等 GC 幫忙。
+            try:
+                events.close()
+            except Exception:
+                pass
+        if gone:
             try:
                 api("POST", "/interrupt", {}, timeout=8)
             except Exception:
@@ -1020,7 +1096,10 @@ class Handler(BaseHTTPRequestHandler):
         self.send_header("Cache-Control", "private, max-age=86400")
         self.send_header("Content-Disposition", f'inline; filename="{safe}"')
         self.end_headers()
-        self.wfile.write(raw)
+        try:
+            self.wfile.write(raw)
+        except OSError:
+            self.close_connection = True
 
     def _static_dest(self):
         path = urllib.parse.urlparse(self.path).path

@@ -34,6 +34,24 @@ if errorlevel 1 (
   pause
   exit /b 1
 )
+echo == draw invariants ==
+call node scripts\audit_draw_invariants.mjs
+if errorlevel 1 (
+  pause
+  exit /b 1
+)
+echo == clothing reachability ==
+call node scripts\test_clothing_reachability.mjs
+if errorlevel 1 (
+  pause
+  exit /b 1
+)
+echo == directional hard rules ==
+call node scripts\test_directional_rules.mjs
+if errorlevel 1 (
+  pause
+  exit /b 1
+)
 echo == quiz ==
 call node scripts\test_quiz.mjs
 if errorlevel 1 (
@@ -63,6 +81,12 @@ if errorlevel 1 (
 )
 echo == server ==
 %PY% scripts\test_server.py
+if errorlevel 1 (
+  pause
+  exit /b 1
+)
+echo == server live (fake comfy) ==
+%PY% scripts\test_server_live.py
 if errorlevel 1 (
   pause
   exit /b 1

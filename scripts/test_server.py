@@ -3,6 +3,7 @@
 from __future__ import annotations
 
 import json
+import socket
 import struct
 import sys
 from pathlib import Path
@@ -256,6 +257,94 @@ ok("enqueue refuses unconfigured", server.tg_enqueue({"filename": "a.png"})["ok"
 
 server._tg.update({"token": "", "chatId": "", "enabled": False, "sent": 0, "failed": 0, "lastError": ""})
 shutil.rmtree(tg_dir, ignore_errors=True)
+
+# --- websocket 幀解析：逾時落在幀中間也不能掉格 ---------------------------
+# Comfy 的預覽是幾百 KB 的二進位幀，會跨好幾個 TCP segment。取樣忙起來時
+# gen_via_ws 的 2 秒 socket timeout 很容易剛好落在幀中間；舊的 _read() 是一個
+# byte 一個 byte 從 buf 吃掉，逾時丟出去時已經吃掉的幀頭就永遠消失，之後每一幀
+# 都錯位解讀 —— 那張圖不是超時十分鐘就是整條串流無聲卡死。
+
+
+class ScriptedSock:
+    """照劇本吐資料。bytes 就送出去，None 代表這一刻卡住（socket.timeout）。"""
+
+    def __init__(self, script):
+        self.script = list(script)
+
+    def recv(self, _n):
+        if not self.script:
+            return b""
+        item = self.script.pop(0)
+        if item is None:
+            raise socket.timeout()
+        return item
+
+    def settimeout(self, _t):
+        pass
+
+
+def server_frame(payload: bytes, opcode: int = 2) -> bytes:
+    """Comfy → 我們的方向不遮罩，所以不能用 ws_frame()（那支是我們送出去用的）。"""
+    n = len(payload)
+    head = bytes([0x80 | opcode])
+    if n < 126:
+        head += bytes([n])
+    elif n < 65536:
+        head += bytes([126]) + struct.pack(">H", n)
+    else:
+        head += bytes([127]) + struct.pack(">Q", n)
+    return head + payload
+
+
+def drain(ws, tries: int = 200):
+    """像 gen_via_ws 那樣：逾時就接住重來。"""
+    for _ in range(tries):
+        try:
+            return ws.recv()
+        except socket.timeout:
+            continue
+    raise AssertionError("recv 一直逾時")
+
+
+preview = struct.pack(">II", 1, 1) + (b"\xff\xd8" + b"J" * 400)
+wire = server_frame(preview)
+
+ok("ws frame in one piece", drain(server.Ws(ScriptedSock([wire]))) == (2, preview))
+
+# 每一個 byte 之間都卡一次 —— 幀頭、126 長度欄位、payload 全都被逾時切開。
+split = []
+for b in wire[:8]:
+    split += [bytes([b]), None]
+split += [wire[8:200], None, wire[200:]]
+ok(
+    "ws frame survives mid-frame timeouts",
+    drain(server.Ws(ScriptedSock(split))) == (2, preview),
+    "逾時落在幀中間時幀頭被吃掉了",
+)
+
+# 兩幀擠在同一個 TCP 段裡：第二幀要留在 buf 等下一次 recv。
+two = server.Ws(ScriptedSock([server_frame(b"AA", 1) + server_frame(b"BBB", 1)]))
+ok("ws two frames one chunk #1", drain(two) == (1, b"AA"))
+ok("ws two frames one chunk #2", drain(two) == (1, b"BBB"))
+
+# 長度欄位被讀成天文數字時要當場報錯，不能一路吞資料把記憶體吃光。
+huge = bytes([0x82, 127]) + struct.pack(">Q", server.WS_FRAME_MAX + 1)
+try:
+    server.Ws(ScriptedSock([huge])).recv()
+    ok("ws rejects absurd frame length", False, "沒有擋下來")
+except ConnectionError as exc:
+    ok("ws rejects absurd frame length", "too big" in str(exc), str(exc))
+
+# 遮罩過的幀（我們自己送出去的格式）照樣解得開。
+masked = ws_frame(b"hello", opcode=1)
+ok("ws parses masked frame", drain(server.Ws(ScriptedSock([masked]))) == (1, b"hello"))
+
+# 對面收線：讀不到東西要報 ws closed，不是安靜地回空幀。
+try:
+    server.Ws(ScriptedSock([])).recv()
+    ok("ws closed raises", False, "沒有報錯")
+except ConnectionError as exc:
+    ok("ws closed raises", "closed" in str(exc), str(exc))
 
 if failed:
     print(f"\n{failed} failed")

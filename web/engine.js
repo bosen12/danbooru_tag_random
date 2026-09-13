@@ -6,6 +6,7 @@ import {
 } from "./shadow-validator.js";
 import {
   SPORT_ACT_PLACE,
+  SPORT_GEAR_IDENTITY,
   SPORT_BUTTONS,
   SPORT_IDENTITY,
   SPORT_MOVE_ACTS,
@@ -763,19 +764,47 @@ function sportKitOk(item, used) {
  * 自行車會掉進浴室。這裡補回來：場上看得出是哪個運動，場地就必須是那個運動的
  * 場地，或它的活動本來就允許的場地。查不到場地資訊的運動不限制。
  */
-function sportPlaceOk(item, used) {
-  if (item.mutex !== "place" && item.group !== "place") return true;
-  // 只看器材，不看服裝：穿排球服在廚房是可以的，浴室騎腳踏車不行。
-  const ids = sportGearIdsOf(used);
-  if (!ids || !ids.size) return true;
+function compatibleSportPlaces(ids) {
   const okPlaces = new Set();
+  if (!ids || !ids.size) return okPlaces;
   for (const sp of SPORT_PRESETS) {
     if (!ids.has(sp.id)) continue;
     for (const v of sp.venue || []) okPlaces.add(v);
     for (const pl of ACT_PLACE[sp.activity] || []) okPlaces.add(pl);
   }
+  return okPlaces;
+}
+
+/**
+ * 一組運動身分與一組場地是否相容。候選 gate 與釘選 warning 共用這個純函式，
+ * 避免兩邊各抄一份場地清單後逐漸失同步。
+ */
+export function sportIdsFitPlaces(ids, places) {
+  if (!ids || !ids.size || !places || !places.size) return true;
+  const okPlaces = compatibleSportPlaces(ids);
   if (!okPlaces.size) return true;
-  return okPlaces.has(item.tag);
+  for (const place of places) if (okPlaces.has(place)) return true;
+  return false;
+}
+
+function sportPlaceOk(item, used) {
+  if (item.mutex !== "place" && item.group !== "place") return true;
+  // 只看器材，不看服裝：穿排球服在廚房是可以的，浴室騎腳踏車不行。
+  return sportIdsFitPlaces(sportGearIdsOf(used), new Set([item.tag]));
+}
+
+// sportPlaceOk() 的反向。上面那支只在「候選是場地」時擋，所以場地先定、器材後抽
+// 就整個繞過去了 —— 客廳抽到網球拍就是這樣來的（網球服先進場給了運動身分，
+// 球拍再跟著合法進來）。意圖在 sportPlaceOk 的註解裡寫得很清楚：浴室騎腳踏車不行。
+// 兩個方向都要擋，規則才不會被抽取順序左右。
+//
+// SPORT_GEAR_IDENTITY 裡的不只是手持器材，還包含活動與場地本身 —— 這是刻意的：
+// 補牌補回來的活動在場地定了之後，要受同一個方向的檢查。它唯一排除的是服裝，
+// 所以穿網球服待在客廳可以，把球拍或「打網球」這個動作放進客廳不行。
+function sportGearPlaceOk(item, used, lex) {
+  const own = SPORT_GEAR_IDENTITY.get(item.tag);
+  if (!own || !own.size) return true;
+  return sportIdsFitPlaces(own, usedPlaces(used, lex));
 }
 
 const PRIVATE_SEX_PLACE = new Set([
@@ -1586,6 +1615,28 @@ export function sportPinWarnings(lex, pinned) {
   return tags.length > 1 ? [{ kind: "sport", tags }] : [];
 }
 
+/** Explicit place + sport-gear/activity pins survive, but normal/diverse surfaces the clash. */
+export function sportPlacePinWarnings(lex, pinned, settings) {
+  if (!lockSceneOn(settings)) return [];
+  const places = usedPlaces(pinned, lex);
+  if (!places.size) return [];
+  const gear = [...pinned].filter((tag) => SPORT_GEAR_IDENTITY.has(tag) && !places.has(tag));
+  const bad = [];
+  if (gear.length) {
+    const ids = sportGearIdsOf(gear);
+    // Cross-sport explicit pins have their own, more specific warning.
+    if (ids && ids.size && !sportIdsFitPlaces(ids, places)) bad.push(...gear);
+  }
+  // Generic `playing sports` intentionally carries no sport identity, but it is still an activity
+  // with a declared SPORT_PLACE dependency and therefore must participate in the pin warning.
+  for (const tag of pinned) {
+    if (!SPORT_ACTS.has(tag) || SPORT_GEAR_IDENTITY.has(tag)) continue;
+    const allowed = ACT_PLACE[tag];
+    if (allowed && ![...places].some((place) => allowed.has(place))) bad.push(tag);
+  }
+  return bad.length ? [{ kind: "sportPlace", tags: [...places, ...bad] }] : [];
+}
+
 export function clearPresetTags(lex, tags, existing = new Set()) {
   const drop = presetOwnedTags(lex, tags);
   const keep = [];
@@ -2089,25 +2140,33 @@ function makeCommit(lex, used, mutexTaken, banned, era, allowDep) {
     if (!tag || used.has(tag) || banned.has(tag)) return false;
     if (mutexBusy(lex, mutexTaken, tag)) return false;
     const deps = implyChain(lex, tag);
-    for (const d of deps) {
-      if (used.has(d) || !depAllowed(lex, d, era)) continue;
-      if (banned.has(d)) return false;
-      if (mutexOccupants(lex, mutexTaken, d).some((occ) => !parentChild(lex, occ, d))) return false;
-      const di = lex.byTag.get(d);
-      if (di?.mutex === "body_pose") {
-        for (const a of usedActs(used, lex)) {
-          if (!activityFitsBody(a, new Set([d]))) return false;
+    // Validate dependencies in the context they will actually enter. A nurse makes nurse cap valid,
+    // a doctor makes stethoscope valid, etc.; validating the dependent before its source existed made
+    // every such source structurally unreachable. This temporary source is always rolled back before
+    // the real atomic occupy pass below.
+    used.add(tag);
+    try {
+      for (const d of deps) {
+        if (used.has(d) || !depAllowed(lex, d, era)) continue;
+        if (banned.has(d)) return false;
+        if (mutexOccupants(lex, mutexTaken, d).some((occ) => !parentChild(lex, occ, d))) return false;
+        const di = lex.byTag.get(d);
+        if (di?.mutex === "body_pose") {
+          for (const a of usedActs(used, lex)) {
+            if (!activityFitsBody(a, new Set([d]))) return false;
+          }
+        }
+        if (
+          allowDep &&
+          di &&
+          di.mutex !== "held_prop" &&
+          !allowDep(di)
+        ) {
+          return false;
         }
       }
-      if (
-        allowDep &&
-        di &&
-        di.mutex !== "held_prop" &&
-        di.mutex !== "in_out" &&
-        !allowDep(di)
-      ) {
-        return false;
-      }
+    } finally {
+      used.delete(tag);
     }
     occupy(tag);
     for (const d of deps) {
@@ -2260,7 +2319,34 @@ export function actionFitsClothes(actionTag, clothingTags) {
 
 function takeFromPool(pool, count, rand, commit, prefer, allow) {
   let buckets;
-  if (Array.isArray(prefer) && prefer.length) {
+  if (prefer && Array.isArray(prefer.softTiers) && prefer.softTiers.length) {
+    const candidates = [...pool];
+    const tiers = prefer.softTiers;
+    const weights = prefer.weights || [];
+    const weightOf = (item) => {
+      const tier = tiers.findIndex((fn) => fn(item));
+      const index = tier < 0 ? tiers.length : tier;
+      return Math.max(0.01, Number(weights[index]) || 1);
+    };
+    let n = 0;
+    while (n < count && candidates.length) {
+      let total = 0;
+      for (const item of candidates) total += weightOf(item);
+      let cursor = rand() * total;
+      let index = candidates.length - 1;
+      for (let i = 0; i < candidates.length; i += 1) {
+        cursor -= weightOf(candidates[i]);
+        if (cursor <= 0) {
+          index = i;
+          break;
+        }
+      }
+      const [item] = candidates.splice(index, 1);
+      if (allow && !allow(item)) continue;
+      if (commit(item.tag)) n += 1;
+    }
+    return n;
+  } else if (Array.isArray(prefer) && prefer.length) {
     const seen = new Set();
     buckets = [];
     for (const fn of prefer) {
@@ -2517,6 +2603,8 @@ export function drawOne(lex, settings, pinned, userBanned, rand, seed) {
     if (item.tag === "bald" && someUsed((it) => it.group === "hair_color" || it.group === "hair_style")) return false;
     if (item.tag === "fat" && used.has("skinny")) return false;
     if (item.tag === "skinny" && used.has("fat")) return false;
+    if (item.tag === "long sleeves" && used.has("short sleeves")) return false;
+    if (item.tag === "short sleeves" && used.has("long sleeves")) return false;
     if (item.tag === "shota" && used.has("adult")) return false;
     if (item.tag === "adult" && used.has("shota")) return false;
     if (
@@ -2581,9 +2669,12 @@ export function drawOne(lex, settings, pinned, userBanned, rand, seed) {
         }
       }
     }
-    if (NIGHT_MARK.has(item.tag) && [...used].some((t) => DAY_MARK.has(t) || t === "sunset" || t === "dusk")) return false;
+    // 只有「嚴格白天」和「嚴格夜側」互斥，而且兩邊對稱。
+    // sunset / dusk 是日夜過渡，兩側都相容，刻意不參與這條硬擋 —— 黃昏看見星星或
+    // 月光本來就合理，夜市在日落時分開張也是。它們和 day / night 同屬 day_night
+    // 互斥，該擋的那一半互斥系統已經擋掉了。
+    if (NIGHT_MARK.has(item.tag) && [...used].some((t) => DAY_MARK.has(t))) return false;
     if (DAY_MARK.has(item.tag) && [...used].some((t) => NIGHT_MARK.has(t))) return false;
-    if (item.tag === "dusk" && [...used].some((t) => NIGHT_MARK.has(t))) return false;
     if (heat === "flash" && item.tag === "sleeping" && !pinned.has("sleeping")) return false;
     if (used.has("sleeping") && SLEEP_BAD_POSE.has(item.tag)) return false;
     if (item.tag === "sleeping" && [...used].some((t) => SLEEP_BAD_POSE.has(t))) return false;
@@ -2897,7 +2988,11 @@ export function drawOne(lex, settings, pinned, userBanned, rand, seed) {
     if (
       WATER_ACT.has(item.tag) &&
       item.tag !== "fishing" &&
-      (used.has("necktie") || used.has("bowtie") || used.has("boots") || used.has("sneakers"))
+      (used.has("necktie") ||
+        used.has("bowtie") ||
+        used.has("boots") ||
+        used.has("sneakers") ||
+        used.has("high heels"))
     ) {
       return false;
     }
@@ -3264,6 +3359,7 @@ export function drawOne(lex, settings, pinned, userBanned, rand, seed) {
     if (item.tag === "carrying" && used.has("sitting")) return false;
     if (item.tag === "sitting" && used.has("carrying")) return false;
     if (item.tag === "indian style" && used.has("amazon position")) return false;
+    if (item.tag === "amazon position" && used.has("indian style")) return false;
     if (
       (item.tag === "breasts on table" || item.tag === "breasts on glass") &&
       ([...used].some((t) => MOVE_ACT.has(t)) || used.has("horseback riding"))
@@ -3485,6 +3581,7 @@ export function drawOne(lex, settings, pinned, userBanned, rand, seed) {
     }
     if (lockSceneOn(settings) && !sportKitOk(item, used)) return false;
     if (lockSceneOn(settings) && !sportPlaceOk(item, used)) return false;
+    if (lockSceneOn(settings) && !sportGearPlaceOk(item, used, lex)) return false;
     if (
       lockSceneOn(settings) &&
       (item.mutex === "sport_ball" || item.mutex === "sport_prop") &&
@@ -3584,20 +3681,26 @@ export function drawOne(lex, settings, pinned, userBanned, rand, seed) {
   };
 
   const counts = settings.counts;
-  const clothingPrefer = [
-    (item) =>
-      eraSpecific(item, era) &&
-      item.layer === "garment" &&
-      !isColorVariant(item) &&
-      (item.mutex === "onepiece" || item.mutex === "top" || item.mutex === "bottom"),
-    (item) => eraSpecific(item, era) && item.layer === "garment" && !isColorVariant(item),
-    (item) =>
-      item.layer === "garment" &&
-      !isColorVariant(item) &&
-      (item.mutex === "onepiece" || item.mutex === "top" || item.mutex === "bottom"),
-    (item) => item.layer === "garment" && !isColorVariant(item),
-    (item) => item.layer === "garment",
-  ];
+  // 衣著需要「偏好」而不是「硬分桶」。硬分桶會先把高順位抽到滿才看下一桶，
+  // top／bottom／onepiece 各只有一格時，顏色變體的實際機率因此永遠是 0。
+  // 權重保留年代合身、完整服裝優先，同時讓低順位衣著仍有非零機會。
+  const clothingPrefer = {
+    softTiers: [
+      (item) =>
+        eraSpecific(item, era) &&
+        item.layer === "garment" &&
+        !isColorVariant(item) &&
+        (item.mutex === "onepiece" || item.mutex === "top" || item.mutex === "bottom"),
+      (item) => eraSpecific(item, era) && item.layer === "garment" && !isColorVariant(item),
+      (item) =>
+        item.layer === "garment" &&
+        !isColorVariant(item) &&
+        (item.mutex === "onepiece" || item.mutex === "top" || item.mutex === "bottom"),
+      (item) => item.layer === "garment" && !isColorVariant(item),
+      (item) => item.layer === "garment",
+    ],
+    weights: [12, 9, 6, 4, 2, 1],
+  };
   const posePrefer = [
     (item) => item.mutex === "body_pose" || item.mutex === "camera" || item.mutex === "gaze",
     (item) => item.group === "face",
@@ -3629,8 +3732,12 @@ export function drawOne(lex, settings, pinned, userBanned, rand, seed) {
     );
     let prefer = null;
     if (section === "clothing") prefer = clothingPrefer;
-    else if (section === "env") prefer = (item) => eraSpecific(item, era) && item.mutex;
     else if (section === "pose") prefer = posePrefer;
+    // env 刻意不給 prefer。takeFromPool 的桶是「抽乾桶 0 才輪到桶 1」，而 lighting
+    // 之類的互斥只有一格 —— 舊的 (eraSpecific && mutex) 會讓桶 0 每次都先把那一格
+    // 拿走，light 群裡 10 個 era:["any"] 的字機率恆為 0。era:["any"] 的意思是每個
+    // 時代都能用，不是次等候選；真正不屬於當代的字 eraOk() 已經擋掉了。
+    // 年代骨架與主場地由 stampAnchors("env") 和 fillSlot("env", "place") 負責。
     takeFromPool(pool, need, rand, commit, prefer, allow);
   };
 
@@ -3837,6 +3944,7 @@ export function drawOne(lex, settings, pinned, userBanned, rand, seed) {
     fill("clothing", (item) => {
       if (item.layer === "skin") return false;
       if (item.layer === "garment" && !item.mutex) {
+        if (item.group === "fabric") return true;
         return someUsed((it) => relOf(it).has(item.tag));
       }
       if (item.mutex === "onepiece" || item.mutex === "top" || item.mutex === "bottom") {
@@ -3931,7 +4039,12 @@ export function drawOne(lex, settings, pinned, userBanned, rand, seed) {
   }
   fillSlot("env", "in_out");
   fillSlot("env", "day_night");
-  if (!realisticOn(settings)) fill("env");
+  // 環境段無條件補到目標數。以前這裡只在非正常模式跑，而正常模式是預設 ——
+  // 左欄「環境」那個數字 2/4/10 給出一模一樣的結果，是個死的控制項。
+  // fill() 算的是 want - countSection()，骨架已經達標時本來就不會多塞，
+  // 所以預設值 4 的畫面幾乎不變；使用者拉到 10 才會拿到額外的環境細節，
+  // 而且每一個都還是要過 allow() 的時代、室內外、場地與日夜這幾關。
+  fill("env");
   stampActProps();
 
   if (lockSceneOn(settings)) {
