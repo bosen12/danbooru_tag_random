@@ -386,6 +386,10 @@ IMPLIES = {
     "hiking": ["outdoors"],
     "sunbathing": ["outdoors"],
     "office lady": ["pantyhose", "pencil skirt"],
+    # 六件運動制服要一致：足球／棒球／網球／排球服本來就 imply sportswear，
+    # 籃球服和田徑服是從 harvest 進來的，漏了這條。
+    "basketball uniform": ["sportswear"],
+    "track uniform": ["sportswear"],
     "basketball court": ["outdoors"],
     "tennis court": ["outdoors"],
     "soccer field": ["outdoors"],

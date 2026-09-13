@@ -175,11 +175,11 @@ MIT，見 [LICENSE](LICENSE)。詞庫裡的 tag 名稱來自 Danbooru，生成�
 - 單張失敗只跳過、繼續下一張；**連續 3 張失敗會自動停**，狀態列會寫原因（Comfy 掛了、報什麼錯）。掛整晚不會空轉。
 - 開跑前會先 ping 一次 ComfyUI，連不上就不開。
 
-畫面上**固定八格**。第 9 張直接在第 1 格原地重畫，第 10 張換第 2 格，以此類推——整片牆只有一格在變，不會一直位移、也不會抱著捲軸跑。正在畫的那格有硃砂色亮框。按「抽並生圖」不再清空畫面，就是一面持續輪替的八格牆。
+畫面上**固定八格**。第 9 張直接在第 1 格原地重畫，第 10 張換第 2 格，以此類推——整片牆只有一格在變，不會一直位移、也不會抱著捲軸跑。正在畫的那格有硃砂色亮框。按「抽並生圖」不再清空畫面，就是一面持續輪替的八格牆。**但按過「停」或「取消」之後，下一次抽圖會先把牆清乾淨再重來**，不會跟上一輪的半成品混在一起。
 
 ## 必抽某一類
 
-每個小分類（誘惑、走光、髮色、飾品、地點…）標題旁邊有一組 `必抽 − 1 ＋`。設成 1 以上，那一類每張都至少要抽到這麼多個，小分類標題會亮起來。上限 20，設 0 就是關。設定跟釘選一樣存在瀏覽器裡。
+每個小分類（誘惑、走光、髮色、飾品、地點…）標題旁邊有一組 `必抽 − 1 ＋`。設成 1 以上，那一類每張都至少要抽到這麼多個，小分類標題會亮起來。上限 20，設 0 就是關。設定跟釘選一樣存在瀏覽器裡。左欄的「**清除必抽**」可以一次把所有小分類歸零。
 
 規矩，由大到小：
 
@@ -245,31 +245,34 @@ bot 要先加進該頻道並給發文權限，否則 Telegram 會回 `chat not f
 
 底下自成一組的 13 顆按鈕，寫的是**運動**不是場地：籃球、網球、足球、棒球、排球、羽球、桌球、游泳、拳擊、田徑、高爾夫、自行車、射箭。
 
-點一下，整套一次進「必進這張圖」——活動、場地、器材、服裝一起。例如按「籃球」會進：
+點一下，整套一次進「必進這張圖」——場地、器材、服裝一起。活動不釘死，由抽牌時按尺度決定（見下面）：
 
-| 運動 | 必進 POS |
-|------|----------|
-| 籃球 | `playing sports` `basketball court` `basketball (object)` `basketball uniform` `sneakers` |
-| 網球 | `tennis` `tennis court` `tennis racket` `tennis ball` `tennis uniform` `sneakers` |
-| 足球 | `soccer` `soccer field` `soccer ball` `soccer uniform` `cleats` |
-| 棒球 | `playing sports` `baseball stadium` `baseball (object)` `baseball bat` `baseball uniform` `baseball cap` `cleats` |
-| 排球 | `playing sports` `sports court` `volleyball (object)` `volleyball uniform` `knee pads` `sneakers` |
-| 羽球 | `badminton` `sports court` `badminton racket` `shuttlecock` `sportswear` `sneakers` |
-| 桌球 | `table tennis` `table tennis paddle` `table tennis ball` `sportswear` `sneakers` |
-| 游泳 | `swimming` `pool` `competition swimsuit` `swim cap` `goggles` |
-| 拳擊 | `boxing` `boxing ring` `boxing gloves` `boxing shorts` |
-| 田徑 | `track and field` `running track` `track uniform` `sneakers` |
-| 高爾夫 | `golf` `golf course` `golf club` `golf ball` `sportswear` |
-| 自行車 | `riding bicycle` `bicycle` `bicycle helmet` `sportswear` `sneakers` |
-| 射箭 | `archery` `bow (weapon)` `arrow (projectile)` `sportswear` |
+| 運動 | 必進 POS（場地／器材／服裝） | 抽牌時帶的活動 |
+|---|---|---|
+| 籃球 | `basketball court` `basketball (object)` `basketball uniform` `sneakers` | `playing sports` |
+| 網球 | `tennis court` `tennis racket` `tennis ball` `tennis uniform` `sneakers` | `tennis` |
+| 足球 | `soccer field` `soccer ball` `soccer uniform` `cleats` | `soccer` |
+| 棒球 | `baseball stadium` `baseball (object)` `baseball bat` `baseball uniform` `baseball cap` `cleats` | `playing sports` |
+| 排球 | `sports court` `volleyball (object)` `volleyball uniform` `knee pads` `sneakers` | `playing sports` |
+| 羽球 | `sports court` `badminton racket` `shuttlecock` `sportswear` `sneakers` | `badminton` |
+| 桌球 | `table tennis paddle` `table tennis ball` `sportswear` `sneakers` | `table tennis` |
+| 游泳 | `pool` `competition swimsuit` `swim cap` `goggles` | `swimming` |
+| 拳擊 | `boxing ring` `boxing gloves` `boxing shorts` | `boxing` |
+| 田徑 | `running track` `track uniform` `sneakers` | `track and field` |
+| 高爾夫 | `golf course` `golf club` `golf ball` `sportswear` | `golf` |
+| 自行車 | `bicycle` `bicycle helmet` `sportswear` `sneakers` | `riding bicycle` |
+| 射箭 | `bow (weapon)` `arrow (projectile)` `sportswear` | `archery` |
 
-**「活動」tag 只有在尺度「單選活動」時才進。** `playing sports`／`tennis`／`badminton` 這類動作 tag，只有當尺度**只勾了「活動」**才會進必進 POS。其他任何組合都不進。
+**「活動」tag 不釘死，看那張圖的尺度決定。** `playing sports`／`tennis`／`badminton` 這類動作 tag **不會進必進 POS**。它由抽牌時決定：
 
-為什麼是單選而不是「有勾就算」：抽尺度時會用你釘選的 tag 自己的 heat 清單去收斂，而**詞庫裡沒有任何一個 tag 的 heat 含 `activity`**。所以只要你釘了東西、尺度又勾了誘惑／走光／性愛任一個，「活動」就會被濾掉、**永遠抽不到**。這種時候還把活動 tag 放進去是純虧：活動照樣不會發生，卻會擋掉性愛動作（會動的活動跟性愛動作不能並存）。
+- 抽到**活動／誘惑／走光**尺度 → 自動帶上這個運動自己的活動（排球場會配「做運動」，不會配「逛街」）。
+- 抽到**性愛**尺度 → 讓位給體位。
 
-誘惑／走光／性愛要的本來也是球衣和球場，不是「正在打球」這個動作。游泳是例外，`swimming` 在 `SEX_OK_ACTIVITY` 白名單裡，所以一直都帶著也不影響性愛。
+所以選「活動＋性愛」會**兩種輪流出**：一半是打球的圖、一半是性愛的圖，球衣球場球具兩邊都在。釘死的話性愛動作會被整個擋掉（會動的活動跟性愛動作不能並存），等於只剩一邊。
 
-如果你自己手動把活動釘進去又選性愛，左欄會直接告訴你「這種活動跟性愛動作不能並存，所以這張抽不到性愛」，不會讓你抽半天不知道為什麼。
+如果你自己手動把活動釘進必進 POS 又選性愛，左欄會直接告訴你「這種活動跟性愛動作不能並存，所以這張抽不到性愛」，並保留你的釘選不動——不會偷偷幫你刪掉。
+
+**器材本身會限定場地。** 腳踏車、弓、球拍不會出現在浴室或臥室。判斷只看器材不看衣服——穿排球服在廚房是可以的，在浴室騎腳踏車不行。
 
 **每個字都可以單獨拿掉。** 在「必進這張圖」點掉其中一個（例如球鞋），就只有那一個不再必進，其他照舊，而且**不會被自動加回來**——重新整理、存讀檔、preset 同步都不會。preset 不是綁死的包裹。
 
@@ -280,7 +283,7 @@ bot 要先加進該頻道並給發文權限，否則 Telegram 會回 `chat not f
 | 狀態 | 樣子 | 再點一下會 |
 |------|------|-----------|
 | 整套都在 | 實心 | 把整套拿掉（你自己另外釘的字留著） |
-| 只剩一部分 | 斜線底紋＋「·部分」 | 補齊整套 |
+| 只剩一部分 | 斜線底紋 | 補齊整套 |
 | 一個都沒有 | 空心 | 套用整套 |
 
 partial 狀態重新整理之後還在。換到另一個運動時，上一個運動的場地、制服、球具會清掉，但髮色、瞳色、身材這類身份釘選會留著；球鞋這種跨運動共用的裝備不會讓舊運動一直顯示半亮。

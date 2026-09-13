@@ -138,6 +138,14 @@ export function placeCard(card) {
   return card;
 }
 
+/** 把八格牆整面清掉，格子重新從第一格開始。 */
+export function resetWall() {
+  const wall = $("results");
+  if (wall) wall.replaceChildren();
+  slots.fill(null);
+  seq = 0;
+}
+
 export function wallCards() {
   return slots.filter((c) => c && c.isConnected);
 }

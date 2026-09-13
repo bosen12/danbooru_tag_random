@@ -15830,7 +15830,9 @@
       ],
       "mutex": "onepiece",
       "bind": [],
-      "implies": [],
+      "implies": [
+        "sportswear"
+      ],
       "layer": "garment",
       "era": [
         "modern"
@@ -16340,7 +16342,9 @@
       ],
       "mutex": "onepiece",
       "bind": [],
-      "implies": [],
+      "implies": [
+        "sportswear"
+      ],
       "layer": "garment",
       "era": [
         "modern"

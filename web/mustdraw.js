@@ -84,6 +84,21 @@ export function mustStepper(sub, sectionId, group, label) {
   return host;
 }
 
+/** 目前有幾個小分類設了必抽。 */
+export function mustCount() {
+  let n = 0;
+  for (const key of nodes.keys()) if (clamp(read(key)) > 0) n += 1;
+  return n;
+}
+
+/** 把所有小分類的必抽歸零。回傳原本有幾個，方便回報。 */
+export function clearAllMustDraw() {
+  const keys = [...nodes.keys()].filter((k) => clamp(read(k)) > 0);
+  for (const key of keys) write(key, 0);
+  syncMustDraw();
+  return keys.length;
+}
+
 export function syncMustDraw() {
   for (const key of [...nodes.keys()]) {
     const rec = nodes.get(key);

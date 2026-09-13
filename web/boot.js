@@ -60,10 +60,17 @@ import {
   markLive,
   placeCard,
   stopInfinite,
+  resetWall,
   wallHasCards,
 } from "./infinite.js";
 import { initTelegram, tgHandleKeys, tgSendCard, tgUiOpen } from "./telegram.js";
-import { initMustDraw, mustShortfall, mustStepper, syncMustDraw } from "./mustdraw.js";
+import {
+  clearAllMustDraw,
+  initMustDraw,
+  mustShortfall,
+  mustStepper,
+  syncMustDraw,
+} from "./mustdraw.js";
 
 const SECTIONS = [
   { id: "quality", title: "畫質與風格", hint: "固定畫質每張都帶。風格預設不進，釘了才進" },
@@ -95,6 +102,8 @@ let running = false;
 // 連續失敗幾張就把無限抽收掉。成功一張歸零。
 const FAIL_LIMIT = 3;
 let failStreak = 0;
+// 被取消／停過之後，下一次按抽圖要把八格牆先清掉重來，不要跟上一輪的殘局混在一起。
+let wallStale = false;
 let lastJobError = "";
 let genAbort = null;
 let jobAbort = null;
@@ -339,29 +348,6 @@ function syncSceneMode() {
 
 // aria-pressed 有三態：整套都在是 true、完全沒有是 false、只剩一部分是 mixed。
 // mixed 的時候再按一次會把缺的補回來。
-// 運動的「活動」tag（做運動、打網球…）只有在尺度「單選活動」時才進必進 POS。
-//
-// 為什麼是單選：chooseHeat() 會用已釘選 tag 自己的 heat 清單收斂尺度，而詞庫裡
-// 沒有任何一個 tag 的 heat 含 activity。所以只要釘了東西、尺度又勾了誘惑／走光／
-// 性愛任一個，活動尺度就會被濾掉、永遠抽不到。這種時候放活動 tag 進去純虧：
-// 活動照樣不會發生，卻還會擋掉性愛動作（會動的活動跟性愛動作不能並存）。
-//
-// 誘惑／走光／性愛要的本來也是球衣和球場，不是「正在打球」這個動作。
-function presetTagsFor(p) {
-  if (!p) return [];
-  if (!p.sport || !p.activity) return p.tags;
-  const heats = settings.heats || [];
-  const activityOnly = heats.length === 1 && heats[0] === "activity";
-  if (activityOnly) return p.tags;
-  return p.tags.filter((t) => t !== p.activity);
-}
-
-function presetCoreFor(p) {
-  if (!p || !p.core) return undefined;
-  const tags = presetTagsFor(p);
-  return p.core.filter((t) => tags.includes(t));
-}
-
 function paintPresetBtn(btn, tags, core) {
   const state = presetState(lex, tags, pinned, core);
   btn.setAttribute("aria-pressed", state === "on" ? "true" : state === "mixed" ? "mixed" : "false");
@@ -376,7 +362,7 @@ function makePresetBtn(p) {
   btn.className = "chip-toggle";
   btn.dataset.preset = p.id;
   btn.textContent = p.name;
-  paintPresetBtn(btn, presetTagsFor(p), presetCoreFor(p));
+  paintPresetBtn(btn, p.tags, p.core);
   return btn;
 }
 
@@ -427,7 +413,7 @@ function syncPresets() {
   if (!box || !lex) return;
   for (const btn of box.querySelectorAll("[data-preset]")) {
     const p = BUILTIN_PRESETS.find((x) => x.id === btn.dataset.preset);
-    if (p) paintPresetBtn(btn, presetTagsFor(p), presetCoreFor(p));
+    if (p) paintPresetBtn(btn, p.tags, p.core);
     else btn.setAttribute("aria-pressed", "false");
   }
   for (const btn of box.querySelectorAll("[data-user]")) {
@@ -1902,6 +1888,7 @@ function finishBatch() {
 // 立刻斷：無限抽的「停」和左欄的「取消」共用這一條。
 function stopNow(reason) {
   aborting = true;
+  wallStale = true;
   stopInfinite(reason || "已停");
   cancelRedoQueue();
   speak(reason || "取消中…");
@@ -2076,8 +2063,13 @@ async function runBatch() {
     return;
   }
 
+  // 上一輪是被取消掉的話，這次從乾淨的牆開始，不要留著半成品。
+  if (wallStale) {
+    resetWall();
+    wallStale = false;
+  }
   beginRound();
-  // 八格牆是連續的：不再每輪清空。只有第一次抽才把畫面捲過去。
+  // 八格牆平常是連續的：不再每輪清空。只有牆是空的才把畫面捲過去。
   if (!wallHasCards()) $("results").scrollIntoView({ behavior: "smooth", block: "start" });
 
   let ident = new Set();
@@ -2485,7 +2477,7 @@ function bindUi() {
       const builtin = e.target.closest("[data-preset]");
       if (builtin) {
         const p = BUILTIN_PRESETS.find((x) => x.id === builtin.dataset.preset);
-        if (p) applyNamedPreset(presetTagsFor(p), presetCoreFor(p));
+        if (p) applyNamedPreset(p.tags, p.core);
         return;
       }
       const user = e.target.closest("[data-user]");
@@ -2511,6 +2503,19 @@ function bindUi() {
       renderPresets();
       speak("已存釘選組合");
     });
+  }
+  const weightsBtn = $("clear-weights");
+  if (weightsBtn && !$("clear-must") && weightsBtn.parentNode) {
+    const btn = document.createElement("button");
+    btn.type = "button";
+    btn.className = "ghost";
+    btn.id = "clear-must";
+    btn.textContent = "清除必抽";
+    btn.addEventListener("click", () => {
+      const n = clearAllMustDraw();
+      speak(n ? `已清除 ${n} 個必抽` : "本來就沒有必抽");
+    });
+    weightsBtn.parentNode.insertBefore(btn, weightsBtn.nextSibling);
   }
   const clearW = $("clear-weights");
   if (clearW) {

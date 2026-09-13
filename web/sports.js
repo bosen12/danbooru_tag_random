@@ -112,8 +112,10 @@ export const SPORT_PRESETS = [
     name: "拳擊",
     activity: "boxing",
     venue: ["boxing ring"],
-    equipment: ["boxing gloves"],
-    clothing: ["boxing shorts"],
+    equipment: [],
+    // 拳擊手套是戴在身上的（lexicon 裡是 clothing/acc/hands），不是會限定場地的器材。
+    // 放進 equipment 會讓隨機抽到手套的廚房場景被擋掉廚房。
+    clothing: ["boxing gloves", "boxing shorts"],
     optionalEquipment: [],
   },
   {
@@ -179,21 +181,23 @@ export const SPORT_PRESETS = [
 ];
 
 /**
- * 這個 preset 的「必進 POS」清單，順序固定：活動 → 場地 → 器材 → 服裝。
+ * 這個 preset 的「必進 POS」清單：場地 → 器材 → 服裝。
  *
- * `withActivity: false` 會把活動 tag 拿掉。尺度沒有選「活動」時就該這樣用：
- * 誘惑／走光／性愛要的是球衣和球場，不是「正在打球」這個動作，而且那個動作會
- * 讓 engine 擋掉所有性愛動作（人不可能一邊打排球一邊做愛）。
+ * **活動 tag 不在裡面。** 它不釘死，改由抽牌時按當張的尺度決定：
+ * 抽到活動／誘惑／走光尺度就自動帶上該運動的活動（見 engine 的活動欄偏好），
+ * 抽到性愛尺度就讓位給體位。釘死的話性愛動作會被整個擋掉（會動的活動跟性愛
+ * 動作不能並存），選「活動＋性愛」就永遠只剩一邊。
+ *
+ * 運動身分仍然由活動 tag 參與判斷，見 SPORT_IDENTITY。
  */
-export function sportPresetTags(p, opts) {
+export function sportPresetTags(p) {
   if (!p) return [];
-  const withActivity = !opts || opts.withActivity !== false;
-  return [
-    ...(p.activity && withActivity ? [p.activity] : []),
-    ...(p.venue || []),
-    ...(p.equipment || []),
-    ...(p.clothing || []),
-  ];
+  return [...(p.venue || []), ...(p.equipment || []), ...(p.clothing || [])];
+}
+
+/** 這個運動的主活動 tag（沒有就回 null）。抽牌時用來優先挑對的活動。 */
+export function sportActivityOf(p) {
+  return (p && p.activity) || null;
 }
 
 /** 會出現在釘選組合列上的運動。 */
@@ -213,15 +217,57 @@ export const SPORT_IDENTITY = (() => {
     m.get(tag).add(id);
   };
   for (const p of SPORT_PRESETS) {
+    add(p.activity, p.id); // 活動雖然不進必進 POS，仍然代表運動身分
     for (const t of sportPresetTags(p)) add(t, p.id);
     for (const t of p.optionalEquipment || []) add(t, p.id);
   }
   return m;
 })();
 
+/**
+ * 只由「活動＋場地＋器材」建的身分表，**不含服裝**。
+ *
+ * 限定場地要用這一份：人可以穿著排球服在廚房，但不能在浴室騎腳踏車。用含服裝的
+ * SPORT_IDENTITY 去限場地會誤傷 —— 隨機抽到釘鞋的煮飯場景會被擋掉廚房。
+ */
+export const SPORT_GEAR_IDENTITY = (() => {
+  const m = new Map();
+  const add = (tag, id) => {
+    if (!tag || SPORT_NEUTRAL_GEAR.has(tag)) return;
+    if (!m.has(tag)) m.set(tag, new Set());
+    m.get(tag).add(id);
+  };
+  for (const p of SPORT_PRESETS) {
+    add(p.activity, p.id);
+    for (const t of [...(p.venue || []), ...(p.equipment || []), ...(p.optionalEquipment || [])]) {
+      add(t, p.id);
+    }
+  }
+  return m;
+})();
+
+/** 只看器材的交集。回 null＝沒有器材線索。 */
+export function sportGearIdsOf(tags) {
+  let ids = null;
+  for (const t of tags) {
+    const own = SPORT_GEAR_IDENTITY.get(t);
+    if (!own) continue;
+    if (ids === null) {
+      ids = new Set(own);
+      continue;
+    }
+    for (const id of [...ids]) if (!own.has(id)) ids.delete(id);
+  }
+  return ids;
+}
+
 /** preset 擁有的 tag（含選配器材）—— 用來判斷「這個 tag 是不是這個運動的」。 */
 export function sportOwnedTags(p) {
-  return new Set([...sportPresetTags(p), ...(p.optionalEquipment || [])]);
+  return new Set([
+    ...(p.activity ? [p.activity] : []),
+    ...sportPresetTags(p),
+    ...(p.optionalEquipment || []),
+  ]);
 }
 
 /**

@@ -11,6 +11,7 @@ import {
   SPORT_MOVE_ACTS,
   SPORT_NEUTRAL_GEAR,
   SPORT_PRESETS,
+  sportGearIdsOf,
   sportIdsOf,
   sportPresetTags,
   sportTagAllowed,
@@ -62,18 +63,14 @@ const SEX_OK_ACTIVITY = new Set([
 const STILL_BODY = new Set(["sleeping", "lying", "on back", "on stomach", "on side", "reclining"]);
 const LOCKED_SIT = new Set(["seiza", "wariza", "indian style"]);
 const GROUND_BODY = new Set(["all fours", "crawling", "top-down bottom-up"]);
-// 這些運動坐著或跪著都做不了。射箭不在裡面 —— 跪射是合理的姿勢。
+// 坐著或跪著做不了的活動。清單從 sports.js 算出來，不手抄，免得加新運動時失同步。
+// 例外寫在 SEATED_OK_SPORT：跪射是合理的姿勢；騎車和游泳本來就有自己的姿勢規則。
+const SEATED_OK_SPORT = new Set(["archery", "riding bicycle", "swimming", "skiing"]);
 const SEATED_BAD_SPORT = new Set([
   "playing sports",
   "training",
   "exercising",
-  "tennis",
-  "soccer",
-  "badminton",
-  "table tennis",
-  "boxing",
-  "track and field",
-  "golf",
+  ...SPORT_MOVE_ACTS.filter((a) => !SEATED_OK_SPORT.has(a)),
 ]);
 const MOVE_ACT = new Set([
   "swimming",
@@ -760,6 +757,28 @@ function sportKitOk(item, used) {
   return sportTagAllowed(item.tag, used);
 }
 
+/**
+ * 運動器材本身就限定場地：球拍、腳踏車、弓在浴室裡不成立。
+ *
+ * 活動 tag 不再釘死之後（改由尺度決定），沒有場地的運動就失去了 ACT_PLACE 的約束，
+ * 自行車會掉進浴室。這裡補回來：場上看得出是哪個運動，場地就必須是那個運動的
+ * 場地，或它的活動本來就允許的場地。查不到場地資訊的運動不限制。
+ */
+function sportPlaceOk(item, used) {
+  if (item.mutex !== "place" && item.group !== "place") return true;
+  // 只看器材，不看服裝：穿排球服在廚房是可以的，浴室騎腳踏車不行。
+  const ids = sportGearIdsOf(used);
+  if (!ids || !ids.size) return true;
+  const okPlaces = new Set();
+  for (const sp of SPORT_PRESETS) {
+    if (!ids.has(sp.id)) continue;
+    for (const v of sp.venue || []) okPlaces.add(v);
+    for (const pl of ACT_PLACE[sp.activity] || []) okPlaces.add(pl);
+  }
+  if (!okPlaces.size) return true;
+  return okPlaces.has(item.tag);
+}
+
 const PRIVATE_SEX_PLACE = new Set([
   "bedroom",
   "hotel room",
@@ -1436,6 +1455,7 @@ export const BUILTIN_PRESETS = [
     id: p.id,
     name: p.name,
     tags: sportPresetTags(p),
+    // 活動不進必進 POS，抽牌時按尺度自動帶上。留著只是給 UI 說明用。
     activity: p.activity || null,
     // core 是「這套的識別性成員」。球鞋、運動服這種跨運動通用的裝備不算，
     // 否則換到網球之後籃球會因為共用球鞋而一直顯示半亮。
@@ -1890,7 +1910,11 @@ function chooseHeat(settings, pinned, lex, rand, ctx) {
   const fromPins = intersectOrUnion(ctx.heatLists);
   let allowed = enabled.length ? enabled : ["tease"];
   if (fromPins && fromPins.length) {
-    const hit = allowed.filter((h) => fromPins.includes(h));
+    // 同一個概念要用同一套規則：itemFitsHeats() 把「heat 含 tease」的 tag 視為
+    // 活動尺度也能用，這裡不能改拿原始陣列硬比，否則詞庫裡 987 個 tease/flash/sex
+    // 的 tag 只要被釘到一個，「活動」就永遠選不到。
+    const fits = (h) => fromPins.includes(h) || (h === "activity" && fromPins.includes("tease"));
+    const hit = allowed.filter(fits);
     if (hit.length) allowed = hit;
   }
   const weights = { ...settings.weights };
@@ -3377,6 +3401,7 @@ export function drawOne(lex, settings, pinned, userBanned, rand, seed) {
       }
     }
     if (lockSceneOn(settings) && !sportKitOk(item, used)) return false;
+    if (lockSceneOn(settings) && !sportPlaceOk(item, used)) return false;
     if (
       lockSceneOn(settings) &&
       (item.mutex === "sport_ball" || item.mutex === "sport_prop") &&
@@ -3553,6 +3578,19 @@ export function drawOne(lex, settings, pinned, userBanned, rand, seed) {
     takeFromPool(pool, 1, rand, commit, prefer, allow);
   };
 
+  // 場上已經看得出是哪個運動時，活動欄優先挑那個運動自己的活動（排球場 → 做運動，
+  // 而不是逛街）。抽不到也沒關係，場地本來就會把不合的活動擋掉。
+  const sportActivityPrefer = () => {
+    const ids = sportIdsOf(used);
+    if (!ids || !ids.size) return null;
+    const wanted = new Set();
+    for (const sp of SPORT_PRESETS) {
+      if (sp.activity && ids.has(sp.id)) wanted.add(sp.activity);
+    }
+    if (!wanted.size) return null;
+    return (item) => wanted.has(item.tag);
+  };
+
   const fillGroup = (section, groupName) => {
     if (someUsed((it) => it.group === groupName)) return;
     const indexed = lex.byGroup && lex.byGroup.get(section + ":" + groupName);
@@ -3622,7 +3660,7 @@ export function drawOne(lex, settings, pinned, userBanned, rand, seed) {
   if (male && !realisticOn(settings) && rand() < 0.38) fillSlot("feature", "race");
   if (settings.drawJob && !used.has("maid")) fillSlot("feature", "job");
   if (heat !== "sex" && !someUsed((it) => it.mutex === "sex_act" || it.tag === "sex")) {
-    fillSlot("pose", "activity");
+    fillSlot("pose", "activity", sportActivityPrefer() || undefined);
   }
   fill("feature", (item) => {
     if (item.mutex === "race") return false;
@@ -3769,7 +3807,7 @@ export function drawOne(lex, settings, pinned, userBanned, rand, seed) {
   fillSlot("pose", "gaze");
   fillSlot("pose", "expression");
   const hasSexAct = someUsed((it) => it.mutex === "sex_act" || it.tag === "sex");
-  if (heat !== "sex" && !hasSexAct) fillSlot("pose", "activity");
+  if (heat !== "sex" && !hasSexAct) fillSlot("pose", "activity", sportActivityPrefer() || undefined);
   const stampActProps = () => {
     for (const a of usedActs(used, lex)) {
       for (const prop of ACT_PROP[a] || []) {
