@@ -8,3 +8,7 @@ docs/
 
 # Telegram bot token 住在這裡，不要進 git
 .secrets/
+
+# 拿舊 commit 解壓出來做前後比對用的暫存基準，整包是 git 裡已有的東西，
+# 別讓它有機會被 `git add -A` 掃進版控（一份就 40MB）。
+.tmp_baseline_*
