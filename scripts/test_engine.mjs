@@ -5841,6 +5841,71 @@ function indoorOutdoorClash(have) {
   );
 }
 
+// --- 室內外：兩個方向都要擋 --------------------------------------------------
+// 靜態掃 allow() 的單向 guard 時抓到的（Codex 第四輪第 5 點）。
+//
+// 舊規則只寫了「室內已定 → 擋戶外景物」和「戶外已定 → 擋室內道具」，
+// 沒寫反向。而 in_out 是 fillSlot("env","in_out") 抽的，排在 fill("env") 之前，
+// 所以一般抽取碰不到 —— 但只要使用者把 tree 這種戶外景物釘起來，順序就翻過來了：
+//
+//   釘 tree，seed 700001 → 最終 POS：tree, futon, indoors, gaming chair, ...
+//   釘 against window，seed 700001 → 最終 POS：against window, open-air bath, outdoors, campfire, ...
+//
+// 兩者都違反 allow() 自己已經宣告的契約（`used.has("indoors") && OUTDOOR_LEFTOVER`
+// 與 `against window && outdoors && !indoors`），而且 contradictions() 抓不到。
+{
+  const ioSettings = () => {
+    const s = defaultSettings(data);
+    s.girl = true;
+    s.boy = true;
+    s.heats = ["activity", "tease", "flash", "sex"];
+    s.sceneMode = "normal";
+    s.lockScene = true;
+    s.counts = { subject: 10, feature: 10, pose: 10, clothing: 10, env: 10 };
+    return s;
+  };
+  const bothIn = (pin, other, n = 250, seed0 = 700000) => {
+    const s = ioSettings();
+    const pinned = new Set([pin]);
+    for (let i = 1; i <= n; i++) {
+      const got = tagsOf(drawOne(lex, s, pinned, new Set(), mulberry32(seed0 + i), seed0 + i));
+      if (got.has(pin) && got.has(other)) return seed0 + i; // 第一個重播 seed
+    }
+    return 0;
+  };
+
+  // 戶外景物先釘 → 不該再抽到 indoors。
+  for (const t of ["tree", "bush", "campfire", "starry sky", "cherry blossoms"]) {
+    const seed = bothIn(t, "indoors");
+    ok(`in/out：釘「${t}」不該再抽到 indoors`, seed === 0, seed ? `seed=${seed}` : "");
+  }
+  // 室內道具先釘 → 不該再抽到 outdoors。
+  for (const t of ["tatami", "curtains", "gaming chair", "office chair", "shoji"]) {
+    const seed = bothIn(t, "outdoors");
+    ok(`in/out：釘「${t}」不該再抽到 outdoors`, seed === 0, seed ? `seed=${seed}` : "");
+  }
+  // 靠窗／靠玻璃先釘 → 不該再抽到 outdoors（除非同時有 indoors）。
+  for (const t of ["against window", "against glass"]) {
+    const s = ioSettings();
+    const pinned = new Set([t]);
+    let bad = 0;
+    let firstSeed = 0;
+    for (let i = 1; i <= 250; i++) {
+      const got = tagsOf(drawOne(lex, s, pinned, new Set(), mulberry32(700000 + i), 700000 + i));
+      if (got.has(t) && got.has("outdoors") && !got.has("indoors")) {
+        bad += 1;
+        if (!firstSeed) firstSeed = 700000 + i;
+      }
+    }
+    ok(`in/out：釘「${t}」不該落在純戶外`, bad === 0, firstSeed ? `${bad}/250，seed=${firstSeed}` : "");
+  }
+
+  // 護欄：修了反向之後，正向不能壞掉，室內外本身也還要抽得出來。
+  for (const [pin, want] of [["tree", "outdoors"], ["tatami", "indoors"], ["against window", "indoors"]]) {
+    ok(`in/out 護欄：釘「${pin}」仍抽得到「${want}」`, bothIn(pin, want) > 0);
+  }
+}
+
 if (failed) {
   console.error(`\n${failed} failed`);
   process.exit(1);

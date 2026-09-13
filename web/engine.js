@@ -2735,6 +2735,12 @@ export function drawOne(lex, settings, pinned, userBanned, rand, seed) {
     }
     if (used.has("indoors") && OUTDOOR_LEFTOVER.has(item.tag)) return false;
     if (used.has("outdoors") && INDOOR_PROP.has(item.tag)) return false;
+    // 反向。單看這兩行擋不到東西 —— indoors／outdoors 多半是場地「暗示」進來的
+    // （futon → indoors、open-air bath → outdoors）。但 commit() 現在會把暗示鏈
+    // 的每一個字送進 allow()，所以這兩行是那條路徑真正的閘門：少了它們，釘一個
+    // 戶外景物之後 indoors 照樣補得進來（釘 tree、seed 700005 → tree, futon, indoors）。
+    if (item.tag === "indoors" && [...used].some((t) => OUTDOOR_LEFTOVER.has(t))) return false;
+    if (item.tag === "outdoors" && [...used].some((t) => INDOOR_PROP.has(t))) return false;
     if (used.has("outdoors") && item.tag === "bunk bed") return false;
     if (item.tag === "outdoors" && used.has("bunk bed")) return false;
     if (
@@ -3090,6 +3096,14 @@ export function drawOne(lex, settings, pinned, userBanned, rand, seed) {
     if (item.tag === "on chair" && used.has("riding bicycle")) return false;
     if (item.tag === "candlelight" && (used.has("underwater") || used.has("swimming") || used.has("diving"))) return false;
     if ((item.tag === "underwater" || item.tag === "swimming" || item.tag === "diving") && used.has("candlelight")) {
+      return false;
+    }
+    // 同理的反向：靠窗／靠玻璃先進場，outdoors 就不能再從暗示鏈補進來。
+    if (
+      item.tag === "outdoors" &&
+      !used.has("indoors") &&
+      (used.has("against window") || used.has("against glass"))
+    ) {
       return false;
     }
     if ((item.tag === "against window" || item.tag === "against glass") && used.has("outdoors") && !used.has("indoors")) {
