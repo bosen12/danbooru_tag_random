@@ -2156,13 +2156,16 @@ function makeCommit(lex, used, mutexTaken, banned, era, allowDep) {
             if (!activityFitsBody(a, new Set([d]))) return false;
           }
         }
-        if (
-          allowDep &&
-          di &&
-          di.mutex !== "held_prop" &&
-          !allowDep(di)
-        ) {
-          return false;
+        if (allowDep && di && di.mutex !== "held_prop" && !allowDep(di)) {
+          // 上面那個暫時的 used.add(tag) 是為了讓「護士在場，聽診器才合法」成立，
+          // 但父子同屬一個排他集合時會反咬自己：karaoke 和它 implies 的 singing
+          // 都算忙手活動，驗 singing 的時候撞到剛放進去的 karaoke，整條 commit 被拒。
+          // 所以再問一次「把父字拿掉還是不合法嗎」—— 只有跟別的東西衝突才真的拒絕。
+          // 一個字不該跟它自己 implies 的字打架。
+          used.delete(tag);
+          const blockedByOthers = !allowDep(di);
+          used.add(tag);
+          if (blockedByOthers) return false;
         }
       }
     } finally {

@@ -5963,6 +5963,52 @@ function indoorOutdoorClash(have) {
   );
 }
 
+// --- 一個字不該跟它自己 implies 的字打架 -----------------------------------
+// commit() 驗證相依字時會先把父字暫時放進 used（護士在場，聽診器才合法）。
+// 但父子同屬一個排他集合時這招會反咬：karaoke 和它 implies 的 singing 都在
+// HANDS_BUSY_ACT 裡，於是驗 singing 的時候撞到剛放進去的 karaoke，整個 commit 被拒。
+//
+// 實測這是迴歸：86a3a1b 的同一批 600 張裡 karaoke 6 次、playing video games 2 次、
+// picnic 1 次；把相依字改走 allow() 之後三個都變成 0。
+{
+  const s = defaultSettings(data);
+  s.girl = true;
+  s.boy = true;
+  s.drawJob = true;
+  s.heats = ["activity", "tease", "flash", "sex"];
+  s.counts = { subject: 10, feature: 10, pose: 10, clothing: 10, env: 10 };
+  const seen = new Map();
+  for (let i = 1; i <= 600; i++) {
+    for (const t of tagsOf(drawOne(lex, s, new Set(), new Set(), mulberry32(950000 + i), 950000 + i))) {
+      seen.set(t, (seen.get(t) || 0) + 1);
+    }
+  }
+  for (const [child, parent] of [
+    ["karaoke", "singing"],
+    ["playing video games", "playing games"],
+    ["picnic", "eating"],
+  ]) {
+    ok(
+      `父子相依：「${child}」抽得到（它 implies 的「${parent}」跟它同屬忙手活動）`,
+      (seen.get(child) || 0) > 0,
+      `600 張裡 ${seen.get(child) || 0} 次`
+    );
+  }
+  // 護欄：父子放行不能變成「兩個無關的忙手活動也放行」。
+  const BUSY = ["playing guitar", "cooking", "driving", "fishing", "smoking", "shopping", "cleaning"];
+  let clash = 0;
+  let why = "";
+  for (let i = 1; i <= 600; i++) {
+    const got = tagsOf(drawOne(lex, s, new Set(), new Set(), mulberry32(950000 + i), 950000 + i));
+    const hit = BUSY.filter((t) => got.has(t));
+    if (hit.length > 1) {
+      clash += 1;
+      if (!why) why = `seed ${950000 + i}：${hit.join(" + ")}`;
+    }
+  }
+  ok("父子相依：無關的忙手活動仍然互斥", clash === 0, why);
+}
+
 if (failed) {
   console.error(`\n${failed} failed`);
   process.exit(1);
