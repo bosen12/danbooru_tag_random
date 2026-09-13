@@ -5259,6 +5259,35 @@ function indoorOutdoorClash(have) {
       sportHeatWarnings(lex, pinSet(sportPresetTags(SPORT_BY_ID.get("hoops"), { withActivity: false })), ["sex"]), []);
     eq("no warning at activity heat",
       sportHeatWarnings(lex, hoopsWithAct, ["activity"]), []);
+
+    // 詞庫裡沒有任何 tag 的 heat 含 activity，所以只要釘了東西、尺度又勾了
+    // 誘惑／走光／性愛任一個，活動尺度就會被 chooseHeat() 濾掉、永遠抽不到。
+    // 這是「活動 tag 只在單選活動時才加」的理由，這裡把前提釘住。
+    eq("no lexicon tag declares the activity heat",
+      lex.data.tags.filter((t) => Array.isArray(t.heat) && t.heat.includes("activity")).length, 0);
+    {
+      const s = settings();
+      s.girl = true;
+      s.boy = false;
+      s.eras = ["modern"];
+      s.sceneMode = "normal";
+      const count = (heats) => {
+        const cfg = { ...s, heats, weights: weightsForHeats(heats, data.heatWeights) };
+        const seen = new Set();
+        for (let i = 0; i < 120; i++) {
+          const seed = 930000 + i;
+          seen.add(drawOne(lex, cfg, hoopsWithAct, new Set(), mulberry32(seed), seed).heat);
+        }
+        return seen;
+      };
+      eq("activity heat only survives when it is the only one",
+        [...count(["activity"])], ["activity"]);
+      ok("activity heat never lands once another heat is on",
+        !count(["activity", "sex"]).has("activity"),
+        [...count(["activity", "sex"])].join(","));
+      ok("activity heat never lands with all four on",
+        !count(["activity", "tease", "flash", "sex"]).has("activity"));
+    }
   }
 
   // 7) 使用者自己釘兩個互斥運動：保留，並且回報 warning，不靜默刪除

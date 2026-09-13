@@ -339,13 +339,20 @@ function syncSceneMode() {
 
 // aria-pressed 有三態：整套都在是 true、完全沒有是 false、只剩一部分是 mixed。
 // mixed 的時候再按一次會把缺的補回來。
-// 運動的「活動」tag（做運動、打網球…）只有在尺度選了「活動」時才進必進 POS。
-// 誘惑／走光／性愛要的是球衣和球場，不是「正在打球」這個動作 —— 而且 engine 規定
-// 會動的活動跟性愛動作不能並存，帶著它會讓性愛整個抽不到。
+// 運動的「活動」tag（做運動、打網球…）只有在尺度「單選活動」時才進必進 POS。
+//
+// 為什麼是單選：chooseHeat() 會用已釘選 tag 自己的 heat 清單收斂尺度，而詞庫裡
+// 沒有任何一個 tag 的 heat 含 activity。所以只要釘了東西、尺度又勾了誘惑／走光／
+// 性愛任一個，活動尺度就會被濾掉、永遠抽不到。這種時候放活動 tag 進去純虧：
+// 活動照樣不會發生，卻還會擋掉性愛動作（會動的活動跟性愛動作不能並存）。
+//
+// 誘惑／走光／性愛要的本來也是球衣和球場，不是「正在打球」這個動作。
 function presetTagsFor(p) {
   if (!p) return [];
   if (!p.sport || !p.activity) return p.tags;
-  if ((settings.heats || []).includes("activity")) return p.tags;
+  const heats = settings.heats || [];
+  const activityOnly = heats.length === 1 && heats[0] === "activity";
+  if (activityOnly) return p.tags;
   return p.tags.filter((t) => t !== p.activity);
 }
 
