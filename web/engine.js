@@ -1436,6 +1436,7 @@ export const BUILTIN_PRESETS = [
     id: p.id,
     name: p.name,
     tags: sportPresetTags(p),
+    activity: p.activity || null,
     // core 是「這套的識別性成員」。球鞋、運動服這種跨運動通用的裝備不算，
     // 否則換到網球之後籃球會因為共用球鞋而一直顯示半亮。
     core: sportPresetTags(p).filter((t) => !SPORT_NEUTRAL_GEAR.has(t)),
@@ -1524,6 +1525,22 @@ export function presetActive(lex, tags, pinned, core) {
  * 使用者自己釘了互相矛盾的運動時回報一下。專案既有政策是保留明確釘選並顯示 warning，
  * 不靜默刪掉使用者要的東西 —— 這裡只負責講，不動 pinned。
  */
+/**
+ * 釘著的活動會不會擋掉性愛動作。engine 的規則是「會動的活動」跟性愛不能並存
+ * （游泳、泡澡那些在 SEX_OK_ACTIVITY 白名單裡例外）。這裡只負責講，不動 pinned ——
+ * 使用者自己釘的東西不靜默刪掉。
+ */
+export function sportHeatWarnings(lex, pinned, heats) {
+  if (!(heats || []).includes("sex")) return [];
+  const blocking = [];
+  for (const t of pinned) {
+    const it = lex.byTag.get(t);
+    if (!it || it.mutex !== "activity") continue;
+    if (MOVE_ACT.has(t) && !SEX_OK_ACTIVITY.has(t)) blocking.push(t);
+  }
+  return blocking.length ? [{ kind: "sexActivity", tags: blocking }] : [];
+}
+
 export function sportPinWarnings(lex, pinned) {
   const ids = sportIdsOf(pinned);
   if (ids === null || ids.size > 0) return [];

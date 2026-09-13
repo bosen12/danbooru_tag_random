@@ -178,11 +178,18 @@ export const SPORT_PRESETS = [
   },
 ];
 
-/** 這個 preset 的「必進 POS」完整清單，順序固定：活動 → 場地 → 器材 → 服裝。 */
-export function sportPresetTags(p) {
+/**
+ * 這個 preset 的「必進 POS」清單，順序固定：活動 → 場地 → 器材 → 服裝。
+ *
+ * `withActivity: false` 會把活動 tag 拿掉。尺度沒有選「活動」時就該這樣用：
+ * 誘惑／走光／性愛要的是球衣和球場，不是「正在打球」這個動作，而且那個動作會
+ * 讓 engine 擋掉所有性愛動作（人不可能一邊打排球一邊做愛）。
+ */
+export function sportPresetTags(p, opts) {
   if (!p) return [];
+  const withActivity = !opts || opts.withActivity !== false;
   return [
-    ...(p.activity ? [p.activity] : []),
+    ...(p.activity && withActivity ? [p.activity] : []),
     ...(p.venue || []),
     ...(p.equipment || []),
     ...(p.clothing || []),

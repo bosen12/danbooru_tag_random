@@ -50,6 +50,7 @@ import {
   sanitizePinPresets,
   presetActive,
   presetState,
+  sportHeatWarnings,
   sportPinWarnings,
   clearPresetTags,
   togglePresetTags,
@@ -5187,6 +5188,77 @@ function indoorOutdoorClash(have) {
       }
     }
     eq("no preset uses a deprecated or empty tag", [...used], []);
+  }
+
+  // 6b) 活動 tag 只有在尺度選了「活動」時才進必進 POS
+  {
+    const sexSettings = () => {
+      const s = settings();
+      s.girl = true;
+      s.boy = false;
+      s.heats = ["sex"];
+      s.eras = ["modern"];
+      s.sceneMode = "normal";
+      s.lockScene = true;
+      s.weights = { tease: 0, flash: 0, sex: 1, activity: 0 };
+      return s;
+    };
+    const isSex = (tag) => {
+      const it = lex.byTag.get(tag);
+      return !!it && (it.mutex === "sex_act" || it.group === "sex");
+    };
+
+    for (const p of SPORT_BUTTONS) {
+      const full = sportPresetTags(p);
+      const noAct = sportPresetTags(p, { withActivity: false });
+      eq(`${p.name} drops only the activity without it`, noAct, full.filter((t) => t !== p.activity));
+      ok(`${p.name} keeps venue/kit/clothing without the activity`,
+        [...(p.venue || []), ...(p.equipment || []), ...(p.clothing || [])].every((t) => noAct.includes(t)));
+    }
+
+    // 性愛尺度用不含活動的組合：性愛動作抽得到，運動身分還在
+    for (const p of SPORT_BUTTONS) {
+      const noAct = sportPresetTags(p, { withActivity: false });
+      const pins = pinSet(noAct);
+      let withSex = 0;
+      let keptKit = 0;
+      for (let i = 0; i < 40; i++) {
+        const seed = 915000 + i;
+        const d = drawOne(lex, sexSettings(), pins, new Set(), mulberry32(seed), seed);
+        const got = new Set(d.positive.split(", ").map((t) => t.trim()));
+        if ([...got].some(isSex)) withSex += 1;
+        if (noAct.every((t) => got.has(t))) keptKit += 1;
+      }
+      ok(`${p.name} draws sex acts once the activity is out`, withSex >= 28, `sex=${withSex}/40`);
+      ok(`${p.name} keeps venue/kit/uniform at sex heat`, keptKit >= 28, `kit=${keptKit}/40`);
+    }
+
+    // 游泳例外：swimming 本來就在 SEX_OK_ACTIVITY 白名單，帶著活動也抽得到性愛
+    const swim = SPORT_BY_ID.get("swim");
+    const swimPins = pinSet(sportPresetTags(swim));
+    let swimSex = 0;
+    for (let i = 0; i < 40; i++) {
+      const seed = 915500 + i;
+      const d = drawOne(lex, sexSettings(), swimPins, new Set(), mulberry32(seed), seed);
+      if (d.positive.split(", ").map((t) => t.trim()).some(isSex)) swimSex += 1;
+    }
+    ok("swimming still draws sex acts with its activity pinned", swimSex >= 28, `sex=${swimSex}/40`);
+
+    // 反面：活動留著的話，除了游泳以外的運動確實抽不到性愛 —— 這就是要避開的情況
+    const hoopsWithAct = pinSet(sportPresetTags(SPORT_BY_ID.get("hoops")));
+    let blocked = 0;
+    for (let i = 0; i < 40; i++) {
+      const seed = 915900 + i;
+      const d = drawOne(lex, sexSettings(), hoopsWithAct, new Set(), mulberry32(seed), seed);
+      if (d.positive.split(", ").map((t) => t.trim()).some(isSex)) blocked += 1;
+    }
+    eq("a pinned sport activity really does block sex acts", blocked, 0);
+    ok("and that clash is reported, not silent",
+      sportHeatWarnings(lex, hoopsWithAct, ["sex"]).length > 0);
+    eq("no warning when the activity is out",
+      sportHeatWarnings(lex, pinSet(sportPresetTags(SPORT_BY_ID.get("hoops"), { withActivity: false })), ["sex"]), []);
+    eq("no warning at activity heat",
+      sportHeatWarnings(lex, hoopsWithAct, ["activity"]), []);
   }
 
   // 7) 使用者自己釘兩個互斥運動：保留，並且回報 warning，不靜默刪除

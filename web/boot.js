@@ -40,6 +40,7 @@ import {
   BUILTIN_PRESETS,
   sanitizePinPresets,
   presetState,
+  sportHeatWarnings,
   togglePresetTags,
 } from "./engine.js";
 import {
@@ -229,6 +230,15 @@ const HEAT_LABELS = { activity: "活動", tease: "誘惑", flash: "走光", sex:
 function updateHeatClash() {
   const note = $("heat-clash");
   if (!note) return;
+  const sexBlock = sportHeatWarnings(lex, pinned, settings.heats);
+  if (sexBlock.length) {
+    note.hidden = false;
+    note.textContent =
+      "你釘了「" +
+      sexBlock[0].tags.map((t) => labelOf(lex, t)).join("、") +
+      "」，這種活動跟性愛動作不能並存，所以這張抽不到性愛。把它從「必進這張圖」點掉就會有。";
+    return;
+  }
   const clash = heatMismatches(lex, pinned, settings.heats);
   if (clash.length) {
     const scale = (settings.heats || []).map((h) => HEAT_LABELS[h] || h).join("／");
@@ -329,6 +339,22 @@ function syncSceneMode() {
 
 // aria-pressed 有三態：整套都在是 true、完全沒有是 false、只剩一部分是 mixed。
 // mixed 的時候再按一次會把缺的補回來。
+// 運動的「活動」tag（做運動、打網球…）只有在尺度選了「活動」時才進必進 POS。
+// 誘惑／走光／性愛要的是球衣和球場，不是「正在打球」這個動作 —— 而且 engine 規定
+// 會動的活動跟性愛動作不能並存，帶著它會讓性愛整個抽不到。
+function presetTagsFor(p) {
+  if (!p) return [];
+  if (!p.sport || !p.activity) return p.tags;
+  if ((settings.heats || []).includes("activity")) return p.tags;
+  return p.tags.filter((t) => t !== p.activity);
+}
+
+function presetCoreFor(p) {
+  if (!p || !p.core) return undefined;
+  const tags = presetTagsFor(p);
+  return p.core.filter((t) => tags.includes(t));
+}
+
 function paintPresetBtn(btn, tags, core) {
   const state = presetState(lex, tags, pinned, core);
   btn.setAttribute("aria-pressed", state === "on" ? "true" : state === "mixed" ? "mixed" : "false");
@@ -343,7 +369,7 @@ function makePresetBtn(p) {
   btn.className = "chip-toggle";
   btn.dataset.preset = p.id;
   btn.textContent = p.name;
-  paintPresetBtn(btn, p.tags, p.core);
+  paintPresetBtn(btn, presetTagsFor(p), presetCoreFor(p));
   return btn;
 }
 
@@ -394,7 +420,7 @@ function syncPresets() {
   if (!box || !lex) return;
   for (const btn of box.querySelectorAll("[data-preset]")) {
     const p = BUILTIN_PRESETS.find((x) => x.id === btn.dataset.preset);
-    if (p) paintPresetBtn(btn, p.tags, p.core);
+    if (p) paintPresetBtn(btn, presetTagsFor(p), presetCoreFor(p));
     else btn.setAttribute("aria-pressed", "false");
   }
   for (const btn of box.querySelectorAll("[data-user]")) {
@@ -422,6 +448,7 @@ function pickHeat(h) {
   settings.weights = weightsForHeats(next, lex.data.heatWeights);
   syncHeat();
   saveStore();
+  syncPresets();
   renderCats("heat");
 }
 
@@ -2451,7 +2478,7 @@ function bindUi() {
       const builtin = e.target.closest("[data-preset]");
       if (builtin) {
         const p = BUILTIN_PRESETS.find((x) => x.id === builtin.dataset.preset);
-        if (p) applyNamedPreset(p.tags, p.core);
+        if (p) applyNamedPreset(presetTagsFor(p), presetCoreFor(p));
         return;
       }
       const user = e.target.closest("[data-user]");
