@@ -28,6 +28,12 @@ if errorlevel 1 (
   pause
   exit /b 1
 )
+echo == Danbooru verifier ==
+call node scripts\test_verify_danbooru_tags.mjs
+if errorlevel 1 (
+  pause
+  exit /b 1
+)
 echo == quiz ==
 call node scripts\test_quiz.mjs
 if errorlevel 1 (

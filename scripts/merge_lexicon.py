@@ -395,7 +395,6 @@ IMPLIES = {
     "soccer field": ["outdoors"],
     "baseball stadium": ["outdoors"],
     "bowling alley": ["indoors"],
-    "ski slope": ["outdoors", "snow"],
     "rape": ["sex"],
     "orgy": ["group sex", "sex"],
     "nurse": ["nurse cap"],
@@ -1838,8 +1837,8 @@ def extra_expand_tags() -> list[dict]:
         env("bowling alley", implies=["indoors"], zh="保齡球館"),
         env("boxing ring", implies=["indoors"], zh="拳擊台"),
         env("running track", implies=["outdoors"], zh="跑道"),
-        env("sports court", implies=["outdoors"], zh="綜合球場"),
-        env("ski slope", implies=["outdoors", "snow"], zh="滑雪道"),
+        # 綜合球場可能在室內或室外，不能單向暗示 outdoors。
+        env("sports court", zh="綜合球場"),
         env("bunk bed", mutex="furniture", implies=["indoors"], zh="雙層床"),
         env("basketball (object)", mutex="sport_ball", zh="籃球"),
         env("soccer ball", mutex="sport_ball", zh="足球"),

@@ -245,7 +245,7 @@ bot 要先加進該頻道並給發文權限，否則 Telegram 會回 `chat not f
 
 底下自成一組的 13 顆按鈕，寫的是**運動**不是場地：籃球、網球、足球、棒球、排球、羽球、桌球、游泳、拳擊、田徑、高爾夫、自行車、射箭。
 
-點一下，整套一次進「必進這張圖」——場地、器材、服裝一起。活動不釘死，由抽牌時按尺度決定（見下面）：
+點一下，整套一次進「必進這張圖」——場地、器材、服裝一起。旁邊的「動作也必進」預設關閉；打開後，活動也會一起釘選。預設關閉時由抽牌按尺度決定（見下面）：
 
 | 運動 | 必進 POS（場地／器材／服裝） | 抽牌時帶的活動 |
 |---|---|---|
@@ -253,9 +253,9 @@ bot 要先加進該頻道並給發文權限，否則 Telegram 會回 `chat not f
 | 網球 | `tennis court` `tennis racket` `tennis ball` `tennis uniform` `sneakers` | `tennis` |
 | 足球 | `soccer field` `soccer ball` `soccer uniform` `cleats` | `soccer` |
 | 棒球 | `baseball stadium` `baseball (object)` `baseball bat` `baseball uniform` `baseball cap` `cleats` | `playing sports` |
-| 排球 | `sports court` `volleyball (object)` `volleyball uniform` `knee pads` `sneakers` | `playing sports` |
-| 羽球 | `sports court` `badminton racket` `shuttlecock` `sportswear` `sneakers` | `badminton` |
-| 桌球 | `table tennis paddle` `table tennis ball` `sportswear` `sneakers` | `table tennis` |
+| 排球 | `school gym` `volleyball (object)` `volleyball uniform` `knee pads` `sneakers` | `playing sports` |
+| 羽球 | `school gym` `badminton racket` `shuttlecock` `sportswear` `sneakers` | `badminton` |
+| 桌球 | `school gym` `table tennis paddle` `table tennis ball` `sportswear` `sneakers` | `table tennis` |
 | 游泳 | `pool` `competition swimsuit` `swim cap` `goggles` | `swimming` |
 | 拳擊 | `boxing ring` `boxing gloves` `boxing shorts` | `boxing` |
 | 田徑 | `running track` `track uniform` `sneakers` | `track and field` |
@@ -263,12 +263,12 @@ bot 要先加進該頻道並給發文權限，否則 Telegram 會回 `chat not f
 | 自行車 | `bicycle` `bicycle helmet` `sportswear` `sneakers` | `riding bicycle` |
 | 射箭 | `bow (weapon)` `arrow (projectile)` `sportswear` | `archery` |
 
-**「活動」tag 不釘死，看那張圖的尺度決定。** `playing sports`／`tennis`／`badminton` 這類動作 tag **不會進必進 POS**。它由抽牌時決定：
+**「動作也必進」關閉時，活動 tag 不釘死，看那張圖的尺度決定。** `playing sports`／`tennis`／`badminton` 這類動作由抽牌決定：
 
 - 抽到**活動／誘惑／走光**尺度 → 自動帶上這個運動自己的活動（排球場會配「做運動」，不會配「逛街」）。
 - 抽到**性愛**尺度 → 讓位給體位。
 
-所以選「活動＋性愛」會**兩種輪流出**：一半是打球的圖、一半是性愛的圖，球衣球場球具兩邊都在。釘死的話性愛動作會被整個擋掉（會動的活動跟性愛動作不能並存），等於只剩一邊。
+所以選「活動＋性愛」會**兩種輪流出**：一半是打球的圖、一半是性愛的圖，球衣球場球具兩邊都在。打開「動作也必進」後，活動會釘進 POS；它與性愛動作互斥，因此適合想固定運動畫面的情況。
 
 如果你自己手動把活動釘進必進 POS 又選性愛，左欄會直接告訴你「這種活動跟性愛動作不能並存，所以這張抽不到性愛」，並保留你的釘選不動——不會偷偷幫你刪掉。
 
@@ -286,7 +286,7 @@ bot 要先加進該頻道並給發文權限，否則 Telegram 會回 `chat not f
 | 只剩一部分 | 斜線底紋 | 補齊整套 |
 | 一個都沒有 | 空心 | 套用整套 |
 
-partial 狀態重新整理之後還在。換到另一個運動時，上一個運動的場地、制服、球具會清掉，但髮色、瞳色、身材這類身份釘選會留著；球鞋這種跨運動共用的裝備不會讓舊運動一直顯示半亮。
+partial 狀態重新整理之後還在。系統會記住「上一個組合實際新增了哪些 tag」；換到另一個運動時只移除那些 tag，不會誤刪原本手動釘選的戶外、帽子、球鞋或身份。舊版存檔沒有這份來源紀錄時採保守策略，不推測、也不整套刪除。
 
 **抽牌時的運動互斥**靠「運動身分」判斷：每個帶身分的 tag 記著哪些運動用得到它，場上所有這種 tag 的交集空了就擋掉。所以 `tennis racket` + `tennis ball` 本來就共存（兩個都只屬於網球），但籃球場不會混進足球；球鞋、運動服這類通用裝備不帶身分，不會害任何運動互斥。
 
@@ -296,9 +296,11 @@ partial 狀態重新整理之後還在。換到另一個運動時，上一個運
 
 ```bash
 node scripts/verify_danbooru_tags.mjs
+# 額外列出 2025 年之後才建立的 tag（只警告，不判無效）
+node scripts/verify_danbooru_tags.mjs --max-created 2025
 ```
 
-刻意不用的：`basketball`／`baseball`（deprecated）、`volleyball`（已 alias）、`volleyball court`／`cycling`／`golf uniform`／`tennis shoes`／`archery range`／`ice rink`（post_count 0）、`baseball glove`（alias，正解 `baseball mitt`）、`arrow`／`yumi`（deprecated）。`basketball (sport)` 那三個雖然有效，但是 2026 年才建立，WAI Illustrious 的舊 Danbooru 語彙吃不到，所以不用。
+刻意不用的：`basketball`／`baseball`（deprecated）、`volleyball`（已 alias）、`volleyball court`／`cycling`／`golf uniform`／`tennis shoes`／`archery range`／`ice rink`（post_count 0）、`baseball glove`（alias，正解 `baseball mitt`）、`arrow`／`yumi`（deprecated），以及不存在的 `ski slope`。`basketball (sport)` 那三個雖然有效，但建立年份較新，這版採用較成熟的舊 tag。Danbooru 的建立年份不等於 WAI Illustrious 的訓練截止日，因此驗證器只提供可調年份警告，不把它當有效性結論。
 
 ### 時代
 

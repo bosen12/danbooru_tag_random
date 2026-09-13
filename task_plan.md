@@ -4,17 +4,17 @@
 抽取邏輯盡量完美：引擎自動抽的活動／地點／姿勢／衣著不互相打架。釘選可自相衝突。正常＝現實高機率；多元＝場景＋物理；奇葩＝只物理。
 
 ## Next Step
-Phase 17：先為 `ski slope` 清理寫紅燈測試，再依 sports consistency plan 逐項完成。
+Phase 17：重跑完整測試、live Danbooru verifier、UI smoke，再做 pre-push review 與 commit/push。
 
 ## Current Phase
 Phase 17
 
 ### Phase 17: 運動 preset 一致性與無矛盾修正
-- [ ] 無效／過新場地與完整 Danbooru inventory
-- [ ] 顯式 sport scope 與同源 venue compatibility
-- [ ] presetOwned 無損狀態流與舊存檔保守 migration
-- [ ] boxing gloves 手部佔用規則與 warning
-- [ ] 運動 activity 必進開關（預設關）
+- [x] 無效／過新場地與完整 Danbooru inventory
+- [x] 顯式 sport scope 與同源 venue compatibility
+- [x] presetOwned 無損狀態流與舊存檔保守 migration
+- [x] boxing gloves 手部佔用規則與 warning
+- [x] 運動 activity 必進開關（預設關）
 - [ ] 全套 Node/Python/live verifier 驗證
 - **Status:** in_progress
 

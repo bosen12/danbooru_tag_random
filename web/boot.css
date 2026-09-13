@@ -1945,6 +1945,22 @@ input[type="number"] {
   padding-top: 8px;
 }
 
+.preset-group-head {
+  display: flex;
+  align-items: center;
+  gap: var(--space-2);
+  flex: 0 0 auto;
+}
+
+.preset-group-head .preset-group-label {
+  padding-top: 0;
+}
+
+.preset-option {
+  font-size: var(--text-xs);
+  white-space: nowrap;
+}
+
 .preset-group-row {
   display: flex;
   flex-wrap: wrap;

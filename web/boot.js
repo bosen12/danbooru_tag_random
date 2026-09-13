@@ -18,6 +18,7 @@ import {
   ERA_LABELS,
   eraMismatches,
   heatMismatches,
+  handUsageWarnings,
   itemFitsHeats,
   FEMALE_COUNT,
   indexLexicon,
@@ -40,8 +41,10 @@ import {
   BUILTIN_PRESETS,
   sanitizePinPresets,
   presetState,
+  prunePresetOwned,
+  sanitizePresetOwned,
   sportHeatWarnings,
-  togglePresetTags,
+  toggleNamedPreset,
 } from "./engine.js";
 import {
   currentCkpt,
@@ -116,6 +119,7 @@ const userOpen = new Set(["sec-quality"]);
 let lastIdent = new Set();
 let paintPrev = { pin: new Set(), auto: new Set(), user: new Set() };
 let userPresets = [];
+let presetOwned = null;
 
 const $ = (id) => document.getElementById(id);
 
@@ -136,6 +140,7 @@ function saveStore() {
       userBanned: [...userBanned],
       tagWeights: Object.fromEntries(tagWeights),
       pinPresets: userPresets,
+      presetOwned,
     })
   );
 }
@@ -248,6 +253,15 @@ function updateHeatClash() {
       "」，這種活動跟性愛動作不能並存，所以這張抽不到性愛。把它從「必進這張圖」點掉就會有。";
     return;
   }
+  const handBlock = handUsageWarnings(pinned);
+  if (handBlock.length) {
+    note.hidden = false;
+    note.textContent =
+      "你同時釘了「" +
+      handBlock[0].tags.map((t) => labelOf(lex, t)).join("、") +
+      "」；拳擊手套會妨礙需要靈活手指的動作。明確釘選會保留，但建議拿掉其中一邊。";
+    return;
+  }
   const clash = heatMismatches(lex, pinned, settings.heats);
   if (clash.length) {
     const scale = (settings.heats || []).map((h) => HEAT_LABELS[h] || h).join("／");
@@ -356,13 +370,19 @@ function paintPresetBtn(btn, tags, core) {
   else btn.removeAttribute("title");
 }
 
+function presetWithCurrentOptions(p) {
+  if (!p?.sport || !settings.pinSportActivity || !p.activity) return p;
+  return { ...p, tags: [...new Set([p.activity, ...p.tags])] };
+}
+
 function makePresetBtn(p) {
+  const live = presetWithCurrentOptions(p);
   const btn = document.createElement("button");
   btn.type = "button";
   btn.className = "chip-toggle";
   btn.dataset.preset = p.id;
   btn.textContent = p.name;
-  paintPresetBtn(btn, p.tags, p.core);
+  paintPresetBtn(btn, live.tags, live.core);
   return btn;
 }
 
@@ -383,12 +403,22 @@ function renderPresets() {
     label.className = "preset-group-label";
     label.id = "preset-group-sport";
     label.textContent = "運動";
+    const head = document.createElement("div");
+    head.className = "preset-group-head";
+    const activityToggle = document.createElement("button");
+    activityToggle.type = "button";
+    activityToggle.id = "pin-sport-activity";
+    activityToggle.className = "chip-toggle preset-option";
+    activityToggle.setAttribute("aria-pressed", settings.pinSportActivity ? "true" : "false");
+    activityToggle.title = "開啟後，運動動作也會和場地、器材、服裝一起加入必進 POS";
+    activityToggle.textContent = "動作也必進";
+    head.append(label, activityToggle);
     const row = document.createElement("div");
     row.className = "preset-group-row";
     row.setAttribute("role", "group");
     row.setAttribute("aria-labelledby", label.id);
     for (const p of sports) row.append(makePresetBtn(p));
-    group.append(label, row);
+    group.append(head, row);
     frag.append(group);
   }
   userPresets.forEach((p, i) => {
@@ -413,7 +443,10 @@ function syncPresets() {
   if (!box || !lex) return;
   for (const btn of box.querySelectorAll("[data-preset]")) {
     const p = BUILTIN_PRESETS.find((x) => x.id === btn.dataset.preset);
-    if (p) paintPresetBtn(btn, p.tags, p.core);
+    if (p) {
+      const live = presetWithCurrentOptions(p);
+      paintPresetBtn(btn, live.tags, live.core);
+    }
     else btn.setAttribute("aria-pressed", "false");
   }
   for (const btn of box.querySelectorAll("[data-user]")) {
@@ -424,13 +457,18 @@ function syncPresets() {
   }
 }
 
-function applyNamedPreset(tags, core) {
-  const was = presetState(lex, tags, pinned, core);
-  const others = [...BUILTIN_PRESETS.map((p) => p.tags), ...userPresets.map((p) => p.tags)];
-  pinned = togglePresetTags(lex, tags, pinned, others);
+function userPresetId(p) {
+  return `user:${p.name}\u0000${p.tags.join("\u0000")}`;
+}
+
+function applyNamedPreset(preset) {
+  const next = toggleNamedPreset(lex, preset, pinned, presetOwned);
+  pinned = next.pinned;
+  presetOwned = next.presetOwned;
   afterPin();
-  if (was === "on") speak("已取消釘選組合");
-  else if (was === "mixed") speak("已補齊整套");
+  if (next.action === "removed") speak("已取消釘選組合");
+  else if (next.action === "completed") speak("已補齊整套");
+  else if (next.action === "protected") speak("這套是舊存檔或手動釘選，為避免誤刪請從必進區個別移除");
   else speak("已套用釘選組合");
 }
 
@@ -1241,6 +1279,7 @@ function paintPinMiss(card) {
 }
 
 function afterPin() {
+  presetOwned = prunePresetOwned(presetOwned, pinned, lex);
   saveStore();
   renderCats();
   renderTray();
@@ -2463,6 +2502,15 @@ function bindUi() {
   const presetBox = $("presets");
   if (presetBox) {
     presetBox.addEventListener("click", (e) => {
+      const activityToggle = e.target.closest("#pin-sport-activity");
+      if (activityToggle) {
+        settings.pinSportActivity = !settings.pinSportActivity;
+        saveStore();
+        renderPresets();
+        updateHeatClash();
+        speak(settings.pinSportActivity ? "運動動作會一起加入必進" : "運動動作改為依尺度自動抽取");
+        return;
+      }
       const x = e.target.closest(".preset-x");
       if (x) {
         const wrap = x.closest("[data-user]");
@@ -2477,14 +2525,14 @@ function bindUi() {
       const builtin = e.target.closest("[data-preset]");
       if (builtin) {
         const p = BUILTIN_PRESETS.find((x) => x.id === builtin.dataset.preset);
-        if (p) applyNamedPreset(p.tags, p.core);
+        if (p) applyNamedPreset(presetWithCurrentOptions(p));
         return;
       }
       const user = e.target.closest("[data-user]");
       if (user) {
         const i = Number(user.dataset.user);
         const p = userPresets[i];
-        if (p) applyNamedPreset(p.tags);
+        if (p) applyNamedPreset({ id: userPresetId(p), tags: p.tags });
       }
     });
   }
@@ -2563,6 +2611,7 @@ async function main() {
   const saved = loadStore();
   if (saved.settings) settings = sanitizeSettings(saved.settings, data);
   if (Array.isArray(saved.pinned)) pinned = new Set(knownTags(lex, saved.pinned));
+  presetOwned = prunePresetOwned(sanitizePresetOwned(saved.presetOwned, lex), pinned, lex);
   userPresets = sanitizePinPresets(saved.pinPresets, lex);
   if (Array.isArray(saved.userBanned)) userBanned = new Set(knownTags(lex, saved.userBanned));
   if (saved.tagWeights && typeof saved.tagWeights === "object") {

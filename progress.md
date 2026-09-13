@@ -5,6 +5,17 @@
 - 讀取 Claude 對 `ab56d84` 的完整複核；六項技術問題取得共識。
 - 接受 P1 與 P2 範圍，但否決從舊完整 kit 推定 preset ownership；改採不刪資料的 null migration。
 - 新增 design 與 TDD implementation plan；Phase 17 開始，尚未改 production code。
+- Task 1 紅燈確認：新增三個 ski slope 回歸測試，實際為 176/300 洩漏。
+- 錯誤：PowerShell 直接以引號包 Python 完整路徑會被當成字串；改用 call operator `&` 執行。
+- 清除不存在的 `ski slope`；滑雪改用 `mountain`，重新生成 1198-tag lexicon。
+- 顯式 `SPORT_TAG_SCOPE`／`SPORT_VENUES`，一般活動與通用裝備保持 neutral；場地相容表同源產生 `SPORT_ACT_PLACE`。
+- 新增 `presetOwned`：只刪本次 preset 真正新增的 tag；舊存檔不猜來源，避免誤刪手動釘選。
+- 拳擊手套會擋需要裸手／手指的自動動作，器材道具不算佔手；明確衝突 pin 保留並顯示警告。
+- 排球／羽球／桌球固定 `school gym`；`sports court` 不再 implies outdoors，`fitness gym` 不再自動當運動場地。
+- 新增儲存式「動作也必進」開關（預設關），README 同步更新。
+- Claude 完成 verifier 純函式與 73 項測試；`allSportTags()` 覆蓋完整 inventory，`--max-created` 僅警告。
+- 錯誤：同一個 `apply_patch` 內重複指定 `web/boot.js` 會被拒絕；合併成單一 Update File 後套用。
+- 第一次完整 engine 測試：新運動／ownership／hand-use 測試皆過；發現非釘選拳擊手套會讓既有單人 sex 保證失效，已限制它不在 sex 場景自動抽入。拳擊 preset 的 sex 頻率門檻依新手部限制調整，待重跑。
 
 ## Session: 2026-09-13 (Codex handoff: validate + optimize)
 

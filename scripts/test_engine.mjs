@@ -14,6 +14,7 @@ import {
   identityPins,
   isIdentityItem,
   heatMismatches,
+  handUsageWarnings,
   itemFitsHeats,
   sanitizeSettings,
   sanitizeMustDraw,
@@ -48,6 +49,8 @@ import {
   applyPresetTags,
   BUILTIN_PRESETS,
   sanitizePinPresets,
+  sanitizePresetOwned,
+  toggleNamedPreset,
   presetActive,
   presetState,
   sportHeatWarnings,
@@ -58,8 +61,13 @@ import {
 import {
   SPORT_BUTTONS,
   SPORT_BY_ID,
+  SPORT_ACT_PLACE,
   SPORT_IDENTITY,
   SPORT_PRESETS,
+  SPORT_TAG_SCOPE,
+  SPORT_VENUES,
+  allSportTags,
+  sportTagAllowed,
   sportOwnedTags,
   sportPresetTags,
 } from "../web/sports.js";
@@ -3049,7 +3057,7 @@ function indoorOutdoorClash(have) {
       "golf club",
       "tennis racket",
       "basketball (object)",
-      "ski slope",
+      "mountain",
     ];
     for (let i = 0; i < 40; i++) {
       const h = tagsOf(drawOne(lex, sNorm, pinLivN, new Set(), mulberry32(417000 + i), 417000 + i));
@@ -5001,6 +5009,19 @@ function indoorOutdoorClash(have) {
     return drawOne(lex, s, pins, new Set(), mulberry32(seed), seed);
   };
 
+  // Invalid Danbooru venues must not survive in either the generated lexicon or preset source.
+  ok("lexicon excludes the nonexistent ski slope tag", !lex.byTag.has("ski slope"));
+  ok("sport presets exclude the nonexistent ski slope tag",
+    !SPORT_PRESETS.some((p) => sportPresetTags(p).includes("ski slope")));
+  {
+    const skiingPins = applyPin(lex, new Set(), new Set(), "skiing").pinned;
+    let leakedSkiSlope = 0;
+    for (let i = 0; i < 300; i++) {
+      if (tagsOf(drawWith(skiingPins, 760000 + i)).has("ski slope")) leakedSkiSlope += 1;
+    }
+    eq("pinned skiing never emits the nonexistent ski slope tag", leakedSkiSlope, 0);
+  }
+
   // 1) 按鈕顯示運動名稱，不是場地名稱
   eq("hoops preset is named 籃球", byId("hoops")?.name, "籃球");
   eq("tennis preset is named 網球", byId("tennis")?.name, "網球");
@@ -5010,6 +5031,84 @@ function indoorOutdoorClash(have) {
   ok("no preset is still named after a venue",
     !BUILTIN_PRESETS.some((p) => /球場$|田徑場$/.test(p.name)),
     BUILTIN_PRESETS.filter((p) => /球場$|田徑場$/.test(p.name)).map((p) => p.name).join(","));
+  for (const id of ["volleyball", "badminton", "tabletennis"]) {
+    eq(`${id} pins the older school gym venue`, SPORT_BY_ID.get(id)?.venue, ["school gym"]);
+  }
+  ok("sports court no longer forces outdoors",
+    !(lex.byTag.get("sports court")?.implies || []).includes("outdoors"));
+  ok("fitness gym is not an automatic sport activity venue",
+    !Object.values(SPORT_ACT_PLACE).some((places) => places.includes("fitness gym")));
+
+  {
+    const defaults = defaultSettings(data);
+    eq("sport activity pinning defaults off", defaults.pinSportActivity, false);
+    eq("sanitize keeps sport activity pinning on",
+      sanitizeSettings({ ...defaults, pinSportActivity: true }, data).pinSportActivity, true);
+    eq("regular sport kit still excludes activity",
+      sportPresetTags(SPORT_BY_ID.get("tennis")).includes("tennis"), false);
+    eq("activity-pin option includes activity",
+      sportPresetTags(SPORT_BY_ID.get("tennis"), true).includes("tennis"), true);
+  }
+
+  // Compatibility is declared explicitly; generic tags never create a sport identity.
+  ok("playing sports is neutral", !SPORT_TAG_SCOPE.has("playing sports"));
+  ok("sportswear is neutral", !SPORT_TAG_SCOPE.has("sportswear"));
+  ok("sneakers is neutral", !SPORT_TAG_SCOPE.has("sneakers"));
+  ok("playing sports fits a tennis court",
+    sportTagAllowed("playing sports", new Set(["tennis court"])));
+  ok("sports court fits tennis gear",
+    sportTagAllowed("sports court", new Set(["tennis", "tennis racket"])));
+  ok("cleats fit track and field",
+    sportTagAllowed("cleats", new Set(["track and field", "running track"])));
+  eq("playing sports plus tennis does not warn",
+    sportPinWarnings(lex, new Set(["tennis court", "playing sports"])), []);
+  ok("soccer ball still conflicts with basketball court",
+    !sportTagAllowed("soccer ball", new Set(["basketball court"])));
+  ok("badminton racket still conflicts with tennis court",
+    !sportTagAllowed("badminton racket", new Set(["tennis court"])));
+
+  for (const [tag, scope] of SPORT_TAG_SCOPE) {
+    for (const other of SPORT_TAG_SCOPE.keys()) {
+      const otherScope = SPORT_TAG_SCOPE.get(other);
+      const overlaps = [...scope].some((id) => otherScope.has(id));
+      if (overlaps) {
+        ok(`scope overlap is symmetric: ${tag} + ${other}`,
+          sportTagAllowed(tag, new Set([other])) && sportTagAllowed(other, new Set([tag])));
+      }
+    }
+  }
+  for (const neutral of ["playing sports", "sportswear", "sneakers", "goggles", "knee pads", "baseball cap"]) {
+    for (const scoped of SPORT_TAG_SCOPE.keys()) {
+      ok(`neutral ${neutral} never constrains ${scoped}`,
+        sportTagAllowed(neutral, new Set([scoped])));
+    }
+  }
+  for (const [venue, meta] of Object.entries(SPORT_VENUES)) {
+    for (const id of meta.sports) {
+      const p = SPORT_BY_ID.get(id);
+      const exclusive = [...SPORT_TAG_SCOPE].find(([, ids]) => ids.size === 1 && ids.has(id))?.[0];
+      if (!p || !p.activity || !exclusive) continue;
+      ok(`${venue} is compatible with ${id}`,
+        sportTagAllowed(venue, new Set([exclusive])));
+      ok(`${p.activity} derives ${venue} as an allowed place`,
+        (SPORT_ACT_PLACE[p.activity] || []).includes(venue));
+    }
+  }
+
+  {
+    const inventory = new Set(allSportTags());
+    for (const p of SPORT_PRESETS) {
+      if (p.activity) ok(`inventory includes activity ${p.activity}`, inventory.has(p.activity));
+      for (const t of [...sportPresetTags(p), ...(p.optionalEquipment || [])]) {
+        ok(`inventory includes preset tag ${t}`, inventory.has(t));
+      }
+    }
+    for (const places of Object.values(SPORT_ACT_PLACE)) {
+      for (const place of places) ok(`inventory includes compatible venue ${place}`, inventory.has(place));
+    }
+    eq("every sport inventory tag exists in lexicon",
+      [...inventory].filter((t) => !lex.byTag.has(t)).sort(), []);
+  }
 
   // 2) 每個運動：tag 都在 lexicon、整套進得去、再點一次整套出來、不動無關釘選
   for (const p of SPORT_BUTTONS) {
@@ -5213,8 +5312,12 @@ function indoorOutdoorClash(have) {
       ok(`${p.name} does not pin its activity`, !kit.includes(p.activity), kit.join(","));
       ok(`${p.name} still pins venue/kit/clothing`,
         [...(p.venue || []), ...(p.equipment || []), ...(p.clothing || [])].every((t) => kit.includes(t)));
-      ok(`${p.name} activity still carries its sport identity`,
-        (SPORT_IDENTITY.get(p.activity) || new Set()).has(p.id));
+      if (p.activity === "playing sports") {
+        ok(`${p.name} generic activity is neutral`, !SPORT_IDENTITY.has(p.activity));
+      } else {
+        ok(`${p.name} activity still carries its sport identity`,
+          (SPORT_IDENTITY.get(p.activity) || new Set()).has(p.id));
+      }
     }
 
     // 性愛尺度：抽得到性愛動作，整套裝備還在
@@ -5230,7 +5333,9 @@ function indoorOutdoorClash(have) {
         if ([...got].some(isSex)) withSex += 1;
         if (kit.every((t) => got.has(t))) keptKit += 1;
       }
-      ok(`${p.name} draws sex acts at sex heat`, withSex >= 28, `sex=${withSex}/40`);
+      // 拳擊手套會刻意擋掉所有需要裸手／手指的性行為，所以可用池比其他運動小。
+      const minimumSex = p.id === "boxing" ? 10 : 28;
+      ok(`${p.name} draws sex acts at sex heat`, withSex >= minimumSex, `sex=${withSex}/40`);
       ok(`${p.name} keeps its kit at sex heat`, keptKit >= 28, `kit=${keptKit}/40`);
     }
 
@@ -5329,6 +5434,93 @@ function indoorOutdoorClash(have) {
     ok("explicit cross-sport pins survive the draw",
       got.has("basketball court") && got.has("tennis racket"));
     ok("cross-sport pins are reported", sportPinWarnings(lex, pins).length > 0);
+  }
+
+  // 8) Named preset provenance: only remove what that click actually added.
+  {
+    const cyclingPreset = byId("cycling");
+    const boxingPreset = byId("boxing");
+    const swimPreset = byId("swim");
+
+    let state = toggleNamedPreset(
+      lex,
+      cyclingPreset,
+      new Set(["outdoors", "hat", "sneakers"]),
+      null
+    );
+    ok("manual outdoors survives applying cycling", state.pinned.has("outdoors"));
+    ok("manual hat survives applying cycling", state.pinned.has("hat"));
+    ok("manual sneakers is not claimed by cycling", !state.presetOwned.tags.includes("sneakers"));
+    const cyclingAdded = new Set(state.presetOwned.tags);
+    const beforeOff = new Set(state.pinned);
+    state = toggleNamedPreset(lex, cyclingPreset, state.pinned, state.presetOwned);
+    eq("preset toggle off removes exactly what it added",
+      [...beforeOff].filter((t) => !state.pinned.has(t)).sort(), [...cyclingAdded].sort());
+    ok("manual outdoors remains after cycling toggle off", state.pinned.has("outdoors"));
+    ok("manual hat remains after cycling toggle off", state.pinned.has("hat"));
+    ok("manual sneakers remains after cycling toggle off", state.pinned.has("sneakers"));
+
+    state = toggleNamedPreset(lex, boxingPreset, new Set(["boxing gloves", "blue eyes"]), null);
+    ok("manual boxing gloves is not claimed by boxing", !state.presetOwned.tags.includes("boxing gloves"));
+    state = toggleNamedPreset(lex, swimPreset, state.pinned, state.presetOwned);
+    ok("switching boxing to swim keeps a manually pinned glove", state.pinned.has("boxing gloves"));
+    ok("switching A to B removes the A-owned ring", !state.pinned.has("boxing ring"));
+    ok("switching A to B keeps identity", state.pinned.has("blue eyes"));
+
+    eq("legacy ownership migrates conservatively to null", sanitizePresetOwned(undefined, lex), null);
+    eq("malformed ownership migrates conservatively to null",
+      sanitizePresetOwned({ id: "cycling", tags: "bicycle" }, lex), null);
+    eq("ownership round-trips known tags",
+      sanitizePresetOwned({ id: "cycling", tags: ["bicycle", "unknown tag"] }, lex),
+      { id: "cycling", tags: ["bicycle"] });
+  }
+
+  // 9) Worn boxing gloves occupy fingers; scene props do not.
+  {
+    const freeHandActs = new Set([
+      "handjob", "fingering", "masturbation", "female masturbation",
+      "male masturbation", "masturbation through clothes",
+    ]);
+    const sexSettings = settings();
+    sexSettings.girl = true;
+    sexSettings.boy = false;
+    sexSettings.heats = ["sex"];
+    sexSettings.weights = weightsForHeats(["sex"], data.heatWeights);
+    sexSettings.eras = ["modern"];
+    sexSettings.sceneMode = "normal";
+    sexSettings.lockScene = true;
+
+    const boxingPins = pinSet(tagsOfPreset("boxing"));
+    let boxingConflicts = 0;
+    let boxingOtherSex = 0;
+    for (let i = 0; i < 1000; i++) {
+      const seed = 970000 + i;
+      const got = tagsOf(drawOne(lex, sexSettings, boxingPins, new Set(), mulberry32(seed), seed));
+      if ([...got].some((t) => freeHandActs.has(t))) boxingConflicts += 1;
+      if ([...got].some((t) => {
+        const it = lex.byTag.get(t);
+        return it && (it.group === "sex" || it.mutex === "sex_act") && !freeHandActs.has(t);
+      })) boxingOtherSex += 1;
+    }
+    eq("boxing gloves never auto-pair with free-finger sex acts", boxingConflicts, 0);
+    ok("boxing gloves still allow other sex acts", boxingOtherSex > 0, `other=${boxingOtherSex}`);
+
+    const manual = new Set(["boxing gloves", "fingering"]);
+    const manualDraw = tagsOf(drawOne(lex, sexSettings, manual, new Set(), mulberry32(971001), 971001));
+    ok("explicit boxing gloves and fingering pins are both kept",
+      manualDraw.has("boxing gloves") && manualDraw.has("fingering"));
+    ok("explicit occupied-hand conflict is reported", handUsageWarnings(manual).length > 0);
+
+    for (const id of ["tennis", "archery"]) {
+      const pins = pinSet(tagsOfPreset(id));
+      let sawFingering = 0;
+      for (let i = 0; i < 500; i++) {
+        const seed = 972000 + i;
+        const got = tagsOf(drawOne(lex, sexSettings, pins, new Set(), mulberry32(seed), seed));
+        if (got.has("fingering")) sawFingering += 1;
+      }
+      ok(`${id} scene props do not block fingering`, sawFingering > 0, `seen=${sawFingering}`);
+    }
   }
 }
 

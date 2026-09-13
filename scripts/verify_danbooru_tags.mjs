@@ -1,23 +1,37 @@
 #!/usr/bin/env node
 /**
- * 向 Danbooru 官方 API 核實 tag。只接受 category=0、post_count>0、is_deprecated=false。
+ * 向 Danbooru 官方 API 核實運動 tag。只接受 category=0、post_count>0、is_deprecated=false。
  *
- *   node scripts/verify_danbooru_tags.mjs              # 驗 SPORT_PRESETS 用到的全部 tag
- *   node scripts/verify_danbooru_tags.mjs --retry 40   # API 掛掉時重試幾輪（每輪間隔 30 秒）
- *   node scripts/verify_danbooru_tags.mjs a b c        # 只驗指定 tag（空格格式）
+ *   node scripts/verify_danbooru_tags.mjs                     # 驗 allSportTags() 的完整清單
+ *   node scripts/verify_danbooru_tags.mjs --retry 40          # API 掛掉時重試幾輪（每輪間隔 30 秒）
+ *   node scripts/verify_danbooru_tags.mjs --max-created 2025  # 另外標出建立年份晚於 2025 的
+ *   node scripts/verify_danbooru_tags.mjs a b c               # 只驗指定 tag（空格格式）
  *
  * 專案內是空格格式，API 是底線格式，這裡自動轉換。
  * 結果寫到 scripts/.cache_danbooru_sport_tags.json（已在 .gitignore 的 .cache_* 規則裡）。
+ *
+ * --max-created 的語意（重要）
+ *   這是**模型詞彙相容性的警告**，不是 tag 有效性的判斷。晚於門檻的 tag 仍然算通過、
+ *   仍然留在 ok 裡，只是另外列進 newerThanCutoff，而且不會讓 exit code 變成 1。
+ *   這個年份**不代表** WAI Illustrious 或任何模型的訓練資料截止日 —— 那件事無法從
+ *   Danbooru API 查證，所以門檻做成參數，由呼叫者自己決定。
+ *
+ * 這支檔案可以被安全 import：只有直接從 CLI 執行時才會連網、寫 cache、印報告、
+ * 動 process.exitCode。純函式（parseArgs／verdict／createdYear／buildReport）可以單獨
+ * 測試，見 scripts/test_verify_danbooru_tags.mjs。
  */
-import { readFileSync, writeFileSync } from "fs";
+import { writeFileSync } from "fs";
 import { dirname, join } from "path";
-import { fileURLToPath } from "url";
+import { fileURLToPath, pathToFileURL } from "url";
 
 const here = dirname(fileURLToPath(import.meta.url));
-const root = join(here, "..");
 const API = "https://danbooru.donmai.us/tags.json";
 const UA = "paizi-case-tag-check/1.0 (local tooling)";
 const OUT = join(here, ".cache_danbooru_sport_tags.json");
+const RETRY_WAIT_MS = 30000;
+
+/** CLI 參數錯誤。main 會把它印成一行並以 exit code 2 結束，不留堆疊。 */
+export class CliError extends Error {}
 
 // 使用者點名必須擋掉的：deprecated、post_count 0、或 alias 舊名。
 export const FORBIDDEN = [
@@ -38,6 +52,144 @@ export const FORBIDDEN = [
 const toApi = (t) => t.replace(/ /g, "_");
 const toPos = (t) => t.replace(/_/g, " ");
 
+/**
+ * 解析 CLI 參數。
+ *
+ * @returns {{ retries: number, maxCreatedYear: number|null, tags: string[] }}
+ *   retries        --retry 的輪數，預設 0（維持既有的寬鬆解析）
+ *   maxCreatedYear --max-created 的年份，沒給就是 null
+ *   tags           位置參數；空陣列代表「用 allSportTags() 的完整清單」
+ * @throws {CliError} 參數不合法時，訊息可直接印給使用者看
+ */
+export function parseArgs(argv) {
+  const args = Array.isArray(argv) ? argv : [];
+  let retries = 0;
+  let maxCreatedYear = null;
+  const tags = [];
+
+  for (let i = 0; i < args.length; i++) {
+    const a = args[i];
+    if (a === "--retry") {
+      // 既有行為：寬鬆解析，給不出數字就當 0。不改，免得動到現有用法。
+      retries = Number(args[++i]) || 0;
+      continue;
+    }
+    if (a === "--max-created") {
+      maxCreatedYear = parseYear(args[++i]);
+      continue;
+    }
+    if (a === "--help" || a === "-h") {
+      throw new CliError(
+        "用法：node scripts/verify_danbooru_tags.mjs [--retry N] [--max-created YYYY] [tag ...]"
+      );
+    }
+    if (typeof a === "string" && a.startsWith("--")) {
+      throw new CliError(`不認得的參數：${a}`);
+    }
+    tags.push(a);
+  }
+
+  return { retries, maxCreatedYear, tags };
+}
+
+/** --max-created 的值：必須是四位數整數。不合法就丟 CliError。 */
+function parseYear(raw) {
+  if (raw === undefined || raw === null || raw === "") {
+    throw new CliError("--max-created 需要一個四位數年份，例如 --max-created 2025");
+  }
+  const s = String(raw).trim();
+  if (!/^\d{4}$/.test(s)) {
+    throw new CliError(`--max-created 需要四位數年份，收到「${raw}」`);
+  }
+  const n = Number(s);
+  if (!Number.isInteger(n) || n < 1000 || n > 9999) {
+    throw new CliError(`--max-created 的年份不合理：「${raw}」`);
+  }
+  return n;
+}
+
+/** API 回來的一筆紀錄是否可用。回 "ok" 或不可用的原因。 */
+export function verdict(row) {
+  if (!row) return "不存在";
+  if (row.category !== 0) return `category ${row.category}（不是一般 tag）`;
+  if (row.is_deprecated) return "deprecated";
+  if (!(row.post_count > 0)) return `post_count ${row.post_count}`;
+  return "ok";
+}
+
+/** 從 created_at 取年份。取不到就回 null（不存在、格式壞掉都算）。 */
+export function createdYear(createdAt) {
+  if (!createdAt) return null;
+  const m = /^(\d{4})/.exec(String(createdAt));
+  if (!m) return null;
+  const n = Number(m[1]);
+  return Number.isInteger(n) ? n : null;
+}
+
+function toRecord(tag, row) {
+  return {
+    tag,
+    verdict: verdict(row),
+    post_count: row ? row.post_count : 0,
+    category: row ? row.category : null,
+    created_at: row && row.created_at ? row.created_at : null,
+  };
+}
+
+/**
+ * 純函式：把查詢結果組成報告。不連網、不寫檔、不印東西、不動 exitCode。
+ *
+ * @param wanted    要驗的 tag（空格格式）
+ * @param forbidden 禁用清單
+ * @param found     Map<tag, row>，row 是 Danbooru API 的一筆紀錄
+ * @param options   { maxCreatedYear?: number|null }
+ *
+ * newerThanCutoff 只收「已經通過（ok）但建立年份晚於門檻」的 tag：
+ *   - 等於門檻年份不算晚
+ *   - created_at 是 null 不算晚（查不到年份就不猜）
+ *   - 沒通過的 tag 不會進來：它們的問題是有效性，不是詞彙新舊
+ */
+export function buildReport(wanted, forbidden, found, options = {}) {
+  const maxCreatedYear =
+    options.maxCreatedYear === undefined || options.maxCreatedYear === null
+      ? null
+      : options.maxCreatedYear;
+  const get = (t) => (found && typeof found.get === "function" ? found.get(t) : undefined);
+
+  const report = {
+    checkedAt: new Date().toISOString(),
+    maxCreatedYear,
+    ok: [],
+    bad: [],
+    newerThanCutoff: [],
+    forbiddenStillBad: [],
+    forbiddenNowFine: [],
+  };
+
+  for (const t of wanted || []) {
+    const rec = toRecord(t, get(t));
+    if (rec.verdict === "ok") {
+      report.ok.push(rec);
+      if (maxCreatedYear !== null) {
+        const y = createdYear(rec.created_at);
+        if (y !== null && y > maxCreatedYear) report.newerThanCutoff.push(rec);
+      }
+    } else {
+      report.bad.push(rec);
+    }
+  }
+
+  for (const t of forbidden || []) {
+    const rec = toRecord(t, get(t));
+    if (rec.verdict === "ok") report.forbiddenNowFine.push(rec);
+    else report.forbiddenStillBad.push(rec);
+  }
+
+  return report;
+}
+
+// --- 以下只有 CLI 會用到 ---------------------------------------------------
+
 function chunk(list, n) {
   const out = [];
   for (let i = 0; i < list.length; i += n) out.push(list.slice(i, i + n));
@@ -49,7 +201,10 @@ async function fetchBatch(names) {
   const res = await fetch(url, { headers: { "User-Agent": UA, Accept: "application/json" } });
   const body = await res.json();
   if (!Array.isArray(body)) {
-    const why = body && (body.message || body.error) ? `${body.error || ""} ${body.message || ""}`.trim() : `HTTP ${res.status}`;
+    const why =
+      body && (body.message || body.error)
+        ? `${body.error || ""} ${body.message || ""}`.trim()
+        : `HTTP ${res.status}`;
     throw new Error(why);
   }
   return body;
@@ -66,68 +221,97 @@ async function lookup(names, retries, waitMs) {
       return found;
     } catch (err) {
       if (attempt === retries) throw err;
-      process.stderr.write(`Danbooru 沒回（${err.message}），${waitMs / 1000} 秒後重試 ${attempt + 1}/${retries}\n`);
+      process.stderr.write(
+        `Danbooru 沒回（${err.message}），${waitMs / 1000} 秒後重試 ${attempt + 1}/${retries}\n`
+      );
       await new Promise((r) => setTimeout(r, waitMs));
     }
   }
   return new Map();
 }
 
-function verdict(row) {
-  if (!row) return "不存在";
-  if (row.category !== 0) return `category ${row.category}（不是一般 tag）`;
-  if (row.is_deprecated) return "deprecated";
-  if (!(row.post_count > 0)) return `post_count ${row.post_count}`;
-  return "ok";
+/**
+ * 完整清單只有一個來源：web/sports.js 的 allSportTags()。
+ *
+ * 這裡刻意不自己走訪 SPORT_PRESETS —— 上一次就是因為驗證器自己拼清單，
+ * sportPresetTags() 把 activity 移出去之後，覆蓋率無聲縮水了 26 個 tag 都沒人發現。
+ */
+async function loadInventory() {
+  const mod = await import("../web/sports.js");
+  if (typeof mod.allSportTags !== "function") {
+    throw new CliError(
+      "web/sports.js 沒有匯出 allSportTags()。驗證器不自己拼清單，請先補上這個函式。"
+    );
+  }
+  const tags = mod.allSportTags();
+  if (!Array.isArray(tags) || !tags.length) {
+    throw new CliError("allSportTags() 沒有回傳任何 tag。");
+  }
+  return [...new Set(tags)].sort();
 }
 
-async function main() {
-  const argv = process.argv.slice(2);
-  let retries = 0;
-  const rest = [];
-  for (let i = 0; i < argv.length; i++) {
-    if (argv[i] === "--retry") retries = Number(argv[++i]) || 0;
-    else rest.push(argv[i]);
-  }
-
-  let wanted = rest;
-  if (!wanted.length) {
-    const { SPORT_PRESETS, sportPresetTags } = await import("../web/sports.js");
-    const set = new Set();
-    for (const p of SPORT_PRESETS) {
-      for (const t of sportPresetTags(p)) set.add(t);
-      for (const t of p.optionalEquipment || []) set.add(t);
+async function main(argv) {
+  let opts;
+  try {
+    opts = parseArgs(argv);
+  } catch (err) {
+    if (err instanceof CliError) {
+      console.error(err.message);
+      process.exitCode = 2;
+      return;
     }
-    wanted = [...set].sort();
+    throw err;
   }
 
+  const wanted = opts.tags.length ? opts.tags : await loadInventory();
   const all = [...new Set([...wanted, ...FORBIDDEN])];
-  const found = await lookup(all, retries, 30000);
-
-  const report = { checkedAt: new Date().toISOString(), ok: [], bad: [], forbiddenStillBad: [], forbiddenNowFine: [] };
-  for (const t of wanted) {
-    const v = verdict(found.get(t));
-    const row = found.get(t);
-    const rec = { tag: t, verdict: v, post_count: row ? row.post_count : 0, category: row ? row.category : null };
-    if (v === "ok") report.ok.push(rec);
-    else report.bad.push(rec);
-  }
-  for (const t of FORBIDDEN) {
-    const v = verdict(found.get(t));
-    (v === "ok" ? report.forbiddenNowFine : report.forbiddenStillBad).push({ tag: t, verdict: v });
-  }
+  const found = await lookup(all, opts.retries, RETRY_WAIT_MS);
+  const report = buildReport(wanted, FORBIDDEN, found, { maxCreatedYear: opts.maxCreatedYear });
 
   writeFileSync(OUT, JSON.stringify(report, null, 2), "utf8");
 
-  console.log(`核實 ${wanted.length} 個 tag，${report.ok.length} 通過、${report.bad.length} 不通過`);
+  console.log(
+    `核實 ${wanted.length} 個 tag，${report.ok.length} 通過、${report.bad.length} 不通過`
+  );
   for (const r of report.bad) console.log(`  BAD  ${r.tag} — ${r.verdict}`);
-  console.log(`禁用清單 ${FORBIDDEN.length} 個，${report.forbiddenStillBad.length} 確認仍不可用`);
-  for (const r of report.forbiddenNowFine) console.log(`  NOTE ${r.tag} — 現在是有效 tag（仍照使用者指示不採用）`);
+
+  if (report.maxCreatedYear !== null) {
+    console.log(
+      `建立年份晚於 ${report.maxCreatedYear} 的有 ${report.newerThanCutoff.length} 個` +
+        "（只是模型詞彙相容性的警告，不代表 tag 無效，也不影響 exit code）"
+    );
+    for (const r of report.newerThanCutoff) {
+      console.log(
+        `  NEW  ${r.tag} — 建立於 ${String(r.created_at).slice(0, 10)}，post_count ${r.post_count}`
+      );
+    }
+  }
+
+  console.log(
+    `禁用清單 ${FORBIDDEN.length} 個，${report.forbiddenStillBad.length} 確認仍不可用`
+  );
+  for (const r of report.forbiddenNowFine) {
+    console.log(`  NOTE ${r.tag} — 現在是有效 tag（仍照使用者指示不採用）`);
+  }
   console.log(`報告寫到 ${OUT}`);
+
   if (report.bad.length) process.exitCode = 1;
 }
 
-main().catch((err) => {
-  console.error("核實失敗：" + err.message);
-  process.exitCode = 2;
-});
+// 只有直接跑這支檔案才執行 main。用 pathToFileURL 比較，Windows 的磁碟機代號和
+// 反斜線才會被正規化成同一種 file:// 形式；在 Windows 上直接比字串會對不起來。
+const invokedDirectly =
+  typeof process.argv[1] === "string" &&
+  import.meta.url === pathToFileURL(process.argv[1]).href;
+
+if (invokedDirectly) {
+  main(process.argv.slice(2)).catch((err) => {
+    if (err instanceof CliError) {
+      console.error(err.message);
+      process.exitCode = 2;
+      return;
+    }
+    console.error("核實失敗：" + err.message);
+    process.exitCode = 2;
+  });
+}

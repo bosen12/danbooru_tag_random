@@ -22598,37 +22598,13 @@
       ],
       "mutex": "place",
       "bind": [],
-      "implies": [
-        "outdoors"
-      ],
+      "implies": [],
       "layer": "normal",
       "era": [
         "modern"
       ],
       "group": "place",
       "zh": "綜合球場"
-    },
-    {
-      "tag": "ski slope",
-      "section": "env",
-      "gate": "any",
-      "heat": [
-        "tease",
-        "flash",
-        "sex"
-      ],
-      "mutex": "place",
-      "bind": [],
-      "implies": [
-        "outdoors",
-        "snow"
-      ],
-      "layer": "normal",
-      "era": [
-        "modern"
-      ],
-      "group": "place",
-      "zh": "滑雪道"
     },
     {
       "tag": "bunk bed",

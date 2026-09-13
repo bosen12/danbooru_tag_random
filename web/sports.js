@@ -72,8 +72,8 @@ export const SPORT_PRESETS = [
     id: "volleyball",
     name: "排球",
     activity: "playing sports",
-    // volleyball court 的 post_count 是 0，用綜合球場。
-    venue: ["sports court"],
+    // volleyball court 的 post_count 是 0；用較早且已驗證的學校體育館。
+    venue: ["school gym"],
     equipment: ["volleyball (object)"],
     clothing: ["volleyball uniform", "knee pads", "sneakers"],
     optionalEquipment: [],
@@ -82,7 +82,7 @@ export const SPORT_PRESETS = [
     id: "badminton",
     name: "羽球",
     activity: "badminton",
-    venue: ["sports court"],
+    venue: ["school gym"],
     equipment: ["badminton racket", "shuttlecock"],
     // Danbooru 沒有堪用的 badminton uniform，不發明。
     clothing: ["sportswear", "sneakers"],
@@ -92,7 +92,7 @@ export const SPORT_PRESETS = [
     id: "tabletennis",
     name: "桌球",
     activity: "table tennis",
-    venue: [],
+    venue: ["school gym"],
     // 球拍是 table tennis paddle，不是 post_count 0 的 table tennis racket。
     equipment: ["table tennis paddle", "table tennis ball"],
     clothing: ["sportswear", "sneakers"],
@@ -163,7 +163,7 @@ export const SPORT_PRESETS = [
     name: "滑雪",
     preset: false,
     activity: "skiing",
-    venue: ["ski slope"],
+    venue: ["mountain"],
     equipment: [],
     clothing: [],
     optionalEquipment: [],
@@ -183,16 +183,22 @@ export const SPORT_PRESETS = [
 /**
  * 這個 preset 的「必進 POS」清單：場地 → 器材 → 服裝。
  *
- * **活動 tag 不在裡面。** 它不釘死，改由抽牌時按當張的尺度決定：
+ * 活動 tag 預設不在裡面。第二個參數為 true 時才加入，讓使用者可以選擇
+ * 是否把運動動作也固定進必進 POS。未固定時改由抽牌按當張尺度決定：
  * 抽到活動／誘惑／走光尺度就自動帶上該運動的活動（見 engine 的活動欄偏好），
  * 抽到性愛尺度就讓位給體位。釘死的話性愛動作會被整個擋掉（會動的活動跟性愛
  * 動作不能並存），選「活動＋性愛」就永遠只剩一邊。
  *
  * 運動身分仍然由活動 tag 參與判斷，見 SPORT_IDENTITY。
  */
-export function sportPresetTags(p) {
+export function sportPresetTags(p, includeActivity = false) {
   if (!p) return [];
-  return [...(p.venue || []), ...(p.equipment || []), ...(p.clothing || [])];
+  return [
+    ...(includeActivity && p.activity ? [p.activity] : []),
+    ...(p.venue || []),
+    ...(p.equipment || []),
+    ...(p.clothing || []),
+  ];
 }
 
 /** 這個運動的主活動 tag（沒有就回 null）。抽牌時用來優先挑對的活動。 */
@@ -206,22 +212,118 @@ export const SPORT_BUTTONS = SPORT_PRESETS.filter((p) => p.preset !== false);
 export const SPORT_BY_ID = new Map(SPORT_PRESETS.map((p) => [p.id, p]));
 
 /**
- * tag → 有哪些運動可以合理使用它。只收「帶運動身分」的 tag：
- * 通用裝備（SPORT_NEUTRAL_GEAR）不進來，所以球鞋不會害籃球跟網球互斥。
+ * 場地 → 哪些運動可以合理使用它。這是活動配場地的唯一資料來源；一般城市、山、
+ * 公園等雖然本身不帶運動身分，仍可在這裡宣告成某項運動的合理場地。
  */
-export const SPORT_IDENTITY = (() => {
-  const m = new Map();
-  const add = (tag, id) => {
-    if (!tag || SPORT_NEUTRAL_GEAR.has(tag)) return;
-    if (!m.has(tag)) m.set(tag, new Set());
-    m.get(tag).add(id);
-  };
+export const SPORT_VENUES = {
+  "basketball court": { sports: ["hoops"], where: "either" },
+  "tennis court": { sports: ["tennis"], where: "either" },
+  "soccer field": { sports: ["soccer"], where: "outdoor" },
+  "baseball stadium": { sports: ["baseball"], where: "outdoor" },
+  "sports court": {
+    sports: ["hoops", "tennis", "volleyball", "badminton", "tabletennis", "archery"],
+    where: "either",
+  },
+  "school gym": {
+    sports: ["hoops", "tennis", "volleyball", "badminton", "tabletennis", "boxing", "archery"],
+    where: "indoor",
+  },
+  pool: { sports: ["swim"], where: "either" },
+  "boxing ring": { sports: ["boxing"], where: "indoor" },
+  "running track": { sports: ["track", "cycling"], where: "outdoor" },
+  stadium: { sports: ["soccer", "track", "archery", "cycling"], where: "outdoor" },
+  park: { sports: ["soccer", "cycling"], where: "outdoor" },
+  "golf course": { sports: ["golf"], where: "outdoor" },
+  street: { sports: ["cycling"], where: "outdoor" },
+  city: { sports: ["cycling"], where: "outdoor" },
+  cityscape: { sports: ["cycling"], where: "outdoor" },
+  alley: { sports: ["cycling"], where: "outdoor" },
+  forest: { sports: ["cycling"], where: "outdoor" },
+  mountain: { sports: ["cycling", "ski"], where: "outdoor" },
+  garden: { sports: ["cycling"], where: "outdoor" },
+  courtyard: { sports: ["cycling", "archery"], where: "outdoor" },
+  beach: { sports: ["cycling"], where: "outdoor" },
+  dojo: { sports: ["archery"], where: "indoor" },
+  "bowling alley": { sports: ["bowling"], where: "indoor" },
+};
+
+/**
+ * 明確的 tag → 運動相容範圍。沒列出的 tag 都是 neutral，永遠不建立運動限制。
+ * 這裡描述相容性，不從「某套 preset 剛好包含什麼」反推，避免 kit membership 被誤當身分。
+ */
+const SPORT_TAG_SCOPE_DATA = {
+  "basketball court": ["hoops"],
+  "basketball (object)": ["hoops"],
+  "basketball uniform": ["hoops"],
+  tennis: ["tennis"],
+  "tennis court": ["tennis"],
+  "tennis racket": ["tennis"],
+  "tennis ball": ["tennis"],
+  "tennis uniform": ["tennis"],
+  soccer: ["soccer"],
+  "soccer field": ["soccer"],
+  "soccer ball": ["soccer"],
+  "soccer uniform": ["soccer"],
+  "baseball stadium": ["baseball"],
+  "baseball (object)": ["baseball"],
+  "baseball bat": ["baseball"],
+  "baseball mitt": ["baseball"],
+  "baseball uniform": ["baseball"],
+  "volleyball (object)": ["volleyball"],
+  "volleyball uniform": ["volleyball"],
+  badminton: ["badminton"],
+  "badminton racket": ["badminton"],
+  shuttlecock: ["badminton"],
+  "table tennis": ["tabletennis"],
+  "table tennis paddle": ["tabletennis"],
+  "table tennis ball": ["tabletennis"],
+  swimming: ["swim"],
+  pool: ["swim"],
+  "competition swimsuit": ["swim"],
+  "swim cap": ["swim"],
+  boxing: ["boxing"],
+  "boxing ring": ["boxing"],
+  "boxing gloves": ["boxing"],
+  "boxing shorts": ["boxing"],
+  "track and field": ["track"],
+  "running track": ["track", "cycling"],
+  "track uniform": ["track"],
+  cleats: ["soccer", "baseball", "track"],
+  golf: ["golf"],
+  "golf course": ["golf"],
+  "golf club": ["golf"],
+  "golf ball": ["golf"],
+  "riding bicycle": ["cycling"],
+  bicycle: ["cycling"],
+  "bicycle helmet": ["cycling"],
+  archery: ["archery"],
+  "bow (weapon)": ["archery"],
+  "arrow (projectile)": ["archery"],
+  skiing: ["ski"],
+  "bowling alley": ["bowling"],
+  "bowling ball": ["bowling"],
+  "sports court": ["hoops", "tennis", "volleyball", "badminton", "tabletennis", "archery"],
+  "school gym": ["hoops", "tennis", "volleyball", "badminton", "tabletennis", "boxing", "archery"],
+};
+
+export const SPORT_TAG_SCOPE = new Map(
+  Object.entries(SPORT_TAG_SCOPE_DATA).map(([tag, sports]) => [tag, new Set(sports)])
+);
+
+// 舊名稱保留給 engine 與外部呼叫者；內容現在是顯式 scope，不再由 preset 反推。
+export const SPORT_IDENTITY = SPORT_TAG_SCOPE;
+
+/** 活動 → 合理場地，由 SPORT_VENUES 與 preset activity 同源推導。 */
+export const SPORT_ACT_PLACE = (() => {
+  const out = {};
   for (const p of SPORT_PRESETS) {
-    add(p.activity, p.id); // 活動雖然不進必進 POS，仍然代表運動身分
-    for (const t of sportPresetTags(p)) add(t, p.id);
-    for (const t of p.optionalEquipment || []) add(t, p.id);
+    if (!p.activity) continue;
+    if (!out[p.activity]) out[p.activity] = [];
+    for (const [venue, meta] of Object.entries(SPORT_VENUES)) {
+      if (meta.sports.includes(p.id) && !out[p.activity].includes(venue)) out[p.activity].push(venue);
+    }
   }
-  return m;
+  return out;
 })();
 
 /**
@@ -232,17 +334,17 @@ export const SPORT_IDENTITY = (() => {
  */
 export const SPORT_GEAR_IDENTITY = (() => {
   const m = new Map();
-  const add = (tag, id) => {
-    if (!tag || SPORT_NEUTRAL_GEAR.has(tag)) return;
-    if (!m.has(tag)) m.set(tag, new Set());
-    m.get(tag).add(id);
+  const add = (tag) => {
+    const scope = SPORT_TAG_SCOPE.get(tag);
+    if (scope) m.set(tag, new Set(scope));
   };
   for (const p of SPORT_PRESETS) {
-    add(p.activity, p.id);
+    add(p.activity);
     for (const t of [...(p.venue || []), ...(p.equipment || []), ...(p.optionalEquipment || [])]) {
-      add(t, p.id);
+      add(t);
     }
   }
+  for (const venue of Object.keys(SPORT_VENUES)) add(venue);
   return m;
 })();
 
@@ -298,31 +400,16 @@ export function sportTagAllowed(tag, used) {
   return false;
 }
 
-/** 活動 → 合理場地。給 engine 的 ACT_PLACE 用，讓自行車不會出現在臥室。 */
-export const SPORT_ACT_PLACE = {
-  tennis: ["tennis court", "sports court"],
-  soccer: ["soccer field", "stadium", "park"],
-  badminton: ["sports court", "school gym", "fitness gym"],
-  "table tennis": ["sports court", "school gym", "fitness gym"],
-  boxing: ["boxing ring", "fitness gym"],
-  "track and field": ["running track", "stadium"],
-  golf: ["golf course"],
-  archery: ["dojo", "sports court", "stadium", "courtyard", "school gym"],
-  "riding bicycle": [
-    "street",
-    "city",
-    "cityscape",
-    "alley",
-    "park",
-    "running track",
-    "stadium",
-    "forest",
-    "mountain",
-    "garden",
-    "courtyard",
-    "beach",
-  ],
-};
+/** 驗證器的完整 inventory：preset 各角色與所有相容場地都只從這裡匯出。 */
+export function allSportTags() {
+  const tags = new Set(Object.keys(SPORT_VENUES));
+  for (const p of SPORT_PRESETS) {
+    if (p.activity) tags.add(p.activity);
+    for (const t of [...sportPresetTags(p), ...(p.optionalEquipment || [])]) tags.add(t);
+  }
+  for (const places of Object.values(SPORT_ACT_PLACE)) for (const place of places) tags.add(place);
+  return [...tags].sort();
+}
 
 /** 新加的運動活動 tag。engine 要把它們一起當成「會動的活動」處理。 */
 export const SPORT_MOVE_ACTS = [

@@ -566,7 +566,6 @@ const SPORT_PLACE = new Set([
   "sports court",
   "golf course",
   "stadium",
-  "ski slope",
   "dojo",
 ]);
 const DRIVE_PLACE = new Set(["car", "car interior", "street", "city", "cityscape", "alley"]);
@@ -625,7 +624,7 @@ const ACT_PLACE = {
   picnic: new Set(["park", "garden", "beach", "forest", "courtyard"]),
   hiking: new Set(["forest", "park", "bamboo forest", "garden", "mountain"]),
   jogging: new Set(["park", "street", "running track", "stadium", "garden", "city", "cityscape", "alley"]),
-  skiing: new Set(["ski slope", "mountain"]),
+  skiing: new Set(["mountain"]),
   diving: new Set(["ocean", "underwater", "pool"]),
   weightlifting: new Set(["fitness gym", "school gym"]),
   sunbathing: new Set(["beach", "poolside", "rooftop", "balcony", "park"]),
@@ -879,7 +878,7 @@ export function placeFitsActs(place, acts, realistic = false) {
   }
   if (acts.has("playing sports") || acts.has("exercising") || acts.has("training")) return SPORT_PLACE.has(place);
   if (acts.has("hiking")) return !INDOOR_ROOM.has(place) && !BATH_PLACE.has(place);
-  if (acts.has("skiing")) return place === "ski slope" || place === "mountain";
+  if (acts.has("skiing")) return place === "mountain";
   if (acts.has("karaoke")) {
     if (realistic) return place === "bar (place)" || place === "living room" || place === "karaoke box";
     return place !== "elevator" && !BATH_PLACE.has(place);
@@ -981,7 +980,7 @@ function sceneClothKind(used) {
   if (used.has("classroom") || used.has("school uniform")) return "school";
   if (used.has("kitchen") || used.has("cooking")) return "kitchen";
   if (used.has("flight attendant") || used.has("airplane interior") || used.has("cockpit")) return "cabin";
-  if (used.has("skiing") || used.has("ski slope")) return "sport";
+  if (used.has("skiing")) return "sport";
   if (used.has("firefighter")) return "fire";
   if (used.has("scientist") || used.has("laboratory")) return "lab";
   if (used.has("construction worker") || used.has("construction site")) return "site";
@@ -1202,6 +1201,16 @@ const HANDS_BUSY_ACT = new Set([
   "singing",
   "karaoke",
   "picnic",
+]);
+// Only worn blockers belong here. A racket/bat/bow in the scene does not prove somebody is holding it.
+const HANDS_OCCUPIED = new Set(["boxing gloves"]);
+const NEEDS_FREE_HAND = new Set([
+  "handjob",
+  "fingering",
+  "masturbation",
+  "female masturbation",
+  "male masturbation",
+  "masturbation through clothes",
 ]);
 const HANDS_BUSY_BODY = new Set(["crawling", "all fours", "top-down bottom-up", "bondage", "restrained", "handcuffs"]);
 const BOTH_ARMS = new Set([
@@ -1561,6 +1570,15 @@ export function sportHeatWarnings(lex, pinned, heats) {
   return blocking.length ? [{ kind: "sexActivity", tags: blocking }] : [];
 }
 
+/** Explicit user pins are preserved, but surface worn-hand/free-finger conflicts. */
+export function handUsageWarnings(pinned) {
+  const occupied = [...pinned].filter((tag) => HANDS_OCCUPIED.has(tag));
+  const needsFree = [...pinned].filter((tag) => NEEDS_FREE_HAND.has(tag));
+  return occupied.length && needsFree.length
+    ? [{ kind: "hands", tags: [...occupied, ...needsFree] }]
+    : [];
+}
+
 export function sportPinWarnings(lex, pinned) {
   const ids = sportIdsOf(pinned);
   if (ids === null || ids.size > 0) return [];
@@ -1602,6 +1620,66 @@ export function togglePresetTags(lex, tags, existing = new Set(), others) {
     pinned = clearPresetTags(lex, ot, pinned);
   }
   return applyPresetTags(lex, tags, pinned);
+}
+
+/** Persisted ownership for the last named preset. Missing legacy state is deliberately not inferred. */
+export function sanitizePresetOwned(raw, lex) {
+  if (!raw || typeof raw !== "object" || typeof raw.id !== "string" || !raw.id.trim()) return null;
+  if (!Array.isArray(raw.tags)) return null;
+  const tags = [...new Set(knownTags(lex, raw.tags))];
+  return tags.length ? { id: raw.id.trim(), tags } : null;
+}
+
+/** Keep ownership aligned after the user removes or bans one of the preset-added tags. */
+export function prunePresetOwned(raw, pinned, lex) {
+  const owned = sanitizePresetOwned(raw, lex);
+  if (!owned) return null;
+  const tags = owned.tags.filter((tag) => pinned.has(tag));
+  return tags.length ? { id: owned.id, tags } : null;
+}
+
+/**
+ * Toggle one named preset without guessing which pre-existing pins belong to it.
+ * Only the exact tags introduced by this helper are later eligible for removal.
+ */
+export function toggleNamedPreset(lex, preset, existing = new Set(), rawOwned = null) {
+  if (!preset || typeof preset.id !== "string" || !Array.isArray(preset.tags)) {
+    return { pinned: new Set(existing), presetOwned: prunePresetOwned(rawOwned, existing, lex), action: "noop" };
+  }
+  const id = preset.id;
+  const owned = prunePresetOwned(rawOwned, existing, lex);
+  const state = presetState(lex, preset.tags, existing, preset.core);
+
+  if (state === "on") {
+    // A legacy/manual full kit has no provable ownership. Preserve it rather than deleting user data.
+    if (!owned || owned.id !== id) {
+      return { pinned: new Set(existing), presetOwned: owned, action: "protected" };
+    }
+    const drop = new Set(owned.tags);
+    return {
+      pinned: new Set([...existing].filter((tag) => !drop.has(tag))),
+      presetOwned: null,
+      action: "removed",
+    };
+  }
+
+  let base = new Set(existing);
+  let keptOwned = [];
+  if (owned && owned.id === id) {
+    keptOwned = owned.tags.filter((tag) => base.has(tag));
+  } else if (owned) {
+    const drop = new Set(owned.tags);
+    base = new Set([...base].filter((tag) => !drop.has(tag)));
+  }
+
+  const pinned = applyPresetTags(lex, preset.tags, base);
+  const added = [...pinned].filter((tag) => !base.has(tag));
+  const tags = [...new Set([...keptOwned, ...added])].filter((tag) => pinned.has(tag));
+  return {
+    pinned,
+    presetOwned: tags.length ? { id, tags } : null,
+    action: state === "mixed" ? "completed" : "applied",
+  };
 }
 
 export function sanitizePinPresets(raw, lex) {
@@ -2419,6 +2497,11 @@ export function drawOne(lex, settings, pinned, userBanned, rand, seed) {
   };
   allow = (item, opts) => {
     if (banned.has(item.tag) || used.has(item.tag)) return false;
+    // 裸手性愛是單人 sex 場景的主要可用活動；非運動情境不要隨機抽入拳擊手套
+    // 把整個 sex_act 槽堵死。使用者或拳擊 preset 明確釘選時仍完整尊重。
+    if (item.tag === "boxing gloves" && heat === "sex" && !pinned.has(item.tag)) return false;
+    if (NEEDS_FREE_HAND.has(item.tag) && [...used].some((tag) => HANDS_OCCUPIED.has(tag))) return false;
+    if (HANDS_OCCUPIED.has(item.tag) && [...used].some((tag) => NEEDS_FREE_HAND.has(tag))) return false;
     if (!supportCandidateAllowed({
       used,
       candidate: item.tag,
@@ -4196,6 +4279,7 @@ export function defaultSettings(data) {
     eras: d.eras ? [...d.eras] : [...ERAS],
     samePerson: false,
     drawJob: false,
+    pinSportActivity: false,
     lockScene: true,
     sceneMode: "normal",
     mustDraw: {},
@@ -4239,6 +4323,7 @@ export function sanitizeSettings(raw, data) {
     eras: eras.length ? eras : [...base.eras],
     samePerson: raw.samePerson === true,
     drawJob: raw.drawJob === true,
+    pinSportActivity: raw.pinSportActivity === true,
     sceneMode,
     lockScene: sceneMode !== "weird",
     mustDraw: sanitizeMustDraw(raw.mustDraw),
