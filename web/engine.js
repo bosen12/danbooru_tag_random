@@ -4034,6 +4034,12 @@ export function drawOne(lex, settings, pinned, userBanned, rand, seed) {
     takeFromPool(acts, 1, rand, commit, null, allow);
   }
   fillSlot("pose", "body_pose");
+  // camera 排在臉部特徵之後，所以 head out of frame / lower body 這兩個禁止眼睛
+  // 特徵的鏡頭，自動抽取永遠選不到（釘選仍然可用）。試過把這一槽移到臉部之前：
+  // 兩個鏡頭確實變成各約 4.5% 可達，但同時打破四條既有承諾 —— lower body 會擋掉
+  // 手臂動作和忙手活動，於是「活動尺度一定有活動」「全裸單人性愛一定有自慰動作」
+  // 「flash 一定有衣服」全部失效。這兩個構圖和這工具的多數保證天生不相容，
+  // 留給明確釘選比較誠實。詳見 docs/pose-tag-deep-review.md §2。
   fillSlot("pose", "camera");
   fillSlot("pose", "gaze");
   fillSlot("pose", "expression");

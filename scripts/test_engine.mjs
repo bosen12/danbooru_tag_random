@@ -6044,6 +6044,73 @@ function indoorOutdoorClash(have) {
   }
 }
 
+// --- 鏡頭要在臉部特徵之前決定 -----------------------------------------------
+// head out of frame 和 lower body 禁止眼睛特徵，但 fillSlot("feature","eye_color")
+// 排在 fillSlot("pose","camera") 前面 —— 眼睛顏色永遠先落定，這兩個鏡頭於是每次
+// 都被自己的規則擋掉。普通自動抽取 0/600，其他鏡頭（pov、from behind、close-up）
+// 都正常。
+//
+// 既有的 HOF 測試都是先「釘選」再驗它擋掉臉部標籤，證明的是互斥；順序性餓死要黑箱才抓得到。
+{
+  const camSettings = () => {
+    const s = defaultSettings(data);
+    s.girl = true;
+    s.boy = false;
+    s.heats = ["activity", "tease", "flash", "sex"];
+    s.counts = { subject: 10, feature: 10, pose: 10, clothing: 10, env: 10 };
+    return s;
+  };
+  const autoHits = (want, n = 600, seed0 = 960000) => {
+    const s = camSettings();
+    let hit = 0;
+    for (let i = 1; i <= n; i++) {
+      if (tagsOf(drawOne(lex, s, new Set(), new Set(), mulberry32(seed0 + i), seed0 + i)).has(want)) hit += 1;
+    }
+    return hit;
+  };
+
+  // head out of frame / lower body 是釘選專用，這裡刻意不為它們寫斷言：
+  // 寫「抽得到」會紅（現況如此），寫「抽不到」是把一個未必想保留的現況釘成契約。
+  // 決定與量測寫在 engine.js 的 camera 槽註解與 docs/pose-tag-deep-review.md。
+  // 一般鏡頭的可達性仍然要顧，那才是這批測試守的東西。
+  for (const cam of ["pov", "from behind", "close-up"]) {
+    ok(`鏡頭可達 對照組：「${cam}」抽得到`, autoHits(cam) > 0);
+  }
+
+  // 護欄一：使用者明確釘了臉部標籤時，自動的無臉鏡頭仍要被擋（不准刪 pin）。
+  for (const pin of ["closed eyes", "looking at viewer"]) {
+    const s = camSettings();
+    const pinned = new Set([pin]);
+    let bad = 0;
+    let lost = 0;
+    for (let i = 1; i <= 300; i++) {
+      const got = tagsOf(drawOne(lex, s, pinned, new Set(), mulberry32(970000 + i), 970000 + i));
+      if (got.has("head out of frame") || got.has("lower body")) bad += 1;
+      if (!got.has(pin)) lost += 1;
+    }
+    ok(`鏡頭護欄：釘了「${pin}」就不該自動抽到無臉鏡頭`, bad === 0, `${bad}/300`);
+    ok(`鏡頭護欄：釘的「${pin}」不會被刪掉`, lost === 0, `掉了 ${lost}/300`);
+  }
+
+  // 護欄二：無臉鏡頭進來時，最終 POS 不該還有眼睛／視線這些看不到的東西。
+  const s = camSettings();
+  let leak = 0;
+  let why = "";
+  for (let i = 1; i <= 600; i++) {
+    const got = tagsOf(drawOne(lex, s, new Set(), new Set(), mulberry32(960000 + i), 960000 + i));
+    if (!got.has("head out of frame") && !got.has("lower body")) continue;
+    const face = [...got].filter((t) => {
+      const it = lex.byTag.get(t);
+      return it && (it.mutex === "eye_color" || it.mutex === "gaze" || it.group === "eyes" || /^looking /.test(t));
+    });
+    if (face.length) {
+      leak += 1;
+      if (!why) why = `seed ${960000 + i}：${face.join("、")}`;
+    }
+  }
+  ok("鏡頭護欄：無臉鏡頭的圖裡沒有眼睛／視線標籤", leak === 0, why);
+}
+
 if (failed) {
   console.error(`\n${failed} failed`);
   process.exit(1);
