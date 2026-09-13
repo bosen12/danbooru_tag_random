@@ -1,5 +1,11 @@
 # Progress Log
 
+## Session: 2026-09-13 (sports consistency consensus)
+
+- 讀取 Claude 對 `ab56d84` 的完整複核；六項技術問題取得共識。
+- 接受 P1 與 P2 範圍，但否決從舊完整 kit 推定 preset ownership；改採不刪資料的 null migration。
+- 新增 design 與 TDD implementation plan；Phase 17 開始，尚未改 production code。
+
 ## Session: 2026-09-13 (Codex handoff: validate + optimize)
 
 - 使用者將後續驗證與優化交給 Codex。

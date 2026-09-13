@@ -4,10 +4,19 @@
 抽取邏輯盡量完美：引擎自動抽的活動／地點／姿勢／衣著不互相打架。釘選可自相衝突。正常＝現實高機率；多元＝場景＋物理；奇葩＝只物理。
 
 ## Next Step
-Phase 16 已完成。下一步可沿用同一 schema 擴充 `consciousness / locomotion / subject_medium`，每一維都先 shadow 量測再決定 enforcement。
+Phase 17：先為 `ski slope` 清理寫紅燈測試，再依 sports consistency plan 逐項完成。
 
 ## Current Phase
-Phase 16
+Phase 17
+
+### Phase 17: 運動 preset 一致性與無矛盾修正
+- [ ] 無效／過新場地與完整 Danbooru inventory
+- [ ] 顯式 sport scope 與同源 venue compatibility
+- [ ] presetOwned 無損狀態流與舊存檔保守 migration
+- [ ] boxing gloves 手部佔用規則與 warning
+- [ ] 運動 activity 必進開關（預設關）
+- [ ] 全套 Node/Python/live verifier 驗證
+- **Status:** in_progress
 
 ### Phase 16: r42 金標驗證 + support shadow validator
 - [x] 核對 r42 raw/gold：400 筆、POS 未改；一致性稽核將漏標的 #378/#389 對齊 #181，hard 18/400 = 4.5%
