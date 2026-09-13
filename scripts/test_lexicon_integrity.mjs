@@ -1,0 +1,203 @@
+#!/usr/bin/env node
+/**
+ * 詞庫資料自己的一致性，加上兩條「資料有地雷、引擎必須擋住」的行為保證。
+ *
+ * 詞庫是產生出來的（`scripts/merge_lexicon.py` 等），所以指向性錯誤最可能在重新
+ * 生成的時候悄悄跑進來 —— 那種錯不會讓任何抽取測試變紅，只會讓某些字永遠抽不到
+ * 或是帶進一個不存在的相依字。
+ *
+ * 後半段守的是：`implies` 鏈可以繞過尺度與性別的牆（`spooning` 只開誘惑也能用，
+ * 但它 implies `sex`）。引擎現在會把暗示鏈的每一個字都送進 `allow()`，所以繞不過去。
+ * 這件事只要有人把那段檢查拿掉就會破，而且破得很安靜 —— 誘惑尺度的圖裡開始出現
+ * 性愛的字。所以用行為而不是用程式碼結構把它釘住。
+ */
+import { readFileSync } from "fs";
+import { dirname, join } from "path";
+import { fileURLToPath } from "url";
+import {
+  ERAS,
+  HEATS,
+  defaultSettings,
+  drawOne,
+  indexLexicon,
+  mulberry32,
+  mutexSiblings,
+} from "../web/engine.js";
+
+const ROOT = join(dirname(fileURLToPath(import.meta.url)), "..");
+const data = JSON.parse(readFileSync(join(ROOT, "web", "lexicon.json"), "utf8"));
+const lex = indexLexicon(data);
+const by = new Map(data.tags.map((t) => [t.tag, t]));
+
+let failed = 0;
+function ok(name, rows) {
+  const bad = Array.isArray(rows) ? rows : [];
+  if (!bad.length) {
+    console.log(`ok   ${name}`);
+    return;
+  }
+  failed += 1;
+  console.error(`FAIL ${name}：${bad.length} 件`);
+  for (const r of bad.slice(0, 8)) console.error(`  ${r}`);
+  if (bad.length > 8) console.error(`  …還有 ${bad.length - 8} 件`);
+}
+
+// --- 指向完整性 ------------------------------------------------------------
+{
+  const bad = [];
+  for (const it of data.tags) {
+    for (const d of it.implies || []) if (!by.has(d)) bad.push(`${it.tag} implies 不存在的「${d}」`);
+    for (const d of it.bind || []) if (!by.has(d)) bad.push(`${it.tag} bind 不存在的「${d}」`);
+  }
+  ok("implies / bind 都指向詞庫裡真的有的字", bad);
+}
+
+// 畫質詞、nsfw 尾巴、alwaysEnv、eraAnchors、castWeights 引用的字。
+// quality / nsfwTail 是直接附加的字面字串，不是可點可釘的詞庫條目，所以不檢查它們。
+{
+  const bad = [];
+  for (const t of data.alwaysEnv || []) {
+    if (!by.has(t)) bad.push(`alwaysEnv 的「${t}」不在詞庫（是刻意的字面字串嗎？）`);
+  }
+  for (const [era, tags] of Object.entries(data.eraAnchors || {})) {
+    if (!ERAS.includes(era)) bad.push(`eraAnchors 有未知時代「${era}」`);
+    for (const t of tags || []) if (!by.has(t)) bad.push(`eraAnchors.${era} 引用不存在的「${t}」`);
+  }
+  for (const [name, table] of Object.entries(data.castWeights || {})) {
+    for (const combo of Object.keys(table)) {
+      for (const t of combo.split(",").map((s) => s.trim())) {
+        if (!by.has(t)) bad.push(`castWeights.${name} 引用不存在的「${t}」`);
+      }
+    }
+  }
+  // alwaysEnv 目前放的是 soft lighting，那是字面字串 —— 允許，但要有人知道。
+  ok("eraAnchors / castWeights 引用的字都存在", bad.filter((r) => !r.startsWith("alwaysEnv")));
+}
+
+// --- implies 鏈的形狀 ------------------------------------------------------
+{
+  const bad = [];
+  const done = new Set();
+  const walk = (tag, path) => {
+    if (path.includes(tag)) {
+      bad.push(`迴圈：${[...path, tag].join(" → ")}`);
+      return;
+    }
+    if (done.has(tag)) return;
+    for (const d of by.get(tag)?.implies || []) walk(d, [...path, tag]);
+    done.add(tag);
+  };
+  for (const it of data.tags) walk(it.tag, []);
+  ok("implies 沒有迴圈", bad);
+}
+
+{
+  // 同 mutex 的 implies 只有在父子關係下才合理（high ponytail → ponytail）。
+  // mutexSiblings() 就是引擎判斷「這兩個是不是真的互斥」的地方，拿它當判準。
+  const bad = [];
+  for (const it of data.tags) {
+    if (!it.mutex) continue;
+    const sibs = new Set(mutexSiblings(lex, it.tag));
+    for (const d of it.implies || []) {
+      const di = by.get(d);
+      if (di && di.mutex === it.mutex && di.tag !== it.tag && sibs.has(d)) {
+        bad.push(`${it.tag} implies 同 mutex「${it.mutex}」的「${d}」，而且兩者被當成真互斥`);
+      }
+    }
+  }
+  ok("同 mutex 的 implies 都是父子關係", bad);
+}
+
+{
+  // 某個字能用於某時代，它 implies 的字也必須能用於同一個時代，
+  // 否則在那個時代抽到它就會缺相依字。
+  const okEras = (it) => ((it.era || ["any"]).includes("any") ? ERAS : it.era);
+  const bad = [];
+  for (const it of data.tags) {
+    for (const d of it.implies || []) {
+      const di = by.get(d);
+      if (!di) continue;
+      const miss = okEras(it).filter((e) => !okEras(di).includes(e));
+      if (miss.length) bad.push(`${it.tag} implies ${d}，但 ${miss.join(",")} 這幾個時代對不上`);
+    }
+  }
+  ok("implies 的字在每個可用時代都可用", bad);
+}
+
+// --- 欄位衛生 --------------------------------------------------------------
+{
+  const bad = [];
+  const cnt = new Map();
+  for (const it of data.tags) cnt.set(it.tag, (cnt.get(it.tag) || 0) + 1);
+  for (const [t, n] of cnt) if (n > 1) bad.push(`「${t}」重複 ${n} 次`);
+  for (const it of data.tags) {
+    if (!it.section) bad.push(`${it.tag} 沒有 section`);
+    if (!it.group) bad.push(`${it.tag} 沒有 group`);
+    if (!it.zh && !(data.zh || {})[it.tag]) bad.push(`${it.tag} 沒有中文名`);
+    for (const h of it.heat || []) if (!HEATS.includes(h)) bad.push(`${it.tag} 有未知 heat「${h}」`);
+    for (const e of it.era || []) if (e !== "any" && !ERAS.includes(e)) bad.push(`${it.tag} 有未知 era「${e}」`);
+  }
+  ok("沒有重複、缺欄位或未知列舉值", bad);
+}
+
+// --- 資料有地雷，引擎要擋住 ------------------------------------------------
+// 這兩段不驗資料，驗行為。資料裡確實有「低尺度的字 implies 高尺度的字」和
+// 「gate=any 的字 implies 限定性別的字」，那是合理的詞彙關係；要保證的是引擎
+// 不會讓那條暗示鏈把牆推倒。
+{
+  const FULL = { subject: 10, feature: 10, pose: 10, clothing: 10, env: 10 };
+  const sweep = (over, n = 500, seed0 = 930000) => {
+    const s = Object.assign(JSON.parse(JSON.stringify(defaultSettings(data))), over);
+    const seen = new Set();
+    for (let i = 1; i <= n; i++) {
+      const out = drawOne(lex, s, new Set(), new Set(), mulberry32(seed0 + i), seed0 + i);
+      for (const t of out.positive.split(", ")) seen.add(t.trim());
+    }
+    return seen;
+  };
+
+  const rank = { activity: 0, tease: 1, flash: 2, sex: 3 };
+  const lowest = (it) => Math.min(...(it.heat || ["activity"]).map((h) => rank[h] ?? 0));
+  // 資料裡真的存在的升級對，從詞庫算出來，不手打。
+  const escalating = [];
+  for (const it of data.tags) {
+    for (const d of it.implies || []) {
+      const di = by.get(d);
+      if (di && lowest(di) > lowest(it)) escalating.push([it.tag, d]);
+    }
+  }
+  ok("詞庫裡確實有尺度升級的 implies 對（不然下面等於沒測）", escalating.length ? [] : ["一對都沒有"]);
+
+  for (const [heat, weights] of [
+    ["activity", { activity: 1, tease: 0, flash: 0, sex: 0 }],
+    ["tease", { activity: 0, tease: 1, flash: 0, sex: 0 }],
+  ]) {
+    const seen = sweep({ girl: true, boy: true, heats: [heat], weights, counts: FULL });
+    const leaked = [];
+    for (const [parent, dep] of escalating) {
+      const di = by.get(dep);
+      if (!di) continue;
+      if (lowest(di) > rank[heat] && seen.has(dep)) leaked.push(`只開${heat}卻出現「${dep}」（${parent} 的相依字）`);
+      if (lowest(by.get(parent)) > rank[heat] && seen.has(parent)) leaked.push(`只開${heat}卻出現「${parent}」`);
+    }
+    ok(`implies 不會把尺度推高（只開 ${heat}）`, [...new Set(leaked)]);
+  }
+
+  // 性別牆：只開男生時，任何 female-gated 的字都不該出現。
+  //
+  // 刻意不測「implies 把性別牆推倒」那個更窄的情況。資料裡只有兩對
+  // （black leotard → leotard、breastfeeding → lactation），而那兩個父字在
+  // 只開男生的抽樣裡一次都不出現 —— 就算把引擎的相依字檢查整段拿掉，那條斷言
+  // 照樣是綠的。空的斷言比沒有斷言更糟，所以改成這條會真的被每一張圖檢查到的。
+  const boyOnly = sweep({ girl: false, boy: true, heats: HEATS.slice(), counts: FULL }, 500, 940000);
+  const femaleGated = data.tags.filter((t) => t.gate === "female").map((t) => t.tag);
+  ok("詞庫裡有 female-gated 的字（不然下面等於沒測）", femaleGated.length > 10 ? [] : [`只有 ${femaleGated.length} 個`]);
+  const leaked = femaleGated.filter((t) => boyOnly.has(t));
+  ok(`只開男生時沒有 female-gated 的字漏進來（檢查了 ${femaleGated.length} 個）`, leaked.map((t) => `漏出「${t}」`));
+}
+
+if (failed) {
+  console.error(`\n${failed} failed`);
+  process.exit(1);
+}
+console.log("\nok");

@@ -46,6 +46,12 @@ if errorlevel 1 (
   pause
   exit /b 1
 )
+echo == lexicon integrity ==
+call node scripts\test_lexicon_integrity.mjs
+if errorlevel 1 (
+  pause
+  exit /b 1
+)
 echo == draw contracts ==
 call node scripts\test_draw_contracts.mjs
 if errorlevel 1 (
