@@ -214,3 +214,144 @@ market / festival / street / shrine / temple 這些公共場所仍然不在裡�
 - 金標 seed 42 因為候選池變大而位移，已依既有慣例重產並註明原因。
 
 —— Opus 5
+
+## 參考 Grok 的古中國 pack，補道具與光源（Opus 5，2026-09-15）
+
+使用者指出 `special_prompts` 的 `156_古中國戰爭系列`、`151_中國神明系列`、`51_古中國系列`
+（Grok 寫的，共 495 個 .py）出來的圖比我們的古中國更像古中國。挖了那 495 個檔，
+抽出 2001 種片語，比對詞庫。
+
+### 先講一個負面結論：不是輸在表情和動作
+
+Grok 用得最兇的那些表情／身體片語，**大部分根本不是 Danbooru tag**：
+
+| 片語 | 出現次數 | Danbooru post_count |
+|---|---|---|
+| `pleasure` | 306 | **0** |
+| `teary eyes` | 46 | **0** |
+| `flushed cheeks` | 41 | **0** |
+| `disheveled hair` | 33 | **0** |
+| `doggy style` | 34 | **0** |
+| `glistening skin` | 41 | **0** |
+
+它們是自然語言敘述，不是 tag。而真正對應的 tag（`trembling`、`messy hair`、
+`arched back`、`tears`、`seductive smile`、`sweat`）我們本來就有。
+**所以不要照抄它們的片語。**
+
+### 真正的差別：時代道具和時代光源
+
+| group | 古中國可用 | 其中時代專屬（修正前） |
+|---|---|---|
+| place | 33 | 17 |
+| **other（道具）** | 29 | **4** — wooden floor / koi / paper lantern / bamboo |
+| **light（光源）** | 10 | **0** |
+| furniture | 2 | 0 |
+
+Grok 的每一張都同時有「場景」和「東西」：軍帳＋戰旗＋篝火、神廟＋香爐＋油燈。
+我們只有場景。
+
+而且**光源那一格是死的**：env 明確填的是 place / in_out / day_night，
+lighting 只能在剩下的 `fill("env")` 裡跟道具、天氣、天空搶名額，
+14 個光源 tag 加起來只有約 3% 的機率出現（modern 是 0%）——
+同時每張圖都被無條件加上同一句 `soft lighting`。所以每張圖的光其實都一樣。
+
+### 做了什麼
+
+1. **補 38 個 tag**，全部先用 Danbooru API 查過 post_count：
+   - 時代光源：lantern / oil lamp / torch / bonfire / firelight / fireplace / chandelier / candelabra / lamppost
+   - 古中國道具：incense burner / incense / folding fan / hand fan / scroll / calligraphy / guqin / erhu / teapot / teacup / folding screen / lotus / chrysanthemum / willow / pine tree / dragon / phoenix / silk / beads
+   - 戰爭道具：banner / spear / polearm / shield / drum / horse
+   - 場地：battlefield / pond / altar，並把 `tent` 從 modern-only 放寬（軍帳）
+2. **`fillSlot("env", "lighting")`** —— 讓光源那一格真的會填。
+3. **時代道具格** —— 歷史時代一定帶一件那個年代的東西（仿照既有的時代風味格）。
+
+### 結果
+
+| | 修正前 | 修正後 |
+|---|---|---|
+| 光源出現率 | 3%（modern 0%） | **100%**，每個時代 5–15 種可選 |
+| 古中國道具 | 4 種，各約 1% | **30 種，最高 6%** |
+| 江戶道具 | — | 31 種，最高 6% |
+| 每張 tag 數 | 35.1 | **36.1**（只多一個） |
+
+### 過程中自己弄出來又修掉的兩個
+
+- **把光源填起來之後，28% 的圖變成「大白天配篝火／街燈」。** 光源不能只看時代，
+  還要看日夜。加了 `DARK_LIGHT` 與既有日夜守門對稱的那一條，現在 0/2400。
+  這正是「要考慮 tag 邏輯」—— 補庫存不能只看時代欄位。
+- **維多利亞的 `lamp` 一度佔 60%**（它的時代光源只有三個）。補了 fireplace /
+  chandelier / candelabra / lamppost，降到 46%。
+- **室內出現馬 73 次。** `horse`、`bonfire`、`pine tree`、`willow`、`rice paddy`
+  加進 `OUTDOOR_LEFTOVER`，現在 0/3000。戰旗、長矛留著沒擋 —— 大廳掛兵器是合理的。
+
+—— Opus 5
+
+## 各時代的多樣性與職業（Opus 5，2026-09-15 深夜）
+
+接續古中國那一輪，把同一套做法套到其他時代，並補上職業。
+
+### 職業：原本歷史時代是 0
+
+17 個職業**全部**是 `era:["modern"]`，連 `soldier` 也是。所以歷史時代打開「抽職業」
+等於沒有東西可抽。補完之後：
+
+| 時代 | 修正前 | 修正後 |
+|---|---|---|
+| modern | 17 | 19（+butler, detective） |
+| ancient_china | **0** | 5（monk, priestess, blacksmith, princess, dancer） |
+| ancient_greece | **0** | 5（+gladiator, priest） |
+| medieval | **0** | 10（+knight, viking, witch, barmaid） |
+| edo | **0** | 9（+samurai, ninja, oiran, onmyouji） |
+| victorian | **0** | 6（+witch, butler, detective, barmaid） |
+
+職業靠 `implies` 帶出身上的衣服（`soldier` → `military uniform`），所以
+`samurai` → `japanese armor`、`knight` → `armor`。古中國沒有可用的士兵 tag
+（general / archer 在 Danbooru 都是 0 篇），改走服裝：新增 `chinese armor`，
+配上 spear / banner / battlefield。pack 裡寫的 `hanfu armor` 不是真 tag。
+
+`knight` 本來是 `feature/other` 的普通描述詞，不在職業槽裡 —— 改成 `mutex: "job"`。
+
+### 光源那一格本來是死的
+
+env 明確填的是 place / in_out / day_night，lighting 只能在剩下的 `fill("env")`
+裡跟道具、天氣、天空搶名額：14 個光源加起來只有約 3% 的機率出現（modern 是 0%），
+而每張圖都被無條件加上同一句 `soft lighting`。加了 `fillSlot("env", "lighting")`
+之後 100%，每個時代 5–15 種可選。
+
+### 道具
+
+古中國 4 種時代專屬道具 → 33 種；古希臘 9 → 16；維多利亞 8 → 17。
+每張圖多約 1 個 tag（35.1 → 36.2）。
+
+### 自己弄出來又修掉的四個
+
+1. **光源填起來之後，28% 的圖變成大白天配篝火／街燈。** 加了 `DARK_LIGHT`，
+   和既有的日夜守門對稱。現在 0/5760。
+2. **硬排序把中性光源餓死。** `fillSlot` 的 env 預設偏好是硬桶（時代專屬抽完才
+   輪到中性），歷史時代有 5–9 個時代光源之後，`window light`、`sidelighting`
+   就再也抽不到了 —— 既有測試 `era:[any] 燈光抽得到（不再被硬排序餓死）`
+   當場抓到。改成軟權重 4:1。
+3. **室內出現馬 73 次。** `horse` / `bonfire` / `pine tree` / `willow` /
+   `rice paddy` 加進 `OUTDOOR_LEFTOVER`。現在 0/5760。
+4. **`butler` / `detective` 沒有給 JOB_PLACE**，於是它們不受場地限制，在釘了
+   廚房的場景也會佔掉職業格，把 `maid` 擠掉 —— 既有測試
+   `pinned kitchen can still draw maid` 抓到。那張表裡每個現代職業都有工作地點，
+   我漏了自己加的那兩個。
+
+### 一個既有的、不是我造成的問題（但要記著）
+
+`mustDraw` 的保證會在浴場／泳池場景漏掉：場景篩選把衣服全刪掉之後，
+必抽沒有被重新滿足。拿 HEAD 比對過：**HEAD 1496/1500，我這版 1493/1500** ——
+所以是既有的邊緣情況（約 0.3–0.5%），我的改動讓它稍微常見一點點。
+既有測試 `must beats era` 用的那組 seed 仍然全過。值得之後單獨修。
+
+### 使用者直接指定的兩件
+
+- `chinese clothes` 與 `hanfu` 各半：錨點改成可以有「替代字」，每次隨機挑一個。
+  1000 張古中國 → 445 張只有 `chinese clothes`，471 張是 `chinese clothes + hanfu`。
+  `hanfu` 不可能單獨出現，因為它 `bind` 了 `chinese clothes`，而 Danbooru 上
+  `hanfu → chinese_clothes` 本來就是 active implication。
+- 拿掉 `dragon`（以及同理的 `phoenix`）：在 WAI 裡它們會直接畫出一條龍／一隻鳳凰，
+  而不是衣服上的紋樣。
+
+—— Opus 5

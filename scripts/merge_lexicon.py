@@ -106,6 +106,12 @@ UMBRELLA = {
     "otaku",
 }
 
+# 錨點可以有替代字：抽的時候在同一組裡挑一個。chinese clothes 是泛稱，
+# hanfu 是具體的形制，兩個都對，一直只用前者會讓每張古中國圖長得一樣。
+ERA_ANCHOR_ALTS = {
+    "chinese clothes": ["chinese clothes", "hanfu"],
+}
+
 ERA_ANCHORS = {
     "modern": ["modern"],
     "ancient_china": ["chinese clothes", "chinese architecture"],
@@ -1837,7 +1843,7 @@ def extra_expand_tags() -> list[dict]:
         env("izakaya", implies=["indoors"], zh="居酒屋"),
         env("tavern", implies=["indoors"], era=["any"], zh="酒館"),
         env("ryokan", implies=["indoors"], era=["edo", "modern"], zh="旅館"),
-        env("tent", implies=["outdoors"], zh="帳篷"),
+        env("tent", implies=["outdoors"], era=["modern", "ancient_china", "medieval", "ancient_greece", "edo"], zh="帳篷"),
         env("campfire", mutex=None, implies=["outdoors"], zh="營火"),
         env("karaoke box", implies=["indoors"], zh="KTV包廂"),
         env("night market", implies=["outdoors"], zh="夜市"),
@@ -2034,6 +2040,7 @@ def main() -> None:
         "groupOrder": GROUP_ORDER,
         "groupZh": GROUP_ZH,
         "eraAnchors": ERA_ANCHORS,
+        "eraAnchorAlts": ERA_ANCHOR_ALTS,
         "zh": {t: old_zh[t] for t in (
             "masterpiece", "best quality", "amazing quality",
             "absurdres", "highres", "very aesthetic", "highly aesthetic", "newest",

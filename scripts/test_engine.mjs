@@ -4770,9 +4770,10 @@ function indoorOutdoorClash(have) {
   );
   eq("shadow integration keeps seed 42 POS byte-identical", shadowIntegrationDraw.positive,
     // 衣著權重的時代層從 12/9 提到 40/30（修時代還原度）後 RNG 路徑刻意改變；
-    // 2026-09-15 再次重產：PRIVATE_SEX_PLACE 從 16 個現代／浴場詞擴到含各時代的
-    // 私密場地，候選池變大，RNG 路徑跟著移位。分布差異記在 findings.md，不是拿金標蓋問題。
-    "1girl, solo, adult, very short hair, grey eyes, grey hair, bangs, large breasts, soft breasts, natural breasts, wet, thigh strap, hanging breasts, high-waist pants, pants, vest, open cardigan, cardigan, sports bra, bra, female masturbation, standing, from outside, looking up, dazed, hand on hip, soft lighting, modern, bathroom, indoors, sunset, nsfw, explicit, masterpiece, best quality, amazing quality");
+    // 2026-09-15 再次重產兩次：先是 PRIVATE_SEX_PLACE 擴到含各時代的私密場地，
+    // 後是光源那一格開始真的會填（以前 14 個光源只有 3% 機率出現）。兩次都讓
+    // 候選池變大、RNG 路徑移位。分布差異記在 findings.md，不是拿金標蓋問題。
+    "1girl, solo, adult, very short hair, grey eyes, grey hair, bangs, large breasts, soft breasts, natural breasts, wet, thigh strap, hanging breasts, high-waist pants, pants, vest, open cardigan, cardigan, sports bra, bra, female masturbation, standing, from outside, looking up, dazed, female ejaculation, soft lighting, modern, greenhouse, indoors, sunset, city lights, nsfw, explicit, masterpiece, best quality, amazing quality");
   ok("drawOne exposes shadow diagnostics", Array.isArray(shadowIntegrationDraw.shadowViolations));
 
   const eatProneShadow = validateSupportShadow({
@@ -6580,6 +6581,43 @@ function indoorOutdoorClash(have) {
   if (thin.length) console.error(`      ${thin.join("  ")}`);
   eq("性愛模式下沒有單一場地佔掉三分之一以上", hot.length, 0);
   if (hot.length) console.error(`      ${hot.join("  ")}`);
+}
+
+{
+  // 光源槽是死的。env 明確填的是 place / in_out / day_night，lighting 只能在
+  // 剩下的 fill("env") 裡跟道具、天氣、天空搶，結果 14 個光源 tag 加起來只有
+  // 大約 3% 的機率出現 —— 而每一張圖都被無條件加上同一句 soft lighting。
+  // 於是所有圖的光都一樣，而且沒有一個時代的光看起來像那個時代。
+  const s = defaultSettings(data);
+  s.girl = true;
+  const thin = [];
+  const noEra = [];
+  for (const era of ERAS) {
+    s.eras = [era];
+    const m = new Map();
+    const N = 400;
+    for (let i = 1; i <= N; i++) {
+      const h = tagsOf(drawOne(lex, s, new Set(), new Set(), mulberry32(i), i));
+      for (const t of h) {
+        if (lex.byTag.get(t)?.mutex === "lighting") m.set(t, (m.get(t) || 0) + 1);
+      }
+    }
+    const hit = [...m.values()].reduce((a, b) => a + b, 0);
+    if (hit < N * 0.5) thin.push(`${era} ${Math.round((100 * hit) / N)}%`);
+    // 歷史時代要抽得到屬於那個時代的光（燭光、油燈、火把…），
+    // 不能只有 modern 也適用的那幾個。
+    if (era !== "modern") {
+      const eraLit = [...m.keys()].filter((t) => {
+        const e = lex.byTag.get(t)?.era || [];
+        return e.length && !e.includes("any");
+      });
+      if (!eraLit.length) noEra.push(era);
+    }
+  }
+  eq("每張圖都有講光源（不是只有那句固定的 soft lighting）", thin.length, 0);
+  if (thin.length) console.error(`      光源出現率：${thin.join("  ")}`);
+  eq("歷史時代抽得到屬於那個時代的光源", noEra.length, 0);
+  if (noEra.length) console.error(`      沒有時代光源：${noEra.join(" ")}`);
 }
 
 if (failed) {

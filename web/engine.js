@@ -266,6 +266,23 @@ const BED_PLACE = new Set(["bedroom", "bed", "hotel room", "love hotel", "futon"
 const SKY_EXTRA = new Set(["sky", "blue sky", "orange sky"]);
 const DAY_MARK = new Set(["day", "sunrise", "sunlight", "sunbathing", "blue sky", "orange sky"]);
 const NIGHT_MARK = new Set(["night", "starry sky", "moonlight", "night market"]);
+// 這些光源本身就交代了「天是暗的」：篝火、火把、燭光、油燈、街燈。
+// 它們不在 NIGHT_MARK 裡，因為 NIGHT_MARK 的成員彼此互斥（一張圖只能有一個
+// 夜的講法），而光源是另一個槽，可以和 night 並存 —— 只是不能和白天並存。
+const DARK_LIGHT = new Set([
+  "city lights",
+  "bonfire",
+  "torch",
+  "candlelight",
+  "candle",
+  "lantern",
+  "firelight",
+  "oil lamp",
+  "fireplace",
+  "chandelier",
+  "candelabra",
+  "lamppost",
+]);
 const SLEEP_BAD_POSE = new Set([
   "washing body",
   "partially submerged",
@@ -320,6 +337,11 @@ const OUTDOOR_LEFTOVER = new Set([
   "water",
   "cherry blossoms",
   "campfire",
+  "horse",
+  "bonfire",
+  "pine tree",
+  "willow",
+  "rice paddy",
 ]);
 
 function usedMutexTags(used, lex, mutex) {
@@ -792,6 +814,8 @@ const JOB_PLACE = {
   janitor: new Set(["hallway", "classroom", "office", "hospital", "school gym", "living room"]),
   "race queen": new Set(["stadium", "street", "city"]),
   soldier: new Set(["ruins", "street", "city", "forest"]),
+  butler: new Set(["mansion", "living room", "hallway", "ballroom", "palace", "great hall"]),
+  detective: new Set(["office", "street", "city", "cityscape", "alley", "library"]),
 };
 const RAPE_BAD_PLACE = new Set(["classroom", "bedroom", "living room", "kitchen", "bed", "futon"]);
 // 運動互斥全部從 web/sports.js 那份單一資料來源算出來。以前這裡自己列球、球拍、
@@ -2838,6 +2862,9 @@ export function drawOne(lex, settings, pinned, userBanned, rand, seed) {
     // 互斥，該擋的那一半互斥系統已經擋掉了。
     if (NIGHT_MARK.has(item.tag) && [...used].some((t) => DAY_MARK.has(t))) return false;
     if (DAY_MARK.has(item.tag) && [...used].some((t) => NIGHT_MARK.has(t))) return false;
+    // 正午的篝火、白天的街燈。天生對稱：光源先進場或白天先進場都擋得住。
+    if (DARK_LIGHT.has(item.tag) && [...used].some((t) => DAY_MARK.has(t))) return false;
+    if (DAY_MARK.has(item.tag) && [...used].some((t) => DARK_LIGHT.has(t))) return false;
     if (heat === "flash" && item.tag === "sleeping" && !pinned.has("sleeping")) return false;
     if (used.has("sleeping") && SLEEP_BAD_POSE.has(item.tag)) return false;
     if (item.tag === "sleeping" && [...used].some((t) => SLEEP_BAD_POSE.has(t))) return false;
@@ -3941,11 +3968,20 @@ export function drawOne(lex, settings, pinned, userBanned, rand, seed) {
 
   const stampAnchors = (section) => {
     for (const t of lex.data.eraAnchors?.[era] || []) {
-      const item = lex.byTag.get(t);
-      if (!item || item.section !== section) continue;
-      if (used.has(t) || banned.has(t)) continue;
-      if (!allow(item)) continue;
-      commit(t);
+      // 錨點可以有一組同義的替代字（chinese clothes / hanfu）。每次隨機挑一個，
+      // 否則同一個時代的每一張圖都由同一個字開頭。挑到的字被擋下來時，
+      // 同組其他字還有機會，所以不會因為換寫法就少掉時代訊號。
+      const alts = lex.data.eraAnchorAlts?.[t] || [t];
+      const pool = [];
+      for (const alt of alts) {
+        const item = lex.byTag.get(alt);
+        if (!item || item.section !== section) continue;
+        if (used.has(alt) || banned.has(alt)) continue;
+        if (!allow(item)) continue;
+        pool.push(item);
+      }
+      if (!pool.length) continue;
+      commit(pool[Math.floor(rand() * pool.length)].tag);
     }
   };
 
@@ -4233,6 +4269,18 @@ export function drawOne(lex, settings, pinned, userBanned, rand, seed) {
   }
   fillSlot("env", "in_out");
   fillSlot("env", "day_night");
+  // 光源。以前沒有人明確填這一格，lighting 只能在剩下的 fill("env") 裡跟道具、
+  // 天氣、天空搶名額，14 個光源 tag 加起來只有大約 3% 的機率出現 —— 而每張圖
+  // 都被無條件加上同一句 soft lighting，所以每張圖的光其實都一樣。fillSlot 的
+  // env 預設偏好就是「時代專屬優先」，所以古代會先拿到燭光、油燈、火把。
+  // 偏好用軟權重不用硬桶：fillSlot 的 env 預設偏好是硬排序（時代專屬先抽完才輪到
+  // 中性），而歷史時代現在有五到九個時代光源，硬排序會把 window light、
+  // sidelighting 這些中性光源整個餓死 —— 既有測試「era:[any] 燈光抽得到」
+  // 就是在守這件事。四比一：時代光源仍然是主角，中性光源留得下來。
+  fillSlot("env", "lighting", {
+    softTiers: [(item) => eraSpecific(item, era)],
+    weights: [4, 1],
+  });
   // 時代風味：非現代的時代，畫面上至少要有一個看得出年代的環境字。
   //
   // 場地那一格幫不上忙 —— 場地必須配合先抽的活動，而活動幾乎全是時代中性的現代
@@ -4248,6 +4296,20 @@ export function drawOne(lex, settings, pinned, userBanned, rand, seed) {
   if (era && era !== "modern" && !someUsed((it) => it.section === "env" && eraSpecific(it, era))) {
     const flavour = lex.bySection.env.filter((item) => eraSpecific(item, era) && allow(item));
     takeFromPool(flavour, 1, rand, commit, (item) => !item.mutex, allow);
+  }
+  // 時代道具：一件那個年代的東西。
+  //
+  // 上面那一格挑的是「場景」（石牆、拱門、竹林），這一格挑的是「東西」（香爐、
+  // 古琴、戰旗、茶壺）。special_prompts 裡那三包古中國（Grok 寫的 495 個檔）每一張
+  // 都同時有這兩樣，而我們原本只有場景 —— 道具雖然在詞庫裡，卻因為 env 的名額
+  // 先被場地／室內外／日夜／光源用掉，每個道具只剩大約 1% 的機率露臉。
+  //
+  // 只在歷史時代跑：現代的「道具」是手機和遊戲手把，那本來就不缺。
+  if (era && era !== "modern") {
+    const props = lex.bySection.env.filter(
+      (item) => item.group === "other" && !item.mutex && eraSpecific(item, era) && allow(item)
+    );
+    takeFromPool(props, 1, rand, commit, null, allow);
   }
   // 環境段無條件補到目標數。以前這裡只在非正常模式跑，而正常模式是預設 ——
   // 左欄「環境」那個數字 2/4/10 給出一模一樣的結果，是個死的控制項。
