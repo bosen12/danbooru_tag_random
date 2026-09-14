@@ -787,7 +787,9 @@ def tg_caption(job: dict) -> tuple[str, str]:
     return short, en
 
 
-def tg_multipart(fields: dict, filename: str, blob: bytes, mime: str) -> tuple[bytes, str]:
+def tg_multipart(fields: dict, filename: str, blob: bytes, mime: str,
+                 field: str = "photo") -> tuple[bytes, str]:
+    """Telegram 的檔案欄位叫 photo，Discord 要的是 files[0]，其餘完全一樣。"""
     boundary = "----paiziCase" + uuid.uuid4().hex
     sep = ("--" + boundary).encode("utf-8")
     out = bytearray()
@@ -797,7 +799,7 @@ def tg_multipart(fields: dict, filename: str, blob: bytes, mime: str) -> tuple[b
         out += str(val).encode("utf-8") + b"\r\n"
     out += sep + b"\r\n"
     out += (
-        f'Content-Disposition: form-data; name="photo"; filename="{filename}"\r\n'
+        f'Content-Disposition: form-data; name="{field}"; filename="{filename}"\r\n'
         f"Content-Type: {mime}\r\n\r\n"
     ).encode("utf-8")
     out += blob + b"\r\n"
@@ -943,6 +945,254 @@ def tg_apply_config(payload: dict) -> dict:
     except Exception as exc:
         return {"ok": False, "error": tg_scrub(str(exc))}
     return tg_status()
+
+
+# ---------------------------------------------------------------- Discord
+# 和 Telegram 同一套形狀：設定存在 .secrets/、背景 worker 一張一張送、佇列有上限、
+# worker 絕不能死。差別只有三處：認證放 header 不放 URL、頻道 ID 在路徑上、
+# 訊息上限 2000 字（Telegram 的 caption 是 1024）。
+DC_API = str(cfg("discord.api", "DISCORD_API", "https://discord.com/api/v10"))
+DC_SECRETS = ROOT / ".secrets" / "discord.json"
+DC_CONTENT_MAX = 2000
+DC_GAP = 1.0
+DC_RETRY_WAIT = 5.0
+DC_QUEUE_MAX = int(cfg("discord.queueMax", "", 200))
+
+_dc_lock = threading.Lock()
+_dc_queue: "queue.Queue[dict]" = queue.Queue()
+_dc_worker: threading.Thread | None = None
+_dc = {
+    "token": "",
+    "channelId": "",
+    "enabled": False,
+    "sent": 0,
+    "failed": 0,
+    "lastError": "",
+}
+
+
+def dc_load() -> None:
+    try:
+        raw = json.loads(DC_SECRETS.read_text(encoding="utf-8"))
+    except Exception:
+        return
+    if not isinstance(raw, dict):
+        return
+    with _dc_lock:
+        _dc["token"] = str(raw.get("token") or "")
+        _dc["channelId"] = str(raw.get("channelId") or "")
+        _dc["enabled"] = bool(raw.get("enabled"))
+
+
+def dc_save() -> None:
+    with _dc_lock:
+        body = {
+            "token": _dc["token"],
+            "channelId": _dc["channelId"],
+            "enabled": _dc["enabled"],
+        }
+    DC_SECRETS.parent.mkdir(parents=True, exist_ok=True)
+    DC_SECRETS.write_text(json.dumps(body, ensure_ascii=False, indent=2), encoding="utf-8")
+    try:
+        os.chmod(DC_SECRETS, 0o600)
+    except OSError:
+        pass  # Windows 上沒什麼效果，靠 .gitignore 擋 git
+
+
+def dc_scrub(text: str) -> str:
+    """別讓例外訊息把 bot token 帶回前端。"""
+    out = str(text)
+    with _dc_lock:
+        token = _dc["token"]
+    if token:
+        out = out.replace(token, "***")
+    return out
+
+
+def dc_status() -> dict:
+    with _dc_lock:
+        return {
+            "ok": True,
+            "configured": bool(_dc["token"] and _dc["channelId"]),
+            "tokenTail": tg_tail(_dc["token"]),
+            "channelId": _dc["channelId"],
+            "enabled": bool(_dc["enabled"]),
+            "sent": _dc["sent"],
+            "failed": _dc["failed"],
+            "lastError": _dc["lastError"],
+            "queued": _dc_queue.qsize(),
+        }
+
+
+def dc_content(job: dict) -> str:
+    """和 Telegram 同樣的「seed · 尺寸 / 中文 / 英文」，只是上限不同。
+
+    Discord 的 2000 字比 Telegram 的 1024 寬，所以多數情況下英文 POS 塞得進
+    同一則，不必像 Telegram 那樣再補一則接在圖下面。
+    """
+    head_bits = []
+    if job.get("seed") is not None:
+        head_bits.append(f"seed {job['seed']}")
+    if job.get("width") and job.get("height"):
+        head_bits.append(f"{job['width']}x{job['height']}")
+    head = " · ".join(head_bits)
+    zh = str(job.get("zh") or "").strip()
+    en = str(job.get("en") or "").strip()
+    nl = chr(10)
+    full = nl.join([p for p in (head, zh, en) if p])
+    if len(full) <= DC_CONTENT_MAX:
+        return full
+    short = nl.join([p for p in (head, zh) if p])
+    if len(short) > DC_CONTENT_MAX:
+        short = short[: DC_CONTENT_MAX - 1] + "…"
+    return short
+
+
+def dc_call(path: str, body: bytes, ctype: str, timeout: float = 60) -> dict:
+    with _dc_lock:
+        token = _dc["token"]
+    if not token:
+        raise RuntimeError("沒有 bot token")
+    req = urllib.request.Request(
+        f"{DC_API}{path}",
+        data=body,
+        headers={
+            "Content-Type": ctype,
+            "Authorization": f"Bot {token}",
+            # Discord 會擋掉沒有 User-Agent 的請求。
+            "User-Agent": "DanbooruTagRandom (https://github.com/bosen12/danbooru_tag_random, 1.0)",
+        },
+        method="POST",
+    )
+    try:
+        with urllib.request.urlopen(req, timeout=timeout) as res:
+            return json.loads(res.read().decode("utf-8") or "{}")
+    except urllib.error.HTTPError as exc:
+        try:
+            got = json.loads(exc.read().decode("utf-8") or "{}")
+        except Exception:
+            got = {}
+        desc = got.get("message") or f"HTTP {exc.code}"
+        err = RuntimeError(f"{exc.code} {desc}")
+        err.dc_code = exc.code  # type: ignore[attr-defined]
+        # 429 要等多久 Discord 自己會講，照它說的等，不要拿固定值猜。
+        try:
+            err.dc_retry = float(got.get("retry_after") or DC_RETRY_WAIT)  # type: ignore[attr-defined]
+        except (TypeError, ValueError):
+            err.dc_retry = DC_RETRY_WAIT  # type: ignore[attr-defined]
+        raise err from None
+    except Exception as exc:
+        raise RuntimeError(dc_scrub(str(exc))) from None
+
+
+def dc_send_text(text: str) -> dict:
+    with _dc_lock:
+        channel = _dc["channelId"]
+    if not channel:
+        raise RuntimeError("沒有頻道 ID")
+    body = json.dumps({"content": text[:DC_CONTENT_MAX]}, ensure_ascii=False).encode("utf-8")
+    return dc_call(
+        f"/channels/{urllib.parse.quote(channel)}/messages",
+        body,
+        "application/json",
+    )
+
+
+def dc_send_photo(job: dict) -> None:
+    q = comfy_view_query(
+        job.get("filename") or "",
+        job.get("subfolder") or "",
+        job.get("type") or "output",
+    )
+    if not q:
+        raise RuntimeError("bad image query")
+    blob = api("GET", f"/view?{q}", timeout=60)
+    if not isinstance(blob, (bytes, bytearray)):
+        raise RuntimeError("Comfy 沒給圖")
+    mime = "image/png"
+    if blob[:3] == b"\xff\xd8\xff":
+        mime = "image/jpeg"
+    elif blob[:4] == b"RIFF":
+        mime = "image/webp"
+    with _dc_lock:
+        channel = _dc["channelId"]
+    body, boundary = tg_multipart(
+        {"payload_json": json.dumps({"content": dc_content(job)}, ensure_ascii=False)},
+        str(job.get("filename") or "shot.png"),
+        bytes(blob),
+        mime,
+        field="files[0]",
+    )
+    dc_call(
+        f"/channels/{urllib.parse.quote(channel)}/messages",
+        body,
+        f"multipart/form-data; boundary={boundary}",
+    )
+
+
+def dc_pump() -> None:
+    while True:
+        job = _dc_queue.get()
+        try:
+            try:
+                dc_send_photo(job)
+            except RuntimeError as exc:
+                if getattr(exc, "dc_code", None) == 429:
+                    time.sleep(min(getattr(exc, "dc_retry", DC_RETRY_WAIT), 60))
+                    dc_send_photo(job)
+                else:
+                    raise
+            with _dc_lock:
+                _dc["sent"] += 1
+                _dc["lastError"] = ""
+        except Exception as exc:  # worker 絕不能死
+            with _dc_lock:
+                _dc["failed"] += 1
+                _dc["lastError"] = dc_scrub(str(exc))[:300]
+        finally:
+            _dc_queue.task_done()
+        time.sleep(DC_GAP)
+
+
+def dc_start() -> None:
+    global _dc_worker
+    if _dc_worker and _dc_worker.is_alive():
+        return
+    _dc_worker = threading.Thread(target=dc_pump, name="discord", daemon=True)
+    _dc_worker.start()
+
+
+def dc_enqueue(job: dict) -> dict:
+    with _dc_lock:
+        ready = bool(_dc["token"] and _dc["channelId"] and _dc["enabled"])
+    if not ready:
+        return {"ok": False, "error": "Discord 還沒設定或沒開"}
+    if not comfy_view_query(
+        job.get("filename") or "", job.get("subfolder") or "", job.get("type") or "output"
+    ):
+        return {"ok": False, "error": "bad image query"}
+    deep = _dc_queue.qsize()
+    if deep >= DC_QUEUE_MAX:
+        return {"ok": False, "error": f"Discord 佇列塞住了（{deep} 張待送），這張不排"}
+    dc_start()
+    _dc_queue.put(job)
+    return {"ok": True, "queued": _dc_queue.qsize()}
+
+
+def dc_apply_config(payload: dict) -> dict:
+    token = str(payload.get("token") or "").strip()
+    channel = str(payload.get("channelId") or "").strip()
+    with _dc_lock:
+        if token:
+            _dc["token"] = token
+        _dc["channelId"] = channel
+        if "enabled" in payload:
+            _dc["enabled"] = bool(payload.get("enabled"))
+    try:
+        dc_save()
+    except Exception as exc:
+        return {"ok": False, "error": dc_scrub(str(exc))}
+    return dc_status()
 
 
 class Handler(BaseHTTPRequestHandler):
@@ -1270,6 +1520,9 @@ class Handler(BaseHTTPRequestHandler):
         if path == "/api/telegram/config":
             self._json(200, tg_status())
             return
+        if path == "/api/discord/config":
+            self._json(200, dc_status())
+            return
         self._serve_static(True)
 
     def do_POST(self) -> None:
@@ -1319,6 +1572,22 @@ class Handler(BaseHTTPRequestHandler):
                     self._json(200, {"ok": False, "error": tg_scrub(str(exc))})
                 return
             self._json(200, tg_enqueue(payload))
+            return
+        if path == "/api/discord/config":
+            self._json(200, dc_apply_config(payload))
+            return
+        if path == "/api/discord":
+            if payload.get("test"):
+                # 測試是同步的：面板要當場看到 Discord 回什麼。
+                try:
+                    dc_send_text(
+                        "排字匣測試訊息。看得到這行就代表 bot token 和頻道 ID 都對了。"
+                    )
+                    self._json(200, {"ok": True})
+                except Exception as exc:
+                    self._json(200, {"ok": False, "error": dc_scrub(str(exc))})
+                return
+            self._json(200, dc_enqueue(payload))
             return
         self._json(404, {"ok": False, "error": "not found"})
 
@@ -1442,6 +1711,7 @@ def main() -> None:
     host = str(cfg("server.host", "HOST", "127.0.0.1"))
     port = int(cfg("server.port", "PORT", 8787))
     tg_load()
+    dc_load()
     httpd = ThreadingHTTPServer((host, port), Handler)
     print(f"排字匣  http://{host}:{port}   畫面 {WEB.name}   Comfy {comfy_base()}")
     print("allow    " + ",".join(str(n) for n in ALLOW_NETS))
@@ -1459,6 +1729,9 @@ def main() -> None:
     st = tg_status()
     if st["configured"]:
         print(f"telegram {st['chatId']}  token {st['tokenTail']}  自動送 {'開' if st['enabled'] else '關'}")
+    ds = dc_status()
+    if ds["configured"]:
+        print(f"discord  {ds['channelId']}  token {ds['tokenTail']}  自動送 {'開' if ds['enabled'] else '關'}")
     check_ckpt()
     httpd.serve_forever()
 

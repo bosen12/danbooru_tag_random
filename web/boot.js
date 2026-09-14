@@ -70,6 +70,7 @@ import {
   wallHasCards,
 } from "./infinite.js";
 import { initTelegram, tgHandleKeys, tgSendCard, tgUiOpen } from "./telegram.js";
+import { initDiscord, dcHandleKeys, dcSendCard, dcUiOpen } from "./discord.js";
 import {
   clearAllMustDraw,
   initMustDraw,
@@ -2136,7 +2137,11 @@ async function streamCardJob(card, seedNum, extra) {
   }
   // 投 Telegram 放在這裡，所以一般抽、重抽佇列、單張重新生成三條路都會送。
   // 不 await —— 伺服器收下就回，送圖再慢也不拖抽圖。
-  if (shot) tgSendCard(card, shot, posZh(extra.positive));
+  if (shot) {
+    const zh = posZh(extra.positive);
+    tgSendCard(card, shot, zh);
+    dcSendCard(card, shot, zh);
+  }
   return shot;
 }
 
@@ -2584,6 +2589,7 @@ function bindUi() {
     if (e.ctrlKey || e.metaKey || e.altKey) return;
     if (handleViewerKeys(e)) return;
     if (tgHandleKeys(e)) return;
+    if (dcHandleKeys(e)) return;
     if (handleLoraKeys(e)) return;
     if (isTyping()) return;
     if (e.key === "i" || e.key === "I") {
@@ -2597,7 +2603,7 @@ function bindUi() {
       return;
     }
     if (e.key === "Enter") {
-      if (isLoraUiOpen() || isViewerOpen() || tgUiOpen() || running) return;
+      if (isLoraUiOpen() || isViewerOpen() || tgUiOpen() || dcUiOpen() || running) return;
       e.preventDefault();
       runBatch();
     }
@@ -2785,6 +2791,7 @@ async function main() {
   bindUi();
   initLoraPicker();
   initTelegram();
+  initDiscord();
   initInfinite({
     onStart: () => {
       failStreak = 0;

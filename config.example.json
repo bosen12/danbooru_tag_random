@@ -36,5 +36,10 @@
   "telegram": {
     "api": "https://api.telegram.org",
     "queueMax": 200
+  },
+  "discord": {
+    "_comment": "bot token 和頻道 ID 不放這裡，在畫面上的 Discord 面板填，存進 .secrets/discord.json（已 gitignore）。",
+    "api": "https://discord.com/api/v10",
+    "queueMax": 200
   }
 }

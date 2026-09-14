@@ -493,6 +493,20 @@ python scripts/add_zh.py
 
 挖不到東西時它會停下來，不會把既有的 `web/lexicon_parts/05-harvest.json` 洗掉。
 
+## 送到 Discord 頻道
+
+和 Telegram 並存，兩邊可以同時開。桅杆列上那顆 Discord 圖示打開面板，填兩格：
+
+1. **Bot token** — Discord Developer Portal → 你的 application → Bot → Reset Token
+2. **頻道 ID** — Discord 設定開「開發者模式」後，右鍵頻道 →「複製頻道 ID」
+
+bot 要先邀進那個伺服器，而且在該頻道有 **發送訊息** 和 **附加檔案** 權限。
+按「送一則測試」會當場告訴你 Discord 回什麼（權限不足或 token 錯都看得到）。
+
+token 存在伺服器的 `.secrets/discord.json`（已 gitignore），不會回傳瀏覽器，
+錯誤訊息裡也會被遮成 `***`。送出的內容和 Telegram 一樣：圖 ＋ seed／尺寸 ＋ 中文說明 ＋ 英文 prompt。
+送圖走背景佇列，一張一張送，送失敗不會中斷抽圖。
+
 ## 跑到一半自己停
 
 症狀：生圖跑到一半停住，ComfyUI 後台印出
