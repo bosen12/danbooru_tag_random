@@ -1719,7 +1719,7 @@ def extra_era_tags() -> list[dict]:
         C("bonnet", "clothing", vic, mutex="headwear", layer="accessory", gate="female"),
         C("parasol", "clothing", vic + edo + ac, mutex=None, layer="accessory"),
         C("cravat", "clothing", vic, mutex="neckwear", layer="accessory"),
-        C("courtyard", "env", ac, mutex="place", layer="normal", implies=["outdoors"]),
+        C("courtyard", "env", ac + ["ancient_greece", "medieval"], mutex="place", layer="normal", implies=["outdoors"]),
         C("pavilion", "env", ac + edo, mutex="place", layer="normal", implies=["outdoors"]),
         C("lotus pond", "env", ac, mutex="place", layer="normal", implies=["outdoors"]),
         C("colonnade", "env", ag, mutex="place", layer="normal", implies=["outdoors"]),

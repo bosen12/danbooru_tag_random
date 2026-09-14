@@ -4770,8 +4770,9 @@ function indoorOutdoorClash(have) {
   );
   eq("shadow integration keeps seed 42 POS byte-identical", shadowIntegrationDraw.positive,
     // 衣著權重的時代層從 12/9 提到 40/30（修時代還原度）後 RNG 路徑刻意改變；
-    // 這份金標是 2026-09-14 重新產生的（時代色彩變體分層＋姿勢軟權重）。分布差異記在 progress.md，不是拿金標蓋問題。
-    "1girl, solo, adult, very short hair, grey eyes, grey hair, bangs, large breasts, soft breasts, natural breasts, wet, thigh strap, hanging breasts, naked towel, female masturbation, standing, from outside, looking up, dazed, fucked silly, soft lighting, modern, open-air bath, outdoors, sunset, nsfw, explicit, masterpiece, best quality, amazing quality");
+    // 2026-09-15 再次重產：PRIVATE_SEX_PLACE 從 16 個現代／浴場詞擴到含各時代的
+    // 私密場地，候選池變大，RNG 路徑跟著移位。分布差異記在 findings.md，不是拿金標蓋問題。
+    "1girl, solo, adult, very short hair, grey eyes, grey hair, bangs, large breasts, soft breasts, natural breasts, wet, thigh strap, hanging breasts, high-waist pants, pants, vest, open cardigan, cardigan, sports bra, bra, female masturbation, standing, from outside, looking up, dazed, hand on hip, soft lighting, modern, bathroom, indoors, sunset, nsfw, explicit, masterpiece, best quality, amazing quality");
   ok("drawOne exposes shadow diagnostics", Array.isArray(shadowIntegrationDraw.shadowViolations));
 
   const eatProneShadow = validateSupportShadow({
@@ -6329,7 +6330,7 @@ function indoorOutdoorClash(have) {
       }
     }
   }
-  ok("浴場的取樣夠多，這條測試不是空轉", bathSeen >= 300, `bathSeen=${bathSeen}`);
+  ok("浴場的取樣夠多，這條測試不是空轉", bathSeen >= 200, `bathSeen=${bathSeen}`);
   eq("浴場一定要交代身體（裸標或服裝，任何時代任何 heat）", bad.length, 0);
   if (bad.length) console.error(`      例：${bad.filter(Boolean).join("  ")}`);
 }
@@ -6544,6 +6545,41 @@ function indoorOutdoorClash(have) {
   ok("游泳的取樣夠多，這條測試不是空轉", swimSeen >= 100, `swimSeen=${swimSeen}`);
   eq("游泳時身上不會披著外衣", bad.length, 0);
   if (bad.length) console.error(`      例：${bad.filter(Boolean).join("  ")}`);
+}
+
+{
+  // 性愛模式的場地白名單。PRIVATE_SEX_PLACE 是照現代想像手寫的 16 個詞，其中
+  // 12 個是浴室或臥室的變體，一個歷史時代的場地都沒有。於是一進 sex heat，
+  // 每個時代只剩下剛好通過時代篩選的那兩三個 —— 江戶就是 onsen + open-air
+  // bath 各一半，古中國／古希臘／中世紀是 bedroom + bath 各一半。
+  // 其他三種 heat 每個時代都抽得到 14~26 種場地，差別全在這一條分支。
+  const s = defaultSettings(data);
+  s.girl = true;
+  s.heats = ["sex"];
+  const thin = [];
+  const hot = [];
+  for (const era of ERAS) {
+    s.eras = [era];
+    const m = new Map();
+    const N = 400;
+    for (let i = 1; i <= N; i++) {
+      const h = tagsOf(drawOne(lex, s, new Set(), new Set(), mulberry32(i), i));
+      for (const t of h) {
+        const it = lex.byTag.get(t);
+        if (it && (it.mutex === "place" || it.group === "place")) m.set(t, (m.get(t) || 0) + 1);
+      }
+    }
+    if (m.size < 6) thin.push(`${era} 只有 ${m.size} 種`);
+    const sorted = [...m.entries()].sort((a, b) => b[1] - a[1]);
+    if (sorted.length) {
+      const pct = Math.round((100 * sorted[0][1]) / N);
+      if (pct > 35) hot.push(`${era} ${sorted[0][0]} ${pct}%`);
+    }
+  }
+  eq("性愛模式下每個時代都抽得到至少 6 種場地", thin.length, 0);
+  if (thin.length) console.error(`      ${thin.join("  ")}`);
+  eq("性愛模式下沒有單一場地佔掉三分之一以上", hot.length, 0);
+  if (hot.length) console.error(`      ${hot.join("  ")}`);
 }
 
 if (failed) {

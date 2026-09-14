@@ -173,3 +173,44 @@ Codex 的 `1d027b9` 把我當時工作區未提交的改動一起收進去了，
 我停在這裡，沒有為了讓數字好看去動它。
 
 —— Opus 5
+
+## 性愛模式的場地白名單（Opus 5，2026-09-15）
+
+使用者回報「江戶還是很容易抽到溫泉」，接著補「基本上每張都是」、「我發現不只江戶
+其他時代會」、「好像是性愛模式」。三句都對，而我第一次量的數字是錯的 —— 我把
+`activity` heat 也算進去，稀釋成 25%。**照實際預設（mixed = tease/flash/sex）是 43%，
+只開 sex heat 是 96%。**
+
+根因在 `engine.js` 的 `PRIVATE_SEX_PLACE`：`heat === "sex"` 時場地必須在這張表裡，
+而這張表是照現代想像手寫的 16 個詞，其中 12 個是浴室或臥室的變體，一個歷史時代的
+場地都沒有。於是各時代只剩剛好通過時代篩選的那兩三個：
+
+| 時代 | 修正前（sex heat） | 修正後 |
+|---|---|---|
+| ancient_china | 2 種：bedroom 52% / bath 48% | 7 種，最高 17% |
+| ancient_greece | 2 種：bedroom 53% / bath 47% | 7 種，最高 27% |
+| medieval | 2 種：bedroom 51% / bath 49% | 6 種，最高 22% |
+| edo | 3 種：onsen 48% / open-air bath 48% | 7 種，浴場合計 25% |
+| victorian | 4 種 | 11 種，最高 12% |
+| modern | 15 種 | 20 種 |
+
+和 `isBathOkGarment()` 是同一種形狀：**照現代情境手寫的白名單，沒有人回頭補歷史時代。**
+其他三種 heat 這些時代都抽得到 14~26 種場地，落差全出在這一條分支。
+
+補的是已經在詞庫裡、只是被這張表擋住的場地（bed / futon / ryokan / 中庭 / 涼亭 /
+廢墟 / 列柱 / 大廳 / 酒館 / 馬車 / 溫室 / 舞廳…）。收錄標準是「能不被打擾」，所以
+market / festival / street / shrine / temple 這些公共場所仍然不在裡面。另外補了
+`fountain`，並把 `courtyard` 開給古希臘和中世紀（古希臘原本只有 ruins + colonnade
+兩個時代專屬場地）。
+
+### 過程中踩到、收回來的三件事
+
+- **把 `castle` 放進表裡，中世紀立刻變成 94% 城堡。** castle 是 medieval 的 env 錨點，
+  `stampAnchors()` 會無條件蓋上去；其他 heat 沒事是因為 market/bridge/river 先供應了
+  時代訊號。把 castle 拿掉，中世紀就散成 great hall 22% / tavern 20% / ruins 20% /
+  throne 20% / palace 18%。**往白名單加東西之前，先確認那個詞不是該時代的錨點。**
+- **把 `temple` 開給古希臘被既有測試擋下來**（`temple is not a greek place`）。詞庫裡的
+  `temple` 指的是東亞寺廟，這條不變式是人寫的、有意義的，我撤回了。
+- 金標 seed 42 因為候選池變大而位移，已依既有慣例重產並註明原因。
+
+—— Opus 5

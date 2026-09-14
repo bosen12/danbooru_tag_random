@@ -886,6 +886,36 @@ const PRIVATE_SEX_PLACE = new Set([
   "locker room",
   "living room",
   "kitchen",
+  // 上面十六個是照現代想像寫的，十二個是浴室或臥室的變體，一個歷史時代的
+  // 場地都沒有 —— 於是 sex heat 一開，古中國／古希臘／中世紀只剩 bedroom
+  // 和 bath 各一半，江戶只剩 onsen 和 open-air bath。其他三種 heat 這些時代
+  // 都抽得到十四到二十六種場地，落差全出在這張表。
+  // 收錄標準是「能不被打擾」，所以 market / festival / street / shrine /
+  // temple 這類公共場所仍然不在裡面。
+  "bed",
+  "futon",
+  "ryokan",
+  "balcony",
+  "library",
+  "garden",
+  "forest",
+  "bamboo forest",
+  "courtyard",
+  "pavilion",
+  "lotus pond",
+  "ruins",
+  "colonnade",
+  "pillar",
+  "fountain",
+  "palace",
+  "throne",
+  "great hall",
+  "tavern",
+  "dojo",
+  "mansion",
+  "carriage",
+  "greenhouse",
+  "ballroom",
 ]);
 const PUBLIC_SEX_PLACE = new Set(["street", "city", "cityscape", "alley", "park", "beach", "ocean", "rooftop"]);
 

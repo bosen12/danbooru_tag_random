@@ -984,7 +984,8 @@
     "layer": "normal",
     "era": [
       "ancient_china",
-      "edo"
+      "edo",
+      "ancient_greece"
     ]
   },
   {
@@ -1751,5 +1752,27 @@
     ],
     "group": "fabric",
     "zh": "多層衣著"
+  },
+  {
+    "tag": "fountain",
+    "section": "env",
+    "gate": "any",
+    "heat": [
+      "tease",
+      "flash",
+      "sex"
+    ],
+    "mutex": "place",
+    "bind": [],
+    "implies": [
+      "outdoors"
+    ],
+    "layer": "normal",
+    "era": [
+      "ancient_greece",
+      "victorian",
+      "ancient_china"
+    ],
+    "zh": "噴泉"
   }
 ]

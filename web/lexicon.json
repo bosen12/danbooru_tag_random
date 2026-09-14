@@ -12559,6 +12559,29 @@
       "zh": "多層衣著"
     },
     {
+      "tag": "fountain",
+      "section": "env",
+      "gate": "any",
+      "heat": [
+        "tease",
+        "flash",
+        "sex"
+      ],
+      "mutex": "place",
+      "bind": [],
+      "implies": [
+        "outdoors"
+      ],
+      "layer": "normal",
+      "era": [
+        "ancient_greece",
+        "victorian",
+        "ancient_china"
+      ],
+      "group": "place",
+      "zh": "噴泉"
+    },
+    {
       "tag": "breasts",
       "section": "feature",
       "gate": "female",
@@ -18371,7 +18394,9 @@
       ],
       "layer": "normal",
       "era": [
-        "ancient_china"
+        "ancient_china",
+        "ancient_greece",
+        "medieval"
       ],
       "group": "place",
       "zh": "庭院"
