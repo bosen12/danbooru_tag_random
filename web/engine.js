@@ -143,6 +143,38 @@ const AWAKE_ACT = new Set([
  * 這裡只放真的是別名的。general/specific 的父子對（extreme close-up → close-up、
  * high ponytail → ponytail）不算重複，Danbooru 本來就那樣疊，交給 parentChild()。
  */
+/**
+ * 性愛的三個時序階段：即將 / 進行中 / 已結束。這些字多半沒有 mutex，硬桶時代因為
+ * 桶 2 根本輪不到所以碰不上，放開之後就會疊出「imminent penetration + after vaginal」
+ * 這種同一張圖既還沒開始又已經結束的東西（實測 1.4%）。
+ *
+ * 只擋「即將」對「已結束」。進行中和任何一邊都說得通 —— 正在做的時候可以剛結束
+ * 上一輪，也可以即將換下一個動作。
+ */
+const SEX_PHASE_BEFORE = new Set([
+  "imminent penetration",
+  "imminent vaginal",
+  "imminent fellatio",
+]);
+const SEX_PHASE_AFTER = new Set([
+  "after vaginal",
+  "after sex",
+  "after fellatio",
+  "after paizuri",
+  "afterglow",
+  "cum drip",
+]);
+
+function sexPhaseClash(tag, used) {
+  if (SEX_PHASE_BEFORE.has(tag)) {
+    for (const t of used) if (SEX_PHASE_AFTER.has(t)) return true;
+  }
+  if (SEX_PHASE_AFTER.has(tag)) {
+    for (const t of used) if (SEX_PHASE_BEFORE.has(t)) return true;
+  }
+  return false;
+}
+
 const SYNONYM_GROUPS = [
   new Set(["panting", "heavy breathing"]),
   new Set(["kissing", "kiss"]),
@@ -2609,6 +2641,8 @@ export function drawOne(lex, settings, pinned, userBanned, rand, seed) {
     if (banned.has(item.tag) || used.has(item.tag)) return false;
     // 同義詞只留一個。這條天生對稱 —— 不管誰先進場，後來那個都會被擋。
     if (synonymClash(item.tag, used)) return false;
+    // 同一張圖不能既還沒開始又已經結束。天生對稱，誰先進場都擋得住。
+    if (sexPhaseClash(item.tag, used)) return false;
     // 裸手性愛是單人 sex 場景的主要可用活動；非運動情境不要隨機抽入拳擊手套
     // 把整個 sex_act 槽堵死。使用者或拳擊 preset 明確釘選時仍完整尊重。
     if (item.tag === "boxing gloves" && heat === "sex" && !pinned.has(item.tag)) return false;
@@ -3754,13 +3788,23 @@ export function drawOne(lex, settings, pinned, userBanned, rand, seed) {
     // 40:6 把時代還原到硬桶水準（古中國和維多利亞甚至更好），色彩變體仍有 24 種可達。
     weights: [40, 30, 20, 6, 4, 2, 1],
   };
-  const posePrefer = [
-    (item) => item.mutex === "body_pose" || item.mutex === "camera" || item.mutex === "gaze",
-    (item) => item.group === "face",
-    (item) => heat === "sex" && (item.mutex === "sex_act" || item.group === "sex"),
-    (item) => heat === "flash" && (item.mutex === "clothes_action" || item.group === "flash"),
-    (item) => heat === "tease" && item.group === "tease",
-  ];
+  // 硬桶會抽乾前一桶才看下一桶，而桶 1（臉部）有 18 個 mutex=null 的字可以無限疊。
+  // 姿勢槽扣掉專用格只剩約 6 格，臉部全吃光，桶 2 永遠輪不到 —— 結果是 28 個 sex 字
+  // 結構性不可達（有專用 fill 的 sex_act 活著，mutex=null 的那些全死），姿勢字種數
+  // 也卡在 149。改軟權重之後 284 種，核心內容從 1.78 上到 3.85。
+  //
+  // 臉部從 5.2 降到 1.9 是代價。孤立提示詞裡臉部字確實會複合出表情強度，但完整
+  // 提示詞有性愛情境撐著，同 seed 對照圖的表情沒有變弱（docs/compare-pose/）。
+  const posePrefer = {
+    softTiers: [
+      (item) => item.mutex === "body_pose" || item.mutex === "camera" || item.mutex === "gaze",
+      (item) => item.group === "face",
+      (item) => heat === "sex" && (item.mutex === "sex_act" || item.group === "sex"),
+      (item) => heat === "flash" && (item.mutex === "clothes_action" || item.group === "flash"),
+      (item) => heat === "tease" && item.group === "tease",
+    ],
+    weights: [8, 8, 10, 10, 10, 3],
+  };
   const countSection = (section) => {
     let n = 0;
     for (const t of used) {

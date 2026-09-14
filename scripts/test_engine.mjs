@@ -4760,8 +4760,8 @@ function indoorOutdoorClash(have) {
   );
   eq("shadow integration keeps seed 42 POS byte-identical", shadowIntegrationDraw.positive,
     // 衣著權重的時代層從 12/9 提到 40/30（修時代還原度）後 RNG 路徑刻意改變；
-    // 這份金標是 2026-09-14 重新產生的（時代色彩變體分層）。分布差異記在 progress.md，不是拿金標蓋問題。
-    "1girl, solo, adult, very short hair, grey eyes, grey hair, bangs, large breasts, soft breasts, natural breasts, wet, thigh strap, hanging breasts, naked towel, female masturbation, standing, from outside, looking up, dazed, heavy breathing, soft lighting, modern, open-air bath, outdoors, sunset, nsfw, explicit, masterpiece, best quality, amazing quality");
+    // 這份金標是 2026-09-14 重新產生的（時代色彩變體分層＋姿勢軟權重）。分布差異記在 progress.md，不是拿金標蓋問題。
+    "1girl, solo, adult, very short hair, grey eyes, grey hair, bangs, large breasts, soft breasts, natural breasts, wet, thigh strap, hanging breasts, naked towel, female masturbation, standing, from outside, looking up, dazed, fucked silly, soft lighting, modern, open-air bath, outdoors, sunset, nsfw, explicit, masterpiece, best quality, amazing quality");
   ok("drawOne exposes shadow diagnostics", Array.isArray(shadowIntegrationDraw.shadowViolations));
 
   const eatProneShadow = validateSupportShadow({
@@ -6223,6 +6223,68 @@ function indoorOutdoorClash(have) {
     if (n > 3) over += 1;
   }
   ok("時代訊號：不會塞一整排時代字", over === 0, `${over}/300 超過 3 個`);
+}
+
+// --- 尺度核心內容不該被臉部細節餓死 -----------------------------------------
+// posePrefer 是硬桶，takeFromPool 會抽乾前一桶才看下一桶。桶 1 是臉部，而臉部有
+// 18 個 mutex=null 的字可以無限疊 —— 姿勢槽扣掉專用格只剩約 6 格，全被吃光，
+// 桶 2（該尺度的核心）永遠輪不到。
+//
+// 後果不是「臉太多」這種美感問題，是 28 個 sex 字結構性不可達：mutex=sex_act 的
+// 那些有專用 takeFromPool 繞過階梯所以活著，mutex=null 的那些只能靠桶 2，於是全死。
+// 釘好雙人卡司、只開 sex 尺度、跑 300 張，它們仍然是 0。
+{
+  const s = defaultSettings(data);
+  s.girl = true;
+  s.boy = true;
+  s.heats = ["sex"];
+  s.weights = { activity: 0, tease: 0, flash: 0, sex: 1 };
+  s.counts = { subject: 2, feature: 8, pose: 10, clothing: 5, env: 4 };
+  const seen = new Set();
+  for (let i = 1; i <= 500; i++) {
+    for (const t of tagsOf(drawOne(lex, s, new Set(), new Set(), mulberry32(i), i))) seen.add(t);
+  }
+  const STARVED = ["french kiss", "creampie", "clothed sex", "cum in mouth", "happy sex", "imminent penetration"];
+  const alive = STARVED.filter((t) => seen.has(t));
+  ok(
+    `sex 內容可達：mutex=null 的性愛字不被臉部細節餓死（${STARVED.length} 個裡至少 4 個）`,
+    alive.length >= 4,
+    `只有 ${alive.length} 個抽得到：${alive.join("、") || "（一個都沒有）"}`
+  );
+  // 對照：有專用 fill 的 sex_act 本來就活著，證明這批測試不是在測別的東西
+  ok(
+    "sex 內容可達 對照組：sex_act 的字抽得到",
+    ["vaginal", "fellatio", "handjob"].some((t) => seen.has(t))
+  );
+  // 姿勢的整體多樣性：硬桶時只有 149 種，軟權重約 284 種
+  const poseKinds = [...seen].filter((t) => lex.byTag.get(t)?.section === "pose").length;
+  ok("sex 姿勢字種數不該塌到硬桶的水準（至少 200 種）", poseKinds >= 200, `只有 ${poseKinds} 種`);
+}
+
+// --- 同一張圖不能既「即將」又「已經結束」-------------------------------------
+// 放開桶 2 之後這些 mutex=null 的性愛狀態詞會一起被抽進來，而它們是時序上的
+// 三個階段。1.4% 的圖同時出現 imminent penetration 和 after vaginal。
+{
+  const s = defaultSettings(data);
+  s.girl = true;
+  s.boy = true;
+  s.heats = ["sex"];
+  s.weights = { activity: 0, tease: 0, flash: 0, sex: 1 };
+  s.counts = { subject: 2, feature: 8, pose: 10, clothing: 5, env: 4 };
+  const BEFORE = ["imminent penetration", "imminent vaginal", "imminent fellatio"];
+  const AFTER = ["after vaginal", "after sex", "after fellatio", "after paizuri", "afterglow", "cum drip"];
+  let clash = 0;
+  let why = "";
+  for (let i = 1; i <= 800; i++) {
+    const got = tagsOf(drawOne(lex, s, new Set(), new Set(), mulberry32(i), i));
+    const bf = BEFORE.filter((t) => got.has(t));
+    const af = AFTER.filter((t) => got.has(t));
+    if (bf.length && af.length) {
+      clash += 1;
+      if (!why) why = `seed ${i}：${bf.concat(af).join(" + ")}`;
+    }
+  }
+  ok("性愛時序：不會同時「即將」和「已經結束」", clash === 0, `${clash}/800　${why}`);
 }
 
 if (failed) {
