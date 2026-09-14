@@ -4760,8 +4760,8 @@ function indoorOutdoorClash(have) {
   );
   eq("shadow integration keeps seed 42 POS byte-identical", shadowIntegrationDraw.positive,
     // 衣著權重的時代層從 12/9 提到 40/30（修時代還原度）後 RNG 路徑刻意改變；
-    // 這份金標是 2026-09-14 重新產生的。分布差異記在 progress.md，不是拿金標蓋問題。
-    "1girl, solo, adult, very short hair, grey eyes, grey hair, bangs, large breasts, soft breasts, natural breasts, wet, thigh strap, hanging breasts, naked towel, fingering, standing, from outside, looking up, dazed, heavy breathing, soft lighting, modern, open-air bath, outdoors, sunset, nsfw, explicit, masterpiece, best quality, amazing quality");
+    // 這份金標是 2026-09-14 重新產生的（時代色彩變體分層）。分布差異記在 progress.md，不是拿金標蓋問題。
+    "1girl, solo, adult, very short hair, grey eyes, grey hair, bangs, large breasts, soft breasts, natural breasts, wet, thigh strap, hanging breasts, naked towel, female masturbation, standing, from outside, looking up, dazed, heavy breathing, soft lighting, modern, open-air bath, outdoors, sunset, nsfw, explicit, masterpiece, best quality, amazing quality");
   ok("drawOne exposes shadow diagnostics", Array.isArray(shadowIntegrationDraw.shadowViolations));
 
   const eatProneShadow = validateSupportShadow({
@@ -6124,13 +6124,40 @@ function indoorOutdoorClash(have) {
   };
   // 下限＝硬桶時期實測值的八成。改權重只要沒掉破這條就不會紅。
   const FLOOR = {
-    modern: 4.6,
+    modern: 5.6,
     ancient_china: 1.8,
     ancient_greece: 1.5,
     medieval: 1.5,
     edo: 2.6,
     victorian: 3.0,
   };
+  // 色彩變體一度被硬桶壓到機率恆為 0（blue shirt 這類是 modern 專屬卻被
+  // !isColorVariant 擋在低層）。修好之後也要守著，別為了時代密度又把它們餓死。
+  {
+    const COLOR = new Set(["white", "black", "blue", "green", "red", "pink", "purple",
+      "brown", "aqua", "orange", "yellow", "grey", "gray"]);
+    const isVariant = (t) => {
+      const parts = String(t).split(" ");
+      return parts.length >= 2 && COLOR.has(parts[0]);
+    };
+    const s2 = defaultSettings(data);
+    s2.girl = true;
+    s2.eras = ["modern"];
+    s2.heats = ["activity", "tease", "flash", "sex"];
+    const kinds = new Set();
+    const types = new Set();
+    for (let i = 1; i <= 400; i++) {
+      for (const t of tagsOf(drawOne(lex, s2, new Set(), new Set(), mulberry32(i), i))) {
+        const it = by.get(t);
+        if (!it || it.section !== "clothing" || it.layer !== "garment") continue;
+        if (isVariant(t)) kinds.add(t);
+        else types.add(t);
+      }
+    }
+    ok("色彩變體：現代至少抽得到 20 種", kinds.size >= 20, `只有 ${kinds.size} 種`);
+    ok("色彩變體：沒有把非顏色的款式洗掉（至少 100 種）", types.size >= 100, `只有 ${types.size} 種`);
+  }
+
   for (const era of Object.keys(FLOOR)) {
     const s = defaultSettings(data);
     s.girl = true;

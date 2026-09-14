@@ -3732,6 +3732,11 @@ export function drawOne(lex, settings, pinned, userBanned, rand, seed) {
         !isColorVariant(item) &&
         (item.mutex === "onepiece" || item.mutex === "top" || item.mutex === "bottom"),
       (item) => eraSpecific(item, era) && item.layer === "garment" && !isColorVariant(item),
+      // 顏色變體也可能是這個時代專屬的 —— blue shirt 就是 modern 專屬。
+      // 舊的階梯用 !isColorVariant 把它們一路壓到最底層，等於自己把時代訊號丟掉：
+      // 這一層加回來之後，現代的時代衣服從 5.32 升到 6.21（比硬桶時期的 5.79 還高），
+      // 同時可達的顏色款式從 26 種變成 52 種。古代時代沒有顏色變體，完全不受影響。
+      (item) => eraSpecific(item, era) && item.layer === "garment",
       (item) =>
         item.layer === "garment" &&
         !isColorVariant(item) &&
@@ -3747,7 +3752,7 @@ export function drawOne(lex, settings, pinned, userBanned, rand, seed) {
     // 硬桶下機率恆為 0）。但 12:1 的差距不夠，時代專屬的衣服跟著掉了 12–24%：
     // 中世紀 2.18 → 1.66、江戶 3.33 → 2.57，古代本來就沒幾件，掉一件就看不出年代。
     // 40:6 把時代還原到硬桶水準（古中國和維多利亞甚至更好），色彩變體仍有 24 種可達。
-    weights: [40, 30, 6, 4, 2, 1],
+    weights: [40, 30, 20, 6, 4, 2, 1],
   };
   const posePrefer = [
     (item) => item.mutex === "body_pose" || item.mutex === "camera" || item.mutex === "gaze",
