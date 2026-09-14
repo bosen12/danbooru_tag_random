@@ -3739,7 +3739,15 @@ export function drawOne(lex, settings, pinned, userBanned, rand, seed) {
       (item) => item.layer === "garment" && !isColorVariant(item),
       (item) => item.layer === "garment",
     ],
-    weights: [12, 9, 6, 4, 2, 1],
+    // 前兩層是「這件衣服屬於這個時代」，權重和後面拉開一個量級 —— 時代對不對是
+    // 正確性，顏色夠不夠多樣是豐富度，正確性要壓過豐富度。
+    //
+    // 這裡本來是硬桶（前一桶抽乾才輪到下一桶），改成軟權重是為了救色彩變體
+    // （blue shirt 這類本身是 modern 專屬，卻因為 !isColorVariant 被壓在最低層，
+    // 硬桶下機率恆為 0）。但 12:1 的差距不夠，時代專屬的衣服跟著掉了 12–24%：
+    // 中世紀 2.18 → 1.66、江戶 3.33 → 2.57，古代本來就沒幾件，掉一件就看不出年代。
+    // 40:6 把時代還原到硬桶水準（古中國和維多利亞甚至更好），色彩變體仍有 24 種可達。
+    weights: [40, 30, 6, 4, 2, 1],
   };
   const posePrefer = [
     (item) => item.mutex === "body_pose" || item.mutex === "camera" || item.mutex === "gaze",

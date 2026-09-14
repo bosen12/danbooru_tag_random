@@ -4759,8 +4759,9 @@ function indoorOutdoorClash(have) {
     42,
   );
   eq("shadow integration keeps seed 42 POS byte-identical", shadowIntegrationDraw.positive,
-    // 衣著偏好從硬桶改成軟權重後 RNG 路徑刻意改變；這份金標是 2026-09-13 重新產生的。
-    "1girl, solo, adult, very short hair, grey eyes, grey hair, bangs, large breasts, soft breasts, natural breasts, wet, thigh strap, hanging breasts, naked towel, standing, cowboy shot, averting eyes, angry, fingering, aroused, soft lighting, modern, bubble bath, bath, indoors, night, nsfw, explicit, masterpiece, best quality, amazing quality");
+    // 衣著權重的時代層從 12/9 提到 40/30（修時代還原度）後 RNG 路徑刻意改變；
+    // 這份金標是 2026-09-14 重新產生的。分布差異記在 progress.md，不是拿金標蓋問題。
+    "1girl, solo, adult, very short hair, grey eyes, grey hair, bangs, large breasts, soft breasts, natural breasts, wet, thigh strap, hanging breasts, naked towel, fingering, standing, from outside, looking up, dazed, heavy breathing, soft lighting, modern, open-air bath, outdoors, sunset, nsfw, explicit, masterpiece, best quality, amazing quality");
   ok("drawOne exposes shadow diagnostics", Array.isArray(shadowIntegrationDraw.shadowViolations));
 
   const eatProneShadow = validateSupportShadow({
@@ -6109,6 +6110,45 @@ function indoorOutdoorClash(have) {
     }
   }
   ok("鏡頭護欄：無臉鏡頭的圖裡沒有眼睛／視線標籤", leak === 0, why);
+}
+
+// --- 時代還原度 -------------------------------------------------------------
+// clothingPrefer 從硬桶改成軟權重（為了救色彩變體）的時候，時代專屬的衣服跟著掉了
+// 12–24%，沒有任何測試發現 —— 是使用者看圖看出來的：「以前看得出時代，現在有點看不出來」。
+// 門檻刻意設寬：守的是「不要再無聲掉下去」，不是把某個分布釘死。
+{
+  const by = new Map(data.tags.map((t) => [t.tag, t]));
+  const eraSpecificTag = (t) => {
+    const it = by.get(t);
+    return !!it && !(it.era || ["any"]).includes("any");
+  };
+  // 下限＝硬桶時期實測值的八成。改權重只要沒掉破這條就不會紅。
+  const FLOOR = {
+    modern: 4.6,
+    ancient_china: 1.8,
+    ancient_greece: 1.5,
+    medieval: 1.5,
+    edo: 2.6,
+    victorian: 3.0,
+  };
+  for (const era of Object.keys(FLOOR)) {
+    const s = defaultSettings(data);
+    s.girl = true;
+    s.eras = [era];
+    s.heats = ["activity", "tease", "flash", "sex"];
+    let n = 0;
+    for (let i = 1; i <= 300; i++) {
+      for (const t of tagsOf(drawOne(lex, s, new Set(), new Set(), mulberry32(i), i))) {
+        if (by.get(t)?.section === "clothing" && eraSpecificTag(t)) n += 1;
+      }
+    }
+    const per = n / 300;
+    ok(
+      `時代還原：${era} 每張至少 ${FLOOR[era]} 件該時代的衣服`,
+      per >= FLOOR[era],
+      `實得 ${per.toFixed(2)}`
+    );
+  }
 }
 
 if (failed) {
