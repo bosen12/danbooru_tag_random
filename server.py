@@ -1445,8 +1445,17 @@ def main() -> None:
     httpd = ThreadingHTTPServer((host, port), Handler)
     print(f"排字匣  http://{host}:{port}   畫面 {WEB.name}   Comfy {comfy_base()}")
     print("allow    " + ",".join(str(n) for n in ALLOW_NETS))
+    print(f"設定檔  {CONFIG_PATH}" + ("" if CONFIG else "（沒有，全部用預設值）"))
     print(f"ckpt     {CKPT}")
-    print(f"loras    {lora_scan.LORA_ROOT}")
+    # 第一次 clone 下來最常見的兩個「怎麼是空的」就是這兩項沒設定。
+    # 與其讓使用者從空清單反推，開機就講清楚。
+    print(
+        f"loras    {lora_scan.LORA_ROOT}"
+        if lora_scan.LORA_ROOT
+        else "loras    （未設定 config.json 的 paths.loraRoot，LoRA 面板會是空的）"
+    )
+    if CKPT_DIR is None:
+        print("ckptdir  （未設定 config.json 的 comfy.checkpointDir，換底模清單會是空的）")
     st = tg_status()
     if st["configured"]:
         print(f"telegram {st['chatId']}  token {st['tokenTail']}  自動送 {'開' if st['enabled'] else '關'}")

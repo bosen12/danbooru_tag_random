@@ -91,6 +91,9 @@ cp config.example.json config.json
 | `comfy.ckpt` | 底模檔名，要跟 ComfyUI 選單裡的字**一模一樣** |
 | `paths.loraRoot` | LoRA 收藏根目錄，底下要有 `paths.loraFolders` 列的那幾個資料夾 |
 
+沒填也能跑，只是那塊功能會是空的，而且開機時會講出來：`paths.loraRoot` 沒填 → LoRA 面板空的；
+`comfy.checkpointDir` 沒填 → 「換底模」清單空的。生圖本身不受影響。
+
 其他常用的：`comfy.api`（ComfyUI 位置）、`comfy.checkpointDir`（給「換底模」清單用，留空就不列）、
 `server.port` / `server.host` / `server.allowNet`、`paths.webDir`（版面 `web`／`web1`／`web2`／`web3`）、
 `client.streamIdleMs`（Comfy 靜默多久就放棄該張；**慢顯卡例如 AMD ROCm 建議調大**，見〈跑到一半自己停〉）。

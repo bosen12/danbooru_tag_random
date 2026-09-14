@@ -15,7 +15,11 @@ sys.path.insert(0, str(Path(__file__).resolve().parent / "scripts"))
 from app_config import cfg  # noqa: E402
 
 # LoRA 收藏根目錄。原本寫死成某台機器的 E:\Comfyui\loras。
-LORA_ROOT = Path(str(cfg("paths.loraRoot", "LORA_ROOT", "")))
+# 沒設定就是 None，不要退回 Path("")：那會變成專案根目錄，然後我們會安靜地
+# 在自己的原始碼資料夾裡找 style/Character/… 並回報「資料夾不存在」，
+# 使用者看不出真正的原因是根本沒設定。
+_lora_root = cfg("paths.loraRoot", "LORA_ROOT", "")
+LORA_ROOT = Path(str(_lora_root)) if _lora_root else None
 LORA_FOLDERS = list(cfg("paths.loraFolders", "", ["style", "Character", "HENTAI", "illus"]))
 LORA_PREVIEW_EXTS = (
     ".preview.png", ".preview.jpeg", ".preview.jpg", ".preview.webp",
@@ -49,6 +53,8 @@ def preview_path(folder: str, fn: str) -> Path | None:
     if (not parts or parts[0] not in LORA_FOLDERS
             or any(part in ("", "..") for part in parts) or "\\" in folder):
         return None
+    if LORA_ROOT is None:
+        return None
     p = LORA_ROOT / folder / fn
     try:
         p.resolve().relative_to(LORA_ROOT.resolve())
@@ -59,6 +65,18 @@ def preview_path(folder: str, fn: str) -> Path | None:
 
 def build_lora_list() -> dict:
     items, counts, errs = [], {}, []
+    if LORA_ROOT is None:
+        data = {
+            "items": [],
+            "counts": {c: 0 for c in LORA_FOLDERS},
+            "folders": list(LORA_FOLDERS),
+            "error": "沒有設定 LoRA 收藏資料夾：請在 config.json 填 paths.loraRoot",
+        }
+        with _lock:
+            _cache["data"] = data
+            _cache["at"] = time.time()
+            _cache["refreshing"] = False
+        return data
     for category in LORA_FOLDERS:
         base = LORA_ROOT / category
         if not base.is_dir():
