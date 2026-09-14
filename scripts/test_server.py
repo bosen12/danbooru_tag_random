@@ -2,6 +2,7 @@
 """SSE / Comfy binary preview helpers. Failures print and exit 1."""
 from __future__ import annotations
 
+import inspect
 import json
 import socket
 import struct
@@ -345,6 +346,24 @@ try:
     ok("ws closed raises", False, "沒有報錯")
 except ConnectionError as exc:
     ok("ws closed raises", "closed" in str(exc), str(exc))
+
+# === /api/image 的快取：鑰匙必須是內容，不能是檔名 =============================
+# ComfyUI 的 SaveImage 依輸出資料夾現有檔案編號，資料夾清空後編號從頭開始，
+# 檔名就會重複。舊版送的是一天份的 max-age，於是瀏覽器連問都不問，直接拿同檔名
+# 的舊圖顯示 —— 使用者看到的是「之前生成過的圖」。
+# 只看送出去的那幾行 header，不看註解（不然註解提到舊行為就會誤判）。
+_img_src = inspect.getsource(server.Handler._serve_comfy_image)
+_img_headers = [
+    ln for ln in _img_src.splitlines()
+    if "send_header" in ln and not ln.lstrip().startswith("#")
+]
+_img_joined = chr(10).join(_img_headers)
+ok("圖片不用 max-age 快取（檔名會重複）", "max-age" not in _img_joined, _img_joined)
+ok("圖片每次都回來驗證", "no-cache" in _img_joined)
+ok("有回 ETag", "ETag" in _img_joined)
+ok("有處理 If-None-Match", "If-None-Match" in _img_src)
+ok("ETag 算在內容上而不是檔名上", "hashlib.sha1(bytes(raw))" in _img_src)
+
 
 if failed:
     print(f"\n{failed} failed")

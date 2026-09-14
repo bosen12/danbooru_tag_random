@@ -4,6 +4,7 @@ from __future__ import annotations
 
 import base64
 import gzip
+import hashlib
 import ipaddress
 import json
 import mimetypes
@@ -1401,10 +1402,28 @@ class Handler(BaseHTTPRequestHandler):
         elif raw[:4] == b"RIFF":
             mime = "image/webp"
         safe = one("filename").replace('"', "")
+        # 快取要用內容當鑰匙，不能用檔名。
+        #
+        # 以前這裡是 `max-age=86400`，而網址只有 filename/subfolder/type。ComfyUI 的
+        # SaveImage 是看輸出資料夾現有的檔案來編號（prefix_00001_.png），所以只要那個
+        # 資料夾被清空、或換了一台機器重裝，編號就從頭開始、檔名跟著重複 —— 瀏覽器
+        # 於是拿 24 小時前的舊圖來顯示，畫面上看到的是「之前生成過的圖」。
+        # 輸出資料夾一直長大的人不會遇到，清過的人每次都遇到。
+        #
+        # 改成 no-cache（每次回來問）＋ 內容雜湊的 ETag：內容一樣才回 304，
+        # 檔名重複但內容不同時一定拿到新的那張。
+        etag = '"' + hashlib.sha1(bytes(raw)).hexdigest() + '"'
+        if self.headers.get("If-None-Match") == etag:
+            self.send_response(304)
+            self.send_header("ETag", etag)
+            self.send_header("Cache-Control", "private, no-cache")
+            self.end_headers()
+            return
         self.send_response(200)
         self.send_header("Content-Type", mime)
         self.send_header("Content-Length", str(len(raw)))
-        self.send_header("Cache-Control", "private, max-age=86400")
+        self.send_header("Cache-Control", "private, no-cache")
+        self.send_header("ETag", etag)
         self.send_header("Content-Disposition", f'inline; filename="{safe}"')
         self.end_headers()
         try:
