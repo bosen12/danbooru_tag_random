@@ -89,10 +89,19 @@ cp config.example.json config.json
 | `config.json` 的位置 | 說明 |
 |---|---|
 | `comfy.ckpt` | 底模檔名，要跟 ComfyUI 選單裡的字**一模一樣** |
-| `paths.loraRoot` | LoRA 收藏根目錄，底下要有 `paths.loraFolders` 列的那幾個資料夾 |
+| `paths.loraRoot` | LoRA 收藏根目錄。**留空的話會改問 ComfyUI**，見下面 |
 
-沒填也能跑，只是那塊功能會是空的，而且開機時會講出來：`paths.loraRoot` 沒填 → LoRA 面板空的；
-`comfy.checkpointDir` 沒填 → 「換底模」清單空的。生圖本身不受影響。
+### LoRA 清單：三種設定深度
+
+| `loraRoot` | `loraFolders` | 結果 |
+|---|---|---|
+| 留空 | — | **問 ComfyUI 要清單**，它認得的全都列出來。能選、能送進 workflow，但沒有預覽圖和觸發詞（那要讀本機檔案旁邊的 metadata） |
+| 有填 | 留空 | 掃那個資料夾底下**所有**子資料夾，外加直接放在根目錄的鬆散檔案。分類就是資料夾名字 |
+| 有填 | 有填 | 只掃你列出來的那幾個資料夾 |
+
+換句話說**兩個都不填也能用**。清單為什麼是空的、或為什麼沒有預覽圖，畫面上會直接講。
+
+`comfy.checkpointDir` 沒填 → 「換底模」清單是空的，生圖本身不受影響。開機時也會印出來。
 
 其他常用的：`comfy.api`（ComfyUI 位置）、`comfy.checkpointDir`（給「換底模」清單用，留空就不列）、
 `server.port` / `server.host` / `server.allowNet`、`paths.webDir`（版面 `web`／`web1`／`web2`／`web3`）、

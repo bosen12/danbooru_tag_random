@@ -92,7 +92,12 @@ function toast(msg, isError) {
 async function fetchGenLoras() {
   if (GEN_LORAS) return GEN_LORAS;
   try {
-    GEN_LORAS = (await fetch("/api/loras").then((r) => r.json())).items || [];
+    const got = await fetch("/api/loras").then((r) => r.json());
+    GEN_LORAS = got.items || [];
+    // 伺服器會講為什麼是空的（沒設定 paths.loraRoot、資料夾不存在、改問 ComfyUI
+    // 也失敗…）。不轉述的話使用者只看到一個空面板，沒有線索。
+    if (got.error) toast("LoRA：" + got.error, true);
+    else if (got.note) toast("LoRA：" + got.note);
   } catch (e) {
     GEN_LORAS = [];
     toast("LoRA 清單載入失敗：" + e.message, true);

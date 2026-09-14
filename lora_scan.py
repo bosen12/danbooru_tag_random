@@ -20,7 +20,29 @@ from app_config import cfg  # noqa: E402
 # 使用者看不出真正的原因是根本沒設定。
 _lora_root = cfg("paths.loraRoot", "LORA_ROOT", "")
 LORA_ROOT = Path(str(_lora_root)) if _lora_root else None
-LORA_FOLDERS = list(cfg("paths.loraFolders", "", ["style", "Character", "HENTAI", "illus"]))
+# 留空＝掃 loraRoot 底下的每一個子資料夾（外加直接放在根目錄的鬆散檔案）。
+# 原本的預設值 style/Character/HENTAI/illus 是某一台機器的個人分類習慣，
+# 別人 clone 下來資料夾名字不一樣，就會拿到一個空面板卻找不出原因。
+LORA_FOLDERS = list(cfg("paths.loraFolders", "", []) or [])
+ROOT_CATEGORY = "（根目錄）"
+
+
+def discover_categories() -> list:
+    """實際要掃哪些分類。有設定就照設定，沒有就看資料夾長什麼樣。"""
+    if LORA_FOLDERS:
+        return list(LORA_FOLDERS)
+    if LORA_ROOT is None or not LORA_ROOT.is_dir():
+        return []
+    try:
+        subs = sorted(d.name for d in LORA_ROOT.iterdir() if d.is_dir())
+    except OSError:
+        return []
+    loose = False
+    try:
+        loose = any(f.suffix == ".safetensors" for f in LORA_ROOT.iterdir() if f.is_file())
+    except OSError:
+        pass
+    return ([ROOT_CATEGORY] if loose else []) + subs
 LORA_PREVIEW_EXTS = (
     ".preview.png", ".preview.jpeg", ".preview.jpg", ".preview.webp",
     ".preview.mp4", ".preview.webm",
@@ -50,8 +72,10 @@ def preview_path(folder: str, fn: str) -> Path | None:
     if not fn or "/" in fn or "\\" in fn or fn in (".", ".."):
         return None
     parts = (folder or "").split("/")
-    if (not parts or parts[0] not in LORA_FOLDERS
-            or any(part in ("", "..") for part in parts) or "\\" in folder):
+    allowed = discover_categories()
+    # folder 為空字串代表根目錄的鬆散檔案，那是合法的。
+    if (any(part in (".", "..") for part in parts) or "\\" in folder
+            or (folder and parts[0] not in allowed and parts[0] != "")):
         return None
     if LORA_ROOT is None:
         return None
@@ -63,29 +87,92 @@ def preview_path(folder: str, fn: str) -> Path | None:
     return p if p.is_file() else None
 
 
+def lora_names_from_comfy() -> list:
+    r"""沒設定 loraRoot 時，直接問 ComfyUI 它認得哪些 LoRA。
+
+    回來的是相對路徑（"Character\Foo.safetensors"），足夠選取和送進
+    workflow。預覽圖和觸發詞讀不到 —— 那要有本機路徑才能翻 metadata。
+    """
+    import urllib.request
+
+    base = str(cfg("comfy.api", "COMFY_API", "http://127.0.0.1:8188")).rstrip("/")
+    req = urllib.request.Request(base + "/object_info/LoraLoader", method="GET")
+    with urllib.request.urlopen(req, timeout=10) as r:
+        info = json.loads(r.read().decode("utf-8"))
+    node = info.get("LoraLoader") or {}
+    spec = ((node.get("input") or {}).get("required") or {}).get("lora_name") or []
+    names = spec[0] if spec and isinstance(spec[0], list) else []
+    return [n for n in names if isinstance(n, str) and n.endswith(".safetensors")]
+
+
+def build_from_comfy() -> dict:
+    items, counts = [], {}
+    for rel in lora_names_from_comfy():
+        parts = rel.replace("\\", "/").split("/")
+        fn = parts[-1]
+        stem = fn[: -len(".safetensors")]
+        folder = "/".join(parts[:-1])
+        category = parts[0] if len(parts) > 1 else ROOT_CATEGORY
+        counts[category] = counts.get(category, 0) + 1
+        items.append({
+            "folder": folder,
+            "category": category,
+            "file": fn,
+            "name": stem,
+            "title": stem,
+            "trainedWords": [],
+            "preview": None,
+            "base_model": "",
+        })
+    return {
+        "items": items,
+        "counts": counts,
+        "folders": sorted(counts),
+        "source": "comfy",
+    }
+
+
 def build_lora_list() -> dict:
     items, counts, errs = [], {}, []
     if LORA_ROOT is None:
-        data = {
-            "items": [],
-            "counts": {c: 0 for c in LORA_FOLDERS},
-            "folders": list(LORA_FOLDERS),
-            "error": "沒有設定 LoRA 收藏資料夾：請在 config.json 填 paths.loraRoot",
-        }
+        # 沒設定路徑就問 ComfyUI。這樣新 clone 下來不用填任何東西就有 LoRA 可選，
+        # 只是沒有預覽圖和觸發詞（那兩樣得讀本機檔案旁邊的 metadata）。
+        try:
+            data = build_from_comfy()
+            if not data["items"]:
+                data["error"] = "ComfyUI 沒有回報任何 LoRA"
+            else:
+                data["note"] = (
+                    f"清單來自 ComfyUI（{len(data['items'])} 個）。"
+                    "想要預覽圖和觸發詞，請在 config.json 填 paths.loraRoot。"
+                )
+        except Exception as exc:
+            data = {
+                "items": [], "counts": {}, "folders": [],
+                "error": f"沒設定 paths.loraRoot，改問 ComfyUI 也失敗了：{exc}",
+            }
         with _lock:
             _cache["data"] = data
             _cache["at"] = time.time()
             _cache["refreshing"] = False
         return data
-    for category in LORA_FOLDERS:
-        base = LORA_ROOT / category
+    categories = discover_categories()
+    configured = bool(LORA_FOLDERS)
+    for category in categories:
+        root_level = category == ROOT_CATEGORY
+        base = LORA_ROOT if root_level else LORA_ROOT / category
         if not base.is_dir():
-            errs.append(f"{category}: 資料夾不存在")
+            # 只有在使用者自己列了資料夾名字的時候才抱怨。自動探索出來的清單
+            # 本來就是照現況產生的，不會有不存在的項目。
+            if configured:
+                errs.append(f"{category}: 資料夾不存在")
             counts[category] = 0
             continue
         try:
-            paths = sorted(base.rglob("*.safetensors"),
-                           key=lambda p: (p.parent.as_posix(), p.name))
+            paths = sorted(
+                (base.glob("*.safetensors") if root_level else base.rglob("*.safetensors")),
+                key=lambda p: (p.parent.as_posix(), p.name),
+            )
         except OSError:
             counts[category] = 0
             continue
@@ -125,9 +212,11 @@ def build_lora_list() -> dict:
             })
             n += 1
         counts[category] = n
-    data = {"items": items, "counts": counts, "folders": list(LORA_FOLDERS)}
+    data = {"items": items, "counts": counts, "folders": list(categories)}
     if errs:
         data["error"] = "；".join(errs)
+    elif not items:
+        data["error"] = f"{LORA_ROOT} 底下找不到任何 .safetensors"
     with _lock:
         _cache["data"] = data
         _cache["at"] = time.time()
