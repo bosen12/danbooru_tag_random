@@ -7872,7 +7872,9 @@
       "layer": "garment",
       "era": [
         "modern",
-        "victorian"
+        "victorian",
+        "medieval",
+        "ancient_china"
       ],
       "group": "bottom",
       "zh": "裙子"
@@ -7914,8 +7916,7 @@
       ],
       "layer": "garment",
       "era": [
-        "modern",
-        "victorian"
+        "modern"
       ],
       "group": "bottom",
       "zh": "窄裙"
@@ -8017,7 +8018,8 @@
       "implies": [],
       "layer": "garment",
       "era": [
-        "modern"
+        "modern",
+        "victorian"
       ],
       "group": "bottom",
       "zh": "長褲"
@@ -9177,7 +9179,8 @@
       "implies": [],
       "layer": "garment",
       "era": [
-        "modern"
+        "modern",
+        "victorian"
       ],
       "group": "onepiece",
       "zh": "浴袍"
@@ -12241,6 +12244,122 @@
       ],
       "group": "place",
       "zh": "宅邸"
+    },
+    {
+      "tag": "petticoat",
+      "section": "clothing",
+      "gate": "female",
+      "heat": [
+        "tease",
+        "flash",
+        "sex"
+      ],
+      "mutex": "bottom",
+      "bind": [],
+      "implies": [],
+      "layer": "garment",
+      "era": [
+        "victorian"
+      ],
+      "group": "era",
+      "needs": [
+        "female"
+      ],
+      "zh": "襯裙"
+    },
+    {
+      "tag": "hoop skirt",
+      "section": "clothing",
+      "gate": "female",
+      "heat": [
+        "tease",
+        "flash",
+        "sex"
+      ],
+      "mutex": "bottom",
+      "bind": [],
+      "implies": [
+        "skirt"
+      ],
+      "layer": "garment",
+      "era": [
+        "victorian"
+      ],
+      "group": "era",
+      "needs": [
+        "female"
+      ],
+      "zh": "裙撐"
+    },
+    {
+      "tag": "chemise",
+      "section": "clothing",
+      "gate": "female",
+      "heat": [
+        "tease",
+        "flash",
+        "sex"
+      ],
+      "mutex": "onepiece",
+      "bind": [],
+      "implies": [],
+      "layer": "garment",
+      "era": [
+        "medieval",
+        "victorian"
+      ],
+      "group": "era",
+      "needs": [
+        "female"
+      ],
+      "zh": "亞麻襯衣"
+    },
+    {
+      "tag": "suit pants",
+      "section": "clothing",
+      "gate": "male",
+      "heat": [
+        "tease",
+        "flash",
+        "sex"
+      ],
+      "mutex": "bottom",
+      "bind": [],
+      "implies": [
+        "pants"
+      ],
+      "layer": "garment",
+      "era": [
+        "modern",
+        "victorian"
+      ],
+      "group": "bottom",
+      "needs": [
+        "male"
+      ],
+      "zh": "西裝褲"
+    },
+    {
+      "tag": "loincloth",
+      "section": "clothing",
+      "gate": "male",
+      "heat": [
+        "tease",
+        "flash",
+        "sex"
+      ],
+      "mutex": "underwear_bottom",
+      "bind": [],
+      "implies": [],
+      "layer": "garment",
+      "era": [
+        "medieval"
+      ],
+      "group": "era",
+      "needs": [
+        "male"
+      ],
+      "zh": "腰布"
     },
     {
       "tag": "breasts",
@@ -17530,7 +17649,10 @@
       ],
       "layer": "garment",
       "era": [
-        "modern"
+        "modern",
+        "victorian",
+        "medieval",
+        "ancient_china"
       ],
       "group": "bottom",
       "needs": [

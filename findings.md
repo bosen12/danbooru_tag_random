@@ -1,5 +1,18 @@
 # Findings: 鎖定場景文意
 
+## 2026-09-14 Codex：時代服裝覆蓋與多樣性續查
+- 接手時 dirty worktree 僅有 `merge_lexicon.py`、`test_engine.mjs`、`engine.js`、`lexicon.json`、`04-era.json`，均屬 Claude 未完成 WIP。
+- 原先「古希臘 88% 下半身空白」是探針分類錯誤：漏算 mutex=null 的整套服裝。修正分類後古中國／古希臘／江戶為 0，真正缺口是 medieval 浴場與 victorian 浴場／上衣無下著。
+- Claude 已先建立會失敗的浴場身體描述、上衣配下著測試，再實作浴場補救池與 late lower-body repair；這段保留 TDD 證據。
+- 新增 `loincloth` 為 any gate 後，女性古希臘抽取約 74% 被它佔據；這是修復過程引入的過度集中，不是原始需求。應限制在男性情境或移出自動池，再用相同種子複測。
+- `coat` 不能視為下半身覆蓋；已從 lower-cover 判定移除，並以 `bodyGarmentSlot()` / `coversLowerBody()` 共用分類，避免各修補流程再次分歧。
+- 最終 12,960 張（female/male/mixed × 6 era × 4 heat）矩陣：每格 body blank=0、bath blank=0、非水上 top-only=0。水上 top-only 只剩 Victorian swimming/diving/wading/fishing，沒有為過測試強塞 suit pants。
+- `loincloth` 修成 medieval + male + underwear_bottom，且自動只在浴場出現；男性 medieval 全圖 83% -> 14%，古希臘與純女性皆 0，手動釘選不受限。
+- Victorian 新增 `suit pants` 後，男性一般 top-only 122/640 -> 0；浴場加入既有 `bathrobe` 的 Victorian era，男性非 sex 浴場由 240/240 裸降到約 26%。
+- 浴場 repair 的第二個同形 bug：loincloth 已進 used，但舊 `hasBodyGarment()` 不認 underwear_bottom，隨後補 nude 並由 reconcile 刪除 garment。改用共用 body/lower helper 後不再自我覆寫。
+- 廣泛 draw contract 因 RNG 位移暴露 seed 84：splashing 先靠 floating 過 gate，floating 可留作空中漂浮，最終沒有水源。WATER_SOURCE_ACT 明確排除 floating，allow 與 reconcile 共用。
+- 官方 Danbooru API（2026-09-14）：suit pants 3,912、bathrobe 1,711、pants 709,033；trousers/slacks 是 pants active alias；breeches 僅 57，未採用。
+
 ## 2026-09-14 Codex：pose tag 深度稽核（進行中）
 - 稽核基準為 `main` / `d77ca9f`；開始時另有外部未提交的 `scripts/test_engine.mjs` 修改，視為 Claude／使用者工作並保持不覆寫。
 - 姿勢問題必須區分三個維度：`needs:["pair"]` 是候選資格、抽取機率是 selection weight、`(tag:1.2)` 是送給模型的 prompt emphasis；不能用同義 tag 重複同時承擔三者。

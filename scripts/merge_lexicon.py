@@ -129,14 +129,20 @@ ERA_OF = {
     "off shoulder": _M,
     "jacket": _M,
     "open jacket": _M,
-    "skirt": _MV,
+    # 泛用父標籤只會隨具體子標籤進場；時代需涵蓋 long skirt 的全部時代，否則
+    # child -> parent implication 在古中國／中世紀會被 era gate 截斷。
+    "skirt": ["modern", "victorian", "medieval", "ancient_china"],
     "miniskirt": _M,
-    "pencil skirt": _MV,
+    # 窄裙是 1950 年代的辦公室服裝，維多利亞穿不到它。移走之前 victorian
+    # 的 bottom 池只有它一件真衣服，所以同一批補了長裙、襯裙、裙撐。
+    "pencil skirt": _M,
+    "long skirt": ["modern", "victorian", "medieval", "ancient_china"],
     "pleated skirt": _M,
     "microskirt": _M,
     "shorts": _M,
     "short shorts": _M,
-    "pants": _M,
+    # 同上，讓 Victorian 的 suit pants 能合法帶出 Danbooru 父標籤 pants。
+    "pants": ["modern", "victorian"],
     "bra": _M,
     "panties": _M,
     "thong": _M,
@@ -152,7 +158,9 @@ ERA_OF = {
     "naked shirt": _MV,
     "naked apron": _M,
     "naked towel": _M,
-    "bathrobe": _M,
+    # 浴袍（dressing/bathing gown）在維多利亞時期已有；擴到 victorian 也讓男性
+    # 浴場不必因 chemise 是 female-only 而被迫 100% 裸體。
+    "bathrobe": _MV,
     "elbow gloves": _MV,
     "qipao": _M,
     "tangzhuang": _M,

@@ -37,6 +37,7 @@ import {
   formatWeighted,
   insertTriggerAfterCast,
   toggleHeat,
+  HEATS,
   heatPresetOf,
   weightsForHeats,
   nextTagWeight,
@@ -78,6 +79,15 @@ import {
   supportCandidateAllowed,
   validateSupportShadow,
 } from "../web/shadow-validator.js";
+
+// 不依賴 bottom/onepiece slot、但確實遮到下半身的服裝。engine 有一份幾乎
+// 一樣的清單；這份是手寫對照，故意不從 production 反射出來。
+const LOWER_COVER = new Set([
+  "dress", "school uniform", "leotard", "bodysuit", "skirt", "shorts", "pants",
+  "swimsuit", "bikini", "one-piece swimsuit", "panties", "underwear",
+  "chinese clothes", "ancient greek clothes", "armor", "chainmail", "kimono",
+  "japanese clothes", "yukata", "sportswear", "loincloth",
+]);
 
 const ROOT = join(dirname(fileURLToPath(import.meta.url)), "..");
 const data = JSON.parse(readFileSync(join(ROOT, "web/lexicon.json"), "utf8"));
@@ -6287,11 +6297,191 @@ function indoorOutdoorClash(have) {
   ok("性愛時序：不會同時「即將」和「已經結束」", clash === 0, `${clash}/800　${why}`);
 }
 
+{
+  // 浴場一定要交代身體。isBathOkGarment() 是白名單，modern/漢/希臘/江戶各有一條
+  // 能通過的服裝，medieval 和 victorian 一條都沒有 —— 於是「浴缸裡戴著軟帽，
+  // 身上沒有任何描述」。白名單永遠會漏掉時代，所以這裡測結果不測名單。
+  const s = defaultSettings(data);
+  s.girl = true;
+  const BATH = new Set([
+    "bath", "bathtub", "bathing", "onsen", "shower", "shower (place)",
+    "open-air bath", "sauna", "sento", "ofuro", "bubble bath",
+  ]);
+  const bad = [];
+  let bathSeen = 0;
+  for (const era of ERAS) {
+    for (const heat of HEATS) {
+      s.eras = [era];
+      s.heats = [heat];
+      for (let i = 1; i <= 200; i++) {
+        const h = tagsOf(drawOne(lex, s, new Set(), new Set(), mulberry32(i), i));
+        if (![...h].some((t) => BATH.has(t))) continue;
+        bathSeen += 1;
+        const stated = [...h].some((t) => {
+          const it = lex.byTag.get(t);
+          if (!it || it.section !== "clothing") return false;
+          if (it.layer === "skin") return true;
+          const slot = it.mutex || it.group;
+          return it.layer === "garment" &&
+            (slot === "onepiece" || slot === "top" || slot === "bottom" || LOWER_COVER.has(t));
+        });
+        if (!stated) bad.push(bad.length < 4 ? `${era}/${heat} seed ${i}` : "");
+      }
+    }
+  }
+  ok("浴場的取樣夠多，這條測試不是空轉", bathSeen >= 300, `bathSeen=${bathSeen}`);
+  eq("浴場一定要交代身體（裸標或服裝，任何時代任何 heat）", bad.length, 0);
+  if (bad.length) console.error(`      例：${bad.filter(Boolean).join("  ")}`);
+}
+
+{
+  // coat 可能只到腰部，不能拿它替 white shirt 充當下著。固定 clothing=0 排除
+  // 一般 filler，專門驗證最後的 lower-body repair 是否真的補出 bottom。
+  const s = defaultSettings(data);
+  s.girl = true;
+  s.boy = false;
+  s.eras = ["modern"];
+  s.heats = ["tease"];
+  s.counts = { ...s.counts, clothing: 0 };
+  const h = tagsOf(
+    drawOne(lex, s, new Set(["white shirt", "coat"]), new Set(), mulberry32(63001), 63001)
+  );
+  const lower = [...h].some((t) => {
+    const it = lex.byTag.get(t);
+    if (!it || it.section !== "clothing" || it.layer !== "garment") return false;
+    const slot = it.mutex || it.group;
+    return slot === "bottom";
+  });
+  ok("外套不能冒充下著：上衣＋coat 會補 bottom，不疊穿 onepiece", lower, [...h].join(", "));
+}
+
+{
+  // loincloth 可留給有男性的古代情境，但不應成為純女性古希臘的預設下著；
+  // chiton/toga/ancient greek clothes 已經是完整服裝。
+  eq("loincloth 僅限有男性的情境", lex.byTag.get("loincloth")?.gate, "male");
+  const s = defaultSettings(data);
+  s.girl = true;
+  s.boy = false;
+  s.eras = ["ancient_greece"];
+  s.heats = ["tease", "flash", "sex"];
+  let hits = 0;
+  for (let i = 1; i <= 300; i++) {
+    const h = tagsOf(drawOne(lex, s, new Set(), new Set(), mulberry32(63100 + i), 63100 + i));
+    if (h.has("loincloth")) hits += 1;
+  }
+  eq("純女性古希臘不會自動抽到 loincloth", hits, 0);
+  ok(
+    "loincloth 不再稀釋古希臘完整服裝",
+    !lex.byTag.get("loincloth")?.era?.includes("ancient_greece"),
+    JSON.stringify(lex.byTag.get("loincloth")?.era)
+  );
+  eq("loincloth 使用 underwear slot，不冒充外穿褲裙", lex.byTag.get("loincloth")?.mutex, "underwear_bottom");
+  const male = defaultSettings(data);
+  male.girl = false;
+  male.boy = true;
+  male.eras = ["medieval"];
+  male.heats = ["tease", "flash", "sex"];
+  let dryHits = 0;
+  for (let i = 1; i <= 200; i++) {
+    const h = tagsOf(drawOne(lex, male, new Set(["castle"]), new Set(), mulberry32(63500 + i), 63500 + i));
+    if (h.has("loincloth")) dryHits += 1;
+  }
+  eq("loincloth 不會洗版一般中世紀場景", dryHits, 0);
+  const pinnedLoincloth = tagsOf(
+    drawOne(lex, male, new Set(["castle", "loincloth"]), new Set(), mulberry32(63701), 63701)
+  );
+  ok("手動釘選 loincloth 仍保留", pinnedLoincloth.has("loincloth"));
+}
+
+{
+  // 上衣一定要配下著。hasBodyGarment() 認為單一件 top 就夠了，於是 victorian
+  // 抽到 blouse 之後沒有任何東西會去補裙子 —— 而 victorian 的 bottom 池只有
+  // pencil skirt 一件真衣服。畫出來是上半身有衣服、下半身空著。
+  const s = defaultSettings(data);
+  s.girl = true;
+  const bad = [];
+  let topSeen = 0;
+  for (const era of ERAS) {
+    for (const heat of HEATS) {
+      s.eras = [era];
+      s.heats = [heat];
+      for (let i = 1; i <= 200; i++) {
+        const h = tagsOf(drawOne(lex, s, new Set(), new Set(), mulberry32(i), i));
+        const mut = new Set();
+        let skin = false;
+        for (const t of h) {
+          const it = lex.byTag.get(t);
+          if (!it || it.section !== "clothing") continue;
+          if (it.layer === "skin") skin = true;
+          if (it.layer === "garment" && it.mutex) mut.add(it.mutex);
+        }
+        if (skin || !mut.has("top") || mut.has("onepiece")) continue;
+        topSeen += 1;
+        const covered = mut.has("bottom") || [...h].some((t) => LOWER_COVER.has(t));
+        if (!covered) bad.push(bad.length < 4 ? `${era}/${heat} seed ${i}` : "");
+      }
+    }
+  }
+  ok("上衣的取樣夠多，這條測試不是空轉", topSeen >= 300, `topSeen=${topSeen}`);
+  eq("抽到上衣就一定要有下著（或整套服裝）", bad.length, 0);
+  if (bad.length) console.error(`      例：${bad.filter(Boolean).join("  ")}`);
+}
+
+{
+  // 維多利亞男性已有 waistcoat / shirt 類上衣，但舊池沒有任何 male bottom。
+  // 這裡只掃真正抽到 top 的圖，避免用「完整西裝本來就不需要 bottom」稀釋契約。
+  // 水上活動另有泳裝／裸身策略；把 suit pants 強塞進 swimming 才是不合理。
+  const s = defaultSettings(data);
+  s.girl = false;
+  s.boy = true;
+  s.eras = ["victorian"];
+  const bad = [];
+  let topSeen = 0;
+  for (const heat of HEATS) {
+    s.heats = [heat];
+    for (let i = 1; i <= 160; i++) {
+      const h = tagsOf(drawOne(lex, s, new Set(), new Set(), mulberry32(64000 + i), 64000 + i));
+      if (["swimming", "diving", "wading", "fishing", "bathing"].some((t) => h.has(t))) continue;
+      const clothing = [...h].map((t) => lex.byTag.get(t)).filter((it) => it?.section === "clothing");
+      if (clothing.some((it) => it.layer === "skin")) continue;
+      const slots = new Set(clothing.filter((it) => it.layer === "garment").map((it) => it.mutex || it.group));
+      if (!slots.has("top") || slots.has("onepiece")) continue;
+      topSeen += 1;
+      const covered = slots.has("bottom") || clothing.some((it) => LOWER_COVER.has(it.tag));
+      if (!covered) bad.push(bad.length < 4 ? `${heat} seed ${64000 + i}` : "");
+    }
+  }
+  ok("男性維多利亞上衣樣本足夠", topSeen >= 60, `topSeen=${topSeen}`);
+  eq("男性維多利亞非水上場景抽到上衣時一定有下著", bad.length, 0);
+  if (bad.length) console.error(`      例：${bad.filter(Boolean).join("  ")}`);
+  eq("suit pants 是男性下著", lex.byTag.get("suit pants")?.gate, "male");
+  ok("suit pants 可用於維多利亞", lex.byTag.get("suit pants")?.era?.includes("victorian"));
+}
+
+{
+  // 浴場修復可以選裸標，但不能因為某時代沒有白名單服裝就被迫 100% 裸體。
+  // sex 尺度裸體是合理結果，故只驗 activity / tease / flash。
+  for (const era of ["medieval", "victorian"]) {
+    const s = defaultSettings(data);
+    s.girl = false;
+    s.boy = true;
+    s.eras = [era];
+    let total = 0;
+    let nude = 0;
+    for (const heat of ["activity", "tease", "flash"]) {
+      s.heats = [heat];
+      for (let i = 1; i <= 80; i++) {
+        const h = tagsOf(drawOne(lex, s, new Set(["bath"]), new Set(), mulberry32(65000 + i), 65000 + i));
+        total += 1;
+        if ([...h].some((t) => lex.byTag.get(t)?.layer === "skin")) nude += 1;
+      }
+    }
+    ok(`${era} 男性非 sex 浴場不是被迫全裸`, nude <= total * 0.8, `nude=${nude}/${total}`);
+  }
+}
+
 if (failed) {
   console.error(`\n${failed} failed`);
   process.exit(1);
 }
 console.log("\nok");
-
-
-

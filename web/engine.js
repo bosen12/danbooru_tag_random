@@ -494,6 +494,15 @@ const WATER_PLACE = new Set([
   "bubble bath",
 ]);
 const WATER_ACT = new Set(["swimming", "wading", "floating", "fishing", "bathing", "showering", "shared bathing", "diving"]);
+// floating 也可以是漂浮在空中，不能單獨替 splashing / washing 類細節證明有水。
+const WATER_SOURCE_ACT = new Set([...WATER_ACT].filter((tag) => tag !== "floating"));
+const WATER_DETAIL = new Set([
+  "partially submerged",
+  "splashing",
+  "washing body",
+  "washing hair",
+  "washing another's back",
+]);
 const BATH_PLACE = new Set([
   "onsen",
   "bath",
@@ -1111,6 +1120,51 @@ const SCENE_BAD_CLOTH = {
   indoor: /\b(swimsuit|bikini|armor|school swimsuit|cheerleader)\b/,
 };
 
+// 不使用 onepiece/bottom mutex、但畫面上確實遮到下半身的服裝。engine 早期只認
+// 三個 body mutex，於是 kimono、ancient greek clothes 這種整套服裝和
+// underwear_bottom 的 loincloth 在補救邏輯眼中等於沒穿。
+const LOWER_COVER_TAGS = new Set([
+  "dress",
+  "school uniform",
+  "leotard",
+  "bodysuit",
+  "skirt",
+  "shorts",
+  "pants",
+  "swimsuit",
+  "bikini",
+  "one-piece swimsuit",
+  "panties",
+  "underwear",
+  "chinese clothes",
+  "ancient greek clothes",
+  "armor",
+  "chainmail",
+  "kimono",
+  "japanese clothes",
+  "yukata",
+  "sportswear",
+  "loincloth",
+]);
+
+const BODY_GARMENT_SLOTS = new Set(["onepiece", "top", "bottom"]);
+
+function bodyGarmentSlot(item) {
+  if (!item || item.section !== "clothing" || item.layer !== "garment") return null;
+  if (BODY_GARMENT_SLOTS.has(item.mutex)) return item.mutex;
+  if (BODY_GARMENT_SLOTS.has(item.group)) return item.group;
+  return null;
+}
+
+function isBodyGarment(item) {
+  return Boolean(bodyGarmentSlot(item)) || LOWER_COVER_TAGS.has(item?.tag);
+}
+
+function coversLowerBody(item) {
+  const slot = bodyGarmentSlot(item);
+  return slot === "onepiece" || slot === "bottom" || LOWER_COVER_TAGS.has(item?.tag);
+}
+
 function isBathOkGarment(item) {
   if (!item || item.section !== "clothing") return true;
   if (item.layer === "skin") return true;
@@ -1122,11 +1176,14 @@ function isBathOkGarment(item) {
     t === "yukata" ||
     t === "bath yukata" ||
     t === "fundoshi" ||
+    t === "loincloth" ||
     t === "japanese clothes" ||
     t === "chinese clothes" ||
     t === "hanfu" ||
     t === "ruqun" ||
-    t === "ancient greek clothes"
+    t === "ancient greek clothes" ||
+    // 亞麻襯衣提供中世紀／維多利亞女性浴場的非裸體選項。
+    t === "chemise"
   );
 }
 
@@ -2508,6 +2565,15 @@ export function reconcile(lex, used, female, male, people, pinned = new Set(), l
           !/\b(armor|suit|blazer|lab coat|hakama|necktie|boots|sneakers|high heels)\b/.test(i.tag)
       );
     }
+    // 水上細節可能先靠一個 activity 通過 allow()，但該 activity 又在上面的場景
+    // reconcile 被移除。用最終集合再驗一次，避免留下 splashing 卻沒有任何水源。
+    const finalTags = new Set(keep.map((i) => i.tag));
+    const hasWater = [...finalTags].some(
+      (tag) => WATER_PLACE.has(tag) || BATH_PLACE.has(tag) || WATER_SOURCE_ACT.has(tag) || BATH_ACT.has(tag)
+    );
+    if (!hasWater) {
+      keep = keep.filter((i) => pinned.has(i.tag) || !WATER_DETAIL.has(i.tag));
+    }
   }
 
   if (people > 1) keep = keep.filter((i) => i.tag !== "solo" || pinned.has("solo"));
@@ -2639,6 +2705,10 @@ export function drawOne(lex, settings, pinned, userBanned, rand, seed) {
   };
   allow = (item, opts) => {
     if (banned.has(item.tag) || used.has(item.tag)) return false;
+    // loincloth 是中世紀男性浴場的可辨識替代衣著，不是每張中世紀圖的制服。
+    // 服裝先於自然場景抽取，故一般 fill 先略過；場景確定為浴場後的 repair 仍可選。
+    // forcePin 不走 allow，因此使用者明確釘選在任何場景都會完整保留。
+    if (item.tag === "loincloth" && !pinned.has(item.tag) && !isBathScene(used)) return false;
     // 同義詞只留一個。這條天生對稱 —— 不管誰先進場，後來那個都會被擋。
     if (synonymClash(item.tag, used)) return false;
     // 同一張圖不能既還沒開始又已經結束。天生對稱，誰先進場都擋得住。
@@ -2784,12 +2854,10 @@ export function drawOne(lex, settings, pinned, userBanned, rand, seed) {
       return false;
     }
     if (
-      (item.tag === "partially submerged" ||
-        item.tag === "splashing" ||
-        item.tag === "washing body" ||
-        item.tag === "washing hair" ||
-        item.tag === "washing another's back") &&
-      ![...used].some((t) => WATER_PLACE.has(t) || BATH_PLACE.has(t) || WATER_ACT.has(t) || BATH_ACT.has(t))
+      WATER_DETAIL.has(item.tag) &&
+      ![...used].some(
+        (t) => WATER_PLACE.has(t) || BATH_PLACE.has(t) || WATER_SOURCE_ACT.has(t) || BATH_ACT.has(t)
+      )
     ) {
       return false;
     }
@@ -3999,20 +4067,10 @@ export function drawOne(lex, settings, pinned, userBanned, rand, seed) {
   }
   const gotNude = someUsed((it) => it.section === "clothing" && it.layer === "skin");
   const hasBodyGarment = () =>
-    someUsed((it, t) => {
+    someUsed((it) => {
       if (it.section !== "clothing") return false;
       if (it.layer === "skin") return true;
-      if (it.layer === "garment" && (it.mutex === "onepiece" || it.mutex === "top" || it.mutex === "bottom")) {
-        return true;
-      }
-      return (
-        t === "chinese clothes" ||
-        t === "japanese clothes" ||
-        t === "ancient greek clothes" ||
-        t === "kimono" ||
-        t === "hanfu" ||
-        t === "armor"
-      );
+      return isBodyGarment(it);
     });
   if (gotNude) {
     fill("clothing", (item) => {
@@ -4222,11 +4280,13 @@ export function drawOne(lex, settings, pinned, userBanned, rand, seed) {
         }
       }
       if (!someUsed((it) => it.section === "clothing" && it.layer === "skin") && !hasBodyGarment()) {
+        // 服裝是在場地之前決定的，場地選到浴場之後上面那圈掃描會把衣服刪掉，
+        // 這裡再補一件。池子必須包含裸標，以及不使用三種 body mutex 的完整
+        // 服裝；只收 onepiece/top/bottom 曾讓部分時代的浴場補救池變成空集合。
         const pool = lex.bySection.clothing.filter(
           (item) =>
             allow(item) &&
-            item.layer === "garment" &&
-            (item.mutex === "onepiece" || item.mutex === "top" || item.mutex === "bottom") &&
+            (item.layer === "skin" || isBodyGarment(item)) &&
             garmentOkForKind(item, kind, era)
         );
         takeFromPool(pool, 1, rand, commit, clothingPrefer, allow);
@@ -4261,6 +4321,36 @@ export function drawOne(lex, settings, pinned, userBanned, rand, seed) {
         const acts = lex.bySection.pose.filter((item) => allow(item) && soloSex(item.tag));
         takeFromPool(acts, 1, rand, commit, null, allow);
       }
+    }
+  }
+
+  {
+    // 上衣有了、下著沒有。hasBodyGarment() 看到一件 top 就算通過，所以沒有任何
+    // 一步會去補裙子；victorian 有六件上衣、bottom 池卻只有一條真裙子，畫出來
+    // 就是上半身穿好、下半身什麼都沒交代。
+    const lowerMut = new Set();
+    let lowerSkin = false;
+    for (const t of used) {
+      const it = lex.byTag.get(t);
+      if (!it || it.section !== "clothing") continue;
+      if (it.layer === "skin") lowerSkin = true;
+      const slot = bodyGarmentSlot(it);
+      if (slot) lowerMut.add(slot);
+    }
+    const lowerCovered =
+      lowerMut.has("bottom") ||
+      lowerMut.has("onepiece") ||
+      someUsed((it) => coversLowerBody(it));
+    if (!lowerSkin && lowerMut.has("top") && !lowerCovered) {
+      const kind = sceneClothLocked(used, mustPins(), lex, era, lockSceneOn(settings));
+      const pool = lex.bySection.clothing.filter(
+        (item) =>
+          allow(item) &&
+          item.layer === "garment" &&
+          bodyGarmentSlot(item) === "bottom" &&
+          (!kind || garmentOkForKind(item, kind, era))
+      );
+      takeFromPool(pool, 1, rand, commit, clothingPrefer, allow);
     }
   }
 

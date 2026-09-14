@@ -55,6 +55,30 @@
 - 清掉 `.tmp_baseline_86a3a1b`（46MB，617 檔逐一比對與 86a3a1b 完全相同），並加 `.gitignore` 規則防止再被 `git add -A` 掃進去。
 - 驗收：十三支測試套件全綠。
 
+## Session: 2026-09-14 (Codex 接續 Claude：時代服裝多樣性)
+
+- 已讀取 planning files、session catchup、git status / diff；確認 HEAD=`7508048`，五個未提交檔案均為 Claude 本輪 WIP。
+- 接續既有 TDD：浴場身體描述與上衣配下著測試曾在修正前失敗，現行 WIP 已轉綠。
+- 下一步先處理 WIP 新增的 `loincloth` 女性古希臘 74% 偏斜，再審核 lower-cover 分類及跨時代分布。
+- 搜尋命令第一次因複合 regex 引號造成 unclosed group；改成多個 `rg -e` 後成功，未重複原命令。
+- TDD 紅燈最小重播：`white shirt + coat` 沒有任何 lower slot；女性古希臘 100 張有 59 張 `loincloth`。已只改 `coat` 覆蓋分類與 `loincloth` male gate。
+- 第一輪 12,960 張探針的 `blank` 欄位漏把 LOWER_TAGS 同時計入 body，造成古中國／希臘／江戶假警報；已修探針後再跑，不採用錯誤數字。其餘欄位顯示男性 Victorian top-only 139/720，medieval/victorian 男性浴場裸體率 100%，待複測確認。
+- 官方 Danbooru API：`suit pants` 3912、`bathrobe` 1711、`pants` 709033 有效；`trousers/slacks` 是 pants alias；`breeches` 僅 57，不採用。
+- 新契約完整紅燈：loincloth era/mutex、Victorian 男性 top-only 122、suit pants 缺失、兩時代男性浴場各 240/240 裸，共 7 fail；既有案例在此之前全通。
+- 第一版最小修正後 probe：Victorian top-only 降至 20/480、Victorian 浴場裸 47/180；但 medieval 浴場仍 180/180 裸。停止加規則，回到 root-cause tracing。
+- Trace 證據：medieval seed 65001 在 scene repair 前已有 loincloth，但 `hasBodyGarment()` 不承認 underwear_bottom，遂再補 nude，reconcile 最後刪掉 loincloth。根因是 body-cover 分類重複且不同步。
+- 共用分類修正後 bath probe：medieval 裸 54/180、victorian 47/180；Victorian 非水上 top-only 0。剩餘 20 個 top-only 全是 swimming/diving/wading/fishing，不強塞 suit pants。
+- coat 定向 seed 綠燈時補成 `torn bodysuit`，揭露 top repair 池過寬；新增更精準紅燈，要求補 bottom 而不是疊 onepiece。
+- top repair 收窄為真正 bottom 後，同 seed 改補 blue shorts；不再疊穿 onepiece。
+- 第二輪廣泛探針顯示 `loincloth=596` 卻同時 `blank=192`，數學上不可能；根因是探針自己的 LOWER_TAGS 漏同步新增 loincloth。修正探針再跑，這組 blank/bathBlank 數字作廢。
+- 最終 12,960 張矩陣：全 cast/era/heat blank=0、bathBlank=0、dry topOnly=0；男性 medieval loincloth 83% -> 14%，女性／古希臘 0。
+- `test_lexicon_integrity` 紅燈抓到 suit pants→pants 缺 Victorian、long skirt→skirt 缺 medieval/ancient_china。泛用 parent 只隨 child 進場，故擴 parent era，不增加獨立抽取權重。
+- `test_draw_contracts` 固定 seed 84 紅燈：splashing 先靠 floating 通過 allow，floating 後被 reconcile 移除，留下無水孤兒。以共用 WATER_DETAIL 在最終集合重驗；只作用於 lockScene，釘選保留。
+- 第一次 orphan 修法仍紅：final set 保留 floating，而 WATER_ACT 把它算水源；但 floating 可為空中漂浮。第二假設改用 WATER_SOURCE_ACT（排除 floating）作 detail support，不改 floating 其他規則。
+- 最終驗證：完整 `test_engine`、其餘 Node suites、Python server/live、clothing reachability、directional rules、lexicon integrity、draw contracts 全綠。
+- 深度不變式稽核 19,998 張（6 settings x 3,333）：12 條 hard 全通；暮光夜景 373 次為允許的 soft 共存，室內拿傘 0 次。
+- `git diff --check` 無 whitespace error；暫存診斷腳本已刪除，工作樹只剩本輪 8 個追蹤檔案。
+
 ## Session: 2026-09-13 (Codex 完成 Claude handoff：方向性與可達性)
 
 - normal/diverse 的明確 pin 場地＋運動器材衝突現在會提示但完整保留；weird 不提示。candidate gate 與 warning 共用 `sportIdsFitPlaces()`，並把既有 cross-sport warning 接到 UI。

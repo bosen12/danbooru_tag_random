@@ -4,10 +4,20 @@
 抽取邏輯盡量完美：引擎自動抽的活動／地點／姿勢／衣著不互相打架。釘選可自相衝突。正常＝現實高機率；多元＝場景＋物理；奇葩＝只物理。
 
 ## Next Step
-交給 Claude 依 `docs/pose-tag-deep-review.md` 先完成既有 WIP，再從 camera 可達性 P1 開始 TDD。
+完成 Phase 20：修正時代服裝的下半身覆蓋與分布偏斜，跑完整驗證後 commit / push。
 
 ## Current Phase
-Phase 19
+Phase 20
+
+### Phase 20: 時代服裝覆蓋與多樣性續查
+- [x] 還原 Claude session、確認 dirty worktree 與既有紅綠測試證據
+- [x] 定位浴場服裝被剝除後無法補衣、上衣無下著兩個根因
+- [x] 移除 `loincloth` 對女性古希臘抽取造成的新偏斜，保持男性情境可達
+- [x] 稽核下半身覆蓋清單，避免把只遮上身的服裝誤判為完整覆蓋
+- [x] 量測各時代／heat 的浴場、上下裝、完整服裝與概念集中度
+- [x] 跑全套 Node / Python / live / invariant 驗證與 diff 檢查
+- [x] commit 並 push 到 main
+- **Status:** done
 
 ### Phase 19: 姿勢 tag 深度稽核與 Claude handoff
 - [x] 盤點 pose tag schema、needs／heat／implies／mutex／group 與抽取順序
