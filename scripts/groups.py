@@ -113,6 +113,11 @@ UMBRELLA_GROUP = {
 
 FABRIC = {
     "wide sleeves",
+    # 古中國本來只有 wide sleeves 一個時代專屬布料細節，於是 clothingPrefer
+    # 的時代層每次都只有它一個候選，七成六的畫面都是寬袖。
+    "mandarin collar",
+    "side slit",
+    "layered clothes",
     "frills",
     "long sleeves",
     "short sleeves",

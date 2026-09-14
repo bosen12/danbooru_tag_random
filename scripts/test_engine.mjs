@@ -6480,6 +6480,72 @@ function indoorOutdoorClash(have) {
   }
 }
 
+{
+  // 外衣的時代庫存差距。modern 有 13 件外衣，每個歷史時代剛好只有一件，於是
+  // 那一件就等於該時代的制服：himation 佔古希臘七成八、cloak 佔中世紀七成二。
+  // 觸發率各時代其實差不多，差的是可選數量 —— 和浴場白名單同一種形狀。
+  const s = defaultSettings(data);
+  s.girl = true;
+  s.boy = true;
+  // 時代錨點本來就每張都在，不算重複。
+  const ANCHOR = new Set([
+    "modern", "chinese clothes", "chinese architecture", "ancient greek clothes",
+    "armor", "castle", "japanese clothes", "victorian",
+  ]);
+  const worst = [];
+  for (const era of ERAS) {
+    s.eras = [era];
+    s.heats = ["activity", "tease", "flash", "sex"];
+    const seen = new Map();
+    const N = 400;
+    for (let i = 1; i <= N; i++) {
+      const h = tagsOf(drawOne(lex, s, new Set(), new Set(), mulberry32(i), i));
+      for (const t of h) {
+        if (ANCHOR.has(t)) continue;
+        const it = lex.byTag.get(t);
+        if (it && it.section === "clothing" && it.layer === "garment") {
+          seen.set(t, (seen.get(t) || 0) + 1);
+        }
+      }
+    }
+    const sorted = [...seen.entries()].sort((a, b) => b[1] - a[1]);
+    if (sorted.length) {
+      const [tag, n] = sorted[0];
+      const pct = Math.round((100 * n) / N);
+      if (pct > 55) worst.push(`${era} ${tag} ${pct}%`);
+    }
+  }
+  eq("沒有哪一件衣服佔掉一個時代過半的畫面", worst.length, 0);
+  if (worst.length) console.error(`      ${worst.join("  ")}`);
+}
+
+{
+  // 沒有人穿著斗篷游泳。garmentOkForSwim() 只擋 modern（`if (era === "modern")
+  // return false` 之後就 return true），歷史時代整套外衣照穿下水。
+  const s = defaultSettings(data);
+  s.girl = true;
+  s.boy = true;
+  const SWIM = ["swimming", "diving", "underwater"];
+  const bad = [];
+  let swimSeen = 0;
+  for (const era of ERAS) {
+    for (const heat of HEATS) {
+      s.eras = [era];
+      s.heats = [heat];
+      for (let i = 1; i <= 200; i++) {
+        const h = tagsOf(drawOne(lex, s, new Set(), new Set(), mulberry32(i), i));
+        if (!SWIM.some((t) => h.has(t))) continue;
+        swimSeen += 1;
+        const outer = [...h].filter((t) => lex.byTag.get(t)?.mutex === "outer");
+        if (outer.length) bad.push(bad.length < 4 ? `${era}/${heat} seed ${i}: ${outer.join("+")}` : "");
+      }
+    }
+  }
+  ok("游泳的取樣夠多，這條測試不是空轉", swimSeen >= 100, `swimSeen=${swimSeen}`);
+  eq("游泳時身上不會披著外衣", bad.length, 0);
+  if (bad.length) console.error(`      例：${bad.filter(Boolean).join("  ")}`);
+}
+
 if (failed) {
   console.error(`\n${failed} failed`);
   process.exit(1);

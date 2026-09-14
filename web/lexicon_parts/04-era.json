@@ -1556,5 +1556,200 @@
       "male"
     ],
     "zh": "腰布"
+  },
+  {
+    "tag": "cape",
+    "section": "clothing",
+    "gate": "any",
+    "heat": [
+      "tease",
+      "flash",
+      "sex"
+    ],
+    "mutex": "outer",
+    "bind": [],
+    "implies": [],
+    "layer": "garment",
+    "era": [
+      "medieval",
+      "victorian",
+      "ancient_greece"
+    ],
+    "group": "outer",
+    "zh": "斗篷"
+  },
+  {
+    "tag": "capelet",
+    "section": "clothing",
+    "gate": "any",
+    "heat": [
+      "tease",
+      "flash",
+      "sex"
+    ],
+    "mutex": "outer",
+    "bind": [],
+    "implies": [],
+    "layer": "garment",
+    "era": [
+      "medieval",
+      "victorian"
+    ],
+    "group": "outer",
+    "zh": "短披肩"
+  },
+  {
+    "tag": "hooded cloak",
+    "section": "clothing",
+    "gate": "any",
+    "heat": [
+      "tease",
+      "flash",
+      "sex"
+    ],
+    "mutex": "outer",
+    "bind": [],
+    "implies": [],
+    "layer": "garment",
+    "era": [
+      "medieval"
+    ],
+    "group": "outer",
+    "zh": "連帽斗篷"
+  },
+  {
+    "tag": "tabard",
+    "section": "clothing",
+    "gate": "any",
+    "heat": [
+      "tease",
+      "flash",
+      "sex"
+    ],
+    "mutex": "outer",
+    "bind": [],
+    "implies": [],
+    "layer": "garment",
+    "era": [
+      "medieval"
+    ],
+    "group": "outer",
+    "zh": "罩袍"
+  },
+  {
+    "tag": "shawl",
+    "section": "clothing",
+    "gate": "female",
+    "heat": [
+      "tease",
+      "flash",
+      "sex"
+    ],
+    "mutex": "outer",
+    "bind": [],
+    "implies": [],
+    "layer": "garment",
+    "era": [
+      "victorian",
+      "ancient_greece"
+    ],
+    "group": "outer",
+    "zh": "披巾"
+  },
+  {
+    "tag": "tailcoat",
+    "section": "clothing",
+    "gate": "male",
+    "heat": [
+      "tease",
+      "flash",
+      "sex"
+    ],
+    "mutex": "outer",
+    "bind": [],
+    "implies": [],
+    "layer": "garment",
+    "era": [
+      "victorian"
+    ],
+    "group": "outer",
+    "zh": "燕尾服"
+  },
+  {
+    "tag": "uchikake",
+    "section": "clothing",
+    "gate": "female",
+    "heat": [
+      "tease",
+      "flash",
+      "sex"
+    ],
+    "mutex": "outer",
+    "bind": [],
+    "implies": [],
+    "layer": "garment",
+    "era": [
+      "edo"
+    ],
+    "group": "outer",
+    "zh": "打掛"
+  },
+  {
+    "tag": "mandarin collar",
+    "section": "clothing",
+    "gate": "any",
+    "heat": [
+      "tease",
+      "flash",
+      "sex"
+    ],
+    "mutex": null,
+    "bind": [],
+    "implies": [],
+    "layer": "garment",
+    "era": [
+      "ancient_china"
+    ],
+    "group": "fabric",
+    "zh": "立領"
+  },
+  {
+    "tag": "side slit",
+    "section": "clothing",
+    "gate": "any",
+    "heat": [
+      "tease",
+      "flash",
+      "sex"
+    ],
+    "mutex": null,
+    "bind": [],
+    "implies": [],
+    "layer": "garment",
+    "era": [
+      "ancient_china"
+    ],
+    "group": "fabric",
+    "zh": "開衩"
+  },
+  {
+    "tag": "layered clothes",
+    "section": "clothing",
+    "gate": "any",
+    "heat": [
+      "tease",
+      "flash",
+      "sex"
+    ],
+    "mutex": null,
+    "bind": [],
+    "implies": [],
+    "layer": "garment",
+    "era": [
+      "ancient_china",
+      "edo"
+    ],
+    "group": "fabric",
+    "zh": "多層衣著"
   }
 ]

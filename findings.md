@@ -134,3 +134,42 @@ See session list: only Danbooru-wiki tags missing from lexicon; jobs need JOB_PL
 - 睡覺 + come hither／scared
 - on chair + crawling／seiza／floating
 - 已修：浴場服裝白名單、女僕地點、開車只坐、配件鎖定、FACE_NEED 擴大
+
+## 這一輪：時代庫存的洞（Opus 5，接在 Codex 1d027b9 之後）
+
+Codex 的 `1d027b9` 把我當時工作區未提交的改動一起收進去了，我先驗過：它的重構是對的，
+而且抓到我兩個真錯誤 ——
+
+1. `skirt` / `pants` 是 Danbooru 的父標籤。我把 `long skirt` 的時代開到 medieval /
+   ancient_china，卻沒同步放寬父標籤，child → parent 的 implication 會在那兩個時代被
+   era gate 截斷。Codex 補上了。
+2. `chemise` 是 `gate: female`，所以中世紀／維多利亞的**男性**浴場還是會被迫全裸。
+   Codex 把 `bathrobe` 開到 victorian 補這個缺口。
+
+### 這一輪找到並修掉的（同一種形狀：白名單／庫存只填了一部分時代）
+
+| 位置 | 症狀 | 修法 |
+|---|---|---|
+| `isBathOkGarment()` | 白名單逐個時代填，medieval 和 victorian 一條都沒有 → 浴缸裡只剩一頂軟帽，身體完全沒交代（medieval 51/500、victorian 30/500） | 補 `chemise`；**另外**把補救池從「只收 onepiece/top/bottom」放寬到含裸標與整套服裝，這樣以後漏掉的時代也不會空手 |
+| `hasBodyGarment()` | 看到一件 top 就放行，沒有任何一步會去補下著；victorian 六件上衣只配得到一條 `pencil skirt`（1950 年代的衣服） | 加後置條件；`pencil skirt` 降回 modern；補 `long skirt` / `petticoat` / `hoop skirt` |
+| 外衣庫存 | modern 有 13 件外衣，每個歷史時代**剛好一件** → 那件就是該時代的制服：`himation` 佔古希臘 78%、`cloak` 佔中世紀 72% | 補 cape / capelet / hooded cloak / tabard / shawl / tailcoat / uchikake。現在最高 30% |
+| `garmentOkForSwim()` | `if (era === "modern") return false; return true;` —— 歷史時代一件泳裝都沒有，於是整套外衣跟著下水，古希臘 97% 的游泳畫面裹著 himation | 外衣一律不能下水 |
+| `wide sleeves` | 古中國唯一的時代專屬布料細節，`clothingPrefer` 時代層每次只有它一個候選 → 76% | 補 `mandarin collar` / `side slit` / `layered clothes`（要加進 `groups.py` 的 `FABRIC`，放 `04-era.json` 會被 merge 改成 `group: "era"` 而永遠抽不到）。現在 49%，每張多 0.3 個 tag |
+
+### 兩個自己踩到又收回來的
+
+- 我第一次量「下半身有沒有東西遮」時，分類器只認 `mutex: onepiece|bottom`，把 `kimono`、
+  `ancient greek clothes`、`chinese clothes` 這 36 個 `mutex: null` 的整套服裝全算成沒穿，
+  得出「古希臘 88% 沒有下半身」這種假數字。真實數字是 medieval 10%、victorian 16%。
+  **量之前先確認分類器認得詞庫的實際形狀。**
+- 補 `loincloth` 給 ancient_greece 之後，它立刻佔掉 74% 的希臘畫面（希臘女性穿的是
+  chiton，不是腰布）。補 `layered clothes` 給 medieval 之後同樣立刻衝到 65%。
+  **往一個只有 0～1 個選項的槽補東西，補進去的那個會馬上變成新的制服。**
+
+### 一個留著沒動的判斷
+
+`wide sleeves` 現在 49%，還是古中國最常見的單一服裝細節。它是對的時代訊號（漢服本來就是
+寬袖），要再壓下去就得動 `clothingPrefer` 的權重，而那組權重是為了「看得出時代」調出來的。
+我停在這裡，沒有為了讓數字好看去動它。
+
+—— Opus 5

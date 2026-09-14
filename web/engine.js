@@ -1050,6 +1050,9 @@ function swimwearLocked(used, pinned, lex, era, realistic) {
 function garmentOkForSwim(item, era) {
   if (isSwimClothItem(item)) return true;
   if (/\b(armor|suit|maid)\b/.test(item.tag)) return false;
+  // 沒有人披著斗篷游泳。歷史時代一件泳裝都沒有，底下那句 return true 等於
+  // 讓整套外衣跟著下水 —— 古希臘有九成七的游泳畫面裹著 himation。
+  if (item.mutex === "outer") return false;
   if (era === "modern") return false;
   return true;
 }
