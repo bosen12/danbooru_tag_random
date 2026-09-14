@@ -1,5 +1,31 @@
 # Progress Log
 
+## Session: 2026-09-14 (姿勢 tag：迴歸、同義詞、舊詞 A/B)
+
+- Codex 的 `docs/pose-tag-deep-review.md` 逐條驗過，兩條採用、一條推翻、三條暫緩。
+- **迴歸（Codex 自己造成的）**：`karaoke`／`playing video games`／`picnic` 在 86a3a1b 分別是 6／2／1 次，把相依字改走 `allow()` 之後全變 0。肇因是驗證相依字時會先把父字放進 `used`，而父子同屬 `HANDS_BUSY_ACT` 就會自撞。修法：相依字被拒時再問一次「把父字拿掉還是不合法嗎」。
+- **同義詞**：Codex 列的 8 組裡 4 組第二個字不在詞庫（那是 Danbooru 正規名不是重複），1 組是父子關係。真正要修的 2 組（panting/heavy breathing 114 次、kissing/kiss 16 次）改用互斥，保留加權不刪字。
+- **推翻 §2**：把 camera 槽移到臉部特徵之前確實讓兩個無臉鏡頭各約 4.5% 可達，但同時打破四條既有承諾（lower body 擋掉手臂與忙手活動 → 活動尺度沒活動、全裸單人性愛沒自慰、flash 沒衣服）。這兩個構圖和工具的多數保證天生不相容，留給釘選。量測與理由寫在 engine.js 的 camera 槽註解。
+- 過程中一度把測試寫成 `=== 0 || true` 的恆真斷言，自己抓掉了。寫「抽得到」會紅、寫「抽不到」是把未必想留的現況釘成契約，所以刻意不寫斷言只留註解。
+- **舊詞 A/B 生圖**（ComfyUI 實跑 20 張，`docs/compare-posetags/`）：五組「官方 deprecated」的舊詞，WAI **全部畫得出正確結果**，一組都不該改名。Danbooru 2026 的 tag 狀態不預測模型認不認得。
+- `wink` vs `one eye closed` 是唯一有實質差異的：前者是俏皮眨眼（咧嘴笑），後者是慵懶半闔眼。alias 是資料庫去重，不代表模型向量空間相同。
+- 方法教訓：`close-up` 在 seed 101 是一團皮膚、seed 202 是漂亮眼部特寫。單 seed 會給出完全錯誤的結論。
+- §4（posePrefer 軟分層）／§6（quota root/support 分離）未做，兩者都需要先建 baseline/candidate 統計並通過 Codex 訂的門檻。
+- 驗收：十支測試套件全綠。
+
+## Session: 2026-09-14 (姿勢 tag 深度稽核)
+
+- 使用者要求深度檢查、驗證姿勢 tag，整理為 Claude 可直接執行的 `.md`；本輪不直接修改引擎。
+- 已恢復既有 planning files，開始盤點 pose schema、抽取管線、pair 權重、可達性與 Danbooru 官方標籤狀態。
+- 稽核基準 HEAD=`d77ca9f`；發現既有外部修改 `scripts/test_engine.mjs`，不覆寫。smart-explore 絕對路徑解析失敗，記錄後改用相對路徑重試。
+- 相對路徑也無法使用 smart-explore，已回退精準搜尋。讀到 Claude 新增的三個 parent/child busy activity 紅燈，尚未修改 production；將驗證測試穩定性與更精準的 directed contract。
+- 跑 fresh local probes：lexicon integrity、draw contracts 通過；12,960-draw reachability 找到 pose 26 個 zero-hit。定向拆因後，flash／mouth 候選都可達，真正非 pair 結構性不可達剩 faceless camera 兩字。
+- Claude 在探針期間 live 修改 `makeCommit()`；新進程確認三個 activity children 恢復非零，舊的長跑進程屬修改前快照，不拿來作最終驗收。
+- 完成 12 個 mode×heat 的 solo 分布量測：hard `posePrefer` 造成 flash/sex 場景 face group 平均約 4.8/5.9 個、真正 flash/sex group 約 1.2/0.9 個；列為需 A/B 的分布優化。
+- 完成 Danbooru 官方 tags/aliases fresh 驗證：355 中 333 有效、22 不通過；最終 handoff 只收非 pair 的 13 個裁決項，且標記 WAI legacy 相容性不能只看網站現況。
+- 產出 `docs/pose-tag-deep-review.md`：P1 camera 普通 filler 不可達與不可見 feature 浪費；P2 pose hard bucket 分布、非 pair 舊詞、support quota；P3 測試工具護欄。依使用者指示不交辦 pair 工作。
+- 臨時 `.tmp_pose_audit.mjs` 已刪除；未修改 Claude live WIP 的 `scripts/test_engine.mjs`。
+
 ## Session: 2026-09-13 (深度審核收尾：reconcile／quota／weights)
 
 - 三方分工出事：Codex 與 Claude 同時改 `web/engine.js` 與 `scripts/test_engine.mjs`，一棵沒 commit 的樹。室內外那個洞需要兩半（Codex 的 `makeCommit` 讓 imply 鏈走 `allow()`、Claude 的反向 guard 在 `allow()` 裡擋下來），Claude 因為「單獨加沒用」把自己那半退掉，Codex 以為還在 —— `findings.md` 寫「全綠」，實際 12 條紅。停手時把測試 park 起來、事後獨立重跑才抓到。
