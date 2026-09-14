@@ -160,7 +160,8 @@ ERA_OF = {
     "shower (place)": _M,
     "couch": _M,
     "bar (place)": _MV,
-    "sauna": ["modern", "edo"],
+    # 三溫暖是芬蘭浴，對江戶是時代錯置。
+    "sauna": _M,
     "spotlight": _M,
     "lamp": _MV,
     "armor": ["medieval", "edo"],
@@ -203,8 +204,12 @@ ERA_OF = {
     "showering": _M,
     "shower head": _M,
     "innertube": _M,
-    "sento": ["edo", "modern"],
-    "ofuro": ["edo", "modern"],
+    # 江戶的專屬場地本來 16 個裡有 6 個是浴場（古中國 0 個），於是三分之一的
+    # 江戶圖在泡澡。ofuro 跟 bath、sento 跟 onsen 畫出來幾乎是同一種場景 ——
+    # 五個日式浴場各自競爭，合計機率就是單一場地的五倍。留 onsen 和
+    # open-air bath 撐江戶的沐浴文化，這兩個回歸現代。
+    "sento": _M,
+    "ofuro": _M,
     "open-air bath": ["edo", "modern"],
     "bubble bath": _M,
     "shopping": _M,

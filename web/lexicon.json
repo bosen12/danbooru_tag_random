@@ -9727,8 +9727,7 @@
       ],
       "layer": "normal",
       "era": [
-        "modern",
-        "edo"
+        "modern"
       ],
       "group": "place",
       "zh": "三溫暖"
@@ -10664,6 +10663,257 @@
       ],
       "group": "other",
       "zh": "膠片顆粒"
+    },
+    {
+      "tag": "bridge",
+      "section": "env",
+      "gate": "any",
+      "heat": [
+        "tease",
+        "flash",
+        "sex"
+      ],
+      "mutex": "place",
+      "bind": [],
+      "implies": [
+        "outdoors"
+      ],
+      "layer": "normal",
+      "era": [
+        "ancient_china",
+        "edo",
+        "medieval",
+        "victorian"
+      ],
+      "group": "place",
+      "zh": "橋"
+    },
+    {
+      "tag": "river",
+      "section": "env",
+      "gate": "any",
+      "heat": [
+        "tease",
+        "flash",
+        "sex"
+      ],
+      "mutex": "place",
+      "bind": [],
+      "implies": [
+        "outdoors"
+      ],
+      "layer": "normal",
+      "era": [
+        "ancient_china",
+        "edo",
+        "medieval"
+      ],
+      "group": "place",
+      "zh": "河"
+    },
+    {
+      "tag": "field",
+      "section": "env",
+      "gate": "any",
+      "heat": [
+        "tease",
+        "flash",
+        "sex"
+      ],
+      "mutex": "place",
+      "bind": [],
+      "implies": [
+        "outdoors"
+      ],
+      "layer": "normal",
+      "era": [
+        "ancient_china",
+        "edo",
+        "medieval"
+      ],
+      "group": "place",
+      "zh": "田野"
+    },
+    {
+      "tag": "market",
+      "section": "env",
+      "gate": "any",
+      "heat": [
+        "tease",
+        "flash",
+        "sex"
+      ],
+      "mutex": "place",
+      "bind": [],
+      "implies": [
+        "outdoors"
+      ],
+      "layer": "normal",
+      "era": [
+        "ancient_china",
+        "edo",
+        "medieval",
+        "victorian"
+      ],
+      "group": "place",
+      "zh": "市集"
+    },
+    {
+      "tag": "festival",
+      "section": "env",
+      "gate": "any",
+      "heat": [
+        "tease",
+        "flash",
+        "sex"
+      ],
+      "mutex": "place",
+      "bind": [],
+      "implies": [
+        "outdoors"
+      ],
+      "layer": "normal",
+      "era": [
+        "ancient_china",
+        "edo"
+      ],
+      "group": "place",
+      "zh": "祭典"
+    },
+    {
+      "tag": "veranda",
+      "section": "env",
+      "gate": "any",
+      "heat": [
+        "tease",
+        "flash",
+        "sex"
+      ],
+      "mutex": null,
+      "bind": [],
+      "implies": [],
+      "layer": "normal",
+      "era": [
+        "edo"
+      ],
+      "group": "other",
+      "zh": "緣側"
+    },
+    {
+      "tag": "wooden floor",
+      "section": "env",
+      "gate": "any",
+      "heat": [
+        "tease",
+        "flash",
+        "sex"
+      ],
+      "mutex": null,
+      "bind": [],
+      "implies": [],
+      "layer": "normal",
+      "era": [
+        "ancient_china",
+        "edo"
+      ],
+      "group": "other",
+      "zh": "木地板"
+    },
+    {
+      "tag": "stone lantern",
+      "section": "env",
+      "gate": "any",
+      "heat": [
+        "tease",
+        "flash",
+        "sex"
+      ],
+      "mutex": null,
+      "bind": [],
+      "implies": [],
+      "layer": "normal",
+      "era": [
+        "edo"
+      ],
+      "group": "other",
+      "zh": "石燈籠"
+    },
+    {
+      "tag": "koi",
+      "section": "env",
+      "gate": "any",
+      "heat": [
+        "tease",
+        "flash",
+        "sex"
+      ],
+      "mutex": null,
+      "bind": [],
+      "implies": [],
+      "layer": "normal",
+      "era": [
+        "ancient_china",
+        "edo"
+      ],
+      "group": "other",
+      "zh": "錦鯉"
+    },
+    {
+      "tag": "noren",
+      "section": "env",
+      "gate": "any",
+      "heat": [
+        "tease",
+        "flash",
+        "sex"
+      ],
+      "mutex": null,
+      "bind": [],
+      "implies": [],
+      "layer": "normal",
+      "era": [
+        "edo"
+      ],
+      "group": "other",
+      "zh": "暖簾"
+    },
+    {
+      "tag": "fusuma",
+      "section": "env",
+      "gate": "any",
+      "heat": [
+        "tease",
+        "flash",
+        "sex"
+      ],
+      "mutex": null,
+      "bind": [],
+      "implies": [],
+      "layer": "normal",
+      "era": [
+        "edo"
+      ],
+      "group": "other",
+      "zh": "襖"
+    },
+    {
+      "tag": "rock garden",
+      "section": "env",
+      "gate": "any",
+      "heat": [
+        "tease",
+        "flash",
+        "sex"
+      ],
+      "mutex": null,
+      "bind": [],
+      "implies": [],
+      "layer": "normal",
+      "era": [
+        "edo"
+      ],
+      "group": "other",
+      "zh": "枯山水"
     },
     {
       "tag": "park bench",
@@ -11605,6 +11855,7 @@
       ],
       "layer": "normal",
       "era": [
+        "edo",
         "medieval"
       ],
       "group": "place",
@@ -20058,7 +20309,6 @@
       ],
       "layer": "normal",
       "era": [
-        "edo",
         "modern"
       ],
       "group": "place",
@@ -20081,7 +20331,6 @@
       ],
       "layer": "normal",
       "era": [
-        "edo",
         "modern"
       ],
       "group": "place",
