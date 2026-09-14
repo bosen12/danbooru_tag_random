@@ -1,0 +1,45 @@
+{
+  "_comment": [
+    "複製成 config.json 再改。config.json 不進版控，所以你的路徑不會被推出去。",
+    "優先序：環境變數 > config.json > 程式內建預設值。",
+    "任何一項留空或整個拿掉，就會退回內建預設值。"
+  ],
+  "comfy": {
+    "_comment": "ComfyUI 在哪、用哪個模型。checkpointDir 留空的話 /api/checkpoints 回空清單，生圖本身仍然正常。",
+    "api": "http://127.0.0.1:8188",
+    "ckpt": "illurtrious\\waiIllustriousSDXL_v170.safetensors",
+    "checkpointDir": "",
+    "checkpointPrefix": "illurtrious",
+    "genTimeoutSec": 600,
+    "steps": 25,
+    "cfg": 6.5,
+    "sampler": "euler_ancestral",
+    "scheduler": "normal"
+  },
+  "server": {
+    "_comment": "allowNet 留空代表只放行本機與 Tailscale 網段。",
+    "host": "127.0.0.1",
+    "port": 8787,
+    "allowNet": ""
+  },
+  "paths": {
+    "_comment": "promptPacksDir 是 scripts/harvest_prompts.py 挖新 tag 用的外部素材夾，不是這個 repo 的一部分；沒有就留空。loraRoot 底下要有 loraFolders 列出的那幾個資料夾。",
+    "webDir": "web",
+    "promptPacksDir": "",
+    "loraRoot": "",
+    "loraFolders": [
+      "style",
+      "Character",
+      "HENTAI",
+      "illus"
+    ]
+  },
+  "client": {
+    "_comment": "streamIdleMs：Comfy 靜默超過這麼久就放棄該張。顯示卡較慢（例如 AMD ROCm 載模型或搬顯存）可以調大。",
+    "streamIdleMs": 90000
+  },
+  "telegram": {
+    "api": "https://api.telegram.org",
+    "queueMax": 200
+  }
+}

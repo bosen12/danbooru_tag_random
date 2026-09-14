@@ -10,11 +10,13 @@ import threading
 import time
 from pathlib import Path
 
-LORA_ROOT = Path(os.environ.get(
-    "LORA_ROOT",
-    r"E:\Comfyui\loras",
-))
-LORA_FOLDERS = ["style", "Character", "HENTAI", "illus"]
+import sys
+sys.path.insert(0, str(Path(__file__).resolve().parent / "scripts"))
+from app_config import cfg  # noqa: E402
+
+# LoRA 收藏根目錄。原本寫死成某台機器的 E:\Comfyui\loras。
+LORA_ROOT = Path(str(cfg("paths.loraRoot", "LORA_ROOT", "")))
+LORA_FOLDERS = list(cfg("paths.loraFolders", "", ["style", "Character", "HENTAI", "illus"]))
 LORA_PREVIEW_EXTS = (
     ".preview.png", ".preview.jpeg", ".preview.jpg", ".preview.webp",
     ".preview.mp4", ".preview.webm",

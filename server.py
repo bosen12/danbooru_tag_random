@@ -25,18 +25,52 @@ from pathlib import Path
 import lora_scan
 
 ROOT = Path(__file__).resolve().parent
-WEB = (ROOT / os.environ.get("WEB_DIR", "web")).resolve()
+
+# 這支程式原本把機器專屬的路徑寫死在原始碼裡（checkpoint 目錄、ComfyUI 位址…），
+# 別人要跑就得改 server.py。全部搬到 config.json，優先序是：
+#   環境變數  >  config.json  >  這裡的預設值
+# 環境變數擺第一是為了不打斷既有的啟動腳本。config.json 不進版控，
+# config.example.json 才是給人抄的範本。
+CONFIG_PATH = Path(os.environ.get("APP_CONFIG", ROOT / "config.json"))
+
+
+def _load_config() -> dict:
+    try:
+        raw = json.loads(CONFIG_PATH.read_text(encoding="utf-8"))
+    except FileNotFoundError:
+        return {}
+    except (OSError, ValueError) as exc:
+        # 設定檔壞掉要吵，不要安靜地套預設值 —— 不然使用者會以為自己改的有生效。
+        print(f"[config] 讀不到 {CONFIG_PATH}：{exc}", flush=True)
+        return {}
+    return raw if isinstance(raw, dict) else {}
+
+
+CONFIG = _load_config()
+
+
+def cfg(path: str, env: str = "", default=None):
+    """依序看環境變數、config.json 的 "a.b.c" 路徑、預設值。"""
+    if env:
+        got = os.environ.get(env, "").strip()
+        if got:
+            return got
+    node = CONFIG
+    for part in path.split("."):
+        if not isinstance(node, dict) or part not in node:
+            return default
+        node = node[part]
+    return default if node is None or node == "" else node
+
+
+WEB = (ROOT / str(cfg("paths.webDir", "WEB_DIR", "web"))).resolve()
 SHARED = (ROOT / "web").resolve()
-CKPT = os.environ.get(
-    "COMFY_CKPT", r"illurtrious\waiIllustriousSDXL_v170.safetensors"
-)
-CKPT_DIR = Path(
-    os.environ.get(
-        "COMFY_CKPT_DIR",
-        r"C:\ComfyUI\ComfyUI_windows_portable_nvidia\ComfyUI_windows_portable\ComfyUI\models\checkpoints\illurtrious",
-    )
-)
-CKPT_PREFIX = os.environ.get("COMFY_CKPT_PREFIX", "illurtrious")
+CKPT = str(cfg("comfy.ckpt", "COMFY_CKPT", r"illurtrious\waiIllustriousSDXL_v170.safetensors"))
+# 沒設定就是 None，不要退回 Path("")：那會變成專案根目錄，然後被當成
+# checkpoint 資料夾掃一遍。沒設定時 /api/checkpoints 就回空清單。
+_ckpt_dir = cfg("comfy.checkpointDir", "COMFY_CKPT_DIR", "")
+CKPT_DIR = Path(str(_ckpt_dir)) if _ckpt_dir else None
+CKPT_PREFIX = str(cfg("comfy.checkpointPrefix", "COMFY_CKPT_PREFIX", "illurtrious"))
 CKPT_EXTS = {".safetensors", ".ckpt", ".pt"}
 CKPT_PREVIEW_EXTS = (
     ".preview.png",
@@ -75,7 +109,7 @@ _DEFAULT_ALLOW_NET = "127.0.0.0/8,100.64.0.0/10"
 
 def parse_allow_nets(raw: str | None = None):
     if raw is None:
-        raw = os.environ.get("ALLOW_NET", "")
+        raw = str(cfg("server.allowNet", "ALLOW_NET", ""))
     text = raw.strip() or _DEFAULT_ALLOW_NET
     return [ipaddress.ip_network(part.strip(), strict=False) for part in text.split(",") if part.strip()]
 
@@ -93,10 +127,10 @@ def allowed_client(addr: str, nets=None) -> bool:
     return any(ip in net for net in (ALLOW_NETS if nets is None else nets))
 
 
-STEPS = 25
-CFG = 6.5
-SAMPLER = "euler_ancestral"
-SCHEDULER = "normal"
+STEPS = int(cfg("comfy.steps", "", 25))
+CFG = float(cfg("comfy.cfg", "", 6.5))
+SAMPLER = str(cfg("comfy.sampler", "", "euler_ancestral"))
+SCHEDULER = str(cfg("comfy.scheduler", "", "normal"))
 SEED_MAX = 0xFFFFFFFFFFFFFFFF
 
 # LoRA Manager（獨立埠 7861）點「送到 workflow」時 POST /api/lora-push。
@@ -113,10 +147,7 @@ _LORA_CORS = {
 
 
 def comfy_base() -> str:
-    env = os.environ.get("COMFY_API", "").strip()
-    if env:
-        return env.rstrip("/")
-    return "http://127.0.0.1:8188"
+    return str(cfg("comfy.api", "COMFY_API", "http://127.0.0.1:8188")).rstrip("/")
 
 
 def api(method: str, path: str, data=None, timeout: float = 60):
@@ -159,9 +190,21 @@ def ping() -> dict:
         ver = ""
         if isinstance(stats, dict):
             ver = str((stats.get("system") or {}).get("comfyui_version") or "")
-        val = {"ok": True, "base": comfy_base(), "version": ver}
+        val = {
+            "ok": True,
+            "base": comfy_base(),
+            "version": ver,
+            # 慢顯卡（AMD ROCm 載模型／搬顯存）可能安靜很久，前端的放棄門檻
+            # 得跟著機器走，所以由 config.json 決定而不是寫死在 boot.js。
+            "streamIdleMs": int(cfg("client.streamIdleMs", "", 90000)),
+        }
     except Exception as exc:
-        val = {"ok": False, "base": comfy_base(), "error": str(exc)}
+        val = {
+            "ok": False,
+            "base": comfy_base(),
+            "error": str(exc),
+            "streamIdleMs": int(cfg("client.streamIdleMs", "", 90000)),
+        }
     _PING["t"] = now
     _PING["val"] = val
     return val
@@ -273,6 +316,18 @@ def build_workflow(positive: str, width: int, height: int, seed: int, loras=None
     for lora_name, strength in convert_loras(loras):
         inject_lora(wf, lora_name, strength)
     return wf
+
+
+def comfy_interrupt(prompt_id=None) -> None:
+    """中斷生圖。給了 prompt_id 就只砍那一張。
+
+    不給的話 Comfy 走的是全域中斷（後台會印 "Global interrupt (no prompt_id
+    specified)"），砍掉的是它當下正在跑的任何東西。舊版一律送空的 {}，於是一張
+    圖逾時或瀏覽器斷線之後補送的中斷，會落在使用者已經開始的下一張上 —— 畫面看
+    起來就是「跑到一半自己停了」。
+    """
+    body = {"prompt_id": prompt_id} if prompt_id else {}
+    api("POST", "/interrupt", body, timeout=8)
 
 
 def wait_done(prompt_id: str, timeout: float = 600) -> dict:
@@ -477,7 +532,7 @@ def _job(seed: int, width: int, height: int, positive: str, image: str, ckpt: st
 
 
 # 單張圖的上限。超過就報錯收工，免得 Comfy 卡住的時候無限抽整晚空轉。
-GEN_TIMEOUT = float(os.environ.get("COMFY_GEN_TIMEOUT", "600"))
+GEN_TIMEOUT = float(cfg("comfy.genTimeoutSec", "COMFY_GEN_TIMEOUT", 600))
 
 
 class WsUnavailable(Exception):
@@ -498,7 +553,7 @@ def gen_via_ws(width: int, height: int, seed: int, positive: str, wf: dict):
         prompt_id = (posted or {}).get("prompt_id")
         if not prompt_id:
             raise RuntimeError(f"Comfy 沒有回 prompt_id：{posted!r}"[:200])
-        yield ("ping", {"stage": "queued"})
+        yield ("ping", {"stage": "queued", "prompt_id": prompt_id})
         t0 = time.time()
         beat = t0
         while time.time() - t0 < GEN_TIMEOUT:
@@ -630,7 +685,7 @@ def gen(payload: dict) -> dict:
 # token 只活在這支程式的記憶體和 .secrets/telegram.json 裡。/api/telegram/config
 # 的 GET 只回末四碼，前端拿不到 token 本體。上傳跑在背景執行緒，抽圖不等它。
 
-TG_API = os.environ.get("TELEGRAM_API", "https://api.telegram.org")
+TG_API = str(cfg("telegram.api", "TELEGRAM_API", "https://api.telegram.org"))
 TG_SECRETS = ROOT / ".secrets" / "telegram.json"
 TG_CAPTION_MAX = 1024
 TG_TEXT_MAX = 4096
@@ -638,7 +693,7 @@ TG_GAP = 1.0  # 頻道大約 20 則/分鐘，每則之間隔一秒
 TG_RETRY_WAIT = 5.0
 # 佇列上限。Telegram 連不上的時候每一張要等 60 秒才失敗，而無限抽十秒就出一張 ——
 # 沒有上限就會一路積到記憶體爆掉，而且你按停之後它還要吐好幾個小時。
-TG_QUEUE_MAX = 200
+TG_QUEUE_MAX = int(cfg("telegram.queueMax", "", 200))
 
 _tg_lock = threading.Lock()
 _tg_queue: "queue.Queue[dict]" = queue.Queue()
@@ -934,7 +989,7 @@ class Handler(BaseHTTPRequestHandler):
             200,
             {
                 "ok": True,
-                "dir": str(CKPT_DIR),
+                "dir": str(CKPT_DIR) if CKPT_DIR else "",
                 "current": resolve_ckpt(None, items),
                 "items": items,
             },
@@ -1038,8 +1093,14 @@ class Handler(BaseHTTPRequestHandler):
         self.send_header("X-Accel-Buffering", "no")
         self.end_headers()
         gone = False
+        # 記下這條串流正在等哪一張。不記的話下面只能送「全域中斷」，那會砍掉
+        # Comfy 當下正在跑的任何東西 —— 包含這張早就結束、而使用者已經開始的
+        # 下一張。A 卡跑得慢、事件之間空窗大，特別容易踩到。
+        prompt_id = None
         try:
             for event, data in events:
+                if isinstance(data, dict) and data.get("prompt_id"):
+                    prompt_id = data["prompt_id"]
                 try:
                     self.wfile.write(sse(event, data))
                     self.wfile.flush()
@@ -1061,7 +1122,7 @@ class Handler(BaseHTTPRequestHandler):
                 pass
         if gone:
             try:
-                api("POST", "/interrupt", {}, timeout=8)
+                comfy_interrupt(prompt_id)
             except Exception:
                 pass
 
@@ -1237,7 +1298,7 @@ class Handler(BaseHTTPRequestHandler):
             return
         if path == "/api/interrupt":
             try:
-                api("POST", "/interrupt", {}, timeout=8)
+                comfy_interrupt((payload or {}).get("prompt_id"))
                 self._json(200, {"ok": True})
             except Exception as exc:
                 self._json(500, {"ok": False, "error": str(exc)})
@@ -1282,7 +1343,7 @@ def list_ckpts(root: Path | None = None, prefix: str | None = None) -> list[dict
     folder = Path(root) if root is not None else CKPT_DIR
     pre = CKPT_PREFIX if prefix is None else prefix
     items = []
-    if not folder.is_dir():
+    if folder is None or not folder.is_dir():
         return items
     try:
         names = list(folder.iterdir())
@@ -1339,7 +1400,10 @@ def resolve_ckpt(name: str | None, items: list | None = None) -> str:
 def ckpt_preview_path(fn: str, root: Path | None = None) -> Path | None:
     if not fn or "/" in fn or "\\" in fn or fn in (".", "..") or ".." in fn:
         return None
-    folder = (Path(root) if root is not None else CKPT_DIR).resolve()
+    base = Path(root) if root is not None else CKPT_DIR
+    if base is None:
+        return None
+    folder = base.resolve()
     p = (folder / fn).resolve()
     try:
         p.relative_to(folder)
@@ -1375,8 +1439,8 @@ def check_ckpt() -> None:
 
 
 def main() -> None:
-    host = os.environ.get("HOST", "127.0.0.1")
-    port = int(os.environ.get("PORT", "8787"))
+    host = str(cfg("server.host", "HOST", "127.0.0.1"))
+    port = int(cfg("server.port", "PORT", 8787))
     tg_load()
     httpd = ThreadingHTTPServer((host, port), Handler)
     print(f"排字匣  http://{host}:{port}   畫面 {WEB.name}   Comfy {comfy_base()}")

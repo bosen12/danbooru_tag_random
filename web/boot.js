@@ -111,7 +111,8 @@ const FAIL_LIMIT = 3;
 let failStreak = 0;
 // 伺服器在等 Comfy 的時候每 5 秒送一則心跳，所以這條 SSE 靜默這麼久就是死了。
 // 留寬一點是因為換底模那下可以整整安靜一分鐘。
-const STREAM_IDLE_MS = 90000;
+// 由 config.json 的 client.streamIdleMs 覆寫（透過 /api/ping 帶下來）。
+let STREAM_IDLE_MS = 90000;
 // /api/ping 走到底也只要八秒（伺服器那邊對 Comfy 的 timeout 就是 8）。
 const PING_TIMEOUT_MS = 10000;
 // 被取消／停過之後，下一次按抽圖要把八格牆先清掉重來，不要跟上一輪的殘局混在一起。
@@ -197,6 +198,7 @@ async function ping() {
   try {
     const r = await fetch("/api/ping", { signal: AbortSignal.timeout(PING_TIMEOUT_MS) });
     const j = await r.json();
+    if (Number(j.streamIdleMs) > 0) STREAM_IDLE_MS = Number(j.streamIdleMs);
     el.dataset.ok = j.ok ? "1" : "0";
     el.querySelector("span").textContent = j.ok
       ? `Comfy ${j.version || "ok"}`
@@ -2016,6 +2018,7 @@ function stopNow(reason) {
   } catch {
     /* ignore */
   }
+  // 這條是使用者自己按「停」／「取消」，全域中斷是對的：他要的就是現在停掉。
   fetch("/api/interrupt", { method: "POST", body: "{}" }).catch(() => {
     /* ignore */
   });
@@ -2039,6 +2042,7 @@ async function streamCardJob(card, seedNum, extra) {
   // 「抽並生圖」一直轉、進度條停在原地、沒有錯誤、失敗計數也不會動，整晚就這樣掛著。
   let stalled = false;
   let watchdog = 0;
+  let jobPromptId = null;
   const kick = () => {
     window.clearTimeout(watchdog);
     watchdog = window.setTimeout(() => {
@@ -2063,6 +2067,9 @@ async function streamCardJob(card, seedNum, extra) {
       },
       (event, data) => {
         kick();
+        // Comfy 的 /interrupt 不帶 prompt_id 就是全域中斷，會砍掉它當下正在跑
+        // 的任何東西。記下這張是哪一個，中斷時才砍得準。
+        if (data && data.prompt_id) jobPromptId = data.prompt_id;
         if (event === "queued") {
           setLive(card, { status: `排隊中 · seed ${data.seed || seedNum}` });
         } else if (event === "progress") {
@@ -2118,7 +2125,10 @@ async function streamCardJob(card, seedNum, extra) {
     jobAbort = null;
     if (skipNow || stalled) {
       try {
-        await fetch("/api/interrupt", { method: "POST", body: "{}" });
+        await fetch("/api/interrupt", {
+          method: "POST",
+          body: JSON.stringify(jobPromptId ? { prompt_id: jobPromptId } : {}),
+        });
       } catch {
         /* ignore */
       }

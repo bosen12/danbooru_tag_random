@@ -19,9 +19,12 @@ sys.path.insert(0, str(Path(__file__).resolve().parent))
 from groups import assign_group
 from merge_lexicon import BANNED, HEATS
 
+sys.path.insert(0, str(Path(__file__).resolve().parent))
+from app_config import cfg
+
 ROOT = Path(__file__).resolve().parents[1]
 # Optional: a directory of prompt-pack JSON to mine for new tags. Not part of this repo.
-PACKS = Path(os.environ.get("PACKS_DIR", "/mnt/c/projects/special_prompts"))
+PACKS = Path(str(cfg("paths.promptPacksDir", "PACKS_DIR", "")))
 LEX = ROOT / "web" / "lexicon.json"
 OUT_PART = ROOT / "web" / "lexicon_parts" / "05-harvest.json"
 REPORT = ROOT / "scripts" / "harvest_report.json"

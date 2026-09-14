@@ -7,10 +7,14 @@ import json
 import random
 import re
 from collections import Counter
+import sys
 from pathlib import Path
 
+sys.path.insert(0, str(Path(__file__).resolve().parent))
+from app_config import cfg
+
 ROOT = Path(__file__).resolve().parents[1]
-PACKS = Path("/mnt/c/projects/special_prompts")
+PACKS = Path(str(cfg("paths.promptPacksDir", "PACKS_DIR", "")))
 LEX = ROOT / "web" / "lexicon.json"
 OUT = ROOT / "scripts" / "special_prompts_missing.json"
 

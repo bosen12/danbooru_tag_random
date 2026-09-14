@@ -12,3 +12,6 @@ docs/
 # 拿舊 commit 解壓出來做前後比對用的暫存基準，整包是 git 裡已有的東西，
 # 別讓它有機會被 `git add -A` 掃進版控（一份就 40MB）。
 .tmp_baseline_*
+
+# 機器專屬設定（ComfyUI 路徑、checkpoint 資料夾…）。範本見 config.example.json
+config.json

@@ -75,7 +75,27 @@ WEB_DIR=web1 PORT=8788 python3 server.py
 
 ## 設定
 
-全部走環境變數，不用改程式：
+機器專屬的東西（ComfyUI 在哪、模型和 LoRA 資料夾在哪）都在 **`config.json`**，不用改程式。
+
+```bash
+cp config.example.json config.json
+```
+
+然後把 `config.json` 裡的路徑改成你自己的。`config.json` 已經 gitignore，不會被推出去；
+`config.example.json` 才是版控裡的範本。每一項留空就退回內建預設值。
+
+新 clone 至少要改這兩個：
+
+| `config.json` 的位置 | 說明 |
+|---|---|
+| `comfy.ckpt` | 底模檔名，要跟 ComfyUI 選單裡的字**一模一樣** |
+| `paths.loraRoot` | LoRA 收藏根目錄，底下要有 `paths.loraFolders` 列的那幾個資料夾 |
+
+其他常用的：`comfy.api`（ComfyUI 位置）、`comfy.checkpointDir`（給「換底模」清單用，留空就不列）、
+`server.port` / `server.host` / `server.allowNet`、`paths.webDir`（版面 `web`／`web1`／`web2`／`web3`）、
+`client.streamIdleMs`（Comfy 靜默多久就放棄該張；**慢顯卡例如 AMD ROCm 建議調大**，見〈跑到一半自己停〉）。
+
+環境變數仍然可用，而且**優先於 `config.json`**，所以既有的啟動腳本不會壞：
 
 | 環境變數 | 預設 | 說明 |
 |----------|------|------|
@@ -460,3 +480,28 @@ python scripts/add_zh.py
 ```
 
 挖不到東西時它會停下來，不會把既有的 `web/lexicon_parts/05-harvest.json` 洗掉。
+
+## 跑到一半自己停
+
+症狀：生圖跑到一半停住，ComfyUI 後台印出
+
+```
+[INFO] Global interrupt (no prompt_id specified)
+[INFO] Processing interrupted
+```
+
+`Global interrupt` 是 ComfyUI 在說「有人叫我停，但沒說停哪一張」，所以它停掉**當下正在跑的
+任何東西**。舊版本送中斷時一律不帶 `prompt_id`，於是前一張的收尾（逾時、跳過、瀏覽器斷線）
+補送的那個中斷，會落在你已經開始的**下一張**上 —— 畫面就是「跑到一半自己停了」。顯示卡越慢、
+一張圖跑越久，這個時間差越容易撞上，所以 AMD ROCm 特別常見。
+
+現在除了使用者自己按「停／取消」以外，中斷都會帶上該張的 `prompt_id`，只停那一張。
+
+如果還是會停，多半是前端的放棄門檻對你的卡太短了（預設 90 秒）。AMD ROCm 在載模型或搬顯存時
+可以安靜很久（後台會看到 `Unloaded partially: … MB freed`）。把它調大：
+
+```json
+{ "client": { "streamIdleMs": 300000 } }
+```
+
+改完重開伺服器，瀏覽器 Ctrl+F5。
