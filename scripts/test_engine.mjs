@@ -6123,8 +6123,10 @@ function indoorOutdoorClash(have) {
     return !!it && !(it.era || ["any"]).includes("any");
   };
   // 下限＝硬桶時期實測值的八成。改權重只要沒掉破這條就不會紅。
+  // 刻意不隨著調參往上抬：門檻要守的是「不要無聲崩掉」，不是「不准把優化讓回去」。
+  // 一度把 modern 抬到 5.6 去鎖住當時的數字，那會讓之後每次合法調整都假紅。
   const FLOOR = {
-    modern: 5.6,
+    modern: 4.6,
     ancient_china: 1.8,
     ancient_greece: 1.5,
     medieval: 1.5,

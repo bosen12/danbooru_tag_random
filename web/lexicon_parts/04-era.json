@@ -725,7 +725,7 @@
     ]
   },
   {
-    "tag": "marble",
+    "tag": "stone floor",
     "section": "env",
     "gate": "any",
     "heat": [
@@ -739,7 +739,8 @@
     "layer": "normal",
     "era": [
       "ancient_greece"
-    ]
+    ],
+    "zh": "石地板"
   },
   {
     "tag": "ruins",
@@ -1025,7 +1026,7 @@
     ]
   },
   {
-    "tag": "shoji",
+    "tag": "shouji",
     "section": "env",
     "gate": "any",
     "heat": [
@@ -1041,7 +1042,8 @@
     "layer": "normal",
     "era": [
       "edo"
-    ]
+    ],
+    "zh": "紙拉門"
   },
   {
     "tag": "tatami",

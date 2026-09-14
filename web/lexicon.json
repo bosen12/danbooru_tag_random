@@ -11468,7 +11468,7 @@
       "zh": "寺廟"
     },
     {
-      "tag": "marble",
+      "tag": "stone floor",
       "section": "env",
       "gate": "any",
       "heat": [
@@ -11484,7 +11484,7 @@
         "ancient_greece"
       ],
       "group": "other",
-      "zh": "大理石"
+      "zh": "石地板"
     },
     {
       "tag": "ruins",
@@ -11816,7 +11816,7 @@
       "zh": "鳥居"
     },
     {
-      "tag": "shoji",
+      "tag": "shouji",
       "section": "env",
       "gate": "any",
       "heat": [
@@ -11832,7 +11832,7 @@
         "edo"
       ],
       "group": "other",
-      "zh": "障子"
+      "zh": "紙拉門"
     },
     {
       "tag": "tatami",
