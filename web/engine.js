@@ -4093,6 +4093,22 @@ export function drawOne(lex, settings, pinned, userBanned, rand, seed) {
   }
   fillSlot("env", "in_out");
   fillSlot("env", "day_night");
+  // 時代風味：非現代的時代，畫面上至少要有一個看得出年代的環境字。
+  //
+  // 場地那一格幫不上忙 —— 場地必須配合先抽的活動，而活動幾乎全是時代中性的現代
+  // 動作，所以中性場地每次都贏（中世紀最常抽到 bedroom、park、beach，castle 只有
+  // 15/400，連 eraAnchors 都被擋掉）。結果是古代場景有 95–97% 的環境字是中性的，
+  // 而 park、bedroom 這種字在 WAI 裡預設就畫成現代的：江戶場景配電線桿和公園長椅。
+  //
+  // 這一格挑的優先是「不佔互斥格的景物」（拱門、石牆、竹子、紙燈籠）—— 它們不是
+  // 場地，所以不必配合活動，也不會跟已經選好的場地打架。補詞庫只能把中世紀從
+  // 0.10 拉到 0.19；真正缺的是這一格。
+  //
+  // 已經看得出年代就不做事，所以不會在有城堡的圖上再疊一座塔。
+  if (era && era !== "modern" && !someUsed((it) => it.section === "env" && eraSpecific(it, era))) {
+    const flavour = lex.bySection.env.filter((item) => eraSpecific(item, era) && allow(item));
+    takeFromPool(flavour, 1, rand, commit, (item) => !item.mutex, allow);
+  }
   // 環境段無條件補到目標數。以前這裡只在非正常模式跑，而正常模式是預設 ——
   // 左欄「環境」那個數字 2/4/10 給出一模一樣的結果，是個死的控制項。
   // fill() 算的是 want - countSection()，骨架已經達標時本來就不會多塞，

@@ -4,10 +4,19 @@
 抽取邏輯盡量完美：引擎自動抽的活動／地點／姿勢／衣著不互相打架。釘選可自相衝突。正常＝現實高機率；多元＝場景＋物理；奇葩＝只物理。
 
 ## Next Step
-Phase 18：完成釘選場所警告、方向性 hard-rule 掃描、zero-hit 衣著族群分析，再跑完整驗證與 commit/push。
+交給 Claude 依 `docs/pose-tag-deep-review.md` 先完成既有 WIP，再從 camera 可達性 P1 開始 TDD。
 
 ## Current Phase
-Phase 18
+Phase 19
+
+### Phase 19: 姿勢 tag 深度稽核與 Claude handoff
+- [x] 盤點 pose tag schema、needs／heat／implies／mutex／group 與抽取順序
+- [x] 以固定 seed／定向限制重現不可達、分布與 quota 問題；依使用者要求排除 pair WIP
+- [x] 以 Danbooru 官方 API 驗證失效／別名標籤；區分網站現況與 WAI 相容性
+- [x] 分級列出可修 bug、可量測優化、不可直接改的模型相容風險
+- [x] 寫入 `docs/pose-tag-deep-review.md`，附 Claude 實作順序與驗收標準
+- [x] 刪除臨時探針，重跑文件／資料檢查並確認未覆寫 Claude WIP
+- **Status:** done
 
 ### Phase 18: Claude handoff 裁決後實作
 - [x] 共用運動—場所相容 helper，正常／多元顯示明確釘選衝突 warning；奇葩不警告
@@ -88,6 +97,10 @@ Phase 18
 ## Errors Encountered
 | Error | Attempt | Resolution |
 |-------|---------|------------|
+| smart-explore 無法解析 Windows 絕對路徑的 JS/MJS | Phase 19 / attempt 1 | 改用 repo-relative POSIX path；若仍失敗，以精準搜尋與小範圍讀取回退 |
+| smart-explore 相對路徑仍顯示 0 files／無法解析 | Phase 19 / attempt 2 | 停止重試，採 skill 明確允許的精準 `rg`＋小範圍 `Get-Content` |
+| 第一次 pose API PowerShell filter 打成 `-eqeq` | Phase 19 / attempt 1 | 修正為 `-eq`；不重複錯誤字串 |
+| sandbox 內 Danbooru fetch failed | Phase 19 / attempt 1 | 依規則申請 scoped network escalation 後成功核實 355 tags |
 | stampAnchors 把城堡蓋上泡澡 | r1 | 衝突 place 不 stamp，env 後丟掉不配活動 |
 | 衣服先於場景，浴＋盔甲／下駄 | r1 | reconcile 浴場剝不釘的壞衣 |
 | picnic 暗示 eating 讓睡覺＋吃漏過 | r1 | picnic 進 AWAKE_ACT |

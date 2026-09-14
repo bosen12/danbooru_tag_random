@@ -1,5 +1,27 @@
 # Findings: 鎖定場景文意
 
+## 2026-09-14 Codex：pose tag 深度稽核（進行中）
+- 稽核基準為 `main` / `d77ca9f`；開始時另有外部未提交的 `scripts/test_engine.mjs` 修改，視為 Claude／使用者工作並保持不覆寫。
+- 姿勢問題必須區分三個維度：`needs:["pair"]` 是候選資格、抽取機率是 selection weight、`(tag:1.2)` 是送給模型的 prompt emphasis；不能用同義 tag 重複同時承擔三者。
+- 初步確認 `castOk()` 已正確讓 pair tag 在 `people < 2` 時不可選；可達性驗收應在標籤合法 context 內測，不要求 pair tag 在 solo 命中。
+- `smart-explore` 以 Windows 絕對路徑解析 `.js/.mjs` 失敗（0 symbols／Could not parse）；下一次改用 repo-relative POSIX path，若仍失敗則依 skill 允許回退精準 `rg`。
+- 相對路徑重試仍為 0 files／Could not parse，依 skill 回退精準 `rg` 與小範圍讀取。
+- 外部 `scripts/test_engine.mjs` 修改已針對三個 activity child 加紅燈：Claude 註解記錄舊版 `86a3a1b` 的 600 張中 `karaoke=6`、`playing video games=2`、`picnic=1`，依賴改走 `allow()` 後全變 0；另加 unrelated busy activities 不得共存的護欄。這與獨立定向重播的根因一致，應保留並把機率式 `>0/600` 改成定向 deterministic contract，降低偶然紅燈／綠燈風險。
+- 現行 `posePrefer` 仍是 hard buckets；clothing 已在同檔改為 `softTiers + weights`，因此有現成的最小參考實作，但 pose 權重屬產品分布決策，必須先 A/B 量測再落地。
+- pair tag 的 `castOk()` eligibility 與 heat gate 已存在；目前沒有 lexicon-level selection weight。`applyTagWeights()` 是輸出 prompt emphasis，不可拿來代替抽取權重。
+- 使用者後續明確要求本交辦文件排除 Claude 正在處理的 pair 問題；最終文件不列 pair eligibility、pair 權重或 pair 同義詞待辦。
+- `audit_tag_reachability 60`：12,960 draws，1132/1198 命中、zero-hit 66；pose zero-hit 26。非 pair 的 zero-hit 主要是 `lower body`／`head out of frame`、6 個 flash 衣著動作與 `covering own mouth`／`closed mouth`。zero-hit 本身不是 bug，後續用定向候選拆因。
+- 定向 200 次：flash 衣著動作在匹配服裝且只留目標候選時全部可達（jack-o 177、shirt lift 200、downblouse 200、panty pull 175、sweater lift 200、leotard aside 200）；`covering own mouth` 與 `closed mouth` 都 200/200。因此它們只是自然分布罕見／被硬桶壓低，不是結構性不可達，不應列 P0 bug。
+- 定向 camera：一般 feature 流程下 `head out of frame=0/200`、`lower body=0/200`；排除 eye/face/gaze/expression 候選後分別 150/200、72/200。根因已隔離為 eye color 先選、faceless camera 後選且互斥，不是詞庫或 RNG。
+- pose 355 個中有 57 個會 imply 另一個 pose；排除 pair/group/crowd/2x/yuri 後仍有 12 個。現行 `countSection("pose")` 會把 child 與 support parent 都計入 quota，這是可量測的產品語意問題，不是 hard bug。
+- `test_lexicon_integrity.mjs` 與 `test_draw_contracts.mjs` fresh pass；代表 schema／implies cycle／現有 orphan contract 無紅燈，但它們沒有保證每個 pool-enabled pose 自動可達。
+- Claude live WIP 已同時修改 `makeCommit()`：依賴在來源暫放 `used` 時若被 `allowDep()` 擋，移除來源再問一次，只有仍被其他標籤擋才拒絕。WIP 版本的定向活動測試已恢復 `karaoke=13/200`、`playing video games=10/200`、`picnic=5/200`；不列為 Claude 要重做的待辦，只列完成後應驗證的 scope。
+- 200 張／context 的 solo modern 分布：pose quota 約 10。activity/tease 平均 face≈3、tease≈3；flash 平均 face≈4.8–4.9、flash≈1.15–1.21；sex 平均 face≈5.92–5.95、sex≈0.88–0.89。三種 sceneMode 幾乎相同。這與 `posePrefer` hard bucket（face 在 heat-specific group 之前）一致：尺度越高，反而約半數以上 pose token 被 face group 吃掉。屬分布優化候選，不是 hard contradiction；必須同 seed A/B 後再改。
+- Danbooru 官方 API fresh 2026-09-14：355 pose 中 333 pass、22 fail。排除明確／實質 pair scope 後，仍有 13 個需裁決：`one knee up`、`presenting`、`presenting ass`、`hand on hip`、`hands on own breasts`、`panting`、`wink`、`breast hold`、`hand in panties`、`self fondling`、`extreme close-up`、`looking away`、`washing body`。
+- 官方 active aliases：`hand on hip -> hand on own hip`、`panting -> heavy breathing`、`wink -> one eye closed`；歷史/deleted alias 記錄仍指出 `presenting -> presenting own body`、`presenting ass -> presenting own ass`。候選核實中 `presenting own body/ass`、`hand on own hip`、`grabbing own breast`、`heavy breathing`、`one eye closed`、`hand in own panties`、`close-up`、`looking to the side`、`averting eyes`、`sideways glance` 都有效。
+- `one knee up` 不可直接換成 `on one knee`：語意可能不同。官方有效近似詞 `knees up`(82,157)、`knee up`(58,898)、`leg up`(112,275)、`on one knee`(18,875)；需要看原本意圖與 WAI A/B。
+- `washing body` 無 exact current tag；`washing self` 也不存在。官方 inventory 有 `washing back`(365)、`washing own back`(5)、`washing arm`(5)、`washing face`(89)、`washing hands`(227)、`washing hair`(1,015)。不可猜換，應刪除／拆成可驗證具體動作或保留為 WAI legacy 實驗組。
+
 ## 2026-09-13 Codex：Claude handoff 方向性／可達性稽核
 - Guard 依關係分成 A（final-set hard incompatibility）、B（有向 dependency/support）、C（quota/prefer/reconcile arbitration）、S（soft plausibility），mode／pin／phase 另列，不把它們混成關係種類。
 - A 類掃描涵蓋 day/night、faceless/face、sleep/action/expression、eye/mouth/sky、in/out、body/limb/hand、sport/venue。已成對的 guard 保留；只修 final POS 可固定重播的缺口。

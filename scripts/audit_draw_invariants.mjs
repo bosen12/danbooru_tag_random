@@ -86,7 +86,7 @@ const WATER_SOURCES = [
   // 天氣與物件
   "rain", "steam", "water", "shower head",
   // 動作與狀態（自己就代表畫面裡有水）
-  "bathing", "showering", "swimming", "shared bathing", "diving", "partially submerged",
+  "bathing", "showering", "swimming", "shared bathing", "diving", "wading", "partially submerged",
   "after bathing", "wet", "wet hair", "wet clothes", "steaming body",
 ];
 

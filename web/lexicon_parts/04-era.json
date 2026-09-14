@@ -1,5 +1,306 @@
 [
   {
+    "tag": "park bench",
+    "section": "env",
+    "gate": "any",
+    "heat": [
+      "tease",
+      "flash",
+      "sex"
+    ],
+    "mutex": "place",
+    "bind": [],
+    "implies": [],
+    "layer": "normal",
+    "era": [
+      "modern",
+      "victorian"
+    ],
+    "zh": "公園長椅"
+  },
+  {
+    "tag": "tavern",
+    "section": "env",
+    "gate": "any",
+    "heat": [
+      "tease",
+      "flash",
+      "sex"
+    ],
+    "mutex": "place",
+    "bind": [],
+    "implies": [
+      "indoors"
+    ],
+    "layer": "normal",
+    "era": [
+      "medieval",
+      "victorian"
+    ],
+    "zh": "酒館"
+  },
+  {
+    "tag": "bamboo forest",
+    "section": "env",
+    "gate": "any",
+    "heat": [
+      "tease",
+      "flash",
+      "sex"
+    ],
+    "mutex": "place",
+    "bind": [],
+    "implies": [
+      "outdoors"
+    ],
+    "layer": "normal",
+    "era": [
+      "ancient_china",
+      "edo",
+      "modern"
+    ],
+    "zh": "竹林"
+  },
+  {
+    "tag": "rice paddy",
+    "section": "env",
+    "gate": "any",
+    "heat": [
+      "tease",
+      "flash",
+      "sex"
+    ],
+    "mutex": "place",
+    "bind": [],
+    "implies": [
+      "outdoors"
+    ],
+    "layer": "normal",
+    "era": [
+      "ancient_china",
+      "edo",
+      "modern"
+    ],
+    "zh": "稻田"
+  },
+  {
+    "tag": "dojo",
+    "section": "env",
+    "gate": "any",
+    "heat": [
+      "tease",
+      "flash",
+      "sex"
+    ],
+    "mutex": "place",
+    "bind": [],
+    "implies": [
+      "indoors"
+    ],
+    "layer": "normal",
+    "era": [
+      "edo",
+      "modern"
+    ],
+    "zh": "道場"
+  },
+  {
+    "tag": "arch",
+    "section": "env",
+    "gate": "any",
+    "heat": [
+      "tease",
+      "flash",
+      "sex"
+    ],
+    "mutex": null,
+    "bind": [],
+    "implies": [],
+    "layer": "normal",
+    "era": [
+      "ancient_greece",
+      "medieval",
+      "victorian"
+    ],
+    "zh": "拱門"
+  },
+  {
+    "tag": "stone wall",
+    "section": "env",
+    "gate": "any",
+    "heat": [
+      "tease",
+      "flash",
+      "sex"
+    ],
+    "mutex": null,
+    "bind": [],
+    "implies": [],
+    "layer": "normal",
+    "era": [
+      "ancient_greece",
+      "medieval"
+    ],
+    "zh": "石牆"
+  },
+  {
+    "tag": "greco-roman architecture",
+    "section": "env",
+    "gate": "any",
+    "heat": [
+      "tease",
+      "flash",
+      "sex"
+    ],
+    "mutex": null,
+    "bind": [],
+    "implies": [],
+    "layer": "normal",
+    "era": [
+      "ancient_greece"
+    ],
+    "zh": "希臘羅馬建築"
+  },
+  {
+    "tag": "tower",
+    "section": "env",
+    "gate": "any",
+    "heat": [
+      "tease",
+      "flash",
+      "sex"
+    ],
+    "mutex": null,
+    "bind": [],
+    "implies": [
+      "outdoors"
+    ],
+    "layer": "normal",
+    "era": [
+      "medieval"
+    ],
+    "zh": "塔樓"
+  },
+  {
+    "tag": "windmill",
+    "section": "env",
+    "gate": "any",
+    "heat": [
+      "tease",
+      "flash",
+      "sex"
+    ],
+    "mutex": null,
+    "bind": [],
+    "implies": [
+      "outdoors"
+    ],
+    "layer": "normal",
+    "era": [
+      "medieval"
+    ],
+    "zh": "風車"
+  },
+  {
+    "tag": "paper lantern",
+    "section": "env",
+    "gate": "any",
+    "heat": [
+      "tease",
+      "flash",
+      "sex"
+    ],
+    "mutex": null,
+    "bind": [],
+    "implies": [],
+    "layer": "normal",
+    "era": [
+      "ancient_china",
+      "edo"
+    ],
+    "zh": "紙燈籠"
+  },
+  {
+    "tag": "bamboo",
+    "section": "env",
+    "gate": "any",
+    "heat": [
+      "tease",
+      "flash",
+      "sex"
+    ],
+    "mutex": null,
+    "bind": [],
+    "implies": [],
+    "layer": "normal",
+    "era": [
+      "ancient_china",
+      "edo"
+    ],
+    "zh": "竹子"
+  },
+  {
+    "tag": "ballroom",
+    "section": "env",
+    "gate": "any",
+    "heat": [
+      "tease",
+      "flash",
+      "sex"
+    ],
+    "mutex": "place",
+    "bind": [],
+    "implies": [
+      "indoors"
+    ],
+    "layer": "normal",
+    "era": [
+      "victorian"
+    ],
+    "zh": "舞廳"
+  },
+  {
+    "tag": "carriage",
+    "section": "env",
+    "gate": "any",
+    "heat": [
+      "tease",
+      "flash",
+      "sex"
+    ],
+    "mutex": "place",
+    "bind": [],
+    "implies": [
+      "indoors"
+    ],
+    "layer": "normal",
+    "era": [
+      "victorian"
+    ],
+    "zh": "馬車"
+  },
+  {
+    "tag": "greenhouse",
+    "section": "env",
+    "gate": "any",
+    "heat": [
+      "tease",
+      "flash",
+      "sex"
+    ],
+    "mutex": "place",
+    "bind": [],
+    "implies": [
+      "indoors"
+    ],
+    "layer": "normal",
+    "era": [
+      "victorian",
+      "modern"
+    ],
+    "zh": "溫室"
+  },
+  {
     "tag": "modern",
     "section": "env",
     "gate": "any",

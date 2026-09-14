@@ -1,5 +1,21 @@
 # Progress Log
 
+## Session: 2026-09-14 (時代看不出來：服裝權重 + 環境時代訊號)
+
+- 使用者回報「以前看得出時代，現在有點看不出來」。量測分成兩件事。
+- **迴歸（已修）**：clothingPrefer 從硬桶改軟權重後，時代專屬衣服掉 12–24%（中世紀 2.18→1.66）。環境完全沒掉，一度誤以為是自己移除 env prefer 造成的。時代層權重 12/9 → 40/30，中世紀回到 1.91、古中國與維多利亞超過原值，色彩變體仍有 24 種可達。加了每時代下限測試。
+- **長期問題（已修）**：古代時代的環境有 95–97% 是時代中性字，而 park/bedroom 在 WAI 裡預設畫成現代 —— 江戶場景配電線桿和公園長椅。
+- 根因：場地必須配合先抽的活動，活動幾乎全是時代中性的現代動作，中性場地每次都贏；連 eraAnchors 的 castle 都只有 15/400。
+- 補詞庫只把中世紀從 0.10 拉到 0.19，不夠。關鍵觀察：**景物（mutex null）不是場地，不受 placeFitsActs 約束**，可以繞過整個順序問題，不必大改順序。
+- 新增「時代風味槽」：非現代時代且環境還看不出年代時，補一個時代專屬字，優先挑不佔互斥格的景物。六個時代全部 300/300 有時代訊號。
+- 詞庫 1198 → 1208：7 個景物（arch、stone wall、greco-roman architecture、tower、windmill、paper lantern、bamboo）＋ 3 個場地（ballroom、carriage、greenhouse），全部通過 Danbooru API 核實。
+- 修正既有時代標註：park／alley/park bench → modern+victorian（公共公園是 19 世紀以後的概念）、tavern → medieval+victorian、rice paddy／bamboo forest → 古中國+江戶+現代、dojo → 江戶+現代。改 `web/lexicon_parts/*` 來源檔再重建，沒有手改產物。
+- **自我檢查抓到自己的錯**：新加的 15 個字有 7 個是死的（全是 mutex=place 的）—— 正好印證診斷。依證據砍掉三種模式都接近零的 5 個，留下多元/奇葩可達的 3 個。
+- 採納 Codex 的批評：`karaoke` 等三個字用 `>0/600` 斷言太脆（picnic 只有 1/600），改成三者總和 ≥5、樣本 2000。紅燈驗證確認鑑別力沒變。
+- 探針第五次抓到我自己的規格錯：水源清單漏了 `wading`。
+- 生圖驗證：同 seed 的江戶圖從「現代公園＋電線桿」變成「白羽織＋藏青腰帶＋草履＋竹林」。
+- 驗收：十二支測試套件 + 20000 張深度稽核 + Danbooru API 核實全綠。
+
 ## Session: 2026-09-14 (姿勢 tag：迴歸、同義詞、舊詞 A/B)
 
 - Codex 的 `docs/pose-tag-deep-review.md` 逐條驗過，兩條採用、一條推翻、三條暫緩。

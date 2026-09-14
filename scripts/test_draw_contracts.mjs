@@ -74,7 +74,7 @@ const WATER_SRC = [
   "poolside", "pool", "pool ladder", "underwater", "open-air bath", "bubble bath", "waterfall",
   "beach towel", "river", "lake", "hot spring", "lotus pond", "fountain", "puddle",
   "rain", "steam", "water", "shower head", "fishing", "fishing rod",
-  "bathing", "showering", "swimming", "shared bathing", "diving", "partially submerged",
+  "bathing", "showering", "swimming", "shared bathing", "diving", "wading", "partially submerged",
   "after bathing", "wet", "wet hair", "wet clothes", "steaming body",
 ];
 

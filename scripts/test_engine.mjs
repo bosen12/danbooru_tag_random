@@ -5979,22 +5979,22 @@ function indoorOutdoorClash(have) {
   s.heats = ["activity", "tease", "flash", "sex"];
   s.counts = { subject: 10, feature: 10, pose: 10, clothing: 10, env: 10 };
   const seen = new Map();
-  for (let i = 1; i <= 600; i++) {
+  for (let i = 1; i <= 2000; i++) {
     for (const t of tagsOf(drawOne(lex, s, new Set(), new Set(), mulberry32(950000 + i), 950000 + i))) {
       seen.set(t, (seen.get(t) || 0) + 1);
     }
   }
-  for (const [child, parent] of [
-    ["karaoke", "singing"],
-    ["playing video games", "playing games"],
-    ["picnic", "eating"],
-  ]) {
-    ok(
-      `父子相依：「${child}」抽得到（它 implies 的「${parent}」跟它同屬忙手活動）`,
-      (seen.get(child) || 0) > 0,
-      `600 張裡 ${seen.get(child) || 0} 次`
-    );
-  }
+  // 斷言放在三者的**總和**上，不是各自 >0。活動槽只有一格要跟 51 個活動搶，
+  // 這三個單獨都只有 1–5/600，RNG 稍微一位移就可能變 0 而假紅。
+  // 迴歸發生時三個會同時歸零（父子衝突擋的是 commit 整體），所以總和的鑑別力
+  // 一樣強，餘裕卻大得多。
+  const kids = ["karaoke", "playing video games", "picnic"];
+  const total = kids.reduce((n, t) => n + (seen.get(t) || 0), 0);
+  ok(
+    "父子相依：跟自己 implies 的字同屬忙手活動的三個字抽得到",
+    total >= 5,
+    `${kids.map((t) => `${t}=${seen.get(t) || 0}`).join("、")}，總和 ${total}`
+  );
   // 護欄：父子放行不能變成「兩個無關的忙手活動也放行」。
   const BUSY = ["playing guitar", "cooking", "driving", "fishing", "smoking", "shopping", "cleaning"];
   let clash = 0;
@@ -6149,6 +6149,51 @@ function indoorOutdoorClash(have) {
       `實得 ${per.toFixed(2)}`
     );
   }
+}
+
+// --- 非現代的時代至少要看得出一個年代 ---------------------------------------
+// 使用者回報「以前看得出時代，現在有點看不出來」。量到的其實是長期問題：古代時代
+// 的環境有 95–97% 是時代中性的字，而 park、bedroom 這種中性場地在 WAI 裡預設就
+// 畫成現代的（江戶場景配電線桿和公園長椅）。
+//
+// 根因是場地必須配合先抽的活動，而活動幾乎全是時代中性的現代動作，所以中性場地
+// 每次都贏；連 eraAnchors 的 castle 都只有 15/400。補詞庫只把 medieval 從 0.10
+// 拉到 0.19，不夠。
+{
+  const by = new Map(data.tags.map((t) => [t.tag, t]));
+  const isSpec = (t, era) => {
+    const it = by.get(t);
+    const e = it && it.era;
+    return Array.isArray(e) && e.length && !e.includes("any") && e.includes(era);
+  };
+  for (const era of ["ancient_china", "ancient_greece", "medieval", "edo", "victorian"]) {
+    const s = defaultSettings(data);
+    s.girl = true;
+    s.eras = [era];
+    s.heats = ["activity", "tease", "flash", "sex"];
+    let withSignal = 0;
+    for (let i = 1; i <= 300; i++) {
+      const got = tagsOf(drawOne(lex, s, new Set(), new Set(), mulberry32(i), i));
+      if ([...got].some((t) => by.get(t)?.section === "env" && isSpec(t, era))) withSignal += 1;
+    }
+    ok(
+      `時代訊號：${era} 每張圖的環境都看得出年代`,
+      withSignal === 300,
+      `300 張裡只有 ${withSignal} 張有時代專屬的環境字`
+    );
+  }
+  // 護欄：現代不該被硬塞（它本來就有一堆專屬場地），也不該重複塞。
+  const s = defaultSettings(data);
+  s.girl = true;
+  s.eras = ["medieval"];
+  s.heats = ["activity", "tease", "flash", "sex"];
+  let over = 0;
+  for (let i = 1; i <= 300; i++) {
+    const got = tagsOf(drawOne(lex, s, new Set(), new Set(), mulberry32(i), i));
+    const n = [...got].filter((t) => by.get(t)?.section === "env" && isSpec(t, "medieval")).length;
+    if (n > 3) over += 1;
+  }
+  ok("時代訊號：不會塞一整排時代字", over === 0, `${over}/300 超過 3 個`);
 }
 
 if (failed) {
