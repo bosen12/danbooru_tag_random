@@ -684,12 +684,12 @@ const ACT_PLACE = {
   wading: new Set(["beach", "ocean", "pool", "poolside", "lotus pond"]),
   floating: new Set(["pool", "ocean", "bathtub", "ofuro", "onsen", "open-air bath", "bubble bath"]),
   "shared bathing": new Set(["onsen", "sento", "ofuro", "open-air bath", "bath"]),
-  eating: new Set([...MEAL_PLACE, "movie theater", "airplane interior", "convenience store", "izakaya", "festival", "market"]),
-  drinking: new Set(["cafe", "bar (place)", "restaurant", "kitchen", "living room", "movie theater", "airplane interior", "izakaya", "festival", "market"]),
+  eating: new Set([...MEAL_PLACE, "movie theater", "airplane interior", "convenience store", "izakaya", "festival", "market", "ryokan", "great hall", "tavern"]),
+  drinking: new Set(["cafe", "bar (place)", "restaurant", "kitchen", "living room", "movie theater", "airplane interior", "izakaya", "festival", "market", "ryokan", "tavern", "great hall", "ballroom"]),
   reading: new Set([...DESK_PLACE, "train", "train interior"]),
   cooking: new Set(["kitchen", "great hall", "castle", "palace"]),
   shopping: new Set(["street", "city", "cityscape", "fitting room", "convenience store", "supermarket", "night market", "market", "festival"]),
-  singing: new Set(["living room", "bar (place)", "park", "rooftop", "karaoke box", "church", "shrine", "festival"]),
+  singing: new Set(["living room", "bar (place)", "park", "rooftop", "karaoke box", "church", "shrine", "festival", "ballroom", "great hall", "ryokan", "colonnade"]),
   karaoke: new Set(["bar (place)", "living room", "karaoke box"]),
   "playing guitar": new Set(["bedroom", "living room", "park", "rooftop", "balcony", "garden"]),
   "playing games": new Set([...HOME_PLACE, "internet cafe"]),
@@ -699,15 +699,15 @@ const ACT_PLACE = {
   writing: DESK_PLACE,
   "drawing (action)": new Set(["bedroom", "living room", "classroom", "cafe", "park", "garden"]),
   "painting (action)": new Set(["bedroom", "living room", "garden", "park", "courtyard", "pavilion"]),
-  dancing: new Set(["living room", "park", "rooftop", "school gym", "bar (place)", "fitness gym"]),
+  dancing: new Set(["living room", "park", "rooftop", "school gym", "bar (place)", "fitness gym", "ballroom", "great hall", "palace", "colonnade", "ryokan", "festival"]),
   stretching: new Set(["bedroom", "living room", "fitness gym", "park", "rooftop", "beach"]),
   yoga: new Set(["bedroom", "living room", "fitness gym", "park", "rooftop", "beach"]),
   exercising: SPORT_PLACE,
-  training: SPORT_PLACE,
+  training: new Set([...SPORT_PLACE, "battlefield", "dojo", "castle", "colonnade"]),
   fishing: FISH_PLACE,
   camping: new Set(["forest", "park", "bamboo forest", "garden", "ruins", "tent", "river", "field"]),
   picnic: new Set(["park", "garden", "beach", "forest", "courtyard"]),
-  hiking: new Set(["forest", "park", "bamboo forest", "garden", "mountain", "river", "bridge", "field"]),
+  hiking: new Set(["forest", "park", "bamboo forest", "garden", "mountain", "river", "bridge", "field", "battlefield", "ruins", "colonnade"]),
   jogging: new Set(["park", "street", "running track", "stadium", "garden", "city", "cityscape", "alley"]),
   skiing: new Set(["mountain"]),
   diving: new Set(["ocean", "underwater", "pool"]),
@@ -1655,6 +1655,20 @@ export const BUILTIN_PRESETS = [
   { id: "xmas", name: "聖誕", tags: ["santa costume"] },
   { id: "ski", name: "滑雪", tags: ["skiing"] },
   { id: "dojo", name: "道場", tags: ["dojo"] },
+  // 時代組合。每一組自己帶 era：單一時代是使用者的硬選擇，會贏過有衝突的釘選
+  // （契約見 chooseEra() 的註解），所以不能指望「釘了武士就自動變江戶」——
+  // 按鈕按下去時要把時代一起套進設定，否則會畫出現代廚房裡的武士。
+  // 身分＋場地兩個字就夠，其餘讓它自己抽，才不會每次按下去都長一樣。
+  { id: "samurai", name: "武士", tags: ["samurai", "dojo"], era: ["edo"] },
+  { id: "ninja", name: "忍者", tags: ["ninja", "bamboo forest"], era: ["edo"] },
+  { id: "oiran", name: "花魁", tags: ["oiran", "ryokan"], era: ["edo"] },
+  { id: "knight", name: "騎士", tags: ["knight", "castle"], era: ["medieval"] },
+  { id: "gladiator", name: "角鬥士", tags: ["gladiator", "colonnade"], era: ["ancient_greece"] },
+  { id: "battlefield", name: "戰場", tags: ["battlefield", "banner"], era: ["ancient_china", "medieval", "edo"] },
+  { id: "hanfu", name: "漢服庭園", tags: ["hanfu", "courtyard"], era: ["ancient_china"] },
+  { id: "palace", name: "宮廷", tags: ["princess", "palace"], era: ["ancient_china", "medieval"] },
+  { id: "ballroom", name: "維多利亞舞會", tags: ["ballroom", "evening gown"], era: ["victorian"] },
+  { id: "witch", name: "女巫", tags: ["witch", "forest"], era: ["medieval", "victorian"] },
   // 運動組合全部由 web/sports.js 產生：按鈕寫運動名稱，一次帶進活動、場地、器材、服裝。
   ...SPORT_BUTTONS.map((p) => ({
     id: p.id,
@@ -2222,6 +2236,9 @@ function chooseHeat(settings, pinned, lex, rand, ctx) {
 function chooseEra(settings, pinned, lex, rand, ctx) {
   let pool = (settings.eras || ERAS).filter((e) => ERAS.includes(e));
   if (!pool.length) pool = ["modern"];
+  // 單一時代是使用者的硬選擇，贏過有衝突的釘選 —— 這條有測試在守
+  // （"exclusive medieval beats bikini pin for era"）。所以「釘武士就變江戶」
+  // 不能走這裡實作，得由組合按鈕自己帶時代（BUILTIN_PRESETS 的 era 欄位）。
   if (pool.length === 1) return pool[0];
   ctx = ctx || pinContext(lex, pinned);
   const fromPins = intersectOrUnion(ctx.eraLists);

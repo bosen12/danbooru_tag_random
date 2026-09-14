@@ -530,6 +530,18 @@ function applyNamedPreset(preset) {
   const next = toggleNamedPreset(lex, preset, pinned, presetOwned);
   pinned = next.pinned;
   presetOwned = next.presetOwned;
+  // 時代組合要把時代一起套進去。單一時代是使用者的硬選擇，會贏過有衝突的釘選
+  // （契約見 engine.js 的 chooseEra()），所以光釘「武士」是不夠的 ——
+  // 不套時代就會畫出現代廚房裡的武士。取消組合時不動時代，使用者自己改回去。
+  if (next.action !== "removed" && Array.isArray(preset.era) && preset.era.length) {
+    const want = preset.era.filter((e) => ERAS.includes(e));
+    if (want.length) {
+      settings.eras = want;
+      saveStore();
+      renderEras();
+      renderCats("filter");
+    }
+  }
   afterPin();
   if (next.action === "removed") speak("已取消釘選組合");
   else if (next.action === "completed") speak("已補齊整套");

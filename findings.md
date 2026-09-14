@@ -355,3 +355,46 @@ env 明確填的是 place / in_out / day_night，lighting 只能在剩下的 `fi
   而不是衣服上的紋樣。
 
 —— Opus 5
+
+## Loop 1：時代組合按鈕，以及一個我自己推翻的改動（Opus 5）
+
+### 先說我做錯又收回來的那一個
+
+要加「武士」「騎士」這類組合之前，先量了一下：**釘 samurai，時代還是 modern，
+60/60。** 畫出來是「現代廚房裡穿運動外套的武士」。
+
+看 `chooseEra()` 發現它是先 `if (pool.length === 1) return pool[0]` 才去讀 pinned，
+而預設設定就是單一時代（`data.defaults.eras = ["modern"]`）。看起來像明顯的 bug，
+我就把讀 pin 移到早退前面，六個時代標籤全部 0/60 通過，看起來很漂亮。
+
+**然後既有測試打臉：** `exclusive medieval beats bikini pin for era` ——
+使用者只選中世紀、釘了比基尼時，**時代要贏過釘選**。那是刻意的契約，
+我那個「修正」正好把它拆了。已還原。
+
+正確的做法是組合按鈕自己帶時代：`BUILTIN_PRESETS` 加 `era` 欄位，
+按下去時由 UI 一起套進 `settings.eras`。這樣既不動契約，按鈕也真的有用。
+
+**教訓：看起來像 bug 的東西，先找有沒有測試在守著它。**
+
+### 新增 10 組時代組合
+
+武士（samurai+dojo，江戶）、忍者（ninja+竹林）、花魁（oiran+旅館）、
+騎士（knight+城堡，中世紀）、角鬥士（gladiator+列柱廊，古希臘）、
+戰場（battlefield+戰旗，漢/中世紀/江戶）、漢服庭園（hanfu+中庭）、
+宮廷（princess+宮殿）、維多利亞舞會（ballroom+晚禮服）、女巫（witch+森林）。
+
+每一組實測：宣告的時代下 100/100 抽對時代，釘選的字 0/100 掉字。
+
+### 連帶修掉的兩件
+
+1. **`miko` 標成 `era:["edo"]` 是詞庫的錯。** 巫女服在 Danbooru 上壓倒性地
+   出現在當代場景。以前沒被發現，是因為 `chooseEra()` 根本不讀 pin；一旦組合
+   會帶時代，「神社巫女」就會被鎖死在江戶。改成 `["edo","modern"]`。
+   修完再量：五組既有組合（溫泉／女僕／神社巫女／婚禮／道場）全部維持 modern:100，
+   也就是**既有行為完全沒變**。
+2. **四個新組合在 activity heat 下抽不到活動**（花魁/角鬥士/戰場/舞會）——
+   釘的場地不在任何活動的 `ACT_PLACE` 裡。既有的自動測試抓到的。
+   補了 ryokan / colonnade / battlefield / ballroom / great hall / tavern 到
+   吃、喝、唱、跳舞、操練、健行底下。現在十組都是 0/40。
+
+—— Opus 5

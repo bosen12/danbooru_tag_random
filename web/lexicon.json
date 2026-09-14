@@ -7505,9 +7505,10 @@
       "implies": [],
       "layer": "garment",
       "era": [
-        "edo"
+        "edo",
+        "modern"
       ],
-      "group": "era",
+      "group": "onepiece",
       "zh": "巫女"
     },
     {

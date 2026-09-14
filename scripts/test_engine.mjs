@@ -6620,6 +6620,54 @@ function indoorOutdoorClash(have) {
   if (noEra.length) console.error(`      沒有時代光源：${noEra.join(" ")}`);
 }
 
+{
+  // 時代組合按鈕要自己帶時代。
+  //
+  // 不能靠「釘了江戶的字就自動變江戶」—— 單一時代是使用者的硬選擇，贏過有衝突的
+  // 釘選，那條契約有測試在守（"exclusive medieval beats bikini pin for era"）。
+  // 我一度改了 chooseEra() 去讓 pin 贏，當場打破那條契約，已經還原。
+  // 所以每個時代組合都必須自己宣告 era，按鈕按下去時由 UI 套進設定。
+  const ERA_PRESETS = {
+    samurai: "edo",
+    ninja: "edo",
+    oiran: "edo",
+    knight: "medieval",
+    gladiator: "ancient_greece",
+    hanfu: "ancient_china",
+    ballroom: "victorian",
+  };
+  const missing = [];
+  const wrong = [];
+  for (const [id, want] of Object.entries(ERA_PRESETS)) {
+    const p = BUILTIN_PRESETS.find((x) => x.id === id);
+    if (!p) {
+      missing.push(id);
+      continue;
+    }
+    if (!p.era) {
+      missing.push(`${id} 沒有 era 欄位`);
+      continue;
+    }
+    if (!p.era.includes(want)) wrong.push(`${id} era=${JSON.stringify(p.era)} 應含 ${want}`);
+    // 宣告的時代下，釘選的字全都要是合法的
+    const s2 = defaultSettings(data);
+    s2.girl = true;
+    s2.eras = [...p.era];
+    let pinned = new Set();
+    for (const t of p.tags) pinned = applyPin(lex, pinned, new Set(), t).pinned;
+    let lost = 0;
+    for (let i = 1; i <= 40; i++) {
+      const h = tagsOf(drawOne(lex, s2, pinned, new Set(), mulberry32(i), i));
+      if (!p.tags.every((t) => h.has(t))) lost += 1;
+    }
+    if (lost) wrong.push(`${id} 有 ${lost}/40 張把釘選的字弄丟了`);
+  }
+  eq("每個時代組合都宣告了 era", missing.length, 0);
+  if (missing.length) console.error(`      ${missing.join("  ")}`);
+  eq("時代組合宣告的時代正確，且釘選的字留得住", wrong.length, 0);
+  if (wrong.length) console.error(`      ${wrong.join("  ")}`);
+}
+
 if (failed) {
   console.error(`\n${failed} failed`);
   process.exit(1);
