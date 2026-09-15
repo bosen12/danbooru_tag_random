@@ -549,6 +549,30 @@ function applyNamedPreset(preset) {
   else speak("已套用釘選組合");
 }
 
+function syncPornMode() {
+  const btn = $("porn-mode");
+  if (!btn) return;
+  // 開關顯示的是「色情模式」，settings 存的是相反的 sfw —— 所以這裡要反過來。
+  const on = !settings.sfw;
+  btn.classList.toggle("is-on", on);
+  btn.setAttribute("aria-checked", on ? "true" : "false");
+  const hint = $("porn-mode-hint");
+  if (hint) {
+    hint.textContent = on
+      ? "關掉＝完全不抽情色的字，nsfw／explicit 改放負面"
+      : "已關閉：情色的字抽不到，nsfw／explicit 在負面";
+  }
+}
+
+function togglePornMode() {
+  settings.sfw = !settings.sfw;
+  saveStore();
+  syncPornMode();
+  // 可抽的字整批變了，詞庫面板要重畫。
+  renderCats("filter");
+  speak(settings.sfw ? "色情模式已關閉" : "色情模式已開啟");
+}
+
 function pickHeat(h) {
   const next = toggleHeat(settings.heats, h);
   settings.heats = next;
@@ -2077,6 +2101,8 @@ async function streamCardJob(card, seedNum, extra) {
         seed: seedNum,
         loras: extra.loras || currentLorasPayload(),
         ckpt: extra.ckpt || currentCkpt(),
+        // 伺服器要靠這個決定負面詞：關掉色情模式時把 nsfw/explicit 移過去。
+        sfw: !!settings.sfw,
       },
       (event, data) => {
         kick();
@@ -2802,6 +2828,8 @@ async function main() {
   renderTray();
   bindUi();
   initLoraPicker();
+  $("porn-mode")?.addEventListener("click", togglePornMode);
+  syncPornMode();
   initTelegram();
   initDiscord();
   initInfinite({

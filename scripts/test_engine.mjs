@@ -38,6 +38,7 @@ import {
   insertTriggerAfterCast,
   toggleHeat,
   HEATS,
+  sfwBlocked,
   heatPresetOf,
   weightsForHeats,
   nextTagWeight,
@@ -6666,6 +6667,87 @@ function indoorOutdoorClash(have) {
   if (missing.length) console.error(`      ${missing.join("  ")}`);
   eq("時代組合宣告的時代正確，且釘選的字留得住", wrong.length, 0);
   if (wrong.length) console.error(`      ${wrong.join("  ")}`);
+}
+
+{
+  // 色情模式關掉之後，畫面上不可以有任何情色的字。
+  //
+  // 規則寫對了和畫面乾淨是兩件事：補救邏輯（浴場補衣、上衣補下著）、implies、
+  // bind 都可能從側門把東西塞回來。所以這裡測的是「實際抽出來的每一個字」，
+  // 不是「規則涵蓋了幾個字」。
+  const s = defaultSettings(data);
+  s.girl = true;
+  s.boy = true;
+  s.sfw = true;
+  const leaks = new Map();
+  let noTail = 0;
+  let hadNsfw = 0;
+  let total = 0;
+  const kinds = new Set();
+  for (const era of ERAS) {
+    for (const heat of HEATS) {
+      s.eras = [era];
+      s.heats = [heat];
+      for (let i = 1; i <= 40; i++) {
+        const arr = drawOne(lex, s, new Set(), new Set(), mulberry32(i), i).positive.split(", ");
+        total += 1;
+        if (!arr.includes("sfw")) noTail += 1;
+        if (arr.includes("nsfw") || arr.includes("explicit")) hadNsfw += 1;
+        for (const t of arr) {
+          kinds.add(t);
+          const it = lex.byTag.get(t);
+          if (it && sfwBlocked(it)) leaks.set(t, (leaks.get(t) || 0) + 1);
+        }
+      }
+    }
+  }
+  ok("SFW 的取樣夠多，這條測試不是空轉", total >= 900 && kinds.size >= 300,
+     `${total} 張，${kinds.size} 種字`);
+  eq("SFW：正面不帶 nsfw/explicit", hadNsfw, 0);
+  eq("SFW：正面帶著 sfw", noTail, 0);
+  eq("SFW：沒有任何被擋的字漏出來", leaks.size, 0);
+  if (leaks.size) console.error(`      漏出來的：${[...leaks.keys()].slice(0, 8).join("  ")}`);
+
+  // 開著色情模式時，這些字本來就該抽得到 —— 不然上面等於測了個空殼。
+  const s2 = defaultSettings(data);
+  s2.girl = true;
+  s2.heats = ["sex"];
+  let sexy = 0;
+  for (let i = 1; i <= 200; i++) {
+    const arr = drawOne(lex, s2, new Set(), new Set(), mulberry32(i), i).positive.split(", ");
+    if (arr.some((t) => { const it = lex.byTag.get(t); return it && sfwBlocked(it); })) sexy += 1;
+  }
+  ok("色情模式開著時，那些字抽得到（證明上面擋的是真的有在擋）", sexy > 150,
+     `${sexy}/200`);
+
+  // 釘選會繞過 allow()，所以光擋 allow() 不夠：關掉色情模式之前釘的 nude
+  // 會原封不動留在圖上。這條測的是「連釘選都擋得住」。
+  const sPin = defaultSettings(data);
+  sPin.girl = true;
+  sPin.sfw = true;
+  const stuck = [];
+  const goneWhenOn = [];
+  for (const tag of ["nude", "completely nude", "sex", "nipples", "bra"]) {
+    if (!lex.byTag.has(tag)) continue;
+    const pin = applyPin(lex, new Set(), new Set(), tag).pinned;
+    let got = 0;
+    for (let i = 1; i <= 40; i++) {
+      if (tagsOf(drawOne(lex, sPin, pin, new Set(), mulberry32(i), i)).has(tag)) got += 1;
+    }
+    if (got) stuck.push(`${tag} ${got}/40`);
+    // 反過來：色情模式開著時，同樣的釘選一定要留得住，否則是把功能弄壞了
+    const sOn = defaultSettings(data);
+    sOn.girl = true;
+    let kept = 0;
+    for (let i = 1; i <= 40; i++) {
+      if (tagsOf(drawOne(lex, sOn, pin, new Set(), mulberry32(i), i)).has(tag)) kept += 1;
+    }
+    if (kept < 40) goneWhenOn.push(`${tag} 只留住 ${kept}/40`);
+  }
+  eq("SFW：連釘選的情色字也要擋掉", stuck.length, 0);
+  if (stuck.length) console.error(`      ${stuck.join("  ")}`);
+  eq("色情模式開著時，釘選照常生效（沒有被誤傷）", goneWhenOn.length, 0);
+  if (goneWhenOn.length) console.error(`      ${goneWhenOn.join("  ")}`);
 }
 
 if (failed) {

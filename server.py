@@ -105,6 +105,35 @@ def _negative() -> str:
 
 
 NEGATIVE = _negative()
+
+
+def _sfw_negative() -> list:
+    path = SHARED / "lexicon.json"
+    if not path.is_file():
+        path = WEB / "lexicon.json"
+    try:
+        data = json.loads(path.read_text(encoding="utf-8"))
+        got = data.get("sfwNegative")
+        if isinstance(got, list) and got:
+            return [str(x) for x in got if str(x).strip()]
+    except Exception:
+        pass
+    return ["nsfw", "explicit", "nude", "nipples", "pussy", "penis", "sex"]
+
+
+SFW_NEGATIVE = _sfw_negative()
+
+
+def negative_for(sfw: bool) -> str:
+    """關掉色情模式時，把 nsfw/explicit 那一組移到負面。
+
+    正面那邊由 engine.js 換成 sfwTail，並且情色的字根本抽不出來；這裡是第二道
+    保險 —— 模型就算自己想畫，負面也會把它拉回來。
+    """
+    if not sfw:
+        return NEGATIVE
+    extra = [t for t in SFW_NEGATIVE if t not in NEGATIVE]
+    return NEGATIVE + (", " + ", ".join(extra) if extra else "")
 _DEFAULT_ALLOW_NET = "127.0.0.0/8,100.64.0.0/10"
 
 
@@ -268,7 +297,8 @@ def inject_lora(wf: dict, lora_name: str, strength: float) -> None:
                     n["inputs"][k] = [lid, 1]
 
 
-def build_workflow(positive: str, width: int, height: int, seed: int, loras=None, ckpt=None) -> dict:
+def build_workflow(positive: str, width: int, height: int, seed: int, loras=None,
+                   ckpt=None, sfw: bool = False) -> dict:
     ckpt_name = resolve_ckpt(ckpt)
     wf = {
         "13": {
@@ -281,7 +311,7 @@ def build_workflow(positive: str, width: int, height: int, seed: int, loras=None
         },
         "37": {
             "class_type": "CLIPTextEncode",
-            "inputs": {"text": NEGATIVE, "clip": ["13", 1]},
+            "inputs": {"text": negative_for(sfw), "clip": ["13", 1]},
         },
         "119": {
             "class_type": "EmptyLatentImage",
@@ -637,7 +667,10 @@ def gen_events(payload: dict):
     if seed is None or seed == "":
         seed = random.randint(0, SEED_MAX)
     seed = int(seed) & SEED_MAX
-    wf = build_workflow(positive, width, height, seed, payload.get("loras"), payload.get("ckpt"))
+    wf = build_workflow(
+        positive, width, height, seed, payload.get("loras"), payload.get("ckpt"),
+        sfw=bool(payload.get("sfw")),
+    )
     yield ("queued", {"seed": seed, "width": width, "height": height})
     try:
         yield from gen_via_ws(width, height, seed, positive, wf)
@@ -665,7 +698,10 @@ def gen(payload: dict) -> dict:
     if seed is None or seed == "":
         seed = random.randint(0, SEED_MAX)
     seed = int(seed) & SEED_MAX
-    wf = build_workflow(positive, width, height, seed, payload.get("loras"), payload.get("ckpt"))
+    wf = build_workflow(
+        positive, width, height, seed, payload.get("loras"), payload.get("ckpt"),
+        sfw=bool(payload.get("sfw")),
+    )
     prompt_id = api("POST", "/prompt", {"prompt": wf}, timeout=60)["prompt_id"]
     hist = wait_done(prompt_id)
     image = first_image_src(hist)

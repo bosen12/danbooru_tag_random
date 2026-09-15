@@ -538,6 +538,89 @@ const BATH_PLACE = new Set([
   "sauna",
 ]);
 const BATH_ACT = new Set(["bathing", "showering", "shared bathing"]);
+// ---------------------------------------------------------------- SFW 模式
+// 關掉色情模式之後，哪些字不能出現。
+//
+// heat 欄位幫不上忙：1304 個字裡有 1092 個都是 ["tease","flash","sex"]，
+// 從 blue sky 到 bra 全在同一格。所以這裡另外定一套規則，而且是「留下來的要
+// 逐個看過」而不是「擋掉的列一列就算」—— 漏掉一個就是一張不該出現的圖。
+//
+// 身體「尺寸」是體型描述（large breasts），留著；對身體「做什麼」一律擋。
+const SFW_NSFW_RE =
+  /\b(nipple|areola|pussy|penis|testicl|cum|anus|anal|sex|erection|bulge|masturbat|fellatio|paizuri|cunnilingus|orgasm|ahegao|condom|dildo|vibrator|bondage|bdsm|rape|molest|groping|lewd|cameltoe|upskirt|downblouse|crotch|cleavage|naked|nude|topless|bottomless|panties|panty|bra|lingerie|underwear|thong|garter|fundoshi|pubic|drool|ejaculat|lactation)\b/i;
+
+// 這幾個字會被上面的規則誤傷，但它們本身不情色：流汗、淋濕、蒸氣。
+const SFW_KEEP = new Set(["sweat", "wet", "wet hair", "steam"]);
+
+// regex 抓不到、但一樣不該出現的。
+const SFW_EXTRA = new Set([
+  "soft breasts",
+  "natural breasts",
+  "thigh gap",
+  "mole on breast",
+  "wet shirt",
+  "spread cleavage",
+  "breast focus",
+  "pov crotch",
+  "collar",
+  "leash",
+  "pet play",
+  "torn clothes",
+  "wardrobe malfunction",
+  "public indecency",
+  "exhibitionism",
+  "saliva",
+  "heart-shaped pupils",
+  "fucked silly",
+  "rolling eyes",
+  // 實際抽 4320 張之後看出來的漏網：規則對了，但這些字規則抓不到。
+  // 透視與極度暴露的衣著
+  "see-through shirt",
+  "micro bikini",
+  "slingshot swimsuit",
+  "revealing clothes",
+  "tight clothes",
+  "microskirt",
+  "unbuttoned shirt",
+  "wet clothes",
+  // 臀部特寫
+  "ass",
+  "huge ass",
+  "ass ripple",
+  "grabbing another's ass",
+  "hand on own ass",
+  // 挑逗的表情與動作
+  "naughty face",
+  "seductive smile",
+  "licking lips",
+  "clothes tug",
+  "come hither",
+  "cheating (relationship)",
+]);
+
+export function sfwBlocked(item) {
+  if (!item) return false;
+  const tag = item.tag;
+  if (SFW_KEEP.has(tag)) return false;
+  if (item.layer === "skin") return true;
+  if (item.mutex === "sex_act") return true;
+  if (item.group === "flash") return true;
+  if (item.mutex === "clothes_action") return true;
+  if (item.mutex === "underwear_top" || item.mutex === "underwear_bottom") return true;
+  const heat = item.heat && item.heat.length ? item.heat : MIXED_HEATS;
+  // 只在 flash/sex 才出現的字，本來就是為了那兩檔而存在的。
+  if (!heat.includes("tease")) return true;
+  if (SFW_EXTRA.has(tag)) return true;
+  // 胸部：mutex=breast_size 是體型，其餘（抓、托、夾、特寫）都擋。
+  if (/\bbreasts?\b/i.test(tag) && item.mutex !== "breast_size") return true;
+  if (SFW_NSFW_RE.test(tag)) return true;
+  return false;
+}
+
+export function sfwOn(settings) {
+  return !!(settings && settings.sfw);
+}
+
 const BATH_BAD_CLOTHES = new Set([
   "geta",
   "zouri",
@@ -631,6 +714,13 @@ const INDOOR_PROP = new Set([
   "office chair",
   "gaming chair",
   "swivel chair",
+  // 光源那一格裝的多半是「東西」而不是「光的性質」：WAI 會照著畫出一根蠟燭、
+  // 一盞吊燈。以前光源幾乎抽不到所以看不出來，改成每張都填之後就露餡了 ——
+  // 生出來的圖裡有一根蠟燭立在運動場草地上。這幾樣只能在室內。
+  "candle",
+  "candelabra",
+  "chandelier",
+  "fireplace",
 ]);
 const SPORT_PLACE = new Set([
   "fitness gym",
@@ -2699,6 +2789,18 @@ export function contradictions(lex, tags) {
 }
 
 export function drawOne(lex, settings, pinned, userBanned, rand, seed) {
+  const sfw = sfwOn(settings);
+  // 釘選會繞過 allow()（forcePin 就是為了「使用者說了算」而存在的），所以光在
+  // allow() 擋是不夠的：關掉色情模式之前釘的 nude、sex 會原封不動留在圖上，
+  // 實測 60/60。關掉色情模式時，這些釘選一律當作不存在 —— 這是整個模式的
+  // 保證，不能有例外。使用者原本的釘選沒有被改掉，重新打開就回來了。
+  if (sfw) {
+    const cleaned = new Set();
+    for (const t of pinned) {
+      if (!sfwBlocked(lex.byTag.get(t))) cleaned.add(t);
+    }
+    pinned = cleaned;
+  }
   const autoBan = autoBannedFromPins(lex, pinned);
   const banned = new Set([...userBanned, ...autoBan]);
   const used = new Set();
@@ -2779,6 +2881,9 @@ export function drawOne(lex, settings, pinned, userBanned, rand, seed) {
   };
   allow = (item, opts) => {
     if (banned.has(item.tag) || used.has(item.tag)) return false;
+    // 關掉色情模式：情色的字一個都不准進場。放在最前面，後面所有補救邏輯
+    // （浴場補衣、上衣補下著、必抽）也都走 allow，所以不會有人從側門把它們塞回來。
+    if (sfw && sfwBlocked(item)) return false;
     // loincloth 是中世紀男性浴場的可辨識替代衣著，不是每張中世紀圖的制服。
     // 服裝先於自然場景抽取，故一般 fill 先略過；場景確定為浴場後的 repair 仍可選。
     // forcePin 不走 allow，因此使用者明確釘選在任何場景都會完整保留。
@@ -4627,7 +4732,7 @@ export function drawOne(lex, settings, pinned, userBanned, rand, seed) {
       bucket[item.section].push(tag);
     }
   }
-  if (female) {
+  if (female && !sfw) {
     const feel = ["soft breasts", "natural breasts"];
     const after = feature.findLastIndex((t) => lex.byTag.get(t)?.mutex === "breast_size");
     let at = after >= 0 ? after + 1 : feature.length;
@@ -4639,7 +4744,9 @@ export function drawOne(lex, settings, pinned, userBanned, rand, seed) {
   }
   if (!env.includes("soft lighting")) env.unshift("soft lighting");
 
-  const nsfw = lex.data.nsfwTail;
+  // 色情模式關掉時，正面的 nsfw/explicit 換成相反的那組；伺服器那邊會把
+  // nsfw/explicit 改放到負面。
+  const nsfw = sfw ? lex.data.sfwTail || [] : lex.data.nsfwTail;
   const ordered = [...subject, ...feature, ...clothing, ...pose, ...env, ...nsfw, ...style, ...quality];
   const seen = new Set();
   const positive = [];
@@ -4723,6 +4830,7 @@ export function defaultSettings(data) {
     eras: d.eras ? [...d.eras] : [...ERAS],
     samePerson: false,
     drawJob: false,
+    sfw: false,
     pinSportActivity: false,
     lockScene: true,
     sceneMode: "normal",
@@ -4767,6 +4875,7 @@ export function sanitizeSettings(raw, data) {
     eras: eras.length ? eras : [...base.eras],
     samePerson: raw.samePerson === true,
     drawJob: raw.drawJob === true,
+    sfw: raw.sfw === true,
     pinSportActivity: raw.pinSportActivity === true,
     sceneMode,
     lockScene: sceneMode !== "weird",

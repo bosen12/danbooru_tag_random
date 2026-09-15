@@ -2001,6 +2001,12 @@ def main() -> None:
             "amazing quality",
         ],
         "nsfwTail": ["nsfw", "explicit"],
+        "sfwTail": ["sfw", "general"],
+        "sfwNegative": [
+            "nsfw", "explicit", "questionable", "nude", "nipples", "pussy",
+            "penis", "sex", "cum", "areolae", "topless", "bottomless",
+            "panties", "underwear", "cameltoe", "pubic hair",
+        ],
         "alwaysEnv": ["soft lighting"],
         "negative": NEGATIVE,
         "defaults": {
