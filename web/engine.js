@@ -728,6 +728,16 @@ const INDOOR_PROP = new Set([
   // 之後，2400 張裡就有 23 張天花板燈在戶外、75 張人在戶外卻打著窗光。
   "ceiling light",
   "window light",
+  // 搬不出去的室內物件。lamp 是桌燈／立燈（不是路燈，路燈是 lamppost），
+  // folding screen 是屏風 —— 室內隔間用的。
+  //
+  // 注意：statue、arch、stone wall 我本來也以為是戶外的，量完才發現它們在
+  // 室內完全合理（宮殿大廳的雕像、廳堂的拱門、城堡內側的石牆），所以沒有動它們。
+  "lamp",
+  "folding screen",
+  "piano",
+  "clock",
+  "birdcage",
 ]);
 const SPORT_PLACE = new Set([
   "fitness gym",
