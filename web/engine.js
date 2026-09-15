@@ -4470,7 +4470,12 @@ export function drawOne(lex, settings, pinned, userBanned, rand, seed) {
   // 先被場地／室內外／日夜／光源用掉，每個道具只剩大約 1% 的機率露臉。
   //
   // 只在歷史時代跑：現代的「道具」是手機和遊戲手把，那本來就不缺。
-  if (era && era !== "modern") {
+  //
+  // 把環境拉到 0 的人要的是最少的環境字，畫面上也寫著「不做額外隨機補牌，
+  // 必要骨架仍保留」。場地、室內外、日夜、光源是骨架（每張圖都得有），
+  // 一件年代道具是裝飾 —— 所以它跟著 counts 走。
+  // 不這樣做的話，我加的這一格會讓環境滑桿在 0~5 之間完全沒有效果。
+  if (era && era !== "modern" && Number(counts.env) > 0) {
     const props = lex.bySection.env.filter(
       (item) => item.group === "other" && !item.mutex && eraSpecific(item, era) && allow(item)
     );
