@@ -1978,47 +1978,110 @@ input[type="number"] {
   }
 }
 
-/* 尺度分級：三段滑桿。三個停點要看得見、點得到，拖到哪一段就亮哪一段。 */
-.rating-field .rating-slider {
+/* 尺度分級：分段控制項（Primer SegmentedControl 的結構與行為）。
+   視覺走本站 token —— radius 2px 的方角、紙感底色、朱紅重點色，
+   不是 Primer 那套圓角藍，那會跟這個版面打架。 */
+.field-label {
+  display: block;
+  font-size: var(--text-sm);
+  color: var(--color-muted);
+  margin-bottom: var(--space-2);
+}
+/* --thumb-x / --thumb-w 一定要用 @property 註冊成 <length>。
+   沒註冊的自訂屬性在 CSS 裡是「離散」變化 —— 值換掉就換掉，不會補間，
+   所以 transform: translate3d(var(--thumb-x),0,0) 上的 transition 根本不會跑，
+   色塊是用瞬移的。註冊成 <length> 之後才會被當成可補間的長度。
+   （這件事我是先寫完、量到色塊在瞬移、才回頭查出來的 —— 表面上 CSS 完全正確。）
+   inherits: true：值設在 ul 上，要讓 ::before 繼承得到。 */
+@property --thumb-x {
+  syntax: "<length>";
+  inherits: true;
+  initial-value: 0px;
+}
+@property --thumb-w {
+  syntax: "<length>";
+  inherits: true;
+  initial-value: 0px;
+}
+
+.segmented {
   position: relative;
-  padding: 2px 0 0;
-}
-.rating-field input[type="range"] {
-  width: 100%;
-  margin: 0;
-  accent-color: var(--accent, #6aa6ff);
-  cursor: pointer;
-}
-.rating-marks {
   display: flex;
-  justify-content: space-between;
-  margin-top: 2px;
+  margin: 0;
+  padding: 2px;
+  list-style: none;
+  border: var(--rule) solid var(--color-rule);
+  border-radius: var(--radius);
+  background-color: var(--color-paper-2);
 }
-.rating-mark {
-  flex: 0 0 auto;
+/* 選中的色塊是**一塊會滑動的東西**，不是三個按鈕各自亮起來。
+   分段控制項的招牌動效就是這個：眼睛跟著同一塊走，才看得出「同一個選擇換了位置」，
+   而不是「一個亮了、另一個暗了」。
+   位置與寬度由 JS 量出來寫進 --thumb-x / --thumb-w。用 ::before 而不是多一個
+   <span>，是因為 ul 底下只能放 li，塞 span 會是無效的 HTML。 */
+.segmented::before {
+  content: "";
+  position: absolute;
+  z-index: 0;
+  top: 2px;
+  bottom: 2px;
+  left: 0;
+  width: var(--thumb-w, 0);
+  transform: translate3d(var(--thumb-x, 0), 0, 0);
+  border-radius: calc(var(--radius) - 1px);
+  background-color: var(--color-paper-3);
+  box-shadow: inset 0 0 0 var(--rule) var(--color-rule);
+  /* 主角是 transform（不觸發 layout，滑動就靠它）。
+     width 也放進來是保險：三顆按鈕是 flex: 1 1 0，平常等寬（實測都是 73px），
+     所以切換時其實不會變 —— 但側欄寬度變了就會，那時候不動會看到色塊瞬間跳一格。 */
+  transition:
+    transform var(--dur-ui) var(--ease-out),
+    width var(--dur-ui) var(--ease-out);
+}
+/* 第一次上畫面時不要滑 —— 頁面剛載入就看到色塊從左邊飛過來很怪。
+   JS 量好位置之後才加上 is-ready。 */
+.segmented:not(.is-ready)::before {
+  transition: none;
+}
+.segmented-item {
+  position: relative;
+  z-index: 1;
+  flex: 1 1 0;
+  min-width: 0;
+}
+.segmented-btn {
+  appearance: none;
+  width: 100%;
+  min-height: 34px;
+  padding: 0 var(--space-2);
   border: 0;
-  background: none;
-  padding: 2px 6px;
+  border-radius: calc(var(--radius) - 1px);
+  background-color: transparent;
+  color: var(--color-muted);
   font: inherit;
-  font-size: 0.82em;
-  line-height: 1.3;
-  color: var(--dim, #8b93a7);
-  border-radius: 6px;
+  font-size: var(--text-sm);
+  line-height: 1.2;
+  white-space: nowrap;
   cursor: pointer;
-  /* 亮起來是顏色和字重的變化，不是位移 —— 位移會讓三個標籤在拖動時跳動 */
-  transition: color 140ms ease, background-color 140ms ease, font-weight 140ms ease;
+  touch-action: manipulation;
+  /* 字的變化比色塊快一點收尾，這樣「滑過去」和「字亮起來」不會像兩件事。 */
+  transition: color var(--dur-micro) var(--ease-out);
 }
-.rating-mark:first-child { margin-left: -6px; }
-.rating-mark:last-child { margin-right: -6px; }
-.rating-mark:hover { color: var(--fg, #e6e9f0); }
-.rating-mark.is-on {
-  color: var(--fg, #e6e9f0);
+.segmented-btn:hover {
+  color: var(--color-ink);
+}
+.segmented-btn[aria-current="true"] {
+  color: var(--color-ink);
   font-weight: 600;
-  background: color-mix(in srgb, var(--accent, #6aa6ff) 18%, transparent);
 }
-.rating-mark:focus-visible {
-  outline: 2px solid var(--accent, #6aa6ff);
-  outline-offset: 1px;
+/* 按下去要有回應。色塊在滑，按鈕本身輕輕一縮，手指／游標知道這一下有進去。 */
+.segmented-btn:active {
+  transform: scale(0.97);
+  transition: transform 60ms var(--ease-out);
+}
+.segmented-btn:focus-visible {
+  outline: 2px solid var(--color-focus);
+  outline-offset: -2px;
 }
 /* 分級變動時，詞庫面板會整批重畫。給一個很短的淡入，讓使用者知道是同一次操作
    造成的，而不是畫面自己閃了一下。 */
@@ -2028,6 +2091,9 @@ input[type="number"] {
   to { opacity: 1; }
 }
 @media (prefers-reduced-motion: reduce) {
-  .rating-mark { transition: none; }
+  .segmented::before,
+  .segmented-btn { transition: none; }
+  .segmented-btn:active { transform: none; }
   .rating-changed .cats { animation: none; }
+}
 }

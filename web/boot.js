@@ -581,18 +581,39 @@ const RATING_HINT = {
   explicit: "色情：現狀，什麼都抽得到。",
 };
 
+function ratingButtons() {
+  return [...document.querySelectorAll(".segmented-btn[data-rating]")];
+}
+
+// 把會滑動的色塊挪到目前選中的那一顆底下。位置用 offsetLeft／offsetWidth 量，
+// 寫進 CSS 變數讓 ::before 自己去過渡（見 boot.css）。
+function moveRatingThumb() {
+  const group = $("rating");
+  if (!group) return;
+  const on = group.querySelector('.segmented-btn[aria-current="true"]');
+  if (!on) return;
+  const item = on.closest(".segmented-item") || on;
+  // 量不到（面板收起來、還沒排版）就先不要動，免得把色塊縮成 0 寬再彈開。
+  if (!item.offsetWidth) return;
+  group.style.setProperty("--thumb-x", `${item.offsetLeft}px`);
+  group.style.setProperty("--thumb-w", `${item.offsetWidth}px`);
+  // 第一次量完才開過渡，否則載入時色塊會從左邊滑進來。
+  if (!group.classList.contains("is-ready")) {
+    // 先讓這一幀把位置畫出去，下一幀再允許過渡。
+    requestAnimationFrame(() => group.classList.add("is-ready"));
+  }
+}
+
 function syncRating() {
   const cur = RATINGS.includes(settings.rating) ? settings.rating : "explicit";
-  const slider = $("rating");
-  if (slider) {
-    const idx = String(RATINGS.indexOf(cur));
-    // 只在真的不同時才寫回去，否則拖動中會被自己蓋掉
-    if (slider.value !== idx) slider.value = idx;
-    slider.setAttribute("aria-valuetext", RATING_LABEL[cur] || cur);
+  for (const btn of ratingButtons()) {
+    const on = btn.dataset.rating === cur;
+    btn.setAttribute("aria-current", on ? "true" : "false");
+    // roving tabindex：整組只佔一個 Tab 停點，組內用方向鍵移動。
+    // 三個按鈕各自可 Tab 的話，鍵盤使用者要按三次才能離開這一個設定。
+    btn.tabIndex = on ? 0 : -1;
   }
-  for (const btn of document.querySelectorAll(".rating-mark")) {
-    btn.classList.toggle("is-on", btn.dataset.rating === cur);
-  }
+  moveRatingThumb();
   const hint = $("rating-hint");
   if (hint) hint.textContent = RATING_HINT[cur] || "";
 }
@@ -2882,18 +2903,33 @@ async function main() {
   bindUi();
   initLoraPicker();
   {
-    const slider = $("rating");
-    // input 是拖動中就更新（看得到即時反應），change 收尾。
-    slider?.addEventListener("input", () => {
-      setRating(RATINGS[Number(slider.value)] || "explicit", { speakIt: false });
-    });
-    slider?.addEventListener("change", () => {
-      speak(`尺度：${RATING_LABEL[settings.rating] || settings.rating}`);
-    });
-    // 三個停點的字本身也能點，比拖滑桿準
-    for (const btn of document.querySelectorAll(".rating-mark")) {
+    const group = $("rating");
+    const btns = ratingButtons();
+    for (const btn of btns) {
       btn.addEventListener("click", () => setRating(btn.dataset.rating));
     }
+    // 方向鍵在組內移動並直接套用（分段控制項的慣例：移到哪就是選到哪）。
+    group?.addEventListener("keydown", (e) => {
+      const list = ratingButtons();
+      const at = list.indexOf(document.activeElement);
+      if (at < 0) return;
+      let to = -1;
+      if (e.key === "ArrowLeft" || e.key === "ArrowUp") to = (at - 1 + list.length) % list.length;
+      else if (e.key === "ArrowRight" || e.key === "ArrowDown") to = (at + 1) % list.length;
+      else if (e.key === "Home") to = 0;
+      else if (e.key === "End") to = list.length - 1;
+      if (to < 0) return;
+      e.preventDefault();
+      setRating(list[to].dataset.rating);
+      // setRating 之後 tabindex 才會更新，所以聚焦要放在後面。
+      list[to].focus();
+    });
+    // 欄寬變了色塊就要跟著重量 —— 側欄會隨視窗縮放，字體載入完成也會改變按鈕寬度。
+    if (group && typeof ResizeObserver === "function") {
+      new ResizeObserver(() => moveRatingThumb()).observe(group);
+    }
+    // 網頁字體晚一點才到，到了之後寬度會變。
+    document.fonts?.ready?.then(() => moveRatingThumb());
   }
   syncRating();
   initTelegram();
