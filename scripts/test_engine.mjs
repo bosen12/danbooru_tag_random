@@ -1450,7 +1450,12 @@ function indoorOutdoorClash(have) {
     `cloth@${firstCloth} pose@${firstPose} pos=${d.positive}`
   );
   const qAt = parts.indexOf("masterpiece");
-  const nsfwAt = Math.max(parts.lastIndexOf("nsfw"), parts.lastIndexOf("explicit"));
+  // 尾巴的字現在看實際抽到的內容而定（explicit / sensitive / sfw+general），
+  // 所以這裡找「哪一個尾巴在場」，而不是寫死 nsfw —— 這條測的是位置，不是尺度。
+  const nsfwAt = Math.max(
+    parts.lastIndexOf("nsfw"), parts.lastIndexOf("explicit"),
+    parts.lastIndexOf("sensitive"), parts.lastIndexOf("general"), parts.lastIndexOf("sfw")
+  );
   const girlAt = parts.indexOf("1girl");
   ok("quality sits after subject", qAt > girlAt && girlAt >= 0, `girl@${girlAt} quality@${qAt}`);
   ok("quality sits after nsfw tail", qAt > nsfwAt && nsfwAt >= 0, `nsfw@${nsfwAt} quality@${qAt}`);

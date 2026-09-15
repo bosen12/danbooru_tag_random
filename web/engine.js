@@ -681,6 +681,77 @@ export function explicitOnly(item) {
   return false;
 }
 
+// 畫面上真的有什麼，決定這張圖是哪一級 —— 而不是滑桿說了算。
+//
+// Danbooru 的 rating 是從內容推出來的，WAI 也是照那個對應訓練的。滑桿只代表
+// 「我最多接受到哪一級」，不代表「每張都要標到那一級」。兩者混為一談的後果是：
+// 滑桿放色情、尺度選「活動」，一張全身穿好、在超市買東西的圖照樣被寫上
+// nsfw, explicit —— 那個組合在訓練集裡不存在，模型只能往色情的方向硬拉。
+//
+// 實測（每格 400 張，六個時代都一樣）：
+//   尺度=活動 或 誘惑 -> 100% 的圖沒有任何情色內容，卻都標著 explicit
+//   預設尺度（誘惑＋走光＋性愛）-> 29%
+//   走光、性愛 -> 0%（這兩個本來就名副其實）
+//
+// 判準只認畫面上的東西，不碰 heat/gate 那些「能不能抽」的欄位 ——
+// 我一開始拿 explicitOnly() 來當判準是錯的：那是閘不是分類器，
+// 只要一個字的 heat 沒有 tease 就回 true，連 shopping 都被算成情色內容。
+// 這裡用的是 Danbooru 的**內容**階梯，不是本程式的**權限**階梯。兩者不一樣：
+//   權限階梯（ratingBlocked / EXPLICIT_RE）說「敏感級不准出現內衣」—— 那是使用者
+//   自己訂的門檻，`bra` 連 sports bra 都算。
+//   內容階梯說「看得見內衣 = sensitive，露點與性行為 = explicit」—— 那是訓練集
+//   實際的標法，也是這條尾巴要對齊的東西。
+// 拿權限階梯當內容判準，穿運動內衣做健身會被標成 explicit。
+const EXPLICIT_CONTENT_RE = new RegExp(
+  "\\b(pussy|pussies|penis|testicl|cum\\w*|anus|anal|sex|erections?|" +
+    "masturbat|fellatio|paizuri|cunnilingus|orgasm|ahegao|fucked|" +
+    "rape|molest|groping|ejaculat|lactation|nude|naked|topless|bottomless|" +
+    "nipples?|areolae?|pubic|dildos?|vibrators?|condoms?)\\b",
+  "i"
+);
+
+// 看得出尺度但還沒到露點的：內衣外露、泳裝、透視、乳溝、走光。
+const SENSITIVE_CONTENT_RE = new RegExp(
+  "\\b(panty|panties|bra|lingerie|underwear|thong|garter|fundoshi|" +
+    "bikini|swimsuit|see-through|wet clothes|cleavage|underboob|sideboob|" +
+    "cameltoe|upskirt|downblouse|crotch|bulge|revealing)\\b",
+  "i"
+);
+
+function hasExplicitContent(item) {
+  if (!item) return false;
+  // sweat / wet / steam 會被字面規則誤傷，沿用既有的例外名單。
+  if (SFW_KEEP.has(item.tag)) return false;
+  if (item.layer === "skin") return true;
+  if (item.mutex === "sex_act" || item.group === "sex") return true;
+  if (item.mutex === "clothes_action") return true;
+  if (EXPLICIT_ONLY_EXTRA.has(item.tag)) return true;
+  // group="flash" 混了脫衣跟穿著衣服擺姿勢，不能整組算。但光看
+  // FLASH_UNDRESS_RE 會漏掉 masturbation through clothes、hand on own crotch
+  // 這種同屬 flash 卻明確情色的字 —— 實測就出過「masturbation through clothes
+  // + fucked silly」被標成 sfw, general 的圖，比原本的問題還糟。
+  return EXPLICIT_CONTENT_RE.test(item.tag);
+}
+
+function hasSensitiveContent(item) {
+  if (!item) return false;
+  if (SFW_KEEP.has(item.tag)) return false;
+  if (item.mutex === "underwear_top" || item.mutex === "underwear_bottom") return true;
+  if (item.group === "flash") return true;
+  return SENSITIVE_CONTENT_RE.test(item.tag);
+}
+
+// 照畫面推一級出來，再被滑桿壓上限（滑桿是天花板，不是目標）。
+export function ratingOfDrawnTags(items, cap) {
+  let level = "general";
+  for (const it of items) {
+    if (hasExplicitContent(it)) { level = "explicit"; break; }
+    if (hasSensitiveContent(it)) level = "sensitive";
+  }
+  const order = { general: 0, sensitive: 1, explicit: 2 };
+  return order[level] <= order[cap] ? level : cap;
+}
+
 export const RATINGS = ["general", "sensitive", "explicit"];
 export const RATING_LABEL = { general: "全年齡", sensitive: "敏感", explicit: "色情" };
 
@@ -5118,10 +5189,17 @@ export function drawOne(lex, settings, pinned, userBanned, rand, seed) {
 
   // 色情模式關掉時，正面的 nsfw/explicit 換成相反的那組；伺服器那邊會把
   // nsfw/explicit 改放到負面。
+  // 尾巴照實際抽到的內容給，滑桿只當上限。
+  const drawnItems = [];
+  for (const t of kept) {
+    const it = lex.byTag.get(t);
+    if (it) drawnItems.push(it);
+  }
+  const shownRating = ratingOfDrawnTags(drawnItems, rating);
   const nsfw =
-    rating === "explicit"
+    shownRating === "explicit"
       ? lex.data.nsfwTail
-      : rating === "sensitive"
+      : shownRating === "sensitive"
         ? lex.data.sensitiveTail || []
         : lex.data.sfwTail || [];
   const ordered = [...subject, ...feature, ...clothing, ...pose, ...env, ...nsfw, ...style, ...quality];
