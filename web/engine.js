@@ -339,6 +339,8 @@ const OUTDOOR_LEFTOVER = new Set([
   "campfire",
   "horse",
   "bonfire",
+  // 路燈是街上的東西。
+  "lamppost",
   "pine tree",
   "willow",
   "rice paddy",
@@ -721,6 +723,11 @@ const INDOOR_PROP = new Set([
   "candelabra",
   "chandelier",
   "fireplace",
+  // 天花板燈裝在天花板上，窗光是從窗戶照進「室內」的光 —— 兩個都不可能在戶外。
+  // 這兩個是舊有的問題，但光源以前只有 3% 機率抽到所以看不出來；改成每張都填
+  // 之後，2400 張裡就有 23 張天花板燈在戶外、75 張人在戶外卻打著窗光。
+  "ceiling light",
+  "window light",
 ]);
 const SPORT_PLACE = new Set([
   "fitness gym",
