@@ -1977,3 +1977,57 @@ input[type="number"] {
     padding-top: 0;
   }
 }
+
+/* 尺度分級：三段滑桿。三個停點要看得見、點得到，拖到哪一段就亮哪一段。 */
+.rating-field .rating-slider {
+  position: relative;
+  padding: 2px 0 0;
+}
+.rating-field input[type="range"] {
+  width: 100%;
+  margin: 0;
+  accent-color: var(--accent, #6aa6ff);
+  cursor: pointer;
+}
+.rating-marks {
+  display: flex;
+  justify-content: space-between;
+  margin-top: 2px;
+}
+.rating-mark {
+  flex: 0 0 auto;
+  border: 0;
+  background: none;
+  padding: 2px 6px;
+  font: inherit;
+  font-size: 0.82em;
+  line-height: 1.3;
+  color: var(--dim, #8b93a7);
+  border-radius: 6px;
+  cursor: pointer;
+  /* 亮起來是顏色和字重的變化，不是位移 —— 位移會讓三個標籤在拖動時跳動 */
+  transition: color 140ms ease, background-color 140ms ease, font-weight 140ms ease;
+}
+.rating-mark:first-child { margin-left: -6px; }
+.rating-mark:last-child { margin-right: -6px; }
+.rating-mark:hover { color: var(--fg, #e6e9f0); }
+.rating-mark.is-on {
+  color: var(--fg, #e6e9f0);
+  font-weight: 600;
+  background: color-mix(in srgb, var(--accent, #6aa6ff) 18%, transparent);
+}
+.rating-mark:focus-visible {
+  outline: 2px solid var(--accent, #6aa6ff);
+  outline-offset: 1px;
+}
+/* 分級變動時，詞庫面板會整批重畫。給一個很短的淡入，讓使用者知道是同一次操作
+   造成的，而不是畫面自己閃了一下。 */
+.rating-changed .cats { animation: rating-fade 200ms ease; }
+@keyframes rating-fade {
+  from { opacity: 0.45; }
+  to { opacity: 1; }
+}
+@media (prefers-reduced-motion: reduce) {
+  .rating-mark { transition: none; }
+  .rating-changed .cats { animation: none; }
+}

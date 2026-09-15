@@ -2010,6 +2010,11 @@ def main() -> None:
         ],
         "nsfwTail": ["nsfw", "explicit"],
         "sfwTail": ["sfw", "general"],
+        "sensitiveTail": ["sensitive"],
+        "sensitiveNegative": [
+            "explicit", "nude", "nipples", "pussy", "penis", "sex", "cum",
+            "areolae", "topless", "bottomless", "pubic hair",
+        ],
         "sfwNegative": [
             "nsfw", "explicit", "questionable", "nude", "nipples", "pussy",
             "penis", "sex", "cum", "areolae", "topless", "bottomless",

@@ -6,6 +6,8 @@ import {
   defaultSettings,
   drawOne,
   sceneModeOf,
+  RATINGS,
+  RATING_LABEL,
   identityPins,
   identityBans,
   isIdentityItem,
@@ -550,28 +552,44 @@ function applyNamedPreset(preset) {
   else speak("已套用釘選組合");
 }
 
-function syncPornMode() {
-  const btn = $("porn-mode");
-  if (!btn) return;
-  // 開關顯示的是「色情模式」，settings 存的是相反的 sfw —— 所以這裡要反過來。
-  const on = !settings.sfw;
-  btn.classList.toggle("is-on", on);
-  btn.setAttribute("aria-checked", on ? "true" : "false");
-  const hint = $("porn-mode-hint");
-  if (hint) {
-    hint.textContent = on
-      ? "關掉＝完全不抽情色的字，nsfw／explicit 改放負面"
-      : "已關閉：情色的字抽不到，nsfw／explicit 在負面";
+const RATING_HINT = {
+  general: "全年齡：連暗示都沒有。情色的字整批抽不到，nsfw／explicit 在負面。",
+  sensitive: "敏感：性感但不露點、不做愛、不穿內衣外出、不走光。",
+  explicit: "色情：現狀，什麼都抽得到。",
+};
+
+function syncRating() {
+  const cur = RATINGS.includes(settings.rating) ? settings.rating : "explicit";
+  const slider = $("rating");
+  if (slider) {
+    const idx = String(RATINGS.indexOf(cur));
+    // 只在真的不同時才寫回去，否則拖動中會被自己蓋掉
+    if (slider.value !== idx) slider.value = idx;
+    slider.setAttribute("aria-valuetext", RATING_LABEL[cur] || cur);
   }
+  for (const btn of document.querySelectorAll(".rating-mark")) {
+    btn.classList.toggle("is-on", btn.dataset.rating === cur);
+  }
+  const hint = $("rating-hint");
+  if (hint) hint.textContent = RATING_HINT[cur] || "";
 }
 
-function togglePornMode() {
-  settings.sfw = !settings.sfw;
+function setRating(next, { speakIt = true } = {}) {
+  if (!RATINGS.includes(next) || next === settings.rating) {
+    syncRating();
+    return;
+  }
+  settings.rating = next;
   saveStore();
-  syncPornMode();
-  // 可抽的字整批變了，詞庫面板要重畫。
+  syncRating();
+  // 能抽的字整批變了，詞庫面板要重畫。加一個很短的淡入，讓使用者看得出來
+  // 這次重畫是自己剛才那一下造成的。
+  const rail = document.querySelector(".rail") || document.body;
+  rail.classList.remove("rating-changed");
+  void rail.offsetWidth;
+  rail.classList.add("rating-changed");
   renderCats("filter");
-  speak(settings.sfw ? "色情模式已關閉" : "色情模式已開啟");
+  if (speakIt) speak(`尺度：${RATING_LABEL[next]}`);
 }
 
 function pickHeat(h) {
@@ -2102,8 +2120,8 @@ async function streamCardJob(card, seedNum, extra) {
         seed: seedNum,
         loras: extra.loras || currentLorasPayload(),
         ckpt: extra.ckpt || currentCkpt(),
-        // 伺服器要靠這個決定負面詞：關掉色情模式時把 nsfw/explicit 移過去。
-        sfw: !!settings.sfw,
+        // 伺服器要靠這個決定負面詞。
+        rating: settings.rating || "explicit",
       },
       (event, data) => {
         kick();
@@ -2838,8 +2856,21 @@ async function main() {
   renderTray();
   bindUi();
   initLoraPicker();
-  $("porn-mode")?.addEventListener("click", togglePornMode);
-  syncPornMode();
+  {
+    const slider = $("rating");
+    // input 是拖動中就更新（看得到即時反應），change 收尾。
+    slider?.addEventListener("input", () => {
+      setRating(RATINGS[Number(slider.value)] || "explicit", { speakIt: false });
+    });
+    slider?.addEventListener("change", () => {
+      speak(`尺度：${RATING_LABEL[settings.rating] || settings.rating}`);
+    });
+    // 三個停點的字本身也能點，比拖滑桿準
+    for (const btn of document.querySelectorAll(".rating-mark")) {
+      btn.addEventListener("click", () => setRating(btn.dataset.rating));
+    }
+  }
+  syncRating();
   initTelegram();
   initDiscord();
   initInfinite({

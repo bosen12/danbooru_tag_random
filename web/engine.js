@@ -549,7 +549,7 @@ const BATH_ACT = new Set(["bathing", "showering", "shared bathing"]);
 //
 // 身體「尺寸」是體型描述（large breasts），留著；對身體「做什麼」一律擋。
 const SFW_NSFW_RE =
-  /\b(nipple|areola|pussy|penis|testicl|cum|anus|anal|sex|erection|bulge|masturbat|fellatio|paizuri|cunnilingus|orgasm|ahegao|condom|dildo|vibrator|bondage|bdsm|rape|molest|groping|lewd|cameltoe|upskirt|downblouse|crotch|cleavage|naked|nude|topless|bottomless|panties|panty|bra|lingerie|underwear|thong|garter|fundoshi|pubic|drool|ejaculat|lactation)\b/i;
+  /\b(nipples?|areolae?|pussy|pussies|penis|testicl|cum\w*|anus|anal|sex|erections?|bulge|masturbat|fellatio|paizuri|cunnilingus|orgasm|ahegao|condoms?|dildos?|vibrators?|bondage|bdsm|rape|molest|groping|lewd|cameltoe|upskirt|downblouse|crotch|cleavage|naked|nude|topless|bottomless|panties|panty|bra|lingerie|underwear|thong|garter|fundoshi|pubic|drool|ejaculat|lactation)\b/i;
 
 // 這幾個字會被上面的規則誤傷，但它們本身不情色：流汗、淋濕、蒸氣。
 const SFW_KEEP = new Set(["sweat", "wet", "wet hair", "steam"]);
@@ -598,7 +598,104 @@ const SFW_EXTRA = new Set([
   "clothes tug",
   "come hither",
   "cheating (relationship)",
+  // 全年齡＝連暗示都沒有。這幾個沒有露點，但畫面上讀起來就是性感取向 ——
+  // 兩段制的時候它們待在「關掉色情」那一檔，正是那時候會生出
+  // 網襪＋極短洋裝＋背向蹲姿的原因。現在它們有 sensitive 可以去。
+  "fishnet thighhighs",
+  "fishnets",
+  "short dress",
+  "garter belt",
+  "thigh strap",
+  "bare shoulders",
+  "off shoulder",
 ]);
+
+// 三段分級，對齊 Danbooru 自己的 rating 階梯。
+//
+//   general    全年齡：連暗示都沒有
+//   sensitive  敏感：性感，但沒有露點、沒有性行為、沒有內衣外穿、沒有走光
+//   explicit   色情：現狀
+//
+// 中間這段是為了解掉一個兩段制解不掉的問題：兩段的時候「關掉色情」同時要
+// 負責「乾淨」和「不色情」，結果兩件事都做不好 —— 實測會生出網襪＋極短洋裝＋
+// 背向蹲姿的圖，沒有露點卻明顯是性感取向。
+//
+// group="flash" 這一組混了兩種東西，不能整組處理：
+//   掀裙、拉衣、走光、滑落  -> 那是脫衣，只有 explicit 能有
+//   彎腰、張腿、跪趴、跨坐  -> 穿著衣服擺姿勢，正是 sensitive 的內容
+// 這正是「規則掛錯層級」那條教訓：group 不等於概念。
+const FLASH_UNDRESS_RE =
+  /\b(lift|pull|aside|slip|undress|flashing|exhibitionism|wedgie|grab|tweak|chikan|nude|spread pussy)\b/i;
+
+// 這些不是暴露，是明講的性 —— 不管穿多少都只能在 explicit。
+const EXPLICIT_ONLY_EXTRA = new Set([
+  "see-through shirt",
+  "micro bikini",
+  "slingshot swimsuit",
+  "naked coat",
+  "naked jacket",
+  "pussy focus",
+  "cameltoe",
+  "masturbation through clothes",
+  "groping",
+  "netorare",
+  "cheating (relationship)",
+  "voyeurism",
+  "breastfeeding",
+  "used condom",
+  "dildo",
+  "condom",
+]);
+
+// 只有 explicit 能出現：真正的性、裸露、脫衣走光、內衣當外衣。
+// explicit 專屬的字眼。比 general 那條窄：cleavage、crotch、彎腰張腿這些
+// 「穿著衣服的性感」要留給 sensitive，所以不在這條裡面。
+// 字根要吃得下複數與複合字：nipple 配不到 "pink nipples"，
+// cum 配不到 "cumdrip" —— 兩個都真的漏過。
+const EXPLICIT_RE = new RegExp(
+  "\\b(nipples?|areolae?|pussy|pussies|penis|testicl|cum\\w*|anus|anal|sex|erections?|" +
+    "masturbat|fellatio|cunnilingus|orgasm|ahegao|condom|dildo|vibrator|" +
+    "bondage|bdsm|rape|molest|nude|naked|topless|bottomless|panties|panty|bra|" +
+    "lingerie|underwear|thong|garter|fundoshi|pubic|ejaculat|lactation|" +
+    "upskirt|downblouse|cameltoe)\\b",
+  "i"
+);
+
+export function explicitOnly(item) {
+  if (!item) return false;
+  const tag = item.tag;
+  if (SFW_KEEP.has(tag)) return false;
+  if (item.layer === "skin") return true;
+  // 用 group 不用 mutex：ejaculation、cumdrip、masturbation 都是 group="sex"
+  // 但 mutex 是 null，寫成 mutex === "sex_act" 的話它們會整批從旁邊走過去
+  // 混進 sensitive。這是這個 session 第四次踩到「規則掛錯層級」。
+  if (item.group === "sex" || item.mutex === "sex_act") return true;
+  // 脫衣動作是 explicit，但「穿著衣服擺姿勢」不是 —— 所以不用 heat 判斷。
+  // flash 那一檔的姿勢（彎腰、張腿、跨坐）heat 裡本來就沒有 tease，
+  // 拿 heat 當鑰匙會把整個 sensitive 檔位掏空。
+  if (item.mutex === "clothes_action") return true;
+  if (item.mutex === "underwear_top" || item.mutex === "underwear_bottom") return true;
+  if (item.group === "flash" && FLASH_UNDRESS_RE.test(tag)) return true;
+  if (EXPLICIT_ONLY_EXTRA.has(tag)) return true;
+  if (EXPLICIT_RE.test(tag)) return true;
+  return false;
+}
+
+export const RATINGS = ["general", "sensitive", "explicit"];
+export const RATING_LABEL = { general: "全年齡", sensitive: "敏感", explicit: "色情" };
+
+export function ratingOf(settings) {
+  const r = settings && settings.rating;
+  return RATINGS.includes(r) ? r : "explicit";
+}
+
+// 某個字在某一級之下能不能出現。
+// general 沿用已經逐字審過、實抽 4320 張驗證過的 sfwBlocked()，不重寫。
+export function ratingBlocked(item, rating) {
+  if (rating === "explicit") return false;
+  if (rating === "sensitive") return explicitOnly(item);
+  return sfwBlocked(item);
+}
 
 export function sfwBlocked(item) {
   if (!item) return false;
@@ -619,8 +716,9 @@ export function sfwBlocked(item) {
   return false;
 }
 
+// 舊的布林開關還留著給既有呼叫端用：非 explicit 就代表要過濾。
 export function sfwOn(settings) {
-  return !!(settings && settings.sfw);
+  return ratingOf(settings) !== "explicit";
 }
 
 const BATH_BAD_CLOTHES = new Set([
@@ -2847,7 +2945,9 @@ export function contradictions(lex, tags) {
 }
 
 export function drawOne(lex, settings, pinned, userBanned, rand, seed) {
-  const sfw = sfwOn(settings);
+  const rating = ratingOf(settings);
+  const sfw = rating !== "explicit";
+  const blockedByRating = (item) => ratingBlocked(item, rating);
   // 釘選會繞過 allow()（forcePin 就是為了「使用者說了算」而存在的），所以光在
   // allow() 擋是不夠的：關掉色情模式之前釘的 nude、sex 會原封不動留在圖上，
   // 實測 60/60。關掉色情模式時，這些釘選一律當作不存在 —— 這是整個模式的
@@ -2855,7 +2955,7 @@ export function drawOne(lex, settings, pinned, userBanned, rand, seed) {
   if (sfw) {
     const cleaned = new Set();
     for (const t of pinned) {
-      if (!sfwBlocked(lex.byTag.get(t))) cleaned.add(t);
+      if (!blockedByRating(lex.byTag.get(t))) cleaned.add(t);
     }
     pinned = cleaned;
   }
@@ -2941,7 +3041,7 @@ export function drawOne(lex, settings, pinned, userBanned, rand, seed) {
     if (banned.has(item.tag) || used.has(item.tag)) return false;
     // 關掉色情模式：情色的字一個都不准進場。放在最前面，後面所有補救邏輯
     // （浴場補衣、上衣補下著、必抽）也都走 allow，所以不會有人從側門把它們塞回來。
-    if (sfw && sfwBlocked(item)) return false;
+    if (sfw && blockedByRating(item)) return false;
     // loincloth 是中世紀男性浴場的可辨識替代衣著，不是每張中世紀圖的制服。
     // 服裝先於自然場景抽取，故一般 fill 先略過；場景確定為浴場後的 repair 仍可選。
     // forcePin 不走 allow，因此使用者明確釘選在任何場景都會完整保留。
@@ -4821,7 +4921,12 @@ export function drawOne(lex, settings, pinned, userBanned, rand, seed) {
 
   // 色情模式關掉時，正面的 nsfw/explicit 換成相反的那組；伺服器那邊會把
   // nsfw/explicit 改放到負面。
-  const nsfw = sfw ? lex.data.sfwTail || [] : lex.data.nsfwTail;
+  const nsfw =
+    rating === "explicit"
+      ? lex.data.nsfwTail
+      : rating === "sensitive"
+        ? lex.data.sensitiveTail || []
+        : lex.data.sfwTail || [];
   const ordered = [...subject, ...feature, ...clothing, ...pose, ...env, ...nsfw, ...style, ...quality];
   const seen = new Set();
   const positive = [];
@@ -4905,7 +5010,7 @@ export function defaultSettings(data) {
     eras: d.eras ? [...d.eras] : [...ERAS],
     samePerson: false,
     drawJob: false,
-    sfw: false,
+    rating: "explicit",
     pinSportActivity: false,
     lockScene: true,
     sceneMode: "normal",
@@ -4950,7 +5055,12 @@ export function sanitizeSettings(raw, data) {
     eras: eras.length ? eras : [...base.eras],
     samePerson: raw.samePerson === true,
     drawJob: raw.drawJob === true,
-    sfw: raw.sfw === true,
+    // 舊存檔存的是布林 sfw，沿用時對應到全年齡。
+    rating: RATINGS.includes(raw.rating)
+      ? raw.rating
+      : raw.sfw === true
+        ? "general"
+        : "explicit",
     pinSportActivity: raw.pinSportActivity === true,
     sceneMode,
     lockScene: sceneMode !== "weird",

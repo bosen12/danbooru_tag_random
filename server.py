@@ -107,6 +107,20 @@ def _negative() -> str:
 NEGATIVE = _negative()
 
 
+def _rating_negative(key: str, fallback: list) -> list:
+    path = SHARED / "lexicon.json"
+    if not path.is_file():
+        path = WEB / "lexicon.json"
+    try:
+        data = json.loads(path.read_text(encoding="utf-8"))
+        got = data.get(key)
+        if isinstance(got, list) and got:
+            return [str(x) for x in got if str(x).strip()]
+    except Exception:
+        pass
+    return list(fallback)
+
+
 def _sfw_negative() -> list:
     path = SHARED / "lexicon.json"
     if not path.is_file():
@@ -124,16 +138,29 @@ def _sfw_negative() -> list:
 SFW_NEGATIVE = _sfw_negative()
 
 
-def negative_for(sfw: bool) -> str:
-    """關掉色情模式時，把 nsfw/explicit 那一組移到負面。
+SENSITIVE_NEGATIVE = _rating_negative(
+    "sensitiveNegative",
+    ["explicit", "nude", "nipples", "pussy", "penis", "sex", "cum"],
+)
 
-    正面那邊由 engine.js 換成 sfwTail，並且情色的字根本抽不出來；這裡是第二道
-    保險 —— 模型就算自己想畫，負面也會把它拉回來。
+
+def negative_for(rating) -> str:
+    """依分級決定負面詞。
+
+    正面那邊由 engine.js 換掉尾巴，而且該級不能出現的字根本抽不出來；
+    這裡是第二道保險 —— 模型就算自己想畫，負面也會把它拉回來。
+
+    為了相容舊的呼叫方式，傳 True/False 仍然當成 general／explicit。
     """
-    if not sfw:
+    if rating is True:
+        rating = "general"
+    elif rating is False or rating is None:
+        rating = "explicit"
+    if rating == "explicit":
         return NEGATIVE
-    extra = [t for t in SFW_NEGATIVE if t not in NEGATIVE]
-    return NEGATIVE + (", " + ", ".join(extra) if extra else "")
+    extra = SFW_NEGATIVE if rating == "general" else SENSITIVE_NEGATIVE
+    add = [t for t in extra if t not in NEGATIVE]
+    return NEGATIVE + (", " + ", ".join(add) if add else "")
 _DEFAULT_ALLOW_NET = "127.0.0.0/8,100.64.0.0/10"
 
 
@@ -298,7 +325,7 @@ def inject_lora(wf: dict, lora_name: str, strength: float) -> None:
 
 
 def build_workflow(positive: str, width: int, height: int, seed: int, loras=None,
-                   ckpt=None, sfw: bool = False) -> dict:
+                   ckpt=None, sfw: bool = False, rating=None) -> dict:
     ckpt_name = resolve_ckpt(ckpt)
     wf = {
         "13": {
@@ -311,7 +338,7 @@ def build_workflow(positive: str, width: int, height: int, seed: int, loras=None
         },
         "37": {
             "class_type": "CLIPTextEncode",
-            "inputs": {"text": negative_for(sfw), "clip": ["13", 1]},
+            "inputs": {"text": negative_for(rating if rating is not None else sfw), "clip": ["13", 1]},
         },
         "119": {
             "class_type": "EmptyLatentImage",
@@ -669,7 +696,7 @@ def gen_events(payload: dict):
     seed = int(seed) & SEED_MAX
     wf = build_workflow(
         positive, width, height, seed, payload.get("loras"), payload.get("ckpt"),
-        sfw=bool(payload.get("sfw")),
+        sfw=bool(payload.get("sfw")), rating=payload.get("rating"),
     )
     yield ("queued", {"seed": seed, "width": width, "height": height})
     try:
@@ -700,7 +727,7 @@ def gen(payload: dict) -> dict:
     seed = int(seed) & SEED_MAX
     wf = build_workflow(
         positive, width, height, seed, payload.get("loras"), payload.get("ckpt"),
-        sfw=bool(payload.get("sfw")),
+        sfw=bool(payload.get("sfw")), rating=payload.get("rating"),
     )
     prompt_id = api("POST", "/prompt", {"prompt": wf}, timeout=60)["prompt_id"]
     hist = wait_done(prompt_id)

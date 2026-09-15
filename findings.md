@@ -863,3 +863,62 @@ engine.js 有 **22 種** `item.mutex === "X"` 的判斷，對每一種找出「g
 比第一版差一點，但沒有為了數字去撞契約。
 
 **這是這個 session 第三次「看起來像 bug、其實有測試在守著」。**
+
+## Loop 12：兩段改三段（使用者提議的 sensitive）
+
+使用者問要不要加一個「敏感」檔位。**要，而且它正好解掉我自己先前留下的那個判斷題** ——
+我在做色情模式時說過「保證是沒有性、沒有露點，但不等於不性感」，並把界線留給使用者決定。
+兩段制的問題在於「關掉色情」那一檔同時要負責「乾淨」和「不色情」，兩件事做不好。
+
+### 先查事實再建議
+
+- `general` / `sensitive` / `questionable` / `explicit` 是 **Danbooru 自己的 rating 階梯**。
+- 但這六個字在 Danbooru 上 **post_count 全是 0** —— 它們是 rating metadata 不是 tag。
+  Illustrious 系列拿 rating 當 token 訓練，所以模型吃這一套（現在的 `nsfw, explicit` 有效就是這個道理）。
+- 中間層有沒有料？目前被擋的 242 個字裡，大約 117 個是硬性（性行為、裸露），
+  其餘是軟性（乳溝、彎腰、張腿、跪趴、挑逗表情、網襪）。**夠撐起一個檔位。**
+
+使用者選：三段、UI 改成三點滑桿、敏感**不含內衣與走光**。
+
+### group="flash" 混了兩種東西
+
+這一組 61 個字裡同時有：
+
+- **掀裙、拉衣、走光、滑落** —— 那是脫衣，只有 explicit 能有
+- **彎腰、張腿、跪趴、跨坐** —— 穿著衣服擺姿勢，**正是 sensitive 的內容**
+
+整組擋掉的話 sensitive 會被掏空。改用「動作字根」分：
+`lift|pull|aside|slip|undress|flashing|wedgie|grab|tweak` → explicit，其餘留給 sensitive。
+**又一次驗證「group 不等於概念」。**
+
+### 第一版錯了兩處，都是量出來的
+
+1. **拿 heat 當鑰匙會掏空 sensitive。** flash 檔的姿勢 heat 裡本來就沒有 tease，
+   `!heat.includes("tease")` 一條就把 bent over / spread legs / straddling 全擋掉了。拿掉。
+2. **沿用 general 的 regex 太寬** —— 那條連 `cleavage`、`crotch` 都擋。
+   explicit 另寫一條窄的。
+
+### 修完之後又抓到兩個漏
+
+- **`nipple` 配不到 `nipples`**（字尾 s 破壞了 word boundary），
+  於是 `pink nipples` 漏進**全年齡**。`cum` 也配不到 `cumdrip`。字根改成吃複數。
+- **`ejaculation`、`cumdrip`、`masturbation` 是 `group:"sex"` 但 `mutex:null`** ——
+  規則寫成 `mutex === "sex_act"`，它們整批從旁邊走進 sensitive。
+  **這是這個 session 第四次踩到「規則掛錯層級」**，而且是我自己剛寫下那條教訓之後又踩的。
+
+### 結果
+
+| 檔位 | 擋掉 | 可用字 | 實抽 1440 張的漏出 |
+|---|---|---|---|
+| 全年齡 | 304 | 1000 | **0** |
+| 敏感 | 216 | 1088 | **0** |
+| 色情 | 0 | 1304 | **0** |
+
+同一個 seed 的三張：全年齡是浴袍＋大小姐姿勢；敏感是緊身衣＋網襪＋蹲姿；色情維持原樣。
+
+順帶把全年齡收得更嚴（網襪、極短洋裝、吊襪帶、露肩），因為現在它們有 sensitive 可以去 ——
+這正是我先前留給使用者的那個判斷題的答案。
+
+舊存檔的布林 `sfw` 會對應到全年齡，伺服器的 `negative_for()` 也保留布林相容。
+
+—— Opus 5

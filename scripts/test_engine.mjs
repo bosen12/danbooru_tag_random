@@ -40,6 +40,8 @@ import {
   toggleHeat,
   HEATS,
   sfwBlocked,
+  ratingBlocked,
+  RATINGS,
   heatPresetOf,
   weightsForHeats,
   nextTagWeight,
@@ -6693,7 +6695,7 @@ function indoorOutdoorClash(have) {
   const s = defaultSettings(data);
   s.girl = true;
   s.boy = true;
-  s.sfw = true;
+  s.rating = "general";
   const leaks = new Map();
   let noTail = 0;
   let hadNsfw = 0;
@@ -6739,7 +6741,7 @@ function indoorOutdoorClash(have) {
   // 會原封不動留在圖上。這條測的是「連釘選都擋得住」。
   const sPin = defaultSettings(data);
   sPin.girl = true;
-  sPin.sfw = true;
+  sPin.rating = "general";
   const stuck = [];
   const goneWhenOn = [];
   for (const tag of ["nude", "completely nude", "sex", "nipples", "bra"]) {
@@ -6913,6 +6915,71 @@ function indoorOutdoorClash(have) {
       .some((t) => lex.byTag.get(t)?.layer === "skin")) sexSkin += 1;
   }
   ok("性愛尺度仍然抽得到裸標（證明上面擋的是真的有在擋）", sexSkin > 80, `${sexSkin}/300`);
+}
+
+{
+  // 三段分級：每一段都不能漏出該段不該有的字，而且下一段要真的比上一段寬。
+  const leaks = {};
+  const kinds = {};
+  for (const rating of RATINGS) {
+    const s = defaultSettings(data);
+    s.girl = true;
+    s.boy = true;
+    s.rating = rating;
+    const bad = new Set();
+    const seen = new Set();
+    for (const era of ERAS) {
+      for (const heat of HEATS) {
+        s.eras = [era];
+        s.heats = [heat];
+        for (let i = 1; i <= 25; i++) {
+          for (const t of tagsOf(drawOne(lex, s, new Set(), new Set(), mulberry32(i), i))) {
+            seen.add(t);
+            if (ratingBlocked(lex.byTag.get(t), rating)) bad.add(t);
+          }
+        }
+      }
+    }
+    leaks[rating] = bad;
+    kinds[rating] = seen.size;
+  }
+  for (const rating of RATINGS) {
+    eq(`分級 ${rating}：沒有該級不該有的字漏出來`, leaks[rating].size, 0);
+    if (leaks[rating].size) console.error(`      ${[...leaks[rating]].slice(0, 6).join("  ")}`);
+  }
+  // 階梯要真的是階梯，不是三個一樣的東西
+  ok("分級是階梯：敏感比全年齡寬", kinds.sensitive > kinds.general,
+     `general=${kinds.general} sensitive=${kinds.sensitive}`);
+  ok("分級是階梯：色情比敏感寬", kinds.explicit > kinds.sensitive,
+     `sensitive=${kinds.sensitive} explicit=${kinds.explicit}`);
+
+  // 界線要照使用者定的走：敏感＝性感但不露、不做愛、不內衣、不走光
+  const line = [
+    ["bent over", "sensitive"], ["cleavage", "sensitive"], ["straddling", "sensitive"],
+    ["microskirt", "sensitive"], ["fishnet thighhighs", "sensitive"],
+    ["nude", "explicit"], ["sex", "explicit"], ["bra", "explicit"],
+    ["panties", "explicit"], ["skirt lift", "explicit"], ["upskirt", "explicit"],
+    ["ejaculation", "explicit"], ["cumdrip", "explicit"], ["pink nipples", "explicit"],
+  ];
+  const wrong = [];
+  for (const [tag, firstAllowed] of line) {
+    const it = lex.byTag.get(tag);
+    if (!it) continue;
+    if (ratingBlocked(it, "explicit")) wrong.push(`${tag} 在色情也被擋`);
+    if (firstAllowed === "sensitive" && ratingBlocked(it, "sensitive")) {
+      wrong.push(`${tag} 應該在敏感可用`);
+    }
+    if (firstAllowed === "explicit" && !ratingBlocked(it, "sensitive")) {
+      wrong.push(`${tag} 不該在敏感出現`);
+    }
+    if (!ratingBlocked(it, "general")) wrong.push(`${tag} 不該在全年齡出現`);
+  }
+  eq("分級界線符合設定（敏感＝穿著衣服的性感）", wrong.length, 0);
+  if (wrong.length) console.error(`      ${wrong.join("  ")}`);
+
+  // 舊存檔相容：以前存的是布林 sfw
+  eq("舊存檔 sfw:true 對應到全年齡", sanitizeSettings({ sfw: true }, data).rating, "general");
+  eq("舊存檔 sfw:false 對應到色情", sanitizeSettings({ sfw: false }, data).rating, "explicit");
 }
 
 if (failed) {

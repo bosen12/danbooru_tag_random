@@ -12,6 +12,22 @@
     "sfw",
     "general"
   ],
+  "sensitiveTail": [
+    "sensitive"
+  ],
+  "sensitiveNegative": [
+    "explicit",
+    "nude",
+    "nipples",
+    "pussy",
+    "penis",
+    "sex",
+    "cum",
+    "areolae",
+    "topless",
+    "bottomless",
+    "pubic hair"
+  ],
   "sfwNegative": [
     "nsfw",
     "explicit",

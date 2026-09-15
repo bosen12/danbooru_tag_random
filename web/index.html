@@ -45,21 +45,32 @@
       <aside class="rail" aria-label="抽卡設定">
         <h2>先定規則，再點詞庫</h2>
 
-        <div class="field">
-          <button
-            type="button"
-            class="same-switch"
-            id="porn-mode"
-            role="switch"
-            aria-checked="true"
-            aria-describedby="porn-mode-hint"
-          >
-            <span class="same-knob" aria-hidden="true"><i></i></span>
-            <span class="same-copy">
-              <strong>色情模式</strong>
-              <em id="porn-mode-hint">關掉＝完全不抽情色的字，nsfw／explicit 改放負面</em>
-            </span>
-          </button>
+        <div class="field rating-field">
+          <label for="rating">尺度分級</label>
+          <div class="rating-slider">
+            <input
+              id="rating"
+              name="rating"
+              type="range"
+              min="0"
+              max="2"
+              step="1"
+              value="2"
+              aria-describedby="rating-hint"
+              list="rating-stops"
+            />
+            <datalist id="rating-stops">
+              <option value="0"></option>
+              <option value="1"></option>
+              <option value="2"></option>
+            </datalist>
+            <div class="rating-marks" aria-hidden="true">
+              <button type="button" class="rating-mark" data-rating="general">全年齡</button>
+              <button type="button" class="rating-mark" data-rating="sensitive">敏感</button>
+              <button type="button" class="rating-mark is-on" data-rating="explicit">色情</button>
+            </div>
+          </div>
+          <p class="hint" id="rating-hint">色情＝現狀。敏感＝性感但不露點、不做愛、不穿內衣外出、不走光。全年齡＝連暗示都沒有。</p>
         </div>
 
         <div class="field batch-field">
