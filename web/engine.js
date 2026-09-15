@@ -1475,7 +1475,7 @@ function isBathOkGarment(item) {
 // 以前這些是在 allow() 裡一條一條手寫的 if，寫到哪擋到哪：stethoscope、hard hat、
 // police hat、lab coat 有，goggles、swim cap、boxing gloves、microphone 沒有 ——
 // 結果辦公室裡有人戴蛙鏡、教堂裡有人拿麥克風、溫泉裡有人戴拳擊手套。
-const ACC_NEEDS_CONTEXT = {
+export const ACC_NEEDS_CONTEXT = {
   goggles: new Set([
     "swimming", "diving", "pool", "poolside", "underwater", "ocean", "skiing",
     "laboratory", "scientist", "construction site", "construction worker",
@@ -1505,6 +1505,31 @@ const ACC_NEEDS_CONTEXT = {
   handcuffs: new Set(["bondage", "bdsm", "prison", "policewoman", "police uniform"]),
   "o-ring": new Set(["bondage", "bdsm", "lingerie", "swimsuit", "bikini"]),
 };
+
+// 上面那張表只做了負向的一半：沒有場合就刪掉。
+// 少了正向的一半，配件就只能靠「瞎抽剛好碰上場合」存活 —— 實測釘住 pet play
+// 抽 400 張，leash 出現 0 次；釘 boxing，拳擊手套 4 次；釘 armor，肩甲 0 次。
+// 對照 microphone 釘 singing 是 400/400，因為 ACT_PROP 會在活動定下來之後
+// 把麥克風拉進來。負向擋、正向拉，兩半要齊。
+//
+// 只收「有那個場合就幾乎一定有那個東西」的配對，而且是擲骰子不是必定 ——
+// stampActProps() 無條件蓋章正是之前宮廷裡 52% 都在拿平底鍋的原因。
+export const CTX_PULLS_ACC = [
+  ["pet play", "animal collar", 0.8],
+  ["pet play", "leash", 0.4],
+  ["bondage", "handcuffs", 0.4],
+  ["boxing", "boxing gloves", 0.85],
+  ["playing sports", "knee pads", 0.25],
+  ["riding bicycle", "bicycle helmet", 0.45],
+  ["armor", "shoulder armor", 0.5],
+  ["plate armor", "shoulder armor", 0.5],
+];
+
+// 沒有收進上表的：clipboard 和 o-ring。
+// 辦公室不代表有寫字板，比基尼不代表有 O 環 —— 那是我自己想出來的關聯，不是那個
+// 場合本來就有的東西。硬收進來只是為了讓數字不是 0，那是在替指標作答。
+// 代價是這兩個字現在幾乎抽不到（4320 張裡各 1 次）。這是刻意的：它們以前是
+// 「沒場合也會出現」，現在是「有場合才出現、而那個場合很少」—— 後者才是對的。
 
 const SCENE_BAD_ACC = {
   office: /\b(police hat|nurse cap|hard hat|helmet|stethoscope|innertube|beach umbrella)\b/,
@@ -3778,13 +3803,6 @@ export function drawOne(lex, settings, pinned, userBanned, rand, seed) {
       return false;
     }
     if (item.tag === "police hat" && !used.has("policewoman") && !used.has("police uniform")) return false;
-    // 上面那幾條是一個一個手寫的，於是只擋到有人想到的那幾樣：蛙鏡出現在辦公室、
-    // 泳帽出現在睡覺、拳擊手套出現在溫泉、麥克風出現在教堂。
-    // 這張表把同一條規則寫成資料 —— 這些配件都得有它的場合才准出現。
-    {
-      const need = ACC_NEEDS_CONTEXT[item.tag];
-      if (need && ![...used].some((t) => need.has(t))) return false;
-    }
     if (item.tag === "nurse cap" && !used.has("nurse")) return false;
     if (item.tag === "tsurime" && used.has("tareme")) return false;
     if (item.tag === "tareme" && used.has("tsurime")) return false;
@@ -4935,6 +4953,61 @@ export function drawOne(lex, settings, pinned, userBanned, rand, seed) {
           for (const g of extraMutex(it)) {
             if (mutexTaken.get(g) === t) mutexTaken.delete(g);
           }
+        }
+      }
+    }
+  }
+  // 正向的一半：場合已經定了，把跟它成對的配件拉進來。
+  // 泡澡游泳不拉 —— 那邊的配件本來就要少，不是要多。
+  {
+    const kind = sceneClothLocked(used, mustPins(), lex, era, lockSceneOn(settings));
+    // 使用者把服裝目標數設成 0，就是不要衣服。這一段是在額度花完之後才 commit 的，
+    // 不擋的話會直接跨過那個 0（實測釘住場合時 1000 張裡有 442 張冒出配件）。
+    //
+    // 旁邊的 stampActProps() 有同樣的問題 —— 釘 singing、服裝設 0，microphone
+    // 照樣 300/300 出現，新舊版都一樣。那是既有行為，不在這次動的範圍，
+    // 但新加的東西不該拿它當藉口。
+    const clothBudget = Math.max(0, Math.min(10, Number(counts.clothing) || 0));
+    if (clothBudget > 0 && kind !== "bath" && kind !== "swim") {
+      for (const [ctx, acc, chance] of CTX_PULLS_ACC) {
+        if (!used.has(ctx) || used.has(acc)) continue;
+        const item = lex.byTag.get(acc);
+        if (!item) continue;
+        if (!eraOk(item, era) || !heatOk(item, heat) || !gateOk(item, female, male)) continue;
+        // 用 allow() 而不是自己再寫一遍條件。commit() 只驗相依字、不驗這個字本身，
+        // 所以這一關得自己過 —— 但要過的是既有那一關，不是我另外寫的一關。
+        // （例如 allow() 裡有「性愛熱度不要隨機抽入拳擊手套」那條，自己寫會漏掉。）
+        if (!allow(item)) continue;
+        if (rand() < chance) commit(acc);
+      }
+    }
+  }
+
+  // 配件的場合檢查要放在這裡，不能放在 allow()。
+  //
+  // 我第一版放在 allow() 裡，結果 animal collar 86->0、leash 19->0、clipboard 15->0、
+  // knee pads 13->0、handcuffs 14->0 —— 全部變成永遠抽不到。原因是順序：
+  // 衣服在 fill("clothing") 就填完了，而場地 fillSlot("env","place") 和活動
+  // fillSlot("pose","activity") 都在那之後才跑。allow() 看到的 used 裡根本還沒有
+  // 場地和活動，「沒有場合」這個條件於是永遠成立。
+  //
+  // police hat 要 policewoman、nurse cap 要 nurse 之所以沒事，純粹是因為那兩個是
+  // 職業，在 fillSlot("feature","job") 就定了 —— 剛好排在衣服前面。我照抄那個寫法，
+  // 卻沒注意到它依賴的是排序而不是規則本身。
+  //
+  // 這裡是全部填完、reconcile() 之前，該知道的都知道了。旁邊的 ACT_PROP 收尾
+  // 用的就是同一個位置和同一個手法。
+  {
+    // mustPins() 而不是 pinned：必抽抽到的字跟釘選一樣不能被刪掉。
+    const guard = mustPins();
+    for (const [tag, need] of Object.entries(ACC_NEEDS_CONTEXT)) {
+      if (!used.has(tag) || guard.has(tag)) continue;
+      if ([...used].some((t) => need.has(t))) continue;
+      const it = lex.byTag.get(tag);
+      used.delete(tag);
+      if (it) {
+        for (const g of extraMutex(it)) {
+          if (mutexTaken.get(g) === tag) mutexTaken.delete(g);
         }
       }
     }

@@ -65,6 +65,8 @@ import {
   sportPlacePinWarnings,
   clearPresetTags,
   togglePresetTags,
+  ACC_NEEDS_CONTEXT,
+  CTX_PULLS_ACC,
 } from "../web/engine.js";
 import {
   SPORT_BUTTONS,
@@ -6992,6 +6994,77 @@ function indoorOutdoorClash(have) {
   // 舊存檔相容：以前存的是布林 sfw
   eq("舊存檔 sfw:true 對應到全年齡", sanitizeSettings({ sfw: true }, data).rating, "general");
   eq("舊存檔 sfw:false 對應到色情", sanitizeSettings({ sfw: false }, data).rating, "explicit");
+}
+
+// 配件的場合規則。這一段是因為我自己把它改壞過兩次才補的：
+//   第一版用黑名單 —— 沒列到的東西全部從洞裡走過去（溫泉戴拳擊手套）。
+//   第二版把檢查寫進 allow() —— 那裡看到的 used 還沒有場地和活動，
+//   於是 animal collar 86->0、leash 19->0、clipboard 15->0、handcuffs 14->0，
+//   五個字直接變成永遠抽不到，而所有測試都是綠的。
+// 所以這裡驗的是「規格」，不是分布：表從 engine.js import 進來，不抄第二份。
+{
+  let n = 0;
+  const offenders = new Map();
+  for (const mode of ["normal", "diverse", "weird"]) {
+    for (const heat of ["activity", "tease", "flash", "sex"]) {
+      for (const rating of ["general", "sensitive", "explicit"]) {
+        for (let i = 1; i <= 60; i++) {
+          const s = settings();
+          s.girl = true;
+          s.boy = true;
+          s.sceneMode = mode;
+          s.heats = [heat];
+          s.rating = rating;
+          const seed = i * 31 + heat.length;
+          const have = tagsOf(drawOne(lex, s, new Set(), new Set(), mulberry32(seed), seed));
+          n += 1;
+          for (const [tag, need] of Object.entries(ACC_NEEDS_CONTEXT)) {
+            if (!have.has(tag)) continue;
+            if ([...have].some((t) => need.has(t))) continue;
+            offenders.set(tag, (offenders.get(tag) || 0) + 1);
+          }
+        }
+      }
+    }
+  }
+  eq(`配件沒有場合就不該出現（${n} 張）`, offenders.size, 0);
+  if (offenders.size) console.error(`      ${[...offenders].map(([t, c]) => `${t}:${c}`).join("  ")}`);
+
+  // 反面：擋歸擋，不能擋到抽不到。釘住場合之後，配對的配件要真的拉得進來。
+  const unreachable = [];
+  for (const [ctx, acc] of CTX_PULLS_ACC) {
+    if (!lex.byTag.has(ctx) || !lex.byTag.has(acc)) { unreachable.push(`${acc}（詞庫沒有）`); continue; }
+    let pinned = applyPin(lex, new Set(), new Set(), ctx).pinned;
+    // shoulder armor 只在中世紀有，釘 armor 不會把時代拉過去（既有行為），
+    // 所以這裡把時代一起指定，驗的是「有場合就拉得到」而不是時代規則。
+    const era = (lex.byTag.get(acc)?.era || []).filter((e) => e !== "any");
+    let hit = 0;
+    for (let i = 1; i <= 120; i++) {
+      const s = settings();
+      s.girl = true;
+      s.boy = false;
+      s.rating = "explicit";
+      if (era.length) s.eras = era;
+      if (tagsOf(drawOne(lex, s, pinned, new Set(), mulberry32(i * 13), i * 13)).has(acc)) hit += 1;
+    }
+    if (hit === 0) unreachable.push(`${acc}（釘了 ${ctx} 仍 0/120）`);
+  }
+  eq("釘住場合之後配對的配件抽得到", unreachable.length, 0);
+  if (unreachable.length) console.error(`      ${unreachable.join("  ")}`);
+
+  // 釘選永遠優先：使用者自己釘的配件不會被場合規則刪掉。
+  let dropped = 0;
+  for (const tag of Object.keys(ACC_NEEDS_CONTEXT)) {
+    if (!lex.byTag.has(tag)) continue;
+    const pinned = applyPin(lex, new Set(), new Set(), tag).pinned;
+    for (let i = 1; i <= 40; i++) {
+      const s = settings();
+      s.girl = true;
+      s.rating = "explicit";
+      if (!tagsOf(drawOne(lex, s, pinned, new Set(), mulberry32(i * 7), i * 7)).has(tag)) dropped += 1;
+    }
+  }
+  eq("釘選的配件不會被場合規則刪掉", dropped, 0);
 }
 
 if (failed) {
