@@ -22398,7 +22398,8 @@
       "implies": [],
       "layer": "normal",
       "era": [
-        "any"
+        "modern",
+        "victorian"
       ],
       "group": "activity",
       "zh": "彈吉他"
@@ -22571,7 +22572,7 @@
       "implies": [],
       "layer": "normal",
       "era": [
-        "any"
+        "modern"
       ],
       "group": "activity",
       "zh": "瑜伽"
@@ -22715,7 +22716,7 @@
       ],
       "layer": "normal",
       "era": [
-        "any"
+        "modern"
       ],
       "group": "activity",
       "zh": "日光浴"
@@ -22734,7 +22735,9 @@
       "implies": [],
       "layer": "normal",
       "era": [
-        "any"
+        "modern",
+        "edo",
+        "victorian"
       ],
       "group": "activity",
       "zh": "吸菸"

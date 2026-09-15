@@ -142,6 +142,14 @@ ERA_OF = {
     # 窄裙是 1950 年代的辦公室服裝，維多利亞穿不到它。移走之前 victorian
     # 的 bottom 池只有它一件真衣服，所以同一批補了長裙、襯裙、裙撐。
     "pencil skirt": _M,
+    # 活動也會時代錯置，而且沒人查過。菸草到 1500 年代才進歐洲，吉他是 15 世紀
+    # 以後的樂器，日光浴當成休閒是 20 世紀的事，瑜伽墊那種畫面也是現代的。
+    # 這四個原本是「任何時代」，於是古希臘有 3% 的圖在抽菸、4% 在做瑜伽。
+    # 江戶有煙管、維多利亞有菸，所以 smoking 留給這兩個時代。
+    "smoking": ["modern", "edo", "victorian"],
+    "yoga": _M,
+    "playing guitar": _MV,
+    "sunbathing": _M,
     "long skirt": ["modern", "victorian", "medieval", "ancient_china"],
     "pleated skirt": _M,
     "microskirt": _M,
