@@ -1470,6 +1470,42 @@ function isBathOkGarment(item) {
   );
 }
 
+// 需要場合才成立的配件。沒有對應的活動／場地／身分就不該出現。
+//
+// 以前這些是在 allow() 裡一條一條手寫的 if，寫到哪擋到哪：stethoscope、hard hat、
+// police hat、lab coat 有，goggles、swim cap、boxing gloves、microphone 沒有 ——
+// 結果辦公室裡有人戴蛙鏡、教堂裡有人拿麥克風、溫泉裡有人戴拳擊手套。
+const ACC_NEEDS_CONTEXT = {
+  goggles: new Set([
+    "swimming", "diving", "pool", "poolside", "underwater", "ocean", "skiing",
+    "laboratory", "scientist", "construction site", "construction worker",
+  ]),
+  "swim cap": new Set(["swimming", "diving", "pool", "poolside", "underwater", "ocean"]),
+  "boxing gloves": new Set(["boxing", "fitness gym", "stadium", "training", "exercising"]),
+  "knee pads": new Set([
+    "playing sports", "exercising", "training", "skiing", "basketball", "volleyball",
+    "skating", "stadium", "school gym", "fitness gym",
+  ]),
+  microphone: new Set(["singing", "karaoke"]),
+  clipboard: new Set([
+    "office", "office lady", "salaryman", "teacher", "classroom", "nurse", "doctor",
+    "clinic", "hospital", "laboratory", "scientist", "construction site",
+  ]),
+  // 這四個是原本手寫規則允許的範圍，原樣搬過來。騎士配頭盔照理也說得通，
+  // 但那是擴大行為、不是修這個 bug，這次不動。
+  helmet: new Set(["riding bicycle", "skiing", "construction site", "construction worker"]),
+  "bicycle helmet": new Set(["riding bicycle", "street", "city", "park", "stadium"]),
+  "shoulder armor": new Set([
+    "armor", "plate armor", "leather armor", "chinese armor", "japanese armor",
+    "knight", "samurai", "gladiator", "viking", "battlefield", "castle",
+  ]),
+  // 寵物／拘束類的東西要有那個情境，不能當成一般飾品隨便出現
+  "animal collar": new Set(["pet play", "leash", "bondage", "bdsm"]),
+  leash: new Set(["pet play", "animal collar", "collar", "bondage", "bdsm"]),
+  handcuffs: new Set(["bondage", "bdsm", "prison", "policewoman", "police uniform"]),
+  "o-ring": new Set(["bondage", "bdsm", "lingerie", "swimsuit", "bikini"]),
+};
+
 const SCENE_BAD_ACC = {
   office: /\b(police hat|nurse cap|hard hat|helmet|stethoscope|innertube|beach umbrella)\b/,
   school: /\b(police hat|nurse cap|hard hat|helmet|stethoscope|innertube|beach umbrella)\b/,
@@ -1481,8 +1517,39 @@ const SCENE_BAD_ACC = {
   bath: /\b(necktie|bowtie|police hat|nurse cap|hard hat|helmet|stethoscope|microphone|clipboard|innertube|beach umbrella|umbrella|high heels)\b/,
 };
 
+// 泡澡與游泳的配件改用白名單。
+//
+// 原本 SCENE_BAD_ACC.bath 是一份 13 樣的黑名單，於是沒被列到的東西全部從洞裡
+// 走過去：600 張溫泉圖裡 collar 428 次、gloves 275、goggles 195、baseball cap 147，
+// 還有拳擊手套和寵物項圈 —— 泡溫泉戴著手套、棒球帽和項圈。
+//
+// 黑名單在這裡註定有洞：配件有 79 個，而「下水時會脫掉什麼」是開放集合。
+// 白名單是封閉的：只留真的會戴著下水的東西（綁起來的頭髮、戒指耳環、眼鏡、毛巾）。
+// 使用者自己釘的配件不受影響 —— allow() 與場景掃描都有 pinned 例外。
+const BATH_OK_ACC = new Set([
+  "barefoot",
+  "towel",
+  // 泡湯把頭髮盤起來，這幾樣正是拿來盤頭髮的
+  "hair ornament",
+  "hairpin",
+  "hair stick",
+  "kanzashi",
+  // 戒指耳環多半不會為了泡澡特地拔掉
+  "ring",
+  "wedding ring",
+  "earrings",
+  "stud earrings",
+  "hoop earrings",
+  "glasses",
+]);
+
+// 游泳多了泳具；泡澡不該有蛙鏡和泳帽。
+const SWIM_OK_ACC = new Set([...BATH_OK_ACC, "goggles", "swim cap", "innertube"]);
+
 function accessoryOkForKind(item, kind) {
   if (!item || item.layer !== "accessory") return true;
+  if (kind === "bath") return BATH_OK_ACC.has(item.tag);
+  if (kind === "swim") return SWIM_OK_ACC.has(item.tag);
   const re = SCENE_BAD_ACC[kind];
   return !(re && re.test(item.tag));
 }
@@ -3652,7 +3719,6 @@ export function drawOne(lex, settings, pinned, userBanned, rand, seed) {
       if (plantedTease(item.tag) && [...used].some((t) => MOVE_ACT.has(t))) return false;
       if (MOVE_ACT.has(item.tag) && [...used].some(plantedTease)) return false;
     }
-    if (item.tag === "microphone" && !used.has("singing") && !used.has("karaoke")) return false;
     if (
       item.tag === "bunk bed" &&
       ![...used].some((t) => t === "bedroom" || t === "dormitory" || t === "hotel room" || t === "kids room")
@@ -3712,16 +3778,14 @@ export function drawOne(lex, settings, pinned, userBanned, rand, seed) {
       return false;
     }
     if (item.tag === "police hat" && !used.has("policewoman") && !used.has("police uniform")) return false;
-    if (item.tag === "nurse cap" && !used.has("nurse")) return false;
-    if (
-      item.tag === "helmet" &&
-      !used.has("riding bicycle") &&
-      !used.has("construction worker") &&
-      !used.has("construction site") &&
-      !used.has("skiing")
-    ) {
-      return false;
+    // 上面那幾條是一個一個手寫的，於是只擋到有人想到的那幾樣：蛙鏡出現在辦公室、
+    // 泳帽出現在睡覺、拳擊手套出現在溫泉、麥克風出現在教堂。
+    // 這張表把同一條規則寫成資料 —— 這些配件都得有它的場合才准出現。
+    {
+      const need = ACC_NEEDS_CONTEXT[item.tag];
+      if (need && ![...used].some((t) => need.has(t))) return false;
     }
+    if (item.tag === "nurse cap" && !used.has("nurse")) return false;
     if (item.tag === "tsurime" && used.has("tareme")) return false;
     if (item.tag === "tareme" && used.has("tsurime")) return false;
     if (
@@ -4232,8 +4296,25 @@ export function drawOne(lex, settings, pinned, userBanned, rand, seed) {
     return false;
   };
 
+  // 泡澡／游泳本來就沒什麼好穿的，但服裝段的目標數不知道這件事：衣服被場景掃掉
+  // 之後，那個額度會整批轉去補配件 —— 溫泉圖平均 4.6 件配件、0.8 件衣服，
+  // 而一般場景是 0.7 件配件、5.4 件衣服。
+  //
+  // 以前那些額度填的是項圈、手套、棒球帽（黑名單沒列到的），改成白名單之後填的
+  // 變成髮飾、眼鏡、耳環，每張都有 —— 問題從來不是「填什麼」，是「不該填那麼多」。
+  //
+  // 這個上限一定要下在 want，不能下在 fill 的過濾函式：那個函式是先把整池篩完
+  // 才開始 commit，計數在裡面永遠是 0（我第一版就是這樣寫的，完全沒有作用）。
+  const WATER_CLOTH_WANT = 3;
+  const clothingWant = (base) => {
+    const kind = sceneClothLocked(used, mustPins(), lex, era, lockSceneOn(settings));
+    if (kind !== "bath" && kind !== "swim") return base;
+    return Math.min(base, WATER_CLOTH_WANT);
+  };
+
   const fill = (section, extraFilter) => {
-    const want = Math.max(0, Math.min(10, Number(counts[section]) || 0));
+    let want = Math.max(0, Math.min(10, Number(counts[section]) || 0));
+    if (section === "clothing") want = clothingWant(want);
     const need = want - countSection(section);
     if (need <= 0) return;
     const pool = lex.bySection[section].filter(
