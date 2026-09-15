@@ -263,6 +263,25 @@ SKIN = {
 }
 
 SEX = {
+    # 2026-09-15：這幾個本來被歸進「走光」，但它們不是走光。
+    #
+    # 原因是 assign_group() 底下那條 `"flash" in heat and "tease" not in heat`——
+    # 那是拿 heat（什麼時候抽得到）去決定 group（這是什麼東西）。癡漢的 heat 是
+    # ["flash","sex"]，於是就被歸成走光了，沒有人判斷過它的意思。
+    #
+    # 走光＝衣服意外露出來；這幾個是性接觸或自慰，跟露不露沒有關係。
+    # 分級結果本來就是「只有色情」（靠 FLASH_UNDRESS_RE 裡硬塞的 chikan|grab|tweak
+    # 這些字），所以這次改的是「用對的理由得到同樣的結果」——
+    # 例外是 self fondling，它哪一條特例都沒對到，本來錯在敏感層。
+    "chikan",
+    "breast grab",
+    "ass grab",
+    "nipple tweak",
+    "grinding",
+    "spread pussy",
+    "hand in panties",
+    "masturbation through clothes",
+    "self fondling",
     "sex",
     "vaginal",
     "anal",

@@ -556,6 +556,10 @@ const SFW_KEEP = new Set(["sweat", "wet", "wet hair", "steam"]);
 
 // regex 抓不到、但一樣不該出現的。
 const SFW_EXTRA = new Set([
+  // 這兩個本來全年齡就抽得到，但實測帶著 3 倍於基準的成人圖，
+  // 語意上也確實是「性感取向」而不是中性 —— 往上挪一層到敏感。
+  "biting own lip",      // 3.1x
+  "legs up",             // 3.2x
   "soft breasts",
   "natural breasts",
   "thigh gap",
@@ -629,6 +633,26 @@ const FLASH_UNDRESS_RE =
 
 // 這些不是暴露，是明講的性 —— 不管穿多少都只能在 explicit。
 const EXPLICIT_ONLY_EXTRA = new Set([
+  // 2026-09-15 逐字對 Danbooru 的實際 rating 分布查過之後補的。
+  // 判準是「相對全站基準的倍率」而不是原始百分比 —— 全站有 20.2% 的圖是 q+e，
+  // 所以一個字帶著 20% 成人圖只代表它很普通。第一版直接看百分比，
+  // 把 v（比 YA）、head tilt（歪頭）都判成敏感，明顯是被基準騙了。
+  //
+  // 收進來的只有語意上本來就是「露出／性器／性行為／高潮狀態」的字，
+  // 純粹的身體姿勢（spread legs、m legs、straddling、bent over）留在敏感 ——
+  // 那些字配上穿著整齊的衣服仍然成立，是不是色情由衣服決定。
+  "one breast out",      // 4.9x，字面就是露出來了
+  "covering breasts",    // 3.5x，遮胸的前提是沒穿
+  "covering crotch",     // 3.9x，同上
+  "bulge",               // 4.1x，性器輪廓
+  "hand on own crotch",  // 4.1x
+  "grinding",            // 5.0x，性行為
+  "moaning",             // 5.0x，e98%
+  "fucked silly",        // 4.9x，e98%
+  "rolling eyes",        // 4.8x，e94%，翻白眼是 ahegao 的一部分
+  "aroused",             // 4.5x
+  "heavy breathing",     // 3.9x
+  "panting",             // 3.9x
   "see-through shirt",
   "micro bikini",
   "slingshot swimsuit",
@@ -765,7 +789,16 @@ export function ratingOf(settings) {
 export function ratingBlocked(item, rating) {
   if (rating === "explicit") return false;
   if (rating === "sensitive") return explicitOnly(item);
-  return sfwBlocked(item);
+  // 全年齡是階梯的最底層，所以「敏感擋掉的，這裡一定也擋」。
+  //
+  // 以前這兩層各用各的判準：敏感看 explicitOnly()（含 EXPLICIT_ONLY_EXTRA 名單），
+  // 全年齡看 sfwBlocked()（字面 regex）。兩邊沒有任何東西保證是階梯，於是
+  // netorare、voyeurism、breastfeeding 在敏感被擋、在全年齡卻放行 ——
+  // 因為那三個字裡沒有任何一個 regex 認得的詞。實抽 2800 張全年齡的圖，
+  // netorare 47 次、voyeurism 72 次。
+  //
+  // 補名單只能修掉這三個，補階梯才是修掉這一類。
+  return sfwBlocked(item) || explicitOnly(item);
 }
 
 export function sfwBlocked(item) {

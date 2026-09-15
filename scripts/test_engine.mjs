@@ -7166,6 +7166,23 @@ function indoorOutdoorClash(have) {
   eq("釘選的配件不會被場合規則刪掉", dropped, 0);
 }
 
+// --- 分級是階梯 -------------------------------------------------------------
+// 敏感擋掉的字，全年齡一定也要擋。以前兩層各用各的判準（敏感看名單、全年齡看字面
+// regex），沒有任何東西保證這件事，於是 netorare / voyeurism / breastfeeding
+// 在敏感被擋、全年齡卻放行 —— 實抽 2800 張全年齡的圖，netorare 47 次、voyeurism 72 次。
+{
+  const broken = data.tags.filter(
+    (t) => ratingBlocked(t, "sensitive") && !ratingBlocked(t, "general")
+  );
+  eq("分級是階梯：敏感擋掉的全年齡一定也擋", broken.length, 0);
+  if (broken.length) console.error(`      ${broken.slice(0, 6).map((t) => t.tag).join("、")}`);
+  // 反面：階梯不能靠「全年齡把全部擋光」成立。
+  const okInGeneral = data.tags.filter((t) => !ratingBlocked(t, "general"));
+  ok("全年齡仍然有夠多的字可用（不是靠全擋來滿足階梯）", okInGeneral.length >= 900,
+     `只剩 ${okInGeneral.length} 個`);
+}
+
+
 if (failed) {
   console.error(`\n${failed} failed`);
   process.exit(1);
