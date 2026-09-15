@@ -966,12 +966,14 @@ const MODERN_ONLY = [
     const d = drawOne(lex, s, pinned, new Set(), mulberry32(22000 + i), 22000 + i);
     const have = tagsOf(d);
     if (have.has("gaming chair") || have.has("swivel chair")) chair += 1;
-    if (!have.has("sports bra") || !have.has("bra")) missingBra += 1;
+    // sports bra 不再連帶 bra：Danbooru 上 sports_bra 沒有任何 implication，
+    // 顏色款也只 implies sports_bra。運動內衣在他們的分類裡不是 bra。
+    if (!have.has("sports bra")) missingBra += 1;
     if (!have.has("castle") && !have.has("armor")) missingCastle += 1;
     if (d.era !== "medieval") chair += 1;
   }
   eq("medieval + sports bra pin still medieval", chair, 0);
-  eq("medieval + sports bra pin keeps bra", missingBra, 0);
+  eq("medieval + sports bra pin keeps sports bra", missingBra, 0);
   eq("medieval + sports bra pin still stamps castle/armor", missingCastle, 0);
 }
 
@@ -1953,27 +1955,35 @@ function indoorOutdoorClash(have) {
   ok("loli is in the lexicon", !!k);
   eq("loli is a female feature", k?.section, "feature");
   eq("loli gate is female", k?.gate, "female");
-  ok("loli implies small breasts", (k?.implies || []).includes("small breasts"));
+  // 2026-09-15：拿掉 flat chest -> small breasts（以及 loli -> small breasts）。
+  // Danbooru 上 flat_chest 沒有任何 implication，而且兩者都是 mutex=breast_size ——
+  // 平胸和小胸是同一把尺上的兩個點，不是父子。實測 17% 的圖同時寫著兩個。
+  //
+  // 有可能的反面理由是出圖品質（flat chest 單獨下去會不會畫成中性胸？），
+  // 所以真的出了圖：同 seed、同提示詞，只差這一個字，兩個 seed 都清楚是女性、
+  // 沒有中性化。既有測試沒有寫下理由，圖也不支持那個理由，所以照資料修正。
+  ok("loli 不再連帶 small breasts", !(k?.implies || []).includes("small breasts"));
   ok("loli implies flat chest", (k?.implies || []).includes("flat chest"));
   ok("loli implies petite", (k?.implies || []).includes("petite"));
-  ok("flat chest implies small breasts", (lex.byTag.get("flat chest")?.implies || []).includes("small breasts"));
+  ok("flat chest 不再 implies small breasts（Danbooru 沒有這條）",
+     !(lex.byTag.get("flat chest")?.implies || []).includes("small breasts"));
   eq("flat chest mutex is breast_size", lex.byTag.get("flat chest")?.mutex, "breast_size");
   eq("petite mutex is height", lex.byTag.get("petite")?.mutex, "height");
   ok("loli mutexes tall female", mutexSiblings(lex, "loli").includes("tall female"));
   ok("petite mutexes tall female", mutexSiblings(lex, "petite").includes("tall female"));
   ok("petite does not mutex loli", !mutexSiblings(lex, "petite").includes("loli"));
   ok("flat chest mutexes huge breasts", mutexSiblings(lex, "flat chest").includes("huge breasts"));
-  ok("flat chest does not mutex small breasts", !mutexSiblings(lex, "flat chest").includes("small breasts"));
+  // 拆掉父子關係之後，兩者回到正常的互斥關係：同一個 breast_size 格只能有一個值。
+  ok("flat chest 與 small breasts 互斥（同一個 breast_size 格）",
+     mutexSiblings(lex, "flat chest").includes("small breasts"));
   ok("loli does not mutex milf", !mutexSiblings(lex, "loli").includes("milf"));
   ok("loli does not mutex mature female", !mutexSiblings(lex, "loli").includes("mature female"));
   const pin = applyPin(lex, new Set(), new Set(), "loli");
   ok(
-    "pin loli also pins petite, flat chest and small breasts",
-    pin.pinned.has("loli") &&
-      pin.pinned.has("petite") &&
-      pin.pinned.has("flat chest") &&
-      pin.pinned.has("small breasts")
+    "pin loli also pins petite and flat chest",
+    pin.pinned.has("loli") && pin.pinned.has("petite") && pin.pinned.has("flat chest")
   );
+  ok("pin loli 不再連帶 small breasts", !pin.pinned.has("small breasts"));
   const s = settings();
   s.girl = true;
   s.boy = false;
@@ -1990,7 +2000,6 @@ function indoorOutdoorClash(have) {
       !h.has("loli") ||
       !h.has("petite") ||
       !h.has("flat chest") ||
-      !h.has("small breasts") ||
       !h.has("adult")
     ) {
       miss += 1;
@@ -2000,7 +2009,7 @@ function indoorOutdoorClash(have) {
       big += 1;
     }
   }
-  eq("pin loli keeps adult petite small breasts", miss, 0);
+  eq("pin loli keeps adult petite flat chest", miss, 0);
   eq("pin loli never draws tall female", tall, 0);
   eq("pin loli never draws a larger bust", big, 0);
   const sb = settings();
@@ -4791,7 +4800,10 @@ function indoorOutdoorClash(have) {
     // 2026-09-15 再次重產兩次：先是 PRIVATE_SEX_PLACE 擴到含各時代的私密場地，
     // 後是光源那一格開始真的會填（以前 14 個光源只有 3% 機率出現）。兩次都讓
     // 候選池變大、RNG 路徑移位。分布差異記在 findings.md，不是拿金標蓋問題。
-    "1girl, solo, adult, very short hair, grey eyes, grey hair, bangs, large breasts, soft breasts, natural breasts, wet, thigh strap, hanging breasts, high-waist pants, pants, vest, open cardigan, cardigan, sports bra, bra, female masturbation, standing, from outside, looking up, dazed, female ejaculation, soft lighting, modern, greenhouse, indoors, sunset, city lights, nsfw, explicit, masterpiece, best quality, amazing quality");
+    // 同日第三次：拿掉 sports bra -> bra（Danbooru 上沒有這條 implication）。
+    // 這次差異只有少一個 bra，其餘一個 byte 都沒動 —— 沒有重排、沒有換字，
+    // 正是「只改該改的那一格」應有的樣子。
+    "1girl, solo, adult, very short hair, grey eyes, grey hair, bangs, large breasts, soft breasts, natural breasts, wet, thigh strap, hanging breasts, high-waist pants, pants, vest, open cardigan, cardigan, sports bra, female masturbation, standing, from outside, looking up, dazed, female ejaculation, soft lighting, modern, greenhouse, indoors, sunset, city lights, nsfw, explicit, masterpiece, best quality, amazing quality");
   ok("drawOne exposes shadow diagnostics", Array.isArray(shadowIntegrationDraw.shadowViolations));
 
   const eatProneShadow = validateSupportShadow({

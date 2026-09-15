@@ -280,6 +280,17 @@ ERA_OF = {
 }
 
 # Variant → parent so they coexist (mutex siblings skip parent/child).
+# 後綴規則（「X 什麼」就 implies「什麼」）對「顏色＋衣服」很準，Danbooru 也是這樣
+# 定的：blue bra -> bra、white panties -> panties、track jacket -> jacket。
+# 但複合名詞不一定是那個東西的一種，這裡放查證過的例外。
+#
+# sports bra：Danbooru 上 sports_bra 沒有任何 implication，顏色款也只 implies
+# sports_bra —— 運動內衣在他們的分類裡不是 bra。我們自己補出來的 -> bra 會讓
+# 「black sports bra, sports bra, bra」這種三連出現，而那個 bra 是訓練集裡沒有的。
+SUFFIX_COMPOUND_EXCEPTIONS = {
+    "bra": ("sports bra",),
+}
+
 SUFFIX_PARENT = (
     "shirt",
     "sweater",
@@ -316,7 +327,9 @@ SUFFIX_PARENT = (
 IMPLIES = {
     "pencil skirt": ["skirt"],
     "pleated skirt": ["skirt"],
-    "microskirt": ["miniskirt", "skirt"],
+    # Danbooru 是 microskirt -> skirt，不經過 miniskirt（兩者是兄弟不是父子），
+    # 而且兩個都是 mutex=bottom，硬串起來等於在同一格塞兩件下著。
+    "microskirt": ["skirt"],
     "short shorts": ["shorts"],
     "jeans": ["pants"],
     "open shirt": ["shirt"],
@@ -327,7 +340,6 @@ IMPLIES = {
     "dress shirt": ["shirt"],
     "see-through shirt": ["shirt"],
     "sleeveless shirt": ["shirt"],
-    "sports bra": ["bra"],
     "string bikini": ["bikini"],
     "micro bikini": ["bikini"],
     "open kimono": ["kimono", "japanese clothes"],
@@ -391,8 +403,7 @@ IMPLIES = {
     "single braid": ["braid"],
     "single hair bun": ["hair bun"],
     "double bun": ["hair bun"],
-    "flat chest": ["small breasts"],
-    "loli": ["petite", "flat chest", "small breasts"],
+    "loli": ["petite", "flat chest"],
     "shota": ["short male"],
     "pov": ["looking at viewer"],
     "pov crotch": ["looking at viewer"],
@@ -844,6 +855,9 @@ def apply_relations(tag: str, implies: list[str], bind: list[str], mutex, sectio
                 continue
             if section != "clothing":
                 continue
+            skip = SUFFIX_COMPOUND_EXCEPTIONS.get(suf) or ()
+            if any(tag == c or tag.endswith(" " + c) for c in skip):
+                continue
             if suf not in im:
                 im.append(suf)
     if tag.endswith(" kimono") and tag != "kimono":
@@ -861,9 +875,11 @@ def apply_relations(tag: str, implies: list[str], bind: list[str], mutex, sectio
             im.append("one-piece swimsuit")
         if "swimsuit" not in im:
             im.append("swimsuit")
-    if tag.endswith(" sports bra") or tag == "sports bra":
-        if "bra" not in im:
-            im.append("bra")
+    # 運動內衣在 Danbooru 的分類裡不是 bra：sports_bra 沒有任何 implication，
+    # 顏色款只 implies sports_bra。我們自己補的 -> bra 是訓練集裡沒有的組合，
+    # 也是「black sports bra, sports bra, bra」這種三連的來源。
+    if tag.endswith(" sports bra") and "sports bra" not in im:
+        im.append("sports bra")
     if section == "env" and mutex == "day_night":
         im = [x for x in im if x not in ("indoors", "outdoors")]
     elif section == "env" and mutex not in ("place", "in_out"):
@@ -1140,7 +1156,10 @@ def extra_loli_tags() -> list[dict]:
             "heat": list(HEATS),
             "mutex": "breast_size",
             "bind": [],
-            "implies": ["small breasts"],
+            # Danbooru 上 flat_chest 沒有任何 implication —— 平胸和小胸是同一把尺上
+            # 的兩個點，不是父子。而且兩個都是 mutex=breast_size，串起來等於在同一格
+            # 塞兩個互斥的值：實測 17% 的圖同時寫著「平胸」和「小胸」。
+            "implies": [],
             "layer": "normal",
             "era": ["any"],
             "needs": ["female"],
@@ -1153,7 +1172,7 @@ def extra_loli_tags() -> list[dict]:
             "heat": list(HEATS),
             "mutex": "height",
             "bind": [],
-            "implies": ["petite", "flat chest", "small breasts"],
+            "implies": ["petite", "flat chest"],
             "layer": "normal",
             "era": ["any"],
             "needs": ["female"],

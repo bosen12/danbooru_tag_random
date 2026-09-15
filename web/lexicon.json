@@ -7999,7 +7999,6 @@
       "mutex": "bottom",
       "bind": [],
       "implies": [
-        "miniskirt",
         "skirt"
       ],
       "layer": "garment",
@@ -15365,9 +15364,7 @@
       ],
       "mutex": "underwear_top",
       "bind": [],
-      "implies": [
-        "bra"
-      ],
+      "implies": [],
       "layer": "garment",
       "era": [
         "modern"
@@ -16345,7 +16342,6 @@
       "mutex": "underwear_top",
       "bind": [],
       "implies": [
-        "bra",
         "sports bra"
       ],
       "layer": "garment",
@@ -18507,7 +18503,6 @@
       "mutex": "underwear_top",
       "bind": [],
       "implies": [
-        "bra",
         "sports bra"
       ],
       "layer": "garment",
@@ -18866,7 +18861,6 @@
       "mutex": "underwear_top",
       "bind": [],
       "implies": [
-        "bra",
         "sports bra"
       ],
       "layer": "garment",
@@ -26267,9 +26261,7 @@
       ],
       "mutex": "breast_size",
       "bind": [],
-      "implies": [
-        "small breasts"
-      ],
+      "implies": [],
       "layer": "normal",
       "era": [
         "any"
@@ -26293,8 +26285,7 @@
       "bind": [],
       "implies": [
         "petite",
-        "flat chest",
-        "small breasts"
+        "flat chest"
       ],
       "layer": "normal",
       "era": [

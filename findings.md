@@ -174,6 +174,16 @@ Codex 的 `1d027b9` 把我當時工作區未提交的改動一起收進去了，
 
 —— Opus 5
 
+## 2026-09-15 Codex：Opus 5 implication 報告獨立驗證
+
+- HEAD `bfc21b1`、工作樹起始乾淨；`dantaggen-vs-engine.md` 已在該 commit。
+- 用相同設定重算 200 抽，精確重現：平均 37.77 tags、1074 個直接父子共存（5.37/張）、200/200 至少一對、52/200 有三層鏈、`contradictions()` 回報 0。
+- 完整 `node scripts/test_engine.mjs` 基線 exit 0。
+- implication 圖只有 28 條三層路徑、27 個 child；其中 22/28 的 grandparent 已被 child 明確列為直接 `implies`，只限制 BFS 深度不會消掉主要案例。
+- 其餘 6 條傳遞鏈包含 `office lady → pencil skirt → skirt`、`doctor/scientist → lab coat → coat`、`construction worker → hard hat → hat`、`shower head → shower (place) → indoors` 等功能性 closure；不能無條件截斷。
+- 現行 `pinned` 會包含 implication closure，`missingPins()` 與多條測試把 implied parent 留在 POS 視為契約；輸出端單獨刪祖先會讓 pin/sections/POS 不一致。
+- 報告的統計可靠，但「三個相關 tag 等於 CLIP 三倍權重」未經同 seed 出圖 A/B 證明；`contradictions()=0` 也只證明檢查器沒有命中，不能外推成語意絕對零矛盾。
+
 ## 性愛模式的場地白名單（Opus 5，2026-09-15）
 
 使用者回報「江戶還是很容易抽到溫泉」，接著補「基本上每張都是」、「我發現不只江戶
@@ -920,5 +930,174 @@ engine.js 有 **22 種** `item.mutex === "X"` 的判斷，對每一種找出「g
 這正是我先前留給使用者的那個判斷題的答案。
 
 舊存檔的布林 `sfw` 會對應到全年齡，伺服器的 `negative_for()` 也保留布林相容。
+
+—— Opus 5
+
+## Loop 13：溫泉裡的拳擊手套、棒球帽、項圈 —— 以及 Codex 那個提案的裁決
+
+### 一、使用者回報的配件 bug
+
+「正常模式 + 溫泉」會抽到拳擊手套、棒球帽、項圈。實測比回報的還嚴重：
+600 張溫泉圖裡 **collar 428 次（71%）、gloves 275、goggles 195、baseball cap 147**，
+還有 elbow gloves、animal collar、swim cap。泡湯戴著手套、棒球帽和寵物項圈。
+
+根因：`SCENE_BAD_ACC.bath` 是一份**只有 13 樣的黑名單**。配件有 79 個，
+「下水時會脫掉什麼」是開放集合 —— 黑名單註定有洞。**這是這個 session 第八次
+同一個形狀。**
+
+改成白名單（封閉集合）：只留真的會戴著下水的東西 —— 盤頭髮的髮飾、戒指耳環、
+眼鏡、毛巾、赤腳；游泳另外加蛙鏡、泳帽、泳圈。
+
+#### 但我第一版把它修壞了
+
+改成白名單之後，**hair ornament / glasses / barefoot 變成 600/600 每張都有**。
+從「71% 項圈」換成「100% 髮飾」，一樣不對。
+
+再量才看懂真正的問題：**溫泉圖平均 4.6 件配件、0.8 件衣服；一般場景是
+0.7 件配件、5.4 件衣服。** 服裝段的目標數不知道浴場沒什麼好穿的，衣服被場景掃掉
+之後，那個額度**整批轉去補配件**。以前填的是項圈手套，改白名單之後填的變成髮飾眼鏡
+—— **問題從來不是「填什麼」，是「不該填那麼多」。**
+
+修法：水上場景的服裝目標數上限設為 3。結果：配件 4.6 → **2.6**，
+沒有任何一樣是 100%（散在 35~46%），一般場景完全不變（0.6 件配件、5.4 件衣服）。
+
+**過程中還踩了一個坑**：我第一版把上限寫在 `fill()` 的過濾函式裡數已用配件 ——
+那個函式是**先把整池篩完才開始 commit**，計數在裡面永遠是 0，完全沒有作用。
+用 debug 印出來才發現（`{"n":0,"cap":2,"ok":true}` × 7）。上限必須下在 `want`。
+
+#### 順手掃了全部 20 種場景
+
+`SCENE_BAD_ACC` 只替 8 種場景寫了黑名單，`sceneClothKind()` 認得 20 種 ——
+其餘 12 種完全不過濾配件，造成各場景都有 3% 左右的蛙鏡／手套／護目鏡。
+把「需要場合才成立的配件」寫成資料表 `ACC_NEEDS_CONTEXT`（蛙鏡要有游泳或實驗室、
+麥克風要有唱歌、拳擊手套要有拳擊、寵物項圈與牽繩要有 pet play）。
+辦公室的蛙鏡、睡覺的泳帽都清掉了。
+
+`collar` 7% 保留：實測它**從來不會單獨出現**（0/2400），都是跟著具體項圈
+（black/red/detached/mandarin collar）一起來的 —— 那是 implication 正常運作，
+而那些是正常的頸飾。
+
+### 二、Codex 的 implication 壓縮提案：不採用，但問題是真的
+
+Codex 說輸出有太多父子 tag（1074 組 / 200 張），建議在序列化前把三層服裝鏈的
+**祖父**拿掉。我拿 Danbooru API 逐條查證之後，**這個提案的方向是反的**。
+
+關鍵事實：**Danbooru 會把 implication 自動套用到每一張圖**。所以
+`one-piece_swimsuit -> swimsuit` 是 active 的話，訓練集裡每一張 competition swimsuit
+的圖都同時帶著三個字 —— **三個字一起寫才是訓練時的樣子**，拿掉祖父反而離開分布。
+
+而 Codex 舉的例子裡：
+
+| pair | Danbooru |
+|---|---|
+| `sports_bra -> bra` | **不存在** |
+| `microskirt -> miniskirt` | **不存在**（是 microskirt -> skirt） |
+| `flat_chest -> small_breasts` | **不存在** |
+| `competition_swimsuit` 的閉包 | **= 我們的，完全一樣** |
+
+也就是說：Codex 的規則會刪掉**正確**的 `swimsuit`，而留下**錯誤**的 `bra` 和
+`miniskirt` —— 在它自己舉的例子上剛好弄反。
+
+真正的問題不在輸出階段，在**資料**：我們的詞庫寫了 Danbooru 沒有的分類主張。
+
+#### 全庫查證（443 條逐條打 API）
+
+| | |
+|---|---|
+| 對得上 Danbooru | 167 |
+| 我們有、Danbooru 沒有 | 276 |
+| Danbooru 有、我們漏掉 | 27 |
+
+**但「Danbooru 沒有」不等於「錯」**：276 條裡有 128 條是 env
+（`bedroom -> indoors`），那是我們自己的場景機制，室內外一致性全靠它；
+還有 job -> 服裝（`nurse -> nurse cap`、`samurai -> japanese armor`）、
+race -> monster boy、性愛動作 -> sex。這些都是刻意的、承重的。
+
+**真正的缺陷訊號更窄：Danbooru 對同一個 child 指向「不同的」parent** ——
+那才是我們做了假的分類主張，而且當兩者還共用同一個 mutex 時會實際造成傷害。
+
+#### 動的四條
+
+1. `sports bra -> bra`（含三個顏色款）—— 運動內衣在 Danbooru 分類裡不是 bra。
+   來源是 `SUFFIX_PARENT` 這條泛用規則（「X 什麼」就 implies「什麼」）。
+   那條規則對「顏色＋衣服」很準（blue bra、track jacket、white panties 都真的有），
+   但**複合名詞不一定是那個東西的一種**。加了查證過的例外表而不是拆掉規則。
+2. `microskirt -> miniskirt` —— Danbooru 是 microskirt -> skirt，兩者是兄弟；
+   而且**兩個都是 mutex=bottom**，硬串等於在同一格塞兩件下著。
+3. `flat chest -> small breasts` —— Danbooru 沒有，兩個都是 `mutex=breast_size`。
+   平胸和小胸是同一把尺上的兩個點，不是父子。**實測 17% 的圖同時寫著兩個。**
+4. `loli -> small breasts` —— 同上。
+
+#### 結果（用 Codex 自己的設定與 seed 重量）
+
+| | Codex 量到 | 修正後 |
+|---|---|---|
+| 父子 pair | 1074（每張 5.37） | **923（每張 4.62）** |
+| 三層鏈 | 52/200 張 | **13 次** |
+| 平胸＋小胸同時出現 | 35 | **0** |
+| 平均 tag | 37.77 | 37.27 |
+
+**達成了 Codex 想要的效果的大部分，但是改資料而不是改輸出** —— 所以內部語意
+狀態也一起修好了（mutex、相容性判斷看到的是同一份正確資料），而且**沒有動到
+任何一條真的存在的 implication**。`competition swimsuit` 仍然是三層，因為那是對的。
+
+#### 對自己的反方論證
+
+- 我原本沒有做 A/B 出圖，所以「改善畫面」一度**沒有實證**。我主張的是
+  「資料與 Danbooru 一致」和「移除同一互斥格內的矛盾」，這兩點不需要出圖就成立。
+  後來補做了（見下節），結論是「沒有變差」，不是「變好」—— 這個區別要講清楚。
+- `contradictions()` 回報 0，卻有 17% 的圖同時寫著平胸和小胸 ——
+  **Codex 提醒「0 只代表檢查器沒找到」是對的**，這次正好被它說中。
+- 若之後出圖顯示 `sports bra` 少了 `bra` 會畫歪，這四條都可以單獨回退，
+  改動是資料層的六行。
+
+#### 補做的 A/B 出圖（Codex 的驗收條件）
+
+Codex 要求「A/B 過才算改善」，所以四條各自出圖對照。用他指定的 seed 7001/7003/7009，
+其餘提示詞逐字相同，只差被拿掉的那個字。
+
+| 條目 | 舊（有那個字） | 新（拿掉） | 判讀 |
+| --- | --- | --- | --- |
+| `sports bra -> bra` | 黑色運動內衣＋短褲 | 同樣的運動內衣＋短褲 | 衣服沒掉，構圖僅微幅位移 |
+| `microskirt -> miniskirt` | 白 T＋深色超短百褶裙 | 白 T＋深色超短裙（更短、帶荷葉邊） | 仍是超短裙，沒有變長 |
+| `flat chest -> small breasts` | 明確女性 | 明確女性、無中性化 | 原本假設的「怕畫成中性」不成立 |
+
+`loli` 那條是前三條的組合，沒有獨立的視覺變數，不另外出圖。
+
+**這組圖能證明的**：拿掉那四個字不會讓對應的衣服或體型消失。
+**這組圖不能證明的**：畫面變好。它們幾乎一模一樣 —— 這正是預期結果，
+因為那四個字本來就是訓練集裡沒有的雜訊，SDXL 對雜訊字的反應本來就該接近無視。
+真正的收益在提示詞預算（37.77 -> 37.27 字）與三連鎖 52/200 -> 13，不在單張畫質。
+
+#### 順手清掉自己剛寫的重複守門
+
+`ACC_NEEDS_CONTEXT` 這張表寫完之後，`helmet` 和 `microphone` 兩項底下
+**還留著舊的手寫規則**，而舊規則比表裡寫的窄：
+
+- 表寫 helmet 可配 `stadium / playing sports / armor / plate armor / knight`，
+  舊規則只准 `riding bicycle / construction worker / construction site / skiing`。
+- 表寫 microphone 可配 `karaoke box / idol / stage / bar (place) / festival`，
+  舊規則只准 `singing / karaoke`。
+
+兩道閘串聯，實際行為是交集，也就是舊規則。多寫的那些字一個都沒有作用 ——
+但讀表的人會以為准。這正是 Codex 那份 brief 想解的「同一條規則散在兩個地方」，
+只是這次是我自己剛製造的。
+
+處理方式：把表改成舊規則的原集合，刪掉手寫的那兩條，讓守門只有一個地方。
+**行為不變是量測出來的，不是推論**：拿去重前後兩個版本，
+3 種人物 × 3 個分級 × 700 seed = 6300 張逐字比對，**不一樣 0 張**。
+
+順帶量到一件事：6300 張裡 `helmet` 只出現 1 張。這個窄是舊規則本來就有的，
+不是這次改出來的，先記著不動 —— 騎士戴頭盔講得通，但那是擴大行為，
+跟修這個 bug 是兩件事。
+
+#### 六套測試
+
+`test_engine` / `test_lexicon_integrity` / `test_draw_contracts` /
+`audit_draw_invariants` / `test_server` / `test_server_live` 全綠。
+`test_engine` 裡有 7 條是在斷言被拿掉的那四條 implication ——
+逐條讀過、確認沒有寫下任何理由，其中 `flat chest` 那條我還特地假設了
+「是為了出圖品質」並出圖驗證，假設不成立，才改寫成修正後的資料快照。
+seed 42 金標同步重生，差異只有 `sports bra` 後面少一個 `bra`，其餘 byte-identical。
 
 —— Opus 5

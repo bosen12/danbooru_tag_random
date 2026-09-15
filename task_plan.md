@@ -4,10 +4,20 @@
 抽取邏輯盡量完美：引擎自動抽的活動／地點／姿勢／衣著不互相打架。釘選可自相衝突。正常＝現實高機率；多元＝場景＋物理；奇葩＝只物理。
 
 ## Next Step
-完成 Phase 20：修正時代服裝的下半身覆蓋與分布偏斜，跑完整驗證後 commit / push。
+完成 Phase 21 設計裁決：先確認是否允許既有 seed 的 POS 改變，再決定是否進入實作。
 
 ## Current Phase
-Phase 20
+Phase 21
+
+### Phase 21: implication 關係與抽取邏輯深度優化
+- [x] 重算 Opus 5 報告的 200 抽核心統計
+- [x] 跑完整 `scripts/test_engine.mjs` 建立乾淨基線
+- [x] 盤點三層 implication 圖、直接／傳遞邊與現有 pin/mutex/section 契約
+- [ ] 確認是否允許同 seed POS 改變
+- [ ] 提出 2–3 個方案與風險，取得設計核准
+- [ ] 依 TDD 實作核准方案，跑矩陣與實際出圖 A/B
+- [ ] 全套驗證、文件修正與 diff 審核
+- **Status:** in_progress
 
 ### Phase 20: 時代服裝覆蓋與多樣性續查
 - [x] 還原 Claude session、確認 dirty worktree 與既有紅綠測試證據
@@ -116,3 +126,4 @@ Phase 20
 | picnic 暗示 eating 讓睡覺＋吃漏過 | r1 | picnic 進 AWAKE_ACT |
 | 睡覺＋抽菸 r3 漏網 | r3 | smoking 進 AWAKE_ACT |
 | planning session-catchup 無法以一般命令啟動 | 2026-09-13 | `python` 不在 PATH，`py -3` 也沒有登錄 runtime；之後由 workspace dependencies 找到 bundled Python 3.12.14，完整路徑可正常執行 |
+| Phase 21 planning patch 同時更新三檔時找不到錨點 | Phase 21 / attempt 1–2 | 先讀各檔實際尾端，再拆成獨立 patch；production 未受影響 |

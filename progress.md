@@ -215,3 +215,10 @@
 
 ## Next
 可選 r42 稽核。
+
+## Session: 2026-09-15（Opus 5 implication 報告驗證）
+
+- 恢復 planning context、確認 HEAD 與乾淨基線。
+- 重算 200 抽，Opus 報告的核心數字全數可重現。
+- 跑完整 `scripts/test_engine.mjs`：exit 0。
+- 深挖 implication 圖後確認：直接套用「最多兩層」會碰到 pin、mutex、sections、職業配件、場景錨點等既有契約；目前停在設計門檻，尚未修改 production。
