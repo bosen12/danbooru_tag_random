@@ -6265,11 +6265,29 @@ function indoorOutdoorClash(have) {
     const it = by.get(t);
     return !!it && !(it.era || ["any"]).includes("any");
   };
+  // 2026-09-15：不算內衣。
+  //
+  // 這條測試在意的是「看圖看不看得出時代」—— 那是使用者當初回報的原話。
+  // 穿在衣服底下、畫面上根本看不到的內衣從來就不是時代訊號，但它 era=["modern"]，
+  // 所以一直被算進 modern 的密度裡，把門檻墊高成 4.6（比當時真正看得見的 4.22 還高）。
+  //
+  // 加了「全身穿好又沒有脫衣動作就不要標內衣」之後，modern 總數 5.68 -> 4.46，
+  // 但拆開來看：內衣 1.47 -> 0.40，而**真正看得見的衣服 3.10 -> 3.13，沒有掉**。
+  // 其他五個時代的數字一個都沒動（內衣只有 modern 有）。
+  //
+  // 所以這裡改的是「量什麼」，不是「把尺改短」：改成只算看得見的衣服，
+  // modern 的門檻也跟著從那個被墊高的數字，換成從看得見的實測值往下留餘裕。
+  const visibleGarment = (t) => {
+    const it = by.get(t);
+    if (!it) return false;
+    return !(it.mutex === "underwear_top" || it.mutex === "underwear_bottom" || it.group === "underwear");
+  };
   // 下限＝硬桶時期實測值的八成。改權重只要沒掉破這條就不會紅。
   // 刻意不隨著調參往上抬：門檻要守的是「不要無聲崩掉」，不是「不准把優化讓回去」。
   // 一度把 modern 抬到 5.6 去鎖住當時的數字，那會讓之後每次合法調整都假紅。
   const FLOOR = {
-    modern: 4.6,
+    // 看得見的實測值 4.06，留約 15% 餘裕 —— 門檻是要抓崩掉，不是釘住當下的數字。
+    modern: 3.5,
     ancient_china: 1.8,
     ancient_greece: 1.5,
     medieval: 1.5,
@@ -6311,7 +6329,7 @@ function indoorOutdoorClash(have) {
     let n = 0;
     for (let i = 1; i <= 300; i++) {
       for (const t of tagsOf(drawOne(lex, s, new Set(), new Set(), mulberry32(i), i))) {
-        if (by.get(t)?.section === "clothing" && eraSpecificTag(t)) n += 1;
+        if (by.get(t)?.section === "clothing" && eraSpecificTag(t) && visibleGarment(t)) n += 1;
       }
     }
     const per = n / 300;
@@ -7182,6 +7200,137 @@ function indoorOutdoorClash(have) {
      `只剩 ${okInGeneral.length} 個`);
 }
 
+// --- 整套服裝的搭配 ---------------------------------------------------------
+// 使用者回報：釘了軍服，圖裡卻是「military uniform, blue jacket, jacket」。
+// 量過之後發現是整批的：女僕裝 92% 會疊外套、軍服／警服／西裝 75%、和服 35% 配襯衫。
+{
+  const by = new Map(data.tags.map((t) => [t.tag, t]));
+  const outfitSettings = () => {
+    const s = defaultSettings(data);
+    s.girl = true;
+    s.boy = false;
+    s.rating = "explicit";
+    s.sceneMode = "normal";
+    return s;
+  };
+  let layered = 0;
+  let lostPin = 0;
+  for (const outfit of ["military uniform", "maid", "business suit", "police uniform"]) {
+    const pin = applyPin(lex, new Set(), new Set(), outfit).pinned;
+    for (let i = 1; i <= 80; i++) {
+      const have = tagsOf(drawOne(lex, outfitSettings(), pin, new Set(), mulberry32(i * 31), i * 31));
+      if (!have.has(outfit)) lostPin += 1;
+      for (const t of have) {
+        const it = by.get(t);
+        if (it && it.group === "outer" && !pin.has(t)) layered += 1;
+      }
+    }
+  }
+  eq("整套制服不會再疊一件外套", layered, 0);
+  eq("釘的制服本身不會被弄丟", lostPin, 0);
+
+  // 時代服裝底下不塞別的時代的衣服 —— 但同時代的、以及 era:["any"] 的要留著。
+  let wrongEra = 0;
+  const kimonoPin = applyPin(lex, new Set(), new Set(), "kimono").pinned;
+  for (let i = 1; i <= 200; i++) {
+    const have = tagsOf(drawOne(lex, outfitSettings(), kimonoPin, new Set(), mulberry32(i * 17), i * 17));
+    for (const t of have) {
+      const it = by.get(t);
+      if (!it || it.section !== "clothing" || it.layer !== "garment" || kimonoPin.has(t)) continue;
+      const slot = it.mutex === "top" || it.mutex === "bottom" ? it.mutex
+        : it.group === "outer" ? "outer" : null;
+      if (!slot) continue;
+      const eras = it.era || [];
+      if (!eras.includes("any") && !eras.includes("edo")) wrongEra += 1;
+    }
+  }
+  eq("和服底下不會出現別的時代的上下身衣服", wrongEra, 0);
+  // 反面：era:["any"] 是「每個時代都能用」，不是「哪個時代都不屬於」。
+  // 少了這一條，和服在場時 topless female / bottomless 會被一起擋掉，
+  // 但「和服褪到腰間」是正常畫法。
+  for (const t of ["topless female", "bottomless"]) {
+    if (!lex.byTag.has(t)) continue;
+    const both = applyPin(lex, applyPin(lex, new Set(), new Set(), "kimono").pinned, new Set(), t).pinned;
+    let kept = 0;
+    for (let i = 1; i <= 40; i++) {
+      if (tagsOf(drawOne(lex, outfitSettings(), both, new Set(), mulberry32(i * 23), i * 23)).has(t)) kept += 1;
+    }
+    eq(`和服搭配 era:[any] 的「${t}」仍然成立`, kept, 40);
+  }
+}
+
+// --- 看不見的內衣 -----------------------------------------------------------
+// Danbooru 上標 panties 的意思是「畫面上看得見」。全身穿好、又沒有任何脫衣或裸露
+// 動作，卻標著內衣，那是訓練集裡沒有的組合（實測釘女僕裝 100% 帶內衣，其中 31%
+// 連一個脫衣動作都沒有）。
+{
+  const by = new Map(data.tags.map((t) => [t.tag, t]));
+  const isUnder = (it) =>
+    !!it && (it.mutex === "underwear_top" || it.mutex === "underwear_bottom" || it.group === "underwear");
+  let ghost = 0;
+  let n = 0;
+  for (const heat of ["activity", "tease", "flash", "sex"]) {
+    const s = defaultSettings(data);
+    s.girl = true;
+    s.boy = true;
+    s.rating = "explicit";
+    s.heats = [heat];
+    for (let i = 1; i <= 250; i++) {
+      const have = tagsOf(drawOne(lex, s, new Set(), new Set(), mulberry32(i * 41 + heat.length), i * 41 + heat.length));
+      n += 1;
+      const items = [...have].map((t) => by.get(t)).filter(Boolean);
+      const exposed = items.some(
+        (it) => it.mutex === "clothes_action" || it.group === "flash" || it.group === "sex" || it.layer === "skin"
+      );
+      if (exposed) continue;
+      const covered = items.some((it) => it.section === "clothing" && it.layer === "garment" && !isUnder(it) &&
+        (it.mutex === "onepiece" || it.mutex === "bottom" || it.group === "onepiece" || it.group === "bottom"));
+      if (!covered) continue;
+      if (items.some(isUnder)) ghost += 1;
+    }
+  }
+  eq(`穿好了又沒脫衣動作就不該標內衣（${n} 張）`, ghost, 0);
+
+  // 反面一：只穿內衣的造型不能被這條規則抹掉。
+  for (const t of ["lingerie", "underwear only", "bra", "panties"]) {
+    if (!lex.byTag.has(t)) continue;
+    const pin = applyPin(lex, new Set(), new Set(), t).pinned;
+    let kept = 0;
+    for (let i = 1; i <= 40; i++) {
+      const s = defaultSettings(data);
+      s.girl = true;
+      s.rating = "explicit";
+      if (tagsOf(drawOne(lex, s, pin, new Set(), mulberry32(i * 29), i * 29)).has(t)) kept += 1;
+    }
+    eq(`釘了「${t}」不會被「看不見的內衣」規則刪掉`, kept, 40);
+  }
+
+  // 反面二：兜襠布的 mutex 是 underwear_bottom，group 卻是 era。兩邊判準不一致時
+  // 它會同時算「遮蔽物」和「該刪的內衣」，然後把自己刪掉 —— 中世紀浴場就變成
+  // 沒有任何身體交代。這條守的是那個。
+  if (lex.byTag.has("loincloth")) {
+    const s = defaultSettings(data);
+    s.girl = false;
+    s.boy = true;
+    s.heats = ["activity"];
+    s.eras = ["medieval"];
+    let bare = 0;
+    let bath = 0;
+    const BATH = new Set(["bath", "bathtub", "bathing", "onsen", "shower", "open-air bath", "ofuro"]);
+    for (let i = 1; i <= 400; i++) {
+      const have = tagsOf(drawOne(lex, s, new Set(), new Set(), mulberry32(i), i));
+      if (![...have].some((t) => BATH.has(t))) continue;
+      bath += 1;
+      const stated = [...have].some((t) => {
+        const it = lex.byTag.get(t);
+        return it && it.section === "clothing" && (it.layer === "skin" || it.layer === "garment");
+      });
+      if (!stated) bare += 1;
+    }
+    ok("中世紀浴場的取樣夠多", bath >= 10, `只有 ${bath} 張`);
+    eq("內衣規則不會把唯一的身體交代刪掉（兜襠布不會自己刪自己）", bare, 0);
+  }
+}
 
 if (failed) {
   console.error(`\n${failed} failed`);

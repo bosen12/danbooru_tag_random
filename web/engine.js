@@ -1538,6 +1538,56 @@ const LOWER_COVER_TAGS = new Set([
   "loincloth",
 ]);
 
+// 本身就已經含外衣的整套服裝。再疊一件休閒外套就變成兩件外套 ——
+// 使用者回報的就是這個：釘了軍服，結果圖裡「military uniform, blue jacket, jacket」。
+//
+// 實測釘下去之後身上多一件外套的比例：女僕裝 92%、軍服／警服／西裝 75%、
+// 婚紗 66%、水手服 66%。不是偶發。
+//
+// 這裡只收「整套本來就有外衣」或「整套是完整造型」的。洋裝、泳裝、比基尼
+// 不在內 —— 洋裝配大衣、比基尼配罩衫都是正常搭配，那一格要留著。
+const OUTFIT_HAS_OUTER = new Set([
+  "military uniform",
+  "police uniform",
+  "business suit",
+  "suit",
+  "tuxedo",
+  "gakuran",
+  "nun",
+  "bathrobe",
+  "maid",
+  "santa costume",
+  "miko",
+  "plate armor",
+  "japanese armor",
+  "chinese armor",
+  "leather armor",
+  "power armor",
+]);
+
+// 整套的時代服裝：底下不該再塞別的時代的上下身衣服。
+// 和服配襯衫配裙子不是搭配，是三件不相干的衣服疊在一起（實測釘和服有 32% 配襯衫、
+// 26% 配裙子）。值得注意的是這不是時代判斷錯 —— 和服出現在現代場景很正常，
+// 廟會就是這樣穿；錯的是**底下那件**。
+// 對應的時代寫在值裡，所以同時代的搭配仍然成立（和服配袴、漢服配襦裙）。
+const ERA_OUTFIT_ERA = new Map([
+  ["kimono", "edo"],
+  ["yukata", "edo"],
+  ["white kimono", "edo"],
+  ["blue kimono", "edo"],
+  ["purple kimono", "edo"],
+  ["bath yukata", "edo"],
+  ["japanese clothes", "edo"],
+  ["hanfu", "ancient_china"],
+  ["ruqun", "ancient_china"],
+  ["tangzhuang", "ancient_china"],
+  ["chinese clothes", "ancient_china"],
+  ["toga", "ancient_greece"],
+  ["chiton", "ancient_greece"],
+  ["peplos", "ancient_greece"],
+  ["ancient greek clothes", "ancient_greece"],
+]);
+
 const BODY_GARMENT_SLOTS = new Set(["onepiece", "top", "bottom"]);
 
 function bodyGarmentSlot(item) {
@@ -3925,6 +3975,31 @@ export function drawOne(lex, settings, pinned, userBanned, rand, seed) {
     if (item.tag === "lab coat" && ![...used].some((t) => t === "scientist" || t === "laboratory" || t === "doctor")) {
       return false;
     }
+    // 整套制服已經自帶外衣，不要再疊第二件。使用者明確釘的不受影響。
+    if (item.group === "outer" && !pinned.has(item.tag)) {
+      for (const t of used) {
+        if (OUTFIT_HAS_OUTER.has(t)) return false;
+      }
+    }
+    // 整套的時代服裝底下，不要塞別的時代的上下身衣服。
+    // 同時代的照樣可以（和服配袴），所以比的是時代不是「有沒有穿」。
+    if (!pinned.has(item.tag)) {
+      // 外衣也算：和服該配羽織，不是配現代夾克（羽織是 edo，所以照樣過得去）。
+      const slot = bodyGarmentSlot(item) || (item.group === "outer" ? "outer" : null);
+      if (slot === "top" || slot === "bottom" || slot === "outer") {
+        for (const t of used) {
+          const era0 = ERA_OUTFIT_ERA.get(t);
+          if (!era0) continue;
+          const eras = item.era || [];
+          // era:["any"] 是「每個時代都能用」，不是「哪個時代都不屬於」。
+          // 少了這一句，topless female / topless male / bottomless（都是 any）
+          // 會在和服、漢服、托加在場時被擋掉 —— 但「和服褪到腰間」是正常的畫法，
+          // 那三個字講的是身體狀態，本來就跟時代無關。
+          if (eras.includes("any")) continue;
+          if (!eras.includes(era0)) return false;
+        }
+      }
+    }
     if (item.tag === "police hat" && !used.has("policewoman") && !used.has("police uniform")) return false;
     if (item.tag === "nurse cap" && !used.has("nurse")) return false;
     if (item.tag === "tsurime" && used.has("tareme")) return false;
@@ -5141,6 +5216,50 @@ export function drawOne(lex, settings, pinned, userBanned, rand, seed) {
         // （例如 allow() 裡有「性愛熱度不要隨機抽入拳擊手套」那條，自己寫會漏掉。）
         if (!allow(item)) continue;
         if (rand() < chance) commit(acc);
+      }
+    }
+  }
+
+  // 全身穿好了還標著內衣，而且沒有任何脫衣或裸露的動作 —— 那件內衣看不見。
+  //
+  // Danbooru 上標 panties 的意思是「畫面上看得見」，所以「軍服＋panties」在訓練集
+  // 裡代表掀起來或脫一半，不是「裡面穿著內褲」。實測釘女僕裝 600 張，100% 帶著內衣，
+  // 其中 31% 連一個脫衣/裸露的動作都沒有。
+  //
+  // 跟配件那一段同樣的理由放在這裡而不是 allow()：脫衣動作是在服裝之後才決定的，
+  // 在 allow() 裡看不到。
+  {
+    const guard = mustPins();
+    const exposed = [...used].some((t) => {
+      const it = lex.byTag.get(t);
+      if (!it) return false;
+      return it.mutex === "clothes_action" || it.group === "flash" ||
+             it.group === "sex" || it.layer === "skin";
+    });
+    if (!exposed) {
+      // 「是不是內衣」兩邊必須用同一個判準，否則同一件衣服會既算遮蔽物又算被遮的內衣，
+      // 然後把自己刪掉。loincloth 就是這樣：mutex=underwear_bottom 但 group=era，
+      // 於是「遮蔽物要排除 group==underwear」放它過關，「要刪的內衣看 mutex」又抓住它。
+      // 中世紀浴場只剩兜襠布當身體交代時，它把自己刪光，圖裡就沒人說身上有什麼了 ——
+      // 既有測試「只勾活動時浴場仍然交代得出身體」抓到的就是這一張。
+      const isUnderwearItem = (it) =>
+        !!it && (it.mutex === "underwear_top" || it.mutex === "underwear_bottom" ||
+                 it.group === "underwear");
+      const covered = [...used].some((t) => {
+        const it = lex.byTag.get(t);
+        return it && coversLowerBody(it) && !isUnderwearItem(it);
+      });
+      if (covered) {
+        for (const t of [...used]) {
+          if (guard.has(t)) continue;
+          const it = lex.byTag.get(t);
+          if (!it || it.section !== "clothing") continue;
+          if (!isUnderwearItem(it)) continue;
+          used.delete(t);
+          for (const g of extraMutex(it)) {
+            if (mutexTaken.get(g) === t) mutexTaken.delete(g);
+          }
+        }
       }
     }
   }
