@@ -1633,7 +1633,7 @@ function isBathOkGarment(item) {
 // 以前這些是在 allow() 裡一條一條手寫的 if，寫到哪擋到哪：stethoscope、hard hat、
 // police hat、lab coat 有，goggles、swim cap、boxing gloves、microphone 沒有 ——
 // 結果辦公室裡有人戴蛙鏡、教堂裡有人拿麥克風、溫泉裡有人戴拳擊手套。
-export const ACC_NEEDS_CONTEXT = {
+export const NEEDS_CONTEXT = {
   goggles: new Set([
     "swimming", "diving", "pool", "poolside", "underwater", "ocean", "skiing",
     "laboratory", "scientist", "construction site", "construction worker",
@@ -1662,6 +1662,25 @@ export const ACC_NEEDS_CONTEXT = {
   leash: new Set(["pet play", "animal collar", "collar", "bondage", "bdsm"]),
   handcuffs: new Set(["bondage", "bdsm", "prison", "policewoman", "police uniform"]),
   "o-ring": new Set(["bondage", "bdsm", "lingerie", "swimsuit", "bikini"]),
+
+  // 衣服也適用同一條規則。這張表本來只收配件，但「沒有那個場合就不該出現」
+  // 跟它是配件還是衣服無關 —— 實測釘女僕裝會配到足球釘鞋 33%，全庫 2800 張裡
+  // cleats 出現 274 次而其中 90% 身上沒有任何運動場合。
+  // 與其另開一張衣服專用的表，不如把這張表的名字改對（本來就沒有濾 layer）。
+  cleats: new Set([
+    "playing sports", "exercising", "training", "soccer", "track and field",
+    "baseball", "jogging", "stadium", "sports court", "running track",
+    "school gym", "fitness gym", "field",
+  ]),
+  "swim briefs": new Set(["swimming", "diving", "pool", "poolside", "ocean", "beach", "underwater"]),
+  "gym uniform": new Set([
+    "playing sports", "exercising", "training", "school gym", "stadium",
+    "sports court", "running track", "fitness gym",
+  ]),
+  "track uniform": new Set([
+    "track and field", "jogging", "running track", "stadium", "playing sports",
+    "exercising", "training", "school gym",
+  ]),
 };
 
 // 上面那張表只做了負向的一半：沒有場合就刪掉。
@@ -5281,7 +5300,7 @@ export function drawOne(lex, settings, pinned, userBanned, rand, seed) {
   {
     // mustPins() 而不是 pinned：必抽抽到的字跟釘選一樣不能被刪掉。
     const guard = mustPins();
-    for (const [tag, need] of Object.entries(ACC_NEEDS_CONTEXT)) {
+    for (const [tag, need] of Object.entries(NEEDS_CONTEXT)) {
       if (!used.has(tag) || guard.has(tag)) continue;
       if ([...used].some((t) => need.has(t))) continue;
       const it = lex.byTag.get(tag);

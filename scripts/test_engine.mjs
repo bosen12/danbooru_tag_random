@@ -65,7 +65,7 @@ import {
   sportPlacePinWarnings,
   clearPresetTags,
   togglePresetTags,
-  ACC_NEEDS_CONTEXT,
+  NEEDS_CONTEXT,
   CTX_PULLS_ACC,
 } from "../web/engine.js";
 import {
@@ -7135,7 +7135,7 @@ function indoorOutdoorClash(have) {
           const seed = i * 31 + heat.length;
           const have = tagsOf(drawOne(lex, s, new Set(), new Set(), mulberry32(seed), seed));
           n += 1;
-          for (const [tag, need] of Object.entries(ACC_NEEDS_CONTEXT)) {
+          for (const [tag, need] of Object.entries(NEEDS_CONTEXT)) {
             if (!have.has(tag)) continue;
             if ([...have].some((t) => need.has(t))) continue;
             offenders.set(tag, (offenders.get(tag) || 0) + 1);
@@ -7171,7 +7171,7 @@ function indoorOutdoorClash(have) {
 
   // 釘選永遠優先：使用者自己釘的配件不會被場合規則刪掉。
   let dropped = 0;
-  for (const tag of Object.keys(ACC_NEEDS_CONTEXT)) {
+  for (const tag of Object.keys(NEEDS_CONTEXT)) {
     if (!lex.byTag.has(tag)) continue;
     const pinned = applyPin(lex, new Set(), new Set(), tag).pinned;
     for (let i = 1; i <= 40; i++) {
