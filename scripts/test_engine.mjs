@@ -6750,6 +6750,45 @@ function indoorOutdoorClash(have) {
   if (goneWhenOn.length) console.error(`      ${goneWhenOn.join("  ")}`);
 }
 
+{
+  // 正常模式說「不抽男人人種」，那就一個都不能有。
+  //
+  // 這條規則本來寫成 `item.mutex === "race"`，但 monster boy 是那一組的傘狀父標籤
+  // （goblin 等等 implies 它），它的 mutex 是 null —— 於是從規則旁邊溜過去，
+  // 正常模式每 800 張還是會冒出 41 個光禿禿的「怪物男」。
+  const s = defaultSettings(data);
+  s.girl = false;
+  s.boy = true;
+  s.heats = ["tease", "flash", "sex"];
+  s.sceneMode = "normal";
+  const leaked = new Map();
+  for (let i = 1; i <= 400; i++) {
+    for (const t of tagsOf(drawOne(lex, s, new Set(), new Set(), mulberry32(i), i))) {
+      if (lex.byTag.get(t)?.group === "race") leaked.set(t, (leaked.get(t) || 0) + 1);
+    }
+  }
+  eq("正常模式一個男人人種都不抽（含傘狀的 monster boy）", leaked.size, 0);
+  if (leaked.size) console.error(`      漏出來的：${[...leaked.keys()].join(" ")}`);
+
+  // 反面：多元模式本來就該抽得到，而且要有多樣性，否則上面等於測了個空殼。
+  const sD = { ...s, sceneMode: "diverse" };
+  const kinds = new Set();
+  for (let i = 1; i <= 400; i++) {
+    for (const t of tagsOf(drawOne(lex, sD, new Set(), new Set(), mulberry32(i), i))) {
+      if (lex.byTag.get(t)?.group === "race") kinds.add(t);
+    }
+  }
+  ok("多元模式抽得到人種，而且不只一兩種", kinds.size >= 15, `${kinds.size} 種`);
+
+  // 使用者自己釘的仍然算數 —— 這條規則有 !pinned 的例外，不能被我改掉。
+  const pin = applyPin(lex, new Set(), new Set(), "goblin").pinned;
+  let kept = 0;
+  for (let i = 1; i <= 40; i++) {
+    if (tagsOf(drawOne(lex, s, pin, new Set(), mulberry32(i), i)).has("goblin")) kept += 1;
+  }
+  eq("正常模式下釘選的人種仍然留得住", kept, 40);
+}
+
 if (failed) {
   console.error(`\n${failed} failed`);
   process.exit(1);

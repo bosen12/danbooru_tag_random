@@ -3986,7 +3986,11 @@ export function drawOne(lex, settings, pinned, userBanned, rand, seed) {
       ) {
         return false;
       }
-      if (item.mutex === "race" && !pinned.has(item.tag)) return false;
+      // 正常模式不抽男人人種。這條本來寫成 `item.mutex === "race"`，但 monster boy
+      // 是那一組的傘狀父標籤（goblin 等等 implies 它），mutex 是 null —— 於是它
+      // 從規則旁邊溜過去，正常模式每 800 張還是會有 41 張冒出一個光禿禿的
+      // 「怪物男」。改看 group 才擋得住整組。
+      if (item.group === "race" && !pinned.has(item.tag)) return false;
       if (item.tag === "dark-skinned male" && !pinned.has(item.tag)) return false;
       const jobs = usedJobs(used, lex);
       if ((item.mutex === "place" || item.group === "place") && !placeFitsJob(item.tag, jobs, used)) {
@@ -4226,7 +4230,9 @@ export function drawOne(lex, settings, pinned, userBanned, rand, seed) {
     fillSlot("pose", "activity", sportActivityPrefer() || undefined);
   }
   fill("feature", (item) => {
-    if (item.mutex === "race") return false;
+    // 同上：一般補牌也要看 group，否則傘狀的 monster boy 會自己被補進來。
+    // 具體人種由上面的 fillSlot("feature", "race") 負責，它會連帶 implies 出父標籤。
+    if (item.group === "race") return false;
     if (item.mutex === "job" && (!settings.drawJob || used.has("maid"))) return false;
     return true;
   });
