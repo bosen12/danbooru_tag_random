@@ -123,6 +123,20 @@ function settings() {
   return s;
 }
 
+// 「看得出是哪個時代」的嚴格判準：這個字屬於該時代，而且現代不會有。
+//
+// 不能用 engine 的 eraSpecific()：它只要求 era 清單裡有該時代且沒有 "any"，
+// 而 skirt 的 era 是 ["modern","victorian","medieval","ancient_china"] ——
+// 拿來當抽取偏好沒問題，拿來當「這張看得出是中世紀」就會自己騙自己。
+// 第一版我就是這樣寫的，被自己加的對照組抓到（現代圖 6/30 誤判）。
+function eraReadable(have, era) {
+  for (const t of have) {
+    const e = lex.byTag.get(t)?.era || [];
+    if (e.length && !e.includes("any") && e.includes(era) && !e.includes("modern")) return true;
+  }
+  return false;
+}
+
 function tagsOf(drawn) {
   return new Set(drawn.positive.split(", ").map((t) => t.trim()));
 }
@@ -678,6 +692,12 @@ function eraDraws(era, n = 60, seed0 = 9000) {
   s.eras = ["medieval"];
   s.lockScene = false;
   s.sceneMode = "weird";
+  // 2026-09-15：時代錨如果佔住 place 這一格，就會把場地那一格整個吃掉
+  // （奇葩模式 castle 100%）。改成 35% 機率之後，castle/armor 這兩個字不再是
+  // 每張都有 —— 但要守的東西從來不是「這兩個字」，是「看得出是中世紀」。
+  // 實跑掉出來的那幾張是 cloak/tent/oil lamp/tower 和 cloak/palace/candelabra，
+  // 中世紀得很。所以改成驗那個性質：這比原本只認兩個字涵蓋更廣，不是把尺改短。
+  const medievalSignal = (have) => eraReadable(have, "medieval");
   const pinned = applyPin(lex, new Set(), new Set(), "bikini").pinned;
   let modern = 0;
   let missingAnchor = 0;
@@ -687,11 +707,25 @@ function eraDraws(era, n = 60, seed0 = 9000) {
     if (d.era !== "medieval") modern += 1;
     const have = tagsOf(d);
     if (!have.has("bikini")) missingBikini += 1;
-    if (!have.has("armor") && !have.has("castle")) missingAnchor += 1;
+    if (!medievalSignal(have)) missingAnchor += 1;
   }
   eq("exclusive medieval beats bikini pin for era", modern, 0);
   eq("medieval + bikini pin still has bikini", missingBikini, 0);
-  eq("medieval + bikini pin still stamps armor/castle", missingAnchor, 0);
+  eq("medieval + bikini pin 仍看得出是中世紀", missingAnchor, 0);
+  // 對照組：這條斷言真的會紅嗎？現代的圖不該有任何中世紀訊號。
+  {
+    const m = settings();
+    m.girl = true;
+    m.boy = false;
+    m.eras = ["modern"];
+    let falsePositive = 0;
+    for (let i = 0; i < 30; i++) {
+      if (medievalSignal(tagsOf(drawOne(lex, m, new Set(), new Set(), mulberry32(17500 + i), 17500 + i)))) {
+        falsePositive += 1;
+      }
+    }
+    eq("對照組：現代的圖不會被誤判成有中世紀訊號", falsePositive, 0);
+  }
 }
 
 {
@@ -971,12 +1005,13 @@ const MODERN_ONLY = [
     // sports bra 不再連帶 bra：Danbooru 上 sports_bra 沒有任何 implication，
     // 顏色款也只 implies sports_bra。運動內衣在他們的分類裡不是 bra。
     if (!have.has("sports bra")) missingBra += 1;
-    if (!have.has("castle") && !have.has("armor")) missingCastle += 1;
+    // 同上：驗「看得出是中世紀」，不是驗那兩個字。
+    if (!eraReadable(have, "medieval")) missingCastle += 1;
     if (d.era !== "medieval") chair += 1;
   }
   eq("medieval + sports bra pin still medieval", chair, 0);
   eq("medieval + sports bra pin keeps sports bra", missingBra, 0);
-  eq("medieval + sports bra pin still stamps castle/armor", missingCastle, 0);
+  eq("medieval + sports bra pin 仍看得出是中世紀", missingCastle, 0);
 }
 
 {
@@ -4803,9 +4838,12 @@ function indoorOutdoorClash(have) {
     // 後是光源那一格開始真的會填（以前 14 個光源只有 3% 機率出現）。兩次都讓
     // 候選池變大、RNG 路徑移位。分布差異記在 findings.md，不是拿金標蓋問題。
     // 同日第三次：拿掉 sports bra -> bra（Danbooru 上沒有這條 implication）。
+    // 第四次：場地那一格從硬桶改成 4:1 軟權重（era:[any] 場地本來幾乎抽不到，
+    // beach 在 18000 張裡是 0）。場地換了，整條 RNG 就跟著換人，所以這次差很多 ——
+    // 不是金標壞掉，是那一格真的改了。理由與量測見 findings.md Loop 14 第四節。
     // 這次差異只有少一個 bra，其餘一個 byte 都沒動 —— 沒有重排、沒有換字，
     // 正是「只改該改的那一格」應有的樣子。
-    "1girl, solo, adult, very short hair, grey eyes, grey hair, bangs, large breasts, soft breasts, natural breasts, wet, thigh strap, hanging breasts, high-waist pants, pants, vest, open cardigan, cardigan, sports bra, female masturbation, standing, from outside, looking up, dazed, female ejaculation, soft lighting, modern, greenhouse, indoors, sunset, city lights, nsfw, explicit, masterpiece, best quality, amazing quality");
+    "1girl, solo, adult, very short hair, grey eyes, grey hair, bangs, large breasts, soft breasts, natural breasts, wet, thigh strap, hanging breasts, naked towel, female masturbation, standing, from outside, looking up, dazed, leaning forward, soft lighting, modern, onsen, indoors, day, spotlight, nsfw, explicit, masterpiece, best quality, amazing quality");
   ok("drawOne exposes shadow diagnostics", Array.isArray(shadowIntegrationDraw.shadowViolations));
 
   const eatProneShadow = validateSupportShadow({
@@ -5776,6 +5814,31 @@ function indoorOutdoorClash(have) {
     anyHits > 0,
     `era 專屬 ${specHits} 次，era=any ${anyHits} 次`
   );
+
+  // 4b) 場地那一格是同一個病。燈光是硬排序把 era:["any"] 餓死，場地也是 ——
+  // 而且更嚴重，因為場地只有一格，「抽乾時代專屬才輪到中性」幾乎不會輪到。
+  // 實測修之前：現代 16 個中性場地合計只有 5%，beach 在 18000 張裡是 0 次。
+  const placesOf = (runs, pick) => {
+    let n = 0;
+    for (const d of runs) {
+      for (const t of tagsOf(d)) {
+        const it = lex.byTag.get(t);
+        if (it && it.section === "env" && it.mutex === "place" && pick(it)) n += 1;
+      }
+    }
+    return n;
+  };
+  for (const era of ["modern", "edo", "medieval"]) {
+    const runs = runEnv({ sceneMode: "diverse", eras: [era], counts: { env: 8 } }, 300, 91000);
+    const spec = placesOf(runs, (it) => !eraAny(it));
+    const anyP = placesOf(runs, eraAny);
+    ok(
+      `place: ${era} 的 era:[any] 場地抽得到（不再被硬排序餓死）`,
+      anyP > 0,
+      `era 專屬 ${spec} 次，era=any ${anyP} 次`
+    );
+    ok(`place: ${era} 的 era 專屬場地仍然是主角`, spec > anyP, `${spec} vs ${anyP}`);
+  }
 
   // 5) 古代不能冒出只屬於現代的燈光。
   const MODERN_ONLY = ["spotlight", "neon lights", "ceiling light", "city lights"];

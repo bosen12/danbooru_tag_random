@@ -1004,6 +1004,10 @@ const ACT_PLACE = {
 for (const [act, places] of Object.entries(SPORT_ACT_PLACE)) {
   ACT_PLACE[act] = new Set([...(ACT_PLACE[act] || []), ...places]);
 }
+// 時代招牌場地（castle / chinese architecture）出現在多少比例的圖上。
+// 舊行為是無條件蓋章，等於 100%，而且會把唯一的場地格佔滿。
+const PLACE_ANCHOR_CHANCE = 0.35;
+
 const ACT_PROP = {
   "playing guitar": ["guitar"],
   reading: ["book"],
@@ -4349,6 +4353,21 @@ export function drawOne(lex, settings, pinned, userBanned, rand, seed) {
     takeFromPool(pool, need, rand, commit, prefer, allow);
   };
 
+  // 佔住 place 這一格的時代錨，改成「偏好」而不是「無條件蓋章」。
+  //
+  // 六個時代裡只有兩個錨是場地：castle（medieval）和 chinese architecture
+  // （ancient_china）。它們一蓋下去就把唯一的場地格佔滿，接著
+  // fillSlot("env","place") 看到 mutexTaken 有 place 就直接 return ——
+  // 那一格等於不存在。
+  //
+  // 結果是反過來的：奇葩模式 castle 佔 100%，多元 62%，正常反而只有 19%。
+  // 正常模式之所以最鬆，是因為 allow() 會用 placeFitsActs 擋掉不合活動的城堡，
+  // 剛好把格子讓回來。**規則放得越鬆、畫面反而越單調**，跟面板上寫的
+  // 「多元＝只鎖場景配對與物理，奇葩＝只鎖物理」正好相反。
+  //
+  // 其他四個時代的錨不佔場地格（armor、japanese clothes、modern…），
+  // 它們的場地本來就很散（edo dojo 10%、victorian park 9%），這也反過來說明
+  // 問題出在「佔格子」而不是「錨」本身。
   const stampAnchors = (section) => {
     for (const t of lex.data.eraAnchors?.[era] || []) {
       // 錨點可以有一組同義的替代字（chinese clothes / hanfu）。每次隨機挑一個，
@@ -4364,7 +4383,16 @@ export function drawOne(lex, settings, pinned, userBanned, rand, seed) {
         pool.push(item);
       }
       if (!pool.length) continue;
-      commit(pool[Math.floor(rand() * pool.length)].tag);
+      const pick = pool[Math.floor(rand() * pool.length)];
+      // 場地錨改成擲骰子。不用「軟權重」是因為 takeFromPool 的權重是**逐個字**算的，
+      // 不是逐層：castle 一個字權重 6，要跟十幾個中世紀場地（各 3）和十六個中性
+      // 場地（各 1）比，算出來只有 9%。想調到某個比例就得把權重寫成 37 這種數字，
+      // 而那個數字會隨著詞庫長大而失準 —— 那是在對著池子大小調參，不是在表達意圖。
+      // 機率直接就是意圖：這個時代有多少比例的圖用它的招牌場地。
+      if (pick.mutex === "place") {
+        if (rand() >= PLACE_ANCHOR_CHANCE) continue;
+      }
+      commit(pick.tag);
     }
   };
 
@@ -4640,7 +4668,22 @@ export function drawOne(lex, settings, pinned, userBanned, rand, seed) {
     }
   }
   stampAnchors("env");
-  fillSlot("env", "place");
+  // 場地也改成軟權重，理由跟燈光那一格一模一樣。
+  //
+  // fillSlot 的 env 預設偏好是硬桶：時代專屬的抽乾了才輪到 era:["any"]。而場地
+  // 只有一格，所以「輪到」幾乎不會發生 —— 實測現代 86 個時代專屬場地拿走 95%，
+  // 16 個中性場地（沙灘、海洋、森林、山）合計只有 5%，beach 在 18000 張裡是 0。
+  // 古中國 67% 都是 chinese architecture，中世紀 70% 都是 castle。
+  //
+  // 這件事這個檔案自己已經想通過一次：fill(section) 那裡的註解寫著
+  // 「era:["any"] 的意思是每個時代都能用，不是次等候選」，所以 fill("env") 早就
+  // 拿掉了 prefer。漏掉的是場地這一格。燈光那一格也是同一個病，用 4:1 修好的。
+  //
+  // 時代味不靠這一格扛 —— 底下的「時代風味」那一格（不佔互斥格的景物）才是。
+  fillSlot("env", "place", {
+    softTiers: [(item) => eraSpecific(item, era)],
+    weights: [4, 1],
+  });
   if (realisticOn(settings) && !usedPlaces(used, lex).size) {
     for (const a of usedActs(used, lex)) {
       for (const p of ACT_PLACE[a] || []) {
