@@ -3417,6 +3417,20 @@ function indoorOutdoorClash(have) {
     "office",
     "train",
     "train interior",
+    // 2026-09-15 加的：這些也是坐得下來看書的地方。判斷標準是「一個人會不會
+    // 在那裡坐著看書」—— 公寓、宿舍、旅館房間、宅邸、宮殿、王座、旅籠、陽台、
+    // 中庭、被爐、帳篷都會；城堡、大廳、酒館、舞廳不算，所以沒有列進來。
+    "apartment",
+    "dormitory",
+    "hotel room",
+    "mansion",
+    "palace",
+    "throne",
+    "ryokan",
+    "balcony",
+    "courtyard",
+    "futon",
+    "tent",
   ];
   let readMiss = 0;
   for (let i = 0; i < 40; i++) {

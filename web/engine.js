@@ -781,9 +781,30 @@ function usedActs(used, lex) {
 
 const FISH_PLACE = new Set(["beach", "ocean", "lotus pond", "poolside", "pool"]);
 const INDOOR_FURN = new Set(["on bed", "on chair", "office chair", "gaming chair", "swivel chair", "bunk bed"]);
-const DESK_PLACE = new Set(["library", "bedroom", "living room", "cafe", "classroom", "office", "park bench", "garden", "shrine", "pavilion"]);
-const HOME_PLACE = new Set(["bedroom", "living room", "hotel room", "futon"]);
-const MEAL_PLACE = new Set(["restaurant", "cafe", "kitchen", "living room", "park", "garden", "beach", "courtyard"]);
+// 能坐下來讀書寫字的地方。原本這三組只列了現代的房間，而正常模式下
+// 「有 ACT_PLACE 表的活動必須把場地列進去」—— 沒被列到的場地等於做不了那件事。
+// 結果是 130 個場地裡有 39 個只配得到一個活動（carrying），73 個配不到 4 個：
+// 釘「宮殿」的人有 52% 會拿到平底鍋，因為煮飯是少數列了 palace 的活動。
+const DESK_PLACE = new Set([
+  "library", "bedroom", "living room", "cafe", "classroom", "office",
+  "park bench", "garden", "shrine", "pavilion",
+  // 住得下人、坐得下來的地方，古今都有
+  // 補的是「坐得下來看書寫字的地方」。城堡、大廳、酒館、舞廳、神殿刻意不補 ——
+  // 既有測試 "normal studying never castle/beach/onsen" 明講不要在城堡唸書，
+  // 那是有意的內容契約，我一開始把 castle 加進來就是把它撞掉了。
+  "apartment", "dormitory", "hotel room", "mansion", "palace", "throne",
+  "ryokan", "balcony", "courtyard", "futon", "tent",
+]);
+const HOME_PLACE = new Set([
+  "bedroom", "living room", "hotel room", "futon",
+  "apartment", "dormitory", "mansion", "palace", "ryokan", "great hall", "castle",
+]);
+const MEAL_PLACE = new Set([
+  "restaurant", "cafe", "kitchen", "living room", "park", "garden", "beach", "courtyard",
+  "apartment", "dormitory", "hotel room", "mansion", "palace", "throne",
+  "balcony", "pavilion", "rooftop", "tent", "field", "food stall", "izakaya",
+  "castle", "great hall", "tavern", "ryokan", "ballroom",
+]);
 const ACT_PLACE = {
   bathing: new Set([...BATH_PLACE]),
   showering: new Set(["bathroom", "shower (place)"]),
