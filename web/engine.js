@@ -2458,7 +2458,22 @@ export function itemFitsHeats(item, heats) {
   const enabled = HEATS.filter((h) => (heats || []).includes(h));
   if (!enabled.length) return true;
   return enabled.some((h) => {
-    if (h === "activity") return hs.includes("tease") || hs.includes("activity");
+    if (h === "activity") {
+      // 詞庫裡**沒有任何**一個字的 heat 含 "activity"（實測 337 件衣服、355 個
+      // 姿勢、295 個特徵全都沒有），所以「活動」這一檔本來就只能借 tease 的池子。
+      // 但整池照收就把面板上那句「只勾活動＝日常，沒有走光或做愛」變成假的：
+      // 只勾活動抽 1200 張，naked coat 90 次、netorare 5 次、groping 6 次、
+      // paizuri gesture 4 次、pink nipples 25 次。
+      //
+      // 所以借池子照借，情色內容扣掉 —— 短裙去買菜沒問題，裸身外套去買菜不是日常。
+      if (!hs.includes("tease") && !hs.includes("activity")) return false;
+      // 裸體是例外，要放行。泡溫泉、洗澡本來就沒穿衣服，那是場景決定的，不是尺度 ——
+      // 場景那一套（sceneClothKind / 浴場脫衣）已經在管什麼時候該裸。
+      // 我第一版把 layer=skin 一起擋掉，結果「正常模式 溫泉 活動」變成 0/80 永遠不裸，
+      // 被既有測試抓到。擋的應該是「日常不會發生的事」，不是「沒穿衣服」。
+      if (item.layer === "skin") return true;
+      return !hasExplicitContent(item);
+    }
     return hs.includes(h);
   });
 }

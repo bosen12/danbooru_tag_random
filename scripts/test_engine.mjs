@@ -851,7 +851,38 @@ function eraDraws(era, n = 60, seed0 = 9000) {
   ok("sex-only does not clash with undressing", !heatMismatches(lex, applyPin(lex, new Set(), new Set(), "undressing").pinned, ["sex"]).includes("undressing"));
   ok("tease-only clash lists fellatio", heatMismatches(lex, applyPin(lex, new Set(), new Set(), "fellatio").pinned, ["tease"]).includes("fellatio"));
   ok("tease-only does not clash with nude", !heatMismatches(lex, applyPin(lex, new Set(), new Set(), "nude").pinned, ["tease"]).includes("nude"));
-  ok("activity-only does not clash with nude", !heatMismatches(lex, applyPin(lex, new Set(), new Set(), "nude").pinned, ["activity"]).includes("nude"));
+  // 2026-09-15：「活動」這一檔沒有自己的池子 —— 詞庫裡沒有任何一個字的 heat
+  // 含 "activity"，所以它只能借 tease 的。整池照收的話，面板那句「只勾活動＝日常，
+  // 沒有走光或做愛」就是假的：實測只勾活動 1200 張，naked coat 90、netorare 5、
+  // paizuri gesture 4。現在池子照借，情色內容扣掉。
+  //
+  // 但**裸體是例外**：泡溫泉沒穿衣服是場景決定的，不是尺度決定的。所以 nude
+  // 跟「只勾活動」仍然不衝突，這條原本的斷言維持不變 —— 我中途一度把它翻面，
+  // 是因為第一版連 layer=skin 一起擋掉，那是我的錯不是它的錯。
+  {
+    const nudePin = applyPin(lex, new Set(), new Set(), "nude").pinned;
+    ok("activity-only does not clash with nude", !heatMismatches(lex, nudePin, ["activity"]).includes("nude"));
+    // 但明確不是日常的東西就該提示：裸身外套、微型比基尼不是去買菜穿的。
+    ok("activity-only 釘 naked coat 會提示尺度對不上",
+       heatMismatches(lex, applyPin(lex, new Set(), new Set(), "naked coat").pinned, ["activity"]).includes("naked coat"));
+    const s2 = settings();
+    s2.girl = true;
+    s2.boy = false;
+    s2.rating = "explicit";
+    s2.heats = ["activity"];
+    let lost = 0;
+    for (let i = 1; i <= 60; i++) {
+      if (!tagsOf(drawOne(lex, s2, applyPin(lex, new Set(), new Set(), "naked coat").pinned, new Set(), mulberry32(i * 19), i * 19)).has("naked coat")) lost += 1;
+    }
+    eq("activity-only 釘了仍然一定進圖（提示歸提示，釘選不動）", lost, 0);
+    // 沒釘的時候才擋：日常不該自己冒出裸身外套或 netorare。
+    let leaked = 0;
+    for (let i = 1; i <= 200; i++) {
+      const h = tagsOf(drawOne(lex, s2, new Set(), new Set(), mulberry32(i * 23), i * 23));
+      if (h.has("naked coat") || h.has("netorare") || h.has("groping")) leaked += 1;
+    }
+    eq("activity-only 沒釘就不會自己冒出情色內容", leaked, 0);
+  }
   ok("shopping is available in activity-only", itemFitsHeats(lex.byTag.get("shopping"), ["activity"]));
   ok("bathing is available in activity-only", itemFitsHeats(lex.byTag.get("bathing"), ["activity"]));
   ok("cowgirl is not available in activity-only", !itemFitsHeats(lex.byTag.get("cowgirl position"), ["activity"]));

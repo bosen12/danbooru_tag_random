@@ -291,9 +291,32 @@ function renderEras() {
 
 const HEAT_LABELS = { activity: "活動", tease: "誘惑", flash: "走光", sex: "性愛" };
 
+// 分級滑桿會把某些尺度整個擋掉，但面板上完全看不出來。
+// 實測（每格 400 張）：全年齡 + 走光 -> 情色內容 0%；全年齡 + 性愛 -> 0%。
+// 使用者勾了卻一張都抽不到，而且沒有任何提示 —— 這是我加三段滑桿時漏掉的一塊，
+// 舊的布林開關其實也有，只是三段之後更容易踩到。
+const RATING_BLOCKS_HEAT = { general: ["flash", "sex"], sensitive: [], explicit: [] };
+
+function ratingHeatClash() {
+  const rating = RATINGS.includes(settings.rating) ? settings.rating : "explicit";
+  const blocked = RATING_BLOCKS_HEAT[rating] || [];
+  return (settings.heats || []).filter((h) => blocked.includes(h));
+}
+
 function updateHeatClash() {
   const note = $("heat-clash");
   if (!note) return;
+  const ratingHit = ratingHeatClash();
+  if (ratingHit.length) {
+    note.hidden = false;
+    note.textContent =
+      "分級選了「" +
+      (RATING_LABEL[settings.rating] || settings.rating) +
+      "」，但尺度勾了「" +
+      ratingHit.map((h) => HEAT_LABELS[h] || h).join("、") +
+      "」。這一級不會出現那種內容，這些尺度等於沒作用 —— 把分級往右拉，或改勾別的尺度。";
+    return;
+  }
   const sexBlock = sportHeatWarnings(lex, pinned, settings.heats);
   if (sexBlock.length) {
     note.hidden = false;
@@ -580,6 +603,8 @@ function setRating(next, { speakIt = true } = {}) {
     return;
   }
   settings.rating = next;
+  // 分級會影響尺度提示（全年齡擋掉走光／性愛），改完要重算。
+  updateHeatClash();
   saveStore();
   syncRating();
   // 能抽的字整批變了，詞庫面板要重畫。加一個很短的淡入，讓使用者看得出來
