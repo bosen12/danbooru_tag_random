@@ -1726,6 +1726,26 @@ export function isIdentityItem(item) {
   return IDENTITY_MUTEX.has(item.mutex) || item.group === "hair_style";
 }
 
+// 「同一個人」要鎖住的另一半。
+//
+// identityPins() 只把第一張抽到的身分特徵釘起來，於是第一張沒有的欄位在後面幾張
+// 仍然是空的、可以自由補 —— 實測 960 批裡有 685 批，第三張突然多了一撮呆毛、
+// 一個馬尾，或是整個人變得肌肉發達。第一張的特徵一次都沒掉（0 次），
+// 問題從頭到尾是「多出來」。
+//
+// 同一個人就是同一個人：身分特徵要剛好等於第一張那一組，多的一律不准。
+// 被釘選連帶帶出來的父標籤已經在 pins 裡，所以不會誤禁到它們。
+export function identityBans(lex, positive) {
+  const keep = identityPins(lex, positive);
+  const out = new Set();
+  for (const item of lex.data.tags) {
+    if (!isIdentityItem(item)) continue;
+    if (keep.has(item.tag)) continue;
+    out.add(item.tag);
+  }
+  return out;
+}
+
 export function identityPins(lex, positive) {
   let pinned = new Set();
   let banned = new Set();

@@ -14,6 +14,7 @@ import {
   drawOne,
   ERAS,
   identityPins,
+  identityBans,
   isIdentityItem,
   heatMismatches,
   handUsageWarnings,
@@ -6787,6 +6788,66 @@ function indoorOutdoorClash(have) {
     if (tagsOf(drawOne(lex, s, pin, new Set(), mulberry32(i), i)).has("goblin")) kept += 1;
   }
   eq("正常模式下釘選的人種仍然留得住", kept, 40);
+}
+
+{
+  // 「同一個人」：一批圖裡的身分特徵要剛好等於第一張那一組。
+  //
+  // 以前只有 identityPins()，把第一張抽到的釘起來 —— 第一張「沒有」的欄位在後面
+  // 幾張仍然空著可以自由補，於是第三張突然多了一撮呆毛、一個馬尾，或整個人變得
+  // 肌肉發達。實測 960 批裡有 685 批會漂移，而且第一張的特徵一次都沒掉：
+  // 問題從頭到尾是「多出來」，不是「少掉」。
+  const s = defaultSettings(data);
+  s.girl = true;
+  s.boy = false;
+  s.samePerson = true;
+  let batches = 0;
+  let lost = 0;
+  let gained = 0;
+  let clothMoved = 0;
+  const examples = [];
+  for (const era of ERAS) {
+    s.eras = [era];
+    for (let b = 0; b < 12; b++) {
+      batches += 1;
+      let ident = new Set();
+      let identBan = new Set();
+      let first = null;
+      const cloth = new Set();
+      for (let i = 0; i < 5; i++) {
+        const seed = b * 1000 + i + 1;
+        const d = drawOne(
+          lex, s,
+          ident.size ? new Set([...ident]) : new Set(),
+          identBan.size ? new Set([...identBan]) : new Set(),
+          mulberry32(seed), seed
+        );
+        const arr = d.positive.split(", ");
+        cloth.add(arr.filter((t) => lex.byTag.get(t)?.section === "clothing").join("|"));
+        const mine = new Set(arr.filter((t) => isIdentityItem(lex.byTag.get(t))));
+        if (i === 0) {
+          ident = identityPins(lex, d.positive);
+          identBan = identityBans(lex, d.positive);
+          first = mine;
+          continue;
+        }
+        for (const t of first) if (!mine.has(t)) lost += 1;
+        for (const t of mine) {
+          if (!first.has(t)) {
+            gained += 1;
+            if (examples.length < 4) examples.push(`${era} 批 ${b} 第 ${i + 1} 張多了 ${t}`);
+          }
+        }
+      }
+      if (cloth.size > 1) clothMoved += 1;
+    }
+  }
+  ok("同一個人的取樣夠多，這條測試不是空轉", batches >= 60, `${batches} 批`);
+  eq("同一個人：第一張的身分特徵一個都不能掉", lost, 0);
+  eq("同一個人：後面幾張不能多出新的身分特徵", gained, 0);
+  if (gained) console.error(`      ${examples.join("  ")}`);
+  // 反面：鎖的是人不是場景，衣服還是要照抽，否則等於把功能鎖死了
+  eq("同一個人：衣服仍然每批都有變化", clothMoved, batches);
 }
 
 if (failed) {

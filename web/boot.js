@@ -7,6 +7,7 @@ import {
   drawOne,
   sceneModeOf,
   identityPins,
+  identityBans,
   isIdentityItem,
   QUOTA_SECTIONS,
   sanitizeSettings,
@@ -2276,6 +2277,8 @@ async function runBatch() {
 
     let ident = new Set();
 
+    let identBan = new Set();
+
     for (let i = 0; i < n; i++) {
       if (aborting) {
         speak("已取消");
@@ -2293,9 +2296,16 @@ async function runBatch() {
       const rng = mulberry32(seedNum);
       const pinForDraw =
         settings.samePerson && ident.size ? new Set([...pinned, ...ident]) : pinned;
-      const drawn = drawOne(lex, settings, pinForDraw, userBanned, rng, seedNum);
+      // 釘住第一張有的，同時禁掉第一張沒有的 —— 只做前者的話，第一張留空的欄位
+      // 在後面幾張會被自由補上，同一個人會突然長出呆毛或變得肌肉發達。
+      const banForDraw =
+        settings.samePerson && identBan.size
+          ? new Set([...userBanned, ...identBan])
+          : userBanned;
+      const drawn = drawOne(lex, settings, pinForDraw, banForDraw, rng, seedNum);
       if (settings.samePerson && ident.size === 0) {
         ident = identityPins(lex, drawn.positive);
+        identBan = identityBans(lex, drawn.positive);
         lastIdent = ident;
         syncSamePerson();
       }
