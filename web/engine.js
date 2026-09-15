@@ -4549,7 +4549,13 @@ export function drawOne(lex, settings, pinned, userBanned, rand, seed) {
             (item.layer === "skin" || isBodyGarment(item)) &&
             garmentOkForKind(item, kind, era)
         );
-        takeFromPool(pool, 1, rand, commit, clothingPrefer, allow);
+        // 只勾「活動」時畫面上說好的是日常，沒有走光或做愛 —— 補救時就不該
+        // 拿裸體交差。有衣服可穿就穿衣服，真的一件都沒有才退回裸標
+        //（不然浴場又會變回什麼都沒交代）。實測這條沒加之前，
+        // 只勾活動的 3000 張裡會漏出兩張全裸。
+        const dressed = pool.filter((item) => item.layer !== "skin");
+        const rescue = heat === "activity" && dressed.length ? dressed : pool;
+        takeFromPool(rescue, 1, rand, commit, clothingPrefer, allow);
       }
       for (const t of [...used]) {
         if (pinned.has(t)) continue;

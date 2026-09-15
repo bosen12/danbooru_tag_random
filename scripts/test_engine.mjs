@@ -6850,6 +6850,57 @@ function indoorOutdoorClash(have) {
   eq("同一個人：衣服仍然每批都有變化", clothMoved, batches);
 }
 
+{
+  // 只勾「活動」時，畫面上寫的是日常，沒有走光或做愛。
+  //
+  // 浴場補救那一段（服裝先於場地決定，場地選到浴場之後衣服被掃掉，這裡再補一件）
+  // 的池子裡含裸標 —— 於是只勾活動的 3000 張裡會漏出兩張全裸。有衣服可穿就該
+  // 穿衣服，真的一件都沒有才退回裸標，否則浴場又會變回什麼都沒交代。
+  const s = defaultSettings(data);
+  s.girl = true;
+  s.boy = true;
+  s.heats = ["activity"];
+  const BATH = new Set([
+    "bath", "bathtub", "bathing", "onsen", "shower", "shower (place)",
+    "open-air bath", "sento", "ofuro", "bubble bath",
+  ]);
+  let skin = 0;
+  let bath = 0;
+  let bare = 0;
+  let total = 0;
+  for (const era of ERAS) {
+    s.eras = [era];
+    for (let i = 1; i <= 200; i++) {
+      const h = tagsOf(drawOne(lex, s, new Set(), new Set(), mulberry32(i), i));
+      total += 1;
+      if ([...h].some((t) => lex.byTag.get(t)?.layer === "skin")) skin += 1;
+      if ([...h].some((t) => BATH.has(t))) {
+        bath += 1;
+        const stated = [...h].some((t) => {
+          const it = lex.byTag.get(t);
+          return it && it.section === "clothing" && (it.layer === "skin" || it.layer === "garment");
+        });
+        if (!stated) bare += 1;
+      }
+    }
+  }
+  ok("活動尺度的取樣夠多，這條測試不是空轉", total >= 1000 && bath >= 30,
+     `${total} 張，浴場 ${bath}`);
+  eq("只勾活動時不會有裸標", skin, 0);
+  eq("只勾活動時浴場仍然交代得出身體（沒有為了不裸而留白）", bare, 0);
+
+  // 反面：走光與性愛本來就該抽得到裸標，否則上面等於把功能關掉了
+  const sSex = defaultSettings(data);
+  sSex.girl = true;
+  sSex.heats = ["sex"];
+  let sexSkin = 0;
+  for (let i = 1; i <= 300; i++) {
+    if ([...tagsOf(drawOne(lex, sSex, new Set(), new Set(), mulberry32(i), i))]
+      .some((t) => lex.byTag.get(t)?.layer === "skin")) sexSkin += 1;
+  }
+  ok("性愛尺度仍然抽得到裸標（證明上面擋的是真的有在擋）", sexSkin > 80, `${sexSkin}/300`);
+}
+
 if (failed) {
   console.error(`\n${failed} failed`);
   process.exit(1);
