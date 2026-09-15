@@ -7332,6 +7332,126 @@ function indoorOutdoorClash(have) {
   }
 }
 
+// --- 釘了會讓性愛抽不到的字，一定要出提示 -----------------------------------
+// 使用者回報：色情＋正常＋性愛＋釘泳池，結果抽不到性愛。泳池本身沒問題（單釘泳池
+// 是 100%），是釘選裡另外有個運動活動 —— 打球跟做愛不能同時發生，那是物理。
+//
+// 但當時 sleeping 會讓性愛歸零而且**完全沒有提示**，因為提示只看 mutex="activity"，
+// 而 sleeping 是 body_pose。使用者只會看到「選了性愛卻一張都沒有」。
+//
+// 這條測試不信任任何手寫名單：它自己去跑，找出「釘下去會讓性愛歸零」的字，
+// 再要求每一個都有提示。以後有人新增這種字，這裡會自己紅。
+{
+  const by = new Map(data.tags.map((t) => [t.tag, t]));
+  const isSexTag = (t) => {
+    const it = by.get(t);
+    return !!it && (it.mutex === "sex_act" || it.group === "sex");
+  };
+  const sexRate = (pinnedSet, n) => {
+    let hit = 0;
+    for (let i = 1; i <= n; i++) {
+      const s = defaultSettings(data);
+      s.rating = "explicit";
+      s.sceneMode = "normal";
+      s.heats = ["sex"];
+      s.weights = weightsForHeats(["sex"], lex.data.heatWeights);
+      const have = tagsOf(drawOne(lex, s, pinnedSet, new Set(), mulberry32(i * 37), i * 37));
+      if ([...have].some(isSexTag)) hit += 1;
+    }
+    return hit / n;
+  };
+  // 候選只掃 pose（活動與身體姿勢），其他段落不會擋性愛，掃全庫太慢。
+  const candidates = data.tags.filter(
+    (t) => t.section === "pose" && (t.mutex === "activity" || t.mutex === "body_pose")
+  );
+  const silent = [];
+  let killers = 0;
+  for (const t of candidates) {
+    let pinnedSet;
+    try { pinnedSet = applyPin(lex, new Set(), new Set(), t.tag).pinned; } catch { continue; }
+    if (sexRate(pinnedSet, 16) > 0.05) continue;
+    killers += 1;
+    if (!sportHeatWarnings(lex, pinnedSet, ["sex"]).length) silent.push(t.tag);
+  }
+  ok("取樣夠多：真的有找到會擋性愛的字", killers >= 10, `只找到 ${killers} 個`);
+  eq("會讓性愛抽不到的字，每一個都會出提示", silent.length, 0);
+  if (silent.length) console.error(`      無聲歸零：${silent.join("、")}`);
+
+  // 反面：泡在水裡的活動可以跟性愛並存，不能被誤報成阻擋。
+  const wet = ["swimming", "diving", "bathing", "wading", "floating", "showering"];
+  const wrong = wet.filter((t) => {
+    if (!lex.byTag.has(t)) return false;
+    return sportHeatWarnings(lex, applyPin(lex, new Set(), new Set(), t).pinned, ["sex"]).length > 0;
+  });
+  eq("泡在水裡的活動不會被誤報成擋住性愛", wrong.length, 0);
+  if (wrong.length) console.error(`      被誤報：${wrong.join("、")}`);
+
+  // 泳池 preset 本身不擋性愛 —— 使用者回報的那個組合要是好的。
+  const poolPin = applyPresetTags(lex, BUILTIN_PRESETS.find((p) => p.id === "pool").tags, new Set());
+  ok("釘泳池 preset 抽得到性愛", sexRate(poolPin, 40) > 0.8, "泳池本身不該擋性愛");
+  eq("釘泳池 preset 不會出現「擋住性愛」的提示", sportHeatWarnings(lex, poolPin, ["sex"]).length, 0);
+}
+
+// --- hetero：一男一女又真的在做，就要標上 -----------------------------------
+// Danbooru 上「1girl 1boy sex」有 98.9% 同時帶 hetero，而我們一直沒給 ——
+// 因為 hetero 的 section 是 subject，而 drawOne() 刻意沒有 fill("subject")。
+// 那個設計對「人數」是對的，卻把配對描述一起排除了。
+{
+  const by = new Map(data.tags.map((t) => [t.tag, t]));
+  const isSexTag = (t) => {
+    const it = by.get(t);
+    return !!it && (it.mutex === "sex_act" || it.group === "sex");
+  };
+  // 用 engine 匯出的 FEMALE_COUNT / MALE_COUNT，不要自己寫一個正規表示式 ——
+  // 人數字的清單只該有一份，手抄的那份會跟著詞庫長大而失準。
+  const hasGirl = (arr) => arr.some((t) => FEMALE_COUNT.has(t));
+  const hasBoy = (arr) => arr.some((t) => MALE_COUNT.has(t));
+
+  let mixedSex = 0;
+  let mixedSexTagged = 0;
+  let wrongNoSex = 0;
+  let wrongSameSex = 0;
+  for (const [g, b] of [[true, false], [false, true], [true, true]]) {
+    for (const heat of ["activity", "tease", "flash", "sex"]) {
+      for (let i = 1; i <= 120; i++) {
+        const s = defaultSettings(data);
+        s.girl = g;
+        s.boy = b;
+        s.rating = "explicit";
+        s.heats = [heat];
+        const arr = [...tagsOf(drawOne(lex, s, new Set(), new Set(), mulberry32(i * 31 + heat.length), i * 31 + heat.length))];
+        const mixed = hasGirl(arr) && hasBoy(arr);
+        const sex = arr.some(isSexTag);
+        const het = arr.includes("hetero");
+        if (mixed && sex) {
+          mixedSex += 1;
+          if (het) mixedSexTagged += 1;
+        } else if (het) {
+          if (mixed) wrongNoSex += 1;
+          else wrongSameSex += 1;
+        }
+      }
+    }
+  }
+  ok("取樣夠多：真的抽到一男一女的性愛圖", mixedSex >= 30, `只有 ${mixedSex} 張`);
+  eq("一男一女＋有性行為 -> 一定標 hetero", mixedSex - mixedSexTagged, 0);
+  eq("沒有性行為就不標 hetero", wrongNoSex, 0);
+  eq("同性或單人不標 hetero", wrongSameSex, 0);
+
+  // yuri 不比照辦理：查過 Danbooru，「2girls sex」只有 6.6% 帶 yuri，
+  // 跟 hetero 的 98.9% 不是同一個量級。這條守著別人（或我）之後手癢補對稱。
+  let yuriAuto = 0;
+  for (let i = 1; i <= 400; i++) {
+    const s = defaultSettings(data);
+    s.girl = true;
+    s.boy = false;
+    s.rating = "explicit";
+    s.heats = ["sex"];
+    if (tagsOf(drawOne(lex, s, new Set(), new Set(), mulberry32(i * 17), i * 17)).has("yuri")) yuriAuto += 1;
+  }
+  eq("yuri 不會被自動補上（共現率只有 6.6%，不該比照 hetero）", yuriAuto, 0);
+}
+
 if (failed) {
   console.error(`\n${failed} failed`);
   process.exit(1);

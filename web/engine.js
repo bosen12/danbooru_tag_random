@@ -52,6 +52,13 @@ export function weightsForHeats(heats, heatWeights) {
   for (const x of h) w[x] = share;
   return w;
 }
+// 可以跟性愛動作並存的活動。其餘會動的活動（打球、騎馬、跑步）跟性愛互斥 ——
+// 那是物理，不是尺度。
+//
+// diving 是 2026-09-16 補的：它跟 swimming／wading／floating 一樣在 WATER_ACT
+// 裡，中文是「潛水」不是「跳水」，泡在水裡這件事跟游泳同一類。漏掉它沒有理由，
+// 結果是「游泳可以、潛水不行」。WATER_ACT 裡只剩 fishing 不在這裡，那個有道理：
+// 釣魚是手上拿著竿子站在岸上，不是泡在水裡。
 const SEX_OK_ACTIVITY = new Set([
   "bathing",
   "showering",
@@ -59,7 +66,14 @@ const SEX_OK_ACTIVITY = new Set([
   "wading",
   "floating",
   "shared bathing",
+  "diving",
 ]);
+
+// 不是「活動」但一樣會讓性愛抽不到的身體姿勢。
+// sleeping 的互斥寫在 allow() 裡（睡著時整段 pose 只留鏡頭／身體／表情／脫衣），
+// 所以它不是 mutex="activity"，sportHeatWarnings 本來看不到它 ——
+// 使用者釘了「睡著」再選性愛，會一張都抽不到而且**畫面上完全沒有提示**。
+const SEX_BLOCKING_BODY = new Set(["sleeping"]);
 
 const STILL_BODY = new Set(["sleeping", "lying", "on back", "on stomach", "on side", "reclining"]);
 const LOCKED_SIT = new Set(["seiza", "wariza", "indian style"]);
@@ -2289,8 +2303,11 @@ export function sportHeatWarnings(lex, pinned, heats) {
   const blocking = [];
   for (const t of pinned) {
     const it = lex.byTag.get(t);
-    if (!it || it.mutex !== "activity") continue;
-    if (MOVE_ACT.has(t) && !SEX_OK_ACTIVITY.has(t)) blocking.push(t);
+    if (!it) continue;
+    // 兩種都要收：會動的活動，以及 sleeping 這種不是 activity 的身體姿勢。
+    // 只看 mutex==="activity" 的話，睡著就會變成無聲歸零。
+    if (it.mutex === "activity" && MOVE_ACT.has(t) && !SEX_OK_ACTIVITY.has(t)) blocking.push(t);
+    else if (SEX_BLOCKING_BODY.has(t)) blocking.push(t);
   }
   return blocking.length ? [{ kind: "sexActivity", tags: blocking }] : [];
 }
@@ -5234,6 +5251,29 @@ export function drawOne(lex, settings, pinned, userBanned, rand, seed) {
   // 這裡的每一段都要：用 mustPins() 當護身符（釘選與必抽不能刪），
   // 刪字時一併清掉 mutexTaken，並且量「還抽不抽得到」而不是只量「壞的不見了」。
   // ===========================================================================
+
+  // 一男一女又真的在做，就補上 hetero。
+  //
+  // Danbooru 上標了「1girl 1boy sex」的圖有 **98.9%** 同時帶 hetero
+  // （282,780 / 285,992），所以模型看那組字的時候，hetero 幾乎一定在場。
+  // 我們一直沒給，等於少了它最熟悉的那一個配對訊號。
+  //
+  // 之所以會漏，是因為 hetero 的 section 是 subject，而 drawOne() 刻意沒有
+  // fill("subject")（主體段整段由 chooseCast 決定人數，見 QUOTA_SECTIONS 的註解）。
+  // 那個設計對「人數」是對的，但把 hetero 這種**配對描述**一起排除掉了。
+  //
+  // yuri 不比照辦理：同樣查過，「2girls sex」只有 6.6% 帶 yuri，
+  // 跟 hetero 完全不是同一個量級，自動補上會是錯的。
+  //
+  // 只在有性行為時補。純粹一男一女同框（沒有性）在 Danbooru 上是 58%，
+  // 不夠高到可以無條件加。
+  if (female && male && !used.has("hetero") && lex.byTag.has("hetero")) {
+    const doingIt = [...used].some((t) => {
+      const it = lex.byTag.get(t);
+      return it && (it.mutex === "sex_act" || it.group === "sex");
+    });
+    if (doingIt) commit("hetero");
+  }
 
   // 正向的一半：場合已經定了，把跟它成對的配件拉進來。
   // 泡澡游泳不拉 —— 那邊的配件本來就要少，不是要多。
