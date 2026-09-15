@@ -1018,6 +1018,11 @@ def tg_apply_config(payload: dict) -> dict:
 DC_API = str(cfg("discord.api", "DISCORD_API", "https://discord.com/api/v10"))
 DC_SECRETS = ROOT / ".secrets" / "discord.json"
 DC_CONTENT_MAX = 2000
+# Discord embed 的上限（官方文件）：標題 256、說明 4096、單一欄位值 1024。
+DC_TITLE_MAX = 256
+DC_DESC_MAX = 4096
+# 左側色條。跟介面的 --color-accent 同一個硃砂調。
+DC_COLOR = 0xE0563C
 DC_GAP = 1.0
 DC_RETRY_WAIT = 5.0
 DC_QUEUE_MAX = int(cfg("discord.queueMax", "", 200))
@@ -1086,6 +1091,40 @@ def dc_status() -> dict:
             "lastError": _dc["lastError"],
             "queued": _dc_queue.qsize(),
         }
+
+
+def dc_safe_filename(name: str) -> str:
+    """embed 的 attachment:// 必須和上傳的檔名一字不差，先把奇怪字元濾掉。"""
+    keep = "".join(c for c in str(name or "") if c.isalnum() or c in "._-")
+    return keep[-100:] or "shot.png"
+
+
+def dc_fence(text: str, limit: int) -> str:
+    """包成 code block，並保證連圍籬一起不超過 limit。"""
+    nl = chr(10)
+    fence = "```"
+    cost = len(fence) * 2 + 2  # 兩道圍籬加兩個換行
+    room = max(0, limit - cost)
+    body = text if len(text) <= room else text[: max(0, room - 1)] + "…"
+    return fence + nl + body + nl + fence
+
+
+def dc_embed(job: dict, filename: str) -> dict:
+    """一張成品的 embed：標題放 seed 和尺寸，說明放中文 POS，圖嵌在裡面。"""
+    bits = []
+    if job.get("seed") is not None:
+        bits.append(f"seed {job['seed']}")
+    if job.get("width") and job.get("height"):
+        bits.append(f"{job['width']}×{job['height']}")
+    embed = {
+        "color": DC_COLOR,
+        "title": (" · ".join(bits) or "排字匣")[:DC_TITLE_MAX],
+        "image": {"url": f"attachment://{filename}"},
+    }
+    zh = str(job.get("zh") or "").strip()
+    if zh:
+        embed["description"] = zh if len(zh) <= DC_DESC_MAX else zh[: DC_DESC_MAX - 1] + "…"
+    return embed
 
 
 def dc_content(job: dict) -> str:
@@ -1180,9 +1219,16 @@ def dc_send_photo(job: dict) -> None:
         mime = "image/webp"
     with _dc_lock:
         channel = _dc["channelId"]
+    fname = dc_safe_filename(job.get("filename") or "shot.png")
+    # 版面：embed 負責好看（色條、標題、中文說明、圖），英文 POS 放在訊息本體的
+    # code block —— 那裡有 2000 字可用（embed 欄位只有 1024），而且使用者可以直接複製。
+    payload = {"embeds": [dc_embed(job, fname)]}
+    en = str(job.get("en") or "").strip()
+    if en:
+        payload["content"] = dc_fence(en, DC_CONTENT_MAX)
     body, boundary = tg_multipart(
-        {"payload_json": json.dumps({"content": dc_content(job)}, ensure_ascii=False)},
-        str(job.get("filename") or "shot.png"),
+        {"payload_json": json.dumps(payload, ensure_ascii=False)},
+        fname,
         bytes(blob),
         mime,
         field="files[0]",

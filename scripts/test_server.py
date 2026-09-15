@@ -365,6 +365,81 @@ ok("有處理 If-None-Match", "If-None-Match" in _img_src)
 ok("ETag 算在內容上而不是檔名上", "hashlib.sha1(bytes(raw))" in _img_src)
 
 
+
+
+# --- Discord embed ---------------------------------------------------------
+
+NL = chr(10)
+FENCE = "```"
+
+dc_job = {
+    "filename": "ComfyUI_00042_.png",
+    "seed": 786465539,
+    "width": 1024,
+    "height": 1216,
+    "zh": "1個女性、單人、長髮、排球服",
+    "en": "1girl, solo, long hair, volleyball uniform, masterpiece",
+}
+
+# 檔名清洗：attachment:// 必須和上傳的檔名一字不差
+ok("safe filename keeps a normal comfy name", server.dc_safe_filename("ComfyUI_00042_.png") == "ComfyUI_00042_.png")
+ok("safe filename drops spaces and punctuation", " " not in server.dc_safe_filename("a b!c.png"))
+ok("safe filename falls back when empty", server.dc_safe_filename("") == "shot.png")
+ok("safe filename falls back when all stripped", server.dc_safe_filename("!!!") == "shot.png")
+
+# code block 圍籬
+fenced = server.dc_fence("abc", 100)
+ok("fence wraps in a code block", fenced.startswith(FENCE + NL) and fenced.endswith(NL + FENCE))
+ok("fence keeps short text intact", "abc" in fenced)
+tight = server.dc_fence("x" * 500, 40)
+ok("fence never exceeds the limit", len(tight) <= 40, f"len={len(tight)}")
+ok("fence marks truncation", "…" in tight)
+ok("fence still closed when truncated", tight.startswith(FENCE + NL) and tight.endswith(NL + FENCE))
+
+# embed 本體
+emb = server.dc_embed(dc_job, server.dc_safe_filename(dc_job["filename"]))
+ok("embed carries the accent colour", emb["color"] == server.DC_COLOR)
+ok("embed title has seed and size", emb["title"] == "seed 786465539 · 1024×1216", emb["title"])
+ok("embed shows the image inline", emb["image"]["url"] == "attachment://ComfyUI_00042_.png", emb["image"]["url"])
+ok("embed description is the chinese pos", emb["description"] == dc_job["zh"])
+ok("embed does not duplicate the english pos", "fields" not in emb)
+
+# attachment:// 一定要對得上實際上傳的檔名
+dirty = dict(dc_job, filename="a b!c.png")
+fn = server.dc_safe_filename(dirty["filename"])
+ok("attachment url matches the uploaded name", server.dc_embed(dirty, fn)["image"]["url"] == "attachment://" + fn)
+
+# 沒有 seed / 尺寸時的退路
+bare = server.dc_embed({"filename": "x.png"}, "x.png")
+ok("embed falls back to a plain title", bare["title"] == "排字匣", bare["title"])
+ok("embed omits description when there is no chinese", "description" not in bare)
+
+# 只有 seed、只有尺寸
+ok("embed title with seed only", server.dc_embed({"seed": 7}, "x.png")["title"] == "seed 7")
+ok("embed title with size only", server.dc_embed({"width": 832, "height": 1216}, "x.png")["title"] == "832×1216")
+
+# 上限
+long_zh = "字" * 9000
+ok("embed truncates a huge chinese pos", len(server.dc_embed({"zh": long_zh}, "x.png")["description"]) <= server.DC_DESC_MAX)
+ok("embed truncation is marked", server.dc_embed({"zh": long_zh}, "x.png")["description"].endswith("…"))
+long_title = server.dc_embed({"seed": "S" * 900, "width": 1, "height": 1}, "x.png")["title"]
+ok("embed truncates a huge title", len(long_title) <= server.DC_TITLE_MAX)
+
+# 英文 POS 放訊息本體，2000 字上限
+long_en = ", ".join(["some very long danbooru tag"] * 200)
+body = server.dc_fence(long_en, server.DC_CONTENT_MAX)
+ok("english pos stays under the content limit", len(body) <= server.DC_CONTENT_MAX, f"len={len(body)}")
+ok("english pos is copy-friendly in a code block", body.startswith(FENCE + NL))
+
+# multipart 仍然用 Discord 要的欄位名
+dc_body, dc_boundary = server.tg_multipart(
+    {"payload_json": "{}"}, "ComfyUI_00042_.png", b"\x89PNG", "image/png", field="files[0]"
+)
+ok("discord multipart uses files[0]", b'name="files[0]"' in dc_body)
+ok("discord multipart carries payload_json", b'name="payload_json"' in dc_body)
+ok("discord multipart keeps the filename", b'filename="ComfyUI_00042_.png"' in dc_body)
+ok("discord multipart closes", dc_body.endswith(("--" + dc_boundary + "--" + chr(13) + NL).encode()))
+
 if failed:
     print(f"\n{failed} failed")
     sys.exit(1)
