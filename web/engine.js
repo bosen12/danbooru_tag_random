@@ -553,6 +553,27 @@ const BATH_PLACE = new Set([
   "sauna",
 ]);
 const BATH_ACT = new Set(["bathing", "showering", "shared bathing"]);
+// steam 掛在 mutex:"weather" 底下，但它不是天氣：Danbooru 上它在室內（15.0%）比在
+// 室外（9.0%）多，而且 12.4% 跟 onsen 同框 —— 那是浴場的蒸氣。跟著天氣那格在室外
+// 抽出來會擺錯地方，所以它要有自己的場合。
+// 分兩檔，因為 Danbooru 上「這個場合有幾成帶蒸氣」差很多：
+//   onsen 37.8%、sauna 43.0%、bathing 28.6%、shared bathing 26.7%
+//   bathroom 14.3%、bathtub 14.6%
+// 熱水池和洗澡間不是同一件事，用一個數字蓋過去會讓浴室霧茫茫。
+const STEAM_HOT = new Set([
+  "onsen", "sauna", "open-air bath", "hot spring", "bathing", "shared bathing", "steaming body",
+]);
+const STEAM_MILD = new Set([
+  "bath", "bathroom", "bathtub", "shower (place)", "sento", "ofuro", "bubble bath",
+  "showering", "after bathing",
+]);
+const STEAM_CTX = new Set([...STEAM_HOT, ...STEAM_MILD]);
+// 真正的天氣只在室外。天氣那一格自己有室外判斷，但通用的 fill("env") 在張數調高時
+// 也搆得到 mutex:"weather"，那裡沒有任何室內外檢查 —— 實測 seed 3「抽好抽滿」抽出
+// 「sauna, indoors, ... fog」，三溫暖裡起霧。所以閘要放在 allow()，兩條路徑一起擋。
+// in_out 在 fillSlot("env","in_out") 就定了，排在天氣那格和 fill("env") 前面，
+// 所以這裡問得到答案。（Danbooru 佐證：snow 在室內只有 2.1%、cherry blossoms 2.5%。）
+const OUTDOOR_WEATHER = new Set(["rain", "overcast", "snow", "fog", "cherry blossoms"]);
 // ---------------------------------------------------------------- SFW 模式
 // 關掉色情模式之後，哪些字不能出現。
 //
@@ -4090,6 +4111,11 @@ export function drawOne(lex, settings, pinned, userBanned, rand, seed) {
     ) {
       return false;
     }
+    // 場地在 fillSlot("env","place") 就定了，排在天氣那一格前面，所以這條問得到答案，
+    // 放 allow() 是對的（而不是事後刪除）—— 這樣天氣那一格也不會把名額浪費在
+    // 一個注定要被刪掉的 steam 上。
+    if (item.tag === "steam" && ![...used].some((t) => STEAM_CTX.has(t))) return false;
+    if (OUTDOOR_WEATHER.has(item.tag) && used.has("indoors") && !used.has("outdoors")) return false;
     if (item.tag === "wading" && (used.has("legs up") || used.has("m legs"))) return false;
     if ((item.tag === "legs up" || item.tag === "m legs") && used.has("wading")) return false;
     if (
@@ -4950,6 +4976,41 @@ export function drawOne(lex, settings, pinned, userBanned, rand, seed) {
     }
   }
   fillSlot("env", "in_out");
+  // 天氣。這一格以前完全沒人填，而通用的 fill("env") 在預設張數下一格預算都不剩
+  // （place / in_out / day_night / lighting 四格剛好把預設的 env:4 用完），所以
+  // rain、snow、fog、overcast、cherry blossoms 這幾個字在預設設定下是 0 —— 不是
+  // 抽得少，是結構性抽不到。跟光源當初一模一樣的病。
+  //
+  // 但不能照抄光源那格的做法。光源是每張圖都有，天氣不是：Danbooru 上六個天氣字
+  // 加起來最多只佔室外圖的 6.6%（rain 2.00%、snow 2.89%、cherry blossoms 2.37%、
+  // steam 0.84%、fog 0.46%、overcast 0.39%）。無條件填等於每張圖都在下雨，而且
+  // 室內也會下。所以這裡是「室外才擲骰子」。
+  //
+  // 15% 比 Danbooru 的基礎比例略高 —— 這是隨機器，看得到才有意義 —— 但仍在同一個
+  // 量級。室外約佔六成，所以全體大約 9% 的圖會有天氣。
+  //
+  // 蒸氣跟天氣互斥（同一個 mutex），所以兩者在這裡二選一：有浴場就是蒸氣，
+  // 否則室外才擲天氣。
+  //
+  // 蒸氣**不能**放進 CTX_PULLS_ACC —— 那個迴圈外面包著 kind !== "bath" &&
+  // kind !== "swim"（「泡澡游泳不拉，那邊的配件本來就要少」），所以一進浴場整段
+  // 就被跳過，寫在那裡是死碼。我第一版就是寫在那裡，實測釘 onsen 抽 400 張
+  // steam 是 0 才發現。
+  //
+  // commit() 只驗相依字、不驗這個字本身，所以 allow() 這一關要自己過 ——
+  // 跟 CTX_PULLS_ACC 那邊同樣的理由。
+  const steamItem = lex.byTag.get("steam");
+  const steamChance = [...used].some((t) => STEAM_HOT.has(t))
+    ? 0.35
+    : [...used].some((t) => STEAM_MILD.has(t))
+      ? 0.15
+      : 0;
+  if (steamChance > 0 && steamItem && !used.has("steam") && eraOk(steamItem, era) &&
+      heatOk(steamItem, heat) && gateOk(steamItem, female, male) && allow(steamItem)) {
+    if (rand() < steamChance) commit("steam");
+  } else if (steamChance === 0 && used.has("outdoors") && rand() < 0.15) {
+    fillSlot("env", "weather");
+  }
   fillSlot("env", "day_night");
   // 光源。以前沒有人明確填這一格，lighting 只能在剩下的 fill("env") 裡跟道具、
   // 天氣、天空搶名額，14 個光源 tag 加起來只有大約 3% 的機率出現 —— 而且每張

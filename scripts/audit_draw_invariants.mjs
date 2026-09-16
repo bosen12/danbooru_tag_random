@@ -95,7 +95,32 @@ const WATER_SOURCES = [
 /** 這些字明確在室外。 */
 const OUTDOOR_ONLY = ["tree", "bush", "sky", "blue sky", "starry sky", "ocean", "mountain"];
 
+// 天氣那一格是新加的（室外 15% 擲骰），這兩條是它的護欄。
+//
+// 清單照這個檔案的規矩自己手寫，不從 engine.js 反射 —— 那邊改了規則，這裡就會
+// 產生一個需要人審的 diff，而不是跟著一起錯。
+const WEATHER_OUTDOOR = ["rain", "overcast", "snow", "fog", "cherry blossoms"];
+const STEAM_NEEDS = [
+  "onsen", "sauna", "open-air bath", "hot spring", "bathing", "shared bathing",
+  "steaming body", "bath", "bathroom", "bathtub", "shower (place)", "sento",
+  "ofuro", "bubble bath", "showering", "after bathing",
+];
+
 const HARD = [
+  {
+    name: "室內下雨",
+    why: "天氣那一格只在室外擲。室內出現真正的天氣（雨雪霧陰櫻）代表那道室外判斷破了。",
+    check: (n) => {
+      if (!n.has("indoors") || n.has("outdoors")) return "";
+      const w = WEATHER_OUTDOOR.filter((t) => n.has(t));
+      return w.length ? `indoors 撞 ${w.join("+")}` : "";
+    },
+  },
+  {
+    name: "沒有浴場的蒸氣",
+    why: "steam 掛在 weather 互斥格底下，但它是浴場的蒸氣不是天氣（Danbooru 上室內 15.0% 比室外 9.0% 多）。沒有浴場就不該有它。",
+    check: (n) => (n.has("steam") && !STEAM_NEEDS.some((t) => n.has(t)) ? "steam 沒有任何浴場情境" : ""),
+  },
   {
     name: "晝夜同框",
     why: "嚴格白天和嚴格夜側不能同時成立。暮光(sunset/dusk)兩側相容，不算。",
