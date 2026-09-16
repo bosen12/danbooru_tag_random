@@ -40,6 +40,12 @@ UA = "danbooru-tag-random-harvest/1.0 (local lexicon builder)"
 
 SKIP_CAT = {1, 3, 4, 5}  # artist, copyright, character, meta
 SKIP_TAGS = {
+    # bra／panties 已經把同一件事講得更清楚，而 underwear 在 Danbooru 上就是那兩個字
+    # implies 的父標籤。它進了詞庫也永遠抽不到（父標籤要靠子標籤 implies 才會出現，
+    # 而沒有任何字 implies 它），所以在這裡就擋掉 —— 否則下次重跑採集又會把它撿回來。
+    # 注意：negative prompt 裡的 underwear 是另一回事，那個要留（見 merge_lexicon 的
+    # sfwNegative）—— 全年齡模式要靠它把模型推離內衣。
+    "underwear",
     "english text",
     "speech bubble",
     "watermark",
