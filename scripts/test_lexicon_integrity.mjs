@@ -70,7 +70,8 @@ function ok(name, rows) {
       }
     }
   }
-  // alwaysEnv 目前放的是 soft lighting，那是字面字串 —— 允許，但要有人知道。
+  // alwaysEnv 現在是空的。裡面允許放詞庫沒收的字面字串，所以這條
+  // 檢查刻意排掉 alwaysEnv 的回報 —— 允許，但要有人知道。
   ok("eraAnchors / castWeights 引用的字都存在", bad.filter((r) => !r.startsWith("alwaysEnv")));
 }
 

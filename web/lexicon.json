@@ -46,9 +46,7 @@
     "cameltoe",
     "pubic hair"
   ],
-  "alwaysEnv": [
-    "soft lighting"
-  ],
+  "alwaysEnv": [],
   "negative": "bad quality, worst quality, worst detail, displeasing, lowres, sketch, censored, bar censor, mosaic censoring, english text, watermark, signature, artist name, username, logo, speech bubble, multiple views, artistic error, bad anatomy, bad hands, extra digits, fewer digits, extra arms, deformed, blurry, jpeg artifacts, 3d, realistic, photorealistic",
   "defaults": {
     "n": 1,
@@ -250,8 +248,7 @@
     "best quality": "最高品質",
     "amazing quality": "極致品質",
     "nsfw": "限制級",
-    "explicit": "露骨",
-    "soft lighting": "柔光"
+    "explicit": "露骨"
   },
   "tags": [
     {
@@ -10417,25 +10414,6 @@
       "zh": "蒸氣"
     },
     {
-      "tag": "cinematic lighting",
-      "section": "env",
-      "gate": "any",
-      "heat": [
-        "tease",
-        "flash",
-        "sex"
-      ],
-      "mutex": "lighting",
-      "bind": [],
-      "implies": [],
-      "layer": "normal",
-      "era": [
-        "any"
-      ],
-      "group": "light",
-      "zh": "電影光"
-    },
-    {
       "tag": "dim lighting",
       "section": "env",
       "gate": "any",
@@ -12704,29 +12682,6 @@
       ],
       "group": "light",
       "zh": "篝火"
-    },
-    {
-      "tag": "firelight",
-      "section": "env",
-      "gate": "any",
-      "heat": [
-        "tease",
-        "flash",
-        "sex"
-      ],
-      "mutex": "lighting",
-      "bind": [],
-      "implies": [],
-      "layer": "normal",
-      "era": [
-        "ancient_china",
-        "ancient_greece",
-        "medieval",
-        "edo",
-        "victorian"
-      ],
-      "group": "light",
-      "zh": "火光"
     },
     {
       "tag": "incense burner",

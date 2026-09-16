@@ -81,17 +81,20 @@ const sample = draws(200);
 }
 
 {
-  ok(
-    "soft lighting is in the draws at all",
-    sample.filter((d) => drawnTags(d).has("soft lighting")).length > 0
-  );
-  let soft = 0;
+  // 原本測的是「soft lighting 每張圖都有，所以不能拿來當答案」。soft lighting 已經
+  // 移除（Danbooru 0 篇，也不在 Illustrious 的訓練字彙裡），但那條不變式仍然成立且
+  // 該守住：alwaysEnv 裡的東西每張圖都有，拿來當題目等於送分，而且湊不出干擾項。
+  const always = lex.data.alwaysEnv || [];
+  let alwaysEligible = 0;
   for (const draw of sample) {
     for (const sec of ANSWER_SECTIONS) {
-      if (eligibleAnswers(lex, draw, banlist, sec).some((c) => c.tag === "soft lighting")) soft += 1;
+      for (const cand of eligibleAnswers(lex, draw, banlist, sec)) {
+        if (always.includes(cand.tag)) alwaysEligible += 1;
+      }
     }
   }
-  ok("soft lighting is never eligible", soft === 0, `soft=${soft}`);
+  ok("alwaysEnv tags are never eligible answers", alwaysEligible === 0, `hits=${alwaysEligible}`);
+  ok("the retired soft lighting tag is gone from the lexicon", !lex.byTag.has("soft lighting"));
 }
 
 {

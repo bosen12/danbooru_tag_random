@@ -2053,7 +2053,10 @@ def main() -> None:
             "penis", "sex", "cum", "areolae", "topless female", "bottomless",
             "panties", "underwear", "cameltoe", "pubic hair",
         ],
-        "alwaysEnv": ["soft lighting"],
+        # 清空：soft lighting 在 Danbooru 是 0 篇、也不在 Illustrious 的訓練字彙裡，
+        # 兩本字典都查不到卻每張圖硬掛。打光交給 light 群組隨機抽，那裡有 22 個
+        # 有真實訊號的 tag（shadow 164778、sunlight 102678、backlighting 45718…）。
+        "alwaysEnv": [],
         "negative": NEGATIVE,
         "defaults": {
             "n": 1,
@@ -2096,7 +2099,7 @@ def main() -> None:
         "zh": {t: old_zh[t] for t in (
             "masterpiece", "best quality", "amazing quality",
             "absurdres", "highres", "very aesthetic", "highly aesthetic", "newest",
-            "nsfw", "explicit", "soft lighting",
+            "nsfw", "explicit",
         ) if t in old_zh},
         "tags": unique,
     }

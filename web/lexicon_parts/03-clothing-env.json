@@ -2798,23 +2798,6 @@
     ]
   },
   {
-    "tag": "cinematic lighting",
-    "section": "env",
-    "gate": "any",
-    "heat": [
-      "tease",
-      "flash",
-      "sex"
-    ],
-    "mutex": "lighting",
-    "bind": [],
-    "implies": [],
-    "layer": "normal",
-    "era": [
-      "any"
-    ]
-  },
-  {
     "tag": "dim lighting",
     "section": "env",
     "gate": "any",

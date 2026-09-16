@@ -290,7 +290,6 @@ const DARK_LIGHT = new Set([
   "candlelight",
   "candle",
   "lantern",
-  "firelight",
   "oil lamp",
   "fireplace",
   "chandelier",
@@ -4928,9 +4927,11 @@ export function drawOne(lex, settings, pinned, userBanned, rand, seed) {
   fillSlot("env", "in_out");
   fillSlot("env", "day_night");
   // 光源。以前沒有人明確填這一格，lighting 只能在剩下的 fill("env") 裡跟道具、
-  // 天氣、天空搶名額，14 個光源 tag 加起來只有大約 3% 的機率出現 —— 而每張圖
-  // 都被無條件加上同一句 soft lighting，所以每張圖的光其實都一樣。fillSlot 的
-  // env 預設偏好就是「時代專屬優先」，所以古代會先拿到燭光、油燈、火把。
+  // 天氣、天空搶名額，14 個光源 tag 加起來只有大約 3% 的機率出現 —— 而且每張
+  // 圖都被無條件加上同一句 soft lighting，所以光其實都一樣。那句固定尾巴後來
+  // 也拿掉了（Danbooru 0 篇，也不在 Illustrious 的訓練字彙裡），現在打光完全
+  // 靠這一格真的抽到。fillSlot 的 env 預設偏好就是「時代專屬優先」，所以古代
+  // 會先拿到燭光、油燈、火把。
   // 偏好用軟權重不用硬桶：fillSlot 的 env 預設偏好是硬排序（時代專屬先抽完才輪到
   // 中性），而歷史時代現在有五到九個時代光源，硬排序會把 window light、
   // sidelighting 這些中性光源整個餓死 —— 既有測試「era:[any] 燈光抽得到」
@@ -5433,7 +5434,6 @@ export function drawOne(lex, settings, pinned, userBanned, rand, seed) {
       at += 1;
     }
   }
-  if (!env.includes("soft lighting")) env.unshift("soft lighting");
 
   // 色情模式關掉時，正面的 nsfw/explicit 換成相反的那組；伺服器那邊會把
   // nsfw/explicit 改放到負面。

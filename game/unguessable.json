@@ -1,5 +1,5 @@
 {
   "note": "出不出得了題的黑名單。tags 擋單一 tag，groups 擋整個 mutex 群組。打到覺得刁難的題就往這裡加。",
-  "tags": ["soft lighting"],
+  "tags": [],
   "groups": ["day_night"]
 }

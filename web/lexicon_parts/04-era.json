@@ -1866,29 +1866,6 @@
     "zh": "篝火"
   },
   {
-    "tag": "firelight",
-    "section": "env",
-    "gate": "any",
-    "heat": [
-      "tease",
-      "flash",
-      "sex"
-    ],
-    "mutex": "lighting",
-    "bind": [],
-    "implies": [],
-    "layer": "normal",
-    "era": [
-      "ancient_china",
-      "ancient_greece",
-      "medieval",
-      "edo",
-      "victorian"
-    ],
-    "group": "light",
-    "zh": "火光"
-  },
-  {
     "tag": "incense burner",
     "section": "env",
     "gate": "any",

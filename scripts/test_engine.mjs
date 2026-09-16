@@ -4877,9 +4877,12 @@ function indoorOutdoorClash(have) {
     // 第四次：場地那一格從硬桶改成 4:1 軟權重（era:[any] 場地本來幾乎抽不到，
     // beach 在 18000 張裡是 0）。場地換了，整條 RNG 就跟著換人，所以這次差很多 ——
     // 不是金標壞掉，是那一格真的改了。理由與量測見 findings.md Loop 14 第四節。
+    // 第五次：拿掉每張圖硬掛的 soft lighting（Danbooru 0 篇，也不在
+    // Illustrious 的訓練字彙裡）。同時被拿掉的 cinematic lighting 與 firelight 沒有
+    // 讓這條 RNG 路徑位移，所以這次的差異就只有少了那一個字。
     // 這次差異只有少一個 bra，其餘一個 byte 都沒動 —— 沒有重排、沒有換字，
     // 正是「只改該改的那一格」應有的樣子。
-    "1girl, solo, adult, very short hair, grey eyes, grey hair, bangs, large breasts, soft breasts, natural breasts, wet, thigh strap, hanging breasts, naked towel, female masturbation, standing, from outside, looking up, dazed, leaning forward, soft lighting, modern, onsen, indoors, day, spotlight, nsfw, explicit, masterpiece, best quality, amazing quality");
+    "1girl, solo, adult, very short hair, grey eyes, grey hair, bangs, large breasts, soft breasts, natural breasts, wet, thigh strap, hanging breasts, naked towel, female masturbation, standing, from outside, looking up, dazed, leaning forward, modern, onsen, indoors, day, spotlight, nsfw, explicit, masterpiece, best quality, amazing quality");
   ok("drawOne exposes shadow diagnostics", Array.isArray(shadowIntegrationDraw.shadowViolations));
 
   const eatProneShadow = validateSupportShadow({
@@ -6735,8 +6738,10 @@ function indoorOutdoorClash(have) {
 {
   // 光源槽是死的。env 明確填的是 place / in_out / day_night，lighting 只能在
   // 剩下的 fill("env") 裡跟道具、天氣、天空搶，結果 14 個光源 tag 加起來只有
-  // 大約 3% 的機率出現 —— 而每一張圖都被無條件加上同一句 soft lighting。
-  // 於是所有圖的光都一樣，而且沒有一個時代的光看起來像那個時代。
+  // 大約 3% 的機率出現 —— 而每一張圖都被無條件加上同一句 soft lighting，
+  // 所以所有圖的光都一樣，而且沒有一個時代的光看起來像那個時代。
+  // 那句固定的 soft lighting 已經拿掉（兩本字典都查不到），所以這條
+  // 覆蓋率現在完全靠 light 群組真的被抽到才成立 —— 更該守住。
   const s = defaultSettings(data);
   s.girl = true;
   const thin = [];
@@ -6763,7 +6768,7 @@ function indoorOutdoorClash(have) {
       if (!eraLit.length) noEra.push(era);
     }
   }
-  eq("每張圖都有講光源（不是只有那句固定的 soft lighting）", thin.length, 0);
+  eq("每張圖都有講光源（靠真的抽，不是靠一句固定尾巴）", thin.length, 0);
   if (thin.length) console.error(`      光源出現率：${thin.join("  ")}`);
   eq("歷史時代抽得到屬於那個時代的光源", noEra.length, 0);
   if (noEra.length) console.error(`      沒有時代光源：${noEra.join(" ")}`);
