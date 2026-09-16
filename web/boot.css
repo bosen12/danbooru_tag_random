@@ -114,6 +114,27 @@ input[type="search"] {
   touch-action: manipulation;
 }
 
+/* 輸入框原本只有瀏覽器預設的 focus 外框，邊框本身毫無反應 ——
+   搜尋框是這個 app 打字最多的地方，值得知道自己在不在裡面。
+   外框留給 :focus-visible（那是無障礙的事，要即時、不能有過場拖延），
+   這裡動的是邊框顏色與底色。 */
+input[type="search"],
+input[type="number"],
+input[type="text"],
+input[type="password"] {
+  transition:
+    border-color var(--dur-micro) var(--ease-out),
+    background-color var(--dur-micro) var(--ease-out);
+}
+
+input[type="search"]:focus,
+input[type="number"]:focus,
+input[type="text"]:focus,
+input[type="password"]:focus {
+  border-color: var(--color-accent);
+  background-color: color-mix(in oklab, var(--color-accent) 5%, var(--color-paper));
+}
+
 input[type="number"] {
   width: 5.5rem;
   font-variant-numeric: tabular-nums;
@@ -346,6 +367,31 @@ input[type="number"] {
   border-radius: var(--radius);
 }
 
+/* .ghost 在這之前**完全沒有 :hover 規則** —— 選 LoRA、底模、複製 POS、不補、
+   清除釘選、關閉全部，大約七十顆按鈕滑上去什麼事都不會發生。字牌那邊做得很細
+   （抬 1px、換色、按下去縮 0.98），次要控制項卻一個都沒有。
+   用的是同一組語彙：同樣的 --dur-micro、同樣的 --ease-out、同樣抬 1px。 */
+.ghost {
+  transition:
+    color var(--dur-micro) var(--ease-out),
+    border-color var(--dur-micro) var(--ease-out),
+    background-color var(--dur-micro) var(--ease-out),
+    transform var(--dur-micro) var(--ease-out);
+}
+
+.ghost:hover {
+  border-color: var(--color-accent);
+  background-color: color-mix(in oklab, var(--color-accent) 8%, transparent);
+  transform: translateY(-1px);
+}
+
+/* 複製之後原本只有文字從「複製 POS」換成「已複製」，按鈕本身完全沒變，
+   很容易以為沒按到。借 accent 做一次看得見的確認，跟文字一起還原。 */
+.ghost.is-copied {
+  border-color: var(--color-accent);
+  color: var(--color-accent);
+}
+
 .ghost.mini {
   min-height: 28px;
   padding: 0 8px;
@@ -353,6 +399,13 @@ input[type="number"] {
   letter-spacing: 0.06em;
   color: var(--color-muted);
   flex-shrink: 0;
+}
+
+/* mini 版本擠在數量格與清單列裡，抬起來會讓整排看起來在抖，
+   所以只換顏色不位移。 */
+.ghost.mini:hover {
+  color: var(--color-ink);
+  transform: none;
 }
 
 .heat {
@@ -452,6 +505,24 @@ input[type="number"] {
   border: 2px solid var(--color-pin);
   pointer-events: none;
   animation: pin-ripple calc(var(--dur-move) + var(--dur-ui)) var(--ease-out) forwards;
+}
+
+/* 封禁的回饋。釘選是一圈往外擴的環（把東西收進來），封禁就走相反方向：
+   一圈從外面收回來（把東西推開）。同一個語彙的兩個方向，比再放一次同樣的漣漪
+   更說得清楚發生了什麼。
+   在這之前封禁完全沒有動態回饋 —— 三段狀態裡只有一段會確認，點下去心裡沒底。 */
+.tag.is-ban-flash {
+  z-index: 4;
+}
+
+.tag.is-ban-flash::before {
+  content: "";
+  position: absolute;
+  inset: -4px;
+  border-radius: inherit;
+  border: 2px solid var(--color-danger);
+  pointer-events: none;
+  animation: ban-ripple calc(var(--dur-move) + var(--dur-ui)) var(--ease-out) forwards;
 }
 
 .tag[data-ban="mutex"] {
@@ -610,6 +681,28 @@ input[type="number"] {
   opacity: 0.65;
 }
 
+.cat-toggle {
+  transition: color var(--dur-micro) var(--ease-out);
+}
+
+.cat-toggle:hover {
+  color: var(--color-accent);
+}
+
+/* 分類本體是 grid-template-rows 0fr -> 1fr、320ms 走完，箭頭卻是瞬間翻面 ——
+   開合的指示器比開合本身先到，看起來像兩件事。翻面用同一組時間與曲線綁住。
+   透明度走 micro，那是 hover 的事，跟開合無關，不該一起拖 320ms。 */
+.cat-toggle::before {
+  transition:
+    transform var(--dur-move) var(--ease-in-out),
+    translate var(--dur-move) var(--ease-in-out),
+    opacity var(--dur-micro) var(--ease-out);
+}
+
+.cat-toggle:hover::before {
+  opacity: 1;
+}
+
 .cat.is-open .cat-toggle::before {
   transform: rotate(45deg);
   translate: 0 -0.18em;
@@ -674,6 +767,10 @@ input[type="number"] {
   white-space: nowrap;
 }
 
+.jump a {
+  transition: color var(--dur-micro) var(--ease-out);
+}
+
 .jump a:hover,
 .jump a:focus-visible {
   color: var(--color-ink);
@@ -732,11 +829,26 @@ input[type="number"] {
   height: 100%;
   object-fit: contain;
   opacity: 0;
-  transition: opacity var(--dur-move) var(--ease-out);
+  /* 落定時帶一點收尾的縮放：整張圖不是「淡出來」而是「沉下來」。
+     2% 很小，但那一下讓成品有重量 —— 這是整個 app 的高潮，值得一個動作。 */
+  transform: scale(1.02);
+  transition:
+    opacity var(--dur-move) var(--ease-out),
+    transform var(--dur-move) var(--ease-out);
 }
 
 .shot-img.is-on {
   opacity: 1;
+  transform: none;
+}
+
+/* 骨架退場。以前是 skel.remove() 直接拔掉，而且發生在圖片還在下載的時候，
+   所以順序是：骨架瞬間消失 -> 空盒子 -> 圖硬跳出來。現在改成等 decode() 之後
+   才交接，兩邊同時走：骨架淡出、圖沉下來。 */
+.shot .skel.is-gone {
+  opacity: 0;
+  animation: none;
+  transition: opacity var(--dur-move) var(--ease-out);
 }
 
 .card.is-done .shot {
@@ -1286,6 +1398,20 @@ input[type="number"] {
   }
 }
 
+@keyframes ban-ripple {
+  from {
+    transform: scale(1.8);
+    opacity: 0;
+  }
+  35% {
+    opacity: 1;
+  }
+  to {
+    transform: scale(1);
+    opacity: 0;
+  }
+}
+
 @keyframes rise {
   from {
     opacity: 0;
@@ -1426,6 +1552,21 @@ input[type="number"] {
   }
 }
 
+/* 第一次上畫面不要有過場。
+   那幾顆開關（尺度、人數、場景模式、同一個人）的狀態是 JS 讀 localStorage 之後
+   才套上去的，比 CSS 晚到，所以每次重新整理都會看到它們的顏色從預設值淡進正確
+   狀態 —— 實測載入後有 36 個 color / background-color / border-color 過場在跑，
+   全部是這件事。那不是動效，是還沒準備好就被看見。
+   分段控制項早就用 .is-ready 處理過同一個問題，這裡是把同一個道理套到全域。
+   收尾在 JS：狀態都套完、兩個 frame 之後才拿掉，另外有 timeout 保底，
+   免得 main() 中途炸掉就把全站動效永久關死。 */
+html.is-booting *,
+html.is-booting *::before,
+html.is-booting *::after {
+  transition: none !important;
+  animation: none !important;
+}
+
 @media (prefers-reduced-motion: reduce) {
   *,
   *::before,
@@ -1434,6 +1575,7 @@ input[type="number"] {
     animation-iteration-count: 1 !important;
     transition-duration: 0.01ms !important;
   }
+  .ghost:hover,
   .seg:hover,
   .chip-toggle:hover,
   .tag:hover,

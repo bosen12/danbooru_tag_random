@@ -1035,6 +1035,24 @@ function paintTrayChip(btn, tag, auto) {
   paintWeightMark(btn, raw);
 }
 
+// 複製的確認。原本這段六行邏輯在四個地方各抄了一次，而且都只換文字不換樣子；
+// 連點兩下還會提早還原、把按鈕留在錯的字上（第二次的 timeout 蓋不掉第一次的）。
+// 這裡順手把那兩件事一起收掉：記住原本的字、每次重設計時器、加上看得見的確認。
+function confirmCopy(btn, ms = 1200) {
+  if (!btn) return;
+  const back = btn.dataset.copyLabel || btn.textContent;
+  btn.dataset.copyLabel = back;
+  btn.textContent = "已複製";
+  btn.classList.add("is-copied");
+  window.clearTimeout(Number(btn.dataset.copyTimer) || 0);
+  btn.dataset.copyTimer = String(
+    window.setTimeout(() => {
+      btn.textContent = back;
+      btn.classList.remove("is-copied");
+    }, ms)
+  );
+}
+
 function renderTray() {
   const tray = $("tray");
   const box = $("tray-pins");
@@ -1058,10 +1076,7 @@ function renderTray() {
       e.stopPropagation();
       if (!lastPositive) return;
       await navigator.clipboard.writeText(escapeForComfy(weightedPos(lastPositive)));
-      copy.textContent = "已複製";
-      window.setTimeout(() => {
-        copy.textContent = "複製";
-      }, 1200);
+      confirmCopy(copy);
     });
     head.append(copy);
   }
@@ -1406,15 +1421,25 @@ function tagButtons(tag) {
   return btnByTag.get(tag) || [];
 }
 
-function flashPin(tag) {
+// 釘選與封禁各給一次確認。差別在方向：釘選那圈往外擴（收進來），
+// 封禁那圈往內收（推開去）。同一個語彙的兩個方向，比放兩次一樣的漣漪清楚。
+// 在這之前只有釘選會確認，封禁點下去沒有任何回應。
+function flashTag(tag, kind) {
   if (reduceMotion()) return;
+  const cls = kind === "ban" ? "is-ban-flash" : "is-pin-flash";
   for (const el of tagButtons(tag)) {
-    el.classList.remove("is-pin-flash");
-    requestAnimationFrame(() => {
-      el.classList.add("is-pin-flash");
-      window.setTimeout(() => el.classList.remove("is-pin-flash"), 560);
-    });
+    el.classList.remove(cls);
+    // 先拿掉再加回去才會重播，中間要讓瀏覽器真的重算一次樣式。
+    // 這裡用 offsetWidth 而不是 requestAnimationFrame：rAF 在分頁沒有焦點時
+    // 會被節流到幾乎不跑（實測 1.7 秒才一格），動效就這樣卡著不放。
+    void el.offsetWidth;
+    el.classList.add(cls);
+    window.setTimeout(() => el.classList.remove(cls), 560);
   }
+}
+
+function flashPin(tag) {
+  flashTag(tag, "pin");
 }
 
 function pinsAtDrawOf(card) {
@@ -1515,10 +1540,12 @@ function onTagWeight(tag, dir = 1) {
 function onTagClick(tag) {
   const next = cycleTag(lex, pinned, userBanned, tag);
   const becamePin = next.pinned.has(tag) && !pinned.has(tag);
+  const becameBan = next.userBanned.has(tag) && !userBanned.has(tag);
   pinned = next.pinned;
   userBanned = next.userBanned;
   afterPin();
-  if (becamePin) flashPin(tag);
+  if (becamePin) flashTag(tag, "pin");
+  else if (becameBan) flashTag(tag, "ban");
 }
 
 function makeTagBtn(item, sec, auto) {
@@ -1679,10 +1706,7 @@ function failCard(el, err) {
     btn.addEventListener("click", async () => {
       await navigator.clipboard.writeText(escapeForComfy(el.dataset.positive));
       speak("已複製 POS");
-      btn.textContent = "已複製";
-      setTimeout(() => {
-        btn.textContent = "複製 POS";
-      }, 1200);
+      confirmCopy(btn);
     });
     bar.append(btn);
   }
@@ -1712,6 +1736,10 @@ function fillCard(el, job, err) {
   hideMeter(el);
   const img = el.querySelector(".shot-img");
   const skel = el.querySelector(".skel");
+  // 有圖可放的時候，骨架的退場歸 reveal() 管（等 decode 之後跟圖一起交接）；
+  // 沒圖可放（失敗、跳過）才在下面直接拔掉。用旗標宣告所有權，不要去問
+  // class 有沒有被加上 —— decode() 是非同步的，同步那行問的時候還沒加上。
+  let skelHandled = false;
   if (img && job.image) {
     img.alt = "";
     if (job.width && job.height) {
@@ -1736,7 +1764,26 @@ function fillCard(el, job, err) {
       { once: true }
     );
     img.src = job.image;
-    img.classList.add("is-on");
+    // 等真的有像素了才開始淡入。原本 is-on 是跟 src 同一行加上去的，
+    // 於是 320ms 的淡入在還沒有圖的空盒子上就跑完了，圖真的到的時候是硬跳出來的；
+    // 而骨架又在下面幾行被直接 remove()，中間那段就是一個空盒子。
+    // decode() 解決的正是這件事：它 resolve 的時候畫面已經可以直接畫，不會卡一下。
+    skelHandled = true;
+    let revealed = false;
+    const reveal = () => {
+      if (revealed) return;
+      revealed = true;
+      img.classList.add("is-on");
+      if (skel) {
+        skel.classList.add("is-gone");
+        window.setTimeout(() => skel.remove(), 420);
+      }
+    };
+    // 失敗也要交接 —— 圖破了有另外的 error handler 處理，但骨架不能永遠留著。
+    // 再加一個保底 timeout：decode() 在某些情況下不會 settle。
+    if (typeof img.decode === "function") img.decode().then(reveal, reveal);
+    else reveal();
+    window.setTimeout(reveal, 3000);
     if (!String(job.image).startsWith("data:")) {
       try {
         const fn = new URL(job.image, location.href).searchParams.get("filename");
@@ -1746,7 +1793,7 @@ function fillCard(el, job, err) {
       }
     }
   }
-  if (skel) skel.remove();
+  if (skel && !skelHandled) skel.remove();
   const shot = el.querySelector(".shot");
   if (shot) {
     shot.setAttribute("role", "button");
@@ -1773,11 +1820,7 @@ function fillCard(el, job, err) {
   bar.querySelector(".copy").addEventListener("click", async () => {
     await navigator.clipboard.writeText(escapeForComfy(job.positive));
     speak("已複製 POS");
-    const btn = bar.querySelector(".copy");
-    btn.textContent = "已複製";
-    setTimeout(() => {
-      btn.textContent = "複製 POS";
-    }, 1200);
+    confirmCopy(bar.querySelector(".copy"));
   });
   meta.replaceChildren(bar, pos || document.createElement("div"));
   paintPinMiss(el);
@@ -1923,10 +1966,7 @@ function fillViewer(card) {
   copy.addEventListener("click", async () => {
     await navigator.clipboard.writeText(escapeForComfy(card.dataset.positive || ""));
     speak("已複製 POS");
-    copy.textContent = "已複製";
-    setTimeout(() => {
-      copy.textContent = "複製 POS";
-    }, 1200);
+    confirmCopy(copy);
   });
   info.append(posLab, pos, copy);
   const list = doneCards();
@@ -2960,7 +3000,26 @@ function trackChrome() {
   document.fonts?.ready?.then(measure);
 }
 
+// 開機期間把過場關掉，等狀態都套上去再打開。理由與收尾時機寫在 boot.css 的
+// html.is-booting 那一段。保底的 timeout 是必要的：main() 中途丟例外時，
+// 沒有它整站的動效會永久關死。
+function startBooting() {
+  const root = document.documentElement;
+  root.classList.add("is-booting");
+  const done = () => root.classList.remove("is-booting");
+  // 保底：main() 中途丟例外時，沒有這個整站動效會永久關死。
+  window.setTimeout(done, 4000);
+  return () => {
+    // rAF 是首選（保證「下一次真的上畫面之後」才開），但分頁在背景時 rAF 會被
+    // 節流甚至完全不跑 —— 實測在隱藏的分頁裡兩個 frame 一直沒來，動效就這樣卡著。
+    // 所以配一個短 timeout 一起搶，誰先到算誰的。remove 是冪等的，搶兩次沒差。
+    requestAnimationFrame(() => requestAnimationFrame(done));
+    window.setTimeout(done, 60);
+  };
+}
+
 async function main() {
+  const bootingDone = startBooting();
   watchForCrashes();
   // lexicon.json is ~340 KB, so say something instead of showing an empty shell.
   const loading = bootNote("詞庫載入中…", "boot-load");
@@ -3065,6 +3124,8 @@ async function main() {
     onStop: () => stopNow("已停"),
   });
   syncMustDraw();
+  // 狀態都套上去了，從下一個 frame 起才讓過場生效。
+  bootingDone();
   ping();
   setInterval(ping, 15000);
 }
