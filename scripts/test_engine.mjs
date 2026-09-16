@@ -1294,8 +1294,11 @@ function indoorOutdoorClash(have) {
   ok("smile does not mutex one eye closed", !mutexSiblings(lex, "smile").includes("one eye closed"));
   const pinSmile = applyPin(lex, new Set(), new Set(), "light smile");
   ok("light smile keeps smile", pinSmile.pinned.has("light smile") && pinSmile.pinned.has("smile"));
-  const pinXcu = applyPin(lex, new Set(), new Set(), "extreme close-up");
-  ok("pin extreme close-up also pins close-up", pinXcu.pinned.has("extreme close-up") && pinXcu.pinned.has("close-up"));
+  // 原本驗的是 extreme close-up -> close-up。extreme close-up 是自創字（Danbooru
+  // 查無，close-up 才是真的，63,844 篇），已移除；這條要守的「釘子標籤會一起釘上
+  // implies 的父標籤」仍然成立，改用一對還活著的來驗，覆蓋沒有減少。
+  const pinHoop = applyPin(lex, new Set(), new Set(), "hoop earrings");
+  ok("pin hoop earrings also pins earrings", pinHoop.pinned.has("hoop earrings") && pinHoop.pinned.has("earrings"));
   const s = settings();
   s.girl = true;
   s.boy = false;
@@ -2386,7 +2389,7 @@ function indoorOutdoorClash(have) {
   ok("showering implies shower (place)", (lex.byTag.get("showering")?.implies || []).includes("shower (place)"));
   ok("showering is modern-only", JSON.stringify(lex.byTag.get("showering")?.era) === '["modern"]');
   ok("washing hair implies wet hair", (lex.byTag.get("washing hair")?.implies || []).includes("wet hair"));
-  ok("washing another's back needs pair", (lex.byTag.get("washing another's back")?.needs || []).includes("pair"));
+  ok("washing back needs pair", (lex.byTag.get("washing back")?.needs || []).includes("pair"));
   ok("shared bathing needs pair", (lex.byTag.get("shared bathing")?.needs || []).includes("pair"));
   ok("shared bathing implies bathing", (lex.byTag.get("shared bathing")?.implies || []).includes("bathing"));
   ok("mixed-sex bathing implies bathing", (lex.byTag.get("mixed-sex bathing")?.implies || []).includes("bathing"));
@@ -2993,7 +2996,7 @@ function indoorOutdoorClash(have) {
   for (let i = 0; i < 40; i++) {
     const h = tagsOf(drawOne(lex, fat, pinKit, new Set(), mulberry32(194000 + i), 194000 + i));
     if (h.has("on bed") || h.has("bed sheet")) bedKit += 1;
-    if (h.has("partially submerged") || h.has("splashing") || h.has("washing body")) wetKit += 1;
+    if (h.has("partially submerged") || h.has("splashing")) wetKit += 1;
   }
   eq("kitchen pose10 never on bed leftover", bedKit, 0);
   eq("kitchen pose10 never water leftovers", wetKit, 0);
@@ -3282,9 +3285,9 @@ function indoorOutdoorClash(have) {
   let wash = 0;
   for (let i = 0; i < 40; i++) {
     const h = tagsOf(drawOne(lex, actS, pinSleep2, new Set(), mulberry32(178000 + i), 178000 + i));
-    if (h.has("washing body") || h.has("partially submerged")) wash += 1;
+    if (h.has("partially submerged")) wash += 1;
   }
-  eq("sleeping never auto washing body", wash, 0);
+  eq("sleeping never auto partially submerged", wash, 0);
 }
 
 {
@@ -3852,9 +3855,9 @@ function indoorOutdoorClash(have) {
     let washOffice = 0;
     for (let i = 0; i < 40; i++) {
       const h = tagsOf(drawOne(lex, s, pinOffice, new Set(), mulberry32(238000 + i), 238000 + i));
-      if (h.has("washing hair") || h.has("washing another's back") || h.has("washing body")) washOffice += 1;
+      if (h.has("washing hair") || h.has("washing back")) washOffice += 1;
     }
-    eq("office never auto washing hair/body without water", washOffice, 0);
+    eq("office never auto washing hair/back without water", washOffice, 0);
     const pinSleep5 = applyPin(lex, new Set(), new Set(), "sleeping").pinned;
     let sleepExpr = 0;
     for (let i = 0; i < 40; i++) {
@@ -3905,7 +3908,7 @@ function indoorOutdoorClash(have) {
     eq("head out of frame never auto kiss/closed mouth/breast focus", hofKiss, 0);
     const pinCookMed = applyPin(lex, new Set(), new Set(), "cooking").pinned;
     const medCook = { ...s, eras: ["medieval"] };
-    const COOK_OK = ["kitchen", "great hall", "castle", "palace"];
+    const COOK_OK = ["kitchen", "castle", "palace"];
     let cookOut = 0;
     for (let i = 0; i < 40; i++) {
       const h = tagsOf(drawOne(lex, medCook, pinCookMed, new Set(), mulberry32(249000 + i), 249000 + i));
@@ -4284,7 +4287,7 @@ function indoorOutdoorClash(have) {
   eq("crawling never auto talking on phone", neverAuto2(sAct, "crawling", ["talking on phone"], 310760), 0);
   eq("drinking never auto busy-arm leftovers", neverAuto2(sAct, "drinking", ["arms behind head", "arms behind back", "crossed arms"], 310800), 0);
   eq("closed eyes never auto reading", neverAuto2(sAct, "closed eyes", ["reading", "studying"], 310840), 0);
-  eq("after bathing never auto washing body", neverAuto2(sN, "after bathing", ["washing body", "splashing"], 310880), 0);
+  eq("after bathing never auto splashing", neverAuto2(sN, "after bathing", ["splashing"], 310880), 0);
   eq("heart hands never auto clothes tug", neverAuto2(sAct, "heart hands", ["clothes tug", "paizuri gesture", "breast hold"], 310920), 0);
   eq("taking picture never auto arms behind back", neverAuto2(sAct, "taking picture", ["arms behind back", "crossed arms"], 310960), 0);
   const sTease2 = { ...sAct, heats: ["tease"], weights: { activity: 0, tease: 1, flash: 0, sex: 0 } };
@@ -4351,7 +4354,7 @@ function indoorOutdoorClash(have) {
   eq("diverse swimming never leftover armor/suit/cheerleader", divArmor, 0);
   const pinCook = applyPin(lex, new Set(), new Set(), "cooking").pinned;
   const sChina = { ...s, eras: ["ancient_china"] };
-  const COOK_PLACE = ["kitchen", "great hall", "castle", "palace"];
+  const COOK_PLACE = ["kitchen", "castle", "palace"];
   let dryChina = 0;
   for (let i = 0; i < 40; i++) {
     const h = tagsOf(drawOne(lex, sChina, pinCook, new Set(), mulberry32(430080 + i), 430080 + i));
@@ -4906,6 +4909,10 @@ function indoorOutdoorClash(have) {
     // 第四次：場地那一格從硬桶改成 4:1 軟權重（era:[any] 場地本來幾乎抽不到，
     // beach 在 18000 張裡是 0）。場地換了，整條 RNG 就跟著換人，所以這次差很多 ——
     // 不是金標壞掉，是那一格真的改了。理由與量測見 findings.md Loop 14 第四節。
+    // 第九次：移除五個 Danbooru 查無的自創字（lotus pond／great hall／
+    // extreme close-up／washing body／free use）。候選池少了五個，牌序整條位移，
+    // 所以差異比較大。新的這張仍然自洽：shower (place) + indoors + steam，
+    // 蒸氣出現在淋浴間是對的。
     // 第八次：配件補回互斥格（necklace／bowtie／necktie／gloves 家族在 normal 模式
     // 整族抽不到）。這一張多出來的 hoop earrings + earrings 就是 jewelry 那一格
     // 多了競爭者的結果 —— 純粹是多了兩個字，其餘一個 byte 都沒動，沒有重排。
@@ -4923,7 +4930,7 @@ function indoorOutdoorClash(have) {
     // 讓這條 RNG 路徑位移，所以這次的差異就只有少了那一個字。
     // 這次差異只有少一個 bra，其餘一個 byte 都沒動 —— 沒有重排、沒有換字，
     // 正是「只改該改的那一格」應有的樣子。
-    "1girl, solo, adult, very short hair, grey eyes, grey hair, bangs, large breasts, soft breasts, natural breasts, wet, thigh strap, hanging breasts, hoop earrings, earrings, bathrobe, female masturbation, standing, from outside, looking up, dazed, female ejaculation, modern, onsen, indoors, sunset, backlighting, chromatic aberration, nsfw, explicit, masterpiece, best quality, amazing quality");
+    "1girl, solo, adult, very short hair, grey eyes, grey hair, bangs, large breasts, soft breasts, natural breasts, wet, thigh strap, hanging breasts, hoop earrings, earrings, naked towel, female masturbation, standing, from outside, looking away, angry, leaning forward, modern, shower (place), indoors, steam, day, spotlight, nsfw, explicit, masterpiece, best quality, amazing quality");
   ok("drawOne exposes shadow diagnostics", Array.isArray(shadowIntegrationDraw.shadowViolations));
 
   const eatProneShadow = validateSupportShadow({
@@ -5731,7 +5738,7 @@ function indoorOutdoorClash(have) {
 
 // --- 暮光是日夜過渡，不屬於任何一側（Codex 裁決 2026-09-13）------------------
 // sunset / dusk 以前被當成白天側硬擋，而且只補了 dusk 的反向規則，於是
-//   - night market + sunset 漏出去（場地比時間早抽，反向規則不存在）
+//   - market stall + sunset 漏出去（場地比時間早抽，反向規則不存在）
 //   - sunset + starry sky、dusk + moonlight 這類自然的光線過渡反而被擋掉
 // 正確模型是三類：嚴格白天(DAY_MARK) / 嚴格夜側(NIGHT_MARK) / 過渡(sunset,dusk)，
 // 過渡不參與硬互斥。sunset/dusk/night 本來就同屬 day_night 互斥，不必額外擋。
@@ -5756,19 +5763,19 @@ function indoorOutdoorClash(have) {
 
   // 先證明這些字在這個設定下本來就抽得到，否則下面的斷言會空過。
   ok("twilight control: starry sky 抽得到", seenWith("night", "starry sky") > 0);
-  ok("twilight control: night market 抽得到", seenWith("night", "night market") > 0);
+  ok("twilight control: market stall 抽得到", seenWith("night", "market stall") > 0);
   ok("twilight control: dusk 抽得到", seenWith("outdoors", "dusk") > 0);
 
   // 過渡時段和夜側可以共存，而且兩個方向都要通（換順序結果相同）。
   for (const [pin, want] of [
-    ["night market", "sunset"],
-    ["night market", "dusk"],
+    ["market stall", "sunset"],
+    ["market stall", "dusk"],
     ["starry sky", "sunset"],
     ["starry sky", "dusk"],
     ["moonlight", "sunset"],
     ["moonlight", "dusk"],
     ["sunset", "starry sky"],
-    ["dusk", "night market"],
+    ["dusk", "market stall"],
   ]) {
     const seed = seenWith(pin, want);
     ok(`twilight: 釘「${pin}」抽得到「${want}」`, seed > 0,
@@ -5777,14 +5784,14 @@ function indoorOutdoorClash(have) {
 
   // 嚴格白天 ↔ 嚴格夜側仍然對稱互斥，暮光的改動不能鬆到這裡。
   for (const [pin, never] of [
-    ["night market", "day"],
-    ["night market", "sunlight"],
-    ["night market", "blue sky"],
+    ["market stall", "day"],
+    ["market stall", "sunlight"],
+    ["market stall", "blue sky"],
     ["night", "sunlight"],
     ["night", "blue sky"],
     ["day", "starry sky"],
     ["day", "moonlight"],
-    ["blue sky", "night market"],
+    ["blue sky", "market stall"],
   ]) {
     const seed = seenWith(pin, never);
     ok(`day/night: 釘「${pin}」不該抽到「${never}」`, seed === 0,
@@ -5862,7 +5869,7 @@ function indoorOutdoorClash(have) {
   let envBad = 0;
   let envBadWhy = "";
   const DAY = new Set(["day", "sunrise", "sunlight", "sunbathing", "blue sky", "orange sky"]);
-  const NIGHT = new Set(["night", "starry sky", "moonlight", "night market"]);
+  const NIGHT = new Set(["night", "starry sky", "moonlight", "market stall"]);
   for (const d of highN) {
     const names = tagsOf(d);
     const why = [];

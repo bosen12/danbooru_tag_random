@@ -9,7 +9,7 @@
  *
  * 1. **規格不從 production 原始碼反射。** 前一版探針用正規表達式把 engine.js 裡的
  *    常數挖出來再拿去驗同一批常數 —— 那只能證明實作自洽，不能證明規則正確。實際
- *    後果是暮光語意改掉之後，探針還在報「night market 撞 dusk」，因為它繼承了舊的
+ *    後果是暮光語意改掉之後，探針還在報「market stall 撞 dusk」，因為它繼承了舊的
  *    二元分類。所以下面每一條的 tag 清單都是這裡自己寫的，production 改了規則，
  *    這份規格就會產生一個需要人審的 diff。
  *
@@ -41,7 +41,7 @@ const lex = indexLexicon(data);
 /** 嚴格白天：畫面明確是白天。 */
 const DAY = ["day", "sunrise", "sunlight", "sunbathing", "blue sky", "orange sky"];
 /** 嚴格夜側：畫面明確是夜晚。 */
-const NIGHT = ["night", "starry sky", "moonlight", "night market"];
+const NIGHT = ["night", "starry sky", "moonlight", "market stall"];
 /** 日夜過渡：兩側都相容，刻意不參與硬互斥（Codex 2026-09-13）。 */
 const TWILIGHT = ["sunset", "dusk"];
 
@@ -68,12 +68,12 @@ const MOUTH_ONE_OF = [
 const SKY_ONE_OF = ["blue sky", "orange sky", "starry sky"];
 /** 睡著就不可能在做的事。 */
 const SLEEP_IMPOSSIBLE = [
-  "washing body", "washing hair", "splashing", "partially submerged",
+  "washing hair", "splashing", "partially submerged",
   "bent over", "presenting", "grinding", "presenting ass", "fingering",
   "kissing", "ahegao", "surprised", "angry", "scared", "smug",
 ];
 /** 需要水的動作。 */
-const WATER_ACTS = ["partially submerged", "splashing", "washing body", "washing another's back"];
+const WATER_ACTS = ["partially submerged", "splashing", "washing back"];
 /**
  * 算得上有水的場地、天氣或動作。人工從詞庫挑出來的完整清單 —— 第一版只憑印象
  * 寫了一半，把「open-air bath + bathing + splashing」這種完全合理的畫面誤報成違規。
@@ -82,7 +82,7 @@ const WATER_SOURCES = [
   // 場地
   "onsen", "bath", "bathroom", "bathtub", "shower (place)", "sauna", "beach", "ocean",
   "poolside", "pool", "pool ladder", "underwater", "open-air bath", "bubble bath",
-  "waterfall", "beach towel", "river", "lake", "hot spring", "lotus pond", "fountain", "puddle",
+  "waterfall", "beach towel", "river", "lake", "hot spring", "fountain", "puddle",
   // 天氣與物件
   "rain", "steam", "water", "shower head",
   // 釣魚不是泡水，但畫面裡一定有水

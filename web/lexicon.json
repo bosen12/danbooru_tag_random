@@ -19816,27 +19816,6 @@
       "zh": "亭臺"
     },
     {
-      "tag": "lotus pond",
-      "section": "env",
-      "gate": "any",
-      "heat": [
-        "tease",
-        "flash",
-        "sex"
-      ],
-      "mutex": "place",
-      "bind": [],
-      "implies": [
-        "outdoors"
-      ],
-      "layer": "normal",
-      "era": [
-        "ancient_china"
-      ],
-      "group": "place",
-      "zh": "荷塘"
-    },
-    {
       "tag": "colonnade",
       "section": "env",
       "gate": "any",
@@ -19856,28 +19835,6 @@
       ],
       "group": "place",
       "zh": "柱廊"
-    },
-    {
-      "tag": "great hall",
-      "section": "env",
-      "gate": "any",
-      "heat": [
-        "tease",
-        "flash",
-        "sex"
-      ],
-      "mutex": "place",
-      "bind": [],
-      "implies": [
-        "indoors"
-      ],
-      "layer": "normal",
-      "era": [
-        "medieval",
-        "victorian"
-      ],
-      "group": "place",
-      "zh": "大廳"
     },
     {
       "tag": "goblin",
@@ -21017,27 +20974,6 @@
       "zh": "遠景"
     },
     {
-      "tag": "extreme close-up",
-      "section": "pose",
-      "gate": "any",
-      "heat": [
-        "tease",
-        "flash",
-        "sex"
-      ],
-      "mutex": "camera",
-      "bind": [],
-      "implies": [
-        "close-up"
-      ],
-      "layer": "normal",
-      "era": [
-        "any"
-      ],
-      "group": "camera",
-      "zh": "大特寫"
-    },
-    {
       "tag": "over shoulder",
       "section": "pose",
       "gate": "any",
@@ -21926,26 +21862,7 @@
       "zh": "洗頭"
     },
     {
-      "tag": "washing body",
-      "section": "pose",
-      "gate": "any",
-      "heat": [
-        "tease",
-        "flash",
-        "sex"
-      ],
-      "mutex": null,
-      "bind": [],
-      "implies": [],
-      "layer": "normal",
-      "era": [
-        "any"
-      ],
-      "group": "tease",
-      "zh": "洗身體"
-    },
-    {
-      "tag": "washing another's back",
+      "tag": "washing back",
       "section": "pose",
       "gate": "any",
       "heat": [
@@ -24586,7 +24503,7 @@
       "zh": "KTV包廂"
     },
     {
-      "tag": "night market",
+      "tag": "market stall",
       "section": "env",
       "gate": "any",
       "heat": [
@@ -25702,26 +25619,6 @@
       ],
       "group": "sex",
       "zh": "被拘束"
-    },
-    {
-      "tag": "free use",
-      "section": "pose",
-      "gate": "any",
-      "heat": [
-        "sex"
-      ],
-      "mutex": null,
-      "bind": [],
-      "implies": [],
-      "layer": "normal",
-      "era": [
-        "any"
-      ],
-      "group": "sex",
-      "needs": [
-        "pair"
-      ],
-      "zh": "自由使用"
     },
     {
       "tag": "prostitution",

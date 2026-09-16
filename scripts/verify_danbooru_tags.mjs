@@ -98,6 +98,7 @@ export function parseArgs(argv) {
   const args = Array.isArray(argv) ? argv : [];
   let retries = 0;
   let maxCreatedYear = null;
+  let all = false;
   const tags = [];
 
   for (let i = 0; i < args.length; i++) {
@@ -111,9 +112,13 @@ export function parseArgs(argv) {
       maxCreatedYear = parseYear(args[++i]);
       continue;
     }
+    if (a === "--all") {
+      all = true;
+      continue;
+    }
     if (a === "--help" || a === "-h") {
       throw new CliError(
-        "用法：node scripts/verify_danbooru_tags.mjs [--retry N] [--max-created YYYY] [tag ...]"
+        "用法：node scripts/verify_danbooru_tags.mjs [--retry N] [--max-created YYYY] [--all] [tag ...]"
       );
     }
     if (typeof a === "string" && a.startsWith("--")) {
@@ -122,7 +127,7 @@ export function parseArgs(argv) {
     tags.push(a);
   }
 
-  return { retries, maxCreatedYear, tags };
+  return { retries, maxCreatedYear, all, tags };
 }
 
 /** --max-created 的值：必須是四位數整數。不合法就丟 CliError。 */
@@ -309,7 +314,23 @@ function promptVocab() {
   return out;
 }
 
-async function loadInventory() {
+/**
+ * 預設清單只有運動 tag ＋ 固定字彙，約 122 個 —— 詞庫有 1296 個，其餘 1170 幾個
+ * 從來沒被查證過。實際後果：lotus pond、great hall、extreme close-up、washing body、
+ * free use 五個 Danbooru 查無的自創字就這樣活了很久，還有十幾個早就被 alias 併走的
+ * 舊名（wink、sento、cravat…）一直在用，而那些名字的 post_count 是 0。
+ *
+ * `--all` 把整個詞庫一起查。沒有設成預設，是因為還有一批 post_count 0 的字沒有裁決
+ * （adult、soft breasts、natural breasts 那些可能是刻意的模型字彙），
+ * 預設就紅會讓這支工具失去意義。裁決完之後應該改成預設。
+ */
+function lexiconTags() {
+  const raw = readFileSync(join(here, "..", "web", "lexicon.json"), "utf8");
+  const data = JSON.parse(raw);
+  return (data.tags || []).map((t) => t.tag).filter(Boolean);
+}
+
+async function loadInventory(all) {
   const mod = await import("../web/sports.js");
   if (typeof mod.allSportTags !== "function") {
     throw new CliError(
@@ -320,8 +341,10 @@ async function loadInventory() {
   if (!Array.isArray(tags) || !tags.length) {
     throw new CliError("allSportTags() 沒有回傳任何 tag。");
   }
-  // 運動 tag ＋ 每張圖都會用到的固定字彙，一次驗完。
-  return [...new Set([...tags, ...promptVocab()])].sort();
+  // 運動 tag ＋ 每張圖都會用到的固定字彙，一次驗完。--all 再加上整個詞庫。
+  const base = [...tags, ...promptVocab()];
+  if (all) base.push(...lexiconTags());
+  return [...new Set(base)].sort();
 }
 
 async function main(argv) {
@@ -338,7 +361,7 @@ async function main(argv) {
   }
 
   const prompts = opts.tags.length ? null : promptVocab();
-  const wanted = opts.tags.length ? opts.tags : await loadInventory();
+  const wanted = opts.tags.length ? opts.tags : await loadInventory(opts.all);
   const all = [...new Set([...wanted, ...FORBIDDEN])];
   const found = await lookup(all, opts.retries, RETRY_WAIT_MS);
   const report = buildReport(wanted, FORBIDDEN, found, {

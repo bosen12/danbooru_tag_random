@@ -279,7 +279,7 @@ const CHEST_NEED_TAGS = new Set([
 const BED_PLACE = new Set(["bedroom", "bed", "hotel room", "love hotel", "futon"]);
 const SKY_EXTRA = new Set(["sky", "blue sky", "orange sky"]);
 const DAY_MARK = new Set(["day", "sunrise", "sunlight", "sunbathing", "blue sky", "orange sky"]);
-const NIGHT_MARK = new Set(["night", "starry sky", "moonlight", "night market"]);
+const NIGHT_MARK = new Set(["night", "starry sky", "moonlight", "market stall"]);
 // 這些光源本身就交代了「天是暗的」：篝火、火把、燭光、油燈、街燈。
 // 它們不在 NIGHT_MARK 裡，因為 NIGHT_MARK 的成員彼此互斥（一張圖只能有一個
 // 夜的講法），而光源是另一個槽，可以和 night 並存 —— 只是不能和白天並存。
@@ -297,7 +297,6 @@ const DARK_LIGHT = new Set([
   "lamppost",
 ]);
 const SLEEP_BAD_POSE = new Set([
-  "washing body",
   "partially submerged",
   "washing hair",
   "splashing",
@@ -397,7 +396,6 @@ function activityFitsBody(act, body) {
       act === "diving" ||
       act === "shopping" ||
       act === "weightlifting" ||
-      act === "washing body" ||
       act === "washing hair")
   ) {
     return false;
@@ -519,7 +517,6 @@ const WATER_PLACE = new Set([
   "beach",
   "ocean",
   "underwater",
-  "lotus pond",
   "onsen",
   "bath",
   "bathroom",
@@ -536,9 +533,8 @@ const WATER_SOURCE_ACT = new Set([...WATER_ACT].filter((tag) => tag !== "floatin
 const WATER_DETAIL = new Set([
   "partially submerged",
   "splashing",
-  "washing body",
   "washing hair",
-  "washing another's back",
+  "washing back",
 ]);
 const BATH_PLACE = new Set([
   "onsen",
@@ -912,7 +908,6 @@ const INDOOR_ROOM = new Set([
   "restaurant",
   "clinic",
   "hospital",
-  "great hall",
   "mansion",
   "palace",
   "futon",
@@ -1015,7 +1010,7 @@ function usedActs(used, lex) {
   return s;
 }
 
-const FISH_PLACE = new Set(["beach", "ocean", "lotus pond", "poolside", "pool"]);
+const FISH_PLACE = new Set(["beach", "ocean", "poolside", "pool"]);
 const INDOOR_FURN = new Set(["on bed", "on chair", "office chair", "gaming chair", "swivel chair", "bunk bed"]);
 // 能坐下來讀書寫字的地方。原本這三組只列了現代的房間，而正常模式下
 // 「有 ACT_PLACE 表的活動必須把場地列進去」—— 沒被列到的場地等於做不了那件事。
@@ -1033,27 +1028,27 @@ const DESK_PLACE = new Set([
 ]);
 const HOME_PLACE = new Set([
   "bedroom", "living room", "hotel room", "futon",
-  "apartment", "dormitory", "mansion", "palace", "ryokan", "great hall", "castle",
+  "apartment", "dormitory", "mansion", "palace", "ryokan", "castle",
 ]);
 const MEAL_PLACE = new Set([
   "restaurant", "cafe", "kitchen", "living room", "park", "garden", "beach", "courtyard",
   "apartment", "dormitory", "hotel room", "mansion", "palace", "throne",
   "balcony", "pavilion", "rooftop", "tent", "field", "food stall", "izakaya",
-  "castle", "great hall", "tavern", "ryokan", "ballroom",
+  "castle", "tavern", "ryokan", "ballroom",
 ]);
 const ACT_PLACE = {
   bathing: new Set([...BATH_PLACE]),
   showering: new Set(["bathroom", "shower (place)"]),
   swimming: new Set(["pool", "ocean", "beach", "underwater"]),
-  wading: new Set(["beach", "ocean", "pool", "poolside", "lotus pond"]),
+  wading: new Set(["beach", "ocean", "pool", "poolside"]),
   floating: new Set(["pool", "ocean", "bathtub", "ofuro", "onsen", "open-air bath", "bubble bath"]),
   "shared bathing": new Set(["onsen", "bathhouse", "ofuro", "open-air bath", "bath"]),
-  eating: new Set([...MEAL_PLACE, "movie theater", "airplane interior", "convenience store", "izakaya", "festival", "market", "ryokan", "great hall", "tavern"]),
-  drinking: new Set(["cafe", "bar (place)", "restaurant", "kitchen", "living room", "movie theater", "airplane interior", "izakaya", "festival", "market", "ryokan", "tavern", "great hall", "ballroom"]),
+  eating: new Set([...MEAL_PLACE, "movie theater", "airplane interior", "convenience store", "izakaya", "festival", "market", "ryokan", "tavern"]),
+  drinking: new Set(["cafe", "bar (place)", "restaurant", "kitchen", "living room", "movie theater", "airplane interior", "izakaya", "festival", "market", "ryokan", "tavern", "ballroom"]),
   reading: new Set([...DESK_PLACE, "train", "train interior"]),
-  cooking: new Set(["kitchen", "great hall", "castle", "palace"]),
-  shopping: new Set(["street", "city", "cityscape", "fitting room", "convenience store", "supermarket", "night market", "market", "festival"]),
-  singing: new Set(["living room", "bar (place)", "park", "rooftop", "karaoke box", "church", "shrine", "festival", "ballroom", "great hall", "ryokan", "colonnade"]),
+  cooking: new Set(["kitchen", "castle", "palace"]),
+  shopping: new Set(["street", "city", "cityscape", "fitting room", "convenience store", "supermarket", "market stall", "market", "festival"]),
+  singing: new Set(["living room", "bar (place)", "park", "rooftop", "karaoke box", "church", "shrine", "festival", "ballroom", "ryokan", "colonnade"]),
   karaoke: new Set(["bar (place)", "living room", "karaoke box"]),
   "playing guitar": new Set(["bedroom", "living room", "park", "rooftop", "balcony", "garden"]),
   "playing games": new Set([...HOME_PLACE, "internet cafe"]),
@@ -1063,7 +1058,7 @@ const ACT_PLACE = {
   writing: DESK_PLACE,
   "drawing (action)": new Set(["bedroom", "living room", "classroom", "cafe", "park", "garden"]),
   "painting (action)": new Set(["bedroom", "living room", "garden", "park", "courtyard", "pavilion"]),
-  dancing: new Set(["living room", "park", "rooftop", "school gym", "bar (place)", "fitness gym", "ballroom", "great hall", "palace", "colonnade", "ryokan", "festival"]),
+  dancing: new Set(["living room", "park", "rooftop", "school gym", "bar (place)", "fitness gym", "ballroom", "palace", "colonnade", "ryokan", "festival"]),
   stretching: new Set(["bedroom", "living room", "fitness gym", "park", "rooftop", "beach"]),
   yoga: new Set(["bedroom", "living room", "fitness gym", "park", "rooftop", "beach"]),
   exercising: SPORT_PLACE,
@@ -1182,7 +1177,7 @@ const JOB_PLACE = {
   janitor: new Set(["hallway", "classroom", "office", "hospital", "school gym", "living room"]),
   "race queen": new Set(["stadium", "street", "city"]),
   soldier: new Set(["ruins", "street", "city", "forest"]),
-  butler: new Set(["mansion", "living room", "hallway", "ballroom", "palace", "great hall"]),
+  butler: new Set(["mansion", "living room", "hallway", "ballroom", "palace"]),
   detective: new Set(["office", "street", "city", "cityscape", "alley", "library"]),
 };
 const RAPE_BAD_PLACE = new Set(["classroom", "bedroom", "living room", "kitchen", "bed", "futon"]);
@@ -1304,14 +1299,12 @@ const PRIVATE_SEX_PLACE = new Set([
   "bamboo forest",
   "courtyard",
   "pavilion",
-  "lotus pond",
   "ruins",
   "colonnade",
   "pillar",
   "fountain",
   "palace",
   "throne",
-  "great hall",
   "tavern",
   "dojo",
   "mansion",
@@ -1382,7 +1375,7 @@ export function placeFitsActs(place, acts, realistic = false) {
   if (acts.has("horseback riding")) return !INDOOR_ROOM.has(place) && !BATH_PLACE.has(place);
   if (acts.has("driving")) return DRIVE_PLACE.has(place);
   if (acts.has("cooking")) {
-    return place === "kitchen" || place === "great hall" || place === "castle" || place === "palace";
+    return place === "kitchen" || place === "castle" || place === "palace";
   }
   if (acts.has("picnic")) {
     return (
@@ -1945,14 +1938,13 @@ const HANDS_BUSY_ACT = new Set([
   "fishing",
   "taking picture",
   "washing hair",
-  "washing body",
   "playing games",
   "playing video games",
   "recording",
   "smoking",
   "driving",
   "riding bicycle",
-  "washing another's back",
+  "washing back",
   "shopping",
   "cleaning",
   "singing",
@@ -3731,8 +3723,8 @@ export function drawOne(lex, settings, pinned, userBanned, rand, seed) {
     }
     if (item.tag === "playing guitar" && used.has("on stomach")) return false;
     if (item.tag === "on stomach" && used.has("playing guitar")) return false;
-    if (item.tag === "washing another's back" && used.has("on stomach")) return false;
-    if (item.tag === "on stomach" && used.has("washing another's back")) return false;
+    if (item.tag === "washing back" && used.has("on stomach")) return false;
+    if (item.tag === "on stomach" && used.has("washing back")) return false;
     if (
       (item.tag === "breasts on table" || item.tag === "breasts on glass") &&
       (used.has("dancing") ||
@@ -4270,7 +4262,6 @@ export function drawOne(lex, settings, pinned, userBanned, rand, seed) {
         (t) =>
           BATH_ACT.has(t) ||
           (WATER_ACT.has(t) && t !== "fishing") ||
-          t === "washing body" ||
           t === "washing hair" ||
           t === "splashing" ||
           t === "partially submerged"
@@ -4282,7 +4273,6 @@ export function drawOne(lex, settings, pinned, userBanned, rand, seed) {
       used.has("after bathing") &&
       (BATH_ACT.has(item.tag) ||
         (WATER_ACT.has(item.tag) && item.tag !== "fishing") ||
-        item.tag === "washing body" ||
         item.tag === "washing hair" ||
         item.tag === "splashing" ||
         item.tag === "partially submerged")

@@ -271,6 +271,35 @@ function ok(name, rows) {
   ok("hairpin 留著（alias 是 2026-05-30 才建，晚於模型訓練）", by.has("hairpin"));
 }
 
+// --- Danbooru 查無的自創字不該留在詞庫 --------------------------------------
+//
+// 這幾個不是「被併走的舊名」（那種在上面那條），而是**Danbooru 根本沒有這個 tag**。
+// 模型沒學過的字放進 prompt 就是在稀釋注意力，跟當初的 soft lighting 同一回事。
+// 每一個都確認過詞庫裡已經有真的替代品，不是砍掉就沒了：
+//
+//   lotus pond       -> pond(3,948)，而且 pond 的 era 本來就含 ancient_china
+//   great hall       -> 中世紀室內還有 throne / palace / tavern / altar
+//   extreme close-up -> close-up(63,844)，它原本就 implies close-up
+//   washing body     -> bathing(18,182)、showering 都在詞庫裡
+//   free use         -> Danbooru 沒有對應的字，也沒有近義的真 tag
+//
+// 另外兩個是**改名**不是移除：Danbooru 有真的字，只是我們拼錯了
+//   washing another's back -> washing back(365)
+//   night market           -> market stall(1,246)
+{
+  const invented = ["lotus pond", "great hall", "extreme close-up", "washing body", "free use"];
+  const renamed = [["washing another's back", "washing back"], ["night market", "market stall"]];
+  const stale = invented.filter((t) => by.has(t)).map((t) => `自創字「${t}」Danbooru 查無，不該在詞庫`);
+  for (const [old, real] of renamed) {
+    if (by.has(old)) stale.push(`「${old}」Danbooru 查無，正確拼法是「${real}」`);
+    if (!by.has(real)) stale.push(`「${real}」不在詞庫（${old} 的正確拼法）`);
+  }
+  ok("Danbooru 查無的自創 tag 沒有留在詞庫", stale);
+  // 反面：替代品要真的還在，不能連同被砍掉
+  const gone = ["pond", "close-up", "bathing", "throne"].filter((t) => !by.has(t));
+  ok("被拿來頂替的真 tag 都還在", gone.map((t) => `替代品「${t}」不見了`));
+}
+
 // --- token_counts.json 不能跟詞庫脫節 ---------------------------------------
 // 它是另一支腳本（scripts/token_counts.py）產生的，merge_lexicon.py 不會碰它。
 // 好處是重產詞庫不會把它洗掉，代價是有人加了新字卻沒重跑就會脫節——

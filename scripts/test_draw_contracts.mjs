@@ -69,11 +69,11 @@ const NEEDS = [
 // jewelry/eyewear/neckwear/hands/headwear/feet 這幾類才過得了 fill("clothing")，
 // 它們兩個過不了，就算把 beach／pool 釘起來也抽不到（實測 0/200）。
 // 規則測不到就不要假裝在測 —— 那是可達性問題，不是 reconcile 的問題。
-const WATER_ACTS = ["partially submerged", "splashing", "washing body", "washing another's back"];
+const WATER_ACTS = ["partially submerged", "splashing", "washing back"];
 const WATER_SRC = [
   "onsen", "bath", "bathroom", "bathtub", "shower (place)", "sauna", "beach", "ocean",
   "poolside", "pool", "pool ladder", "underwater", "open-air bath", "bubble bath", "waterfall",
-  "beach towel", "river", "lake", "hot spring", "lotus pond", "fountain", "puddle",
+  "beach towel", "river", "lake", "hot spring", "fountain", "puddle",
   "rain", "steam", "water", "shower head", "fishing", "fishing rod",
   "bathing", "showering", "swimming", "shared bathing", "diving", "wading", "partially submerged",
   "after bathing", "wet", "wet hair", "wet clothes", "steaming body",

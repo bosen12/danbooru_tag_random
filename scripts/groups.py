@@ -353,7 +353,6 @@ SEX = {
     "bondage",
     "bdsm",
     "restrained",
-    "free use",
     "prostitution",
     "pet play",
 }
