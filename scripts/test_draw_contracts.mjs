@@ -360,6 +360,54 @@ const WATER_SRC = [
   }
 }
 
+// --- 5. 分級尾巴就是滑桿選的那一級 -------------------------------------------
+// 選了色情就要寫 nsfw, explicit。這裡曾經是「照抽到的內容推一級、滑桿只當上限」，
+// 結果預設尺度在色情模式下 2000 張裡只有 22% 真的寫了 explicit、57% 寫成
+// sfw, general —— 選了色情卻拿到全年齡的標註。專案主決定讓滑桿說了算。
+{
+  const WANT = {
+    explicit: data.nsfwTail || [],
+    sensitive: data.sensitiveTail || [],
+    general: data.sfwTail || [],
+  };
+  const OTHERS = {
+    explicit: [...(data.sensitiveTail || []), ...(data.sfwTail || [])],
+    sensitive: [...(data.nsfwTail || []), ...(data.sfwTail || [])],
+    general: [...(data.nsfwTail || []), ...(data.sensitiveTail || [])],
+  };
+  for (const rating of ["explicit", "sensitive", "general"]) {
+    const want = WANT[rating];
+    ok(`${rating} 的尾巴在詞庫裡不是空的`, want.length > 0, JSON.stringify(want));
+    const bad = [];
+    let drew = 0;
+    for (const heats of [["mixed"], ["activity"], ["tease"], ["flash"], ["sex"]]) {
+      for (let i = 0; i < 40; i++) {
+        const st = sanitizeSettings({ ...base, heats, rating, sceneMode: "normal" }, data);
+        st.weights = weightsForHeats(st.heats, data.heatWeights);
+        st.lockScene = true;
+        let d;
+        try {
+          d = drawOne(lex, st, new Set(), new Set(), mulberry32(96000 + drew));
+        } catch {
+          continue;
+        }
+        drew += 1;
+        const tags = new Set(String(d.positive).split(", "));
+        const missing = want.filter((t) => !tags.has(t));
+        const leaked = OTHERS[rating].filter((t) => tags.has(t) && !want.includes(t));
+        if (missing.length || leaked.length) {
+          bad.push(`${heats.join("+")} #${i} 少了 [${missing}] 多了 [${leaked}]`);
+        }
+      }
+    }
+    ok(
+      `分級 ${rating} 的每一張都帶著自己的尾巴、不帶別級的（抽了 ${drew} 張）`,
+      bad.length === 0,
+      bad.slice(0, 3).join("; ")
+    );
+  }
+}
+
 if (failed) {
   console.error(`\n${failed} failed`);
   process.exit(1);

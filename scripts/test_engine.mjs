@@ -1481,8 +1481,9 @@ function indoorOutdoorClash(have) {
     `cloth@${firstCloth} pose@${firstPose} pos=${d.positive}`
   );
   const qAt = parts.indexOf("masterpiece");
-  // 尾巴的字現在看實際抽到的內容而定（explicit / sensitive / sfw+general），
+  // 尾巴的字跟著滑桿走（色情 nsfw+explicit／敏感 sensitive／全年齡 sfw+general），
   // 所以這裡找「哪一個尾巴在場」，而不是寫死 nsfw —— 這條測的是位置，不是尺度。
+  // 尾巴的內容由 test_draw_contracts 第 5 組守。
   const nsfwAt = Math.max(
     parts.lastIndexOf("nsfw"), parts.lastIndexOf("explicit"),
     parts.lastIndexOf("sensitive"), parts.lastIndexOf("general"), parts.lastIndexOf("sfw")

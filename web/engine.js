@@ -5435,15 +5435,20 @@ export function drawOne(lex, settings, pinned, userBanned, rand, seed) {
     }
   }
 
-  // 色情模式關掉時，正面的 nsfw/explicit 換成相反的那組；伺服器那邊會把
-  // nsfw/explicit 改放到負面。
-  // 尾巴照實際抽到的內容給，滑桿只當上限。
-  const drawnItems = [];
-  for (const t of kept) {
-    const it = lex.byTag.get(t);
-    if (it) drawnItems.push(it);
-  }
-  const shownRating = ratingOfDrawnTags(drawnItems, rating);
+  // 尾巴就是滑桿選的那一級。選色情就寫 nsfw, explicit。
+  //
+  // 這裡曾經是「照實際抽到的內容推一級出來，滑桿只當上限」，動機是實測到
+  // 尺度=活動 時 100% 的圖沒有任何情色內容卻都標著 explicit —— 一張穿好衣服在
+  // 超市買東西的圖配上 nsfw, explicit，那個組合在訓練標註裡不存在。
+  //
+  // 但那個設計的代價更大，而且是專案主自己發現的：預設尺度（混合）在色情模式下，
+  // 2000 張裡只有 22% 真的寫了 explicit，57% 寫成 sfw, general。選了色情卻拿到
+  // 全年齡的標註，比偶爾標過頭難接受得多 —— 而且判準本身還會漏字（breast bondage、
+  // breasts on glass、grabbing another's breast 都被判成 general）。
+  //
+  // 漏字那件事仍然值得修，但那是詞庫分類的問題；尾巴該不該由內容決定是另一回事，
+  // 這裡照專案主的決定走：滑桿說了算。
+  const shownRating = rating;
   const nsfw =
     shownRating === "explicit"
       ? lex.data.nsfwTail
