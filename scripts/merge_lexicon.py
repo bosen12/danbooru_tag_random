@@ -531,6 +531,20 @@ RECLASS = {
     "bald": {"mutex": "hair_length"},
     "tall female": {"mutex": "height", "gate": "female"},
     "cherry blossoms": {"mutex": "weather", "era": ["any"]},
+    # 舔陰莖是動作，不是身體特徵。採集進來時被歸成 feature/body_m，於是它沒有
+    # sex_act 互斥格 —— 實測 8000 張裡它出現 58 次，其中 23 次同時還有別的性行為，
+    # 包括「licking penis + cowgirl position」（一邊騎乘一邊舔，畫不出來）。
+    # 它的兩個同類 cunnilingus（舔陰）和 anilingus（舔肛）本來就在 pose/sex_act。
+    # Danbooru 佐證：licking_penis 18150 篇，其中 100.0% 同時有 fellatio、100.0%
+    # 有 penis，而 cowgirl_position 只有 1.4%。needs 照最近的同類 fellatio。
+    # 放在覆寫表而不是改 05-harvest.json，因為那個檔案重跑採集會被整個重產。
+    # layer 和 gate 也要一起搬：採集給的 layer="skin" 不是中性的 —— engine 的
+    # wearsBodyClothes() 和「有沒有露出來」那兩個判斷都看 layer==="skin"。
+    # 整組對齊最近的同類 fellatio（layer normal、gate any、needs male+pair）。
+    "licking penis": {
+        "section": "pose", "mutex": "sex_act", "heat": ["sex"],
+        "needs": ["male", "pair"], "layer": "normal", "gate": "any",
+    },
     "tall male": {"mutex": "height_m", "gate": "male"},
     "short male": {"mutex": "height_m", "gate": "male"},
     "male pubic hair": {"gate": "male", "heat": ["flash", "sex"]},

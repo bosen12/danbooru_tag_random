@@ -106,7 +106,29 @@ const STEAM_NEEDS = [
   "ofuro", "bubble bath", "showering", "after bathing",
 ];
 
+// 一張圖只能在做一件事。這份清單是**手寫**的，不從 engine.js 的 mutex 反射 ——
+// 這條的重點正是要抓「某個性行為忘了掛 sex_act 互斥格」，從 production 反射出來
+// 就等於跟著一起漏掉。實際抓到過：licking penis 被採集歸成 feature/body_m，沒有
+// 互斥格，於是 8000 張裡 58 次出現中有 23 次同時還有別的性行為，包括
+// 「licking penis + cowgirl position」（一邊騎乘一邊舔）。
+const SEX_ACTS = [
+  "vaginal", "anal", "fellatio", "deepthroat", "irrumatio", "cunnilingus", "anilingus",
+  "licking penis", "handjob", "footjob", "paizuri", "paizuri under clothes",
+  "cowgirl position", "reverse cowgirl position", "doggystyle", "standing doggystyle",
+  "missionary", "mating press", "standing sex", "amazon position", "spooning",
+  "prone bone", "sex from behind", "facesitting", "69", "spitroast",
+  "double penetration", "tribadism", "full nelson", "suspended congress",
+];
+
 const HARD = [
+  {
+    name: "同時做兩件性事",
+    why: "一張圖只能在做一件事。兩個性行為同框代表其中一個沒有掛上 sex_act 互斥格。",
+    check: (n) => {
+      const acts = SEX_ACTS.filter((t) => n.has(t));
+      return acts.length > 1 ? acts.join(" + ") : "";
+    },
+  },
   {
     name: "室內下雨",
     why: "天氣那一格只在室外擲。室內出現真正的天氣（雨雪霧陰櫻）代表那道室外判斷破了。",
@@ -302,6 +324,45 @@ if (softHits.size) {
     console.log(`  ${String(n).padStart(5)}  ${rule.name} —— ${rule.why}`);
   }
   console.log();
+}
+
+// --- 針對性複查：性行為互斥 --------------------------------------------------
+//
+// 上面那輪掃描是廣的，對稀有組合取樣不足：licking penis 缺互斥格那個 bug，在預設的
+// 2000 張底下**掃不出來**，要 20000 張才會紅 6 次。與其把整輪掃描放大（所有人跑
+// test.bat 都變慢），不如針對這一條開一小輪把條件調到它該出現的地方。
+//
+// heats=["sex"]、一男一女、預設張數：bug 還在的時候 3000 張抓到 36 次，
+// 所以 1500 張仍有大約 18 次的預期命中，很穩。
+{
+  const N = 1500;
+  let bad = 0;
+  const examples = [];
+  for (let i = 0; i < N; i += 1) {
+    const s = defaultSettings(data);
+    s.girl = true;
+    s.boy = true;
+    s.heats = ["sex"];
+    const seed = 600000 + i;
+    const pos = drawOne(lex, s, new Set(), new Set(), mulberry32(seed), seed).positive;
+    const names = new Set(pos.split(",").map((t) => t.trim()));
+    const acts = SEX_ACTS.filter((t) => names.has(t));
+    if (acts.length > 1) {
+      bad += 1;
+      if (examples.length < 3) examples.push(`seed=${seed} ${acts.join(" + ")}`);
+    }
+  }
+  if (bad === 0) {
+    console.log(`ok   性行為互斥：${N} 張色情抽取沒有一張同時做兩件事`);
+  } else {
+    console.log(`
+FAIL 性行為互斥  ×${bad}/${N}`);
+    console.log("  規格：一張圖只能在做一件事；兩個性行為同框代表其中一個沒掛 sex_act 互斥格。");
+    for (const e of examples) console.log(`  重播：${e}`);
+    console.log("");
+    console.log("1 條 hard 不變式被違反");
+    process.exit(1);
+  }
 }
 
 if (!hardHits.size) {

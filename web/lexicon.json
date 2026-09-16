@@ -15800,22 +15800,22 @@
     },
     {
       "tag": "licking penis",
-      "section": "feature",
-      "gate": "male",
+      "section": "pose",
+      "gate": "any",
       "heat": [
-        "flash",
         "sex"
       ],
-      "mutex": null,
+      "mutex": "sex_act",
       "bind": [],
       "implies": [],
-      "layer": "skin",
+      "layer": "normal",
       "era": [
         "any"
       ],
-      "group": "body_m",
+      "group": "sex",
       "needs": [
-        "male"
+        "male",
+        "pair"
       ],
       "zh": "舔陰莖"
     },
