@@ -1068,7 +1068,7 @@
       "tease",
       "flash"
     ],
-    "mutex": null,
+    "mutex": "onepiece",
     "bind": [
       "armor"
     ],
