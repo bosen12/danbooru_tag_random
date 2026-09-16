@@ -235,6 +235,42 @@ function ok(name, rows) {
   ok(`SEX 清單裡進了詞庫的字都是 group="sex"`, wrong);
 }
 
+// --- 已被 Danbooru 併走的舊名不該留在詞庫 ------------------------------------
+//
+// 這些字在 Danbooru 上 post_count 是 0：它們早就被 alias 併到別的名字，沒有任何一張
+// 圖帶著它們，所以模型訓練時根本沒看過。用它們等於把一格 token 丟掉（跟當初的
+// soft lighting 同一回事）。
+//
+// **判斷關鍵是 alias 的建立日期，不是 post_count。** Illustrious 的字彙凍結在訓練當下，
+// 而 Danbooru 會一直搬家：alias 如果是訓練之後才建立的，那個舊名在訓練時是活的，
+// 模型認得它，改名反而是把訊號丟掉。
+//
+// 實例：hairpin -> hairclip 這條 alias 建立於 **2026-05-30**，遠晚於 Illustrious 的
+// 訓練，所以 hairpin 要留著（我一度把它改掉，查了日期才發現改錯，已還原）。
+// 下面這八條的 alias 分別是 2013～2023 年建立的，都在訓練之前，改名才是對的。
+{
+  const goneForGood = [
+    ["wink", "one eye closed", "2014-06-21"],
+    ["facesitting", "sitting on face", "2013-02-16"],
+    ["naga", "lamia", "2013-02-16"],
+    ["incubus", "demon boy", "2021-02-08"],
+    ["cravat", "ascot", "2021-08-10"],
+    ["public sex", "public indecency", "2021-11-21"],
+    ["sento", "bathhouse", "2022-08-09"],
+    ["hand on hip", "hand on own hip", "2023-03-27"],
+  ];
+  const stale = [];
+  const missing = [];
+  for (const [old, canon, when] of goneForGood) {
+    if (by.has(old)) stale.push(`「${old}」已於 ${when} 被 Danbooru 併成「${canon}」，不該再出現`);
+    if (!by.has(canon)) missing.push(`「${canon}」不在詞庫（${old} 的正規名）`);
+  }
+  ok("被 Danbooru 併走的舊 tag 名沒有留在詞庫", stale);
+  ok("併走之後的正規名都在詞庫裡", missing);
+  // 反面：訓練之後才被併的舊名要留著，不能一起殺掉。
+  ok("hairpin 留著（alias 是 2026-05-30 才建，晚於模型訓練）", by.has("hairpin"));
+}
+
 // --- token_counts.json 不能跟詞庫脫節 ---------------------------------------
 // 它是另一支腳本（scripts/token_counts.py）產生的，merge_lexicon.py 不會碰它。
 // 好處是重產詞庫不會把它洗掉，代價是有人加了新字卻沒重跑就會脫節——

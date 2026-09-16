@@ -4075,7 +4075,7 @@
       "zh": "雙手交叉"
     },
     {
-      "tag": "hand on hip",
+      "tag": "hand on own hip",
       "section": "pose",
       "gate": "any",
       "heat": [
@@ -4091,7 +4091,7 @@
         "any"
       ],
       "group": "tease",
-      "zh": "手叉腰"
+      "zh": "手叉自己的腰"
     },
     {
       "tag": "hands on own hips",
@@ -5228,7 +5228,7 @@
       "zh": "高潮"
     },
     {
-      "tag": "wink",
+      "tag": "one eye closed",
       "section": "pose",
       "gate": "any",
       "heat": [
@@ -6377,7 +6377,7 @@
       "zh": "從後插入"
     },
     {
-      "tag": "facesitting",
+      "tag": "sitting on face",
       "section": "pose",
       "gate": "any",
       "heat": [
@@ -6694,7 +6694,7 @@
       "zh": "著衣做愛"
     },
     {
-      "tag": "public sex",
+      "tag": "public indecency",
       "section": "pose",
       "gate": "any",
       "heat": [
@@ -19752,7 +19752,7 @@
       "zh": "陽傘"
     },
     {
-      "tag": "cravat",
+      "tag": "ascot",
       "section": "clothing",
       "gate": "any",
       "heat": [
@@ -20144,7 +20144,7 @@
       "zh": "羊人"
     },
     {
-      "tag": "incubus",
+      "tag": "demon boy",
       "section": "feature",
       "gate": "male",
       "heat": [
@@ -20216,7 +20216,7 @@
       "zh": "狼人"
     },
     {
-      "tag": "naga",
+      "tag": "lamia",
       "section": "feature",
       "gate": "male",
       "heat": [
@@ -22029,7 +22029,7 @@
       "zh": "共浴"
     },
     {
-      "tag": "sento",
+      "tag": "bathhouse",
       "section": "env",
       "gate": "any",
       "heat": [

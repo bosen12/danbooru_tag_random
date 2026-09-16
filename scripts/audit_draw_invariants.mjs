@@ -51,10 +51,10 @@ const FACELESS = ["head out of frame", "lower body"];
 const FACE_NEEDED = [
   "closed eyes", "covering own mouth", "closed mouth", "french kiss", "kissing", "kiss",
   "finger to mouth", "eating", "drinking", "smoking", "singing", "talking on phone",
-  "tongue out", "lipstick", "glasses", "tears", "wink", "ahegao",
+  "tongue out", "lipstick", "glasses", "tears", "one eye closed", "ahegao",
 ];
 /** 同一張臉上只能有一個的眼部細節。 */
-const EYE_ONE_OF = ["wink", "empty eyes", "sparkling eyes", "half-closed eyes", "rolling eyes"];
+const EYE_ONE_OF = ["one eye closed", "empty eyes", "sparkling eyes", "half-closed eyes", "rolling eyes"];
 /** 同一張臉上只能有一個的嘴部細節。 */
 const MOUTH_ONE_OF = [
   "open mouth", "clenched teeth", "biting own lip", "tongue out",
@@ -102,7 +102,7 @@ const OUTDOOR_ONLY = ["tree", "bush", "sky", "blue sky", "starry sky", "ocean", 
 const WEATHER_OUTDOOR = ["rain", "overcast", "snow", "fog", "cherry blossoms"];
 const STEAM_NEEDS = [
   "onsen", "sauna", "open-air bath", "hot spring", "bathing", "shared bathing",
-  "steaming body", "bath", "bathroom", "bathtub", "shower (place)", "sento",
+  "steaming body", "bath", "bathroom", "bathtub", "shower (place)", "bathhouse",
   "ofuro", "bubble bath", "showering", "after bathing",
 ];
 
@@ -116,7 +116,7 @@ const SEX_ACTS = [
   "licking penis", "handjob", "footjob", "paizuri", "paizuri under clothes",
   "cowgirl position", "reverse cowgirl position", "doggystyle", "standing doggystyle",
   "missionary", "mating press", "standing sex", "amazon position", "spooning",
-  "prone bone", "sex from behind", "facesitting", "69", "spitroast",
+  "prone bone", "sex from behind", "sitting on face", "69", "spitroast",
   "double penetration", "tribadism", "full nelson", "suspended congress",
 ];
 

@@ -554,7 +554,7 @@ function eraDraws(era, n = 60, seed0 = 9000) {
     "reverse upright straddle": "sitting",
     "squatting cowgirl position": "squatting",
     "69": "lying",
-    "facesitting": "sitting",
+    "sitting on face": "sitting",
   };
   for (const [act, pose] of Object.entries(BODY)) {
     ok(`${act} implies ${pose}`, (lex.byTag.get(act)?.implies || []).includes(pose));
@@ -832,7 +832,7 @@ function eraDraws(era, n = 60, seed0 = 9000) {
   ok("dress allows sex", has("dress", "sex"));
   ok("undressing allows sex", has("undressing", "sex"));
   ok("flashing allows sex", has("flashing", "sex"));
-  ok("wink allows sex", has("wink", "sex"));
+  ok("one eye closed allows sex", has("one eye closed", "sex"));
   ok("indian style allows sex", has("indian style", "sex"));
   ok("bed allows tease", has("bed", "tease"));
   ok("torii allows sex", has("torii", "sex"));
@@ -1291,7 +1291,7 @@ function indoorOutdoorClash(have) {
   ok("dutch angle mutexes cowboy shot", mutexSiblings(lex, "dutch angle").includes("cowboy shot"));
   eq("smile mutex", lex.byTag.get("smile")?.mutex, "expression");
   ok("smile mutexes frown", mutexSiblings(lex, "smile").includes("frown"));
-  ok("smile does not mutex wink", !mutexSiblings(lex, "smile").includes("wink"));
+  ok("smile does not mutex one eye closed", !mutexSiblings(lex, "smile").includes("one eye closed"));
   const pinSmile = applyPin(lex, new Set(), new Set(), "light smile");
   ok("light smile keeps smile", pinSmile.pinned.has("light smile") && pinSmile.pinned.has("smile"));
   const pinXcu = applyPin(lex, new Set(), new Set(), "extreme close-up");
@@ -2391,7 +2391,7 @@ function indoorOutdoorClash(have) {
   ok("shared bathing implies bathing", (lex.byTag.get("shared bathing")?.implies || []).includes("bathing"));
   ok("mixed-sex bathing implies bathing", (lex.byTag.get("mixed-sex bathing")?.implies || []).includes("bathing"));
   eq("ofuro is env", lex.byTag.get("ofuro")?.section, "env");
-  eq("sento is env", lex.byTag.get("sento")?.section, "env");
+  eq("bathhouse is env", lex.byTag.get("bathhouse")?.section, "env");
   eq("open-air bath is env", lex.byTag.get("open-air bath")?.section, "env");
   ok("ofuro implies bath", (lex.byTag.get("ofuro")?.implies || []).includes("bath"));
   ok("open-air bath implies outdoors", (lex.byTag.get("open-air bath")?.implies || []).includes("outdoors"));
@@ -2402,8 +2402,8 @@ function indoorOutdoorClash(have) {
   const greeceHits = [];
   for (const d of eraDraws("ancient_greece", 60, 97000)) {
     const h = tagsOf(d);
-    if (h.has("showering") || h.has("shower (place)") || h.has("onsen") || h.has("sento") || h.has("ofuro")) {
-      greeceHits.push([...h].filter((t) => ["showering", "shower (place)", "onsen", "sento", "ofuro"].includes(t)).join(","));
+    if (h.has("showering") || h.has("shower (place)") || h.has("onsen") || h.has("bathhouse") || h.has("ofuro")) {
+      greeceHits.push([...h].filter((t) => ["showering", "shower (place)", "onsen", "bathhouse", "ofuro"].includes(t)).join(","));
     }
   }
   eq("ancient_greece: no modern shower or japanese bathhouse", greeceHits, []);
@@ -2898,7 +2898,7 @@ function indoorOutdoorClash(have) {
   }
   eq("seiza never auto moving activities", move, 0);
   const pinHof = applyPin(lex, new Set(), new Set(), "head out of frame").pinned;
-  const FACE = ["looking at viewer", "smile", "wink", "ahegao", "closed eyes", "facial", "cum in mouth"];
+  const FACE = ["looking at viewer", "smile", "one eye closed", "ahegao", "closed eyes", "facial", "cum in mouth"];
   let face = 0;
   const tease = settings();
   tease.girl = true;
@@ -2949,7 +2949,7 @@ function indoorOutdoorClash(have) {
   fat.eras = ["modern"];
   fat.sceneMode = "normal";
   fat.counts = { subject: 10, feature: 10, pose: 10, clothing: 10, env: 10 };
-  const EYE = ["wink", "empty eyes", "sparkling eyes", "half-closed eyes", "rolling eyes"];
+  const EYE = ["one eye closed", "empty eyes", "sparkling eyes", "half-closed eyes", "rolling eyes"];
   const MOUTH = ["open mouth", "clenched teeth", "biting own lip", "tongue out", "parted lips", "licking lips", "drooling"];
   let twoEye = 0;
   let twoMouth = 0;
@@ -3001,9 +3001,9 @@ function indoorOutdoorClash(have) {
   let spark = 0;
   for (let i = 0; i < 40; i++) {
     const h = tagsOf(drawOne(lex, fat, pinClosed2, new Set(), mulberry32(195000 + i), 195000 + i));
-    if (["sparkling eyes", "wink", "empty eyes", "looking at viewer", "looking ahead"].some((t) => h.has(t))) spark += 1;
+    if (["sparkling eyes", "one eye closed", "empty eyes", "looking at viewer", "looking ahead"].some((t) => h.has(t))) spark += 1;
   }
-  eq("closed eyes never leftover sparkle/wink/gaze", spark, 0);
+  eq("closed eyes never leftover sparkle/one eye closed/gaze", spark, 0);
   const pinOl = applyPin(lex, new Set(), new Set(), "office lady").pinned;
   const ol = { ...fat, heats: ["tease"], weights: { activity: 0, tease: 1, flash: 0, sex: 0 }, eras: ["modern"], drawJob: true };
   let olOut = 0;
@@ -3308,7 +3308,7 @@ function indoorOutdoorClash(have) {
   s.lockScene = true;
   s.counts.env = 6;
   const pinSwim = applyPin(lex, new Set(), new Set(), "swimming").pinned;
-  const WATER = ["pool", "poolside", "pool ladder", "beach", "ocean", "underwater", "bathtub", "bathroom", "shower (place)", "onsen", "ofuro", "sento", "open-air bath", "bubble bath", "bath"];
+  const WATER = ["pool", "poolside", "pool ladder", "beach", "ocean", "underwater", "bathtub", "bathroom", "shower (place)", "onsen", "ofuro", "bathhouse", "open-air bath", "bubble bath", "bath"];
   let dry = 0;
   for (let i = 0; i < 40; i++) {
     const h = tagsOf(drawOne(lex, s, pinSwim, new Set(), mulberry32(160000 + i), 160000 + i));
@@ -3428,7 +3428,7 @@ function indoorOutdoorClash(have) {
   let bath = 0;
   for (let i = 0; i < 40; i++) {
     const h = tagsOf(drawOne(lex, s, pinDoc, new Set(), mulberry32(173000 + i), 173000 + i));
-    if (["sento", "ofuro", "onsen", "bathroom", "bathtub"].some((t) => h.has(t))) bath += 1;
+    if (["bathhouse", "ofuro", "onsen", "bathroom", "bathtub"].some((t) => h.has(t))) bath += 1;
   }
   eq("normal doctor never auto bath place", bath, 0);
   const pinGuitar = applyPin(lex, new Set(), new Set(), "playing guitar").pinned;
@@ -3444,7 +3444,7 @@ function indoorOutdoorClash(have) {
   let guitarBath = 0;
   for (let i = 0; i < 40; i++) {
     const h = tagsOf(drawOne(lex, lock, pinGuitar, new Set(), mulberry32(174000 + i), 174000 + i));
-    if (["bathtub", "ofuro", "sento", "bathroom", "shower (place)"].some((t) => h.has(t))) guitarBath += 1;
+    if (["bathtub", "ofuro", "bathhouse", "bathroom", "shower (place)"].some((t) => h.has(t))) guitarBath += 1;
   }
   eq("lockScene guitar never bath place", guitarBath, 0);
   const pinCook = applyPin(lex, new Set(), new Set(), "cooking").pinned;
@@ -4068,7 +4068,7 @@ function indoorOutdoorClash(have) {
     eq("all fours never auto leaning back", neverAuto(sTease, "all fours", ["leaning back"], 286600), 0);
     eq("bathing never auto after bathing", neverAuto(sTease, "bathing", ["after bathing"], 286640), 0);
     eq("lower body never auto breast hold", neverAuto(sTease, "lower body", ["breast hold", "breastfeeding", "spread cleavage"], 286680), 0);
-    eq("expressionless never auto wink", neverAuto(sTease, "expressionless", ["wink"], 286720), 0);
+    eq("expressionless never auto one eye closed", neverAuto(sTease, "expressionless", ["one eye closed"], 286720), 0);
     eq("on back never auto bent over", neverAuto(sFlash, "on back", ["bent over"], 286760), 0);
     eq("overcast never auto blue sky", neverAuto(s, "overcast", ["blue sky"], 286800), 0);
     eq("overcast never auto starry sky", neverAuto(s, "overcast", ["starry sky"], 286840), 0);
@@ -6504,7 +6504,7 @@ function indoorOutdoorClash(have) {
   s.girl = true;
   const BATH = new Set([
     "bath", "bathtub", "bathing", "onsen", "shower", "shower (place)",
-    "open-air bath", "sauna", "sento", "ofuro", "bubble bath",
+    "open-air bath", "sauna", "bathhouse", "ofuro", "bubble bath",
   ]);
   const bad = [];
   let bathSeen = 0;
@@ -7059,7 +7059,7 @@ function indoorOutdoorClash(have) {
   s.heats = ["activity"];
   const BATH = new Set([
     "bath", "bathtub", "bathing", "onsen", "shower", "shower (place)",
-    "open-air bath", "sento", "ofuro", "bubble bath",
+    "open-air bath", "bathhouse", "ofuro", "bubble bath",
   ]);
   let skin = 0;
   let bath = 0;

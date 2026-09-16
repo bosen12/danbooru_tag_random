@@ -173,8 +173,8 @@ SEX_POS = {
 SEX_ACT = {
     "sex", "vaginal", "anal", "oral", "fellatio", "cunnilingus", "paizuri",
     "handjob", "footjob", "thighjob", "anilingus", "irrumatio", "deepthroat",
-    "facesitting", "tribadism", "frottage", "grinding", "clothed sex",
-    "public sex", "happy sex", "group sex", "threesome", "mmf threesome",
+    "sitting on face", "tribadism", "frottage", "grinding", "clothed sex",
+    "public indecency", "happy sex", "group sex", "threesome", "mmf threesome",
     "ffm threesome", "orgy",
 }
 PAIRISH = {

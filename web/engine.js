@@ -327,7 +327,7 @@ const SLEEP_BAD_EXPR = new Set([
   "embarrassed",
   "nervous",
 ]);
-const EYE_EXTRA = new Set(["wink", "empty eyes", "sparkling eyes", "half-closed eyes", "rolling eyes"]);
+const EYE_EXTRA = new Set(["one eye closed", "empty eyes", "sparkling eyes", "half-closed eyes", "rolling eyes"]);
 const MOUTH_EXTRA = new Set([
   "open mouth",
   "clenched teeth",
@@ -506,7 +506,7 @@ function activityFitsBody(act, body) {
   }
   if (
     (act === "jogging" || act === "skiing" || act === "hiking") &&
-    (body.has("sitting") || body.has("facesitting"))
+    (body.has("sitting") || body.has("sitting on face"))
   ) {
     return false;
   }
@@ -525,7 +525,7 @@ const WATER_PLACE = new Set([
   "bathroom",
   "bathtub",
   "shower (place)",
-  "sento",
+  "bathhouse",
   "ofuro",
   "open-air bath",
   "bubble bath",
@@ -546,7 +546,7 @@ const BATH_PLACE = new Set([
   "bathroom",
   "bathtub",
   "shower (place)",
-  "sento",
+  "bathhouse",
   "ofuro",
   "open-air bath",
   "bubble bath",
@@ -564,7 +564,7 @@ const STEAM_HOT = new Set([
   "onsen", "sauna", "open-air bath", "hot spring", "bathing", "shared bathing", "steaming body",
 ]);
 const STEAM_MILD = new Set([
-  "bath", "bathroom", "bathtub", "shower (place)", "sento", "ofuro", "bubble bath",
+  "bath", "bathroom", "bathtub", "shower (place)", "bathhouse", "ofuro", "bubble bath",
   "showering", "after bathing",
 ]);
 const STEAM_CTX = new Set([...STEAM_HOT, ...STEAM_MILD]);
@@ -1047,7 +1047,7 @@ const ACT_PLACE = {
   swimming: new Set(["pool", "ocean", "beach", "underwater"]),
   wading: new Set(["beach", "ocean", "pool", "poolside", "lotus pond"]),
   floating: new Set(["pool", "ocean", "bathtub", "ofuro", "onsen", "open-air bath", "bubble bath"]),
-  "shared bathing": new Set(["onsen", "sento", "ofuro", "open-air bath", "bath"]),
+  "shared bathing": new Set(["onsen", "bathhouse", "ofuro", "open-air bath", "bath"]),
   eating: new Set([...MEAL_PLACE, "movie theater", "airplane interior", "convenience store", "izakaya", "festival", "market", "ryokan", "great hall", "tavern"]),
   drinking: new Set(["cafe", "bar (place)", "restaurant", "kitchen", "living room", "movie theater", "airplane interior", "izakaya", "festival", "market", "ryokan", "tavern", "great hall", "ballroom"]),
   reading: new Set([...DESK_PLACE, "train", "train interior"]),
@@ -1281,7 +1281,7 @@ const PRIVATE_SEX_PLACE = new Set([
   "shower (place)",
   "ofuro",
   "onsen",
-  "sento",
+  "bathhouse",
   "open-air bath",
   "bubble bath",
   "changing room",
@@ -1921,7 +1921,7 @@ const ARM_POSE = new Set([
   "v",
   "reaching towards viewer",
   "hands on own hips",
-  "hand on hip",
+  "hand on own hip",
   "hands on own breasts",
   "hand in pocket",
   "index fingers together",
@@ -1985,7 +1985,7 @@ const BOTH_ARMS = new Set([
 ]);
 const HAND_GESTURE = new Set([
   "finger to mouth",
-  "hand on hip",
+  "hand on own hip",
   "hand on own chest",
   "hand on own hip",
   "adjusting hair",
@@ -3465,7 +3465,7 @@ export function drawOne(lex, settings, pinned, userBanned, rand, seed) {
       FACE_NEED_TAGS.has(item.tag) ||
       item.tag === "glasses" ||
       item.tag === "tears" ||
-      item.tag === "wink" ||
+      item.tag === "one eye closed" ||
       /^looking /.test(item.tag);
     if (needsFace && [...used].some((t) => FACELESS_CAM.has(t))) return false;
     if ([...used].some((t) => FACELESS_CAM.has(t))) {
@@ -3495,7 +3495,7 @@ export function drawOne(lex, settings, pinned, userBanned, rand, seed) {
             FACE_NEED_TAGS.has(t) ||
             t === "glasses" ||
             t === "tears" ||
-            t === "wink" ||
+            t === "one eye closed" ||
             t === "lipstick" ||
             /^looking /.test(t))
         ) {
@@ -3580,13 +3580,13 @@ export function drawOne(lex, settings, pinned, userBanned, rand, seed) {
     if (item.tag === "outdoors" && used.has("bunk bed")) return false;
     if (
       (used.has("jogging") || used.has("skiing") || used.has("hiking")) &&
-      (item.tag === "facesitting" || item.tag === "sitting")
+      (item.tag === "sitting on face" || item.tag === "sitting")
     ) {
       return false;
     }
     if (
       (item.tag === "jogging" || item.tag === "skiing" || item.tag === "hiking") &&
-      (used.has("facesitting") || used.has("sitting"))
+      (used.has("sitting on face") || used.has("sitting"))
     ) {
       return false;
     }
@@ -4173,8 +4173,8 @@ export function drawOne(lex, settings, pinned, userBanned, rand, seed) {
     if (item.tag === "upper body" && used.has("pussy focus")) return false;
     if (item.tag === "wading" && used.has("on chair")) return false;
     if (item.tag === "on chair" && used.has("wading")) return false;
-    if (item.tag === "facesitting" && used.has("on chair")) return false;
-    if (item.tag === "on chair" && used.has("facesitting")) return false;
+    if (item.tag === "sitting on face" && used.has("on chair")) return false;
+    if (item.tag === "on chair" && used.has("sitting on face")) return false;
     if (item.tag === "bald" && used.has("wet hair")) return false;
     if (item.tag === "wet hair" && used.has("bald")) return false;
     if (item.tag === "cooking" && used.has("squatting")) return false;
@@ -4188,8 +4188,8 @@ export function drawOne(lex, settings, pinned, userBanned, rand, seed) {
     if (item.tag === "lipstick" && [...used].some((t) => FACELESS_CAM.has(t))) return false;
     if (item.tag === "sunbathing" && used.has("rain")) return false;
     if (item.tag === "rain" && used.has("sunbathing")) return false;
-    if (item.tag === "facing away" && (used.has("wink") || used.has("selfie") || used.has("looking at viewer"))) return false;
-    if ((item.tag === "wink" || item.tag === "selfie" || item.tag === "looking at viewer") && used.has("facing away")) {
+    if (item.tag === "facing away" && (used.has("one eye closed") || used.has("selfie") || used.has("looking at viewer"))) return false;
+    if ((item.tag === "one eye closed" || item.tag === "selfie" || item.tag === "looking at viewer") && used.has("facing away")) {
       return false;
     }
     if (item.tag === "breasts squeezed together" && used.has("breasts apart")) return false;
@@ -4307,13 +4307,13 @@ export function drawOne(lex, settings, pinned, userBanned, rand, seed) {
     if (CHEST_NEED_TAGS.has(item.tag) && used.has("lower body")) return false;
     if (
       used.has("expressionless") &&
-      (item.tag === "wink" || EYE_EXTRA.has(item.tag) || item.tag === "clenched teeth" || item.tag === "fucked silly")
+      (item.tag === "one eye closed" || EYE_EXTRA.has(item.tag) || item.tag === "clenched teeth" || item.tag === "fucked silly")
     ) {
       return false;
     }
     if (
       item.tag === "expressionless" &&
-      (used.has("wink") ||
+      (used.has("one eye closed") ||
         used.has("clenched teeth") ||
         used.has("fucked silly") ||
         [...used].some((t) => EYE_EXTRA.has(t)))
