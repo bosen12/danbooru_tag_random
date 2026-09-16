@@ -24,6 +24,9 @@ import {
   mutexSiblings,
 } from "../web/engine.js";
 
+const NL = String.fromCharCode(10);
+// 反斜線在這個專案的編輯路徑上被吃掉過太多次，引號與換行一律用碼點組。
+const chr34 = String.fromCharCode(34);
 const ROOT = join(dirname(fileURLToPath(import.meta.url)), "..");
 const data = JSON.parse(readFileSync(join(ROOT, "web", "lexicon.json"), "utf8"));
 const lex = indexLexicon(data);
@@ -195,6 +198,41 @@ function ok(name, rows) {
   ok("詞庫裡有 female-gated 的字（不然下面等於沒測）", femaleGated.length > 10 ? [] : [`只有 ${femaleGated.length} 個`]);
   const leaked = femaleGated.filter((t) => boyOnly.has(t));
   ok(`只開男生時沒有 female-gated 的字漏進來（檢查了 ${femaleGated.length} 個）`, leaked.map((t) => `漏出「${t}」`));
+}
+
+// --- groups.py 的 SEX 清單要真的變成 group: "sex" -----------------------------
+// assign_group() 是一長串 if，先中的先算。feature 段裡有一條「gate=female 且
+// tag 名字含 breast → body_f」的子字串規則，排在 `tag in SEX` 前面，於是
+// breast bondage 與 grabbing another's breast 被歸成身體特徵 —— 人工清單寫了，
+// 但輪不到它說話。後果是「只勾活動」借 tease 池子時扣不掉它們：實測 1500 張
+// 漏進去 58 次與 14 次，而同義的 breast grab（在 pose 段、順序不同）是 0 次。
+//
+// 這條直接比對「清單寫了什麼」與「詞庫變成什麼」。以後誰再加字進 SEX 卻被某條
+// 子字串規則吃掉，就會在這裡紅燈，而不是等到出圖才發現。
+// 刻意不從 assign_group() 反射 —— 從實作反射出來的規格只能驗實作自不自洽。
+{
+  const src = readFileSync(join(ROOT, "scripts", "groups.py"), "utf8");
+  const at = src.indexOf("SEX = {");
+  const end = src.indexOf(NL + "}", at);
+  const wanted = [];
+  if (at >= 0 && end > at) {
+    for (const raw of src.slice(at, end).split(NL)) {
+      const line = raw.trim();
+      if (!line.startsWith(chr34)) continue;
+      const close = line.indexOf(chr34, 1);
+      if (close > 1) wanted.push(line.slice(1, close));
+    }
+  }
+  ok(`在 groups.py 裡讀得到 SEX 清單（${wanted.length} 個字）`, wanted.length > 10 ? [] : ["讀不到或太少，解析可能壞了"]);
+
+  const byTag = new Map(data.tags.map((t) => [t.tag, t]));
+  const wrong = [];
+  for (const tag of wanted) {
+    const it = byTag.get(tag);
+    if (!it) continue; // 沒進詞庫的（被 BANNED 或 dropped）不算
+    if (it.group !== "sex") wrong.push(`${tag} 在 SEX 清單裡，卻是 group=${it.group}（section=${it.section}）`);
+  }
+  ok(`SEX 清單裡進了詞庫的字都是 group="sex"`, wrong);
 }
 
 // --- token_counts.json 不能跟詞庫脫節 ---------------------------------------

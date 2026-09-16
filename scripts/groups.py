@@ -273,6 +273,25 @@ SEX = {
     # 分級結果本來就是「只有色情」（靠 FLASH_UNDRESS_RE 裡硬塞的 chikan|grab|tweak
     # 這些字），所以這次改的是「用對的理由得到同樣的結果」——
     # 例外是 self fondling，它哪一條特例都沒對到，本來錯在敏感層。
+    # 2026-09-16：同一類錯的第二次。上面那次是拿 heat（什麼時候抽得到）決定
+    # group（這是什麼東西）；這次是拿**名字裡有沒有 breast** 決定 —— 下面
+    # assign_group() 有一條「gate=female 且 tag 含 breast → body_f」的子字串規則，
+    # 於是這兩個被歸成身體特徵，而它們是性接觸與拘束。
+    #
+    # 後果不在分級（尾巴已經改成跟滑桿走），在「只勾活動」那一檔：日常模式借
+    # tease 的池子時靠 hasExplicitContent() 扣掉情色內容，而那個函式只認 group
+    # 與幾條正則，body_f 整批看不見。實測只勾活動抽 1500 張，
+    # breast bondage 漏進去 58 次、grabbing another's breast 14 次，
+    # 而同義的 breast grab（本來就在這個集合裡）與 groping 都是 0 次。
+    #
+    # 為什麼只收這兩個：拿 Danbooru 的 q+e 比例對過（倍率 = 該字比例 ÷ 全站 20.2%）
+    #   grabbing another's breast 99%(4.90)、breast bondage 96.8%(4.79)
+    #     —— 跟已經擋住的 breast grab 99%(4.90)、groping 97.4%(4.82) 同一級
+    #   breasts on glass 73.1%(3.62)、breast lift 70.5%(3.49) —— 誘惑級，
+    #     借 tease 池子本來就該進得來
+    #   breast rest 39.5%(1.96)、breasts on table 22.9%(1.13) —— 普通
+    "breast bondage",
+    "grabbing another's breast",
     "chikan",
     "breast grab",
     "ass grab",
@@ -361,6 +380,15 @@ def assign_group(item: dict) -> str:
         return "extra"
 
     if sec == "feature":
+        # 這條要排在最前面。下面有一條「gate=female 且 tag 含 breast → body_f」的
+        # 子字串規則，而 breast bondage 與 grabbing another's breast 的名字裡都有
+        # breast —— 它們會在走到 `tag in SEX` 之前就被那條吃掉，變成身體特徵。
+        # 同義的 breast grab 之所以沒事，只是因為它在 pose 段、順序不一樣。
+        #
+        # 一個字「是什麼」由人工清單說了算，名字裡剛好有什麼字不算。
+        # 目前 feature 段裡在 SEX 的就是那兩個，所以搬到前面不會波及別的字。
+        if tag in SEX:
+            return "sex"
         if mx == "job":
             return "job"
         if mx == "race" or tag == "monster boy":

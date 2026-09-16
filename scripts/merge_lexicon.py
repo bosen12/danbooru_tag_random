@@ -2044,13 +2044,16 @@ def main() -> None:
         "nsfwTail": ["nsfw", "explicit"],
         "sfwTail": ["sfw", "general"],
         "sensitiveTail": ["sensitive"],
+        # areolae 拿掉了：Danbooru 上它是 deprecated（17671 篇但已停用），
+        # 而同一份清單裡的 nipples 有 1142587 篇，本來就把它蓋住了。
+        # 想保留同樣意思又要現役的話是 large areolae(48770)，但在 nipples 旁邊是多餘的。
         "sensitiveNegative": [
             "explicit", "nude", "nipples", "pussy", "penis", "sex", "cum",
-            "areolae", "topless female", "bottomless", "pubic hair",
+            "topless female", "bottomless", "pubic hair",
         ],
         "sfwNegative": [
             "nsfw", "explicit", "questionable", "nude", "nipples", "pussy",
-            "penis", "sex", "cum", "areolae", "topless female", "bottomless",
+            "penis", "sex", "cum", "topless female", "bottomless",
             "panties", "underwear", "cameltoe", "pubic hair",
         ],
         # 清空：soft lighting 在 Danbooru 是 0 篇、也不在 Illustrious 的訓練字彙裡，

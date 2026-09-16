@@ -23,7 +23,6 @@
     "penis",
     "sex",
     "cum",
-    "areolae",
     "topless female",
     "bottomless",
     "pubic hair"
@@ -38,7 +37,6 @@
     "penis",
     "sex",
     "cum",
-    "areolae",
     "topless female",
     "bottomless",
     "panties",
@@ -247,6 +245,11 @@
     "masterpiece": "傑作",
     "best quality": "最高品質",
     "amazing quality": "極致品質",
+    "absurdres": "超高解析",
+    "highres": "高解析",
+    "very aesthetic": "非常有美感",
+    "highly aesthetic": "極有美感",
+    "newest": "最新風",
     "nsfw": "限制級",
     "explicit": "露骨"
   },
@@ -14645,7 +14648,7 @@
       "era": [
         "any"
       ],
-      "group": "body_f",
+      "group": "sex",
       "needs": [
         "female",
         "pair"
@@ -18770,7 +18773,7 @@
       "era": [
         "any"
       ],
-      "group": "body_f",
+      "group": "sex",
       "needs": [
         "female"
       ],

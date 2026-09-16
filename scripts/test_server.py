@@ -4,6 +4,7 @@ from __future__ import annotations
 
 import inspect
 import json
+import re
 import socket
 import struct
 import sys
@@ -32,6 +33,8 @@ from server import (  # noqa: E402
 from lora_scan import preview_path, strip_angle_tags  # noqa: E402
 import shutil  # noqa: E402
 import server  # noqa: E402
+
+ROOT = Path(__file__).resolve().parents[1]
 
 failed = 0
 
@@ -444,3 +447,28 @@ if failed:
     print(f"\n{failed} failed")
     sys.exit(1)
 print("\nok")
+
+# --- 備援負面字串不能跟 lexicon.json 脫節 -------------------------------------
+# server._negative() 讀不到 lexicon.json 時會退回一個寫死的字串，而它的註解一直
+#宣稱 merge_lexicon.NEGATIVE 是唯一來源。實際上它脫節了：正式那份已經把
+# censor / extra fingers / fused fingers / missing fingers / extra limbs /
+# disfigured / ugly 換成 Danbooru 的正名，備援還留著舊的，還多塞了
+# loli / shota / teen / child —— 備援比正式嚴格，是最難查的那種不一致。
+#
+# 這條直接比對兩者。只有在檔案真的不見時才會用到備援，所以沒有人會自然發現它壞掉。
+def _fallback_negative() -> str:
+    src = (ROOT / "server.py").read_text(encoding="utf-8")
+    at = src.index("# Last resort if lexicon.json is missing")
+    ret = src.index("return (", at)
+    end = src.index(chr(10) + "    )", ret)
+    q = chr(34)
+    return "".join(re.findall(q + "([^" + q + "]*)" + q, src[ret:end]))
+
+
+_fb = [t.strip() for t in _fallback_negative().split(",") if t.strip()]
+_live = [t.strip() for t in server.NEGATIVE.split(",") if t.strip()]
+ok(
+    "server.py 的備援負面字串跟 lexicon.json 一致",
+    _fb == _live,
+    f"備援多了 {[t for t in _fb if t not in _live]}，少了 {[t for t in _live if t not in _fb]}",
+)

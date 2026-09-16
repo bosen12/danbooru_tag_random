@@ -3783,13 +3783,41 @@ function indoorOutdoorClash(have) {
       if (["street", "city", "cityscape", "alley", "park", "beach"].some((t) => h.has(t))) policePublic += 1;
     }
     eq("normal police sex never auto public outdoor place", policePublic, 0);
+    // 這幾條守的是「場景不該無故拖進別的行業的配件」。但配件本來就有合法的來由 ——
+    // 引擎宣告過 NEEDS_CONTEXT（麥克風要有人唱歌、安全帽要有人騎車或在工地），
+    // 甚至會主動拉（CTX_PULLS_ACC 有 riding bicycle -> bicycle helmet 0.45）。
+    // 所以「配件出現」不等於違規，「配件出現而它的來由不在場」才是。
+    //
+    // 原本只看配件名字，於是海邊騎腳踏車戴安全帽被算成違規 —— 那是引擎刻意做的事。
+    // 這個洞四條斷言都有（microphone 哪天配上 singing 也會誤報），所以修在共用的
+    // helper 上而不是把 helmet 從清單裡刪掉：刪掉是放寬，這樣是把規格寫對。
+    //
+    // 來由清單在這裡人工維護，不從 engine.js 反射 —— 從實作反射出來的規格只能
+    // 驗實作自不自洽。
+    const ACC_REASON = {
+      helmet: ["riding bicycle", "skiing", "construction site", "construction worker"],
+      "bicycle helmet": ["riding bicycle", "street", "city", "park", "stadium"],
+      "hard hat": ["construction site", "construction worker"],
+      microphone: ["singing", "karaoke", "idol", "concert", "stage", "bar (place)", "karaoke box"],
+      clipboard: ["nurse", "doctor", "clinic", "hospital", "teacher", "classroom"],
+      stethoscope: ["nurse", "doctor", "clinic", "hospital"],
+      innertube: ["pool", "beach", "swimming", "poolside"],
+      "beach umbrella": ["beach", "pool", "poolside"],
+    };
     function presetAcc(id, seed, isBad) {
       const p = BUILTIN_PRESETS.find((x) => x.id === id);
       const pin = applyPresetTags(lex, p.tags, new Set());
       let n = 0;
       for (let i = 0; i < 40; i++) {
         const d = drawOne(lex, s, pin, new Set(), mulberry32(seed + i), seed + i);
-        if (d.sections.clothing.some((t) => isBad(t))) n += 1;
+        const all = new Set([...d.positive.split(", ")]);
+        const orphan = d.sections.clothing.filter((t) => {
+          if (!isBad(t)) return false;
+          const why = ACC_REASON[t];
+          if (!why) return true; // 沒宣告來由的，出現就是無故
+          return !why.some((r) => all.has(r));
+        });
+        if (orphan.length) n += 1;
       }
       return n;
     }
