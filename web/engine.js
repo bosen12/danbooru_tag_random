@@ -1694,6 +1694,17 @@ export const NEEDS_CONTEXT = {
     "track and field", "jogging", "running track", "stadium", "playing sports",
     "exercising", "training", "school gym",
   ]),
+
+  // 三把傘原本是 allow() 裡各自一行的 if。但傘要看的天氣和場地都排在衣服後面才填，
+  // 在 allow() 問「有沒有下雨」永遠是沒有 —— 三個字於是全部抽不到。實測 rain 自然
+  // 出現 65/600 張而 umbrella 0 次，把 rain 釘起來（釘選在衣服之前就進 used）立刻
+  // 變 29 次。這就是上面那段註解在講的同一個坑，跟 animal collar、leash、clipboard
+  // 那一輪一模一樣，只是這三個當時沒搬乾淨。
+  //
+  // 場合集合原樣沿用舊的手寫規則，不趁機擴大 —— 擴大是另一件事，不是修這個 bug。
+  umbrella: new Set(["rain", "overcast"]),
+  parasol: new Set(["beach", "garden", "park", "poolside"]),
+  "beach umbrella": new Set(["beach", "poolside", "ocean"]),
 };
 
 // 上面那張表只做了負向的一半：沒有場合就刪掉。
@@ -1713,9 +1724,15 @@ export const CTX_PULLS_ACC = [
   ["riding bicycle", "bicycle helmet", 0.45],
   ["armor", "shoulder armor", 0.5],
   ["plate armor", "shoulder armor", 0.5],
+  // Danbooru 實測：標了 rain 的圖有 31.9% 同時有 umbrella（15,598／48,876），
+  // 跟 knee pads 0.25、bicycle helmet 0.45 同一個量級，照量到的數字給 0.3。
+  ["rain", "umbrella", 0.3],
 ];
 
-// 沒有收進上表的：clipboard 和 o-ring。
+// 沒有收進上表的：clipboard、o-ring，以及 beach umbrella 和 parasol。
+// 後兩個量過：beach -> beach umbrella 只有 8.8%（11,711／133,200），
+// garden -> parasol 2.0%、park -> parasol 0.3%。海灘不代表有遮陽傘，公園不代表有陽傘 ——
+// 硬拉只是為了讓數字不是 0，跟下面這兩個的理由一樣。
 // 辦公室不代表有寫字板，比基尼不代表有 O 環 —— 那是我自己想出來的關聯，不是那個
 // 場合本來就有的東西。硬收進來只是為了讓數字不是 0，那是在替指標作答。
 // 代價是這兩個字現在幾乎抽不到（4320 張裡各 1 次）。這是刻意的：它們以前是
@@ -3995,9 +4012,6 @@ export function drawOne(lex, settings, pinned, userBanned, rand, seed) {
       const acts = usedActs(used, lex);
       if (![...acts].some((a) => (ACT_PROP[a] || []).includes(item.tag))) return false;
     }
-    if (item.tag === "beach umbrella" && ![...used].some((t) => t === "beach" || t === "poolside" || t === "ocean")) {
-      return false;
-    }
     if (item.tag === "innertube" && ![...used].some((t) => WATER_PLACE.has(t) || WATER_ACT.has(t) || BATH_PLACE.has(t))) {
       return false;
     }
@@ -4059,10 +4073,6 @@ export function drawOne(lex, settings, pinned, userBanned, rand, seed) {
         item.tag === "studying") &&
       used.has("closed eyes")
     ) {
-      return false;
-    }
-    if (item.tag === "umbrella" && !used.has("rain") && !used.has("overcast")) return false;
-    if (item.tag === "parasol" && !used.has("beach") && !used.has("garden") && !used.has("park") && !used.has("poolside")) {
       return false;
     }
     if (item.tag === "wading" && (used.has("legs up") || used.has("m legs"))) return false;
