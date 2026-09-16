@@ -2021,6 +2021,12 @@ input[type="number"] {
   }
 }
 
+/* 卡片資訊列的「幾字 · 幾 token」。純粹是數字，不標警示色也不設門檻——
+   理由寫在 boot.js 的 promptCost 上面。等寬數字是為了換卡片時數字不要左右跳。 */
+.cost {
+  font-variant-numeric: tabular-nums;
+}
+
 /* 尺度分級：分段控制項（Primer SegmentedControl 的結構與行為）。
    視覺走本站 token —— radius 2px 的方角、紙感底色、朱紅重點色，
    不是 Primer 那套圓角藍，那會跟這個版面打架。 */

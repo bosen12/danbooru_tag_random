@@ -196,6 +196,36 @@ function ok(name, rows) {
   ok(`只開男生時沒有 female-gated 的字漏進來（檢查了 ${femaleGated.length} 個）`, leaked.map((t) => `漏出「${t}」`));
 }
 
+// --- token_counts.json 不能跟詞庫脫節 ---------------------------------------
+// 它是另一支腳本（scripts/token_counts.py）產生的，merge_lexicon.py 不會碰它。
+// 好處是重產詞庫不會把它洗掉，代價是有人加了新字卻沒重跑就會脫節——
+// 那時候畫面上的 token 數會悄悄用字數粗估頂替，看起來正常但不準。
+// 所以在這裡釘住：詞庫裡每一個會被吐進 POS 的字串都要有數。
+{
+  const tc = JSON.parse(readFileSync(join(ROOT, "web", "token_counts.json"), "utf8"));
+  const shape = [];
+  if (!tc.counts || typeof tc.counts !== "object") shape.push("沒有 counts 物件");
+  if (!Number.isFinite(tc.sep)) shape.push("沒有分隔符成本 sep");
+  ok("token_counts.json 的結構完整", shape);
+
+  const need = new Set(data.tags.map((t) => t.tag));
+  for (const key of ["quality", "alwaysEnv", "nsfwTail", "sfwTail", "sensitiveTail"]) {
+    for (const s of data[key] || []) need.add(s);
+  }
+  need.add("solo");
+  need.add("adult");
+
+  const counts = tc.counts || {};
+  const missing = [...need]
+    .filter((s) => !Number.isFinite(counts[s]))
+    .map((s) => `「${s}」沒有 token 數，重跑 scripts/token_counts.py`);
+  ok(`token_counts 覆蓋所有會進 POS 的字（應為 ${need.size} 個）`, missing);
+
+  // 反面：如果整份都是 0，上面那條會假通過，所以也要求數字是真的
+  const zero = [...need].filter((s) => counts[s] === 0).map((s) => `「${s}」的 token 數是 0`);
+  ok("token 數不是一片 0", zero);
+}
+
 if (failed) {
   console.error(`\n${failed} failed`);
   process.exit(1);

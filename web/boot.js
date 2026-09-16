@@ -101,8 +101,10 @@ const COUNT_LABELS = {
 };
 
 const STORE = "tag-case-v1";
+const SPACE_RE = new RegExp(String.fromCharCode(92) + "s+");
 
 let lex;
+let tokenTable = null;
 let settings;
 let pinned = new Set();
 let userBanned = new Set();
@@ -1565,6 +1567,33 @@ function cardSkeleton(width, height) {
   return el;
 }
 
+// 卡片上就顯示「幾個字、幾個 token」，不加警示、不加門檻。
+//
+// 原本這裡盯著「CLIP 一塊 75 token」並且超過就標紅，那是錯的重點：
+// r42 的 400 條 prompt 有 400 條超過 75 token（中位數 141），警告永遠亮等於沒資訊；
+// 而 Illustrious 論文（arXiv 2409.19946）根本沒給最大 token 長度，社群實測可用長度
+// 在 248 左右，我們最長 166。論文寫明的是標籤順序（§3.1.2）與「越後面越被稀釋」——
+// 是漸變不是斷崖。真要有基準的是標籤數量：2026-09-16 抽樣 3000 篇 Danbooru post，
+// 一般標籤中位數 32、p95 是 61，我們中位數 51。數字擺著讓人自己判斷就好。
+//
+// token 數由 scripts/token_counts.py 用真的 CLIP tokenizer 預先算好，因為瀏覽器
+// 裡沒有 tokenizer，為了這個塞一份 BPE 詞表進來不划算。逐字相加再補上分隔符，
+// 實測 300 條有 92% 與整串 tokenize 完全一致，其餘 8% 高估 1 個（BPE 在逗號處
+// 合併）。當指示器用綽綽有餘，但別拿它當精確值。
+function promptCost(positive) {
+  const tags = String(positive || "").split(", ").filter(Boolean);
+  if (!tokenTable || !tokenTable.counts) return { tags: tags.length, tokens: null };
+  const sep = Number(tokenTable.sep) || 1;
+  let tokens = 0;
+  for (const t of tags) {
+    const n = tokenTable.counts[t];
+    // 查不到的字（新加的還沒重產表）用字數粗估，不要讓整個顯示壞掉
+    tokens += Number.isFinite(n) ? n : t.split(SPACE_RE).length;
+  }
+  tokens += sep * Math.max(0, tags.length - 1);
+  return { tags: tags.length, tokens };
+}
+
 function setPosLine(el, positive) {
   const pos = el.querySelector(".pos");
   if (!pos) return;
@@ -1724,7 +1753,12 @@ function fillCard(el, job, err) {
   }
   const bar = document.createElement("div");
   bar.className = "bar";
-  bar.innerHTML = `<span>seed ${job.seed}${job.era ? " · " + (ERA_LABELS[job.era] || job.era) : ""}</span><button type="button" class="ghost copy">複製 POS</button>`;
+  const cost = promptCost(job.positive);
+  const costTxt = cost.tokens == null ? `${cost.tags} 字` : `${cost.tags} 字 · ${cost.tokens} token`;
+  bar.innerHTML =
+    `<span>seed ${job.seed}${job.era ? " · " + (ERA_LABELS[job.era] || job.era) : ""}` +
+    ` · <span class="cost">${costTxt}</span></span>` +
+    `<button type="button" class="ghost copy">複製 POS</button>`;
   setPosLine(el, job.positive);
   const pos = el.querySelector(".pos");
   bar.querySelector(".copy").addEventListener("click", async () => {
@@ -2918,6 +2952,13 @@ async function main() {
     loading.remove();
     bootNote("詞庫載入失敗：" + (err && err.message ? err.message : String(err)), "boot-error");
     return;
+  }
+  // CLIP token 數。算不出來不該擋住抽圖，失敗就靜靜降級成只顯示標籤數。
+  try {
+    const rt = await fetch("token_counts.json");
+    if (rt.ok) tokenTable = await rt.json();
+  } catch {
+    tokenTable = null;
   }
   loading.remove();
   lex = indexLexicon(data);
