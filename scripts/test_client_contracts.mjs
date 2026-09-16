@@ -40,7 +40,20 @@ globalThis.IntersectionObserver = class {
   };
 }
 
+// scroll-lock 只碰 document.documentElement.style.overflow，一個最小替身就夠。
+globalThis.document = {
+  documentElement: { style: { overflow: "" } },
+  // body 也要給，而且要真的能寫 —— 少了它，「鎖錯元素」會變成當場拋例外，
+  // 那是崩潰不是紅燈，斷言等於沒在守。有了它才量得出「body 有沒有被動過」。
+  body: { style: { overflow: "" } },
+  getElementById: () => null,
+  querySelector: () => null,
+  querySelectorAll: () => [],
+  addEventListener() {},
+};
+
 const { JOB_CARD_FIELDS, jobFields } = await import("../web/engine.js");
+const { lockScroll, unlockScroll, scrollLockCount } = await import("../web/scroll-lock.js");
 const { joinTriggerParts, slotTriggerText } = await import("../web/lora.js");
 
 let failed = 0;
@@ -168,6 +181,57 @@ function ok(name, cond, detail) {
     .filter(([slot, want]) => slotTriggerText(slot) !== want)
     .map(([slot, want, why]) => `${why}：應該是 ${JSON.stringify(want)}，實際 ${JSON.stringify(slotTriggerText(slot))}`);
   ok(`slotTriggerText 逐例正確（${slots.length} 例）`, bad2.length === 0, bad2.join("; "));
+}
+
+// --- 4. 鎖背景捲動：鎖對元素，而且要開幾個就解幾個 --------------------------
+// 這一段守的是一個真的發生過的 bug：三個彈窗各自寫 `body.style.overflow = "hidden"`，
+// 各自維護一份「還有沒有別的彈窗開著」的選擇器清單（telegram 漏了兩個、
+// discord 漏了一個、lora 根本沒鎖）。而且鎖錯了元素 —— boot.css 給 html 設了
+// overflow-x: clip，body 的 overflow 就不會往視窗傳遞，所以背景照捲；
+// body 反而自己變成捲動容器，把 .rail 的 position: sticky 打斷：
+// 捲到 900 開彈窗，左欄往上跳 900px，關掉又跳回來。
+{
+  const style = document.documentElement.style;
+  const bodyStyle = document.body.style;
+  style.overflow = "clip";
+  bodyStyle.overflow = "";
+  const log = [];
+  lockScroll("a");
+  const bodyUntouched = bodyStyle.overflow === "";
+  log.push(["開第一個", style.overflow, scrollLockCount()]);
+  lockScroll("b");
+  log.push(["開第二個", style.overflow, scrollLockCount()]);
+  unlockScroll("a");
+  log.push(["關掉第一個", style.overflow, scrollLockCount()]);
+  unlockScroll("b");
+  log.push(["關掉第二個", style.overflow, scrollLockCount()]);
+
+  ok(
+    "鎖的是 documentElement 不是 body",
+    log[0][1] === "hidden" && bodyUntouched,
+    `html=${log[0][1]} body=${JSON.stringify(bodyStyle.overflow)}`
+  );
+  ok(
+    "還有別的彈窗開著時不能解鎖",
+    log[2][1] === "hidden" && log[2][2] === 1,
+    JSON.stringify(log[2])
+  );
+  ok(
+    "全部關掉才還原成原本的值（不是清成空字串）",
+    log[3][1] === "clip" && log[3][2] === 0,
+    JSON.stringify(log[3])
+  );
+
+  // 同一個 key 重複開關都不該把帳算錯 —— 這是用集合而不是計數器的理由。
+  style.overflow = "clip";
+  lockScroll("x");
+  lockScroll("x");
+  unlockScroll("x");
+  const dbl = style.overflow;
+  unlockScroll("x");
+  unlockScroll("沒開過的");
+  ok("同一個 key 開兩次，關一次就解得開", dbl === "clip" && scrollLockCount() === 0, dbl);
+  ok("解一把沒開過的鎖不會有事", style.overflow === "clip", style.overflow);
 }
 
 if (failed) {

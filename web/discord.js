@@ -7,6 +7,8 @@
 // 樣式沿用 telegram.js 那一套 tg-* class（同樣的面板、同樣的開關），只有 id 是 dc-*，
 // 這樣不用再寫一份 CSS，兩邊的外觀也一定一致。
 
+import { lockScroll, unlockScroll } from "./scroll-lock.js";
+
 const $ = (id) => document.getElementById(id);
 
 let status = { configured: false, enabled: false, channelId: "", tokenTail: "" };
@@ -156,7 +158,7 @@ function open() {
   el.classList.remove("is-closing");
   el.classList.add("open");
   el.inert = false;
-  document.body.style.overflow = "hidden";
+  lockScroll("dc-modal");
   say("");
   const chan = $("dc-channel");
   refresh().then(() => {
@@ -186,9 +188,7 @@ function close() {
   window.setTimeout(() => {
     delete el.dataset.closing;
     el.classList.remove("open", "is-closing");
-    if (!document.querySelector(".lora-modal.open, .shot-viewer.open, .tg-modal.open")) {
-      document.body.style.overflow = "";
-    }
+    unlockScroll("dc-modal");
     $("dc-btn")?.focus();
   }, ms);
 }

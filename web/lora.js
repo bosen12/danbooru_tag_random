@@ -1,3 +1,5 @@
+import { lockScroll, unlockScroll } from "./scroll-lock.js";
+
 const $ = (id) => document.getElementById(id);
 const REDUCE_MOTION = matchMedia("(prefers-reduced-motion: reduce)").matches;
 
@@ -50,6 +52,9 @@ function setActiveSlot(i) {
   renderLmSubcats();
 }
 
+// 這裡的彈窗以前不鎖背景捲動，可是 boot.js / telegram.js / discord.js 的解鎖
+// 條件裡都寫著「.lora-modal.open 還開著就別解」—— 也就是本來就假設它會鎖。
+// 少的那一個正是這種不一致的來源，補上。
 function overlayOpen(el) {
   if (!el) return;
   el._closeGen = (el._closeGen || 0) + 1;
@@ -57,6 +62,7 @@ function overlayOpen(el) {
   el.classList.remove("is-closing");
   el.inert = false;
   el.classList.add("open");
+  lockScroll(el.id || "lora-overlay");
 }
 function fadeCloseOverlay(el, _inner, onDone, msOverride) {
   if (!el || !el.classList.contains("open") || el.dataset.closing === "1") return;
@@ -72,6 +78,7 @@ function fadeCloseOverlay(el, _inner, onDone, msOverride) {
     if (el._closeGen !== gen) return;
     delete el.dataset.closing;
     el.classList.remove("open", "is-closing");
+    unlockScroll(el.id || "lora-overlay");
     if (onDone) onDone();
   };
   setTimeout(finish, ms);

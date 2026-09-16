@@ -3,6 +3,8 @@
 // token 只走伺服器：POST 上去存進 .secrets/telegram.json，GET 回來只有末四碼。
 // 送圖是 fire-and-forget —— 伺服器收下就回，實際上傳在它的背景執行緒，抽圖不等它。
 
+import { lockScroll, unlockScroll } from "./scroll-lock.js";
+
 const $ = (id) => document.getElementById(id);
 
 let status = { configured: false, enabled: false, chatId: "", tokenTail: "" };
@@ -163,7 +165,7 @@ function open() {
   el.classList.remove("is-closing");
   el.classList.add("open");
   el.inert = false;
-  document.body.style.overflow = "hidden";
+  lockScroll("tg-modal");
   say("");
   const chat = $("tg-chat");
   refresh().then(() => {
@@ -193,9 +195,7 @@ function close() {
   window.setTimeout(() => {
     delete el.dataset.closing;
     el.classList.remove("open", "is-closing");
-    if (!document.querySelector(".lora-modal.open, .shot-viewer.open")) {
-      document.body.style.overflow = "";
-    }
+    unlockScroll("tg-modal");
     $("tg-btn")?.focus();
   }, ms);
 }

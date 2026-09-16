@@ -102,6 +102,7 @@ const COUNT_LABELS = {
   env: "場＋光",
 };
 
+import { lockScroll, unlockScroll } from "./scroll-lock.js";
 const STORE = "tag-case-v1";
 const SPACE_RE = new RegExp(String.fromCharCode(92) + "s+");
 
@@ -1846,7 +1847,7 @@ function overlayOpen(el) {
   el.classList.remove("is-closing");
   el.inert = false;
   el.classList.add("open");
-  document.body.style.overflow = "hidden";
+  lockScroll(el.id || "overlay");
 }
 function overlayClose(el, onDone) {
   if (!el || !el.classList.contains("open") || el.dataset.closing === "1") return;
@@ -1859,13 +1860,7 @@ function overlayClose(el, onDone) {
     if (el._closeGen !== gen) return;
     delete el.dataset.closing;
     el.classList.remove("open", "is-closing");
-    if (
-      !$("shot-viewer")?.classList.contains("open") &&
-      !$("lora-modal")?.classList.contains("open") &&
-      !$("shortcuts-overlay")?.classList.contains("open")
-    ) {
-      document.body.style.overflow = "";
-    }
+    unlockScroll(el.id || "overlay");
     if (onDone) onDone();
   }, ms);
 }
