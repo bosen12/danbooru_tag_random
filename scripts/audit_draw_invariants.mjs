@@ -446,6 +446,57 @@ FAIL 性行為互斥  ×${bad}/${N}`);
   }
 }
 
+// --- 針對性複查：只勾性愛時抽得到兩男 ----------------------------------------
+//
+// spitroast／double penetration／mmf threesome／reverse spitroast 四個姿勢都要
+// group(3人) + 2male，而 castWeights 裡**沒有任何組合同時滿足** —— 原本 mixed 有
+// 「兩女一男」卻沒有「一女兩男」，四個字因此全死。Danbooru 上 1girl 2boys 有
+// 96,530 篇，是 2girls 1boy（124,384）的 78%，同一個量級卻只收一邊。
+//
+// 更麻煩的是同一份分佈有兩個來源：只勾性愛時走的是 chooseCast() 裡**寫死**的另一張
+// 表，補了詞庫那張照樣沒用。現在寫死那張已經搬進詞庫（castWeights.sex），
+// 這條同時守「兩男抽得到」和「唯一來源沒有被繞過」。
+{
+  const sexCast = (data.castWeights || {}).sex;
+  if (!sexCast || !Object.keys(sexCast).some((k) => k.split(",").length > 1 && /2boys/.test(k))) {
+    console.log("");
+    console.log("FAIL 詞庫缺少 castWeights.sex 的兩男組合");
+    console.log("  規格：只勾性愛時的人數表要從詞庫來（唯一來源），而且要含兩男組合。");
+    console.log("");
+    console.log("1 條 hard 不變式被違反");
+    process.exit(1);
+  }
+  const ACTS = ["spitroast", "double penetration", "mmf threesome", "reverse spitroast"];
+  const N = 3000;
+  let twoBoys = 0;
+  const seenActs = new Set();
+  for (let i = 0; i < N; i += 1) {
+    const s = defaultSettings(data);
+    s.girl = true;
+    s.boy = true;
+    s.heats = ["sex"];
+    const seed = 850000 + i;
+    const names = new Set(
+      drawOne(lex, s, new Set(), new Set(), mulberry32(seed), seed).positive.split(",").map((t) => t.trim())
+    );
+    if (names.has("2boys")) twoBoys += 1;
+    for (const a of ACTS) if (names.has(a)) seenActs.add(a);
+  }
+  // 兩男在只勾性愛時實測約 12%，取 N=3000 的期望值約 360；門檻取 50 是大幅留餘裕，
+  // 但壞掉的時候是 0，離得非常遠。
+  if (twoBoys >= 50 && seenActs.size >= 2) {
+    console.log(`ok   只勾性愛抽得到兩男：${N} 張裡 2boys ${twoBoys} 次，兩男姿勢看到 ${seenActs.size}/4 種`);
+  } else {
+    console.log("");
+    console.log(`FAIL 只勾性愛抽不到兩男  2boys ${twoBoys}/${N}，兩男姿勢只看到 ${seenActs.size}/4 種`);
+    console.log("  規格：castWeights 要有能同時滿足 group(3人)+2male 的組合，否則那四個姿勢永遠抽不到。");
+    console.log(`  看到的：${[...seenActs].join("、") || "（一個都沒有）"}`);
+    console.log("");
+    console.log("1 條 hard 不變式被違反");
+    process.exit(1);
+  }
+}
+
 if (!hardHits.size) {
   console.log("hard：全部通過。");
   console.log("\nok");

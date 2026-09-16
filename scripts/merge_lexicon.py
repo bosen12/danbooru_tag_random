@@ -2137,15 +2137,44 @@ def main() -> None:
             "flash": {"tease": 0.0, "flash": 1.0, "sex": 0.0},
             "sex": {"tease": 0.0, "flash": 0.0, "sex": 1.0},
         },
+        # 補三個缺口，權重照 Danbooru 的真實比例推出來，其餘等比例縮放。
+        #
+        # 原本 mixed 有「兩女一男」卻**沒有「一女兩男」** —— 而 Danbooru 上
+        # 1girl 2boys 有 96,530 篇，是 2girls 1boy（124,384）的 78%。同一個量級
+        # 卻一邊有一邊沒有，那是漏不是取捨。代價是四個姿勢直接死掉：spitroast、
+        # double penetration、mmf threesome、reverse spitroast 都要 group(3人)+2male，
+        # 而當時**沒有任何組合同時滿足這兩個條件**。
+        #
+        # 4girls（145,822）和 3boys（105,997）同理，都是有量卻不在表裡。
+        #
+        #   mixed  1girl,2boys = 0.08 x 96530/124384 = 0.062 -> 0.06
+        #   girl   4girls      = 0.06 x 145822/328428 = 0.027 -> 0.03
+        #   boy    3boys       = 0.22 x 105997/469237 = 0.050 -> 0.05
+        #
+        # gangbang 仍然抽不到：它要 crowd(4人)，而四人組合（2girls 2boys 只有
+        # 37,463 篇）是另一件事，這次不加，維持釘選限定。
         "castWeights": {
-            "girl_only": {"1girl": 0.72, "2girls": 0.22, "3girls": 0.06},
-            "boy_only": {"1boy": 0.78, "2boys": 0.22},
+            "girl_only": {"1girl": 0.70, "2girls": 0.21, "3girls": 0.06, "4girls": 0.03},
+            "boy_only": {"1boy": 0.74, "2boys": 0.21, "3boys": 0.05},
             "mixed": {
-                "1girl": 0.42,
-                "1boy": 0.12,
-                "1girl,1boy": 0.28,
-                "2girls": 0.1,
+                "1girl": 0.39,
+                "1boy": 0.11,
+                "1girl,1boy": 0.27,
+                "2girls": 0.09,
                 "2girls,1boy": 0.08,
+                "1girl,2boys": 0.06,
+            },
+            # 只勾「性愛」時用這張，比 mixed 更偏向成對。原本這張表是**寫死在**
+            # engine.js 的 chooseCast() 裡，於是同一份分佈有兩個來源 —— 補了詞庫
+            # 這邊的「一女兩男」，寫死那邊照樣沒有，而那張才是勾性愛時真正在用的。
+            # 搬過來只留一個來源，才不會再各改各的。
+            # 權重同樣照 Danbooru 比例：0.16 x 96530/124384 = 0.124 -> 0.12。
+            "sex": {
+                "1girl,1boy": 0.56,
+                "2girls,1boy": 0.14,
+                "2girls": 0.11,
+                "1girl": 0.07,
+                "1girl,2boys": 0.12,
             },
         },
         "groupOrder": GROUP_ORDER,

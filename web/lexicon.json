@@ -93,20 +93,30 @@
   },
   "castWeights": {
     "girl_only": {
-      "1girl": 0.72,
-      "2girls": 0.22,
-      "3girls": 0.06
+      "1girl": 0.7,
+      "2girls": 0.21,
+      "3girls": 0.06,
+      "4girls": 0.03
     },
     "boy_only": {
-      "1boy": 0.78,
-      "2boys": 0.22
+      "1boy": 0.74,
+      "2boys": 0.21,
+      "3boys": 0.05
     },
     "mixed": {
-      "1girl": 0.42,
-      "1boy": 0.12,
-      "1girl,1boy": 0.28,
-      "2girls": 0.1,
-      "2girls,1boy": 0.08
+      "1girl": 0.39,
+      "1boy": 0.11,
+      "1girl,1boy": 0.27,
+      "2girls": 0.09,
+      "2girls,1boy": 0.08,
+      "1girl,2boys": 0.06
+    },
+    "sex": {
+      "1girl,1boy": 0.56,
+      "2girls,1boy": 0.14,
+      "2girls": 0.11,
+      "1girl": 0.07,
+      "1girl,2boys": 0.12
     }
   },
   "groupOrder": {

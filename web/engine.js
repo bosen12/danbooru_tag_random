@@ -2774,12 +2774,10 @@ function chooseCast(lex, settings, pinned, banned, rand, ctx) {
     if (girl && boy) {
       table = lex.data.castWeights.mixed;
       if ((settings.heats || []).length === 1 && settings.heats[0] === "sex") {
-        table = {
-          "1girl,1boy": 0.64,
-          "2girls,1boy": 0.16,
-          "2girls": 0.12,
-          "1girl": 0.08,
-        };
+        // 這張表以前寫死在這裡，跟詞庫的 castWeights 各走各的 —— 補了詞庫那邊的
+        // 「一女兩男」之後，勾純性愛照樣抽不到兩男，因為走的是這張寫死的。
+        // 現在以詞庫為唯一來源，找不到才退回 mixed。
+        table = lex.data.castWeights.sex || table;
       }
     } else if (boy && !girl) table = lex.data.castWeights.boy_only;
     else if (girl && !boy) table = lex.data.castWeights.girl_only;
