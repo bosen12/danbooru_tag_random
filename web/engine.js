@@ -3397,7 +3397,23 @@ export function drawOne(lex, settings, pinned, userBanned, rand, seed) {
     ) {
       return false;
     }
-    if (needsBodyClothes(item.tag) && (actionFitsWorn(item) === 0 || !wearsBodyClothes())) return false;
+    // 這一關是給動作用的（needsBodyClothes 的參數就叫 actionTag）：掀裙子要先有裙子。
+    // 但那條 /through clothes/ 正規表達式也會抓到衣服，而衣服不必再去找一件自己。
+    // bra visible through clothes 的 garment key 就是 bra，於是它被要求身上另外有
+    // 一件 bra —— 可是所有的 bra 都跟它搶同一個 underwear_top 格：先有 bra 就沒
+    // 格子，沒 bra 就不給進。它是 underwear_top 十個字裡唯一抽不到的那個（實測
+    // 0/1500；把剛好不佔格的 bra 釘起來才變 79/800，釘 sports bra 佔走格子又回到 0）。
+    //
+    // 它真正需要的是「身上有衣服可以透出來」，那就是 wearsBodyClothes()。隔壁的
+    // see-through clothes 沒有 garment key，本來走的就是這條路 —— 詞庫裡只有這兩個
+    // 衣服會被那條正規表達式抓到，所以這個例外只影響這一個字。
+    const selfIsTheGarment = item.section === "clothing";
+    if (
+      needsBodyClothes(item.tag) &&
+      ((!selfIsTheGarment && actionFitsWorn(item) === 0) || !wearsBodyClothes())
+    ) {
+      return false;
+    }
     if (item.tag === "mixed-sex bathing" && (!male || !female)) return false;
     if (item.mutex === "activity" && !activityFitsBody(item.tag, usedMutexTags(used, lex, "body_pose"))) return false;
     if (item.mutex === "body_pose") {
