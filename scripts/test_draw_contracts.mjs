@@ -26,6 +26,7 @@ import {
   ERAS,
   defaultSettings,
   drawOne,
+  escapeForComfy,
   indexLexicon,
   mulberry32,
   sanitizeSettings,
@@ -219,6 +220,88 @@ const WATER_SRC = [
     }
     ok(`weightsForHeats(${label})`, good);
   }
+}
+
+// --- 3. 送出去的 POS 在 ComfyUI 語法下必須是字面文字 -------------------------
+// Danbooru 的消歧義標籤自帶括號，而括號在 ComfyUI 是加權群組：
+// `bow (weapon)` 會被拆成 `bow ` 加上加重 1.1 倍的 `weapon`，也就是送出去的不是
+// 「武器的弓」而是「緞帶蝴蝶結」。escapeForComfy() 負責跳脫，這裡守住它。
+//
+// 刻意不在這裡重寫一份 ComfyUI 的 parser 來對答案 —— 照抄實作只會驗到自己自洽。
+// 守的是可以獨立敘述的性質：跳脫後剩下的裸括號只能是我們自己的權重語法，
+// 而且把反斜線拿掉要能還原成原字串。
+//
+// 反斜線一律用 String.fromCharCode(92) 組，不寫字面值 —— 這個檔案經手過 heredoc
+// 與各種轉寫，字面反斜線被吃掉過太多次，被吃掉的時候正規表達式只會安靜地失效。
+{
+  const BS = String.fromCharCode(92);
+  const bareParen = new RegExp("(^|[^" + BS + BS + "])[()]");
+  const unescape = (s) => s.split(BS + "(").join("(").split(BS + ")").join(")");
+  const e = (inner) => BS + "(" + inner + BS + ")";
+
+  const CASES = [
+    ["1girl, solo", "1girl, solo"],
+    ["1990s (style)", "1990s " + e("style")],
+    ["1girl, bow (weapon), solo", "1girl, bow " + e("weapon") + ", solo"],
+    ["(large breasts:1.2)", "(large breasts:1.2)"],
+    ["(1990s (style):1.2)", "(1990s " + e("style") + ":1.2)"],
+    ["", ""],
+  ];
+  const wrong = CASES.filter(([input, want]) => escapeForComfy(input) !== want).map(
+    ([input, want]) =>
+      JSON.stringify(input) + " 應該是 " + JSON.stringify(want) + "，實際 " + JSON.stringify(escapeForComfy(input))
+  );
+  ok("escapeForComfy 逐例正確", wrong.length === 0, wrong.join("; "));
+
+  // 冪等：出口只有兩個，但這個函式很容易被誤加在第三個地方，跳兩次不能壞掉。
+  const twice = CASES.filter(([input]) => escapeForComfy(escapeForComfy(input)) !== escapeForComfy(input)).map(
+    ([input]) => JSON.stringify(input) + " 跳脫兩次跟一次不一樣"
+  );
+  ok("escapeForComfy 是冪等的", twice.length === 0, twice.join("; "));
+
+  const withParen = data.tags.map((t) => t.tag).filter((t) => /[()]/.test(t));
+  ok(`詞庫裡確實有帶括號的字（找到 ${withParen.length} 個）`, withParen.length > 0);
+
+  const bad = [];
+  for (const tag of withParen) {
+    const esc = escapeForComfy(tag);
+    if (bareParen.test(esc)) bad.push(`${tag} -> ${esc} 還有裸括號`);
+    if (unescape(esc) !== tag) bad.push(`${tag} -> ${esc} 還原不回去`);
+  }
+  ok(
+    `帶括號的字跳脫後沒有裸括號、而且還原得回去（檢查了 ${withParen.length} 個）`,
+    bad.length === 0,
+    bad.join("; ")
+  );
+
+  // 真的抽出來的 POS 也要守住：拿掉我們自己的權重語法之後不該剩任何裸括號。
+  const weightSyntax = new RegExp(
+    "[(](?:[^()" + BS + BS + "]|" + BS + BS + "[()])+:[0-9]+(?:[.][0-9]+)?[)]",
+    "g"
+  );
+  const leaks = [];
+  let drew = 0;
+  for (let i = 0; i < 400; i++) {
+    const s = sanitizeSettings(
+      { ...base, counts: { subject: 10, feature: 10, pose: 10, clothing: 10, env: 10 } },
+      data
+    );
+    s.weights = weightsForHeats(s.heats, data.heatWeights);
+    let d;
+    try {
+      d = drawOne(lex, s, new Set(), new Set(), mulberry32(4242 + i));
+    } catch {
+      continue;
+    }
+    drew += 1;
+    const esc = escapeForComfy(d.positive);
+    if (bareParen.test(esc.replace(weightSyntax, ""))) leaks.push(`第 ${i} 張：${esc}`);
+  }
+  ok(
+    `實際抽出的 POS 跳脫後只剩權重語法的括號（抽了 ${drew} 張）`,
+    leaks.length === 0,
+    leaks.slice(0, 3).join("; ")
+  );
 }
 
 if (failed) {

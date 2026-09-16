@@ -39,6 +39,7 @@ import {
   formatWeighted,
   formatWeight,
   insertTriggerAfterCast,
+  escapeForComfy,
   settleGenCard,
   randomSeed,
   tagState,
@@ -1055,7 +1056,7 @@ function renderTray() {
     copy.addEventListener("click", async (e) => {
       e.stopPropagation();
       if (!lastPositive) return;
-      await navigator.clipboard.writeText(weightedPos(lastPositive));
+      await navigator.clipboard.writeText(escapeForComfy(weightedPos(lastPositive)));
       copy.textContent = "已複製";
       window.setTimeout(() => {
         copy.textContent = "複製";
@@ -1481,14 +1482,17 @@ function refreshWeights() {
   }
   for (const card of document.querySelectorAll(".card[data-bare]")) {
     const bare = card.dataset.bare || "";
-    card.dataset.positive = weightedPos(bare);
+    // 抽的時候 dataset.positive 是「權重 + LoRA 觸發詞」，這裡重算只放了權重，
+    // 觸發詞會被洗掉 —— 之後「重抽這張」讀的就是這個欄位，等於掛著 LoRA 卻沒有
+    // 觸發詞。draw 時已經把觸發詞留在 dataset.trigger，照原樣補回去。
+    card.dataset.positive = insertTriggerAfterCast(weightedPos(bare), card.dataset.trigger || "");
     for (const span of card.querySelectorAll(".pos span[data-tag]")) {
       paintWeightMark(span, span.dataset.tag);
     }
   }
   if (lastPositive) {
     const copy = document.querySelector(".copy-pos");
-    if (copy) copy.dataset.pos = weightedPos(lastPositive);
+    if (copy) copy.dataset.pos = escapeForComfy(weightedPos(lastPositive));
   }
 }
 
@@ -1581,17 +1585,21 @@ function cardSkeleton(width, height) {
 // 實測 300 條有 92% 與整串 tokenize 完全一致，其餘 8% 高估 1 個（BPE 在逗號處
 // 合併）。當指示器用綽綽有餘，但別拿它當精確值。
 function promptCost(positive) {
-  const tags = String(positive || "").split(", ").filter(Boolean);
-  if (!tokenTable || !tokenTable.counts) return { tags: tags.length, tokens: null };
+  const parts = String(positive || "").split(", ").filter(Boolean);
+  if (!tokenTable || !tokenTable.counts) return { tags: parts.length, tokens: null };
   const sep = Number(tokenTable.sep) || 1;
   let tokens = 0;
-  for (const t of tags) {
-    const n = tokenTable.counts[t];
-    // 查不到的字（新加的還沒重產表）用字數粗估，不要讓整個顯示壞掉
-    tokens += Number.isFinite(n) ? n : t.split(SPACE_RE).length;
+  for (const part of parts) {
+    // 權重語法不用算錢：ComfyUI 是先把 `(tag:1.2)` 解析掉、只把 tag 本身丟進
+    // tokenizer 的（comfy/sd1_clip.py 先 token_weights() 再 unescape_important()
+    // 才 tokenize）。跳脫用的反斜線同理。所以查的是脫掉外衣的那個字。
+    const { tag } = parseWeighted(part);
+    const n = tokenTable.counts[tag];
+    // 查不到的字（LoRA 觸發詞、或新加的還沒重產表）用字數粗估，不要讓整個顯示壞掉
+    tokens += Number.isFinite(n) ? n : tag.split(SPACE_RE).length;
   }
-  tokens += sep * Math.max(0, tags.length - 1);
-  return { tags: tags.length, tokens };
+  tokens += sep * Math.max(0, parts.length - 1);
+  return { tags: parts.length, tokens };
 }
 
 function setPosLine(el, positive) {
@@ -1668,7 +1676,7 @@ function failCard(el, err) {
     btn.className = "ghost copy";
     btn.textContent = "複製 POS";
     btn.addEventListener("click", async () => {
-      await navigator.clipboard.writeText(el.dataset.positive);
+      await navigator.clipboard.writeText(escapeForComfy(el.dataset.positive));
       speak("已複製 POS");
       btn.textContent = "已複製";
       setTimeout(() => {
@@ -1762,7 +1770,7 @@ function fillCard(el, job, err) {
   setPosLine(el, job.positive);
   const pos = el.querySelector(".pos");
   bar.querySelector(".copy").addEventListener("click", async () => {
-    await navigator.clipboard.writeText(job.positive);
+    await navigator.clipboard.writeText(escapeForComfy(job.positive));
     speak("已複製 POS");
     const btn = bar.querySelector(".copy");
     btn.textContent = "已複製";
@@ -1912,7 +1920,7 @@ function fillViewer(card) {
   copy.className = "shot-viewer-copy";
   copy.textContent = "複製 POS";
   copy.addEventListener("click", async () => {
-    await navigator.clipboard.writeText(card.dataset.positive || "");
+    await navigator.clipboard.writeText(escapeForComfy(card.dataset.positive || ""));
     speak("已複製 POS");
     copy.textContent = "已複製";
     setTimeout(() => {
@@ -1984,6 +1992,8 @@ function handleViewerKeys(e) {
 }
 
 async function streamGen(body, onEvent, signal) {
+  // 唯一送出提示詞的出口，括號跳脫放這裡就不會有哪條路徑漏掉。
+  body = { ...body, positive: escapeForComfy(body.positive) };
   const res = await fetch("/api/gen", {
     method: "POST",
     headers: {

@@ -5629,6 +5629,36 @@ export function formatWeighted(tag, weight) {
 
 const CAST_PREFIX = new Set([...FEMALE_COUNT, ...MALE_COUNT, "solo", "adult"]);
 
+// Danbooru 的消歧義標籤自帶括號（bow (weapon)、arrow (projectile)、1990s (style)），
+// 而括號在 ComfyUI 的提示詞語法裡是「加權群組」。實測（comfy/sd1_clip.py 的
+// token_weights + escape_important，直接跑使用者本機那份）：
+//
+//   "1girl, solo, 1990s (style)"  ->  1.0 "1girl, solo, 1990s "  /  1.1 "style"
+//
+// 括號被吃掉、裡面的字還被意外加重 1.1 倍。送到模型的不是 `bow (weapon)`（武器）
+// 而是 `bow`（緞帶蝴蝶結）加上一個被加重的 `weapon` —— 消歧義標籤的用途正好被
+// 反過來用。實測 5400 張裡有 23% 至少含一個這種標籤。
+//
+// ComfyUI 認 `\(` `\)` 當字面括號，所以送出去之前把標籤本身的括號跳脫掉。
+// 我們自己加的權重語法 `(tag:1.2)` 不能跳脫，所以逐段拆開、只跳脫標籤文字，
+// 再用 formatWeighted 把權重包回去。
+// 先還原再跳脫，所以重複呼叫不會把 `\(` 變成 `\\(`。出口只有兩個、
+// 來源都是沒跳脫的正規形式，但這個函式很容易被誤加在第三個地方。
+export function escapeForComfy(positive) {
+  const esc = (t) =>
+    t
+      .split("\\(").join("(")
+      .split("\\)").join(")")
+      .replace(/[()]/g, (c) => "\\" + c);
+  const out = [];
+  for (const part of String(positive || "").split(",")) {
+    const { tag, weight } = parseWeighted(part);
+    if (!tag) continue;
+    out.push(formatWeighted(esc(tag), weight));
+  }
+  return out.join(", ");
+}
+
 export function insertTriggerAfterCast(positive, trigger) {
   const trig = String(trigger || "").trim();
   const pos = String(positive || "").trim();
