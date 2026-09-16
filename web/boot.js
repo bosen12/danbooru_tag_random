@@ -2210,8 +2210,11 @@ async function streamCardJob(card, seedNum, extra) {
         seed: seedNum,
         loras: extra.loras || currentLorasPayload(),
         ckpt: extra.ckpt || currentCkpt(),
-        // 伺服器要靠這個決定負面詞。
-        rating: settings.rating || "explicit",
+        // 伺服器要靠這個決定負面詞。用這張卡「抽的時候」那一級，不是現在滑桿停在
+        // 哪一級 —— 正面已經定稿了，拿另一級的負面去配會自相矛盾：色情的正面配上
+        // 把 explicit 放進負面的全年齡負面，等於同一個字同時在兩邊。
+        // loras 與 ckpt 早就是這樣處理的，rating 只是漏了。
+        rating: extra.rating || settings.rating || "explicit",
       },
       (event, data) => {
         kick();
@@ -2307,6 +2310,7 @@ async function regenerateCard(card) {
     eraClash: [],
     loras,
     ckpt: card.dataset.ckpt || currentCkpt(),
+    rating: card.dataset.rating || "",
   };
   showPos(extra.positive);
   setLive(card, { status: "重新生成…" });
@@ -2429,6 +2433,7 @@ async function runBatch() {
       const sent = insertTriggerAfterCast(pos, trigger);
       card.dataset.positive = sent;
       card.dataset.trigger = trigger;
+      card.dataset.rating = settings.rating || "explicit";
       card.dataset.loras = JSON.stringify(currentLorasPayload());
       card.dataset.ckpt = currentCkpt() || "";
       if (settings.samePerson && i > 0) {

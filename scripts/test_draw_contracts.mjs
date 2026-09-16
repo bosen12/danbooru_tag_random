@@ -304,6 +304,62 @@ const WATER_SRC = [
   );
 }
 
+// --- 4. 同一個字不能同時在正面和負面 -----------------------------------------
+// 伺服器依分級選負面：全年齡會把 sfwNegative（nsfw、nipples、pussy、sex…）
+// 加進負面。所以「那一級抽得出來的正面」跟「那一級的負面」必須不相交 ——
+// 同一個字兩邊都寫，CFG 算的是「從負面指向正面」的方向，那個字等於自己減自己，
+// 結果既不是全年齡也不是色情，而是該畫的地方糊掉。
+//
+// 這條守的是引擎那一側（抽出來的字）。前端「重抽」是拿舊字串重送，不經過引擎，
+// 所以守不到 —— 那條路徑要靠 boot.js 把抽圖當下的分級記在卡片上，而 boot.js
+// 目前沒有任何自動測試覆蓋。這裡至少讓「分級閘門本身破掉」會當場紅燈。
+{
+  const LISTS = {
+    general: new Set(data.sfwNegative || []),
+    sensitive: new Set(data.sensitiveNegative || []),
+  };
+  for (const [rating, banned] of Object.entries(LISTS)) {
+    if (!banned.size) {
+      ok(`${rating} 的負面清單不是空的`, false, "lexicon.json 少了這一份");
+      continue;
+    }
+    const hits = new Map();
+    let drew = 0;
+    for (const heats of [["mixed"], ["activity"], ["tease"], ["flash"], ["sex"]]) {
+      for (let i = 0; i < 60; i++) {
+        const st = sanitizeSettings(
+          {
+            ...base,
+            heats,
+            rating,
+            sceneMode: "normal",
+            counts: { subject: 10, feature: 10, pose: 10, clothing: 10, env: 10 },
+          },
+          data
+        );
+        st.weights = weightsForHeats(st.heats, data.heatWeights);
+        st.lockScene = true;
+        let d;
+        try {
+          d = drawOne(lex, st, new Set(), new Set(), mulberry32(83000 + drew));
+        } catch {
+          continue;
+        }
+        drew += 1;
+        for (const t of String(d.positive).split(", ")) {
+          if (banned.has(t)) hits.set(t, (hits.get(t) || 0) + 1);
+        }
+      }
+    }
+    const rows = [...hits.entries()].sort((a, b) => b[1] - a[1]).map(([k, v]) => `${k}×${v}`);
+    ok(
+      `分級 ${rating} 抽出來的正面不含該級負面清單裡的字（抽了 ${drew} 張）`,
+      rows.length === 0,
+      rows.join("; ")
+    );
+  }
+}
+
 if (failed) {
   console.error(`\n${failed} failed`);
   process.exit(1);
