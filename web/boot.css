@@ -1061,6 +1061,22 @@ input[type="number"] {
   pointer-events: auto;
 }
 
+/* 權重徽章平常靠 :hover 才冒出來，觸控裝置沒有 hover，
+   所以手機上原本**完全沒辦法**調權重（除非那個字已經有權重了）。
+   淡淡地留著並且讓它可以點。要放在上面那條 opacity:0 之後，同分的話後面的贏。 */
+@media (hover: none) {
+  .tag:not([data-weight]) > .w-flag {
+    opacity: 0.4;
+    pointer-events: auto;
+    transform: scale(1);
+  }
+  /* 15px 的圓點手指戳不到。徽章本來就掛在字牌右上角外面，
+     往外長比往內長安全，不會吃掉字牌自己的點擊範圍。 */
+  .w-flag::before {
+    inset: -7px;
+  }
+}
+
 .tag[data-weight] {
   box-shadow: 0 0 0 1.5px var(--color-weight);
 }
@@ -1340,6 +1356,33 @@ input[type="number"] {
   .cat-toggle {
     min-height: 44px;
     padding: 8px 0;
+  }
+
+  /* 設定欄那幾排才是手機上最常戳的東西，36px 太小了。
+     .segmented .segmented-btn 要多一層，因為基準規則寫在這個 media query 後面，
+     同分的話後面的贏。 */
+  .chip-toggle,
+  .seg,
+  .segmented .segmented-btn,
+  .must .must-add {
+    min-height: 44px;
+  }
+
+  /* 彈窗的關閉鈕原本 32px，手指戳不準就只能關不掉。 */
+  .lora-modal-close,
+  .lora-tarot-close,
+  .shortcuts-close {
+    min-width: 44px;
+    min-height: 44px;
+  }
+
+  /* iOS 在 font-size < 16px 的輸入框上會自動放大整頁，放大完不會自己縮回去。 */
+  input[type="text"],
+  input[type="password"],
+  input[type="search"],
+  input[type="number"],
+  textarea {
+    font-size: 16px;
   }
 
   .ghost.mini {

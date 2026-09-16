@@ -657,6 +657,8 @@
   color: var(--faint);
   font-family: var(--mono);
   margin-top: 2px;
+  /* 路徑是一長串沒有空白的字，不給它斷點就會撐出容器外。 */
+  overflow-wrap: anywhere;
 }
 .lm-actions-row {
   display: flex;
@@ -1066,10 +1068,22 @@
     max-height: calc(100dvh - 24px - env(safe-area-inset-top) - env(safe-area-inset-bottom));
     width: 100%;
   }
+  /* 單欄之後「目前選擇」會排在清單前面，而清單被 flex:1 壓到只剩 10px——
+     來這個彈窗就是為了選東西，所以清單要排第一、而且有保底高度。 */
   .lm-left {
+    order: -1;
     border-right: 0;
     border-bottom: 1px solid var(--line);
-    max-height: 40vh;
+    max-height: 55vh;
+  }
+  /* 清單自己捲，不能整個長出去把「目前選擇」推到彈窗外面
+     （.lora-modal-inner 是 overflow:hidden，推出去就永遠點不到了）。
+     兩段的上限加起來要留在 100dvh 以內。 */
+  .lm-list {
+    min-height: 120px;
+  }
+  .lm-right {
+    max-height: 32vh;
   }
   .lm-search-wrap input {
     font-size: 16px;
@@ -1405,11 +1419,23 @@
 }
 
 @media (max-width: 860px) {
+  /* 手機上圖就是主角，左右各 24px 的留白等於把圖縮掉 15%。 */
+  .shot-viewer {
+    padding-left: max(10px, env(safe-area-inset-left));
+    padding-right: max(10px, env(safe-area-inset-right));
+  }
   .shot-viewer-inner {
     flex-direction: column;
     width: min(640px, 100%);
+    max-width: 100%;
     max-height: calc(100dvh - 24px);
+    padding: 14px;
     overflow-y: auto;
+  }
+  /* 32px 的叉叉手指戳不準，關不掉的彈窗最惱人。 */
+  .shot-viewer-close {
+    width: 44px;
+    height: 44px;
   }
   .shot-viewer-stage {
     width: 100%;

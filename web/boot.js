@@ -2632,7 +2632,12 @@ function bindUi() {
       if (!a) return;
       e.preventDefault();
       const wrap = document.getElementById(a.hash.slice(1));
-      if (!wrap || !wrap.classList.contains("cat")) return;
+      if (!wrap) return;
+      // 手機上多了一個「規則」跳點，指的是設定欄，不是分類區塊。
+      if (!wrap.classList.contains("cat")) {
+        wrap.scrollIntoView({ block: "start" });
+        return;
+      }
       userOpen.add(wrap.id);
       applyCatOpen(wrap, true);
       if (location.hash !== a.hash) location.hash = a.hash;
@@ -2846,6 +2851,59 @@ function bootNote(text, cls) {
   return p;
 }
 
+// 手機上分類列要能一路跟著，不只在詞庫那一段有效。
+// sticky 只在父層的框裡有效，而 .jump 原本住在 .filter-bar 裡（整個只有 165px 高），
+// 所以一滑進設定區就消失。窄螢幕時把它搬到 .shell 前面當頁面層的 sticky，寬螢幕再搬回去。
+function pinJumpNav() {
+  const jump = document.querySelector(".jump");
+  const bar = document.querySelector(".filter-bar");
+  const shell = document.querySelector(".shell");
+  if (!jump || !bar || !shell || !shell.parentElement) return;
+  const mq = matchMedia("(max-width: 900px)");
+  const apply = () => {
+    if (mq.matches) {
+      if (jump.parentElement !== shell.parentElement) {
+        shell.parentElement.insertBefore(jump, shell);
+      }
+      jump.classList.add("is-pinned");
+    } else {
+      if (jump.parentElement !== bar) bar.insertBefore(jump, bar.firstChild);
+      jump.classList.remove("is-pinned");
+    }
+  };
+  apply();
+  mq.addEventListener("change", apply);
+}
+
+// 頂欄與底欄的高度是算出來的，不是猜的：頂欄在手機上會換行，底欄按鈕也會折成兩排。
+// 之前 CSS 裡寫死 3.4rem / 72px，一換行就對不上，篩選列會鑽到頂欄底下、最後一列內容會被底欄蓋住。
+function trackChrome() {
+  const root = document.documentElement;
+  const mast = document.querySelector(".mast");
+  const dock = document.querySelector(".dock");
+  const filter = document.querySelector(".filter-bar");
+  const jump = document.querySelector(".jump");
+  const measure = () => {
+    if (mast) root.style.setProperty("--mast-h", `${Math.round(mast.offsetHeight)}px`);
+    if (dock) root.style.setProperty("--dock-h", `${Math.round(dock.offsetHeight)}px`);
+    // 分類標題要跳到篩選列底下，不是跳到被它蓋住的位置。
+    if (filter) root.style.setProperty("--filter-h", `${Math.round(filter.offsetHeight)}px`);
+    if (jump) root.style.setProperty("--jump-h", `${Math.round(jump.offsetHeight)}px`);
+  };
+  measure();
+  if (typeof ResizeObserver === "function") {
+    const ro = new ResizeObserver(measure);
+    if (mast) ro.observe(mast);
+    if (dock) ro.observe(dock);
+    if (filter) ro.observe(filter);
+    if (jump) ro.observe(jump);
+  } else {
+    addEventListener("resize", measure);
+  }
+  // 網頁字體晚到，到了以後行高會變。
+  document.fonts?.ready?.then(measure);
+}
+
 async function main() {
   watchForCrashes();
   // lexicon.json is ~340 KB, so say something instead of showing an empty shell.
@@ -2932,6 +2990,8 @@ async function main() {
     document.fonts?.ready?.then(() => moveRatingThumb());
   }
   syncRating();
+  pinJumpNav();
+  trackChrome();
   initTelegram();
   initDiscord();
   initInfinite({
