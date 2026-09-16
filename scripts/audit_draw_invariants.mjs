@@ -405,6 +405,47 @@ FAIL 性行為互斥  ×${bad}/${N}`);
   }
 }
 
+// --- 針對性複查：配件家族沒有整族死掉 ----------------------------------------
+//
+// normal 模式（預設）的 fill("clothing") 只放行 outfit 白名單裡的互斥格，mutex 是
+// 空的配件一律回 false。所以配件掉了互斥格就等於被判死刑 —— 而父標籤（necklace、
+// bowtie、gloves、necktie）照 UMBRELLA 的設計本來就是 mutex=None，只能靠子標籤
+// implies 進場。子標籤自己再沒有格子，整個家族就一起死。
+//
+// 實際發生過：79 個配件裡 47 個 mutex 是空的，其中 34 個在預設模式完全抽不到；
+// necklace 和 bowtie 整族是 0，而同類的 ring／stud earrings／choker 都活得好好的。
+//
+// 這條守的是「整族不能一起死」。門檻取十二個裡至少八個 —— 實測十二個全部看得到，
+// 而壞掉的時候是零。
+{
+  const FAMILIES = [
+    "necklace", "cross necklace", "bead necklace", "tooth necklace",
+    "watch", "black gloves", "gloves",
+    "bowtie", "black bowtie", "necktie", "blue necktie", "black necktie",
+  ];
+  const N = 1500;
+  const hits = new Set();
+  for (let i = 0; i < N; i += 1) {
+    const s = defaultSettings(data);
+    const seed = 770000 + i;
+    const names = new Set(
+      drawOne(lex, s, new Set(), new Set(), mulberry32(seed), seed).positive.split(",").map((t) => t.trim())
+    );
+    for (const t of FAMILIES) if (names.has(t)) hits.add(t);
+  }
+  if (hits.size >= 8) {
+    console.log(`ok   配件家族沒有整族死掉：${N} 張看到 ${hits.size}/${FAMILIES.length} 種`);
+  } else {
+    console.log("");
+    console.log(`FAIL 配件家族被餓死  只看到 ${hits.size}/${FAMILIES.length} 種`);
+    console.log("  規格：配件掉了互斥格在 normal 模式就抽不到；父標籤靠子標籤 implies 進場，子標籤沒格子會整族一起死。");
+    console.log(`  看到的：${[...hits].join("、") || "（一個都沒有）"}`);
+    console.log("");
+    console.log("1 條 hard 不變式被違反");
+    process.exit(1);
+  }
+}
+
 if (!hardHits.size) {
   console.log("hard：全部通過。");
   console.log("\nok");

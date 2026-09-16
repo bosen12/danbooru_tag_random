@@ -4906,6 +4906,9 @@ function indoorOutdoorClash(have) {
     // 第四次：場地那一格從硬桶改成 4:1 軟權重（era:[any] 場地本來幾乎抽不到，
     // beach 在 18000 張裡是 0）。場地換了，整條 RNG 就跟著換人，所以這次差很多 ——
     // 不是金標壞掉，是那一格真的改了。理由與量測見 findings.md Loop 14 第四節。
+    // 第八次：配件補回互斥格（necklace／bowtie／necktie／gloves 家族在 normal 模式
+    // 整族抽不到）。這一張多出來的 hoop earrings + earrings 就是 jewelry 那一格
+    // 多了競爭者的結果 —— 純粹是多了兩個字，其餘一個 byte 都沒動，沒有重排。
     // 第七次：預設 env 配額 4 -> 6（通用 fill("env") 以前一格預算都不剩，天空、
     // 家具、攝影感、運動器材共 40 個字在預設設定下永遠抽不到）。這一張多出來的
     // chromatic aberration 正是那批字之一 —— 金標本身就是這次改動的示範。
@@ -4920,7 +4923,7 @@ function indoorOutdoorClash(have) {
     // 讓這條 RNG 路徑位移，所以這次的差異就只有少了那一個字。
     // 這次差異只有少一個 bra，其餘一個 byte 都沒動 —— 沒有重排、沒有換字，
     // 正是「只改該改的那一格」應有的樣子。
-    "1girl, solo, adult, very short hair, grey eyes, grey hair, bangs, large breasts, soft breasts, natural breasts, wet, thigh strap, hanging breasts, bathrobe, female masturbation, standing, from outside, looking up, dazed, female ejaculation, modern, onsen, indoors, sunset, backlighting, chromatic aberration, nsfw, explicit, masterpiece, best quality, amazing quality");
+    "1girl, solo, adult, very short hair, grey eyes, grey hair, bangs, large breasts, soft breasts, natural breasts, wet, thigh strap, hanging breasts, hoop earrings, earrings, bathrobe, female masturbation, standing, from outside, looking up, dazed, female ejaculation, modern, onsen, indoors, sunset, backlighting, chromatic aberration, nsfw, explicit, masterpiece, best quality, amazing quality");
   ok("drawOne exposes shadow diagnostics", Array.isArray(shadowIntegrationDraw.shadowViolations));
 
   const eatProneShadow = validateSupportShadow({
@@ -6021,9 +6024,13 @@ function indoorOutdoorClash(have) {
     "gear/place：中性運動服不限制場地（釘 sneakers 仍抽得到 living room）",
     hits("normal", ["sneakers"], "living room") > 0
   );
+  // 這一條的 n 從預設 200 提到 1000。**斷言本身沒有改**（仍然是 > 0）——
+  // 改的只有取樣數，因為 200 張對這個組合來說在刀鋒上：實測命中率約 3.5%，
+  // 而配件互斥格補完之後牌序位移，原本落在窗內的 3 次剛好被推出去。
+  // 證明不變式沒壞：修前／修後 N=1000 是 35／34，N=4000 是 142／149。
   ok(
     "gear/place：中性運動服不限制場地（釘 sportswear 仍抽得到 kitchen）",
-    hits("normal", ["sportswear"], "kitchen") > 0
+    hits("normal", ["sportswear"], "kitchen", 1000) > 0
   );
 }
 

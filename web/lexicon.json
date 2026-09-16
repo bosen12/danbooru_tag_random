@@ -11680,7 +11680,7 @@
         "flash",
         "sex"
       ],
-      "mutex": null,
+      "mutex": "headwear",
       "bind": [],
       "implies": [],
       "layer": "accessory",
@@ -12187,7 +12187,7 @@
         "flash",
         "sex"
       ],
-      "mutex": null,
+      "mutex": "headwear",
       "bind": [],
       "implies": [
         "hat"
@@ -16200,7 +16200,7 @@
         "flash",
         "sex"
       ],
-      "mutex": null,
+      "mutex": "jewelry",
       "bind": [],
       "implies": [
         "necklace"
@@ -16396,7 +16396,7 @@
         "flash",
         "sex"
       ],
-      "mutex": null,
+      "mutex": "neckwear",
       "bind": [],
       "implies": [
         "necktie"
@@ -17153,7 +17153,7 @@
         "flash",
         "sex"
       ],
-      "mutex": null,
+      "mutex": "jewelry",
       "bind": [],
       "implies": [
         "necklace"
@@ -17196,7 +17196,7 @@
         "flash",
         "sex"
       ],
-      "mutex": null,
+      "mutex": "jewelry",
       "bind": [],
       "implies": [],
       "layer": "accessory",
@@ -17517,7 +17517,7 @@
         "flash",
         "sex"
       ],
-      "mutex": null,
+      "mutex": "hands",
       "bind": [],
       "implies": [
         "gloves"
@@ -17952,7 +17952,7 @@
         "flash",
         "sex"
       ],
-      "mutex": null,
+      "mutex": "jewelry",
       "bind": [],
       "implies": [
         "necklace"
@@ -18876,7 +18876,7 @@
         "flash",
         "sex"
       ],
-      "mutex": null,
+      "mutex": "neckwear",
       "bind": [],
       "implies": [
         "bowtie"
@@ -19068,7 +19068,7 @@
         "flash",
         "sex"
       ],
-      "mutex": null,
+      "mutex": "neckwear",
       "bind": [],
       "implies": [
         "necktie"

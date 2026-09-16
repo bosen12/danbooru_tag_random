@@ -530,6 +530,32 @@ RECLASS = {
     "bara": {"mutex": "male_build"},
     "bald": {"mutex": "hair_length"},
     "tall female": {"mutex": "height", "gate": "female"},
+    # 配件掉了互斥格就等於被判死刑 —— normal 模式（預設）的 fill("clothing") 只放行
+    # outfit 白名單裡的互斥格（feet/legs/jewelry/eyewear/neckwear/underwear_*/outer/
+    # hands/headwear），mutex 是空的配件一律回 false。實測：79 個配件裡 47 個 mutex
+    # 是空的，其中 **34 個在預設模式下完全抽不到**；有互斥格的 32 個只有 1 個抽不到。
+    #
+    # 下面這些不是設計，是漏掉：同一類的手足都有格子，就它們沒有。
+    #   neckwear：black collar／red collar／detached collar／choker 都有，領帶領結沒有
+    #   jewelry ：ring／wedding ring／stud earrings／hoop earrings／bracelet 都有，項鍊沒有
+    #   headwear：hard hat／police hat／baseball cap／circlet／hood 都有，top hat 沒有
+    #
+    # 父標籤（necktie／bowtie／necklace／hat／gloves）維持 mutex=None 是對的 ——
+    # 那是 UMBRELLA 的設計，它們靠子標籤 implies 進場。問題是子標籤自己也沒有格子，
+    # 於是整個家族一起死：bowtie 和 necklace 在預設模式下是 0。
+    #
+    # 補完之後（6000 張，全時代）：necklace 0 -> 440、gloves 48 -> 286、bowtie 0 -> 38，
+    # 而既有手足幾乎沒被排擠（ring 441 -> 392、stud earrings 199 -> 201、choker 162 -> 151）。
+    "blue necktie": {"mutex": "neckwear"},
+    "black necktie": {"mutex": "neckwear"},
+    "black bowtie": {"mutex": "neckwear"},
+    "cross necklace": {"mutex": "jewelry"},
+    "bead necklace": {"mutex": "jewelry"},
+    "tooth necklace": {"mutex": "jewelry"},
+    "watch": {"mutex": "jewelry"},
+    "top hat": {"mutex": "headwear"},
+    "laurel crown": {"mutex": "headwear"},
+    "black gloves": {"mutex": "hands"},
     "cherry blossoms": {"mutex": "weather", "era": ["any"]},
     # 舔陰莖是動作，不是身體特徵。採集進來時被歸成 feature/body_m，於是它沒有
     # sex_act 互斥格 —— 實測 8000 張裡它出現 58 次，其中 23 次同時還有別的性行為，

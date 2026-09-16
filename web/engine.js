@@ -1776,6 +1776,12 @@ const SCENE_BAD_ACC = {
   police: /\b(nurse cap|hard hat|helmet|stethoscope|innertube|beach umbrella)\b/,
   kitchen: /\b(innertube|beach umbrella|hard hat|police hat|nurse cap|helmet)\b/,
   swim: /\b(necktie|bowtie|microphone|clipboard|hard hat|helmet|police hat|nurse cap|stethoscope)\b/,
+  // 沙灘／池畔／海邊（sceneClothKind 叫它 "shore"）原本**整個沒有條目** ——
+  // accessoryOkForKind() 查不到 kind 就直接放行，於是海邊什麼配件都能戴。
+  // 以前看不出來，是因為 necktie／bowtie 這些字的 mutex 是空的、在 normal
+  // 模式根本抽不到；補上互斥格之後第一次跑就抽出「沙灘 + 領帶」。
+  // 沿用 swim 的名單：海邊可以穿著衣服，但辦公室和工地的東西不該出現。
+  shore: /\b(necktie|bowtie|microphone|clipboard|hard hat|helmet|police hat|nurse cap|stethoscope)\b/,
   bath: /\b(necktie|bowtie|police hat|nurse cap|hard hat|helmet|stethoscope|microphone|clipboard|innertube|beach umbrella|umbrella|high heels)\b/,
 };
 
