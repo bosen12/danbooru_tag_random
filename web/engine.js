@@ -5688,6 +5688,29 @@ export function stepTagWeight(weight, dir) {
   return clampTagWeight((cur + (dir < 0 ? -1 : 1)) / 10);
 }
 
+// 「重新生成這張」要重現的是這張卡**抽的時候**那組條件，不是面板現在停在哪裡。
+//
+// 每一個會影響出圖的欄位都必須在這裡表態：屬於卡片，還是屬於即時設定。
+// rating 當初沒表態，於是重抽會拿新分級的負面去配舊分級的正面 —— 同一個字
+// 同時出現在正面與負面。loras 和 ckpt 一直都是對的，只有 rating 漏了，
+// 因為這個判斷散在兩個函式裡、沒有一個地方需要把清單寫完整。
+//
+// 抽到這裡來的用意就是「有一個地方需要寫完整」：欄位少一個，測試會紅。
+export const JOB_CARD_FIELDS = ["positive", "loras", "ckpt", "rating"];
+
+export function jobFields(card, live) {
+  const c = card || {};
+  const l = live || {};
+  return {
+    positive: String(c.positive || ""),
+    // 空陣列是有意義的 —— 那張卡就是沒掛 LoRA。所以只有「根本不是陣列」
+    // （卡片沒存、或存的 JSON 壞了）才退回即時值。
+    loras: Array.isArray(c.loras) ? c.loras : Array.isArray(l.loras) ? l.loras : [],
+    ckpt: c.ckpt || l.ckpt || "",
+    rating: c.rating || l.rating || "explicit",
+  };
+}
+
 export function settleGenCard({ aborting = false, skipping = false, errName = "", finished = false, hadError = false } = {}) {
   if (skipping) return "skip";
   if (aborting || errName === "AbortError") return "cancel";

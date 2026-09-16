@@ -596,7 +596,9 @@ export function joinTriggerParts(parts) {
   }
   return out;
 }
-function slotTriggerText(slot) {
+// export 出來只為了讓測試搆得到：觸發詞組錯了，掛上去的 LoRA 等於沒生效，
+// 而這是整個檔案裡最容易默默壞掉又最難用眼睛發現的一段。
+export function slotTriggerText(slot) {
   if (!slot.lora) return "";
   const tw = slot.lora.trainedWords || [];
   if (tw.length <= 1) return tw[0] || "";

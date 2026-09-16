@@ -58,6 +58,12 @@ if errorlevel 1 (
   pause
   exit /b 1
 )
+echo == client contracts ==
+call node scripts\test_client_contracts.mjs
+if errorlevel 1 (
+  pause
+  exit /b 1
+)
 echo == directional hard rules ==
 call node scripts\test_directional_rules.mjs
 if errorlevel 1 (

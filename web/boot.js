@@ -40,6 +40,7 @@ import {
   formatWeight,
   insertTriggerAfterCast,
   escapeForComfy,
+  jobFields,
   settleGenCard,
   randomSeed,
   tagState,
@@ -2202,19 +2203,25 @@ async function streamCardJob(card, seedNum, extra) {
     let finished = false;
     let hadError = false;
     kick();
+    // 哪些欄位屬於卡片、哪些屬於即時設定，統一由 jobFields() 決定 ——
+    // 散在這裡寫就會像 rating 那樣漏掉一個沒人發現。
+    // 下面這個物件裡除了 width / height / seed 之外都必須是 job.xxx，
+    // test_client_contracts.mjs 會讀這段原始碼守住這件事。
+    const job = jobFields(extra, {
+      loras: currentLorasPayload(),
+      ckpt: currentCkpt(),
+      rating: settings.rating,
+    });
     await streamGen(
       {
-        positive: extra.positive,
+        positive: job.positive,
         width: settings.width,
         height: settings.height,
         seed: seedNum,
-        loras: extra.loras || currentLorasPayload(),
-        ckpt: extra.ckpt || currentCkpt(),
-        // 伺服器要靠這個決定負面詞。用這張卡「抽的時候」那一級，不是現在滑桿停在
-        // 哪一級 —— 正面已經定稿了，拿另一級的負面去配會自相矛盾：色情的正面配上
-        // 把 explicit 放進負面的全年齡負面，等於同一個字同時在兩邊。
-        // loras 與 ckpt 早就是這樣處理的，rating 只是漏了。
-        rating: extra.rating || settings.rating || "explicit",
+        loras: job.loras,
+        ckpt: job.ckpt,
+        // 伺服器要靠這個決定負面詞。
+        rating: job.rating,
       },
       (event, data) => {
         kick();
