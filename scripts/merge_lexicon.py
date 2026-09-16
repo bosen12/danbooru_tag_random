@@ -49,11 +49,25 @@ POSE_CLIMAX = {
 SECTIONS = {"quality", "subject", "feature", "pose", "clothing", "env"}
 GATES = {"any", "female", "male"}
 
+# 前五個是 WAI 發布頁上作者自己給的建議負面，原封不動 —— bad/worst quality 與
+# worst detail 在 Danbooru 上 post_count 是 0，因為它們是 Illustrious 標註器插入的
+# 品質分級 token，不是 Danbooru 標籤，不能拿 post_count 判斷它們有沒有被訓練過。
+#
+# 其餘每一個都對過 Danbooru API。2026-09-16 那輪換掉了六個從 SD1.5 抄來的字：
+#   extra fingers(0，是 extra_digits 的 active alias) -> extra digits(534)
+#   missing fingers(0)                               -> fewer digits(6233)
+#   extra limbs(0)                                   -> extra arms(15897)
+#   fused fingers(Danbooru 根本沒這個 tag)            -> 刪
+#   ugly(0) / disfigured(103)                        -> 刪
+#   censor(0，是 censored 的 active alias，而 censored 已在同一串) -> 刪
+# 並補上通行 Illustrious 負面裡有、我們漏掉的兩個：
+#   multiple views(272192) 擋分鏡與多視角、artistic error(9793)（error 是它的別名）
 NEGATIVE = (
-    "bad quality, worst quality, worst detail, lowres, sketch, censor, censored, "
-    "bar censor, mosaic censoring, text, watermark, signature, username, logo, "
-    "speech bubble, bad anatomy, bad hands, extra fingers, fused fingers, missing "
-    "fingers, extra limbs, deformed, disfigured, ugly, blurry, jpeg artifacts, "
+    "bad quality, worst quality, worst detail, displeasing, lowres, sketch, censored, "
+    "bar censor, mosaic censoring, english text, watermark, signature, artist name, "
+    "username, logo, "
+    "speech bubble, multiple views, artistic error, bad anatomy, bad hands, "
+    "extra digits, fewer digits, extra arms, deformed, blurry, jpeg artifacts, "
     "3d, realistic, photorealistic"
 )
 
@@ -2032,11 +2046,11 @@ def main() -> None:
         "sensitiveTail": ["sensitive"],
         "sensitiveNegative": [
             "explicit", "nude", "nipples", "pussy", "penis", "sex", "cum",
-            "areolae", "topless", "bottomless", "pubic hair",
+            "areolae", "topless female", "bottomless", "pubic hair",
         ],
         "sfwNegative": [
             "nsfw", "explicit", "questionable", "nude", "nipples", "pussy",
-            "penis", "sex", "cum", "areolae", "topless", "bottomless",
+            "penis", "sex", "cum", "areolae", "topless female", "bottomless",
             "panties", "underwear", "cameltoe", "pubic hair",
         ],
         "alwaysEnv": ["soft lighting"],

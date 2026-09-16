@@ -24,7 +24,7 @@
     "sex",
     "cum",
     "areolae",
-    "topless",
+    "topless female",
     "bottomless",
     "pubic hair"
   ],
@@ -39,7 +39,7 @@
     "sex",
     "cum",
     "areolae",
-    "topless",
+    "topless female",
     "bottomless",
     "panties",
     "underwear",
@@ -49,7 +49,7 @@
   "alwaysEnv": [
     "soft lighting"
   ],
-  "negative": "bad quality, worst quality, worst detail, lowres, sketch, censor, censored, bar censor, mosaic censoring, text, watermark, signature, username, logo, speech bubble, bad anatomy, bad hands, extra fingers, fused fingers, missing fingers, extra limbs, deformed, disfigured, ugly, blurry, jpeg artifacts, 3d, realistic, photorealistic",
+  "negative": "bad quality, worst quality, worst detail, displeasing, lowres, sketch, censored, bar censor, mosaic censoring, english text, watermark, signature, artist name, username, logo, speech bubble, multiple views, artistic error, bad anatomy, bad hands, extra digits, fewer digits, extra arms, deformed, blurry, jpeg artifacts, 3d, realistic, photorealistic",
   "defaults": {
     "n": 1,
     "width": 1024,
@@ -249,11 +249,6 @@
     "masterpiece": "傑作",
     "best quality": "最高品質",
     "amazing quality": "極致品質",
-    "absurdres": "超高解析",
-    "highres": "高解析",
-    "very aesthetic": "非常有美感",
-    "highly aesthetic": "極有美感",
-    "newest": "最新風",
     "nsfw": "限制級",
     "explicit": "露骨",
     "soft lighting": "柔光"

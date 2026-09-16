@@ -254,6 +254,100 @@ eq("createdYear 壞格式", createdYear("not-a-date"), null);
   eq("buildReport 容忍空輸入", [r.ok, r.bad, r.newerThanCutoff, r.maxCreatedYear], [[], [], [], null]);
 }
 
+
+// --- 模型字彙白名單 ---------------------------------------------------------
+// Danbooru 查無但 Illustrious／WAI 訓練時學過的 token，不能因為查不到就判無效。
+
+{
+  const { MODEL_VOCAB } = V;
+  ok("匯出 MODEL_VOCAB", MODEL_VOCAB instanceof Set && MODEL_VOCAB.size > 0);
+
+  // WAI 官方負向的五個都要在白名單裡（censored 是真 tag，不在這裡）
+  for (const t of ["bad quality", "worst quality", "worst detail", "censor"]) {
+    ok(`白名單含 WAI 官方負向 ${t}`, MODEL_VOCAB.has(t));
+  }
+  // WAI 官方正向
+  for (const t of ["masterpiece", "best quality", "amazing quality"]) {
+    ok(`白名單含 WAI 官方正向 ${t}`, MODEL_VOCAB.has(t));
+  }
+  // 品質階梯兩端
+  ok("白名單含品質階梯 good quality", MODEL_VOCAB.has("good quality"));
+  ok("白名單含品質階梯 low quality", MODEL_VOCAB.has("low quality"));
+  // 美學階梯
+  for (const t of ["very aesthetic", "displeasing", "very displeasing"]) {
+    ok(`白名單含美學階梯 ${t}`, MODEL_VOCAB.has(t));
+  }
+  // 年代分桶
+  for (const t of ["newest", "recent", "mid", "early", "oldest"]) {
+    ok(`白名單含年代分桶 ${t}`, MODEL_VOCAB.has(t));
+  }
+  // 分級
+  for (const t of ["nsfw", "general", "sensitive", "questionable", "explicit"]) {
+    ok(`白名單含分級 ${t}`, MODEL_VOCAB.has(t));
+  }
+
+  // 真的 Danbooru tag 不可以混進白名單 —— 它們要照常驗
+  for (const t of ["censored", "lowres", "jpeg artifacts", "blurry", "bad anatomy", "artist name"]) {
+    ok(`白名單不收真 Danbooru tag ${t}`, !MODEL_VOCAB.has(t));
+  }
+
+  // 白名單的 token 即使 Danbooru 查無 / deprecated / count 0，都要進 ok 不進 bad
+  const found = new Map([
+    ["bad quality", { name: "bad_quality", category: 0, is_deprecated: false, post_count: 0, created_at: "2013-01-01T00:00:00.000+09:00" }],
+    ["nsfw", { name: "nsfw", category: 0, is_deprecated: true, post_count: 0, created_at: "2013-01-01T00:00:00.000+09:00" }],
+  ]);
+  const r = buildReport(["bad quality", "worst quality", "nsfw", "missing thing"], [], found, {});
+  eq("白名單 token 全部進 ok", r.ok.map((x) => x.tag).sort(), ["bad quality", "nsfw", "worst quality"]);
+  eq("非白名單的查無仍進 bad", r.bad.map((x) => x.tag), ["missing thing"]);
+  ok("白名單 token 標記 modelVocab", r.ok.every((x) => x.modelVocab === true));
+  ok("Danbooru 查無的白名單 token 有說明", r.ok.find((x) => x.tag === "worst quality").verdict.includes("模型字彙"));
+  ok("Danbooru 有資料但 count 0 的白名單 token 也說明", r.ok.find((x) => x.tag === "bad quality").verdict.includes("模型字彙"));
+  ok("deprecated 的白名單 token 也放行", r.ok.find((x) => x.tag === "nsfw").verdict.includes("模型字彙"));
+
+  // 白名單不參與年份警告（它們沒有真正的 created_at 意義）
+  const r2 = buildReport(["worst quality"], [], new Map(), { maxCreatedYear: 2000 });
+  eq("白名單不列入年份警告", r2.newerThanCutoff, []);
+
+  // 白名單 token 若剛好也是有效 Danbooru tag，verdict 保持 ok 不被改寫
+  const r3 = buildReport(["explicit"], [], new Map([
+    ["explicit", { name: "explicit", category: 0, is_deprecated: false, post_count: 123, created_at: "2013-01-01T00:00:00.000+09:00" }],
+  ]), {});
+  eq("同時是有效 tag 時 verdict 維持 ok", r3.ok[0].verdict, "ok");
+  ok("同時是有效 tag 時仍標記 modelVocab", r3.ok[0].modelVocab === true);
+}
+
+
+// --- meta category ----------------------------------------------------------
+// 運動 tag 要 category 0；負向與正向尾巴可以是 category 5（lowres、jpeg artifacts
+// 本來就是 meta）。metaOk 沒給的話一律照舊只收 category 0。
+{
+  const meta = (name) => ({ name, category: 5, is_deprecated: false, post_count: 1000, created_at: "2013-02-24T00:00:00.000+09:00" });
+  const found = new Map([["lowres", meta("lowres")], ["jpeg artifacts", meta("jpeg_artifacts")]]);
+
+  const strict = buildReport(["lowres", "jpeg artifacts"], [], found, {});
+  eq("沒給 metaOk 時 meta 仍算不通過", strict.bad.map((x) => x.tag).sort(), ["jpeg artifacts", "lowres"]);
+
+  const loose = buildReport(["lowres", "jpeg artifacts"], [], found, {
+    metaOk: new Set(["lowres", "jpeg artifacts"]),
+  });
+  eq("metaOk 涵蓋時 meta 算通過", loose.ok.map((x) => x.tag).sort(), ["jpeg artifacts", "lowres"]);
+  eq("metaOk 涵蓋時 bad 是空的", loose.bad, []);
+  eq("metaOk 通過的 verdict 是 ok", loose.ok[0].verdict, "ok");
+
+  // metaOk 只放行「健康的 meta」，deprecated 或 count 0 照樣擋
+  const rot = new Map([
+    ["dep meta", { name: "dep_meta", category: 5, is_deprecated: true, post_count: 900, created_at: null }],
+    ["zero meta", { name: "zero_meta", category: 5, is_deprecated: false, post_count: 0, created_at: null }],
+  ]);
+  const r = buildReport(["dep meta", "zero meta"], [], rot, { metaOk: new Set(["dep meta", "zero meta"]) });
+  eq("metaOk 不放行 deprecated 的 meta", r.bad.map((x) => x.tag).sort(), ["dep meta", "zero meta"]);
+
+  // metaOk 不影響非 meta 的判斷
+  const g = new Map([["ugly", { name: "ugly", category: 0, is_deprecated: true, post_count: 0, created_at: null }]]);
+  eq("metaOk 不會順便放行 deprecated 的 general",
+    buildReport(["ugly"], [], g, { metaOk: new Set(["ugly"]) }).bad.map((x) => x.tag), ["ugly"]);
+}
+
 if (failed) {
   console.error(`\n${failed} failed`);
   process.exit(1);

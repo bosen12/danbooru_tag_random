@@ -96,8 +96,9 @@ def _negative() -> str:
         pass
     # Last resort if lexicon.json is missing. Source of truth: merge_lexicon.NEGATIVE.
     return (
-        "bad quality, worst quality, worst detail, lowres, sketch, censor, censored, "
-        "bar censor, mosaic censoring, text, watermark, signature, username, logo, "
+        "bad quality, worst quality, worst detail, displeasing, lowres, sketch, censor, "
+        "censored, bar censor, mosaic censoring, english text, watermark, signature, "
+        "artist name, username, logo, "
         "speech bubble, bad anatomy, bad hands, extra fingers, fused fingers, missing "
         "fingers, extra limbs, deformed, disfigured, ugly, blurry, jpeg artifacts, "
         "3d, realistic, photorealistic, loli, shota, teen, child"

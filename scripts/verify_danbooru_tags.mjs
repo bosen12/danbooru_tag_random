@@ -20,7 +20,7 @@
  * 動 process.exitCode。純函式（parseArgs／verdict／createdYear／buildReport）可以單獨
  * 測試，見 scripts/test_verify_danbooru_tags.mjs。
  */
-import { writeFileSync } from "fs";
+import { readFileSync, writeFileSync } from "fs";
 import { dirname, join } from "path";
 import { fileURLToPath, pathToFileURL } from "url";
 
@@ -32,6 +32,39 @@ const RETRY_WAIT_MS = 30000;
 
 /** CLI 參數錯誤。main 會把它印成一行並以 exit code 2 結束，不留堆疊。 */
 export class CliError extends Error {}
+
+/**
+ * 模型字彙白名單：Danbooru 查無（或 post_count 0、deprecated），但 Illustrious／WAI
+ * 訓練時學過的 token。這些**不是** Danbooru tag，拿 Danbooru 當唯一標準去判它們
+ * 無效是錯的 —— 刪掉 bad quality 或 worst quality 會讓畫質直接變差。
+ *
+ * 來源（2026-09-16 查證）：
+ *   品質階梯  としあきdiffusion Wiki 記載 Illustrious XL 的排序是
+ *             masterpiece > best quality > good quality > average quality >
+ *             bad quality > worst quality，「正向取最上面 1-3 個，負向取最下面 2 個」
+ *   WAI 官方  模型卡建議 正向 "masterpiece, best quality, amazing quality"、
+ *             負向 "bad quality, worst quality, worst detail, sketch, censor"，
+ *             並要使用者自行把 nsfw 加進負向
+ *   美學階梯  very aesthetic / aesthetic / displeasing / very displeasing
+ *   年代分桶  newest / recent / mid / early / oldest
+ *   分級      Danbooru 的四個 rating 值，Illustrious 系當 token 用
+ *
+ * 注意：這裡放的是「模型認得但 Danbooru 沒有」的。像 censored（662845）、
+ * lowres、jpeg artifacts 那種真的 Danbooru tag 不要放進來，它們要照常驗。
+ */
+export const MODEL_VOCAB = new Set([
+  // 品質階梯
+  "masterpiece", "best quality", "high quality", "good quality",
+  "average quality", "normal quality", "low quality", "bad quality", "worst quality",
+  // WAI 模型卡點名
+  "amazing quality", "worst detail", "censor",
+  // 美學階梯
+  "very aesthetic", "highly aesthetic", "aesthetic", "displeasing", "very displeasing",
+  // 年代分桶
+  "newest", "recent", "mid", "early", "oldest",
+  // 分級
+  "safe", "sfw", "nsfw", "general", "sensitive", "questionable", "explicit",
+]);
 
 // 使用者點名必須擋掉的：deprecated、post_count 0、或 alias 舊名。
 export const FORBIDDEN = [
@@ -126,10 +159,19 @@ export function createdYear(createdAt) {
   return Number.isInteger(n) ? n : null;
 }
 
-function toRecord(tag, row) {
+/**
+ * category 的規則分兩種：
+ *   運動 tag 必須是 category 0（一般 tag）—— 這是專案主定的。
+ *   負向與正向尾巴可以是 category 5（meta）—— lowres、jpeg artifacts 這種
+ *   本來就是 meta，拿「必須 category 0」去判它們無效是套錯規則。
+ */
+function toRecord(tag, row, metaOk) {
+  const v = verdict(row);
+  const metaFine = metaOk && metaOk.has(tag) && row && row.category === 5
+    && !row.is_deprecated && row.post_count > 0;
   return {
     tag,
-    verdict: verdict(row),
+    verdict: metaFine ? "ok" : v,
     post_count: row ? row.post_count : 0,
     category: row ? row.category : null,
     created_at: row && row.created_at ? row.created_at : null,
@@ -155,6 +197,7 @@ export function buildReport(wanted, forbidden, found, options = {}) {
       ? null
       : options.maxCreatedYear;
   const get = (t) => (found && typeof found.get === "function" ? found.get(t) : undefined);
+  const metaOk = options.metaOk instanceof Set ? options.metaOk : null;
 
   const report = {
     checkedAt: new Date().toISOString(),
@@ -167,7 +210,16 @@ export function buildReport(wanted, forbidden, found, options = {}) {
   };
 
   for (const t of wanted || []) {
-    const rec = toRecord(t, get(t));
+    const rec = toRecord(t, get(t), metaOk);
+    // 模型字彙不受 Danbooru 有效性約束，也沒有 created_at 可以比年份。
+    if (MODEL_VOCAB.has(t)) {
+      rec.modelVocab = true;
+      if (rec.verdict !== "ok") {
+        rec.verdict = "模型字彙（Danbooru 查無，但 Illustrious 認得）";
+      }
+      report.ok.push(rec);
+      continue;
+    }
     if (rec.verdict === "ok") {
       report.ok.push(rec);
       if (maxCreatedYear !== null) {
@@ -180,7 +232,7 @@ export function buildReport(wanted, forbidden, found, options = {}) {
   }
 
   for (const t of forbidden || []) {
-    const rec = toRecord(t, get(t));
+    const rec = toRecord(t, get(t), metaOk);
     if (rec.verdict === "ok") report.forbiddenNowFine.push(rec);
     else report.forbiddenStillBad.push(rec);
   }
@@ -236,6 +288,27 @@ async function lookup(names, retries, waitMs) {
  * 這裡刻意不自己走訪 SPORT_PRESETS —— 上一次就是因為驗證器自己拼清單，
  * sportPresetTags() 把 activity 移出去之後，覆蓋率無聲縮水了 26 個 tag 都沒人發現。
  */
+/**
+ * 每張圖都會用到的固定字彙：負向、分級負向、正向尾巴。
+ *
+ * 這些以前完全沒被驗過，結果 lexicon.json 裡一度躺著 fused fingers、extra limbs
+ * 這種 post_count 0 的詞，還有 text、ugly 這種 deprecated 的，沒人發現。
+ * 直接讀產物 lexicon.json，因為 server.py 實際餵給 Comfy 的就是它。
+ */
+function promptVocab() {
+  const lex = JSON.parse(readFileSync(join(here, "..", "web", "lexicon.json"), "utf8"));
+  const out = new Set();
+  const eat = (v) => {
+    if (typeof v === "string") for (const t of v.split(",")) { const x = t.trim(); if (x) out.add(x); }
+    else if (Array.isArray(v)) for (const t of v) { const x = String(t).trim(); if (x) out.add(x); }
+  };
+  for (const key of [
+    "negative", "sfwNegative", "sensitiveNegative",
+    "quality", "nsfwTail", "sfwTail", "sensitiveTail", "alwaysEnv",
+  ]) eat(lex[key]);
+  return out;
+}
+
 async function loadInventory() {
   const mod = await import("../web/sports.js");
   if (typeof mod.allSportTags !== "function") {
@@ -247,7 +320,8 @@ async function loadInventory() {
   if (!Array.isArray(tags) || !tags.length) {
     throw new CliError("allSportTags() 沒有回傳任何 tag。");
   }
-  return [...new Set(tags)].sort();
+  // 運動 tag ＋ 每張圖都會用到的固定字彙，一次驗完。
+  return [...new Set([...tags, ...promptVocab()])].sort();
 }
 
 async function main(argv) {
@@ -263,10 +337,14 @@ async function main(argv) {
     throw err;
   }
 
+  const prompts = opts.tags.length ? null : promptVocab();
   const wanted = opts.tags.length ? opts.tags : await loadInventory();
   const all = [...new Set([...wanted, ...FORBIDDEN])];
   const found = await lookup(all, opts.retries, RETRY_WAIT_MS);
-  const report = buildReport(wanted, FORBIDDEN, found, { maxCreatedYear: opts.maxCreatedYear });
+  const report = buildReport(wanted, FORBIDDEN, found, {
+    maxCreatedYear: opts.maxCreatedYear,
+    metaOk: prompts,
+  });
 
   writeFileSync(OUT, JSON.stringify(report, null, 2), "utf8");
 
