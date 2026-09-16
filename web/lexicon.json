@@ -55,7 +55,7 @@
       "feature": 8,
       "pose": 6,
       "clothing": 5,
-      "env": 4
+      "env": 6
     },
     "girl": true,
     "boy": false,

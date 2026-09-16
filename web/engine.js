@@ -1241,8 +1241,16 @@ export function sportIdsFitPlaces(ids, places) {
   return false;
 }
 
+// 床不是 place，但它就是床。usedPlaces() 只收 mutex==="place"／group==="place"，
+// 而 on bed 的 mutex 是 furniture，所以運動器材的場地檢查從**兩個方向**都漏掉它。
+// 以前沒人發現，是因為 bicycle 和 on bed 在舊的 env 配額下都抽不到；配額調到 6
+// 之後第一次跑就抽出「自行車 + on bed」—— 床上騎腳踏車。
+const SPORT_BAD_FURNITURE = new Set(["on bed", "bunk bed", "on sofa"]);
+
 function sportPlaceOk(item, used) {
-  if (item.mutex !== "place" && item.group !== "place") return true;
+  const placeLike =
+    item.mutex === "place" || item.group === "place" || SPORT_BAD_FURNITURE.has(item.tag);
+  if (!placeLike) return true;
   // 只看器材，不看服裝：穿排球服在廚房是可以的，浴室騎腳踏車不行。
   return sportIdsFitPlaces(sportGearIdsOf(used), new Set([item.tag]));
 }
@@ -1258,7 +1266,9 @@ function sportPlaceOk(item, used) {
 function sportGearPlaceOk(item, used, lex) {
   const own = SPORT_GEAR_IDENTITY.get(item.tag);
   if (!own || !own.size) return true;
-  return sportIdsFitPlaces(own, usedPlaces(used, lex));
+  const places = usedPlaces(used, lex);
+  for (const t of used) if (SPORT_BAD_FURNITURE.has(t)) places.add(t);
+  return sportIdsFitPlaces(own, places);
 }
 
 const PRIVATE_SEX_PLACE = new Set([
@@ -4115,6 +4125,23 @@ export function drawOne(lex, settings, pinned, userBanned, rand, seed) {
     // 放 allow() 是對的（而不是事後刪除）—— 這樣天氣那一格也不會把名額浪費在
     // 一個注定要被刪掉的 steam 上。
     if (item.tag === "steam" && ![...used].some((t) => STEAM_CTX.has(t))) return false;
+    // 時代符號最多三個。以前這件事是靠 env 配額小而「隱性」成立的 —— 配額從 4 放到
+    // 6 之後，中世紀 300 張裡有 28 張塞了四個以上（城堡＋火把＋掛毯＋旗幟…），
+    // 整張圖變成年代符號展示。既有測試「不會塞一整排時代字」抓到的就是這個。
+    //
+    // **現代不套這條。** 在現代，「時代專屬」等於「現代的東西」：283 個 env 裡有 120 個
+    // 掛著 era:["modern"]，而中性的只有 70 個。枕頭和鏡子不是年代符號，拿同一把尺去量
+    // 等於把現代的道具整批壓回三個，剛剛放寬的配額又被自己收回去 —— 實測就是這樣，
+    // 高爾夫球桿、籃球那批運動器材又變回抽不到。
+    // 那條既有測試自己也只跑中世紀，註解還寫著「現代不該被硬塞（它本來就有一堆專屬場地）」。
+    if (item.section === "env" && era !== "modern" && eraSpecific(item, era)) {
+      let n = 0;
+      for (const t of used) {
+        const it = lex.byTag.get(t);
+        if (it && it.section === "env" && eraSpecific(it, era)) n += 1;
+      }
+      if (n >= 3) return false;
+    }
     if (OUTDOOR_WEATHER.has(item.tag) && used.has("indoors") && !used.has("outdoors")) return false;
     if (item.tag === "wading" && (used.has("legs up") || used.has("m legs"))) return false;
     if ((item.tag === "legs up" || item.tag === "m legs") && used.has("wading")) return false;
@@ -4977,7 +5004,8 @@ export function drawOne(lex, settings, pinned, userBanned, rand, seed) {
   }
   fillSlot("env", "in_out");
   // 天氣。這一格以前完全沒人填，而通用的 fill("env") 在預設張數下一格預算都不剩
-  // （place / in_out / day_night / lighting 四格剛好把預設的 env:4 用完），所以
+  // （place / in_out / day_night / lighting 四格，加上場地免費帶進來的 indoors／
+  // outdoors，把當時預設的 env:4 用完；那個預設後來調到 6），所以
   // rain、snow、fog、overcast、cherry blossoms 這幾個字在預設設定下是 0 —— 不是
   // 抽得少，是結構性抽不到。跟光源當初一模一樣的病。
   //

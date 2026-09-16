@@ -4906,6 +4906,10 @@ function indoorOutdoorClash(have) {
     // 第四次：場地那一格從硬桶改成 4:1 軟權重（era:[any] 場地本來幾乎抽不到，
     // beach 在 18000 張裡是 0）。場地換了，整條 RNG 就跟著換人，所以這次差很多 ——
     // 不是金標壞掉，是那一格真的改了。理由與量測見 findings.md Loop 14 第四節。
+    // 第七次：預設 env 配額 4 -> 6（通用 fill("env") 以前一格預算都不剩，天空、
+    // 家具、攝影感、運動器材共 40 個字在預設設定下永遠抽不到）。這一張多出來的
+    // chromatic aberration 正是那批字之一 —— 金標本身就是這次改動的示範。
+    // 同時 nude -> bathrobe、pointing at viewer -> female ejaculation 是牌序位移。
     // 第六次：天氣那一格開始會填了（室外 15% 擲骰，浴場改擲蒸氣）。這一張抽到的是
     // onsen，所以蒸氣那一擲有發生、只是沒中（0.35），但那一次 rand() 就足以把後面
     // 整條序列往後推 —— 差異因此不只一格：naked towel -> nude、leaning forward ->
@@ -4916,7 +4920,7 @@ function indoorOutdoorClash(have) {
     // 讓這條 RNG 路徑位移，所以這次的差異就只有少了那一個字。
     // 這次差異只有少一個 bra，其餘一個 byte 都沒動 —— 沒有重排、沒有換字，
     // 正是「只改該改的那一格」應有的樣子。
-    "1girl, solo, adult, very short hair, grey eyes, grey hair, bangs, large breasts, soft breasts, natural breasts, wet, thigh strap, hanging breasts, nude, female masturbation, standing, from outside, looking up, dazed, pointing at viewer, modern, onsen, indoors, sunset, backlighting, nsfw, explicit, masterpiece, best quality, amazing quality");
+    "1girl, solo, adult, very short hair, grey eyes, grey hair, bangs, large breasts, soft breasts, natural breasts, wet, thigh strap, hanging breasts, bathrobe, female masturbation, standing, from outside, looking up, dazed, female ejaculation, modern, onsen, indoors, sunset, backlighting, chromatic aberration, nsfw, explicit, masterpiece, best quality, amazing quality");
   ok("drawOne exposes shadow diagnostics", Array.isArray(shadowIntegrationDraw.shadowViolations));
 
   const eatProneShadow = validateSupportShadow({

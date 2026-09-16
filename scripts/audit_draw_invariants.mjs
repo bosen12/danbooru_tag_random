@@ -365,6 +365,46 @@ FAIL 性行為互斥  ×${bad}/${N}`);
   }
 }
 
+// --- 針對性複查：預設設定下撿得到景物道具 ------------------------------------
+//
+// drawOne() 明確填了四格 env（place / in_out / day_night / lighting），而
+// countSection() 連 implies 帶進來的字一起算 —— indoors／outdoors 幾乎每張圖都被
+// 場地免費帶進來，又佔掉一格。配額不夠的時候通用的 fill("env") 一格都撈不到，
+// 天空、家具、攝影感、運動器材整批變成永遠抽不到。
+//
+// 這條守的是那件事，而且刻意用 defaultSettings()：實測配額 4 的時候這十個道具在
+// 2000 張裡出現 **0** 次，配額 6 的時候 250 次。門檻取「十個裡至少看到五個」，
+// 離實測（十個裡九個）有餘裕，但離壞掉的狀態（零個）非常遠。
+{
+  const PROPS = [
+    "starry sky", "blue sky", "curtains", "tree", "mirror",
+    "depth of field", "chair", "pillow", "bush", "on bed",
+  ];
+  const N = 1500;
+  const hits = new Set();
+  for (let i = 0; i < N; i += 1) {
+    const s = defaultSettings(data);
+    s.eras = [...ERAS];
+    s.boy = true;
+    const seed = 770000 + i;
+    const names = new Set(
+      drawOne(lex, s, new Set(), new Set(), mulberry32(seed), seed).positive.split(",").map((t) => t.trim())
+    );
+    for (const t of PROPS) if (names.has(t)) hits.add(t);
+  }
+  if (hits.size >= 5) {
+    console.log(`ok   預設設定撿得到景物道具：${N} 張看到 ${hits.size}/${PROPS.length} 種（${[...hits].join("、")}）`);
+  } else {
+    console.log("");
+    console.log(`FAIL 預設設定下景物道具被餓死  只看到 ${hits.size}/${PROPS.length} 種`);
+    console.log("  規格：env 配額要留得下通用 fill(\"env\") 的預算，否則天空、家具、運動器材整批抽不到。");
+    console.log(`  看到的：${[...hits].join("、") || "（一個都沒有）"}`);
+    console.log("");
+    console.log("1 條 hard 不變式被違反");
+    process.exit(1);
+  }
+}
+
 if (!hardHits.size) {
   console.log("hard：全部通過。");
   console.log("\nok");
