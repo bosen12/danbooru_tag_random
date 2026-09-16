@@ -90,7 +90,7 @@ import {
 // 一樣的清單；這份是手寫對照，故意不從 production 反射出來。
 const LOWER_COVER = new Set([
   "dress", "school uniform", "leotard", "bodysuit", "skirt", "shorts", "pants",
-  "swimsuit", "bikini", "one-piece swimsuit", "panties", "underwear",
+  "swimsuit", "bikini", "one-piece swimsuit", "panties",
   "chinese clothes", "ancient greek clothes", "armor", "chainmail", "kimono",
   "japanese clothes", "yukata", "sportswear", "loincloth",
 ]);

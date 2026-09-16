@@ -1539,7 +1539,6 @@ const LOWER_COVER_TAGS = new Set([
   "bikini",
   "one-piece swimsuit",
   "panties",
-  "underwear",
   "chinese clothes",
   "ancient greek clothes",
   "armor",

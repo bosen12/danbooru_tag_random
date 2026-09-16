@@ -539,7 +539,6 @@ RECLASS = {
     "leg hair": {"gate": "male"},
     "side-tie bikini bottom": {"mutex": "bottom", "section": "clothing", "layer": "garment"},
     "shoulder armor": {"mutex": None, "layer": "accessory", "section": "clothing"},
-    "underwear": {"mutex": None},
     "holding sex toy": {"mutex": None, "needs": []},
     "after paizuri": {"mutex": None},
     "after fellatio": {"mutex": None},

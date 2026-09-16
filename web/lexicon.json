@@ -14905,25 +14905,6 @@
       "zh": "床單"
     },
     {
-      "tag": "underwear",
-      "section": "clothing",
-      "gate": "any",
-      "heat": [
-        "tease",
-        "flash",
-        "sex"
-      ],
-      "mutex": null,
-      "bind": [],
-      "implies": [],
-      "layer": "garment",
-      "era": [
-        "modern"
-      ],
-      "group": "underwear",
-      "zh": "內衣"
-    },
-    {
       "tag": "collared shirt",
       "section": "clothing",
       "gate": "any",

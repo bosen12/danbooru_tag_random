@@ -846,23 +846,6 @@
     "group": "other"
   },
   {
-    "tag": "underwear",
-    "section": "clothing",
-    "gate": "any",
-    "heat": [
-      "tease",
-      "flash"
-    ],
-    "mutex": "underwear_top",
-    "bind": [],
-    "implies": [],
-    "layer": "garment",
-    "era": [
-      "modern"
-    ],
-    "group": "underwear"
-  },
-  {
     "tag": "collared shirt",
     "section": "clothing",
     "gate": "any",
