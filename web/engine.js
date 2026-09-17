@@ -1212,12 +1212,20 @@ const JOB_PLACE = {
   // 補的都還是「女僕會在的地方」，不是把限制拿掉：走廊（janitor 本來就有它）、
   // 庭園、陽台、溫室、書房。
   //
-  // **刻意不補 courtyard**，儘管它看起來跟庭園一樣合理。courtyard 是 sports.js 的
-  // SPORT_VENUES 條目（射箭、自行車），而 compatibleSportPlaces() 會把它讀進來，
-  // 於是女僕一旦跟運動場地有交集，就變成「運動場合相容」，playing sports／training／
-  // exercising 就會跟女僕裝一起抽出來 —— 但那些活動真正的場地清單裡沒有 courtyard，
-  // 最後誰也排不進去。實測：補 courtyard 之後釘 maid 的 3000 張裡冒出 178 張運動圖，
-  // 而且**每一張都沒有場地**（0 -> 178）。少補這一個就完全沒有這條路。
+  // **刻意不補 courtyard**，儘管它看起來跟庭園一樣合理。路徑是這樣的：
+  //
+  //   1. courtyard 在 SPORT_PLACE 裡（見上面那個 Set），而 playing sports／
+  //      exercising／training 的場地清單就是 SPORT_PLACE。
+  //   2. 下面 allow() 有一條（搜 actFitsSomePlaces(item.tag, JOB_PLACE.maid)）：
+  //      場上有女僕又沒有真正的職業 tag 時，**活動候選**必須至少能在女僕的某個
+  //      場地發生。補了 courtyard，這一關對運動活動就變成通過 —— 於是運動活動
+  //      開始跟女僕裝一起抽出來。
+  //   3. 但那一關**不看時代**。預設時代是現代，而 courtyard 的 era 只有
+  //      古中國／古希臘／中世紀。放行的理由（可以在中庭運動）在現代根本不存在，
+  //      所以場地那一格誰也排不進去。
+  //
+  // 實測：補 courtyard 之後釘 maid 的 3000 張裡冒出 178 張運動圖，而且**每一張都
+  // 沒有場地**（0 -> 178）。少補這一個就完全沒有這條路。
   maid: new Set([
     "mansion", "kitchen", "living room", "bedroom", "hotel room", "palace",
     "hallway", "balcony", "greenhouse", "library", "garden",

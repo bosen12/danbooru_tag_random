@@ -912,10 +912,11 @@ FAIL 性行為互斥  ×${bad}/${N}`);
     }
     if (sporty > 0) {
       console.log(`FAIL 女僕被丟去運動  ${sporty}/${N} 張`);
-      console.log("  規格：JOB_PLACE.maid 只要跟 sports.js 的運動場地有交集，女僕就會變成");
-      console.log("        「運動場合相容」，playing sports／training／exercising 會跟女僕裝一起");
-      console.log("        抽出來，而那些活動真正的場地清單裡沒有那個場地，最後誰也排不進去。");
-      console.log("        courtyard 就是這樣的一個字，刻意沒有補進 maid。");
+      console.log("  規格：allow() 裡有一條「場上有女僕時，活動候選必須至少能在女僕的某個");
+      console.log("        場地發生」。JOB_PLACE.maid 只要收進一個同時屬於 SPORT_PLACE 的字，");
+      console.log("        運動活動就通過那一關、跟女僕裝一起抽出來；但那一關不看時代，");
+      console.log("        所以放行理由在現代不成立時，場地那一格誰也排不進去。");
+      console.log("        courtyard 就是這樣的一個字（era 只有古代），刻意沒有補進 maid。");
       console.log(`  重播：seed=${firstSporty.seed}`);
       console.log(`  POS：${firstSporty.pos}`);
     }
