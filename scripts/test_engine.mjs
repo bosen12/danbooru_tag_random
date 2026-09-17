@@ -3715,7 +3715,12 @@ function indoorOutdoorClash(have) {
   {
     const pinMaid = applyPresetTags(lex, BUILTIN_PRESETS.find((p) => p.id === "maid").tags, new Set());
     let maidPlace = 0;
-    const MAID_OK = ["mansion", "kitchen", "living room", "bedroom", "hotel room", "palace"];
+    // 門檻沒動（還是一張都不准跑到名單外），放寬的是「女僕會在的地方」這份手寫規格：
+    // 原本六個裡有兩個是歷史時代限定，現代的女僕只剩四個地方可去，每次都長一樣。
+    const MAID_OK = [
+      "mansion", "kitchen", "living room", "bedroom", "hotel room", "palace",
+      "hallway", "balcony", "greenhouse", "library", "garden",
+    ];
     for (let i = 0; i < 40; i++) {
       const h = tagsOf(drawOne(lex, s, pinMaid, new Set(), mulberry32(225000 + i), 225000 + i));
       const places = [...h].filter((t) => lex.byTag.get(t)?.mutex === "place" || lex.byTag.get(t)?.group === "place");

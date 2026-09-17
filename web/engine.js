@@ -1204,7 +1204,24 @@ const JOB_PLACE = {
   waitress: new Set(["restaurant", "cafe", "bar (place)", "izakaya"]),
   barista: new Set(["cafe", "restaurant"]),
   policewoman: new Set(["street", "city", "cityscape", "alley", "office", "prison"]),
-  maid: new Set(["mansion", "kitchen", "living room", "bedroom", "hotel room", "palace"]),
+  // 女僕原本只有六個場地，而其中 mansion 是維多利亞、palace 是古中國／中世紀，
+  // 所以**現代的女僕實際上只有四個地方可去**：釘 maid 抽 3000 張，只看得到
+  // living room 1583、hotel room 682、kitchen 641、bedroom 94 —— 一半以上都在客廳。
+  // 女僕是很常抽到的一件衣服，每次都長一樣。補完是 9 種、客廳從 53% 降到 34%。
+  //
+  // 補的都還是「女僕會在的地方」，不是把限制拿掉：走廊（janitor 本來就有它）、
+  // 庭園、陽台、溫室、書房。
+  //
+  // **刻意不補 courtyard**，儘管它看起來跟庭園一樣合理。courtyard 是 sports.js 的
+  // SPORT_VENUES 條目（射箭、自行車），而 compatibleSportPlaces() 會把它讀進來，
+  // 於是女僕一旦跟運動場地有交集，就變成「運動場合相容」，playing sports／training／
+  // exercising 就會跟女僕裝一起抽出來 —— 但那些活動真正的場地清單裡沒有 courtyard，
+  // 最後誰也排不進去。實測：補 courtyard 之後釘 maid 的 3000 張裡冒出 178 張運動圖，
+  // 而且**每一張都沒有場地**（0 -> 178）。少補這一個就完全沒有這條路。
+  maid: new Set([
+    "mansion", "kitchen", "living room", "bedroom", "hotel room", "palace",
+    "hallway", "balcony", "greenhouse", "library", "garden",
+  ]),
   "flight attendant": new Set(["airplane interior", "airport", "cockpit"]),
   firefighter: new Set(["street", "city", "cityscape"]),
   scientist: new Set(["laboratory"]),

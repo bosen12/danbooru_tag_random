@@ -23,6 +23,7 @@ import { dirname, join } from "path";
 import { fileURLToPath } from "url";
 import {
   ERAS,
+  applyPin,
   contradictions,
   defaultSettings,
   drawOne,
@@ -859,6 +860,65 @@ FAIL 性行為互斥  ×${bad}/${N}`);
     console.log("FAIL 江戶的腰部配件抽不到  " + want.map((t) => t + " " + hit[t]).join("、") + "（各需 >=10）");
     console.log("  規格：mutex 空的配件在 normal 模式抽不到。腰上的東西要有 waist 格，");
     console.log("        而且 waist 要在 outfit 白名單裡。");
+    console.log("");
+    console.log("1 條 hard 不變式被違反");
+    process.exit(1);
+  }
+}
+
+// 女僕：場地要夠多元，而且不會被丟去運動。
+//
+// 這兩條是同一次改動的正反面。女僕原本只有六個場地，其中兩個是歷史時代限定，
+// 所以現代的女僕只有四個地方可去、一半以上在客廳 —— 一件很常抽到的衣服每次都長一樣。
+// 補了走廊／陽台／溫室／書房／庭園之後是九種，客廳從 53% 降到 34%。
+//
+// 反面是：**補場地會改變這件衣服跟哪些活動相容**。我第一版連 courtyard 一起補，
+// 而 courtyard 是 sports.js 的運動場地，於是女僕突然跟運動場合相容，
+// playing sports／training／exercising 開始跟女僕裝一起抽出來，而那些活動真正的
+// 場地清單裡沒有 courtyard —— 3000 張裡冒出 178 張運動圖，每一張都沒有場地。
+// 所以多元那條要配一條「沒有把不相容的活動一起放進來」才算數。
+{
+  const N = 1500;
+  const SPORTY = ["training", "exercising", "playing sports"];
+  const pinMaid = applyPin(lex, new Set(), new Set(), "maid").pinned;
+  const kinds = new Set();
+  let sporty = 0;
+  let firstSporty = null;
+  for (let i = 0; i < N; i += 1) {
+    const s = defaultSettings(data);
+    s.girl = true;
+    const seed = 451000 + i;
+    const names = drawOne(lex, s, pinMaid, new Set(), mulberry32(seed), seed)
+      .positive.split(",").map((t) => t.trim());
+    if (!names.includes("maid")) continue;
+    for (const t of names) {
+      const it = lex.byTag.get(t);
+      if (it && (it.mutex === "place" || it.group === "place")) kinds.add(t);
+    }
+    if (SPORTY.some((t) => names.includes(t))) {
+      sporty += 1;
+      if (!firstSporty) firstSporty = { seed, pos: names.join(", ") };
+    }
+  }
+  // 實測九種（壞掉的版本是四種）。門檻取 7：離實測有餘裕，離壞掉的很遠。
+  if (kinds.size >= 7 && sporty === 0) {
+    console.log(`ok   女僕的場地夠多元且沒混進運動：${kinds.size} 種場地、運動 0/${N}`);
+  } else {
+    console.log("");
+    if (kinds.size < 7) {
+      console.log(`FAIL 女僕的場地不夠多元  只有 ${kinds.size} 種（需要 >=7）：${[...kinds].join("、")}`);
+      console.log("  規格：女僕是很常抽到的一件衣服，場地不能只剩客廳。JOB_PLACE.maid 裡");
+      console.log("        屬於現代的項目太少時就會這樣 —— mansion 是維多利亞、palace 是古代。");
+    }
+    if (sporty > 0) {
+      console.log(`FAIL 女僕被丟去運動  ${sporty}/${N} 張`);
+      console.log("  規格：JOB_PLACE.maid 只要跟 sports.js 的運動場地有交集，女僕就會變成");
+      console.log("        「運動場合相容」，playing sports／training／exercising 會跟女僕裝一起");
+      console.log("        抽出來，而那些活動真正的場地清單裡沒有那個場地，最後誰也排不進去。");
+      console.log("        courtyard 就是這樣的一個字，刻意沒有補進 maid。");
+      console.log(`  重播：seed=${firstSporty.seed}`);
+      console.log(`  POS：${firstSporty.pos}`);
+    }
     console.log("");
     console.log("1 條 hard 不變式被違反");
     process.exit(1);
