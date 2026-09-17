@@ -1184,7 +1184,7 @@ const ACT_PROP = {
   writing: ["pen"],
   "talking on phone": ["cellphone"],
   selfie: ["cellphone"],
-  "taking picture": ["cellphone"],
+  "taking picture": ["cellphone", "camera"],
   smoking: ["cigarette"],
   cooking: ["frying pan"],
   shopping: ["shopping bag"],
@@ -1301,7 +1301,10 @@ export function sportIdsFitPlaces(ids, places) {
 // 而 on bed 的 mutex 是 furniture，所以運動器材的場地檢查從**兩個方向**都漏掉它。
 // 以前沒人發現，是因為 bicycle 和 on bed 在舊的 env 配額下都抽不到；配額調到 6
 // 之後第一次跑就抽出「自行車 + on bed」—— 床上騎腳踏車。
-const SPORT_BAD_FURNITURE = new Set(["on bed", "bunk bed", "on sofa"]);
+// "on sofa" 在這裡放了很久，但**詞庫裡從來沒有那個字** —— Danbooru 的正規名是
+// on couch（on sofa 是它的別名），而我們收的是 couch。也就是說這條防護對沙發
+// 一次都沒有生效過。on couch 現在補進詞庫了，這裡跟著指對。
+const SPORT_BAD_FURNITURE = new Set(["on bed", "bunk bed", "on couch"]);
 
 function sportPlaceOk(item, used) {
   const placeLike =
@@ -1775,6 +1778,11 @@ export const NEEDS_CONTEXT = {
   leash: new Set(["pet play", "animal collar", "collar", "bondage", "bdsm"]),
   handcuffs: new Set(["bondage", "bdsm", "prison", "policewoman", "police uniform"]),
   "o-ring": new Set(["bondage", "bdsm", "lingerie", "swimsuit", "bikini"]),
+  shibari: new Set(["bondage", "bdsm", "restrained"]),
+  "bound wrists": new Set(["bondage", "bdsm", "restrained", "handcuffs"]),
+  "ball gag": new Set(["bondage", "bdsm", "restrained"]),
+  "nipple clamps": new Set(["bondage", "bdsm", "restrained"]),
+  "remote control vibrator": new Set(["bondage", "bdsm", "restrained", "sex toy", "vibrator"]),
 
   // 衣服也適用同一條規則。這張表本來只收配件，但「沒有那個場合就不該出現」
   // 跟它是配件還是衣服無關 —— 實測釘女僕裝會配到足球釘鞋 33%，全庫 2800 張裡
@@ -1819,6 +1827,10 @@ export const CTX_PULLS_ACC = [
   ["pet play", "animal collar", 0.8],
   ["pet play", "leash", 0.4],
   ["bondage", "handcuffs", 0.4],
+  ["bondage", "shibari", 0.45],
+  ["bondage", "bound wrists", 0.35],
+  ["bdsm", "ball gag", 0.3],
+  ["bdsm", "nipple clamps", 0.2],
   ["boxing", "boxing gloves", 0.85],
   ["playing sports", "knee pads", 0.25],
   ["riding bicycle", "bicycle helmet", 0.45],

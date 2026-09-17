@@ -251,6 +251,9 @@ SKIN = {
     "dark skin",
     "very dark skin",
     "pale skin",
+    # 綠皮膚跟上面幾個是同一類東西（膚色），不是雜項。沒列進來的話
+    # assign_group 會讓它掉進 feature/other，跟其他膚色分家。
+    "green skin",
     "mole",
     "mole under eye",
     "freckles",

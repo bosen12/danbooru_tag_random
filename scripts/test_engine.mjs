@@ -746,9 +746,14 @@ function eraDraws(era, n = 60, seed0 = 9000) {
     if ([...have].some((t) => lex.byTag.get(t)?.mutex === "eye_color")) eyes += 1;
     if ([...have].some((t) => lex.byTag.get(t)?.mutex === "breast_size")) breasts += 1;
     if (
+      // 跟下面「flash always has a body garment」同一個修正：用 mutex 判主衣是錯的，
+      // dress／shirt／skirt／kimono／sportswear 的 mutex 全是 null。改看是不是
+      // 遮身體的那一層。門檻沒動（還是 >=36），修的是判準：同一批種子下
+      // 舊判準 35/40、新判準 39/40，而剩下那一張真的只穿內衣。
       [...have].some((t) => {
         const it = lex.byTag.get(t);
-        return it && it.layer === "garment" && (it.mutex === "onepiece" || it.mutex === "top" || it.mutex === "bottom");
+        if (!it || it.layer !== "garment") return false;
+        return !["underwear", "legs", "feet"].includes(it.group);
       })
     ) {
       body += 1;
@@ -1360,10 +1365,19 @@ function indoorOutdoorClash(have) {
     const d = drawOne(lex, s, new Set(), new Set(), mulberry32(26100 + i), 26100 + i);
     const h = tagsOf(d);
     if (h.has("nude") || h.has("completely nude")) nude.push(i);
+    // 「身上有主衣」不能用 mutex 判。詞庫裡 layer=garment 而 mutex 不是那三種的
+    // 有 103 個，包含 dress、shirt、skirt、school uniform、kimono、sportswear ——
+    // 也就是說「只穿一件洋裝」會被這條判成沒穿衣服。這條之所以一直是綠的，
+    // 是因為它只抽 40 顆種子：同樣的判準拿去抽 2000 張，在**這次改動之前**就已經
+    // 有 26 張(1.3%) 被判成沒主衣了。它是靠運氣過的，不是靠正確。
+    //
+    // 改看「是不是遮身體的那一層」：layer=garment 且不屬於內衣／腿／腳。
+    // 這樣 sportswear、dress、shirt 都算數，thong、no bra、襪子、鞋子都不算。
     const garment = [...h].some((t) => {
       const it = lex.byTag.get(t);
       if (!it || it.section !== "clothing") return false;
-      return it.layer === "garment" && (it.mutex === "onepiece" || it.mutex === "top" || it.mutex === "bottom");
+      if (it.layer !== "garment") return false;
+      return !["underwear", "legs", "feet"].includes(it.group);
     });
     if (!garment) noGarment.push(i);
     const act = [...h].some((t) => {
@@ -4960,7 +4974,11 @@ function indoorOutdoorClash(have) {
     // 讓這條 RNG 路徑位移，所以這次的差異就只有少了那一個字。
     // 這次差異只有少一個 bra，其餘一個 byte 都沒動 —— 沒有重排、沒有換字，
     // 正是「只改該改的那一格」應有的樣子。
-    "1girl, solo, adult, very short hair, grey eyes, grey hair, bangs, large breasts, soft breasts, natural breasts, wet, thigh strap, hanging breasts, hoop earrings, earrings, completely nude, female masturbation, standing, from outside, looking away, angry, bondage, modern, shower (place), indoors, steam, day, spotlight, nsfw, explicit, masterpiece, best quality, amazing quality");
+    // 第十一次：special_prompts 語料稽核加進 105 個字（詞庫 1292 -> 1397）。
+    // 候選池變大 13%，牌序整條位移，所以這次差異很大 —— 不是哪條規則變鬆。
+    // 新的這一張自洽：bathtub + indoors + nude + female masturbation 說得通，
+    // 而且裡面就有兩個這次新加的字（nervous smile、surreal），正好是這次改動的示範。
+    "1girl, solo, adult, very short hair, grey eyes, grey hair, bangs, large breasts, soft breasts, natural breasts, tareme, nail polish, red nails, nude, female masturbation, wariza, from behind, looking away, nervous smile, clenched teeth, modern, bathtub, indoors, sunrise, ceiling light, surreal, nsfw, explicit, masterpiece, best quality, amazing quality");
   ok("drawOne exposes shadow diagnostics", Array.isArray(shadowIntegrationDraw.shadowViolations));
 
   const eatProneShadow = validateSupportShadow({

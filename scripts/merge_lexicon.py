@@ -1823,6 +1823,231 @@ def extra_era_tags() -> list[dict]:
     ]
 
 
+def extra_corpus_tags() -> list[dict]:
+    """special_prompts 語料稽核挖出來的字（見 語料新詞候選.md）。
+
+    來源是 30792 個 Grok 寫的情境檔，解析出 91926 個不重複字串，扣掉我們已有的、
+    只留用過 >=5 個檔的 8746 個，再**全部打 Danbooru API 查證**。結果只有 833 個
+    是真的 tag 且有圖 —— 其餘七成以上是 Grok 自己發明的攝影指導與散文
+    （eye-level framing、soft daylight、close intimate framing 這類），模型沒學過。
+
+    這裡收的是「語料常用 + Danbooru 有量 + 我們沒有」的那批，刻意不收三種東西：
+      1. 非合意主題（sexual harassment、forced、molestation…）—— 要專案主自己決定。
+      2. 會跟引擎打架的（solo focus 撞 solo 與卡司、4boys 要改 castWeights、
+         faceless male 撞「男性要交代身體」）—— 那些不是加個詞條就好。
+      3. 太籠統的（floor、wall、dynamic pose、milk）—— 加了只會稀釋。
+
+    另外語料裡的 `cowgirl` 是陷阱：Danbooru 會把它導到 cow girl（牛娘），
+    不是騎乘位。騎乘位叫 cowgirl position，而那個我們本來就有。
+    """
+    all_h = list(HEATS)
+    hot = ["tease", "flash", "sex"]
+    sex_only = ["sex"]
+    modern = ["modern"]
+    any_era = ["any"]
+
+    def env(tag, mutex=None, implies=None, era=None, zh=""):
+        return {
+            "tag": tag, "section": "env", "gate": "any", "heat": all_h,
+            "mutex": mutex, "bind": [], "implies": implies or [],
+            "layer": "normal", "era": era or any_era, "zh": zh,
+        }
+
+    def pose(tag, mutex=None, implies=None, needs=None, heat=None, gate="any", era=None, zh=""):
+        return {
+            "tag": tag, "section": "pose", "gate": gate, "heat": list(heat or all_h),
+            "mutex": mutex, "bind": [], "implies": implies or [],
+            "layer": "normal", "era": era or any_era, "needs": needs or [], "zh": zh,
+        }
+
+    def feat(tag, mutex=None, gate="any", era=None, zh=""):
+        return {
+            "tag": tag, "section": "feature", "gate": gate, "heat": all_h,
+            "mutex": mutex, "bind": [], "implies": [],
+            "layer": "normal", "era": era or any_era, "zh": zh,
+        }
+
+    def cloth(tag, mutex=None, layer="accessory", heat=None, gate="any", era=None, zh=""):
+        return {
+            "tag": tag, "section": "clothing", "gate": gate, "heat": list(heat or all_h),
+            "mutex": mutex, "bind": [], "implies": [],
+            "layer": layer, "era": era or any_era, "zh": zh,
+        }
+
+    return [
+        # ---- 場地 ----------------------------------------------------------
+        # 新場地在寫實模式下有個限制：畫面上只要有 ACT_PLACE 列過的活動，
+        # 場地就必須在那個活動的清單裡，否則會被擋掉。所以這幾個目前主要是
+        # 「沒有活動時」的背景，要讓它們配得上活動得另外補 ACT_PLACE。
+        env("cave", mutex="place", era=any_era, zh="洞穴"),
+        env("jungle", mutex="place", implies=["outdoors"], era=any_era, zh="叢林"),
+        env("rural", mutex="place", implies=["outdoors"], era=any_era, zh="鄉間"),
+        env("village", mutex="place", implies=["outdoors"], era=any_era, zh="村莊"),
+        env("toilet stall", mutex="place", implies=["indoors"], era=modern, zh="廁所隔間"),
+        env("canopy bed", mutex="place", implies=["indoors"],
+            era=["victorian", "ancient_china", "medieval"], zh="四柱床"),
+
+        # ---- 傢俱 ----------------------------------------------------------
+        # on couch 補的是一個真的洞：我們有 on bed、on chair，卻沒有沙發版，
+        # 而 engine 的 SPORT_BAD_FURNITURE 一直寫著詞庫裡不存在的 "on sofa"
+        # （Danbooru 的正規名是 on couch），那條防護對沙發從來沒有生效過。
+        env("on couch", mutex="furniture", implies=["indoors"], era=modern, zh="在沙發上"),
+        env("on desk", mutex="furniture", implies=["indoors"], era=["modern", "victorian"], zh="在桌上"),
+        env("under table", mutex="furniture", implies=["indoors"], era=any_era, zh="桌子底下"),
+
+        # ---- 光源 ----------------------------------------------------------
+        env("desk lamp", mutex="lighting", era=["modern", "victorian"], zh="檯燈"),
+
+        # ---- 手持道具 ------------------------------------------------------
+        # held_prop 是互斥的（一次拿一樣），而且**只靠 ACT_PROP 被活動拉出來** ——
+        # 詞庫裡 18 個 held_prop，抽得到的 11 個全部有活動對應，沒有的一個都抽不到。
+        # 所以這裡只收找得到活動鉤子的兩個，並在 engine 的 ACT_PROP 補上對應。
+        # katana／tarot／thermometer／remote control／whistle 都是真的 Danbooru 字，
+        # 但我們沒有「拔刀」「占卜」「量體溫」「看電視」「吹哨」這些活動，
+        # 硬塞進別的活動只會畫出不合理的圖，所以這一輪不收。
+        # camera 抽得到是因為 cellphone 只有現代，維多利亞那一格輪到它 ——
+        # 早期攝影正好也說得通。mop 沒收：cleaning 的第一順位 broom 是通用時代，
+        # 永遠輪不到第二個。要讓替代道具真的輪得到，得把 stampActProps 從
+        # 「取第一個可用的」改成「在可用的裡面隨機挑」，那是另一件事。
+        env("camera", mutex="held_prop", era=["modern", "victorian"], zh="相機"),
+
+        # ---- 布景道具（不互斥，可以同時出現）------------------------------
+        env("desk", era=["modern", "victorian"], zh="書桌"),
+        env("bench", era=any_era, zh="長椅"),
+        env("wooden bench", era=any_era, zh="木長椅"),
+        env("nightstand", era=["modern", "victorian"], zh="床頭櫃"),
+        env("counter", era=["modern", "victorian"], zh="檯面"),
+        env("sink", era=["modern", "victorian"], zh="洗手台"),
+        env("whiteboard", era=modern, zh="白板"),
+        env("shopping cart", era=modern, zh="購物車"),
+        env("steering wheel", era=modern, zh="方向盤"),
+        env("microphone stand", era=modern, zh="麥克風架"),
+        env("poker table", era=["modern", "victorian"], zh="牌桌"),
+        env("tea set", era=any_era, zh="茶具"),
+        env("crystal ball", era=any_era, zh="水晶球"),
+        env("christmas tree", era=["modern", "victorian"], zh="聖誕樹"),
+        env("ofuda", era=["edo", "ancient_china", "modern"], zh="符咒"),
+        env("stained glass", era=["medieval", "victorian", "modern"], zh="彩繪玻璃"),
+        env("iron bars", era=any_era, zh="鐵欄杆"),
+        env("railing", era=any_era, zh="欄杆"),
+        env("tiles", era=any_era, zh="磁磚"),
+        env("rubble", era=any_era, zh="瓦礫"),
+        env("crowd", era=any_era, zh="人群"),
+        env("mecha", era=modern, zh="機甲"),
+
+        # ---- 自然與環境 ----------------------------------------------------
+        # wind 刻意不給 weather 互斥格：風和雨、雪本來就會同時出現，
+        # 佔了那一格反而會互相擠掉。
+        env("wind", era=any_era, zh="風"),
+        env("grass", implies=["outdoors"], era=any_era, zh="草地"),
+        env("sand", implies=["outdoors"], era=any_era, zh="沙"),
+        env("moss", era=any_era, zh="青苔"),
+        env("dust", era=any_era, zh="塵埃"),
+        env("smoke", era=any_era, zh="煙"),
+        env("full moon", implies=["outdoors"], era=any_era, zh="滿月"),
+        env("reflection", era=any_era, zh="倒影"),
+        env("condensation", era=any_era, zh="水氣凝結"),
+
+        # ---- 時節與場合 ----------------------------------------------------
+        env("christmas", era=["modern", "victorian"], zh="聖誕節"),
+        env("chinese new year", era=["ancient_china", "modern"], zh="過年"),
+        env("winter", era=any_era, zh="冬天"),
+        env("wedding", era=any_era, zh="婚禮"),
+        env("fantasy", era=any_era, zh="奇幻"),
+        env("surreal", era=any_era, zh="超現實"),
+        env("magic", era=any_era, zh="魔法"),
+        env("tribal", era=any_era, zh="部落風"),
+        env("medieval", era=["medieval"], zh="中世紀風"),
+
+        # ---- 職業 ----------------------------------------------------------
+        feat("military", mutex="job", era=modern, zh="軍人"),
+        feat("police", mutex="job", era=modern, zh="警察"),
+        feat("pilot", mutex="job", era=modern, zh="飛行員"),
+        feat("delinquent", mutex="job", era=modern, zh="不良"),
+
+        # ---- 種族與體型 ----------------------------------------------------
+        # android 和 ghost 給 race 互斥格：你不會同時是哥布林又是機器人。
+        # pointy ears 刻意**不**給 race —— 精靈已經是 race 了，而尖耳朵要能單獨
+        # 出現在別的角色身上，佔了那一格反而會把 elf 擠掉。
+        feat("android", mutex="race", era=modern, zh="機器人"),
+        feat("ghost", mutex="race", era=any_era, zh="幽靈"),
+        feat("pointy ears", era=any_era, zh="尖耳朵"),
+        feat("tusks", era=any_era, zh="獠牙"),
+        feat("green skin", era=any_era, zh="綠皮膚"),
+        feat("giant male", gate="male", era=any_era, zh="巨大男性"),
+
+        # ---- 身體 ----------------------------------------------------------
+        feat("large areolae", gate="female", era=any_era, zh="大乳暈"),
+        feat("belly", era=any_era, zh="肚子"),
+        feat("bruise", era=any_era, zh="瘀青"),
+        feat("bruise on face", era=any_era, zh="臉上瘀青"),
+        feat("heart-shaped pupils", era=any_era, zh="愛心瞳"),
+        feat("saliva trail", era=any_era, zh="唾液絲"),
+
+        # ---- 服裝 ----------------------------------------------------------
+        # 每一件都必須落在 normal 模式 fill("clothing") 的 outfit 白名單格子裡
+        # （feet/waist/legs/jewelry/eyewear/neckwear/underwear_top/underwear_bottom/
+        # outer/hands/headwear），不然就是加一個永遠抽不到的字 —— obi 和 sash
+        # 當初就是這樣躺在詞庫裡沒人發現的。
+        cloth("mask", mutex="headwear", era=any_era, zh="面具"),
+        cloth("veil", mutex="headwear", era=any_era, zh="面紗"),
+        cloth("prayer beads", mutex="neckwear", era=["ancient_china", "edo", "medieval"], zh="念珠"),
+        cloth("gold chain", mutex="jewelry", era=any_era, zh="金鏈"),
+        cloth("superhero costume", mutex="onepiece", layer="garment", era=modern, zh="超級英雄裝"),
+        cloth("racing suit", mutex="onepiece", layer="garment", era=modern, zh="賽車服"),
+        cloth("wetsuit", mutex="onepiece", layer="garment", era=modern, zh="潛水衣"),
+        cloth("jersey", mutex="top", layer="garment", era=modern, zh="球衣"),
+        cloth("lace bra", mutex="underwear_top", layer="underwear", gate="female", heat=hot,
+              era=modern, zh="蕾絲胸罩"),
+        cloth("crotchless panties", mutex="underwear_bottom", layer="underwear", gate="female",
+              heat=hot, era=modern, zh="開襠內褲"),
+
+        # ---- 綁縛 ----------------------------------------------------------
+        # mutex 刻意留空，跟詞庫裡既有的 handcuffs／leash／o-ring 一致。
+        # 它們不靠 outfit 白名單被抽出來，靠的是 engine 的 NEEDS_CONTEXT（沒有
+        # bondage／bdsm／restrained 的場合就刪掉）加上 CTX_PULLS_ACC（有場合就
+        # 機率拉進來）。負向擋、正向拉，兩半都要有，只擋不拉的話出現率會是 0。
+        # blindfold 是例外：它就是戴在眼睛上，放進既有的 eyewear 格比較誠實，
+        # 而且蒙眼本來就不限於綁縛場合。
+        cloth("blindfold", mutex="eyewear", heat=hot, era=any_era, zh="眼罩"),
+        cloth("shibari", heat=hot, era=any_era, zh="繩縛"),
+        cloth("bound wrists", heat=hot, era=any_era, zh="綁手腕"),
+        cloth("ball gag", heat=hot, era=modern, zh="口球"),
+        cloth("nipple clamps", heat=hot, gate="female", era=modern, zh="乳夾"),
+        cloth("remote control vibrator", heat=hot, gate="female", era=modern, zh="遙控跳蛋"),
+
+        # ---- 表情 ----------------------------------------------------------
+        pose("drunk", mutex="expression", era=any_era, zh="醉"),
+        pose("flustered", mutex="expression", era=any_era, zh="慌張"),
+        pose("nervous smile", mutex="expression", era=any_era, zh="緊張的笑"),
+        pose("exhausted", mutex="expression", era=any_era, zh="精疲力盡"),
+        pose("forced smile", mutex="expression", era=any_era, zh="強顏歡笑"),
+
+        # ---- 視線與動作 ----------------------------------------------------
+        pose("looking outside", mutex="gaze", era=any_era, zh="看向外面"),
+        pose("arms around neck", needs=["pair"], era=any_era, zh="環抱脖子"),
+        pose("kabedon", needs=["pair"], era=any_era, zh="壁咚"),
+        pose("sandwiched", needs=["group"], heat=hot, era=any_era, zh="被夾在中間"),
+        pose("struggling", era=any_era, zh="掙扎"),
+        pose("bouncing", heat=hot, era=any_era, zh="彈動"),
+        pose("hiding", mutex="activity", era=any_era, zh="躲藏"),
+        pose("fighting", mutex="activity", era=any_era, zh="打鬥"),
+        pose("livestream", mutex="activity", era=modern, zh="直播"),
+        pose("mirror selfie", mutex="activity", implies=["mirror"], era=modern, zh="鏡子自拍"),
+
+        # ---- 暴露 ----------------------------------------------------------
+        pose("lifting own clothes", mutex="clothes_action", heat=hot, era=any_era, zh="撩起衣服"),
+        pose("wardrobe malfunction", heat=hot, era=any_era, zh="走光"),
+        pose("accidental exposure", heat=hot, era=any_era, zh="不慎走光"),
+
+        # ---- 性（只在色情尺度出現）-----------------------------------------
+        pose("internal cumshot", heat=sex_only, era=any_era, zh="中出"),
+        pose("cum overflow", heat=sex_only, era=any_era, zh="精液滿溢"),
+        pose("deep penetration", heat=sex_only, era=any_era, zh="深插"),
+        pose("cum on tongue", heat=sex_only, era=any_era, zh="舌上精液"),
+    ]
+
+
 def extra_expand_tags() -> list[dict]:
     """Places, jobs, sports courts/balls/uniforms, and sex-heat tags from special_prompts."""
     all_h = list(HEATS)
@@ -2041,6 +2266,7 @@ def main() -> None:
     rows.extend(extra_activity_tags())
     rows.extend(extra_job_scene_tags())
     rows.extend(extra_expand_tags())
+    rows.extend(extra_corpus_tags())
     rows.extend(extra_loli_tags())
     rows.extend(extra_shota_tags())
     rows.extend(extra_breast_feel_tags())
