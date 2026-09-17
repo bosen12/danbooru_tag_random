@@ -607,6 +607,62 @@ FAIL 性行為互斥  ×${bad}/${N}`);
   }
 }
 
+// --- 針對性複查：歷史時代的時代感不能只靠衣服 --------------------------------
+//
+// 專案主回報：古中國抽到「nude, diving, underwater, beads, paper lantern」——
+// 完全看不出古中國。查下去發現不是偶發：
+//
+//   古中國 4000 張，時代訊號由誰扛（嚴格定義：時代專屬的場地或服裝）
+//     服裝＋場地 60.9%   **只有服裝 34.9%**   只有場地 3.5%   兩個都沒有 0.7%
+//
+// 三分之一的圖，時代感只靠衣服撐著 —— 人一脫光就只剩紙燈籠、珠子那種小道具。
+// 我原本量成「100% 看得出年代」，是因為把小道具也算成訊號，量法太寬鬆。
+//
+// 場地那一格的軟權重從 4:1 調到 14:1 之後：只靠衣服 34.9% -> 26.3%。
+// 這條守的就是那個上限，門檻取 30%：4:1 的 34.9% 會紅，14:1 的 26.3% 會過，
+// 中間留了緩衝，不是貼著實測值訂的。
+{
+  const era = "ancient_china";
+  const spec = (it) => {
+    const e = it && it.era;
+    return Array.isArray(e) && e.length && !e.includes("any") && e.includes(era);
+  };
+  const N = 3000;
+  let strong = 0, clothOnly = 0, none = 0;
+  for (let i = 0; i < N; i += 1) {
+    const s = defaultSettings(data);
+    s.eras = [era];
+    s.girl = true;
+    s.boy = true;
+    const seed = 310000 + i;
+    const tags = drawOne(lex, s, new Set(), new Set(), mulberry32(seed), seed)
+      .positive.split(",").map((t) => t.trim());
+    let place = false, cloth = false;
+    for (const t of tags) {
+      const it = lex.byTag.get(t);
+      if (!it || !spec(it)) continue;
+      if (it.section === "env" && (it.mutex === "place" || it.group === "place")) place = true;
+      else if (it.section === "clothing") cloth = true;
+    }
+    if (place) strong += 1;
+    else if (cloth) clothOnly += 1;
+    else none += 1;
+  }
+  const clothPct = (100 * clothOnly) / N;
+  const nonePct = (100 * none) / N;
+  if (clothPct <= 30 && nonePct <= 1.5) {
+    console.log(`ok   古中國的時代感不是只靠衣服：只靠衣服 ${clothPct.toFixed(1)}%、完全沒訊號 ${nonePct.toFixed(1)}%`);
+  } else {
+    console.log("");
+    console.log(`FAIL 古中國時代感太依賴衣服  只靠衣服 ${clothPct.toFixed(1)}%（上限 30%）、完全沒訊號 ${nonePct.toFixed(1)}%（上限 1.5%）`);
+    console.log("  規格：歷史時代的時代訊號要有場地在扛，不能全押在衣服上 ——");
+    console.log("        人一脫光就只剩小道具，那撐不起一張圖。");
+    console.log("");
+    console.log("1 條 hard 不變式被違反");
+    process.exit(1);
+  }
+}
+
 if (!hardHits.size) {
   console.log("hard：全部通過。");
   console.log("\nok");
