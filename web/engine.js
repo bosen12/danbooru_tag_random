@@ -1022,6 +1022,22 @@ function usedActs(used, lex) {
 }
 
 const FISH_PLACE = new Set(["beach", "ocean", "poolside", "pool"]);
+// 煮飯的場地以前有兩份：ACT_PLACE.cooking 一份、placeFitsActs() 裡又寫死一份。
+// 釣魚和開車都是共用 FISH_PLACE／DRIVE_PLACE，只有煮飯把清單抄成字面值，所以
+// 兩邊會各自漂移 —— 寫實模式走 ACT_PLACE、非寫實模式走那份寫死的，同一個時代
+// 能不能煮飯要看模式。合成一份之後就不可能再不同步。
+//
+// 補 courtyard 是因為古希臘原本一格煮飯的場地都沒有：kitchen 是維多利亞之後才有
+// 的場地，castle／palace 又都不屬於古希臘，所以「煮飯」在那個時代是一個連場地都
+// 排不進去的活動 —— 開了 lockScene 會被整個刪掉，沒開就畫出一張沒有場地的圖。
+// 庭院爐灶補上之後，古希臘、中世紀、古中國都有地方煮飯了（江戶本來就有 castle）。
+//
+// 只補 courtyard，是因為它的 era 不含 modern：現代的抽法一個字都不會變。
+// 另外兩個候選 tent 和 food stall 都含 modern，補下去會讓現代的煮飯跑到帳篷和
+// 路邊攤 —— 那本身不難看，但 engine 另有一條「lockScene 的煮飯就是要在廚房」
+// （見下面 used.has("cooking") 那段），兩邊會打架。要放寬得先改那條規則，
+// 不是趁補時代空洞的時候順手夾帶。field 同理不收：曠野生火最弱，也不需要。
+const COOK_PLACE = new Set(["kitchen", "castle", "palace", "courtyard"]);
 const INDOOR_FURN = new Set(["on bed", "on chair", "office chair", "gaming chair", "swivel chair", "bunk bed"]);
 // 能坐下來讀書寫字的地方。原本這三組只列了現代的房間，而正常模式下
 // 「有 ACT_PLACE 表的活動必須把場地列進去」—— 沒被列到的場地等於做不了那件事。
@@ -1047,7 +1063,15 @@ const MEAL_PLACE = new Set([
   "balcony", "pavilion", "east asian architecture", "rooftop", "tent", "field", "food stall", "izakaya",
   "castle", "tavern", "ryokan", "ballroom",
 ]);
-const ACT_PLACE = {
+// 「活動在某個時代一個場地都排不進去」是結構性的洞：開了 lockScene 會把活動整個
+// 刪掉，沒開就畫出一張沒有場地的圖。把活動×時代窮舉一遍，只有四對中獎：古希臘的
+// drinking／cooking、中世紀的 singing、維多利亞的 archery —— 前三個的場地清單整份
+// 都是現代或日式場地，最後一個只有體育場館（射箭場、體育館、道場）。
+// 補的是那個時代真的有的場地：會飲的中庭與柱廊、酒館裡的吟遊、草坪上的射箭。
+//
+// 這不是放寬規則 —— scripts/test_draw_contracts.mjs 有一條窮舉的守門檢查，
+// 任何活動在任何時代只要連半個合時代的場地都排不進去就會紅燈。
+export const ACT_PLACE = {
   bathing: new Set([...BATH_PLACE]),
   showering: new Set(["bathroom", "shower (place)"]),
   swimming: new Set(["pool", "ocean", "beach", "underwater"]),
@@ -1055,11 +1079,11 @@ const ACT_PLACE = {
   floating: new Set(["pool", "ocean", "bathtub", "ofuro", "onsen", "open-air bath", "bubble bath"]),
   "shared bathing": new Set(["onsen", "bathhouse", "ofuro", "open-air bath", "bath"]),
   eating: new Set([...MEAL_PLACE, "movie theater", "airplane interior", "convenience store", "izakaya", "festival", "market", "ryokan", "tavern"]),
-  drinking: new Set(["cafe", "bar (place)", "restaurant", "kitchen", "living room", "movie theater", "airplane interior", "izakaya", "festival", "market", "ryokan", "tavern", "ballroom"]),
+  drinking: new Set(["cafe", "bar (place)", "restaurant", "kitchen", "living room", "movie theater", "airplane interior", "izakaya", "festival", "market", "ryokan", "tavern", "ballroom", "courtyard", "garden", "balcony", "colonnade"]),
   reading: new Set([...DESK_PLACE, "train", "train interior"]),
-  cooking: new Set(["kitchen", "castle", "palace"]),
+  cooking: COOK_PLACE,
   shopping: new Set(["street", "city", "cityscape", "fitting room", "convenience store", "supermarket", "market stall", "market", "festival"]),
-  singing: new Set(["living room", "bar (place)", "park", "rooftop", "karaoke box", "church", "shrine", "festival", "ballroom", "ryokan", "colonnade"]),
+  singing: new Set(["living room", "bar (place)", "park", "rooftop", "karaoke box", "church", "shrine", "festival", "ballroom", "ryokan", "colonnade", "tavern", "market", "courtyard", "castle"]),
   karaoke: new Set(["bar (place)", "living room", "karaoke box"]),
   "playing guitar": new Set(["bedroom", "living room", "park", "rooftop", "balcony", "garden"]),
   "playing games": new Set([...HOME_PLACE, "internet cafe"]),
@@ -1074,6 +1098,7 @@ const ACT_PLACE = {
   yoga: new Set(["bedroom", "living room", "fitness gym", "park", "rooftop", "beach"]),
   exercising: SPORT_PLACE,
   training: new Set([...SPORT_PLACE, "battlefield", "dojo", "castle", "colonnade"]),
+  archery: new Set(["garden", "park", "forest"]),
   fishing: FISH_PLACE,
   camping: new Set(["forest", "park", "bamboo forest", "garden", "ruins", "tent", "river", "field"]),
   picnic: new Set(["park", "garden", "beach", "forest", "courtyard"]),
@@ -1388,9 +1413,7 @@ export function placeFitsActs(place, acts, realistic = false) {
   if ([...acts].some((a) => WATER_ACT.has(a))) return WATER_PLACE.has(place);
   if (acts.has("horseback riding")) return !INDOOR_ROOM.has(place) && !BATH_PLACE.has(place);
   if (acts.has("driving")) return DRIVE_PLACE.has(place);
-  if (acts.has("cooking")) {
-    return place === "kitchen" || place === "castle" || place === "palace";
-  }
+  if (acts.has("cooking")) return COOK_PLACE.has(place);
   if (acts.has("picnic")) {
     return (
       !INDOOR_ROOM.has(place) &&

@@ -3907,13 +3907,16 @@ function indoorOutdoorClash(have) {
     eq("head out of frame never auto kiss/closed mouth/breast focus", hofKiss, 0);
     const pinCookMed = applyPin(lex, new Set(), new Set(), "cooking").pinned;
     const medCook = { ...s, eras: ["medieval"] };
-    const COOK_OK = ["kitchen", "castle", "palace"];
+    // 庭院的爐灶也是煮飯的地方，不是只有室內灶房：原本的清單還收過 great hall，
+    // 可見這條從來不是在要求「室內」，而是在要求「煮得成飯的地方」。門檻沒動，
+    // 還是一張都不准漏（eq ..., 0），只是「煮得成飯的地方」多了中世紀的庭院。
+    const COOK_OK = ["kitchen", "castle", "palace", "courtyard"];
     let cookOut = 0;
     for (let i = 0; i < 40; i++) {
       const h = tagsOf(drawOne(lex, medCook, pinCookMed, new Set(), mulberry32(249000 + i), 249000 + i));
       if (h.has("cooking") && !COOK_OK.some((t) => h.has(t))) cookOut += 1;
     }
-    eq("medieval cooking always has an indoor cook place", cookOut, 0);
+    eq("medieval cooking always has a cook place", cookOut, 0);
     const flashS = { ...s, heats: ["flash"], weights: { activity: 0, tease: 0, flash: 1, sex: 0 }, eras: ["victorian"] };
     let flashSleep = 0;
     for (let i = 0; i < 40; i++) {
@@ -4353,7 +4356,7 @@ function indoorOutdoorClash(have) {
   eq("diverse swimming never leftover armor/suit/cheerleader", divArmor, 0);
   const pinCook = applyPin(lex, new Set(), new Set(), "cooking").pinned;
   const sChina = { ...s, eras: ["ancient_china"] };
-  const COOK_PLACE = ["kitchen", "castle", "palace"];
+  const COOK_PLACE = ["kitchen", "castle", "palace", "courtyard"];
   let dryChina = 0;
   for (let i = 0; i < 40; i++) {
     const h = tagsOf(drawOne(lex, sChina, pinCook, new Set(), mulberry32(430080 + i), 430080 + i));

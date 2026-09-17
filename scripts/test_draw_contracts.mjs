@@ -7,7 +7,12 @@
  *    但最終 POS 是 reconcile() 之後才定案的 —— 前提若被事後刪掉，道具就變孤兒，
  *    候選 gate 完全不知情。
  *
- * 2. **設定的邊界值。** drawOne() 拿到全零／NaN／負數／Infinity 的權重時不該爆，
+ * 2. **每個時代都要有地方做那件事。**「活動 X 在時代 E 抽得到，卻連一個
+ *    時代 E 的場地都排不進去」是結構性的洞：開了 lockScene 會把活動整個刪掉，
+ *    沒開就畫出一張沒有場地的圖。這條不列舉「drinking 應該要有柱廊」那種答案
+ *    （那才是從實作反射），只寫下不變式本身，兩邊的資料都從 production 讀。
+ *
+ * 3. **設定的邊界值。** drawOne() 拿到全零／NaN／負數／Infinity 的權重時不該爆，
  *    也不該吐出空的或含 NaN 的 POS。真正的護欄是 sanitizeSettings()，這裡守的是
  *    「它確實擋住了」。
  *
@@ -23,6 +28,7 @@ import { readFileSync } from "fs";
 import { dirname, join } from "path";
 import { fileURLToPath } from "url";
 import {
+  ACT_PLACE,
   ERAS,
   defaultSettings,
   drawOne,
@@ -406,6 +412,42 @@ const WATER_SRC = [
       bad.slice(0, 3).join("; ")
     );
   }
+}
+
+// —— 契約二：每個時代都要有地方做那件事 ——
+{
+  const placeEra = new Map();
+  for (const t of data.tags) {
+    if (t.section !== "env") continue;
+    if (t.mutex !== "place" && t.group !== "place") continue;
+    placeEra.set(t.tag, t.era || []);
+  }
+  const drawableIn = (eraList, era) => (eraList || []).some((x) => x === "any" || x === era);
+
+  // 先擋打錯字：場地清單裡出現不是場地的字，那一格永遠排不進去，而且不會有人發現。
+  const notPlaces = [];
+  for (const [act, set] of Object.entries(ACT_PLACE)) {
+    for (const p of set) if (!placeEra.has(p)) notPlaces.push(act + " -> " + p);
+  }
+  ok("ACT_PLACE 列的每個場地都真的是場地", notPlaces.length === 0, notPlaces.slice(0, 5).join("; "));
+
+  const orphans = [];
+  for (const [act, set] of Object.entries(ACT_PLACE)) {
+    const item = lex.byTag.get(act);
+    if (!item) continue; // 不在詞庫裡就抽不出來，沒有場地也畫不出問題
+    for (const era of ERAS) {
+      if (!drawableIn(item.era || ["any"], era)) continue;
+      if (![...set].some((p) => drawableIn(placeEra.get(p), era))) orphans.push(era + "/" + act);
+    }
+  }
+  ok("每個時代抽得到的活動都至少有一個那個時代的場地", orphans.length === 0, orphans.join("、"));
+
+  // 覆蓋率：這條規則要真的掃到東西才算跑過，不然清空表格就會「通過」。
+  ok(
+    "上面那條確實掃到了活動×時代的組合",
+    Object.keys(ACT_PLACE).length >= 40 && ERAS.length >= 5,
+    "ACT_PLACE " + Object.keys(ACT_PLACE).length + " 條、ERAS " + ERAS.length + " 個"
+  );
 }
 
 if (failed) {
