@@ -663,6 +663,46 @@ FAIL 性行為互斥  ×${bad}/${N}`);
   }
 }
 
+// --- 針對性複查：時代招牌場地真的抽得到 --------------------------------------
+//
+// 專案主回報「古中國應該要配合中式建築」。查下去發現古中國的**招牌場地錨從來沒有
+// 生效過**：stampAnchors() 以 PLACE_ANCHOR_CHANCE(0.35) 擲骰要把它蓋上去，但
+// allow() 在 1500 張裡擋掉了 1494 張。
+//
+// 原因是招牌場地不在任何一張「活動 -> 可用場地」的相容表裡（ACT_PLACE／DESK_PLACE／
+// MEAL_PLACE…）。姿勢和活動在場地之前就抽好了，而它們會限制場地；名字沒出現在那些
+// 表裡的場地就等於被全部擋掉。實測 east asian architecture 在 engine.js 出現 0 次，
+// 而同類的 courtyard 出現 9 次、castle 7 次、pavilion 4 次。
+//
+// 補進三張表之後：8/3000 -> 151/3000。（PRIVATE_SEX_PLACE 刻意不補，見那邊的註解。）
+{
+  const N = 2000;
+  const want = "east asian architecture";
+  let hit = 0;
+  for (let i = 0; i < N; i += 1) {
+    const s = defaultSettings(data);
+    s.eras = ["ancient_china"];
+    s.girl = true;
+    const seed = 310000 + i;
+    const names = drawOne(lex, s, new Set(), new Set(), mulberry32(seed), seed)
+      .positive.split(",").map((t) => t.trim());
+    if (names.includes(want)) hit += 1;
+  }
+  // 實測約 5%（2000 張約 100 次）。門檻取 20：離實測有五倍餘裕，離壞掉的
+  // 「1500 張只有 3 次」非常遠。
+  if (hit >= 20) {
+    console.log(`ok   古中國的招牌場地抽得到：${want} ${hit}/${N}`);
+  } else {
+    console.log("");
+    console.log(`FAIL 古中國的招牌場地抽不到  ${want} 只有 ${hit}/${N}`);
+    console.log("  規格：時代錨的場地要真的蓋得上去。它必須出現在活動-場地相容表裡，");
+    console.log("        否則姿勢一旦先抽好就會把它全部擋掉（這就是它以前 0.3% 的原因）。");
+    console.log("");
+    console.log("1 條 hard 不變式被違反");
+    process.exit(1);
+  }
+}
+
 if (!hardHits.size) {
   console.log("hard：全部通過。");
   console.log("\nok");

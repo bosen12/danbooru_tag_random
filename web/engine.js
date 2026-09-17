@@ -1029,7 +1029,7 @@ const INDOOR_FURN = new Set(["on bed", "on chair", "office chair", "gaming chair
 // 釘「宮殿」的人有 52% 會拿到平底鍋，因為煮飯是少數列了 palace 的活動。
 const DESK_PLACE = new Set([
   "library", "bedroom", "living room", "cafe", "classroom", "office",
-  "park bench", "garden", "shrine", "pavilion",
+  "park bench", "garden", "shrine", "pavilion", "east asian architecture",
   // 住得下人、坐得下來的地方，古今都有
   // 補的是「坐得下來看書寫字的地方」。城堡、大廳、酒館、舞廳、神殿刻意不補 ——
   // 既有測試 "normal studying never castle/beach/onsen" 明講不要在城堡唸書，
@@ -1044,7 +1044,7 @@ const HOME_PLACE = new Set([
 const MEAL_PLACE = new Set([
   "restaurant", "cafe", "kitchen", "living room", "park", "garden", "beach", "courtyard",
   "apartment", "dormitory", "hotel room", "mansion", "palace", "throne",
-  "balcony", "pavilion", "rooftop", "tent", "field", "food stall", "izakaya",
+  "balcony", "pavilion", "east asian architecture", "rooftop", "tent", "field", "food stall", "izakaya",
   "castle", "tavern", "ryokan", "ballroom",
 ]);
 const ACT_PLACE = {
@@ -1068,7 +1068,7 @@ const ACT_PLACE = {
   studying: DESK_PLACE,
   writing: DESK_PLACE,
   "drawing (action)": new Set(["bedroom", "living room", "classroom", "cafe", "park", "garden"]),
-  "painting (action)": new Set(["bedroom", "living room", "garden", "park", "courtyard", "pavilion"]),
+  "painting (action)": new Set(["bedroom", "living room", "garden", "park", "courtyard", "pavilion", "east asian architecture"]),
   dancing: new Set(["living room", "park", "rooftop", "school gym", "bar (place)", "fitness gym", "ballroom", "palace", "colonnade", "ryokan", "festival"]),
   stretching: new Set(["bedroom", "living room", "fitness gym", "park", "rooftop", "beach"]),
   yoga: new Set(["bedroom", "living room", "fitness gym", "park", "rooftop", "beach"]),
@@ -1148,7 +1148,7 @@ const ACT_PLACE = {
 for (const [act, places] of Object.entries(SPORT_ACT_PLACE)) {
   ACT_PLACE[act] = new Set([...(ACT_PLACE[act] || []), ...places]);
 }
-// 時代招牌場地（castle / chinese architecture）出現在多少比例的圖上。
+// 時代招牌場地（castle / east asian architecture）出現在多少比例的圖上。
 // 舊行為是無條件蓋章，等於 100%，而且會把唯一的場地格佔滿。
 const PLACE_ANCHOR_CHANCE = 0.35;
 
@@ -1298,6 +1298,9 @@ const PRIVATE_SEX_PLACE = new Set([
   // 場地都沒有 —— 於是 sex heat 一開，古中國／古希臘／中世紀只剩 bedroom
   // 和 bath 各一半，江戶只剩 onsen 和 open-air bath。其他三種 heat 這些時代
   // 都抽得到十四到二十六種場地，落差全出在這張表。
+  // east asian architecture 也不收：它是建築外觀的泛稱，不是「能不被打擾」的地方。
+  // 試著收過，結果古中國的性愛場地有 44% 都是它（既有測試「沒有單一場地佔掉
+  // 三分之一以上」直接紅）—— 這個時代的私密場地本來就少，補一個泛稱就會蓋掉其他的。
   // 收錄標準是「能不被打擾」，所以 market / festival / street / shrine /
   // temple 這類公共場所仍然不在裡面。
   "bed",
