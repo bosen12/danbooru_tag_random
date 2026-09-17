@@ -523,11 +523,11 @@ try:
 finally:
     server._dc.clear()
     server._dc.update(_dc_backup)
-if failed:
-    print(f"\n{failed} failed")
-    sys.exit(1)
-print("\nok")
-
+# 這一段**必須排在下面的 sys.exit(1) 之前**。它原本寫在檔尾，也就是腳本已經
+# 印完 ok、決定通過之後才跑 —— 印了 FAIL 也不會讓測試失敗。實際踩到了：
+# 負向詞加了 cross-section／x-ray／uterus／inset 之後備援脫節，這條印了紅字，
+# 整支卻還是 exit 0。它自己的註解說「沒有人會自然發現它壞掉」，
+# 而它本身就待在沒有人會發現它壞掉的位置。
 # --- 備援負面字串不能跟 lexicon.json 脫節 -------------------------------------
 # server._negative() 讀不到 lexicon.json 時會退回一個寫死的字串，而它的註解一直
 #宣稱 merge_lexicon.NEGATIVE 是唯一來源。實際上它脫節了：正式那份已經把
@@ -552,3 +552,9 @@ ok(
     _fb == _live,
     f"備援多了 {[t for t in _fb if t not in _live]}，少了 {[t for t in _live if t not in _fb]}",
 )
+
+if failed:
+    print(f"\n{failed} failed")
+    sys.exit(1)
+print("\nok")
+

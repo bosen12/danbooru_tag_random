@@ -45,7 +45,7 @@
     "pubic hair"
   ],
   "alwaysEnv": [],
-  "negative": "bad quality, worst quality, worst detail, displeasing, lowres, sketch, censored, bar censor, mosaic censoring, english text, watermark, signature, artist name, username, logo, speech bubble, multiple views, artistic error, bad anatomy, bad hands, extra digits, fewer digits, extra arms, deformed, blurry, jpeg artifacts, 3d, realistic, photorealistic",
+  "negative": "bad quality, worst quality, worst detail, displeasing, lowres, sketch, censored, bar censor, mosaic censoring, english text, watermark, signature, artist name, username, logo, speech bubble, multiple views, artistic error, bad anatomy, bad hands, extra digits, fewer digits, extra arms, deformed, blurry, jpeg artifacts, 3d, realistic, photorealistic, cross-section, x-ray, uterus, inset",
   "defaults": {
     "n": 1,
     "width": 1024,
@@ -7180,7 +7180,7 @@
         "flash",
         "sex"
       ],
-      "mutex": null,
+      "mutex": "onepiece",
       "bind": [],
       "implies": [],
       "layer": "garment",
@@ -7392,7 +7392,7 @@
         "flash",
         "sex"
       ],
-      "mutex": null,
+      "mutex": "onepiece",
       "bind": [],
       "implies": [],
       "layer": "garment",
@@ -7531,7 +7531,7 @@
         "flash",
         "sex"
       ],
-      "mutex": null,
+      "mutex": "onepiece",
       "bind": [],
       "implies": [],
       "layer": "garment",
@@ -7550,7 +7550,7 @@
         "flash",
         "sex"
       ],
-      "mutex": null,
+      "mutex": "onepiece",
       "bind": [],
       "implies": [],
       "layer": "garment",
@@ -7607,7 +7607,7 @@
         "flash",
         "sex"
       ],
-      "mutex": null,
+      "mutex": "top",
       "bind": [],
       "implies": [],
       "layer": "garment",
@@ -7647,7 +7647,7 @@
         "flash",
         "sex"
       ],
-      "mutex": null,
+      "mutex": "top",
       "bind": [],
       "implies": [],
       "layer": "garment",
@@ -7704,7 +7704,7 @@
         "flash",
         "sex"
       ],
-      "mutex": null,
+      "mutex": "top",
       "bind": [],
       "implies": [],
       "layer": "garment",
@@ -7785,7 +7785,7 @@
         "flash",
         "sex"
       ],
-      "mutex": null,
+      "mutex": "outer",
       "bind": [],
       "implies": [],
       "layer": "garment",
@@ -7846,7 +7846,7 @@
         "flash",
         "sex"
       ],
-      "mutex": null,
+      "mutex": "bottom",
       "bind": [],
       "implies": [],
       "layer": "garment",
@@ -7952,7 +7952,7 @@
         "flash",
         "sex"
       ],
-      "mutex": null,
+      "mutex": "bottom",
       "bind": [],
       "implies": [],
       "layer": "garment",
@@ -7992,7 +7992,7 @@
         "flash",
         "sex"
       ],
-      "mutex": null,
+      "mutex": "bottom",
       "bind": [],
       "implies": [],
       "layer": "garment",
@@ -8033,7 +8033,7 @@
         "flash",
         "sex"
       ],
-      "mutex": null,
+      "mutex": "onepiece",
       "bind": [],
       "implies": [],
       "layer": "garment",
@@ -8052,7 +8052,7 @@
         "flash",
         "sex"
       ],
-      "mutex": null,
+      "mutex": "onepiece",
       "bind": [],
       "implies": [],
       "layer": "garment",
@@ -8156,7 +8156,7 @@
         "flash",
         "sex"
       ],
-      "mutex": null,
+      "mutex": "onepiece",
       "bind": [],
       "implies": [
         "swimsuit"
@@ -8255,7 +8255,7 @@
         "flash",
         "sex"
       ],
-      "mutex": null,
+      "mutex": "underwear_top",
       "bind": [],
       "implies": [],
       "layer": "garment",
@@ -8274,7 +8274,7 @@
         "flash",
         "sex"
       ],
-      "mutex": null,
+      "mutex": "underwear_bottom",
       "bind": [],
       "implies": [],
       "layer": "garment",
@@ -8608,7 +8608,7 @@
         "flash",
         "sex"
       ],
-      "mutex": null,
+      "mutex": "legs",
       "bind": [],
       "implies": [],
       "layer": "garment",
@@ -8785,7 +8785,7 @@
         "flash",
         "sex"
       ],
-      "mutex": null,
+      "mutex": "feet",
       "bind": [],
       "implies": [],
       "layer": "garment",
@@ -8804,7 +8804,7 @@
         "flash",
         "sex"
       ],
-      "mutex": null,
+      "mutex": "neckwear",
       "bind": [],
       "implies": [],
       "layer": "accessory",
@@ -8824,7 +8824,7 @@
         "flash",
         "sex"
       ],
-      "mutex": null,
+      "mutex": "neckwear",
       "bind": [],
       "implies": [],
       "layer": "accessory",
@@ -8863,7 +8863,7 @@
         "flash",
         "sex"
       ],
-      "mutex": null,
+      "mutex": "neckwear",
       "bind": [],
       "implies": [],
       "layer": "accessory",
@@ -8882,7 +8882,7 @@
         "flash",
         "sex"
       ],
-      "mutex": null,
+      "mutex": "jewelry",
       "bind": [],
       "implies": [],
       "layer": "accessory",
@@ -8901,7 +8901,7 @@
         "flash",
         "sex"
       ],
-      "mutex": null,
+      "mutex": "jewelry",
       "bind": [],
       "implies": [],
       "layer": "accessory",
@@ -9016,7 +9016,7 @@
         "flash",
         "sex"
       ],
-      "mutex": null,
+      "mutex": "headwear",
       "bind": [],
       "implies": [],
       "layer": "accessory",
@@ -9035,7 +9035,7 @@
         "flash",
         "sex"
       ],
-      "mutex": null,
+      "mutex": "hands",
       "bind": [],
       "implies": [],
       "layer": "accessory",
@@ -11568,7 +11568,7 @@
         "flash",
         "sex"
       ],
-      "mutex": null,
+      "mutex": "onepiece",
       "bind": [],
       "implies": [],
       "layer": "garment",
@@ -11709,7 +11709,7 @@
         "flash",
         "sex"
       ],
-      "mutex": null,
+      "mutex": "onepiece",
       "bind": [],
       "implies": [],
       "layer": "garment",
@@ -15478,7 +15478,7 @@
         "flash",
         "sex"
       ],
-      "mutex": null,
+      "mutex": "outer",
       "bind": [],
       "implies": [],
       "layer": "garment",
@@ -17210,7 +17210,7 @@
         "flash",
         "sex"
       ],
-      "mutex": null,
+      "mutex": "outer",
       "bind": [],
       "implies": [],
       "layer": "garment",
@@ -18269,7 +18269,7 @@
         "flash",
         "sex"
       ],
-      "mutex": "outer",
+      "mutex": "onepiece",
       "bind": [],
       "implies": [
         "coat"
@@ -18278,7 +18278,7 @@
       "era": [
         "modern"
       ],
-      "group": "outer",
+      "group": "onepiece",
       "zh": "只穿大衣"
     },
     {
@@ -18311,7 +18311,7 @@
         "flash",
         "sex"
       ],
-      "mutex": "outer",
+      "mutex": "onepiece",
       "bind": [],
       "implies": [
         "jacket"
@@ -18320,7 +18320,7 @@
       "era": [
         "modern"
       ],
-      "group": "outer",
+      "group": "onepiece",
       "zh": "只穿外套"
     },
     {

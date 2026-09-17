@@ -82,6 +82,25 @@ const GROUND_BODY = new Set(["all fours", "crawling", "top-down bottom-up"]);
 // body_pose，被改成 env/furniture 之後就脫離了姿勢相容那一整套檢查，於是
 // 「standing + on couch」這種組合一直畫得出來（基準線 4/24，六分之一）。
 const UPRIGHT_BODY = new Set(["standing", "walking", "running", "jumping", "standing split"]);
+
+// 「只穿一件」的字。naked coat 的意思就是**除了大衣什麼都沒穿**，所以它跟任何
+// 主衣、內衣都是矛盾的。這件事以前完全沒有被擋：實測 1500 張裡出現這六個字的
+// 190 張，**190 張身上都還穿著別的衣服**（naked coat 配 idol clothes、
+// naked jacket 配 evening gown 加運動內衣）。
+//
+// 會漏掉是因為互斥格不夠用：naked sweater／naked apron／naked towel 的格子是
+// onepiece，擋得住別的主衣但擋不住內衣；而 naked coat／naked jacket 的格子是
+// outer —— 外套格當然擋不住洋裝。這是語意問題，不是格子問題，所以要一條規則。
+const NAKED_ONLY = new Set([
+  "naked sweater", "naked shirt", "naked apron", "naked towel", "naked coat", "naked jacket",
+]);
+// 會被「只穿一件」排除的：身上的主要衣物與內衣。外套不算（naked coat 自己就是外套），
+// 襪子鞋子也不算（光腳穿大衣跟穿著襪子穿大衣都成立）。
+const BODY_WORN_GROUP = new Set(["onepiece", "top", "bottom", "underwear", "era"]);
+// 泳衣底下不穿內衣。比基尼配運動內褲是穿兩層。
+const isSwimGarment = (item) =>
+  !!item && item.section === "clothing" && item.layer === "garment" &&
+  (item.tag.includes("bikini") || item.tag.includes("swimsuit"));
 // 坐著或跪著做不了的活動。清單從 sports.js 算出來，不手抄，免得加新運動時失同步。
 // 例外寫在 SEATED_OK_SPORT：跪射是合理的姿勢；騎車和游泳本來就有自己的姿勢規則。
 const SEATED_OK_SPORT = new Set(["archery", "riding bicycle", "swimming", "skiing"]);
@@ -1790,6 +1809,21 @@ export const NEEDS_CONTEXT = {
   // （它幾乎不跟任何姿勢衝突），實測佔掉那一格的 64%，還把 on bed 從 8 擠到 3 ——
   // 而且畫面上根本沒有桌子。on desk 同理。
   "under table": new Set(["table", "desk", "poker table", "counter", "kotatsu"]),
+  // 我從語料加進來的那批道具，原本一個前提都沒寫，於是它們散落到任何地方 ——
+  // 實測 4200 張裡 desk lamp 有 93% 出現在沒有桌子、書房、臥室的場合（它掛在
+  // lighting 互斥格，而那一格 100% 的圖都會填，所以它會去照亮海灘和溫泉），
+  // nightstand／poker table／sink／steering wheel／whiteboard 更是 100%。
+  // 這正是這張表上面 cleats 那條註解在講的同一件事：沒有那個場合就不該出現。
+  "desk lamp": new Set(["desk", "on desk", "office", "bedroom", "classroom", "library", "hotel room", "studying", "writing", "reading"]),
+  nightstand: new Set(["bedroom", "hotel room", "love hotel", "bed", "on bed"]),
+  "poker table": new Set(["casino", "nightclub", "bar (place)"]),
+  sink: new Set(["bathroom", "kitchen", "clinic", "hospital"]),
+  counter: new Set(["kitchen", "cafe", "bar (place)", "restaurant", "convenience store", "supermarket", "izakaya"]),
+  "steering wheel": new Set(["car", "car interior", "driving", "cockpit", "airplane interior", "racing suit"]),
+  "shopping cart": new Set(["supermarket", "convenience store", "shopping", "market"]),
+  "microphone stand": new Set(["singing", "karaoke", "karaoke box", "bar (place)", "livestream"]),
+  whiteboard: new Set(["classroom", "office", "teacher", "laboratory", "studying"]),
+  "christmas tree": new Set(["christmas", "winter", "living room"]),
   "on desk": new Set(["desk", "table", "classroom", "office", "whiteboard"]),
   shibari: new Set(["bondage", "bdsm", "restrained"]),
   "bound wrists": new Set(["bondage", "bdsm", "restrained", "handcuffs"]),
@@ -4487,6 +4521,25 @@ export function drawOne(lex, settings, pinned, userBanned, rand, seed) {
       if (HAND_GESTURE.has(item.tag) && !pinned.has(item.tag) && handsBusy) return false;
       if (HANDS_BUSY_ACT.has(item.tag) && [...used].some((t) => ARM_POSE.has(t))) return false;
       if (HANDS_BUSY_ACT.has(item.tag) && [...used].some((t) => HAND_GESTURE.has(t))) return false;
+      if (item.section === "clothing") {
+        // 「只穿一件」：兩個方向都要擋，因為服裝那一段的填入順序不固定。
+        if (NAKED_ONLY.has(item.tag)) {
+          for (const t of used) {
+            const it = lex.byTag.get(t);
+            if (it && it.section === "clothing" && BODY_WORN_GROUP.has(it.group)) return false;
+          }
+        } else if (BODY_WORN_GROUP.has(item.group)) {
+          if ([...used].some((t) => NAKED_ONLY.has(t))) return false;
+        }
+        // 泳衣與內衣二選一。
+        if (isSwimGarment(item)) {
+          for (const t of used) {
+            if (lex.byTag.get(t)?.group === "underwear") return false;
+          }
+        } else if (item.group === "underwear") {
+          if ([...used].some((t) => isSwimGarment(lex.byTag.get(t)))) return false;
+        }
+      }
       // 傢俱：室內才有，而且人得在上面 —— 站著的人不會「在沙發上」。
       // 這一格從 pose 搬到 env 之後就漏掉了姿勢相容檢查，而通用的 fill("env")
       // 也不管室內外（基準線裡 24 張有傢俱的圖，8 張是室外、4 張配站姿）。
@@ -5509,6 +5562,17 @@ export function drawOne(lex, settings, pinned, userBanned, rand, seed) {
       }
     }
   }
+  // 全裸的人不會有「被遮住的乳頭」或「被遮住的肚臍」。
+  //
+  // 這兩個字是 feature，在 clothing 之前就抽好了，所以候選那一關問不到「後面會不會
+  // 抽到裸體」—— 跟 5236 行記的那個順序陷阱同一類，只能在這裡反向清掉。
+  // 實測：出現「隔著衣服」類字的 217 張裡有 8 張身上根本沒有遮身體的衣服，
+  // 而那 8 張全部是 covered nipples 配 nude／completely nude。
+  if (used.has("nude") || used.has("completely nude")) {
+    for (const t of ["covered nipples", "covered navel"]) {
+      if (used.has(t) && !pinned.has(t)) used.delete(t);
+    }
+  }
   if (lockSceneOn(settings) && used.has("cooking") && !used.has("kitchen")) {
     const kit = lex.byTag.get("kitchen");
     if (kit && eraOk(kit, era)) {
@@ -5729,6 +5793,25 @@ export function drawOne(lex, settings, pinned, userBanned, rand, seed) {
   }
 
   const kept = reconcile(lex, used, female, male, people, mustPins(), lockSceneOn(settings));
+
+  // NEEDS_CONTEXT 要在 reconcile **之後**再掃一次。
+  //
+  // 上面那次掃在 reconcile 之前，該知道的都知道了 —— 但 reconcile 自己還會再刪東西
+  // （最明顯的是 lockScene 會刪掉沒有場地的活動），於是前提在掃完之後才消失，
+  // 道具就變成孤兒。這正是 test_draw_contracts.mjs 契約一開頭描述的那一類：
+  // 「擋在候選階段，但最終 POS 是 reconcile() 之後才定案的」。
+  //
+  // 實測是 desk lamp 露出來的：它的前提多半是 studying／reading 這類活動，
+  // 而那些活動被 lockScene 刪掉之後，檯燈就留在浴缸和餐廳裡。
+  // 掃第二次只會刪掉真的沒有前提的字，所以對其餘十八條也只有好處。
+  {
+    const guard = mustPins();
+    for (const [tag, need] of Object.entries(NEEDS_CONTEXT)) {
+      if (!kept.has(tag) || guard.has(tag)) continue;
+      if ([...kept].some((t) => need.has(t))) continue;
+      kept.delete(tag);
+    }
+  }
 
   const quality = lex.data.quality.slice();
   const style = [];

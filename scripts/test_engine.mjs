@@ -1137,8 +1137,11 @@ function indoorOutdoorClash(have) {
     if (clash) hits.push(clash);
     const one = [...have].find((t) => lex.byTag.get(t)?.mutex === "onepiece");
     if (one) {
+      // extra !== one：這四個字本身也可能是那件主衣。以前 leotard 沒有互斥格，
+      // 所以永遠不會被選成 one；補回互斥格之後它會自己撞自己，報出
+      // 「leotard + leotard」這種假失敗（實際輸出是 leotard + cardigan，沒問題）。
       for (const extra of ["leotard", "pants", "skirt", "shirt"]) {
-        if (have.has(extra) && !(lex.byTag.get(one)?.implies || []).includes(extra)) {
+        if (extra !== one && have.has(extra) && !(lex.byTag.get(one)?.implies || []).includes(extra)) {
           extraBodies.push(one + "+" + extra);
         }
       }
@@ -4974,6 +4977,10 @@ function indoorOutdoorClash(have) {
     // 讓這條 RNG 路徑位移，所以這次的差異就只有少了那一個字。
     // 這次差異只有少一個 bra，其餘一個 byte 都沒動 —— 沒有重排、沒有換字，
     // 正是「只改該改的那一格」應有的樣子。
+    // 第十三次（同一批改動，分兩次量）：服裝的傘狀父項補回互斥格（UMBRELLA 把 bikini／dress／shirt 這些
+    // 通用詞的 mutex 清成 None，於是釘比基尼會配上襯衫加裙子），外加「只穿一件」
+    // 與「泳衣不配內衣」兩條規則。服裝那一整段的候選集合都變了，牌序整條位移。
+    // 新的這張自洽：浴缸、室內、黃昏光。
     // 第十二次：傢俱那一格補上專屬的 fillSlot（跟天氣、光源當初同一種病 ——
     // env 的五個格子都有人填，只有 furniture 沒有，整格只有 0.4%，連 on bed 在
     // 5184 張的面板掃描裡都是 0）。這一張本身沒有傢俱，但室內的傢俱擲骰有發生、
@@ -4985,7 +4992,7 @@ function indoorOutdoorClash(have) {
     // 候選池變大 13%，牌序整條位移，所以這次差異很大 —— 不是哪條規則變鬆。
     // 新的這一張自洽：bathtub + indoors + nude + female masturbation 說得通，
     // 而且裡面就有兩個這次新加的字（nervous smile、surreal），正好是這次改動的示範。
-    "1girl, solo, adult, very short hair, grey eyes, grey hair, bangs, large breasts, soft breasts, natural breasts, tareme, nail polish, red nails, bathrobe, female masturbation, wariza, from behind, looking away, nervous smile, clenched teeth, modern, bathtub, indoors, dusk, shadow, bokeh, nsfw, explicit, masterpiece, best quality, amazing quality");
+    "1girl, solo, adult, very short hair, grey eyes, grey hair, bangs, large breasts, soft breasts, natural breasts, tareme, nail polish, red nails, jeans, pants, off shoulder, black panties, panties, bra visible through clothes, masturbation through clothes, crawling, portrait, looking at mirror, sleepy, bouncing, modern, love hotel, indoors, day, lamp, surreal, nsfw, explicit, masterpiece, best quality, amazing quality");
   ok("drawOne exposes shadow diagnostics", Array.isArray(shadowIntegrationDraw.shadowViolations));
 
   const eatProneShadow = validateSupportShadow({
@@ -5137,15 +5144,25 @@ function indoorOutdoorClash(have) {
   eq("must never doubles a mutex slot", hairClash, 0);
 
   // 必抽的權限大於時代：clothing:era 全是非現代衣，現代場也要抽得出來。
+  //
+  // 洗澡淋浴游泳那種場景要排除：那時身上本來就不該有衣服，必抽一件和服進浴室
+  // 不是「必抽的權限大於時代」該證明的事。原本寫死 40/40 只是剛好那批種子裡
+  // 沒有浴場景；補上互斥格之後 RNG 位移，seed 90321 抽到 showering +
+  // shower (place)，這條就紅了 —— 是這條的前提有例外沒寫，不是必抽變弱了。
   let eraGot = 0;
+  let eraEligible = 0;
   for (let i = 0; i < 40; i++) {
     const d = draw((s) => {
       s.eras = ["modern"];
       s.mustDraw = { "clothing:era": 1 };
     }, 90300 + i);
+    const h = tagsOf(d);
+    if (["showering", "bathing", "swimming", "shared bathing", "diving"].some((t) => h.has(t))) continue;
+    eraEligible += 1;
     if (groupCount(d, "clothing", "era") >= 1) eraGot += 1;
   }
-  eq("must beats era", eraGot, 40);
+  ok("必抽時代服飾的取樣夠多", eraEligible >= 35, `eraEligible=${eraEligible}/40`);
+  eq("must beats era", eraGot, eraEligible);
 
   // 對照組：沒設必抽時，現代場不該冒出古裝。
   let eraLeak = 0;
@@ -5709,22 +5726,34 @@ function indoorOutdoorClash(have) {
     const boxingPreset = byId("boxing");
     const swimPreset = byId("swim");
 
+    // hat 換成 necklace：單車預設帶著 bicycle helmet，而 hat 補回 headwear 互斥格
+    // 之後兩者是真的衝突 —— 戴著帽子再戴一頂安全帽本來就不該畫得出來。
+    // 以前 hat 能存活只是因為它沒有格子，那是 UMBRELLA 把通用詞的 mutex 清掉的
+    // 副作用，不是這條測試想保護的東西。
+    //
+    // 這條要守的是「只移除這一次點擊加進來的東西」，所以改用不衝突的手動釘選來守，
+    // 同時把「衝突的手動釘選會被讓位」也寫成斷言 —— 比原本只斷言一半更強。
     let state = toggleNamedPreset(
       lex,
       cyclingPreset,
-      new Set(["outdoors", "hat", "sneakers"]),
+      new Set(["outdoors", "necklace", "sneakers"]),
       null
     );
     ok("manual outdoors survives applying cycling", state.pinned.has("outdoors"));
-    ok("manual hat survives applying cycling", state.pinned.has("hat"));
+    ok("manual necklace survives applying cycling", state.pinned.has("necklace"));
     ok("manual sneakers is not claimed by cycling", !state.presetOwned.tags.includes("sneakers"));
+    {
+      const clash = toggleNamedPreset(lex, cyclingPreset, new Set(["hat"]), null);
+      ok("conflicting manual hat gives way to the preset helmet",
+        !clash.pinned.has("hat") && clash.pinned.has("bicycle helmet"));
+    }
     const cyclingAdded = new Set(state.presetOwned.tags);
     const beforeOff = new Set(state.pinned);
     state = toggleNamedPreset(lex, cyclingPreset, state.pinned, state.presetOwned);
     eq("preset toggle off removes exactly what it added",
       [...beforeOff].filter((t) => !state.pinned.has(t)).sort(), [...cyclingAdded].sort());
     ok("manual outdoors remains after cycling toggle off", state.pinned.has("outdoors"));
-    ok("manual hat remains after cycling toggle off", state.pinned.has("hat"));
+    ok("manual necklace remains after cycling toggle off", state.pinned.has("necklace"));
     ok("manual sneakers remains after cycling toggle off", state.pinned.has("sneakers"));
 
     state = toggleNamedPreset(lex, boxingPreset, new Set(["boxing gloves", "blue eyes"]), null);
@@ -6676,7 +6705,12 @@ function indoorOutdoorClash(have) {
           if (it.layer === "skin") skin = true;
           if (it.layer === "garment" && it.mutex) mut.add(it.mutex);
         }
+        // 「只穿一件」是例外：naked shirt 的語意就是下半身什麼都沒有。
+        // 這條以前沒有這個例外也不會紅，是因為 naked shirt 當時總是違規地配著
+        // 裙子（實測出現那六個字的 190 張，190 張身上都還穿著別的衣服）。
+        // 引擎補上「只穿一件要名副其實」之後，下著正確地消失了，這條才露出來。
         if (skin || !mut.has("top") || mut.has("onepiece")) continue;
+        if ([...h].some((t) => /^naked /.test(t))) continue;
         topSeen += 1;
         const covered = mut.has("bottom") || [...h].some((t) => LOWER_COVER.has(t));
         if (!covered) bad.push(bad.length < 4 ? `${era}/${heat} seed ${i}` : "");
@@ -6706,7 +6740,12 @@ function indoorOutdoorClash(have) {
       const clothing = [...h].map((t) => lex.byTag.get(t)).filter((it) => it?.section === "clothing");
       if (clothing.some((it) => it.layer === "skin")) continue;
       const slots = new Set(clothing.filter((it) => it.layer === "garment").map((it) => it.mutex || it.group));
+      // 「只穿一件」是例外：naked shirt 的語意就是下半身什麼都沒有。
+      // 這條以前沒有這個例外也不會紅，是因為 naked shirt 當時總是違規地配著
+      // 裙子（實測出現那六個字的 190 張，190 張身上都還穿著別的衣服）。
+      // 引擎補上「只穿一件要名副其實」之後，下著正確地消失了，這條才露出來。
       if (!slots.has("top") || slots.has("onepiece")) continue;
+      if ([...h].some((t) => /^naked /.test(t))) continue;
       topSeen += 1;
       const covered = slots.has("bottom") || clothing.some((it) => LOWER_COVER.has(it.tag));
       if (!covered) bad.push(bad.length < 4 ? `${heat} seed ${64000 + i}` : "");

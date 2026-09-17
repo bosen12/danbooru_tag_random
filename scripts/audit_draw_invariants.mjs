@@ -123,6 +123,15 @@ const SEX_ACTS = [
 
 const HARD = [
   {
+    name: "全裸卻說被遮住",
+    why: "covered nipples／covered navel 的語意前提就是身上有東西遮著。它們是 feature，在 clothing 之前就抽好了，所以候選那一關問不到後面會不會抽到裸體 —— 只能在後段反向清掉，而這條就是在守那個清理有沒有在做事。",
+    check: (n) => {
+      if (!n.has("nude") && !n.has("completely nude")) return "";
+      const c = ["covered nipples", "covered navel"].filter((t) => n.has(t));
+      return c.length ? `${c.join("+")} 撞 ${n.has("completely nude") ? "completely nude" : "nude"}` : "";
+    },
+  },
+  {
     name: "同時做兩件性事",
     why: "一張圖只能在做一件事。兩個性行為同框代表其中一個沒有掛上 sex_act 互斥格。",
     check: (n) => {
@@ -1084,6 +1093,118 @@ FAIL 性行為互斥  ×${bad}/${N}`);
         console.log(`  重播：seed=${firstBad.seed}  ${firstBad.why}`);
         console.log(`  POS：${firstBad.pos}`);
       }
+    }
+    console.log("");
+    console.log("1 條 hard 不變式被違反");
+    process.exit(1);
+  }
+}
+
+// 穿著要說得通：主衣只有一件、「只穿一件」名副其實、泳衣底下不穿內衣。
+//
+// 三個都是專案主回報「釘比基尼卻配上襯衫加裙子」之後查出來的，而且互相獨立：
+//
+// 1. 傘狀父項沒有互斥格。UMBRELLA 把 bikini／dress／shirt 這些通用詞的 mutex
+//    清成 None，理由是「父項靠子項 implies 進場，父子不該搶同一格」。那對
+//    「子項被抽到」是對的，但漏了「父項自己被抽到或被釘選」—— 那一格沒人佔，
+//    引擎就以為主衣還空著。實測釘 bikini：shirt 261、skirt 258、pants 142。
+//    對照組 white dress／micro bikini（有格子）一件上衣下身都不會有。
+//
+// 2. 「只穿一件」從來沒有生效過。naked coat 的意思是除了大衣什麼都沒穿，
+//    但它的格子是 outer，擋不住洋裝和內衣。實測出現這六個字的 190 張，
+//    **190 張身上都還穿著別的衣服**。
+//
+// 3. 泳衣底下穿內衣。比基尼配運動內褲是穿兩層。
+{
+  const N = 220;
+  const NAKED_ONLY = ["naked sweater", "naked shirt", "naked apron", "naked towel", "naked coat", "naked jacket"];
+  const BODY_GROUP = new Set(["onepiece", "top", "bottom", "underwear", "era"]);
+  const isSwim = (t) => t.includes("bikini") || t.includes("swimsuit");
+  let drew = 0;
+  let twoMain = 0;
+  let nakedBad = 0;
+  let swimUnder = 0;
+  let firstBad = null;
+  const note = (why, seed, names) => {
+    if (!firstBad) firstBad = { why, seed, pos: names.join(", ") };
+  };
+  for (const era of ERAS) {
+    for (const heats of [["activity"], ["tease"], ["flash"], ["sex"]]) {
+      for (let i = 0; i < N; i += 1) {
+        const s = defaultSettings(data);
+        s.eras = [era];
+        s.girl = true;
+        s.boy = true;
+        s.heats = heats;
+        s.weights = { activity: 0, tease: 0, flash: 0, sex: 0 };
+        s.weights[heats[0]] = 1;
+        const seed = 620000 + i;
+        drew += 1;
+        const names = drawOne(lex, s, new Set(), new Set(), mulberry32(seed), seed)
+          .positive.split(",").map((x) => x.trim());
+        const worn = names.filter((t) => {
+          const it = lex.byTag.get(t);
+          return it && it.section === "clothing" && it.layer === "garment";
+        });
+        // （主衣只有一件那一條改用釘選驗，見這個區塊下面 —— 隨機抽圖看不到它。）
+        // 「只穿一件」：身上不該還有別的主衣或內衣（它自己 implies 的父項不算）。
+        const nk = names.filter((t) => NAKED_ONLY.includes(t));
+        if (nk.length) {
+          const kin = new Set(nk.flatMap((t) => lex.byTag.get(t)?.implies || []));
+          const other = worn.filter((t) => !nk.includes(t) && !kin.has(t) && BODY_GROUP.has(lex.byTag.get(t)?.group));
+          if (other.length) { nakedBad += 1; note(`${nk.join("+")} 卻還穿著 ${other.join("、")}`, seed, names); }
+        }
+        // 泳衣底下不穿內衣。
+        if (worn.some((t) => isSwim(t))) {
+          const u = worn.filter((t) => lex.byTag.get(t)?.group === "underwear");
+          if (u.length) { swimUnder += 1; note(`泳衣配內衣 ${u.join("、")}`, seed, names); }
+        }
+      }
+    }
+  }
+  // 主衣只有一件 —— **必須用釘選來驗**。
+  //
+  // 第一版寫在上面的隨機抽圖迴圈裡，結果是假綠：換回沒有互斥格的舊詞庫照樣通過。
+  // 原因是通用詞（bikini／dress）平常很少被抽成主衣（bikini 在 2400 張裡只有 2 次），
+  // 所以隨機掃描根本碰不到那個洞。專案主是**釘選比基尼**才發現的，
+  // 那就照他發現它的方式測。
+  const PIN_MAIN = ["bikini", "dress", "swimsuit", "leotard"];
+  let pinBad = 0;
+  let firstPin = null;
+  for (const want of PIN_MAIN) {
+    const pin = applyPin(lex, new Set(), new Set(), want).pinned;
+    for (let i = 0; i < 200; i += 1) {
+      const s2 = defaultSettings(data);
+      s2.girl = true;
+      s2.boy = false;
+      const seed = 640000 + i;
+      const names = drawOne(lex, s2, pin, new Set(), mulberry32(seed), seed)
+        .positive.split(",").map((x) => x.trim());
+      if (!names.includes(want)) continue;
+      const clash = names.filter((t) => {
+        const it = lex.byTag.get(t);
+        return it && it.section === "clothing" && it.layer === "garment" &&
+               (it.group === "top" || it.group === "bottom");
+      });
+      if (clash.length) {
+        pinBad += 1;
+        if (!firstPin) firstPin = { want, seed, clash: clash.join("、"), pos: names.join(", ") };
+      }
+    }
+  }
+  if (!twoMain && !nakedBad && !swimUnder && !pinBad) {
+    console.log(`ok   穿著說得通：${drew} 張 + 釘主衣 ${PIN_MAIN.length}×200，整套配單件 0、只穿一件卻沒有 0、泳衣配內衣 0`);
+  } else {
+    console.log("");
+    console.log(`FAIL 穿著矛盾  釘主衣卻配上單件 ${pinBad}、兩件主衣 ${twoMain}、只穿一件卻還穿別的 ${nakedBad}、泳衣配內衣 ${swimUnder}`);
+    if (firstPin) {
+      console.log(`  釘 ${firstPin.want} 卻同時穿著 ${firstPin.clash}（seed=${firstPin.seed}）`);
+      console.log(`  POS：${firstPin.pos}`);
+    }
+    console.log("  規格：主衣一次一件；「只穿一件」要名副其實；泳衣不是內衣外面再穿一層。");
+    if (firstBad) {
+      console.log(`  重播：seed=${firstBad.seed}  ${firstBad.why}`);
+      console.log(`  POS：${firstBad.pos}`);
     }
     console.log("");
     console.log("1 條 hard 不變式被違反");

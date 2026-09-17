@@ -62,13 +62,28 @@ GATES = {"any", "female", "male"}
 #   censor(0，是 censored 的 active alias，而 censored 已在同一串) -> 刪
 # 並補上通行 Illustrious 負面裡有、我們漏掉的兩個：
 #   multiple views(272192) 擋分鏡與多視角、artistic error(9793)（error 是它的別名）
+#
+# 2026-09-18 補四個擋解剖剖面圖的。專案主回報兩張圖：一張左下角多了一個內臟示意
+# 的小框，一張的陰莖直接透視畫在身體上。查 Danbooru 的共現率就知道不是意外 ——
+#   internal cumshot                 12597 張
+#     其中同時標 cross-section        7330 張（58.2%）
+#     其中同時標 x-ray                4328 張（34.4%）
+# 「中出」的圖有將近六成是剖面圖，模型學到的就是這個關聯。deep penetration 與
+# cum overflow 也有同樣傾向（配剖面 2784、2223 張）。
+#
+#   cross-section(18686) 剖面本體、x-ray(17548) 疊在身上的透視版、
+#   uterus(11907) 剖面裡最常畫的器官、inset(2718) 角落那種內嵌小框
+#
+# multiple views 擋不住這一類：它擋的是多格分鏡，而那個小框是單圖內嵌。
+# internal view 與 cutaway 查過是 0 張，沒放進來 —— 模型沒學過的字只會稀釋。
 NEGATIVE = (
     "bad quality, worst quality, worst detail, displeasing, lowres, sketch, censored, "
     "bar censor, mosaic censoring, english text, watermark, signature, artist name, "
     "username, logo, "
     "speech bubble, multiple views, artistic error, bad anatomy, bad hands, "
     "extra digits, fewer digits, extra arms, deformed, blurry, jpeg artifacts, "
-    "3d, realistic, photorealistic"
+    "3d, realistic, photorealistic, "
+    "cross-section, x-ray, uterus, inset"
 )
 
 BANNED = {
@@ -557,6 +572,12 @@ RECLASS = {
     # 在江戶 3000 張裡是 **0**（weird 模式才有 82 / 69）。
     # 腰帶本來就是一次只繫一條，給它一個 waist 格既能抽得到也不會疊三條。
     # 江戶尤其吃虧：obi 是那個時代最具代表性的配件，卻完全抽不到。
+    # naked coat／naked jacket 的意思是「除了這件什麼都沒穿」，也就是整套造型本身，
+    # 但它們的格子是 outer —— 外套永遠排在主衣之後才被考慮，於是「身上已經有主衣
+    # 就拒絕」那條規則會把它們一律擋掉（實測直接變成抽不到）。放進主衣格，
+    # 它們才會在決定主要穿著的那一步就被選中。隱含的 coat／jacket 照樣佔 outer。
+    "naked coat": {"mutex": "onepiece"},
+    "naked jacket": {"mutex": "onepiece"},
     "obi": {"mutex": "waist"},
     "sash": {"mutex": "waist"},
     "belt": {"mutex": "waist"},
@@ -1100,7 +1121,34 @@ def norm(item: dict) -> dict | None:
         if mutex == "sex_act" or tag in SEX_ACT:
             if "sex_act" not in mutex_extra:
                 mutex_extra.append("sex_act")
-        mutex = None
+        # 服裝的傘狀父項**保留**互斥格。
+        #
+        # 原本一律清成 None，理由是「父項靠子項的 implies 進場，父子不該搶同一格」。
+        # 那對「子項被抽到、父項跟著進來」是對的，但漏掉了另一半：**父項自己被抽到
+        # 或被釘選**的時候，那一格就沒有人佔，引擎會以為主衣還空著。
+        #
+        # 實測（釘選，800 張）：
+        #   white dress / micro bikini（有 onepiece 格）→ 不會再有上衣下身
+        #   dress / bikini（被清成 None）→ shirt 261、skirt 258、pants 142、sweater 111
+        # 也就是說釘「比基尼」會得到比基尼配襯衫加裙子。
+        #
+        # 父子不會互相驅逐：occupy() 和 implies 那條路徑都有 parentChild() 保護，
+        # 所以子項照樣進得來；改變的只是「父項先佔住之後，子項不再另外加一件」——
+        # 而那本來就是多餘的（子項的 implies 一定會把父項帶進來）。
+        # 但時代服飾那一家例外，它們本來就是可以分層穿的：和服配袴、鎧甲配零件。
+        # 讓 kimono／japanese clothes 佔住主衣格，袴就永遠配不上和服了
+        # （實測 hakama 與 pelvic curtain 會直接變成抽不到）。
+        # 只留真的有「佔下身格的分層夥伴」的那兩家：
+        #   edo           -> hakama（mutex=bottom）
+        #   ancient_china -> pelvic curtain（mutex=bottom）
+        # 中世紀與古希臘查過沒有這種夥伴（armor 的同伴 tabard／cape／cloak 全是
+        # outer，不衝突），所以它們照樣佔主衣格 —— 不然穿著鎧甲還會再加一件裙子，
+        # 實測中世紀 skirt 因此衝到 61%，越過「沒有哪一件衣服佔掉一個時代過半」那條線。
+        LAYERED_FAMILY = {
+            "kimono", "yukata", "japanese clothes", "chinese clothes",
+        }
+        if section != "clothing" or tag in LAYERED_FAMILY:
+            mutex = None
     if tag in ERA_OF:
         era = list(ERA_OF[tag])
     needs = [x for x in needs if x in NEED_KEYS]

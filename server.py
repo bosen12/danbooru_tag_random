@@ -104,7 +104,7 @@ def _negative() -> str:
     # 備援比正式嚴格是最糟的組合：真的少了 lexicon.json 時行為會跟平常不一樣，
     # 而平常那個才是每張圖在用的。要不要加未成年防護是產品決定，要加就加在正式那份。
     return (
-        "bad quality, worst quality, worst detail, displeasing, lowres, sketch, censored, bar censor, mosaic censoring, english text, watermark, signature, artist name, username, logo, speech bubble, multiple views, artistic error, bad anatomy, bad hands, extra digits, fewer digits, extra arms, deformed, blurry, jpeg artifacts, 3d, realistic, photorealistic"
+        "bad quality, worst quality, worst detail, displeasing, lowres, sketch, censored, bar censor, mosaic censoring, english text, watermark, signature, artist name, username, logo, speech bubble, multiple views, artistic error, bad anatomy, bad hands, extra digits, fewer digits, extra arms, deformed, blurry, jpeg artifacts, 3d, realistic, photorealistic, cross-section, x-ray, uterus, inset"
     )
 
 

@@ -70,6 +70,20 @@ const NEEDS = [
   ["golf club", ["golf", "golf course"], ["golf course"]],
   ["tennis racket", ["tennis", "tennis court", "sports court", "school gym"], ["tennis court"]],
   ["bowling ball", ["bowling alley"], ["bowling alley"]],
+  // 語料那批道具。它們原本一個前提都沒有，於是散落到任何地方 —— 實測 4200 張裡
+  // desk lamp 有 93% 出現在沒有桌子書房臥室的場合、nightstand／poker table／
+  // sink／steering wheel／whiteboard 更是 100%。補上 NEEDS_CONTEXT 之後收進這裡，
+  // 讓「前提事後被 reconcile 刪掉」的那一類也一起被守著。
+  ["desk lamp", ["desk", "on desk", "office", "bedroom", "classroom", "library", "hotel room", "studying", "writing", "reading"], ["office"]],
+  ["nightstand", ["bedroom", "hotel room", "love hotel", "bed", "on bed"], ["bedroom"]],
+  ["poker table", ["casino", "nightclub", "bar (place)"], ["casino"]],
+  ["sink", ["bathroom", "kitchen", "clinic", "hospital"], ["bathroom"]],
+  ["counter", ["kitchen", "cafe", "bar (place)", "restaurant", "convenience store", "supermarket", "izakaya"], ["kitchen"]],
+  ["steering wheel", ["car", "car interior", "driving", "cockpit", "airplane interior", "racing suit"], ["car interior"]],
+  ["shopping cart", ["supermarket", "convenience store", "shopping", "market"], ["supermarket"]],
+  ["microphone stand", ["singing", "karaoke", "karaoke box", "bar (place)", "livestream"], ["karaoke box"]],
+  ["whiteboard", ["classroom", "office", "teacher", "laboratory", "studying"], ["classroom"]],
+  ["christmas tree", ["christmas", "winter", "living room"], ["living room"]],
 ];
 // beach umbrella 與 innertube 刻意不在上面：場景鎖開著時，配件只有 mutex 落在
 // jewelry/eyewear/neckwear/hands/headwear/feet 這幾類才過得了 fill("clothing")，
