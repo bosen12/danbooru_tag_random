@@ -552,6 +552,16 @@ RECLASS = {
     #
     # 補完之後（6000 張，全時代）：necklace 0 -> 440、gloves 48 -> 286、bowtie 0 -> 38，
     # 而既有手足幾乎沒被排擠（ring 441 -> 392、stud earrings 199 -> 201、choker 162 -> 151）。
+    # 腰上的東西本來全是 mutex 空的配件 —— 那在 normal 模式（預設）抽不到，
+    # 因為 fill("clothing") 只放行 outfit 白名單裡的互斥格。實測 obi 和 sash
+    # 在江戶 3000 張裡是 **0**（weird 模式才有 82 / 69）。
+    # 腰帶本來就是一次只繫一條，給它一個 waist 格既能抽得到也不會疊三條。
+    # 江戶尤其吃虧：obi 是那個時代最具代表性的配件，卻完全抽不到。
+    "obi": {"mutex": "waist"},
+    "sash": {"mutex": "waist"},
+    "belt": {"mutex": "waist"},
+    "black belt": {"mutex": "waist"},
+    "brown belt": {"mutex": "waist"},
     "blue necktie": {"mutex": "neckwear"},
     "black necktie": {"mutex": "neckwear"},
     "black bowtie": {"mutex": "neckwear"},

@@ -11939,7 +11939,7 @@
         "flash",
         "sex"
       ],
-      "mutex": null,
+      "mutex": "waist",
       "bind": [],
       "implies": [],
       "layer": "accessory",
@@ -14989,7 +14989,7 @@
         "flash",
         "sex"
       ],
-      "mutex": null,
+      "mutex": "waist",
       "bind": [],
       "implies": [],
       "layer": "accessory",
@@ -16550,7 +16550,7 @@
         "flash",
         "sex"
       ],
-      "mutex": null,
+      "mutex": "waist",
       "bind": [],
       "implies": [],
       "layer": "accessory",
@@ -16955,7 +16955,7 @@
         "flash",
         "sex"
       ],
-      "mutex": null,
+      "mutex": "waist",
       "bind": [],
       "implies": [],
       "layer": "accessory",
@@ -19340,7 +19340,7 @@
         "flash",
         "sex"
       ],
-      "mutex": null,
+      "mutex": "waist",
       "bind": [],
       "implies": [],
       "layer": "accessory",

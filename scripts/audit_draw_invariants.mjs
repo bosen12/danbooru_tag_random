@@ -703,6 +703,168 @@ FAIL 性行為互斥  ×${bad}/${N}`);
   }
 }
 
+// --- 針對性複查：全年齡的中世紀男性浴場要交代身體 ----------------------------
+//
+// 面板組合全掃（405 種 x 800 張）掃出來的：只有 medieval 有異常，而且集中在男性。
+// 追下去是全年齡尺度 + 中世紀 + 男性 + 洗澡時，**每一個浴場衣物都被擋掉**：
+//   wet clothes / naked towel / nude   -> 分級擋
+//   loincloth / fundoshi               -> 分級擋
+//   chemise                            -> female-only
+//   bathrobe / yukata                  -> 時代不對
+// 唯一活得下來的是 towel（era any、gate any、全年齡不擋），但它 layer=accessory、
+// mutex 是空的，normal 模式的 fill("clothing") 挑不到它。
+// 結果 85/2000 的圖**整張沒有任何衣物或裸標**。這是既有問題（b324de1 時是 86/2000）。
+//
+// 補救池空了的時候退回 towel，只影響這個池子真的空掉的情境。
+{
+  const N = 2000;
+  let noBody = 0;
+  const ex = [];
+  for (let i = 0; i < N; i += 1) {
+    const s = defaultSettings(data);
+    s.eras = ["medieval"];
+    s.girl = false;
+    s.boy = true;
+    s.rating = "general";
+    s.heats = ["activity"];
+    const seed = 770000 + i;
+    const pos = drawOne(lex, s, new Set(), new Set(), mulberry32(seed), seed).positive;
+    const tags = pos.split(",").map((t) => t.trim());
+    const body = tags.some((t) => {
+      const it = lex.byTag.get(t);
+      return it && it.section === "clothing" &&
+        (it.layer === "garment" || it.layer === "skin" || t === "towel");
+    });
+    if (!body) { noBody += 1; if (ex.length < 2) ex.push(`seed=${seed}`); }
+  }
+  if (noBody === 0) {
+    console.log(`ok   全年齡中世紀男性浴場交代得出身體：${N} 張全部有衣物或浴巾`);
+  } else {
+    console.log("");
+    console.log(`FAIL 全年齡中世紀男性有 ${noBody}/${N} 張沒交代身體`);
+    console.log("  規格：每張圖都要說得出身上有什麼。那個組合下所有浴場衣物都被分級或性別擋掉，");
+    console.log("        唯一剩下的 towel 又因為沒有互斥格而抽不到 —— 補救池空了要退回 towel。");
+    for (const e of ex) console.log(`  重播：${e}`);
+    console.log("");
+    console.log("1 條 hard 不變式被違反");
+    process.exit(1);
+  }
+}
+
+// --- 針對性複查：腰上的東西抽得到 --------------------------------------------
+//
+// obi／sash／belt 全是 layer=accessory 且 mutex 空的，而 normal 模式的
+// fill("clothing") 只放行 outfit 白名單裡的互斥格 —— 白名單沒有腰這一格，
+// 所以它們一律抽不到。實測江戶 3000 張：obi 0、sash 0（weird 模式才有 82／69）。
+// obi 偏偏是江戶最具代表性的配件。
+//
+// 給它們一個 waist 格（腰帶本來就一次只繫一條），並把 waist 放進白名單。
+{
+  const N = 3000;
+  const want = ["obi", "sash"];
+  const hit = Object.fromEntries(want.map((t) => [t, 0]));
+  for (let i = 0; i < N; i += 1) {
+    const s = defaultSettings(data);
+    s.eras = ["edo"];
+    s.girl = true;
+    const seed = 880000 + i;
+    const names = new Set(
+      drawOne(lex, s, new Set(), new Set(), mulberry32(seed), seed).positive.split(",").map((t) => t.trim())
+    );
+    for (const t of want) if (names.has(t)) hit[t] += 1;
+  }
+  // 實測 obi 46、sash 43。門檻取 10：離實測有四倍餘裕，離壞掉的 0 非常遠。
+  if (want.every((t) => hit[t] >= 10)) {
+    console.log(`ok   江戶的腰部配件抽得到：${want.map((t) => `${t} ${hit[t]}`).join("、")}`);
+  } else {
+    console.log("");
+    console.log(`FAIL 江戶的腰部配件抽不到  ${want.map((t) => `${t} ${hit[t]}`).join("、")}（各需 >=10）`);
+    console.log("  規格：mutex 空的配件在 normal 模式一律抽不到。腰上的東西要有 waist 格，");
+    console.log("        而且 waist 要在 fill(\"clothing\") 的 outfit 白名單裡。");
+    console.log("");
+    console.log("1 條 hard 不變式被違反");
+    process.exit(1);
+  }
+}
+
+// --- 針對性複查：全年齡的中世紀男性浴場要交代身體 ----------------------------
+//
+// 面板組合全掃（405 種 x 800 張）掃出來的：異常只集中在 medieval，而且是男性。
+// 追下去是全年齡 + 中世紀 + 男性 + 洗澡時，每一個浴場衣物都被擋掉：
+//   wet clothes / naked towel / nude -> 分級擋；loincloth / fundoshi -> 分級擋；
+//   chemise -> female-only；bathrobe / yukata -> 時代不對。
+// 唯一活得下來的是 towel（era any、gate any、全年齡不擋），但它 layer=accessory、
+// mutex 空，normal 模式的 fill("clothing") 挑不到 —— 於是 85/2000 的圖整張沒有
+// 任何衣物或裸標。既有問題（loop 之前是 86/2000）。
+{
+  const N = 2000;
+  let noBody = 0;
+  const ex = [];
+  for (let i = 0; i < N; i += 1) {
+    const s = defaultSettings(data);
+    s.eras = ["medieval"];
+    s.girl = false;
+    s.boy = true;
+    s.rating = "general";
+    s.heats = ["activity"];
+    const seed = 770000 + i;
+    const tags = drawOne(lex, s, new Set(), new Set(), mulberry32(seed), seed)
+      .positive.split(",").map((t) => t.trim());
+    const body = tags.some((t) => {
+      const it = lex.byTag.get(t);
+      return it && it.section === "clothing" &&
+        (it.layer === "garment" || it.layer === "skin" || t === "towel");
+    });
+    if (!body) { noBody += 1; if (ex.length < 2) ex.push("seed=" + seed); }
+  }
+  if (noBody === 0) {
+    console.log("ok   全年齡中世紀男性浴場交代得出身體：" + N + " 張全部有衣物或浴巾");
+  } else {
+    console.log("");
+    console.log("FAIL 全年齡中世紀男性有 " + noBody + "/" + N + " 張沒交代身體");
+    console.log("  規格：每張圖都要說得出身上有什麼。那個組合下浴場衣物全被分級或性別擋掉，");
+    console.log("        唯一剩的 towel 又沒有互斥格 —— 補救池空了要退回 towel。");
+    for (const e of ex) console.log("  重播：" + e);
+    console.log("");
+    console.log("1 條 hard 不變式被違反");
+    process.exit(1);
+  }
+}
+
+// --- 針對性複查：腰上的東西抽得到 --------------------------------------------
+//
+// obi／sash／belt 都是 layer=accessory 且 mutex 空，而 normal 模式的
+// fill("clothing") 只放行 outfit 白名單裡的互斥格 —— 白名單沒有腰這一格，
+// 所以它們一律抽不到。實測江戶 3000 張 obi 0、sash 0（weird 模式才有 82／69）。
+// obi 偏偏是江戶最具代表性的配件。給它們 waist 格（腰帶本來一次只繫一條）。
+{
+  const N = 3000;
+  const want = ["obi", "sash"];
+  const hit = Object.fromEntries(want.map((t) => [t, 0]));
+  for (let i = 0; i < N; i += 1) {
+    const s = defaultSettings(data);
+    s.eras = ["edo"];
+    s.girl = true;
+    const seed = 880000 + i;
+    const names = new Set(
+      drawOne(lex, s, new Set(), new Set(), mulberry32(seed), seed).positive.split(",").map((t) => t.trim())
+    );
+    for (const t of want) if (names.has(t)) hit[t] += 1;
+  }
+  // 實測 obi 46、sash 43。門檻取 10：離實測四倍餘裕，離壞掉的 0 非常遠。
+  if (want.every((t) => hit[t] >= 10)) {
+    console.log("ok   江戶的腰部配件抽得到：" + want.map((t) => t + " " + hit[t]).join("、"));
+  } else {
+    console.log("");
+    console.log("FAIL 江戶的腰部配件抽不到  " + want.map((t) => t + " " + hit[t]).join("、") + "（各需 >=10）");
+    console.log("  規格：mutex 空的配件在 normal 模式抽不到。腰上的東西要有 waist 格，");
+    console.log("        而且 waist 要在 outfit 白名單裡。");
+    console.log("");
+    console.log("1 條 hard 不變式被違反");
+    process.exit(1);
+  }
+}
+
 if (!hardHits.size) {
   console.log("hard：全部通過。");
   console.log("\nok");

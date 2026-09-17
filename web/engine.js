@@ -4910,8 +4910,11 @@ export function drawOne(lex, settings, pinned, userBanned, rand, seed) {
         if (item.tag === "hard hat") return used.has("construction worker") || used.has("construction site");
         if (item.tag === "police hat") return used.has("policewoman") || used.has("police uniform");
         if (item.tag === "lab coat") return used.has("scientist") || used.has("doctor") || used.has("laboratory");
+        // waist 是新加的格子（obi／sash／belt）。腰上的東西以前 mutex 是空的，
+        // 於是在這條路徑上一律被擋 —— 江戶的 obi 在 3000 張裡是 0。
         const outfit = new Set([
           "feet",
+          "waist",
           "legs",
           "jewelry",
           "eyewear",
@@ -5222,6 +5225,23 @@ export function drawOne(lex, settings, pinned, userBanned, rand, seed) {
         // 拿裸體交差。有衣服可穿就穿衣服，真的一件都沒有才退回裸標
         //（不然浴場又會變回什麼都沒交代）。實測這條沒加之前，
         // 只勾活動的 3000 張裡會漏出兩張全裸。
+        // 池子空了的退路：一條浴巾。
+        //
+        // 中世紀男性在全年齡尺度下，浴場的每一個選項都被擋掉：wet clothes／
+        // naked towel／nude 被分級擋、loincloth 和 fundoshi 也被分級擋、chemise 是
+        // female-only、bathrobe 和 yukata 的時代不對。於是 4.25% 的圖**整張沒有任何
+        // 衣物或裸標**（實測 85/2000，三個例子全是 bathing）。
+        //
+        // 唯一活得下來的是 towel：era any、gate any、全年齡不擋。但它 layer=accessory、
+        // mutex 是空的，normal 模式的 fill("clothing") 根本挑不到它（那是先前查到的
+        // 34 個「mutex 空的配件抽不到」之一）。
+        //
+        // 只在 pool 真的空的時候才補，所以其他情境一個都不受影響 —— 那些情境的
+        // pool 本來就不是空的。
+        if (!pool.length) {
+          const towel = lex.byTag.get("towel");
+          if (towel && allow(towel)) pool.push(towel);
+        }
         const dressed = pool.filter((item) => item.layer !== "skin");
         const rescue = heat === "activity" && dressed.length ? dressed : pool;
         // 先照真實比例擲一次裸體，再退回服裝池。
