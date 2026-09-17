@@ -1479,6 +1479,21 @@ function actFitsSomePlaces(act, places, realistic = false) {
   return [...places].some((p) => placeFitsActs(p, new Set([act]), realistic));
 }
 
+/**
+ * 把一份場地清單收斂成「這個時代真的存在的那些」。
+ *
+ * 場地清單（JOB_PLACE、ACT_PLACE）都是不分時代寫的，拿它們做可行性判斷時必須先
+ * 過這一關，否則會用一個當下根本不存在的場地去證明「有地方可去」。
+ */
+export function placesInEra(places, lex, era) {
+  const out = new Set();
+  for (const p of places) {
+    const it = lex.byTag.get(p);
+    if (it && eraOk(it, era)) out.add(p);
+  }
+  return out;
+}
+
 function jobPlacesOf(jobs) {
   const s = new Set();
   for (const j of jobs) {
@@ -4587,9 +4602,22 @@ export function drawOne(lex, settings, pinned, userBanned, rand, seed) {
         return false;
       }
       if (item.mutex === "activity") {
+        // 可行性檢查要套時代濾鏡。這一關問的是「這個活動至少有一個地方可以做」，
+        // 但場地清單是不分時代的：清單裡唯一撐住這個活動的場地若不屬於當前時代，
+        // 「有地方可去」就是假的 —— 活動被放行，場地那一格卻誰也填不進去。
+        // （courtyard 補進 maid 時就是這樣：中庭同時是女僕場地也是運動場地，
+        // 運動活動因此過關，但中庭不是現代的字，於是 178 張運動圖全都沒有場地。）
+        // 清單為空代表那個職業在這個時代一個場地都沒有 —— 今天沒有這種職業
+        // （查過，0 組），真的出現的話活動也一定排不進去，擋掉是對的。
         const jp = jobPlacesOf(jobs);
-        if (jp.size && !actFitsSomePlaces(item.tag, jp, true)) return false;
-        if (!jobs.size && used.has("maid") && !actFitsSomePlaces(item.tag, JOB_PLACE.maid, true)) return false;
+        if (jp.size) {
+          const usable = placesInEra(jp, lex, era);
+          if (!usable.size || !actFitsSomePlaces(item.tag, usable, true)) return false;
+        }
+        if (!jobs.size && used.has("maid")) {
+          const usable = placesInEra(JOB_PLACE.maid, lex, era);
+          if (!usable.size || !actFitsSomePlaces(item.tag, usable, true)) return false;
+        }
       }
       for (const d of item.implies || []) {
         const dit = lex.byTag.get(d);

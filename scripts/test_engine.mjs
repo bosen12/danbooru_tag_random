@@ -34,6 +34,7 @@ import {
   actionGarmentKeys,
   actionFitsClothes,
   placeFitsActs,
+  placesInEra,
   parseWeighted,
   formatWeighted,
   insertTriggerAfterCast,
@@ -3734,6 +3735,25 @@ function indoorOutdoorClash(have) {
       if ([...h].some((t) => lex.byTag.get(t)?.mutex === "job")) otherJob += 1;
     }
     eq("pin maid never auto another job", otherJob, 0);
+    // 場地清單（JOB_PLACE／ACT_PLACE）都是不分時代寫的。拿它去判斷「這個活動有沒有
+    // 地方可做」之前必須先套時代濾鏡，否則會用一個當下根本不存在的場地去證明
+    // 「有地方可去」—— 活動被放行，場地那一格卻誰也填不進去。
+    //
+    // courtyard 就是這樣的一個字：它讀起來像個合理的女僕場地，同時又在 SPORT_PLACE
+    // 裡，而它的 era 只有古代。少了濾鏡，把它收進女僕的場地清單就會讓運動活動
+    // 通過可行性檢查、跟女僕裝一起抽出來，然後現代根本沒有中庭可以站。
+    // 實測過一次：3000 張裡冒出 178 張運動圖，每一張都沒有場地。
+    const maidish = new Set(["living room", "kitchen", "bedroom", "courtyard"]);
+    const canProve = (act, era) => {
+      const usable = placesInEra(maidish, lex, era);
+      return [...usable].some((p) => placeFitsActs(p, new Set([act]), true));
+    };
+    eq("時代濾鏡在現代濾掉中庭", placesInEra(maidish, lex, "modern").has("courtyard"), false);
+    eq("時代濾鏡在中世紀留住中庭", placesInEra(maidish, lex, "medieval").has("courtyard"), true);
+    eq("時代濾鏡留下的通用場地沒被誤殺", placesInEra(maidish, lex, "modern").has("living room"), true);
+    eq("現代不能拿中庭證明這裡可以運動", canProve("playing sports", "modern"), false);
+    eq("中世紀可以拿中庭證明這裡可以運動", canProve("playing sports", "medieval"), true);
+
     const pinOnsen = applyPresetTags(lex, BUILTIN_PRESETS.find((p) => p.id === "onsen").tags, new Set());
     let bathChair = 0;
     for (let i = 0; i < 40; i++) {
