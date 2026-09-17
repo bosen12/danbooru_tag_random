@@ -4974,11 +4974,18 @@ function indoorOutdoorClash(have) {
     // 讓這條 RNG 路徑位移，所以這次的差異就只有少了那一個字。
     // 這次差異只有少一個 bra，其餘一個 byte 都沒動 —— 沒有重排、沒有換字，
     // 正是「只改該改的那一格」應有的樣子。
+    // 第十二次：傢俱那一格補上專屬的 fillSlot（跟天氣、光源當初同一種病 ——
+    // env 的五個格子都有人填，只有 furniture 沒有，整格只有 0.4%，連 on bed 在
+    // 5184 張的面板掃描裡都是 0）。這一張本身沒有傢俱，但室內的傢俱擲骰有發生、
+    // 只是沒中，那一次 rand() 就把後面整條序列往後推 —— nude -> bathrobe、
+    // sunrise/ceiling light/surreal -> dusk/shadow/bokeh 都是牌序位移。
+    // 新的這張仍然自洽：浴缸、室內、黃昏光；浴袍配浴缸沒問題，「洗澡時不穿袍子」
+    // 那條規則管的是正在洗澡的活動，這一張的活動是別的。
     // 第十一次：special_prompts 語料稽核加進 105 個字（詞庫 1292 -> 1397）。
     // 候選池變大 13%，牌序整條位移，所以這次差異很大 —— 不是哪條規則變鬆。
     // 新的這一張自洽：bathtub + indoors + nude + female masturbation 說得通，
     // 而且裡面就有兩個這次新加的字（nervous smile、surreal），正好是這次改動的示範。
-    "1girl, solo, adult, very short hair, grey eyes, grey hair, bangs, large breasts, soft breasts, natural breasts, tareme, nail polish, red nails, nude, female masturbation, wariza, from behind, looking away, nervous smile, clenched teeth, modern, bathtub, indoors, sunrise, ceiling light, surreal, nsfw, explicit, masterpiece, best quality, amazing quality");
+    "1girl, solo, adult, very short hair, grey eyes, grey hair, bangs, large breasts, soft breasts, natural breasts, tareme, nail polish, red nails, bathrobe, female masturbation, wariza, from behind, looking away, nervous smile, clenched teeth, modern, bathtub, indoors, dusk, shadow, bokeh, nsfw, explicit, masterpiece, best quality, amazing quality");
   ok("drawOne exposes shadow diagnostics", Array.isArray(shadowIntegrationDraw.shadowViolations));
 
   const eatProneShadow = validateSupportShadow({

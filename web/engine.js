@@ -78,6 +78,10 @@ const SEX_BLOCKING_BODY = new Set(["sleeping"]);
 const STILL_BODY = new Set(["sleeping", "lying", "on back", "on stomach", "on side", "reclining"]);
 const LOCKED_SIT = new Set(["seiza", "wariza", "indian style"]);
 const GROUND_BODY = new Set(["all fours", "crawling", "top-down bottom-up"]);
+// 站著、走著、跑著的人不會同時「在沙發上」。on bed／on chair 這幾個字原本是
+// body_pose，被改成 env/furniture 之後就脫離了姿勢相容那一整套檢查，於是
+// 「standing + on couch」這種組合一直畫得出來（基準線 4/24，六分之一）。
+const UPRIGHT_BODY = new Set(["standing", "walking", "running", "jumping", "standing split"]);
 // 坐著或跪著做不了的活動。清單從 sports.js 算出來，不手抄，免得加新運動時失同步。
 // 例外寫在 SEATED_OK_SPORT：跪射是合理的姿勢；騎車和游泳本來就有自己的姿勢規則。
 const SEATED_OK_SPORT = new Set(["archery", "riding bicycle", "swimming", "skiing"]);
@@ -4483,6 +4487,13 @@ export function drawOne(lex, settings, pinned, userBanned, rand, seed) {
       if (HAND_GESTURE.has(item.tag) && !pinned.has(item.tag) && handsBusy) return false;
       if (HANDS_BUSY_ACT.has(item.tag) && [...used].some((t) => ARM_POSE.has(t))) return false;
       if (HANDS_BUSY_ACT.has(item.tag) && [...used].some((t) => HAND_GESTURE.has(t))) return false;
+      // 傢俱：室內才有，而且人得在上面 —— 站著的人不會「在沙發上」。
+      // 這一格從 pose 搬到 env 之後就漏掉了姿勢相容檢查，而通用的 fill("env")
+      // 也不管室內外（基準線裡 24 張有傢俱的圖，8 張是室外、4 張配站姿）。
+      if (item.mutex === "furniture") {
+        if (used.has("outdoors")) return false;
+        if ([...used].some((t) => UPRIGHT_BODY.has(t))) return false;
+      }
       if (HANDS_BUSY_BODY.has(item.tag) && [...used].some((t) => ARM_POSE.has(t))) return false;
       if (HANDS_BUSY_ACT.has(item.tag) && [...used].some((t) => HANDS_BUSY_BODY.has(t))) return false;
       if (HANDS_BUSY_ACT.has(item.tag) && [...used].some((t) => HANDS_BUSY_ACT.has(t))) return false;
@@ -5165,6 +5176,17 @@ export function drawOne(lex, settings, pinned, userBanned, rand, seed) {
     if (rand() < steamChance) commit("steam");
   } else if (steamChance === 0 && used.has("outdoors") && rand() < 0.15) {
     fillSlot("env", "weather");
+  }
+  // 傢俱。跟天氣當初一樣的病：place／in_out／weather／day_night／lighting 都有
+  // 專屬的 fillSlot，只有 furniture 沒有 —— 那六個字（on bed／on chair／on couch／
+  // bunk bed／on desk／under table）只能在通用的 fill("env") 裡跟另外三百多個 env
+  // 字搶剩餘配額，結果整格只有 0.4% 的圖填得到，連 on bed 這種最基本的概念在
+  // 5184 張的面板掃描裡都是 0。
+  //
+  // 同樣不能無條件填：不是每張圖都有人坐在什麼東西上。室內才擲骰子，
+  // 跟天氣「室外才擲」對稱。
+  if (used.has("indoors") && rand() < 0.2) {
+    fillSlot("env", "furniture");
   }
   fillSlot("env", "day_night");
   // 光源。以前沒有人明確填這一格，lighting 只能在剩下的 fill("env") 裡跟道具、

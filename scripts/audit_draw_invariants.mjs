@@ -1011,6 +1011,86 @@ FAIL 性行為互斥  ×${bad}/${N}`);
   }
 }
 
+// 傢俱：抽得到，而且人真的在上面、而且在室內。
+//
+// 這一格本來是結構性餓死的：place／in_out／weather／day_night／lighting 都有
+// 專屬的 fillSlot，只有 furniture 沒有，那六個字只能在通用的 fill("env") 裡跟
+// 另外三百多個 env 字搶剩餘配額 —— 整格只有 0.4% 的圖填得到，連 on bed 這種
+// 最基本的概念在 5184 張的面板掃描裡都是 0。跟天氣當初一模一樣的病。
+//
+// 而少數填得到的那些還不一定成立：基準線 24 張有傢俱的圖裡，8 張在室外、
+// 4 張配著站姿。on bed／on chair 原本是 body_pose，搬到 env/furniture 之後
+// 就脫離了姿勢相容那一整套檢查。
+//
+// 所以這條要同時守兩件事：**填得到**，而且**填得對**。只守其中一邊都會漏 ——
+// 只守「填得到」會放過站在沙發上的人，只守「填得對」的話整格是空的也算通過。
+{
+  const N = 260;
+  const FURN = ["on bed", "on chair", "on couch", "bunk bed", "on desk", "under table"];
+  const UPRIGHT = ["standing", "walking", "running", "jumping", "standing split"];
+  let drew = 0;
+  let withFurn = 0;
+  let upright = 0;
+  let outdoor = 0;
+  const kinds = new Set();
+  let firstBad = null;
+  for (const era of ERAS) {
+    for (const heats of [["activity"], ["tease"], ["flash"], ["sex"]]) {
+      for (let i = 0; i < N; i += 1) {
+        const s = defaultSettings(data);
+        s.eras = [era];
+        s.girl = true;
+        s.boy = true;
+        s.heats = heats;
+        s.weights = { activity: 0, tease: 0, flash: 0, sex: 0 };
+        s.weights[heats[0]] = 1;
+        const seed = 530000 + i;
+        drew += 1;
+        const names = drawOne(lex, s, new Set(), new Set(), mulberry32(seed), seed)
+          .positive.split(",").map((x) => x.trim());
+        const f = names.filter((t) => FURN.includes(t));
+        if (!f.length) continue;
+        withFurn += 1;
+        for (const x of f) kinds.add(x);
+        const up = names.filter((t) => UPRIGHT.includes(t));
+        if (up.length) {
+          upright += 1;
+          if (!firstBad) firstBad = { seed, why: `${f.join("+")} 配 ${up.join("+")}`, pos: names.join(", ") };
+        }
+        if (names.includes("outdoors")) {
+          outdoor += 1;
+          if (!firstBad) firstBad = { seed, why: `${f.join("+")} 配 outdoors`, pos: names.join(", ") };
+        }
+      }
+    }
+  }
+  // 實測約 112/6240（1.8%）、六種都出現過。門檻取 40 張與 4 種：
+  // 離實測有餘裕，離「結構性餓死」的 24 張／基準線很遠。
+  const enough = withFurn >= 40 && kinds.size >= 4;
+  if (enough && upright === 0 && outdoor === 0) {
+    console.log(`ok   傢俱抽得到且成立：${withFurn}/${drew} 張、${kinds.size} 種、站姿 0、室外 0`);
+  } else {
+    console.log("");
+    if (!enough) {
+      console.log(`FAIL 傢俱這一格又餓死了  只有 ${withFurn}/${drew} 張、${kinds.size} 種（需要 >=40 張且 >=4 種）`);
+      console.log("  規格：env 的每一格都要有人填。furniture 沒有專屬的 fillSlot 時，");
+      console.log("        它得跟三百多個 env 字搶剩餘配額，整格會掉到 0.4%。");
+    }
+    if (upright || outdoor) {
+      console.log(`FAIL 傢俱上的人站著或人在室外  站姿 ${upright}、室外 ${outdoor}`);
+      console.log("  規格：站著的人不會「在沙發上」，室外也沒有沙發。on bed／on chair");
+      console.log("        原本是 body_pose，搬到 env/furniture 之後脫離了姿勢相容檢查。");
+      if (firstBad) {
+        console.log(`  重播：seed=${firstBad.seed}  ${firstBad.why}`);
+        console.log(`  POS：${firstBad.pos}`);
+      }
+    }
+    console.log("");
+    console.log("1 條 hard 不變式被違反");
+    process.exit(1);
+  }
+}
+
 if (!hardHits.size) {
   console.log("hard：全部通過。");
   console.log("\nok");
