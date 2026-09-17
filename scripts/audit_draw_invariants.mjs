@@ -497,6 +497,67 @@ FAIL 性行為互斥  ×${bad}/${N}`);
   }
 }
 
+// --- 針對性複查：正在洗澡時穿的東西 ------------------------------------------
+//
+// 這條是用 Danbooru 當「合不合理」的裁判找出來的：把我們常抽在一起的跨語意域配對
+// 拿去查真實共現率，最低的一批幾乎全是浴袍配洗澡。
+//
+// Danbooru（分母是該動作的總數）：
+//   bathing 18,182   裸 67.2%  towel 28.9%  naked towel 10.6%
+//                    浴袍 0.1%  浴衣 0.4%  褌 0.2%  chemise 0.0%
+// 修之前：現代 flash 的浴場 339 張裡，袍子 100% 起跳、裸 0、浴巾 0。
+//
+// **守的是「有替代品時就不准穿袍子」，不是「任何情況都不准」。**
+// 袍子在沒有替代品的情境（tease／只勾活動／歷史時代）是唯一的有穿選項，
+// 硬拿掉會把畫面逼成全裸 —— 第一版就是這樣，維多利亞男性浴場 240 張裡 226 張全裸、
+// 只勾活動冒出 21 張裸標。所以規則是「有替代品才排除」，這條測試也照同樣的邊界驗。
+//
+// 現代 + flash 是替代品確定存在的組合（naked towel 是 modern/flash、裸體也允許）。
+{
+  const WASH = ["bathing", "showering", "shared bathing"];
+  const ROBE = ["bathrobe", "yukata", "bath yukata", "fundoshi", "chemise"];
+  const N = 4000;
+  let washN = 0, robeN = 0, coveredN = 0;
+  const examples = [];
+  for (let i = 0; i < N; i += 1) {
+    const s = defaultSettings(data);
+    s.eras = ["modern"];
+    s.girl = true;
+    s.heats = ["flash"];
+    const seed = 520000 + i;
+    const names = new Set(
+      drawOne(lex, s, new Set(), new Set(), mulberry32(seed), seed).positive.split(",").map((t) => t.trim())
+    );
+    if (!WASH.some((t) => names.has(t))) continue;
+    washN += 1;
+    const robe = ROBE.filter((t) => names.has(t));
+    if (robe.length) {
+      robeN += 1;
+      if (examples.length < 3) examples.push(`seed=${seed} ${robe.join("+")}`);
+    }
+    if (names.has("nude") || names.has("completely nude") || names.has("towel") || names.has("naked towel")) {
+      coveredN += 1;
+    }
+  }
+  // 取樣要夠，否則這條是空轉。實測 4000 張約有 339 張洗澡圖。
+  const enough = washN >= 80;
+  // 有替代品時袍子必須是 0；而且身體仍然要交代得出來（裸或浴巾），
+  // 不能靠「什麼都不穿也不說」來讓袍子歸零。實測 coveredN 約佔九成以上。
+  if (enough && robeN === 0 && coveredN >= washN * 0.5) {
+    console.log(`ok   有替代品時洗澡不穿袍子：${washN} 張洗澡圖，袍子 0，裸或浴巾 ${coveredN}`);
+  } else {
+    console.log("");
+    console.log(`FAIL 洗澡穿袍子  洗澡 ${washN} 張，袍子 ${robeN} 張，裸或浴巾 ${coveredN} 張`);
+    if (!enough) console.log("  取樣不足，這條會空轉 —— 先確認現代 flash 抽得到洗澡場景");
+    console.log("  規格：浴袍／浴衣／褌是洗完或更衣室才穿的（Danbooru 0.0～0.4%）。");
+    console.log("        有別的可穿時就不該選它；沒有替代品的情境才允許，那是刻意的。");
+    for (const e of examples) console.log(`  重播：${e}`);
+    console.log("");
+    console.log("1 條 hard 不變式被違反");
+    process.exit(1);
+  }
+}
+
 if (!hardHits.size) {
   console.log("hard：全部通過。");
   console.log("\nok");

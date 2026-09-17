@@ -4908,6 +4908,9 @@ function indoorOutdoorClash(have) {
     // 第四次：場地那一格從硬桶改成 4:1 軟權重（era:[any] 場地本來幾乎抽不到，
     // beach 在 18000 張裡是 0）。場地換了，整條 RNG 就跟著換人，所以這次差很多 ——
     // 不是金標壞掉，是那一格真的改了。理由與量測見 findings.md Loop 14 第四節。
+    // 第十次：洗澡當下不再穿袍子。這一張正是淋浴間，naked towel -> completely nude
+    // 就是那一擲真的生效了（作者本來寫的 0.34 以前問的是 pinned，自然抽到的浴場
+    // 永遠不觸發）。leaning forward -> bondage 是牌序位移。
     // 第九次：移除五個 Danbooru 查無的自創字（lotus pond／great hall／
     // extreme close-up／washing body／free use）。候選池少了五個，牌序整條位移，
     // 所以差異比較大。新的這張仍然自洽：shower (place) + indoors + steam，
@@ -4929,7 +4932,7 @@ function indoorOutdoorClash(have) {
     // 讓這條 RNG 路徑位移，所以這次的差異就只有少了那一個字。
     // 這次差異只有少一個 bra，其餘一個 byte 都沒動 —— 沒有重排、沒有換字，
     // 正是「只改該改的那一格」應有的樣子。
-    "1girl, solo, adult, very short hair, grey eyes, grey hair, bangs, large breasts, soft breasts, natural breasts, wet, thigh strap, hanging breasts, hoop earrings, earrings, naked towel, female masturbation, standing, from outside, looking away, angry, leaning forward, modern, shower (place), indoors, steam, day, spotlight, nsfw, explicit, masterpiece, best quality, amazing quality");
+    "1girl, solo, adult, very short hair, grey eyes, grey hair, bangs, large breasts, soft breasts, natural breasts, wet, thigh strap, hanging breasts, hoop earrings, earrings, completely nude, female masturbation, standing, from outside, looking away, angry, bondage, modern, shower (place), indoors, steam, day, spotlight, nsfw, explicit, masterpiece, best quality, amazing quality");
   ok("drawOne exposes shadow diagnostics", Array.isArray(shadowIntegrationDraw.shadowViolations));
 
   const eatProneShadow = validateSupportShadow({

@@ -547,6 +547,19 @@ const BATH_PLACE = new Set([
   "sauna",
 ]);
 const BATH_ACT = new Set(["bathing", "showering", "shared bathing"]);
+// 洗澡**當下**不會穿的東西。isBathOkGarment() 收的是「浴場」的衣服，那對更衣室、
+// 洗完、泡湯前後都對，但對「正在洗」太寬 —— 浴袍是洗完才披上的。
+//
+// Danbooru（分母是該動作的總數）：
+//   bathing 18,182   裸 67.2%  towel 28.9%  naked towel 10.6%  wet clothes 1.6%
+//                    浴袍 0.1%  浴衣 0.4%  bath yukata 0.2%  褌 0.2%  chemise 0.0%
+//   showering 6,606  裸 64.6%  towel 9.5%   浴袍 0.1%
+// 整個袍子／和服那一類都在 0.0～0.4%，是同一個現象，所以整類一起處理。
+const NOT_WHILE_WASHING = new Set(["bathrobe", "yukata", "bath yukata", "fundoshi", "chemise"]);
+function washingNow(used) {
+  for (const t of used) if (BATH_ACT.has(t)) return true;
+  return false;
+}
 // steam 掛在 mutex:"weather" 底下，但它不是天氣：Danbooru 上它在室內（15.0%）比在
 // 室外（9.0%）多，而且 12.4% 跟 onsen 同框 —— 那是浴場的蒸氣。跟著天氣那格在室外
 // 抽出來會擺錯地方，所以它要有自己的場合。
@@ -5129,6 +5142,27 @@ export function drawOne(lex, settings, pinned, userBanned, rand, seed) {
         const pit = lex.byTag.get(p);
         if (pit) for (const r of relOf(pit)) pinRel.add(r);
       }
+      // 袍子類只有在「拿掉之後還穿得上別的」時才排除。
+      //
+      // 第一版沒有這個條件，結果把不准裸體的情境逼到只剩裸標：維多利亞男性浴場
+      // 240 張裡 226 張全裸、只勾活動也冒出 21 張裸標、tease 也被迫裸一次。
+      // 袍子在那些情境是**唯一的有穿選項**，不是多餘的 —— 它對「浴場」是對的，
+      // 只是對「正在洗」不對。兩者都要顧，所以條件是「有替代品才排除」。
+      const dropRobes =
+        washingNow(used) &&
+        lex.bySection.clothing.some(
+          (item) =>
+            item.layer !== "skin" &&
+            !NOT_WHILE_WASHING.has(item.tag) &&
+            isBodyGarment(item) &&
+            garmentOkForKind(item, kind, era) &&
+            // 這裡不能用 allow()：要拿掉的那件袍子**此刻還佔著 onepiece 格**，
+            // allow() 會因此否決所有 onepiece 的替代品，條件永遠不成立、修法整個空轉。
+            // 要問的是「這個字在這個時代／熱度／性別下本來能不能用」，不是「現在這一格空不空」。
+            eraOk(item, era) &&
+            heatOk(item, heat) &&
+            gateOk(item, female, male)
+        );
       for (const t of [...used]) {
         if (guard.has(t) || pinRel.has(t)) continue;
         const it = lex.byTag.get(t);
@@ -5136,7 +5170,8 @@ export function drawOne(lex, settings, pinned, userBanned, rand, seed) {
           it &&
           it.section === "clothing" &&
           (it.layer === "garment" || it.layer === "accessory") &&
-          !garmentOkForKind(it, kind, era)
+          (!garmentOkForKind(it, kind, era) ||
+            (dropRobes && NOT_WHILE_WASHING.has(it.tag)))
         ) {
           used.delete(t);
           for (const g of extraMutex(it)) {
@@ -5154,13 +5189,43 @@ export function drawOne(lex, settings, pinned, userBanned, rand, seed) {
             (item.layer === "skin" || isBodyGarment(item)) &&
             garmentOkForKind(item, kind, era)
         );
+        // 正在洗就把袍子類排掉 —— 但只在還留得下「有穿的」選項時。
+        // 光看 narrowed.length 不夠：那個池子含裸標，袍子拿掉之後可能只剩裸標，
+        // 於是不准裸的情境被逼著裸。要看的是「還有沒有非裸標的選項」。
+        if (dropRobes) {
+          const narrowed = pool.filter((item) => !NOT_WHILE_WASHING.has(item.tag));
+          if (narrowed.some((item) => item.layer !== "skin")) {
+            pool.length = 0;
+            pool.push(...narrowed);
+          }
+        }
         // 只勾「活動」時畫面上說好的是日常，沒有走光或做愛 —— 補救時就不該
         // 拿裸體交差。有衣服可穿就穿衣服，真的一件都沒有才退回裸標
         //（不然浴場又會變回什麼都沒交代）。實測這條沒加之前，
         // 只勾活動的 3000 張裡會漏出兩張全裸。
         const dressed = pool.filter((item) => item.layer !== "skin");
         const rescue = heat === "activity" && dressed.length ? dressed : pool;
-        takeFromPool(rescue, 1, rand, commit, clothingPrefer, allow);
+        // 先照真實比例擲一次裸體，再退回服裝池。
+        //
+        // 上面 4800 多行那段本來就有「浴場 34% 裸」的意圖，但它問的是
+        // sceneClothKind(**pinned**) —— 服裝在場地之前就決定了，那時候 used 裡還沒有
+        // 浴場，所以作者只能拿 pinned 當依據。結果是：**只有使用者自己釘了浴場才會
+        // 觸發**，自然抽到浴場的永遠不會。
+        //
+        // 實測後果（8000 張，正在洗澡的 213 張）：
+        //     裸 0%      Danbooru 是 67%
+        //     浴巾 6.6%  Danbooru 是 40%
+        //     浴袍 23.5% Danbooru 是 0.09%   <- 浴袍是洗完才穿的
+        //
+        // 這裡是場地已經定了的地方，所以同一個意圖放這裡才會真的生效。
+        // 機率沿用作者原本寫的 0.34，不自己另外發明一個數字。
+        // 只勾「活動」時仍然不准拿裸體交差（上面那條既有規則）。
+        const skins = rescue.filter((item) => item.layer === "skin");
+        if (kind === "bath" && heat !== "activity" && skins.length && rand() < 0.34) {
+          takeFromPool(skins, 1, rand, commit, null, allow);
+        } else {
+          takeFromPool(rescue, 1, rand, commit, clothingPrefer, allow);
+        }
       }
       for (const t of [...used]) {
         if (pinned.has(t)) continue;
