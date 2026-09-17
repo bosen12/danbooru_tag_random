@@ -558,6 +558,55 @@ FAIL 性行為互斥  ×${bad}/${N}`);
   }
 }
 
+// --- 針對性複查：歷史時代的浴場也有袍子以外的選擇 ----------------------------
+//
+// naked towel 本來被鎖在 era=["modern"]，於是歷史時代的浴場只剩浴袍／浴衣／褌那一類
+// —— 而 Danbooru 說那一類洗澡時只佔 0.0～0.4%。內部也對不起來：bath／bathing／
+// shared bathing／towel 這四個本來就是 era any，只有 naked towel 被鎖在現代，
+// 而它跟 towel 是同一條毛巾。證據：naked_towel 全站 18,421 張，33.2% 在 onsen。
+//
+// 放寬之後歷史時代 flash 的浴場：袍子 37% -> 22%，裸 0 -> 25，浴巾 0 -> 31。
+// 這條守的是「歷史時代的浴場交代身體時，不是只能靠袍子」。
+{
+  const WASH = ["bathing", "showering", "shared bathing"];
+  const ROBE = ["bathrobe", "yukata", "bath yukata", "fundoshi", "chemise"];
+  const N = 4000;
+  const older = ERAS.filter((e) => e !== "modern");
+  let washN = 0, nonRobeN = 0;
+  for (let i = 0; i < N; i += 1) {
+    const s = defaultSettings(data);
+    s.eras = [...older];
+    s.girl = true;
+    s.heats = ["flash"];
+    const seed = 610000 + i;
+    const names = new Set(
+      drawOne(lex, s, new Set(), new Set(), mulberry32(seed), seed).positive.split(",").map((t) => t.trim())
+    );
+    if (!WASH.some((t) => names.has(t))) continue;
+    washN += 1;
+    const dressedInRobe = ROBE.some((t) => names.has(t));
+    const covered =
+      names.has("nude") || names.has("completely nude") ||
+      names.has("towel") || names.has("naked towel");
+    if (!dressedInRobe && covered) nonRobeN += 1;
+  }
+  // 取樣要夠，否則空轉。實測 4000 張約 180 張洗澡圖，其中非袍子的約 28 張。
+  const enough = washN >= 60;
+  // 門檻取 8：離實測 28 有三倍餘裕，離壞掉的 0 非常遠。
+  if (enough && nonRobeN >= 8) {
+    console.log(`ok   歷史時代浴場不是只能穿袍子：${washN} 張洗澡圖，非袍子交代 ${nonRobeN} 張`);
+  } else {
+    console.log("");
+    console.log(`FAIL 歷史時代浴場只剩袍子  洗澡 ${washN} 張，非袍子交代 ${nonRobeN} 張`);
+    if (!enough) console.log("  取樣不足，這條會空轉 —— 先確認歷史時代 flash 抽得到洗澡場景");
+    console.log("  規格：毛巾不是現代才有的東西；bath／bathing／towel 都是 era any，");
+    console.log("        naked towel 不該被鎖在現代，否則歷史時代的浴場只剩袍子可穿。");
+    console.log("");
+    console.log("1 條 hard 不變式被違反");
+    process.exit(1);
+  }
+}
+
 if (!hardHits.size) {
   console.log("hard：全部通過。");
   console.log("\nok");

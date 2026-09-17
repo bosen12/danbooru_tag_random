@@ -185,7 +185,13 @@ ERA_OF = {
     "naked sweater": _M,
     "naked shirt": _MV,
     "naked apron": _M,
-    "naked towel": _M,
+    # 毛巾不是現代才有的東西，而這個限制讓歷史時代的浴場沒有 flash 等級的衣物可穿，
+    # 只剩浴袍／浴衣／褌那一類 —— 而 Danbooru 說那一類洗澡時只佔 0.0～0.4%。
+    # 證據：naked_towel 全站 18,421 張，其中 **33.2%（6,117）在 onsen**，
+    # 另有 japanese clothes 1.3%、bathhouse 0.9%、east asian architecture 0.4%。
+    # 內部也對不起來：bath／bathing／shared bathing／towel 這四個本來就是 era any，
+    # 只有 naked towel 被鎖在現代，而它跟 towel 是同一條毛巾。
+    "naked towel": ["any"],
     # 浴袍（dressing/bathing gown）在維多利亞時期已有；擴到 victorian 也讓男性
     # 浴場不必因 chemise 是 female-only 而被迫 100% 裸體。
     "bathrobe": _MV,
