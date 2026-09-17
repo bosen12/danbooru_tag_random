@@ -443,6 +443,86 @@ ok("discord multipart carries payload_json", b'name="payload_json"' in dc_body)
 ok("discord multipart keeps the filename", b'filename="ComfyUI_00042_.png"' in dc_body)
 ok("discord multipart closes", dc_body.endswith(("--" + dc_boundary + "--" + chr(13) + NL).encode()))
 
+
+# --- Discord webhook 模式 ------------------------------------------------
+# 先把設定檔導去暫存目錄，跟上面 Telegram 同一個做法。這一段會改 server._dc，
+# 而 dc_apply_config() 會寫檔 —— 現在的測試沒呼叫它，但只要有人補一條就會直接
+# 蓋掉使用者真正的 .secrets/discord.json。這條防線要在那之前就先架好。
+dc_dir = Path(tempfile.mkdtemp())
+server.DC_SECRETS = dc_dir / ".secrets" / "discord.json"
+
+# webhook 網址整條都是憑證，而且它決定圖送去哪台主機，所以驗證那一關是安全問題
+# 不是體驗問題：貼錯一行的後果是成圖被 POST 到別人家。
+GOOD_HOOK = "https://discord.com/api/webhooks/1234567890/abcdefghijklmnopqrstuvwxyz"
+ok("webhook 收下正常的網址", server.dc_webhook_ok(GOOD_HOOK) == GOOD_HOOK)
+ok("webhook 砍掉查詢字串與結尾斜線", server.dc_webhook_ok(GOOD_HOOK + "/?wait=true") == GOOD_HOOK)
+ok("webhook 接受 discordapp.com", server.dc_webhook_ok(GOOD_HOOK.replace("discord.com", "discordapp.com")).endswith("uvwxyz"))
+ok("webhook 空字串當作沒填", server.dc_webhook_ok("") == "")
+
+
+def dc_rejects(url: str) -> bool:
+    try:
+        server.dc_webhook_ok(url)
+        return False
+    except RuntimeError:
+        return True
+
+
+ok("webhook 擋掉 http", dc_rejects(GOOD_HOOK.replace("https://", "http://")))
+ok("webhook 擋掉別人的網域", dc_rejects(GOOD_HOOK.replace("discord.com", "evil.example")))
+ok("webhook 擋掉相似網域", dc_rejects(GOOD_HOOK.replace("discord.com", "discord.com.evil.example")))
+ok("webhook 擋掉不是 webhook 的路徑", dc_rejects("https://discord.com/api/v10/channels/1/messages"))
+ok("webhook 擋掉少了 token 的網址", dc_rejects("https://discord.com/api/webhooks/1234567890"))
+
+_dc_backup = dict(server._dc)
+try:
+    # webhook 模式：送到那個網址，而且**不可以**帶 Authorization。
+    server._dc.update({"mode": "webhook", "webhook": GOOD_HOOK, "token": "botsecret", "channelId": "999"})
+    url, headers = server.dc_endpoint()
+    ok("webhook 模式送到 webhook 網址", url == GOOD_HOOK, url)
+    ok("webhook 模式不帶 Authorization", "Authorization" not in headers, str(sorted(headers)))
+    ok("webhook 模式仍帶 User-Agent", "User-Agent" in headers)
+    ok("webhook 模式算設定好了", server.dc_status()["configured"] is True)
+
+    # 佇列的「設定好了沒」必須和面板同一份。分兩份寫過一次就出事：面板用模式判斷、
+    # 佇列寫死 bot 的條件，於是 webhook 模式下面板說「已設定」，每張圖卻被擋在
+    # 佇列外，錯誤訊息還說「還沒設定」。這裡用空的 job：過得了設定這一關就會
+    # 倒在「bad image query」，不會真的啟動背景執行緒。
+    # 必須把 bot 的欄位清空才隔離得出 webhook 模式 —— 第一版沒清，
+    # 舊的 bot 條件照樣成立，於是把判斷改回寫死也還是綠的（假綠）。
+    server._dc.update({"token": "", "channelId": "", "enabled": True})
+    queued = server.dc_enqueue({})
+    ok(
+        "webhook 模式的圖排得進佇列",
+        queued.get("error") != "Discord 還沒設定或沒開",
+        str(queued),
+    )
+    server._dc.update({"token": "botsecret", "channelId": "999", "enabled": False})
+
+    # bot 模式：走 API 路徑，帶 Bot 認證。
+    server._dc.update({"mode": "bot"})
+    url, headers = server.dc_endpoint()
+    ok("bot 模式走 channels 路徑", url == f"{server.DC_API}/channels/999/messages", url)
+    ok("bot 模式帶 Bot 認證", headers.get("Authorization") == "Bot botsecret")
+
+    # 設定不全時要講得出是缺什麼，而不是送出去才錯。
+    server._dc.update({"mode": "webhook", "webhook": ""})
+    ok("webhook 模式沒網址就不算設定好", server.dc_status()["configured"] is False)
+    try:
+        server.dc_endpoint()
+        ok("webhook 模式沒網址會擋下來", False)
+    except RuntimeError:
+        ok("webhook 模式沒網址會擋下來", True)
+
+    # 憑證不可以從錯誤訊息漏回前端 —— webhook 的 token 就在網址最後一段。
+    server._dc.update({"mode": "webhook", "webhook": GOOD_HOOK})
+    scrubbed = server.dc_scrub(f"HTTP 401 from {GOOD_HOOK}")
+    ok("dc_scrub 遮掉整條 webhook 網址", GOOD_HOOK not in scrubbed, scrubbed)
+    ok("dc_scrub 遮掉 webhook 的 token 段", "abcdefghijklmnopqrstuvwxyz" not in scrubbed, scrubbed)
+    ok("dc_scrub 仍遮掉 bot token", "botsecret" not in server.dc_scrub("boom botsecret"))
+finally:
+    server._dc.clear()
+    server._dc.update(_dc_backup)
 if failed:
     print(f"\n{failed} failed")
     sys.exit(1)

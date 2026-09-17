@@ -513,13 +513,34 @@ python scripts/add_zh.py
 
 ## 送到 Discord 頻道
 
-和 Telegram 並存，兩邊可以同時開。桅杆列上那顆 Discord 圖示打開面板，填兩格：
+和 Telegram 並存，兩邊可以同時開。桅杆列上那顆 Discord 圖示打開面板，
+上方有兩種連接方式，挑一種就好。
+
+### Webhook（建議，不必建機器人）
+
+頻道設定 → **整合** → **建立 Webhook** → 複製 Webhook 網址，貼進面板。就這樣。
+
+不必建 application、不必邀 bot 進伺服器、也不必開開發者模式抓頻道 ID ——
+網址本身就含頻道和憑證（官方文件對這個端點的說法是 *does not require authentication*）。
+萬一網址外洩，別人能做的也只有「往那一個頻道貼文」，讀不到訊息、動不了其他頻道。
+
+網址就是密碼，所以它跟 bot token 一樣只存在伺服器端，而且會被驗過才收：
+只接受 `https`、只接受 Discord 的網域、路徑必須是 `/api/webhooks/<id>/<token>`。
+貼錯網域會當場擋下來 —— 這一關擋的不是打字錯誤，是「成圖被 POST 到別人的主機」。
+
+### Bot token
+
+想日後擴充成互動功能（讀 reaction、slash command）才需要走這條，webhook 做不到那些。
 
 1. **Bot token** — Discord Developer Portal → 你的 application → Bot → Reset Token
 2. **頻道 ID** — Discord 設定開「開發者模式」後，右鍵頻道 →「複製頻道 ID」
 
 bot 要先邀進那個伺服器，而且在該頻道有 **發送訊息** 和 **附加檔案** 權限。
-按「送一則測試」會當場告訴你 Discord 回什麼（權限不足或 token 錯都看得到）。
+
+---
+
+兩種方式都可以按「送一則測試」，會當場告訴你 Discord 回什麼（權限不足、token 錯、
+網址錯都看得到）。舊的設定檔沒有連接方式這個欄位，會照舊當成 bot，不用重設。
 
 token 存在伺服器的 `.secrets/discord.json`（已 gitignore），不會回傳瀏覽器，
 錯誤訊息裡也會被遮成 `***`。送出的內容和 Telegram 一樣：圖 ＋ seed／尺寸 ＋ 中文說明 ＋ 英文 prompt。

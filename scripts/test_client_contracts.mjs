@@ -234,6 +234,49 @@ function ok(name, cond, detail) {
   ok("解一把沒開過的鎖不會有事", style.overflow === "clip", style.overflow);
 }
 
+// --- Discord 面板的兩種連接方式 ---
+// webhook 模式的重點是「少一樣東西」：不必建 bot。但面板上多一個模式，就多一個
+// 「加了欄位卻忘記送上去」的失敗方式 —— 那正是這份契約檔開頭講的 rating 出事的樣子。
+{
+  const src = readFileSync(join(ROOT, "web", "discord.js"), "utf8");
+  ok(
+    "Discord 面板有兩種連接方式的按鈕",
+    src.includes('id="dc-mode-bot"') && src.includes('id="dc-mode-hook"')
+  );
+  ok("Discord 面板有 webhook 網址欄位", src.includes('id="dc-webhook"'));
+  // webhook 網址整條就是憑證（token 在路徑最後一段），跟 bot token 一樣不能是明碼欄位。
+  ok(
+    "webhook 網址是密碼欄位",
+    src.includes('id="dc-webhook" type="password"'),
+    "它是憑證，不該用 type=text"
+  );
+  // 存設定時兩個新欄位都要真的送出去，否則伺服器永遠停在 bot 模式。
+  // 要看的是 save() 那一段，不是 refresh() 的 GET —— 兩處打同一個網址，
+  // 這條的第一版就切錯視窗、誤報了一次，所以改成從函式本身找起。
+  const at = src.indexOf("async function save()");
+  const saveBody = at >= 0 ? src.slice(at, at + 900) : "";
+  ok("找得到 save() 這一段", at >= 0, "切視窗的錨點不見了，下面兩條會失去意義");
+  ok("存設定會把 mode 送上去", saveBody.includes("mode:"), "save() 的 body 裡沒有 mode");
+  ok("存設定會把 webhook 送上去", saveBody.includes("webhook:"), "save() 的 body 裡沒有 webhook");
+
+  // 送上去的必須是**面板上選著的**模式，不是伺服器回來的那個。第一版寫成
+  // status.mode，於是點了 Webhook 也存不進去（存的還是舊模式），而且狀態列會
+  // 立刻改用新模式描述舊資料 —— 面板對使用者說謊。
+  ok(
+    "存設定送的是面板上選的模式",
+    // 只搜 "uiMode" 不夠：save() 的成功分支裡也有一行 uiMode = ...，
+    // 整段搜尋照樣命中，把判斷改回 status.mode 也不會紅（第一版就是這樣假綠的）。
+    saveBody.includes("mode: uiMode"),
+    "save() 送的是 status.mode 的話，切模式永遠存不進去"
+  );
+
+  // 連接方式是「你在哪一邊」的選擇，不是「按了會做事」的動作，所以用全站那組
+  // 分段控制（方／直／橫 用的 .seg），不要用 primary／ghost 那種動作鈕。
+  const modeRow = src.slice(src.indexOf('id="dc-modes"'), src.indexOf('id="dc-modes"') + 420);
+  ok("連接方式用全站的分段控制", modeRow.split('class="seg"').length - 1 === 2, modeRow.slice(0, 160));
+  ok("分段控制標得出目前選哪一個", src.includes('aria-pressed'), "選中狀態是 .seg[aria-pressed=true] 畫的");
+}
+
 if (failed) {
   console.error(NL + failed + " failed");
   process.exit(1);

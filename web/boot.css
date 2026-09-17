@@ -1994,6 +1994,12 @@ html.is-booting *::after {
   line-height: 1.45;
 }
 
+/* 「選了但還沒存」的提示。說明文字全是同一片灰字，未套用的警告混在裡面等於沒說，
+   而那正是使用者最需要看到的一行 —— 他在面板最上面點了東西，還缺一步才生效。 */
+.tg-field em[data-pending="1"] {
+  color: var(--color-accent);
+}
+
 .tg-field code {
   font-family: var(--font-outlier);
   color: var(--color-muted);

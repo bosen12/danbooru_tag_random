@@ -1030,13 +1030,24 @@ DC_COLOR = 0xE0563C
 DC_GAP = 1.0
 DC_RETRY_WAIT = 5.0
 DC_QUEUE_MAX = int(cfg("discord.queueMax", "", 200))
+# Webhook 模式。Discord 的 webhook 不需要 bot：在頻道設定 → 整合 → 建立 Webhook
+# 就拿得到一個網址，POST 上去就好，官方文件對那個端點的說法是
+# "does not require authentication"。對「只是單向貼圖」的我們來說，它省掉建
+# application、邀 bot 進伺服器、開開發者模式抓頻道 ID 那幾步；而且萬一外洩，
+# 它能做的事只有「往那一個頻道貼文」，不像 bot token 是整包權限。
+#
+# 代價是**網址本身就是憑證**，所以一定要驗證它真的指向 Discord —— 使用者貼錯
+# 一行的後果不是「送不出去」，是成圖被 POST 到別人的主機上。
+DC_WEBHOOK_HOSTS = ("discord.com", "discordapp.com", "ptb.discord.com", "canary.discord.com")
 
 _dc_lock = threading.Lock()
 _dc_queue: "queue.Queue[dict]" = queue.Queue()
 _dc_worker: threading.Thread | None = None
 _dc = {
+    "mode": "bot",
     "token": "",
     "channelId": "",
+    "webhook": "",
     "enabled": False,
     "sent": 0,
     "failed": 0,
@@ -1054,14 +1065,20 @@ def dc_load() -> None:
     with _dc_lock:
         _dc["token"] = str(raw.get("token") or "")
         _dc["channelId"] = str(raw.get("channelId") or "")
+        _dc["webhook"] = str(raw.get("webhook") or "")
+        # 舊的設定檔沒有 mode，那時只有 bot 一條路 —— 預設回 bot，現有設定照舊能用。
+        mode = str(raw.get("mode") or "bot")
+        _dc["mode"] = mode if mode in ("bot", "webhook") else "bot"
         _dc["enabled"] = bool(raw.get("enabled"))
 
 
 def dc_save() -> None:
     with _dc_lock:
         body = {
+            "mode": _dc["mode"],
             "token": _dc["token"],
             "channelId": _dc["channelId"],
+            "webhook": _dc["webhook"],
             "enabled": _dc["enabled"],
         }
     DC_SECRETS.parent.mkdir(parents=True, exist_ok=True)
@@ -1073,21 +1090,47 @@ def dc_save() -> None:
 
 
 def dc_scrub(text: str) -> str:
-    """別讓例外訊息把 bot token 帶回前端。"""
+    """別讓例外訊息把憑證帶回前端。
+
+    webhook 網址整條都是憑證（token 就在路徑最後一段），而且它會出現在
+    urllib 的錯誤訊息裡，所以兩種模式都要遮。
+    """
     out = str(text)
     with _dc_lock:
         token = _dc["token"]
+        hook = _dc["webhook"]
     if token:
         out = out.replace(token, "***")
+    if hook:
+        out = out.replace(hook, "***")
+        tail = hook.rstrip("/").rsplit("/", 1)[-1]
+        if len(tail) >= 8:
+            out = out.replace(tail, "***")
     return out
+
+
+def _dc_configured_locked() -> bool:
+    """設定齊不齊 —— 兩種模式條件不同，所以只寫這一份。
+
+    呼叫者必須已經持有 _dc_lock（它不是可重入鎖）。分成兩份寫過一次就出事：
+    面板用模式判斷、佇列卻寫死 bot 的條件，於是 webhook 模式下面板顯示「已設定」，
+    每一張圖卻被擋在佇列外，而且錯誤訊息還說「還沒設定」。
+    """
+    if _dc["mode"] == "webhook":
+        return bool(_dc["webhook"])
+    return bool(_dc["token"] and _dc["channelId"])
 
 
 def dc_status() -> dict:
     with _dc_lock:
+        mode = _dc["mode"]
+        configured = _dc_configured_locked()
         return {
             "ok": True,
-            "configured": bool(_dc["token"] and _dc["channelId"]),
+            "mode": mode,
+            "configured": configured,
             "tokenTail": tg_tail(_dc["token"]),
+            "webhookTail": tg_tail(_dc["webhook"]),
             "channelId": _dc["channelId"],
             "enabled": bool(_dc["enabled"]),
             "sent": _dc["sent"],
@@ -1155,20 +1198,64 @@ def dc_content(job: dict) -> str:
     return short
 
 
-def dc_call(path: str, body: bytes, ctype: str, timeout: float = 60) -> dict:
+def dc_webhook_ok(url: str) -> str:
+    """把使用者貼進來的 webhook 網址驗過再收。
+
+    這裡寧可嚴格：網址就是憑證，貼錯一行的後果是成圖被 POST 到別人的主機，
+    不是「送不出去」而已。所以只收 https、只收 Discord 的網域、路徑必須是
+    /api/webhooks/<id>/<token>。回傳正規化後的網址（去掉查詢字串和結尾斜線）。
+    """
+    raw = str(url or "").strip()
+    if not raw:
+        return ""
+    try:
+        u = urllib.parse.urlsplit(raw)
+    except ValueError:
+        raise RuntimeError("webhook 網址看不懂") from None
+    if u.scheme != "https":
+        raise RuntimeError("webhook 網址必須是 https")
+    if (u.hostname or "").lower() not in DC_WEBHOOK_HOSTS:
+        raise RuntimeError(f"webhook 網址的網域不是 Discord：{u.hostname or '(空)'}")
+    path = u.path.rstrip("/")
+    if not path.startswith("/api/webhooks/"):
+        raise RuntimeError("webhook 網址的路徑不是 /api/webhooks/…")
+    bits = [x for x in path.split("/") if x]
+    if len(bits) < 4 or not bits[2] or not bits[3]:
+        raise RuntimeError("webhook 網址少了 id 或 token")
+    return urllib.parse.urlunsplit((u.scheme, u.netloc, path, "", ""))
+
+
+def dc_endpoint() -> "tuple[str, dict]":
+    """要往哪送、要不要帶認證 —— 兩種模式只差這裡，其餘的組版與佇列完全共用。"""
     with _dc_lock:
+        mode = _dc["mode"]
         token = _dc["token"]
+        channel = _dc["channelId"]
+        hook = _dc["webhook"]
+    headers = {
+        # Discord 會擋掉沒有 User-Agent 的請求。
+        "User-Agent": "DanbooruTagRandom (https://github.com/bosen12/danbooru_tag_random, 1.0)",
+    }
+    if mode == "webhook":
+        if not hook:
+            raise RuntimeError("沒有 webhook 網址")
+        # webhook 不帶 Authorization：token 已經在網址裡，官方文件說這個端點
+        # 不需要認證。多送一個 Authorization 反而會被 Discord 當成壞請求。
+        return hook, headers
     if not token:
         raise RuntimeError("沒有 bot token")
+    if not channel:
+        raise RuntimeError("沒有頻道 ID")
+    headers["Authorization"] = f"Bot {token}"
+    return f"{DC_API}/channels/{urllib.parse.quote(channel)}/messages", headers
+
+
+def dc_call(body: bytes, ctype: str, timeout: float = 60) -> dict:
+    url, headers = dc_endpoint()
     req = urllib.request.Request(
-        f"{DC_API}{path}",
+        url,
         data=body,
-        headers={
-            "Content-Type": ctype,
-            "Authorization": f"Bot {token}",
-            # Discord 會擋掉沒有 User-Agent 的請求。
-            "User-Agent": "DanbooruTagRandom (https://github.com/bosen12/danbooru_tag_random, 1.0)",
-        },
+        headers={**headers, "Content-Type": ctype},
         method="POST",
     )
     try:
@@ -1193,16 +1280,8 @@ def dc_call(path: str, body: bytes, ctype: str, timeout: float = 60) -> dict:
 
 
 def dc_send_text(text: str) -> dict:
-    with _dc_lock:
-        channel = _dc["channelId"]
-    if not channel:
-        raise RuntimeError("沒有頻道 ID")
     body = json.dumps({"content": text[:DC_CONTENT_MAX]}, ensure_ascii=False).encode("utf-8")
-    return dc_call(
-        f"/channels/{urllib.parse.quote(channel)}/messages",
-        body,
-        "application/json",
-    )
+    return dc_call(body, "application/json")
 
 
 def dc_send_photo(job: dict) -> None:
@@ -1221,8 +1300,6 @@ def dc_send_photo(job: dict) -> None:
         mime = "image/jpeg"
     elif blob[:4] == b"RIFF":
         mime = "image/webp"
-    with _dc_lock:
-        channel = _dc["channelId"]
     fname = dc_safe_filename(job.get("filename") or "shot.png")
     # 版面：embed 負責好看（色條、標題、中文說明、圖），英文 POS 放在訊息本體的
     # code block —— 那裡有 2000 字可用（embed 欄位只有 1024），而且使用者可以直接複製。
@@ -1237,11 +1314,7 @@ def dc_send_photo(job: dict) -> None:
         mime,
         field="files[0]",
     )
-    dc_call(
-        f"/channels/{urllib.parse.quote(channel)}/messages",
-        body,
-        f"multipart/form-data; boundary={boundary}",
-    )
+    dc_call(body, f"multipart/form-data; boundary={boundary}")
 
 
 def dc_pump() -> None:
@@ -1278,7 +1351,7 @@ def dc_start() -> None:
 
 def dc_enqueue(job: dict) -> dict:
     with _dc_lock:
-        ready = bool(_dc["token"] and _dc["channelId"] and _dc["enabled"])
+        ready = _dc_configured_locked() and bool(_dc["enabled"])
     if not ready:
         return {"ok": False, "error": "Discord 還沒設定或沒開"}
     if not comfy_view_query(
@@ -1296,10 +1369,20 @@ def dc_enqueue(job: dict) -> dict:
 def dc_apply_config(payload: dict) -> dict:
     token = str(payload.get("token") or "").strip()
     channel = str(payload.get("channelId") or "").strip()
+    mode = str(payload.get("mode") or "").strip().lower()
+    try:
+        # 和 token 同一個規矩：留空＝沿用已存的，不是清掉。
+        hook = dc_webhook_ok(payload.get("webhook"))
+    except Exception as exc:
+        return {"ok": False, "error": dc_scrub(str(exc))}
     with _dc_lock:
         if token:
             _dc["token"] = token
         _dc["channelId"] = channel
+        if hook:
+            _dc["webhook"] = hook
+        if mode in ("bot", "webhook"):
+            _dc["mode"] = mode
         if "enabled" in payload:
             _dc["enabled"] = bool(payload.get("enabled"))
     try:
@@ -1863,7 +1946,12 @@ def main() -> None:
         print(f"telegram {st['chatId']}  token {st['tokenTail']}  自動送 {'開' if st['enabled'] else '關'}")
     ds = dc_status()
     if ds["configured"]:
-        print(f"discord  {ds['channelId']}  token {ds['tokenTail']}  自動送 {'開' if ds['enabled'] else '關'}")
+        where = (
+            f"webhook {ds['webhookTail']}"
+            if ds["mode"] == "webhook"
+            else f"{ds['channelId']}  token {ds['tokenTail']}"
+        )
+        print(f"discord  {where}  自動送 {'開' if ds['enabled'] else '關'}")
     check_ckpt()
     httpd.serve_forever()
 

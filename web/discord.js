@@ -11,8 +11,12 @@ import { lockScroll, unlockScroll } from "./scroll-lock.js";
 
 const $ = (id) => document.getElementById(id);
 
-let status = { configured: false, enabled: false, channelId: "", tokenTail: "" };
+let status = { configured: false, enabled: false, channelId: "", tokenTail: "", mode: "bot", webhookTail: "" };
 let poll = 0;
+// 面板上「現在選著哪一個」。status.mode 是伺服器上**存著**的那個，兩者可以不同：
+// 使用者點了 Webhook 但還沒按存設定的那段時間就是。分開才有辦法一邊照選擇切欄位、
+// 一邊讓狀態列照實描述伺服器的狀態。
+let uiMode = "bot";
 
 function reduceMotion() {
   return matchMedia("(prefers-reduced-motion: reduce)").matches;
@@ -55,6 +59,15 @@ function ensureDom() {
         <button type="button" class="ghost tg-close" id="dc-close" aria-label="關閉">✕</button>
       </header>
       <div class="tg-body">
+        <div class="tg-field">
+          <span>連接方式</span>
+          <div class="row" id="dc-modes" role="radiogroup" aria-label="連接方式">
+            <button type="button" class="seg" id="dc-mode-hook" role="radio" aria-checked="false" aria-pressed="false">Webhook</button>
+            <button type="button" class="seg" id="dc-mode-bot" role="radio" aria-checked="true" aria-pressed="true">Bot token</button>
+          </div>
+          <em id="dc-mode-hint"></em>
+        </div>
+        <div id="dc-bot-fields">
         <label class="tg-field">
           <span>Bot token</span>
           <input id="dc-token" type="password" autocomplete="off" spellcheck="false" placeholder="MTA1…" />
@@ -65,6 +78,14 @@ function ensureDom() {
           <input id="dc-channel" type="text" autocomplete="off" spellcheck="false" placeholder="1234567890123456789" />
           <em>在 Discord 開「開發者模式」後右鍵頻道 →「複製頻道 ID」。bot 要先邀進該伺服器，並且在那個頻道有<strong>發送訊息</strong>和<strong>附加檔案</strong>權限。</em>
         </label>
+        </div>
+        <div id="dc-hook-fields" style="display:none">
+        <label class="tg-field">
+          <span>Webhook 網址</span>
+          <input id="dc-webhook" type="password" autocomplete="off" spellcheck="false" placeholder="https://discord.com/api/webhooks/…" />
+          <em>頻道設定 → 整合 → 建立 Webhook → 複製 Webhook 網址。<strong>不必建 bot、不必邀請、不必抓頻道 ID</strong> —— 網址本身就含頻道和憑證。也因為如此它就是密碼：存在伺服器的 <code>.secrets/discord.json</code>，不進 git、不會回傳瀏覽器。留空＝沿用已存的。</em>
+        </label>
+        </div>
         <button type="button" class="same-switch tg-switch" id="dc-enabled" role="switch" aria-checked="false" aria-describedby="dc-enabled-hint">
           <span class="same-knob" aria-hidden="true"><i></i></span>
           <span class="same-copy">
@@ -84,13 +105,45 @@ function ensureDom() {
 }
 
 function paint() {
+  const hook = uiMode === "webhook";
+  const savedHook = status.mode === "webhook";
+  const pending = uiMode !== status.mode;
   const st = $("dc-state");
   if (st) {
+    // 這一行永遠描述伺服器上存著的狀態，不跟著面板上的選擇跑。
     st.dataset.ok = status.configured ? "1" : "0";
-    st.textContent = status.configured
-      ? `已設定 · token ${status.tokenTail} · ${status.channelId || "沒填頻道 ID"}`
-      : "尚未設定。填好下面兩格再按存設定。";
+    if (status.configured) {
+      st.textContent = savedHook
+        ? `目前走 webhook · ${status.webhookTail}`
+        : `目前走 bot · token ${status.tokenTail} · ${status.channelId || "沒填頻道 ID"}`;
+    } else {
+      st.textContent = savedHook ? "尚未設定。貼上 webhook 網址再按存設定。" : "尚未設定。填好下面兩格再按存設定。";
+    }
   }
+  const botFields = $("dc-bot-fields");
+  const hookFields = $("dc-hook-fields");
+  if (botFields) botFields.style.display = hook ? "none" : "";
+  if (hookFields) hookFields.style.display = hook ? "" : "none";
+  const mBot = $("dc-mode-bot");
+  const mHook = $("dc-mode-hook");
+  if (mBot && mHook) {
+    for (const [el, on] of [[mBot, !hook], [mHook, hook]]) {
+      el.setAttribute("aria-pressed", on ? "true" : "false");
+      el.setAttribute("aria-checked", on ? "true" : "false");
+    }
+  }
+  // 提示就放在按鈕正下方 —— 在最上面點的東西，回饋不該跑到面板最底下。
+  const hint = $("dc-mode-hint");
+  if (hint) {
+    const what = hook
+      ? "Webhook 不必建機器人，在頻道設定裡建一個就好；萬一外洩，它也只能往那一個頻道貼文。"
+      : "Bot 要自己建 application、邀進伺服器、再抓頻道 ID，但日後可以擴充成互動功能。";
+    hint.textContent = pending ? `還沒套用 —— 按下面的「存設定」才會換成${hook ? " Webhook" : " Bot token"}。${what}` : what;
+    hint.dataset.pending = pending ? "1" : "";
+  }
+  // 有沒存的改動時，把「存設定」點出來，不然使用者不知道還缺一步。
+  const saveLabel = document.querySelector("#dc-save span");
+  if (saveLabel) saveLabel.textContent = pending ? "存設定 · 尚未套用" : "存設定";
   const dot = document.querySelector("#dc-btn .tg-dot");
   if (dot) dot.dataset.on = status.configured && status.enabled ? "1" : "0";
   const btn = $("dc-btn");
@@ -132,7 +185,12 @@ function paint() {
 async function refresh() {
   try {
     const j = await getJson("/api/discord/config");
-    if (j && j.ok) status = j;
+    if (j && j.ok) {
+      const first = !status.mode || uiMode === status.mode;
+      status = j;
+      // 使用者正在挑的選擇不要被輪詢蓋掉，只有還沒動過時才跟著伺服器走。
+      if (first) uiMode = status.mode === "webhook" ? "webhook" : "bot";
+    }
   } catch {
     /* 伺服器沒回就維持上一次的狀態，不吵 */
   }
@@ -168,7 +226,15 @@ function open() {
       token.value = "";
       token.placeholder = status.configured ? `已存 · ${status.tokenTail}` : "MTA1…";
     }
-    (status.configured ? chan : $("dc-token"))?.focus();
+    const hookInput = $("dc-webhook");
+    if (hookInput) {
+      hookInput.value = "";
+      hookInput.placeholder = status.webhookTail
+        ? `已存 · ${status.webhookTail}`
+        : "https://discord.com/api/webhooks/…";
+    }
+    if (uiMode === "webhook") $("dc-webhook")?.focus();
+    else (status.configured ? chan : $("dc-token"))?.focus();
   });
   window.clearInterval(poll);
   poll = window.setInterval(() => {
@@ -202,17 +268,27 @@ async function save() {
       method: "POST",
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify({
+        mode: uiMode === "webhook" ? "webhook" : "bot",
         token: $("dc-token")?.value || "",
         channelId: $("dc-channel")?.value || "",
+        webhook: $("dc-webhook")?.value || "",
         enabled: !!status.enabled,
       }),
     });
     if (j && j.ok) {
       status = j;
+      uiMode = status.mode === "webhook" ? "webhook" : "bot";
       const token = $("dc-token");
       if (token) {
         token.value = "";
         token.placeholder = status.configured ? `已存 · ${status.tokenTail}` : "MTA1…";
+      }
+      const hookInput = $("dc-webhook");
+      if (hookInput) {
+        hookInput.value = "";
+        hookInput.placeholder = status.webhookTail
+          ? `已存 · ${status.webhookTail}`
+          : "https://discord.com/api/webhooks/…";
       }
       say("已存。", "ok");
     } else {
@@ -307,7 +383,15 @@ export function initDiscord() {
     paint();
     save();
   });
-  for (const id of ["dc-token", "dc-channel"]) {
+  const pickMode = (m) => {
+    if (uiMode === m) return;
+    uiMode = m;
+    say("");
+    paint();
+  };
+  $("dc-mode-bot")?.addEventListener("click", () => pickMode("bot"));
+  $("dc-mode-hook")?.addEventListener("click", () => pickMode("webhook"));
+  for (const id of ["dc-token", "dc-channel", "dc-webhook"]) {
     $(id)?.addEventListener("keydown", (e) => {
       if (e.key === "Enter") {
         e.preventDefault();
