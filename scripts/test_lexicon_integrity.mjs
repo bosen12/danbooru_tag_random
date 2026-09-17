@@ -258,6 +258,17 @@ function ok(name, rows) {
     ["public sex", "public indecency", "2021-11-21"],
     ["sento", "bathhouse", "2022-08-09"],
     ["hand on hip", "hand on own hip", "2023-03-27"],
+    // 這四個的正規名詞庫裡本來就有，舊名等於重複競爭同一個格子。實測（全時代
+    // 男女 8000 張）舊名／正規名分別是 kissing 68 對 kiss 64、panting 14 對
+    // heavy breathing 17、breast grab 2 對 grabbing another's breast 40，
+    // 兩邊都在抽 —— 舊名那一半是 0 篇的死字，白佔名額。
+    ["kissing", "kiss", "2013-02-16"],
+    ["panting", "heavy breathing", "2013-02-16"],
+    ["breast grab", "grabbing another's breast", "2023-04-11"],
+    // chinese architecture 比較特別：它是古中國的**時代錨**，所以不能只是拿掉，
+    // ERA_ANCHORS 要一起換成正規名，否則古中國會沒有錨。換完之後
+    // east asian architecture 從 0 變成抽得到，古中國 1500 張有 1391 張帶著錨。
+    ["chinese architecture", "east asian architecture", "2022-04-19"],
   ];
   const stale = [];
   const missing = [];
@@ -269,6 +280,12 @@ function ok(name, rows) {
   ok("併走之後的正規名都在詞庫裡", missing);
   // 反面：訓練之後才被併的舊名要留著，不能一起殺掉。
   ok("hairpin 留著（alias 是 2026-05-30 才建，晚於模型訓練）", by.has("hairpin"));
+  // 時代錨換名之後要真的指到活著的字，不然古中國會沒有年代訊號。
+  {
+    const anchors = (data.eraAnchors || {}).ancient_china || [];
+    ok("古中國的時代錨指向詞庫裡存在的字", anchors.filter((t) => !by.has(t)));
+    ok("古中國的時代錨沒有留著被併走的舊名", anchors.filter((t) => t === "chinese architecture"));
+  }
 }
 
 // --- Danbooru 查無的自創字不該留在詞庫 --------------------------------------

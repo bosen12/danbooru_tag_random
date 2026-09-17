@@ -178,7 +178,7 @@ SEX_ACT = {
     "ffm threesome", "orgy",
 }
 PAIRISH = {
-    "kiss", "kissing", "french kiss", "hug", "hug from behind", "holding hands",
+    "kiss", "french kiss", "hug", "hug from behind", "holding hands",
     "eye contact", "face to face", "forehead-to-forehead", "sitting on lap",
     "princess carry", "carry", "embrace", "girl on top", "sex", "hetero",
 }

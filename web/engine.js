@@ -190,8 +190,8 @@ function sexPhaseClash(tag, used) {
 }
 
 const SYNONYM_GROUPS = [
-  new Set(["panting", "heavy breathing"]),
-  new Set(["kissing", "kiss"]),
+  new Set(["heavy breathing"]),
+  new Set(["kiss"]),
 ];
 
 function synonymClash(tag, used) {
@@ -217,7 +217,6 @@ const FACE_NEED_TAGS = new Set([
   "selfie",
   "taking picture",
   "69",
-  "kissing",
   "reading",
   "studying",
   "writing",
@@ -335,7 +334,6 @@ const MOUTH_EXTRA = new Set([
   "parted lips",
   "licking lips",
   "drooling",
-  "panting",
   "moaning",
 ]);
 const OUTDOOR_LEFTOVER = new Set([
@@ -682,7 +680,7 @@ const EXPLICIT_ONLY_EXTRA = new Set([
   "rolling eyes",        // 4.8x，e94%，翻白眼是 ahegao 的一部分
   "aroused",             // 4.5x
   "heavy breathing",     // 3.9x
-  "panting",             // 3.9x
+  // 3.9x
   "see-through shirt",
   "micro bikini",
   "slingshot swimsuit",

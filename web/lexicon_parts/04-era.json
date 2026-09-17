@@ -821,25 +821,6 @@
     ]
   },
   {
-    "tag": "chinese architecture",
-    "section": "env",
-    "gate": "any",
-    "heat": [
-      "tease",
-      "flash",
-      "sex"
-    ],
-    "mutex": "place",
-    "bind": [],
-    "implies": [
-      "outdoors"
-    ],
-    "layer": "normal",
-    "era": [
-      "ancient_china"
-    ]
-  },
-  {
     "tag": "east asian architecture",
     "section": "env",
     "gate": "any",

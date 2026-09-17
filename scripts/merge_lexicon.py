@@ -128,7 +128,7 @@ ERA_ANCHOR_ALTS = {
 
 ERA_ANCHORS = {
     "modern": ["modern"],
-    "ancient_china": ["chinese clothes", "chinese architecture"],
+    "ancient_china": ["chinese clothes", "east asian architecture"],
     "ancient_greece": ["ancient greek clothes"],
     "medieval": ["armor", "castle"],
     "edo": ["japanese clothes"],
@@ -289,7 +289,7 @@ ERA_OF = {
     "pagoda": ["ancient_china", "edo"],
     "torii": ["edo"],
     "shrine": ["edo", "modern"],
-    "chinese architecture": ["ancient_china"],
+    "east asian architecture": ["ancient_china"],
     "east asian architecture": ["ancient_china", "edo"],
 }
 
@@ -784,7 +784,6 @@ NEEDS_FEMALE = {
 NEEDS_PAIR = {
     "sex",
     "kiss",
-    "kissing",
     "french kiss",
     "looking at another",
     "eye contact",
@@ -796,7 +795,6 @@ NEEDS_PAIR = {
     "pinned down",
     "lifting person",
     "happy sex",
-    "breast grab",
     "ass grab",
     "breast sucking",
     "guided penetration",

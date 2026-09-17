@@ -355,7 +355,6 @@ function eraDraws(era, n = 60, seed0 = 9000) {
     "shrine",
     "pagoda",
     "torii",
-    "chinese architecture",
     "east asian architecture",
   ];
   const hits = [];
@@ -2366,7 +2365,7 @@ function indoorOutdoorClash(have) {
 
 {
   ok("holding sex toy does not need pair", !((lex.byTag.get("holding sex toy")?.needs || []).includes("pair")));
-  for (const tag of ["pinned down", "lifting person", "happy sex", "breast grab", "ass grab", "breast sucking"]) {
+  for (const tag of ["pinned down", "lifting person", "happy sex", "ass grab", "breast sucking"]) {
     ok(`${tag} needs pair`, (lex.byTag.get(tag)?.needs || []).includes("pair"));
   }
   ok("jack-o' challenge implies all fours", (lex.byTag.get("jack-o' challenge")?.implies || []).includes("all fours"));
@@ -3758,7 +3757,7 @@ function indoorOutdoorClash(have) {
     let hof69 = 0;
     for (let i = 0; i < 40; i++) {
       const h = tagsOf(drawOne(lex, sexHof, pinHof3, new Set(), mulberry32(230000 + i), 230000 + i));
-      if (["69", "kissing", "french kiss"].some((t) => h.has(t))) hof69 += 1;
+      if (["69", "french kiss"].some((t) => h.has(t))) hof69 += 1;
     }
     eq("head out of frame never auto 69/kissing", hof69, 0);
     const pinSleep4 = applyPin(lex, new Set(), new Set(), "sleeping").pinned;
@@ -6219,8 +6218,8 @@ function indoorOutdoorClash(have) {
   s.heats = ["activity", "tease", "flash", "sex"];
   s.counts = { subject: 10, feature: 10, pose: 10, clothing: 10, env: 10 };
   const PAIRS = [
-    ["panting", "heavy breathing"],
-    ["kissing", "kiss"],
+    ["heavy breathing"],
+    ["kiss"],
   ];
   const both = new Map();
   const each = new Map();
@@ -6695,7 +6694,7 @@ function indoorOutdoorClash(have) {
   s.boy = true;
   // 時代錨點本來就每張都在，不算重複。
   const ANCHOR = new Set([
-    "modern", "chinese clothes", "chinese architecture", "ancient greek clothes",
+    "modern", "chinese clothes", "ancient greek clothes",
     "armor", "castle", "japanese clothes", "victorian",
   ]);
   const worst = [];

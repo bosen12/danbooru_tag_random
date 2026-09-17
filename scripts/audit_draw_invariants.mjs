@@ -49,7 +49,7 @@ const TWILIGHT = ["sunset", "dusk"];
 const FACELESS = ["head out of frame", "lower body"];
 /** 需要看得到臉才成立的字（只列不靠 mutex／group 就能判斷的）。 */
 const FACE_NEEDED = [
-  "closed eyes", "covering own mouth", "closed mouth", "french kiss", "kissing", "kiss",
+  "closed eyes", "covering own mouth", "closed mouth", "french kiss", "kiss",
   "finger to mouth", "eating", "drinking", "smoking", "singing", "talking on phone",
   "tongue out", "lipstick", "glasses", "tears", "one eye closed", "ahegao",
 ];
@@ -58,7 +58,7 @@ const EYE_ONE_OF = ["one eye closed", "empty eyes", "sparkling eyes", "half-clos
 /** 同一張臉上只能有一個的嘴部細節。 */
 const MOUTH_ONE_OF = [
   "open mouth", "clenched teeth", "biting own lip", "tongue out",
-  "parted lips", "licking lips", "drooling", "panting", "moaning",
+  "parted lips", "licking lips", "drooling", "moaning",
 ];
 /**
  * 一張圖只能有一種「有描述的」天空。
@@ -70,7 +70,7 @@ const SKY_ONE_OF = ["blue sky", "orange sky", "starry sky"];
 const SLEEP_IMPOSSIBLE = [
   "washing hair", "splashing", "partially submerged",
   "bent over", "presenting", "grinding", "presenting ass", "fingering",
-  "kissing", "ahegao", "surprised", "angry", "scared", "smug",
+  "ahegao", "surprised", "angry", "scared", "smug",
 ];
 /** 需要水的動作。 */
 const WATER_ACTS = ["partially submerged", "splashing", "washing back"];

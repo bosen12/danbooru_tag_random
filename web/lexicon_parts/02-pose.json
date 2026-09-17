@@ -1660,22 +1660,6 @@
     ]
   },
   {
-    "tag": "panting",
-    "section": "pose",
-    "gate": "any",
-    "heat": [
-      "flash",
-      "sex"
-    ],
-    "mutex": null,
-    "bind": [],
-    "implies": [],
-    "layer": "normal",
-    "era": [
-      "any"
-    ]
-  },
-  {
     "tag": "fucked silly",
     "section": "pose",
     "gate": "any",
@@ -2350,22 +2334,6 @@
     ]
   },
   {
-    "tag": "kissing",
-    "section": "pose",
-    "gate": "any",
-    "heat": [
-      "tease",
-      "sex"
-    ],
-    "mutex": null,
-    "bind": [],
-    "implies": [],
-    "layer": "normal",
-    "era": [
-      "any"
-    ]
-  },
-  {
     "tag": "french kiss",
     "section": "pose",
     "gate": "any",
@@ -2988,22 +2956,6 @@
     "section": "pose",
     "gate": "any",
     "heat": [
-      "sex"
-    ],
-    "mutex": null,
-    "bind": [],
-    "implies": [],
-    "layer": "normal",
-    "era": [
-      "any"
-    ]
-  },
-  {
-    "tag": "breast grab",
-    "section": "pose",
-    "gate": "female",
-    "heat": [
-      "flash",
       "sex"
     ],
     "mutex": null,

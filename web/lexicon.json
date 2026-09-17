@@ -229,7 +229,7 @@
     ],
     "ancient_china": [
       "chinese clothes",
-      "chinese architecture"
+      "east asian architecture"
     ],
     "ancient_greece": [
       "ancient greek clothes"
@@ -5159,24 +5159,6 @@
       "zh": "舔唇"
     },
     {
-      "tag": "panting",
-      "section": "pose",
-      "gate": "any",
-      "heat": [
-        "flash",
-        "sex"
-      ],
-      "mutex": null,
-      "bind": [],
-      "implies": [],
-      "layer": "normal",
-      "era": [
-        "any"
-      ],
-      "group": "face",
-      "zh": "喘氣"
-    },
-    {
       "tag": "fucked silly",
       "section": "pose",
       "gate": "any",
@@ -6003,28 +5985,6 @@
         "pair"
       ],
       "zh": "足交"
-    },
-    {
-      "tag": "kissing",
-      "section": "pose",
-      "gate": "any",
-      "heat": [
-        "tease",
-        "flash",
-        "sex"
-      ],
-      "mutex": null,
-      "bind": [],
-      "implies": [],
-      "layer": "normal",
-      "era": [
-        "any"
-      ],
-      "group": "tease",
-      "needs": [
-        "pair"
-      ],
-      "zh": "接吻中"
     },
     {
       "tag": "french kiss",
@@ -6910,27 +6870,6 @@
         "pair"
       ],
       "zh": "即將插入"
-    },
-    {
-      "tag": "breast grab",
-      "section": "pose",
-      "gate": "female",
-      "heat": [
-        "flash",
-        "sex"
-      ],
-      "mutex": null,
-      "bind": [],
-      "implies": [],
-      "layer": "normal",
-      "era": [
-        "any"
-      ],
-      "group": "sex",
-      "needs": [
-        "pair"
-      ],
-      "zh": "抓胸"
     },
     {
       "tag": "ass grab",
@@ -11553,27 +11492,6 @@
       ],
       "group": "fabric",
       "zh": "寬袖"
-    },
-    {
-      "tag": "chinese architecture",
-      "section": "env",
-      "gate": "any",
-      "heat": [
-        "tease",
-        "flash",
-        "sex"
-      ],
-      "mutex": "place",
-      "bind": [],
-      "implies": [
-        "outdoors"
-      ],
-      "layer": "normal",
-      "era": [
-        "ancient_china"
-      ],
-      "group": "place",
-      "zh": "中式建築"
     },
     {
       "tag": "east asian architecture",
