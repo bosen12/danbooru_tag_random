@@ -1079,10 +1079,10 @@ export const ACT_PLACE = {
   floating: new Set(["pool", "ocean", "bathtub", "ofuro", "onsen", "open-air bath", "bubble bath"]),
   "shared bathing": new Set(["onsen", "bathhouse", "ofuro", "open-air bath", "bath"]),
   eating: new Set([...MEAL_PLACE, "movie theater", "airplane interior", "convenience store", "izakaya", "festival", "market", "ryokan", "tavern"]),
-  drinking: new Set(["cafe", "bar (place)", "restaurant", "kitchen", "living room", "movie theater", "airplane interior", "izakaya", "festival", "market", "ryokan", "tavern", "ballroom", "courtyard", "garden", "balcony", "colonnade"]),
+  drinking: new Set(["cafe", "bar (place)", "restaurant", "kitchen", "living room", "movie theater", "airplane interior", "izakaya", "festival", "market", "ryokan", "tavern", "ballroom", "courtyard", "garden", "balcony", "colonnade", "village"]),
   reading: new Set([...DESK_PLACE, "train", "train interior"]),
   cooking: COOK_PLACE,
-  shopping: new Set(["street", "city", "cityscape", "fitting room", "convenience store", "supermarket", "market stall", "market", "festival"]),
+  shopping: new Set(["street", "city", "cityscape", "fitting room", "convenience store", "supermarket", "market stall", "market", "festival", "village"]),
   singing: new Set(["living room", "bar (place)", "park", "rooftop", "karaoke box", "church", "shrine", "festival", "ballroom", "ryokan", "colonnade", "tavern", "market", "courtyard", "castle"]),
   karaoke: new Set(["bar (place)", "living room", "karaoke box"]),
   "playing guitar": new Set(["bedroom", "living room", "park", "rooftop", "balcony", "garden"]),
@@ -1100,9 +1100,9 @@ export const ACT_PLACE = {
   training: new Set([...SPORT_PLACE, "battlefield", "dojo", "castle", "colonnade"]),
   archery: new Set(["garden", "park", "forest"]),
   fishing: FISH_PLACE,
-  camping: new Set(["forest", "park", "bamboo forest", "garden", "ruins", "tent", "river", "field"]),
-  picnic: new Set(["park", "garden", "beach", "forest", "courtyard"]),
-  hiking: new Set(["forest", "park", "bamboo forest", "garden", "mountain", "river", "bridge", "field", "battlefield", "ruins", "colonnade"]),
+  camping: new Set(["forest", "park", "bamboo forest", "garden", "ruins", "tent", "river", "field", "cave", "jungle", "rural"]),
+  picnic: new Set(["park", "garden", "beach", "forest", "courtyard", "rural", "village"]),
+  hiking: new Set(["forest", "park", "bamboo forest", "garden", "mountain", "river", "bridge", "field", "battlefield", "ruins", "colonnade", "cave", "jungle", "rural"]),
   jogging: new Set(["park", "street", "running track", "stadium", "garden", "city", "cityscape", "alley"]),
   skiing: new Set(["mountain"]),
   diving: new Set(["ocean", "underwater", "pool"]),
@@ -1122,6 +1122,7 @@ export const ACT_PLACE = {
     "train interior",
     "futon",
     "airplane interior",
+    "canopy bed",
   ]),
   smoking: new Set(["balcony", "rooftop", "street", "alley", "bar (place)", "cafe", "izakaya", "bridge", "courtyard"]),
   cleaning: new Set(["living room", "kitchen", "bedroom", "bathroom", "hallway", "office", "classroom", "church", "hospital", "prison"]),
@@ -1331,6 +1332,9 @@ function sportGearPlaceOk(item, used, lex) {
 }
 
 const PRIVATE_SEX_PLACE = new Set([
+  // 廁所隔間沒有對應的活動，所以在一般的場地那一格永遠排不進去（實測 0/4800）。
+  // 它的天然用途本來就是私密場景，放這裡才是它該在的地方。
+  "toilet stall",
   "bedroom",
   "hotel room",
   "love hotel",
@@ -1778,6 +1782,11 @@ export const NEEDS_CONTEXT = {
   leash: new Set(["pet play", "animal collar", "collar", "bondage", "bdsm"]),
   handcuffs: new Set(["bondage", "bdsm", "prison", "policewoman", "police uniform"]),
   "o-ring": new Set(["bondage", "bdsm", "lingerie", "swimsuit", "bikini"]),
+  // 桌子底下要先有桌子。少了這條，「under table」會變成傢俱那一格最好填的字
+  // （它幾乎不跟任何姿勢衝突），實測佔掉那一格的 64%，還把 on bed 從 8 擠到 3 ——
+  // 而且畫面上根本沒有桌子。on desk 同理。
+  "under table": new Set(["table", "desk", "poker table", "counter", "kotatsu"]),
+  "on desk": new Set(["desk", "table", "classroom", "office", "whiteboard"]),
   shibari: new Set(["bondage", "bdsm", "restrained"]),
   "bound wrists": new Set(["bondage", "bdsm", "restrained", "handcuffs"]),
   "ball gag": new Set(["bondage", "bdsm", "restrained"]),
@@ -1831,6 +1840,9 @@ export const CTX_PULLS_ACC = [
   ["bondage", "bound wrists", 0.35],
   ["bdsm", "ball gag", 0.3],
   ["bdsm", "nipple clamps", 0.2],
+  // 這一條是補漏：remote control vibrator 有 NEEDS_CONTEXT 擋著卻沒有任何正向拉取，
+  // 於是兩邊都是 0 —— 正是上面那段註解在講的「只擋不拉，出現率就是零」。
+  ["restrained", "remote control vibrator", 0.25],
   ["boxing", "boxing gloves", 0.85],
   ["playing sports", "knee pads", 0.25],
   ["riding bicycle", "bicycle helmet", 0.45],

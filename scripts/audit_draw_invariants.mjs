@@ -926,6 +926,91 @@ FAIL 性行為互斥  ×${bad}/${N}`);
   }
 }
 
+// 沒有任何一格被單一個字吃掉。
+//
+// 可達性測試對這種問題是全盲的：那個字不但抽得到，還抽爆了。實際發生過兩次，
+// 都是我加字時把一個「永遠成立」的字放進一個「有優先序」的格子：
+//
+//   lifting own clothes 放進 clothes_action（那一格是給 shirt pull 這種
+//   需要特定衣服的動作用的），engine 在 flash 會先填那一格、填成功就不再走
+//   多樣的 flash 群 —— 於是它佔掉 flash 暴露動作的 88.1%，種類從 52 掉到 40。
+//
+//   under table 放進 furniture，它幾乎不跟任何姿勢衝突，佔掉那一格的 64%，
+//   還把 on bed 從 8 擠到 3 —— 而且畫面上根本沒有桌子。
+//
+// 下面的豁免清單是**手寫**的，只放「本來就該集中」的格子：人數格就是該以
+// 1girl 為主、室內外只有兩個值、裸露和 feature/sex 各只有兩三個字。
+// 其餘每一格都不准被單一個字吃掉超過門檻。
+{
+  const N = 220;
+  const EXEMPT = new Set([
+    "subject/count_f", // 1girl 本來就該是大宗
+    "subject/count_m",
+    "subject/extra", // adult 是預設年齡
+    "env/inout", // 只有 indoors / outdoors
+    "feature/sex", // 整組只有兩個字
+    "clothing/nude", // 整組只有三個字
+  ]);
+  // 實測最高的非豁免格是 clothing/bottom 41.3%（skirt），而出過事的兩次是
+  // 88.1% 和 64%。門檻取 55：離實測有餘裕，離兩次事故都很遠。
+  const CAP = 0.55;
+  const perGroup = new Map();
+  let drew = 0;
+  for (const era of ERAS) {
+    for (const heats of [["activity"], ["tease"], ["flash"], ["sex"]]) {
+      for (let i = 0; i < N; i += 1) {
+        const s = defaultSettings(data);
+        s.eras = [era];
+        s.girl = true;
+        s.boy = true;
+        s.heats = heats;
+        s.weights = { activity: 0, tease: 0, flash: 0, sex: 0 };
+        s.weights[heats[0]] = 1;
+        const seed = 480000 + i;
+        drew += 1;
+        for (const t of drawOne(lex, s, new Set(), new Set(), mulberry32(seed), seed)
+          .positive.split(",")
+          .map((x) => x.trim())) {
+          const it = lex.byTag.get(t);
+          if (!it || it.section === "quality") continue;
+          const g = `${it.section}/${it.group}`;
+          if (EXEMPT.has(g)) continue;
+          if (!perGroup.has(g)) perGroup.set(g, new Map());
+          const m = perGroup.get(g);
+          m.set(t, (m.get(t) || 0) + 1);
+        }
+      }
+    }
+  }
+  const bad = [];
+  let checked = 0;
+  for (const [g, m] of perGroup) {
+    const list = [...m.entries()].sort((a, b) => b[1] - a[1]);
+    const tot = list.reduce((sum, r) => sum + r[1], 0);
+    if (tot < 40) continue; // 樣本太少的格子講不出比例
+    checked += 1;
+    const share = list[0][1] / tot;
+    if (share > CAP) bad.push(`${g} 的 ${list[0][0]} 佔 ${(share * 100).toFixed(1)}%（共 ${list.length} 種）`);
+  }
+  if (!bad.length && checked >= 15) {
+    console.log(`ok   沒有任何一格被單一個字吃掉（掃了 ${checked} 格、${drew} 張）`);
+  } else {
+    console.log("");
+    if (bad.length) {
+      console.log(`FAIL 有格子被單一個字吃掉  ${bad.length} 格`);
+      for (const b of bad) console.log(`  ${b}`);
+      console.log("  規格：把一個「永遠成立」的字放進一個「有優先序」的格子，等於把那一格關掉。");
+      console.log("        可達性測試抓不到 —— 那個字不但抽得到，還抽爆了。");
+    }
+    if (checked < 15) {
+      console.log(`FAIL 這條掃到的格子太少（${checked}），等於沒檢查`);
+    }
+    console.log("");
+    console.log("1 條 hard 不變式被違反");
+    process.exit(1);
+  }
+}
+
 if (!hardHits.size) {
   console.log("hard：全部通過。");
   console.log("\nok");

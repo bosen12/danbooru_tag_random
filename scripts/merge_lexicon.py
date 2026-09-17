@@ -2036,7 +2036,12 @@ def extra_corpus_tags() -> list[dict]:
         pose("mirror selfie", mutex="activity", implies=["mirror"], era=modern, zh="鏡子自拍"),
 
         # ---- 暴露 ----------------------------------------------------------
-        pose("lifting own clothes", mutex="clothes_action", heat=hot, era=any_era, zh="撩起衣服"),
+        # **不要**給它 clothes_action 互斥格。那一格是給「針對特定衣服的動作」用的
+        # （shirt pull 要有襯衫、dress pull 要有洋裝），engine 在 flash 尺度會先
+        # fillSlot 那一格，成功了就不再走多樣的 flash 群。而撩衣服對任何衣服都成立，
+        # 於是它每次都贏在最高層 —— 實測佔掉 flash 圖的 88.1%，種類從 52 掉到 40。
+        # 放回一般的 flash 動作，跟其他五十幾個平起平坐。
+        pose("lifting own clothes", heat=hot, era=any_era, zh="撩起衣服"),
         pose("wardrobe malfunction", heat=hot, era=any_era, zh="走光"),
         pose("accidental exposure", heat=hot, era=any_era, zh="不慎走光"),
 

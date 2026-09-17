@@ -27893,14 +27893,14 @@
         "flash",
         "sex"
       ],
-      "mutex": "clothes_action",
+      "mutex": null,
       "bind": [],
       "implies": [],
       "layer": "normal",
       "era": [
         "any"
       ],
-      "group": "flash",
+      "group": "tease",
       "zh": "撩起衣服"
     },
     {
