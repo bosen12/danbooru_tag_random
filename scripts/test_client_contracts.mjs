@@ -277,6 +277,121 @@ function ok(name, cond, detail) {
   ok("分段控制標得出目前選哪一個", src.includes('aria-pressed'), "選中狀態是 .seg[aria-pressed=true] 畫的");
 }
 
+// --- 8. 切換畫面的動效：掛對地方，而且不會變成死按鈕 ------------------------
+// 這一段守的三件事，都是這一輪真的踩到的，不是預防性的。
+{
+  const src = readFileSync(join(ROOT, "web", "boot.js"), "utf8");
+  const html = readFileSync(join(ROOT, "web", "index.html"), "utf8");
+  const css = readFileSync(join(ROOT, "web", "boot.css"), "utf8");
+
+  // (1) 動畫掛在呼叫端，不是掛在 renderCats 的 mode 上。
+  //     第一版寫成 `if (mode === "filter") playCatsSwap()`，結果三顆檢視按鈕
+  //     完全沒動效 —— 因為「釘選／封禁／只看該時代」走的是 renderCats("search")
+  //     （它們只改可見性，共用搜尋那條快路徑），mode 上跟真的搜尋分不出來。
+  //     瀏覽器實測才看出 class 從來沒被加上去。
+  const vAt = src.indexOf('$("view-filters").addEventListener');
+  const vBody = vAt >= 0 ? src.slice(vAt, vAt + 700) : "";
+  ok("找得到檢視按鈕的處理函式", vAt >= 0, "切視窗的錨點不見了，下面兩條會失去意義");
+  ok(
+    "檢視按鈕自己叫動效，不靠 renderCats 的 mode",
+    (vBody.match(/playCatsSwap\(\)/g) || []).length === 2,
+    "[data-view] 與 #era-only 兩個分支各要一次；靠 mode 判斷的話這三顆按鈕沒有動效"
+  );
+
+  // (1b) 動效跑完必須把 is-swapping 拿掉。留著的話，之後任何一個分類由
+  //      hidden 轉可見都會**重新符合選擇器**而再放一次 —— 搜尋正好會這樣，
+  //      於是「搜尋不給動效」從另一邊被繞過去。實測打字篩掉四個分類再清空，
+  //      六個分類全部 cats-swap-in@running。這條擋的是那個。
+  const pAt = src.indexOf("function playCatsSwap()");
+  const pBody = pAt >= 0 ? src.slice(pAt, src.indexOf("function buildCats()")) : "";
+  ok("找得到 playCatsSwap()", pAt >= 0);
+  ok(
+    "動效跑完會把 class 拿掉",
+    pBody.includes("setTimeout") && pBody.split('remove("is-swapping")').length - 1 === 2,
+    "要兩次：一次重播前清掉，一次跑完收尾。少了收尾那次，搜尋會跟著閃"
+  );
+  // 錯開的間隔只能有一份。CSS 算 animation-delay、JS 算「什麼時候跑完」，
+  // 兩邊各寫一個數字遲早走散：CSS 改大、JS 提早收尾，動畫會被切斷。
+  ok("錯開間隔是共用的 token", pBody.includes("--cats-stagger") && css.includes("--cats-stagger:"));
+
+  // (2) 搜尋輸入刻意不給動效。連續輸入每 120 毫秒觸發一次，每打一個字閃一下
+  //     只會更吵 —— 「動效要有目的」那條。這裡守住它不會被順手加回去。
+  const qAt = src.indexOf('$("q").addEventListener("input"');
+  const qBody = qAt >= 0 ? src.slice(qAt, qAt + 260) : "";
+  ok("找得到搜尋輸入的處理函式", qAt >= 0);
+  ok("搜尋輸入不放動效", !qBody.includes("playCatsSwap"), "連續輸入每打一個字閃一下會更吵");
+
+  // (3) 檢視器換圖的 decode 要有保底。decode() 不保證 settle（分頁在背景時
+  //     實測就不會），沒有保底的話 ‹ › 兩顆按鈕是**死的** —— 按三下、等三秒，
+  //     seed 完全不動。卡片淡入那段早就踩過同一個坑，所以那裡有 3000ms 保底。
+  const fAt = src.indexOf("function fillViewer(");
+  const fBody = fAt >= 0 ? src.slice(fAt, src.indexOf("function fillViewerInfo(")) : "";
+  ok("找得到 fillViewer()", fAt >= 0);
+  ok("換圖前先解碼", fBody.includes(".decode()"), "直接換 src 會空一幀，那就是「硬跳」");
+  ok(
+    "解碼有保底，按鈕不會變死的",
+    /setTimeout\(paint/.test(fBody),
+    "decode() 不 settle 的時候（分頁在背景）上一張／下一張會完全沒反應"
+  );
+  ok("連按時只畫最後一張", fBody.includes("VIEW_NAV_GEN"), "非同步 decode 回來的順序可能跟按鍵順序不同");
+
+  // (4) 三條警告改成收合式之後，任何一條分支再寫 hidden = true 就會變回硬跳。
+  const cAt = src.indexOf("function updateHeatClash()");
+  const cEnd = src.indexOf("function identitySummary(");
+  const cBody = cAt >= 0 && cEnd > cAt ? src.slice(cAt, cEnd) : "";
+  ok("找得到三條警告那一段", cBody.length > 0);
+  ok(
+    "警告用收合，不用 display:none",
+    cBody.length > 0 && !cBody.includes("note.hidden = true"),
+    "hidden 沒有過場：一條兩三行的警告一出現就把底下整條側欄推開幾十像素"
+  );
+
+  // 收合靠的是 .clash > span 能被裁掉。少了 overflow:hidden，0fr 的格子
+  // 會被子元素的 min-content 撐開，收不回去。span 在 HTML 裡也要存在。
+  //
+  // 下面三條要切出**規則本體**再看宣告，不能整份搜字串 —— 這兩條的第一版就是
+  // 這樣假綠的：搜 "grid-template-rows" 會命中同一條規則裡的 transition，
+  // 搜 ".clash.is-on" 會命中下面那條 `.clash.is-on > span`。把 0fr 整行刪掉、
+  // 把展開規則改名，兩條都照樣通過。
+  const rule = (sel) => {
+    const at = css.indexOf(sel + " {");
+    return at < 0 ? "" : css.slice(at, css.indexOf("}", at));
+  };
+  ok(
+    "警告的收合軌道還在",
+    rule(".clash").includes("grid-template-rows: 0fr"),
+    "沒有 0fr 就沒有收合，警告會用原本的高度直接卡在那裡"
+  );
+  ok(
+    "展開狀態還在",
+    rule(".clash.is-on").includes("grid-template-rows: 1fr"),
+    "沒有 1fr 就展不開，警告永遠是 0 高、等於看不見"
+  );
+  ok(
+    "裡層裁得掉",
+    rule(".clash > span").includes("overflow: hidden"),
+    "少了 overflow:hidden，0fr 的格子會被子元素的 min-content 撐開，收不回去"
+  );
+  ok(
+    "三條警告的 HTML 都有裡層",
+    (html.match(/class="hint clash" id="[a-z-]+" hidden><span><\/span>/g) || []).length === 3,
+    "少了 <span> 就沒有能裁的子元素"
+  );
+
+  // (5) 分級變動原本有自己的 .rating-changed .cats 淡入。那個意圖已經由
+  //     cats-swap-in 承接，兩個都留會相乘（外層 0.45→1 疊內層 0→1，中段
+  //     亮度掉到 0.67），而且收尾時間不同，看起來像慢了一拍。
+  ok("分級的那層淡入已經收掉", !css.includes("rating-fade"), "兩層淡入會相乘");
+  // 守的是**程式碼**不是註解：setRating 裡留著一句「這裡本來有一段
+  // .rating-changed 淡入」，那是該留的說明。第一版整份搜字串，被自己的
+  // 註解絆倒了 —— 契約要問「有沒有人再加這個 class」，不是「有沒有人提到它」。
+  ok(
+    "對應的 class 也沒人再加",
+    !src.includes('classList.add("rating-changed")'),
+    "CSS 收掉了，JS 這邊會變成死碼；兩層淡入也會回來"
+  );
+}
+
 if (failed) {
   console.error(NL + failed + " failed");
   process.exit(1);

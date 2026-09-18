@@ -1296,6 +1296,58 @@
   object-fit: contain;
   background: #000;
 }
+
+/* 換上一張／下一張：有方向的滑入。按 › 新的一張從右邊進來、按 ‹ 從左邊，
+   這樣兩顆箭頭在畫面上分得出來，而不是原地換一張圖。
+   .shot-viewer-stage 本來就 overflow:hidden，滑動不會漏到面板外面。
+   走的是檢視器自己那套尺度（--d-pop / --ease-entrance，跟面板開啟同一家），
+   不是外層 tokens.css 的那套 —— .shot-viewer 自己重新定義過這些變數。 */
+@keyframes shot-nav-r {
+  from {
+    opacity: 0;
+    transform: translateX(7%);
+  }
+  to {
+    opacity: 1;
+    transform: none;
+  }
+}
+@keyframes shot-nav-l {
+  from {
+    opacity: 0;
+    transform: translateX(-7%);
+  }
+  to {
+    opacity: 1;
+    transform: none;
+  }
+}
+.shot-viewer-stage img.nav-r {
+  animation: shot-nav-r var(--d-pop) var(--ease-entrance) both;
+}
+.shot-viewer-stage img.nav-l {
+  animation: shot-nav-l var(--d-pop) var(--ease-entrance) both;
+}
+/* 右欄的資訊跟著換，但不跟著滑 —— 兩邊一起滑會變成整個面板在動，
+   而 seed／POS 是要讀的字，移動中的字最難讀。只給它淡入。 */
+.shot-viewer-info.nav-in {
+  animation: shot-nav-info var(--d-ui) var(--ease-out) both;
+}
+@keyframes shot-nav-info {
+  from {
+    opacity: 0;
+  }
+  to {
+    opacity: 1;
+  }
+}
+@media (prefers-reduced-motion: reduce) {
+  .shot-viewer-stage img.nav-r,
+  .shot-viewer-stage img.nav-l,
+  .shot-viewer-info.nav-in {
+    animation: none;
+  }
+}
 .shot-viewer-info {
   flex: none;
   width: 320px;

@@ -308,13 +308,45 @@ function ratingHeatClash() {
   return (settings.heats || []).filter((h) => blocked.includes(h));
 }
 
+/**
+ * 三條警告（角色／尺度／時代）的顯示與收合。
+ *
+ * 本來是 note.hidden 直接切 —— display:none 沒有過場，一條兩三行的警告
+ * 一出現就把底下整條側欄往下推四五十像素，消失時又彈回去。改成跟釘選匣
+ * 同一個模式（.tray 的 grid-template-rows: 0fr -> 1fr），高度自己長出來。
+ *
+ * 文字掛在裡面的 <span>，因為 0fr 的格子要有個能設 overflow:hidden 的子元素
+ * 才裁得掉。收合時不清掉文字（清掉就沒東西可以收），改用 aria-hidden 讓
+ * 螢幕閱讀器跳過 —— 不然收起來的舊警告還會被念出來。
+ */
+function clashBox(note) {
+  let box = note.firstElementChild;
+  if (!box) {
+    box = document.createElement("span");
+    note.append(box);
+  }
+  return box;
+}
+
+function showClash(note) {
+  note.hidden = false;
+  note.classList.add("is-on");
+  note.setAttribute("aria-hidden", "false");
+}
+
+function hideClash(note) {
+  note.hidden = false;
+  note.classList.remove("is-on");
+  note.setAttribute("aria-hidden", "true");
+}
+
 function updateHeatClash() {
   const note = $("heat-clash");
   if (!note) return;
   const ratingHit = ratingHeatClash();
   if (ratingHit.length) {
-    note.hidden = false;
-    note.textContent =
+    showClash(note);
+    clashBox(note).textContent =
       "分級選了「" +
       (RATING_LABEL[settings.rating] || settings.rating) +
       "」，但尺度勾了「" +
@@ -324,8 +356,8 @@ function updateHeatClash() {
   }
   const sexBlock = sportHeatWarnings(lex, pinned, settings.heats);
   if (sexBlock.length) {
-    note.hidden = false;
-    note.textContent =
+    showClash(note);
+    clashBox(note).textContent =
       "你釘了「" +
       sexBlock[0].tags.map((t) => labelOf(lex, t)).join("、") +
       "」，這種活動跟性愛動作不能並存，所以這張抽不到性愛。把它從「必進這張圖」點掉就會有。";
@@ -333,8 +365,8 @@ function updateHeatClash() {
   }
   const handBlock = handUsageWarnings(pinned);
   if (handBlock.length) {
-    note.hidden = false;
-    note.textContent =
+    showClash(note);
+    clashBox(note).textContent =
       "你同時釘了「" +
       handBlock[0].tags.map((t) => labelOf(lex, t)).join("、") +
       "」；拳擊手套會妨礙需要靈活手指的動作。明確釘選會保留，但建議拿掉其中一邊。";
@@ -342,8 +374,8 @@ function updateHeatClash() {
   }
   const sportBlock = sportPinWarnings(lex, pinned);
   if (sportBlock.length) {
-    note.hidden = false;
-    note.textContent =
+    showClash(note);
+    clashBox(note).textContent =
       "你同時釘了「" +
       sportBlock[0].tags.map((t) => labelOf(lex, t)).join("、") +
       "」，它們屬於互斥的運動。明確釘選會保留，但自動抽牌不會再補衝突運動。";
@@ -351,8 +383,8 @@ function updateHeatClash() {
   }
   const placeBlock = sportPlacePinWarnings(lex, pinned, settings);
   if (placeBlock.length) {
-    note.hidden = false;
-    note.textContent =
+    showClash(note);
+    clashBox(note).textContent =
       "你同時釘了「" +
       placeBlock[0].tags.map((t) => labelOf(lex, t)).join("、") +
       "」，運動器材／活動跟場地不相容。明確釘選會保留；可拿掉其中一邊，或切到奇葩模式。";
@@ -361,16 +393,15 @@ function updateHeatClash() {
   const clash = heatMismatches(lex, pinned, settings.heats);
   if (clash.length) {
     const scale = (settings.heats || []).map((h) => HEAT_LABELS[h] || h).join("／");
-    note.hidden = false;
-    note.textContent =
+    showClash(note);
+    clashBox(note).textContent =
       "你釘了「" +
       clash.map((t) => labelOf(lex, t)).join("、") +
       "」，尺度對不上（現在只開" +
       scale +
       "）。衣服仍會進圖，這張還是走你勾的尺度。";
   } else {
-    note.hidden = true;
-    note.textContent = "";
+    hideClash(note);
   }
 }
 
@@ -380,8 +411,8 @@ function updateEraClash() {
   const era = exclusiveEra();
   const clash = era ? eraMismatches(lex, pinned, era) : [];
   if (clash.length) {
-    note.hidden = false;
-    note.textContent =
+    showClash(note);
+    clashBox(note).textContent =
       "你釘的「" +
       clash.map((t) => labelOf(lex, t)).join("、") +
       "」不是" +
@@ -390,8 +421,7 @@ function updateEraClash() {
       (ERA_LABELS[era] || era) +
       "場景，釘選也會留在圖裡。";
   } else {
-    note.hidden = true;
-    note.textContent = "";
+    hideClash(note);
   }
 }
 
@@ -633,12 +663,9 @@ function setRating(next, { speakIt = true } = {}) {
   updateHeatClash();
   saveStore();
   syncRating();
-  // 能抽的字整批變了，詞庫面板要重畫。加一個很短的淡入，讓使用者看得出來
-  // 這次重畫是自己剛才那一下造成的。
-  const rail = document.querySelector(".rail") || document.body;
-  rail.classList.remove("rating-changed");
-  void rail.offsetWidth;
-  rail.classList.add("rating-changed");
+  // 能抽的字整批變了，詞庫面板要重畫。淡入由 renderCats("filter") 那條路
+  // 走 playCatsSwap()，跟時代／角色／檢視切換是同一個過場 —— 這裡本來有一段
+  // 自己的 .rating-changed 淡入，兩層疊起來會相乘，所以收掉了。
   renderCats("filter");
   if (speakIt) speak(`尺度：${RATING_LABEL[next]}`);
 }
@@ -726,16 +753,15 @@ function syncCast() {
     }
   }
   if (clash.length) {
-    note.hidden = false;
-    note.textContent =
+    showClash(note);
+    clashBox(note).textContent =
       "你釘了「" +
       clash.map((t) => labelOf(lex, t)).join("、") +
       "」，左欄雖只開" +
       (ex === "female" ? "女" : "男") +
       "，這些仍會進圖。";
   } else {
-    note.hidden = true;
-    note.textContent = "";
+    hideClash(note);
   }
 }
 
@@ -1312,7 +1338,15 @@ function syncVisibility(auto) {
       root.append(empty);
     }
     empty.hidden = false;
-    empty.textContent = q ? "沒有符合的字。" : "這個篩選下沒有 tag。";
+    // 切到「釘選」卻一個都沒釘，是最容易撞到的空畫面 —— 六個分類一次全部消失。
+    // 泛用的那句「這個篩選下沒有 tag」在這裡等於沒說：使用者要的是下一步怎麼做。
+    empty.textContent = q
+      ? "沒有符合的字。"
+      : viewMode === "pinned"
+        ? "還沒釘住任何字。回到「全部」點一下 tag 就會釘住它。"
+        : viewMode === "banned"
+          ? "還沒封禁任何字。釘住的 tag 再點一下就會封禁。"
+          : "這個篩選下沒有 tag。";
   } else if (empty) empty.hidden = true;
 }
 
@@ -1330,6 +1364,58 @@ function renderCats(mode = "auto") {
   paintPrev = { pin: new Set(pinned), auto, user: new Set(userBanned) };
   if (mode !== "heat") syncVisibility(auto);
   syncViewFilters();
+  if (mode === "filter" || mode === "heat") playCatsSwap();
+}
+
+let catsSwapTimer = 0;
+let catsSwapGen = 0;
+
+/**
+ * 切換檢視時讓分類淡入，不要讓上千個晶片瞬間閃動。
+ *
+ * 切到「釘選」會讓 1086 個晶片同時消失（實測），而它們是用 hidden 也就是
+ * display:none 切的 —— 沒有任何過場可言。但**不能**去動畫那上千個元素：
+ * 逐個做不只是效能問題，畫面上也會變成一片雜訊。
+ *
+ * 動的是六個分類容器，只碰 opacity 與 transform，用既有的 --i 錯開慣例
+ * （.tray .tag 已經在用 calc(var(--i) * 12ms)）。切換本身實測 1–3 毫秒，
+ * 所以淡入不會蓋住任何等待，純粹是讓改變看得出是「換了一批」而不是閃一下。
+ *
+ * 由呼叫端決定要不要放，而不是這裡看 mode —— 因為「釘選／封禁／只看該時代」
+ * 那三顆按鈕走的是 renderCats("search")（它們只改可見性，不需要重繪顏色，
+ * 所以共用了搜尋那條快路徑），跟真正的搜尋輸入從 mode 上分不出來。
+ *
+ * 搜尋輸入刻意不放：那是連續輸入（每 120 毫秒觸發一次），每打一個字閃一下
+ * 只會更吵。這就是「動效要有目的」那條 —— 刻意的切換才給過場，連續輸入不給。
+ */
+function playCatsSwap() {
+  const root = $("cats");
+  if (!root) return;
+  if (reduceMotion()) return;
+  root.classList.remove("is-swapping");
+  // 同一幀移除再加上不會重播動畫，中間要讀一次版面逼瀏覽器結算。
+  void root.offsetWidth;
+  let i = 0;
+  // 空狀態也算一格：整片空掉的時候它是畫面上唯一的東西，最不該是硬跳出來的。
+  for (const cat of root.querySelectorAll(":scope > .cat, :scope > .empty-filter")) {
+    if (cat.hidden) continue;
+    cat.style.setProperty("--i", String(i));
+    i += 1;
+  }
+  root.classList.add("is-swapping");
+  // 跑完要把 class 拿掉。留著的話，之後任何一個分類由 hidden 轉可見都會
+  // **重新符合這個選擇器**而再放一次動畫 —— 搜尋正好會這樣：實測打字篩掉
+  // 四個分類、再清空，六個分類全部 cats-swap-in@running。那正是這一段
+  // 刻意要避開的「每打一個字閃一下」，只是繞過 mode 從另一邊回來了。
+  const cs = getComputedStyle(root);
+  const dur = parseFloat(cs.getPropertyValue("--dur-ui")) || 220;
+  const step = parseFloat(cs.getPropertyValue("--cats-stagger")) || 26;
+  const gen = (catsSwapGen += 1);
+  window.clearTimeout(catsSwapTimer);
+  catsSwapTimer = window.setTimeout(() => {
+    if (gen !== catsSwapGen) return;
+    root.classList.remove("is-swapping");
+  }, dur + i * step + 60);
 }
 
 function buildCats() {
@@ -1923,11 +2009,56 @@ function loraSummary(card) {
 let VIEW_INDEX = -1;
 let VIEW_RETURN = null;
 
-function fillViewer(card) {
+let VIEW_NAV_GEN = 0;
+
+/**
+ * 換到上一張／下一張。dir>0 是下一張，0 是第一次開啟（不做動效）。
+ *
+ * 舊寫法是直接 `vImg.src = img.src` —— 兩個問題：
+ * 一是新圖若還沒解碼，img 會空一幀再跳出來，那個閃就是「生硬」的來源；
+ * 二是換完之後畫面上沒有任何東西說明方向，按 › 跟按 ‹ 看起來一模一樣。
+ *
+ * 所以先在旁邊解碼好再換（圖通常已經在卡片上畫過，這一步幾乎是同步的），
+ * 換完再放一段有方向的滑入。連按時用 gen 擋住較早那幾張，免得非同步的
+ * decode 回來的順序跟按鍵順序不同，畫面倒著跳。
+ */
+function fillViewer(card, dir = 0) {
   const img = card.querySelector(".shot-img");
   const vImg = $("shot-viewer-img");
-  vImg.src = img.src;
-  vImg.alt = img.alt || "生成圖";
+  const nextSrc = img.src;
+  const gen = (VIEW_NAV_GEN += 1);
+  let painted = false;
+  const paint = () => {
+    if (painted || gen !== VIEW_NAV_GEN) return;
+    painted = true;
+    vImg.src = nextSrc;
+    vImg.alt = img.alt || "生成圖";
+    fillViewerInfo(card);
+    // 先清乾淨再決定要不要放：關掉再開（dir=0）也要把上一次的方向清掉，
+    // 不然那兩個 class 會一直留在 img 上。
+    const box = $("shot-viewer-info");
+    vImg.classList.remove("nav-l", "nav-r");
+    box.classList.remove("nav-in");
+    if (!dir || REDUCE_MOTION) return;
+    // 同一幀移除再加上不會重播，中間要讀一次版面逼瀏覽器結算。
+    void vImg.offsetWidth;
+    vImg.classList.add(dir > 0 ? "nav-r" : "nav-l");
+    box.classList.add("nav-in");
+  };
+  if (dir && !REDUCE_MOTION) {
+    const pre = new Image();
+    pre.src = nextSrc;
+    if (typeof pre.decode === "function") pre.decode().then(paint, paint);
+    else paint();
+    // decode() 不保證會 settle —— 分頁在背景時實測就不會（卡片淡入那段也踩過，
+    // 所以那裡有 3000ms 保底）。沒有保底的話按鈕會變成死的：按了什麼都不動。
+    // 這裡等的是「已經畫在卡片上的圖」，200 毫秒還沒好就直接換，
+    // 最多閃一幀，比按鈕沒反應好。
+    window.setTimeout(paint, 200);
+  } else paint();
+}
+
+function fillViewerInfo(card) {
   const info = $("shot-viewer-info");
   const rows = [
     ["seed", card.dataset.seed || "—"],
@@ -1994,7 +2125,7 @@ function navViewer(dir) {
   const list = doneCards();
   if (list.length < 2) return;
   VIEW_INDEX = (VIEW_INDEX + dir + list.length) % list.length;
-  fillViewer(list[VIEW_INDEX]);
+  fillViewer(list[VIEW_INDEX], dir);
 }
 
 function isViewerOpen() {
@@ -2792,6 +2923,7 @@ function bindUi() {
     if (!$("q").value) return;
     $("q").value = "";
     renderCats("search");
+    playCatsSwap();
   });
   document.addEventListener("keydown", (e) => {
     if (e.ctrlKey || e.metaKey || e.altKey) return;
@@ -2821,11 +2953,13 @@ function bindUi() {
     if (btn) {
       viewMode = btn.dataset.view;
       renderCats("search");
+      playCatsSwap();
       return;
     }
     if (e.target.closest("#era-only")) {
       eraOnly = !eraOnly;
       renderCats("search");
+      playCatsSwap();
     }
   });
   $("clear-pins").addEventListener("click", () => {

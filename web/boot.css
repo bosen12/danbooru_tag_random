@@ -95,6 +95,44 @@ a {
   color: var(--color-accent);
 }
 
+/* 警告出現時要長出來，不要把底下整條側欄一下推開。跟 .tray 同一個作法：
+   0fr -> 1fr，高度自己量，不用寫死 max-height。
+   上邊距要跟著收：放在裡層當 padding 的話，0fr 裁不掉 padding，收合後
+   側欄會永遠留著三個 8px 的空隙（實測收合高度 8px 而不是 0）。所以放在
+   外層當 margin-top，跟格子一起過場。 */
+.clash {
+  display: grid;
+  grid-template-rows: 0fr;
+  margin: 0;
+  transition:
+    grid-template-rows var(--dur-move) var(--ease-in-out),
+    margin-top var(--dur-move) var(--ease-in-out);
+}
+
+.clash.is-on {
+  grid-template-rows: 1fr;
+  margin-top: var(--space-2);
+}
+
+.clash > span {
+  overflow: hidden;
+  min-height: 0;
+  /* 字比格子早一點淡出，收合到一半就看不到字了，比「字跟著被切掉」好看。 */
+  opacity: 0;
+  transition: opacity var(--dur-ui) var(--ease-out);
+}
+
+.clash.is-on > span {
+  opacity: 1;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .clash,
+  .clash > span {
+    transition: none;
+  }
+}
+
 .row {
   display: flex;
   flex-wrap: wrap;
@@ -586,6 +624,38 @@ input[type="number"] {
   line-height: 1.6;
   color: var(--color-muted);
   white-space: pre-line;
+}
+
+/* 換檢視時分類淡入。動的是六個容器不是上千個晶片 —— 逐個做動畫在這個
+   規模下既慢又雜。只碰 opacity 與 transform，走既有的時間尺度。 */
+@keyframes cats-swap-in {
+  from {
+    opacity: 0;
+    transform: translateY(6px);
+  }
+  to {
+    opacity: 1;
+    transform: none;
+  }
+}
+
+#cats {
+  /* 錯開的間隔。boot.js 收尾時要算「動畫什麼時候跑完」，從這裡讀，
+     不要兩邊各寫一份會走散的數字。 */
+  --cats-stagger: 26ms;
+}
+
+#cats.is-swapping > .cat:not([hidden]),
+#cats.is-swapping > .empty-filter:not([hidden]) {
+  animation: cats-swap-in var(--dur-ui) var(--ease-out) both;
+  animation-delay: calc(var(--i, 0) * var(--cats-stagger));
+}
+
+@media (prefers-reduced-motion: reduce) {
+  #cats.is-swapping > .cat:not([hidden]),
+  #cats.is-swapping > .empty-filter:not([hidden]) {
+    animation: none;
+  }
 }
 
 .cat {
@@ -2280,17 +2350,15 @@ html.is-booting *::after {
   outline: 2px solid var(--color-focus);
   outline-offset: -2px;
 }
-/* 分級變動時，詞庫面板會整批重畫。給一個很短的淡入，讓使用者知道是同一次操作
-   造成的，而不是畫面自己閃了一下。 */
-.rating-changed .cats { animation: rating-fade 200ms ease; }
-@keyframes rating-fade {
-  from { opacity: 0.45; }
-  to { opacity: 1; }
-}
+/* 分級變動時詞庫面板會整批重畫，這裡本來有一個 .rating-changed .cats 的
+   200ms 淡入。那個意圖現在由 cats-swap-in 承接（見上面 #cats.is-swapping）：
+   同一個元素、同一件事，但改成走 --dur-ui／--ease-out，而且時代、角色、
+   尺度、檢視每一種刻意的切換都一致，不是只有分級有。
+   兩個都留會相乘 —— 外層 0.45→1 疊上內層 0→1，中段亮度掉到 0.67，
+   而且兩條曲線收尾時間不同（200ms vs 220ms+錯開），看起來像慢了一拍。 */
 @media (prefers-reduced-motion: reduce) {
   .segmented::before,
   .segmented-btn { transition: none; }
   .segmented-btn:active { transform: none; }
-  .rating-changed .cats { animation: none; }
 }
 }
