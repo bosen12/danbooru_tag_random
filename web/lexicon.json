@@ -25062,7 +25062,8 @@
       "implies": [],
       "layer": "normal",
       "era": [
-        "any"
+        "modern",
+        "victorian"
       ],
       "group": "other",
       "zh": "筆"
@@ -25100,7 +25101,8 @@
       "implies": [],
       "layer": "normal",
       "era": [
-        "any"
+        "modern",
+        "victorian"
       ],
       "group": "other",
       "zh": "菸"
@@ -25218,6 +25220,199 @@
       ],
       "group": "other",
       "zh": "畫筆"
+    },
+    {
+      "tag": "kiseru",
+      "section": "env",
+      "gate": "any",
+      "heat": [
+        "tease",
+        "flash",
+        "sex"
+      ],
+      "mutex": "held_prop",
+      "bind": [],
+      "implies": [],
+      "layer": "normal",
+      "era": [
+        "edo"
+      ],
+      "group": "other",
+      "zh": "煙管"
+    },
+    {
+      "tag": "smoking pipe",
+      "section": "env",
+      "gate": "any",
+      "heat": [
+        "tease",
+        "flash",
+        "sex"
+      ],
+      "mutex": "held_prop",
+      "bind": [],
+      "implies": [],
+      "layer": "normal",
+      "era": [
+        "victorian"
+      ],
+      "group": "other",
+      "zh": "菸斗"
+    },
+    {
+      "tag": "cigar",
+      "section": "env",
+      "gate": "any",
+      "heat": [
+        "tease",
+        "flash",
+        "sex"
+      ],
+      "mutex": "held_prop",
+      "bind": [],
+      "implies": [],
+      "layer": "normal",
+      "era": [
+        "victorian"
+      ],
+      "group": "other",
+      "zh": "雪茄"
+    },
+    {
+      "tag": "calligraphy brush",
+      "section": "env",
+      "gate": "any",
+      "heat": [
+        "tease",
+        "flash",
+        "sex"
+      ],
+      "mutex": "held_prop",
+      "bind": [],
+      "implies": [],
+      "layer": "normal",
+      "era": [
+        "ancient_china",
+        "edo"
+      ],
+      "group": "other",
+      "zh": "毛筆"
+    },
+    {
+      "tag": "quill",
+      "section": "env",
+      "gate": "any",
+      "heat": [
+        "tease",
+        "flash",
+        "sex"
+      ],
+      "mutex": "held_prop",
+      "bind": [],
+      "implies": [],
+      "layer": "normal",
+      "era": [
+        "medieval",
+        "victorian"
+      ],
+      "group": "other",
+      "zh": "羽毛筆"
+    },
+    {
+      "tag": "pencil",
+      "section": "env",
+      "gate": "any",
+      "heat": [
+        "tease",
+        "flash",
+        "sex"
+      ],
+      "mutex": "held_prop",
+      "bind": [],
+      "implies": [],
+      "layer": "normal",
+      "era": [
+        "modern"
+      ],
+      "group": "other",
+      "zh": "鉛筆"
+    },
+    {
+      "tag": "newspaper",
+      "section": "env",
+      "gate": "any",
+      "heat": [
+        "tease",
+        "flash",
+        "sex"
+      ],
+      "mutex": "held_prop",
+      "bind": [],
+      "implies": [],
+      "layer": "normal",
+      "era": [
+        "modern",
+        "victorian"
+      ],
+      "group": "other",
+      "zh": "報紙"
+    },
+    {
+      "tag": "mop",
+      "section": "env",
+      "gate": "any",
+      "heat": [
+        "tease",
+        "flash",
+        "sex"
+      ],
+      "mutex": "held_prop",
+      "bind": [],
+      "implies": [],
+      "layer": "normal",
+      "era": [
+        "modern"
+      ],
+      "group": "other",
+      "zh": "拖把"
+    },
+    {
+      "tag": "bucket",
+      "section": "env",
+      "gate": "any",
+      "heat": [
+        "tease",
+        "flash",
+        "sex"
+      ],
+      "mutex": "held_prop",
+      "bind": [],
+      "implies": [],
+      "layer": "normal",
+      "era": [
+        "any"
+      ],
+      "group": "other",
+      "zh": "水桶"
+    },
+    {
+      "tag": "ladle",
+      "section": "env",
+      "gate": "any",
+      "heat": [
+        "tease",
+        "flash",
+        "sex"
+      ],
+      "mutex": "held_prop",
+      "bind": [],
+      "implies": [],
+      "layer": "normal",
+      "era": [
+        "any"
+      ],
+      "group": "other",
+      "zh": "湯杓"
     },
     {
       "tag": "firefighter",

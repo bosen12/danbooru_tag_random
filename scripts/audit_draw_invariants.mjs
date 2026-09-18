@@ -1212,6 +1212,194 @@ FAIL 性行為互斥  ×${bad}/${N}`);
   }
 }
 
+// 手上拿的東西要對得上時代，而且不要每一張都一樣。
+//
+// 兩半都要守，理由跟服裝那條一樣：只守「不錯置」的話，把整張 ACT_PROP 清空
+// 也會通過（沒有道具就沒有錯置）；只守「夠多元」的話，江戶人拿著香菸跟雪茄
+// 交替出現也算過關。
+//
+// 錯置那一半是實測出來的，不是假想：修之前每格 700 張，江戶抽菸 22/22 拿香菸、
+// 維多利亞 62/62 也是；古中國、古希臘、中世紀、江戶寫字 50/50 拿原子筆。
+// 原因是 cigarette 與 pen 掛著 era=["any"]，而 ACT_PROP 每一項只有一個字，
+// 所以它們贏遍所有時代。
+//
+// 下面兩張表都是**這裡自己寫的**，不從 lexicon 的 era 欄反射 —— 反射的話，
+// 把 cigarette 改回 era=["any"] 這條就會跟著鬆掉，等於沒在守。
+{
+  const N = 700;
+  // 哪個時代不該出現哪個道具。理由寫在旁邊，改這裡等於改產品承諾。
+  const WRONG_ERA = [
+    ["edo", "cigarette", "江戶抽的是煙管，紙菸是明治以後的事"],
+    ["edo", "pen", "江戶寫字用毛筆"],
+    ["edo", "pencil", "同上"],
+    ["ancient_china", "pen", "古中國寫字用毛筆"],
+    ["ancient_china", "pencil", "同上"],
+    ["ancient_china", "cigarette", "菸草是新大陸作物"],
+    ["ancient_greece", "pen", "原子筆在古希臘是穿越"],
+    ["ancient_greece", "pencil", "同上"],
+    ["ancient_greece", "cigarette", "同上"],
+    ["medieval", "pen", "中世紀寫字用羽毛筆"],
+    ["medieval", "pencil", "同上"],
+    ["medieval", "cigarette", "菸草還沒傳進歐洲"],
+    ["ancient_china", "mop", "拖把是現代清潔用具"],
+    ["ancient_greece", "mop", "同上"],
+    ["medieval", "mop", "同上"],
+    ["edo", "mop", "同上"],
+    ["ancient_china", "newspaper", "報紙是近代產物"],
+    ["ancient_greece", "newspaper", "同上"],
+    ["medieval", "newspaper", "同上"],
+    ["edo", "newspaper", "同上"],
+  ];
+  // 哪個時代的哪個活動要看得到不只一種道具。數字是「至少要出現幾種」。
+  const WANT_VARIETY = [
+    ["modern", "writing", ["pen", "pencil"], 2],
+    ["modern", "cleaning", ["broom", "mop", "bucket"], 3],
+    ["victorian", "smoking", ["cigarette", "cigar", "smoking pipe"], 3],
+    ["victorian", "writing", ["pen", "quill"], 2],
+    ["medieval", "cooking", ["frying pan", "ladle"], 2],
+  ];
+  // 哪個時代的哪個活動一定要拿到那個對的東西（正向的一半）。
+  const WANT_RIGHT = [
+    ["edo", "smoking", "kiseru"],
+    ["edo", "writing", "calligraphy brush"],
+    ["ancient_china", "writing", "calligraphy brush"],
+    ["medieval", "writing", "quill"],
+  ];
+  const wrongHits = [];
+  const seen = new Map();   // era|act -> Set(道具)
+  const actOf = new Map();  // 道具 -> 活動（只為了報錯時講得清楚）
+  let drew = 0;
+  for (const era of ERAS) {
+    for (const heats of [["activity"], ["tease"]]) {
+      for (let i = 0; i < N; i += 1) {
+        const s = defaultSettings(data);
+        s.eras = [era];
+        s.girl = true;
+        s.boy = true;
+        s.heats = heats;
+        s.weights = { activity: 0, tease: 0, flash: 0, sex: 0 };
+        s.weights[heats[0]] = 1;
+        const seed = 640000 + i;
+        drew += 1;
+        const names = drawOne(lex, s, new Set(), new Set(), mulberry32(seed), seed)
+          .positive.split(",").map((x) => x.trim());
+        const has = new Set(names);
+        for (const [e, prop, why] of WRONG_ERA) {
+          if (e === era && has.has(prop)) {
+            wrongHits.push({ era, prop, why, seed, pos: names.join(", ") });
+          }
+        }
+        for (const [e, act, props] of [...WANT_VARIETY, ...WANT_RIGHT.map((r) => [r[0], r[1], [r[2]]])]) {
+          if (e !== era || !has.has(act)) continue;
+          const k = era + "|" + act;
+          if (!seen.has(k)) seen.set(k, new Set());
+          for (const p of props) if (has.has(p)) { seen.get(k).add(p); actOf.set(p, act); }
+        }
+      }
+    }
+  }
+  const thin = [];
+  for (const [era, act, props, want] of WANT_VARIETY) {
+    const got = seen.get(era + "|" + act) || new Set();
+    if (got.size < want) thin.push(`${era} 的 ${act} 只看到 ${got.size} 種（${[...got].join("、") || "一種都沒有"}），要 ${want} 種：${props.join("、")}`);
+  }
+  const missing = [];
+  for (const [era, act, prop] of WANT_RIGHT) {
+    const got = seen.get(era + "|" + act) || new Set();
+    if (!got.has(prop)) missing.push(`${era} 的 ${act} 從來沒拿到 ${prop}`);
+  }
+  if (!wrongHits.length && !thin.length && !missing.length) {
+    console.log(`ok   道具對得上時代且不只一種：${drew} 張，錯置 0、${WANT_VARIETY.length} 組多元達標、${WANT_RIGHT.length} 組正解都抽得到`);
+  } else {
+    console.log("");
+    if (wrongHits.length) {
+      const f = wrongHits[0];
+      console.log(`FAIL 道具穿越了  ${wrongHits.length} 次`);
+      console.log(`  規格：${f.era} 不該出現 ${f.prop} —— ${f.why}`);
+      console.log(`  重播：seed=${f.seed}`);
+      console.log(`  POS：${f.pos}`);
+    }
+    if (thin.length) {
+      console.log(`FAIL 道具永遠是同一個  ${thin.length} 組`);
+      for (const t of thin) console.log("  " + t);
+      console.log("  規格：ACT_PROP 的每一項是候選集合，stampActProps() 要從合格的裡面隨機挑。");
+    }
+    if (missing.length) {
+      console.log(`FAIL 該時代的正解抽不到  ${missing.length} 組`);
+      for (const m of missing) console.log("  " + m);
+      console.log("  規格：擋掉錯的還不夠，對的那個要真的進得來（負向擋、正向拉，兩半要齊）。");
+    }
+    console.log("");
+    console.log("1 條 hard 不變式被違反");
+    process.exit(1);
+  }
+}
+
+// 釘住一項運動，那項運動的器材就該在畫面裡。
+//
+// 修之前釘住運動各抽 300 張的實測：網球拍 2、足球 6、羽球拍 5、桌球拍 5、
+// 高爾夫球桿 3、弓 3 —— **300 張網球圖裡有 298 張沒有球拍**。
+// 器材在詞庫裡，但只能在通用的 fill("env") 裡跟三百多個 env 字搶剩餘配額，
+// 跟天氣、光源、傢俱當初是同一種結構性餓死。
+//
+// 門檻刻意訂在實測值的一半上下（實測 52–88%），離壞掉的狀態（1–2%）非常遠，
+// 但也不是隨便給個 1 次就算過 —— 那樣把機率調成 0.01 也會通過。
+//
+// 上限那一半同樣要守：器材不該是 100%。Danbooru 上網球圖也只有 78.6% 有球拍，
+// 硬給 1.0 等於把「有時候鏡頭裡就是沒拍到球拍」這件事消掉。
+{
+  const CASES = [
+    // 活動, 器材, 下限, 上限（比例）
+    ["tennis", "tennis racket", 0.5, 0.95],
+    ["tennis", "tennis ball", 0.25, 0.75],
+    ["soccer", "soccer ball", 0.3, 0.8],
+    ["golf", "golf club", 0.5, 0.95],
+    ["badminton", "badminton racket", 0.5, 0.95],
+    ["table tennis", "table tennis paddle", 0.6, 0.99],
+    ["archery", "bow (weapon)", 0.6, 0.99],
+    ["boxing", "boxing gloves", 0.5, 0.99],
+  ];
+  const N = 250;
+  const bad = [];
+  const lines = [];
+  for (const [act, gear, lo, hi] of CASES) {
+    const r = applyPin(lex, new Set(), new Set(), act);
+    let got = 0;
+    let withAct = 0;
+    for (let i = 0; i < N; i += 1) {
+      const s = defaultSettings(data);
+      s.eras = ["modern"];
+      s.girl = true;
+      s.boy = true;
+      s.heats = ["activity"];
+      s.weights = { activity: 1, tease: 0, flash: 0, sex: 0 };
+      const seed = 660000 + i;
+      const has = new Set(
+        drawOne(lex, s, r.pinned, r.userBanned, mulberry32(seed), seed).positive.split(",").map((t) => t.trim())
+      );
+      if (has.has(act)) withAct += 1;
+      if (has.has(gear)) got += 1;
+    }
+    const pct = got / N;
+    lines.push(`${act} -> ${gear} ${Math.round(pct * 100)}%`);
+    if (withAct < N * 0.9) bad.push(`釘了 ${act} 卻只有 ${withAct}/${N} 張真的有它 —— 這條的前提壞了`);
+    else if (pct < lo) bad.push(`${act} 只有 ${got}/${N}（${Math.round(pct * 100)}%）帶到 ${gear}，下限 ${Math.round(lo * 100)}%`);
+    else if (pct > hi) bad.push(`${act} 有 ${got}/${N}（${Math.round(pct * 100)}%）帶到 ${gear}，上限 ${Math.round(hi * 100)}%`);
+  }
+  if (!bad.length) {
+    console.log(`ok   釘運動就有器材：${CASES.length} 項各 ${N} 張（${lines.join("、")}）`);
+  } else {
+    console.log("");
+    console.log(`FAIL 運動器材不在畫面裡  ${bad.length} 項`);
+    for (const b of bad) console.log("  " + b);
+    console.log("  規格：器材只靠通用 fill(\"env\") 搶配額是搶不到的（實測 300 張網球只有 2 張有球拍），");
+    console.log("        要有 CTX_PULLS_GEAR 那樣的正向拉取；機率取自 Danbooru 共現率。");
+    console.log("");
+    console.log("1 條 hard 不變式被違反");
+    process.exit(1);
+  }
+}
+
 if (!hardHits.size) {
   console.log("hard：全部通過。");
   console.log("\nok");

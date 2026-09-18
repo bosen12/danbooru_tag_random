@@ -1201,18 +1201,26 @@ for (const [act, places] of Object.entries(SPORT_ACT_PLACE)) {
 // 舊行為是無條件蓋章，等於 100%，而且會把唯一的場地格佔滿。
 const PLACE_ANCHOR_CHANCE = 0.35;
 
+// 活動定下來之後蓋一個道具上去。每一項是**候選集合**，不是優先序 ——
+// stampActProps() 會先用 eraOk／heatOk 篩掉不合的，再從剩下的隨機挑一個。
+//
+// 早期每一項都只有一個字，於是 12 個活動的道具是 100% 固定的：實測 9600 張，
+// 每一張 cooking 都是平底鍋、每一張 cleaning 都是掃把、每一張 writing 都是原子筆。
+// 而那個「唯一」在非現代時代還是錯的 —— 江戶抽菸 22/22 拿香菸、古中國寫字
+// 50/50 拿原子筆。時代分支靠的是各道具自己的 era 欄（見 merge_lexicon.py），
+// 不是寫死在這張表裡：這裡列出所有可能，篩選交給既有的 eraOk。
 const ACT_PROP = {
   "playing guitar": ["guitar"],
-  reading: ["book"],
+  reading: ["book", "newspaper"],
   studying: ["book"],
-  writing: ["pen"],
+  writing: ["calligraphy brush", "quill", "pen", "pencil"],
   "talking on phone": ["cellphone"],
   selfie: ["cellphone"],
   "taking picture": ["cellphone", "camera"],
-  smoking: ["cigarette"],
-  cooking: ["frying pan"],
+  smoking: ["kiseru", "smoking pipe", "cigar", "cigarette"],
+  cooking: ["frying pan", "ladle"],
   shopping: ["shopping bag"],
-  cleaning: ["broom"],
+  cleaning: ["broom", "mop", "bucket"],
   fishing: ["fishing rod"],
   "playing video games": ["game controller"],
   "painting (action)": ["paintbrush"],
@@ -1889,6 +1897,35 @@ export const CTX_PULLS_ACC = [
   // Danbooru 實測：標了 rain 的圖有 31.9% 同時有 umbrella（15,598／48,876），
   // 跟 knee pads 0.25、bicycle helmet 0.45 同一個量級，照量到的數字給 0.3。
   ["rain", "umbrella", 0.3],
+];
+
+// 運動的器材。跟 CTX_PULLS_ACC 同一件事，但**不能**放進那張表 —— 那個迴圈外面
+// 包著 `clothBudget > 0`（配件屬於衣服，使用者把服裝設成 0 就是不要衣服），
+// 而球拍是 env、跟衣服的額度無關：全裸打網球一樣該有球拍。
+//
+// 修之前釘住運動抽 300 張的實測，器材幾乎不存在：
+//
+//   tennis        球拍 2、球 3        soccer      球 6
+//   badminton     球拍 5、羽球 2      golf        球桿 3、球 7
+//   table tennis  球拍 5、球 2        archery     弓 3
+//
+// 也就是 300 張網球圖裡有 298 張沒有球拍。原因跟天氣、光源、傢俱當初一樣：
+// 器材在詞庫裡，但只能在通用的 fill("env") 裡跟三百多個字搶剩餘配額。
+// 那三格是補專屬的 fillSlot，這裡不行 —— 器材是「這個運動的」而不是「每張圖
+// 都該有一個」，所以走 CTX_PULLS_ACC 那種「有場合才拉」的形式。
+//
+// 機率全部取自 Danbooru 共現率，跟 rain -> umbrella 那條同一套作法：
+export const CTX_PULLS_GEAR = [
+  ["table tennis", "table tennis paddle", 0.9],   // 560/605
+  ["archery", "bow (weapon)", 0.88],              // 1722/1947
+  ["tennis", "tennis racket", 0.79],              // 728/926
+  ["golf", "golf club", 0.79],                    // 279/355
+  ["badminton", "badminton racket", 0.78],        // 130/167
+  ["soccer", "soccer ball", 0.51],                // 950/1874
+  ["table tennis", "table tennis ball", 0.51],    // 306/605
+  ["tennis", "tennis ball", 0.47],                // 438/926
+  ["badminton", "shuttlecock", 0.41],             // 68/167
+  ["golf", "golf ball", 0.28],                    // 99/355
 ];
 
 // 沒有收進上表的：clipboard、o-ring，以及 beach umbrella 和 parasol。
@@ -5126,13 +5163,23 @@ export function drawOne(lex, settings, pinned, userBanned, rand, seed) {
   if (heat !== "sex" && !hasSexAct) fillSlot("pose", "activity", sportActivityPrefer() || undefined);
   const stampActProps = () => {
     for (const a of usedActs(used, lex)) {
-      for (const prop of ACT_PROP[a] || []) {
-        if (used.has(prop) || banned.has(prop)) continue;
-        const item = lex.byTag.get(prop);
-        if (!item) continue;
-        if (!eraOk(item, era) || !heatOk(item, heat)) continue;
-        commit(prop);
-        break;
+      const props = ACT_PROP[a] || [];
+      // 這個活動已經有道具了就不要再來一次。stampActProps() 一張圖裡會跑三次，
+      // 而 karaoke implies singing、兩個都在 ACT_PROP 裡 —— 少了這一關，
+      // 第二輪會為同一件事再擲一次骰子（擲了也白擲，held_prop 那一格已經被佔）。
+      if (props.some((p) => used.has(p))) continue;
+      const fit = props.filter((p) => {
+        if (banned.has(p)) return false;
+        const item = lex.byTag.get(p);
+        return !!item && eraOk(item, era) && heatOk(item, heat);
+      });
+      if (!fit.length) continue;
+      // 從合格的裡面隨機挑。舊寫法是 `commit(prop); break;` 取第一個 ——
+      // 那是無條件 break，清單一旦有多個字，第一個被 commit 拒絕（互斥格已被
+      // 別的活動佔走）就整個放棄，後面的字連試都不會試到。
+      const start = Math.floor(rand() * fit.length);
+      for (let k = 0; k < fit.length; k += 1) {
+        if (commit(fit[(start + k) % fit.length])) break;
       }
     }
   };
@@ -5695,6 +5742,25 @@ export function drawOne(lex, settings, pinned, userBanned, rand, seed) {
         if (!allow(item)) continue;
         if (rand() < chance) commit(acc);
       }
+    }
+  }
+
+  // 運動器材。刻意**不掛**任何額度：器材跟 stampActProps() 蓋的道具是同一件事
+  // （這個活動需要的那個東西），而平底鍋也不看 counts。實測 counts.env 設 0
+  // 時場地、晝夜、光源、傢俱全部照常出現（它們走 fillSlot，本來就繞過額度），
+  // 所以那個數字的語意是「通用補牌要補幾個」，不是「env 字上限」——
+  // 把球拍掛上去等於用一個管不到別人的閘門去管它。
+  {
+    for (const [act, gear, chance] of CTX_PULLS_GEAR) {
+      if (!used.has(act) || used.has(gear)) continue;
+      const item = lex.byTag.get(gear);
+      if (!item) continue;
+      if (!eraOk(item, era) || !heatOk(item, heat) || !gateOk(item, female, male)) continue;
+      // 跟上面那個迴圈同樣的理由：要過的是既有的 allow()，不是我另外寫的一關。
+      // 運動那邊的 sportKitOk／sportGearPlaceOk／「沒有運動身分就不給器材」
+      // 都在裡面，自己寫一定會漏。
+      if (!allow(item)) continue;
+      if (rand() < chance) commit(gear);
     }
   }
 

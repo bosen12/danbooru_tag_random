@@ -3154,11 +3154,20 @@ function indoorOutdoorClash(have) {
     eq("driving never auto breasts on glass/table", driveGlass, 0);
     const pinCook = applyPin(lex, new Set(), new Set(), "cooking").pinned;
     let noPan = 0;
+    const cookProps = new Set();
     for (let i = 0; i < 16; i++) {
       const h = tagsOf(drawOne(lex, actOnly, pinCook, new Set(), mulberry32(412000 + i), 412000 + i));
-      if (!h.has("frying pan")) noPan += 1;
+      const got = ["frying pan", "ladle"].filter((p) => h.has(p));
+      if (!got.length) noPan += 1;
+      for (const p of got) cookProps.add(p);
     }
-    eq("cooking brings frying pan", noPan, 0);
+    // 保證的是「煮飯一定帶得到廚具」，不是「一定是平底鍋」—— 後者只是當初
+    // ACT_PROP.cooking 裡只有一個字的副產物。清單變成候選集合之後，平底鍋與
+    // 湯杓各半，所以這裡問的是「有沒有拿到其中之一」。
+    eq("cooking brings a cooking prop", noPan, 0);
+    // 但放寬不能變成放水：只寫上面那條，把 ACT_PROP.cooking 改回單一個字
+    // 也照樣通過。這條守住「真的有在隨機挑」。
+    ok("cooking prop is not always the same one", cookProps.size >= 2, [...cookProps].join("/"));
     const sNorm = {
       ...s,
       heats: ["activity"],
@@ -4764,11 +4773,17 @@ function indoorOutdoorClash(have) {
   eq("pinned jogging + m legs stays", kept, 20);
   const pinRead = applyPin(lex, new Set(), new Set(), "reading").pinned;
   let readBook = 0;
+  const readProps = new Set();
   for (let i = 0; i < 40; i++) {
     const h = tagsOf(drawOne(lex, s, pinRead, new Set(), mulberry32(441720 + i), 441720 + i));
-    if (h.has("book")) readBook += 1;
+    const got = ["book", "newspaper"].filter((p) => h.has(p));
+    if (got.length) readBook += 1;
+    for (const p of got) readProps.add(p);
   }
-  eq("pinned reading always keeps book", readBook, 40);
+  // 同 cooking 那條：保證的是「讀東西一定有東西可讀」。報紙是現代／維多利亞
+  // 才有的候選，所以古代時代仍然只會是書。
+  eq("pinned reading always keeps something to read", readBook, 40);
+  ok("reading prop is not always the same one", readProps.size >= 2, [...readProps].join("/"));
   const pinSelfie = applyPin(lex, new Set(), new Set(), "selfie").pinned;
   let selfiePhone = 0;
   for (let i = 0; i < 40; i++) {
@@ -6292,38 +6307,42 @@ function indoorOutdoorClash(have) {
   ok("父子相依：無關的忙手活動仍然互斥", clash === 0, why);
 }
 
-// --- 同一個概念不要吐兩個字 -------------------------------------------------
-// panting 和 heavy breathing 在 Danbooru 是別名，kiss 和 kissing 也是。詞庫兩個
-// 都留著是刻意的 —— 那等於給同一個概念兩張抽獎券，雙人情境要的就是這個加權。
-// 但最後只該吐一個字出來：提示詞本來就超過 75 token，同義詞佔兩格是白費。
+// --- 被別名取代的舊名，正規名要抽得到 ---------------------------------------
+// 這一段本來測的是「同義詞不要同時吐兩個字」：panting/heavy breathing、
+// kissing/kiss 在 Danbooru 是別名，而詞庫兩半都留著（刻意的加權），所以要擋住
+// 兩個一起出現。
+//
+// 72c54e7 把那四個舊名整批從詞庫拿掉之後，**這段的前提就沒了** —— 詞庫裡
+// 已經沒有任何一組別名配對（hairclip 也不在，只留刻意保留的 hairpin）。
+// 而那次順手把 PAIRS 的每一組刪成只剩正規名那一半：
+//
+//     ["panting", "heavy breathing"]  ->  ["heavy breathing"]
+//     ["kissing", "kiss"]             ->  ["kiss"]
+//
+// 於是 `const [a, b] = ["kiss"]` 讓 b 變成 undefined，`got.has(undefined)`
+// 永遠是 false —— 「不同時出現」那兩條**從那次之後就無法失敗**。
+// 跟 server.py 那條寫在 sys.exit(1) 後面的檢查同一種病：看起來在守，其實沒有。
+//
+// 「不同時出現」的保證現在由 test_lexicon_integrity.mjs 在**源頭**守著，而且更強：
+// 那裡直接斷言 kissing／panting／breast grab／chinese architecture 不准出現在
+// 詞庫裡（附 Danbooru 的 alias 建立日期）。兩個字都不在，自然不會同時出現。
+//
+// 這裡留下的是那一段唯一還有對象的一半：**正規名要真的抽得到**。舊名被拿掉之後
+// 如果正規名因為別的規則抽不到，這個概念就整個消失了，而源頭那條檢查看不到這件事。
 {
   const s = defaultSettings(data);
   s.girl = true;
   s.boy = true;
   s.heats = ["activity", "tease", "flash", "sex"];
   s.counts = { subject: 10, feature: 10, pose: 10, clothing: 10, env: 10 };
-  const PAIRS = [
-    ["heavy breathing"],
-    ["kiss"],
-  ];
-  const both = new Map();
+  const CANON = ["heavy breathing", "kiss", "grabbing another's breast", "one eye closed"];
   const each = new Map();
   for (let i = 1; i <= 3000; i++) {
     const got = tagsOf(drawOne(lex, s, new Set(), new Set(), mulberry32(i), i));
-    for (const [a, b] of PAIRS) {
-      if (got.has(a)) each.set(a, (each.get(a) || 0) + 1);
-      if (got.has(b)) each.set(b, (each.get(b) || 0) + 1);
-      if (got.has(a) && got.has(b)) both.set(`${a}+${b}`, (both.get(`${a}+${b}`) || 0) + 1);
-    }
+    for (const t of CANON) if (got.has(t)) each.set(t, (each.get(t) || 0) + 1);
   }
-  for (const [a, b] of PAIRS) {
-    ok(`同義詞：「${a}」和「${b}」不同時出現`, !both.get(`${a}+${b}`), `3000 張裡 ${both.get(`${a}+${b}`) || 0} 次`);
-    // 護欄：互斥不能把整個概念弄不見，兩個字加起來還是要抽得到。
-    ok(
-      `同義詞：「${a}」/「${b}」這個概念仍然抽得到`,
-      (each.get(a) || 0) + (each.get(b) || 0) > 0,
-      `${a} ${each.get(a) || 0} 次、${b} ${each.get(b) || 0} 次`
-    );
+  for (const t of CANON) {
+    ok(`取代舊名的正規名抽得到：「${t}」`, (each.get(t) || 0) > 0, `3000 張裡 ${each.get(t) || 0} 次`);
   }
 }
 

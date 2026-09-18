@@ -2248,15 +2248,50 @@ def extra_expand_tags() -> list[dict]:
         env("bicycle", mutex=None, zh="腳踏車"),
         env("guitar", mutex="held_prop", era=["any"], zh="吉他"),
         env("book", mutex="held_prop", era=["any"], zh="書"),
-        env("pen", mutex="held_prop", era=["any"], zh="筆"),
+        env("pen", mutex="held_prop", era=["modern", "victorian"], zh="筆"),
         env("cellphone", mutex="held_prop", zh="手機"),
-        env("cigarette", mutex="held_prop", era=["any"], zh="菸"),
+        env("cigarette", mutex="held_prop", era=["modern", "victorian"], zh="菸"),
         env("frying pan", mutex="held_prop", era=["any"], zh="平底鍋"),
         env("shopping bag", mutex="held_prop", zh="購物袋"),
         env("broom", mutex="held_prop", era=["any"], zh="掃把"),
         env("fishing rod", mutex="held_prop", era=["any"], zh="釣竿"),
         env("game controller", mutex="held_prop", zh="手把"),
         env("paintbrush", mutex="held_prop", era=["any"], zh="畫筆"),
+        # 時代對得上的道具。ACT_PROP 會在活動定下來之後蓋一個道具上去，而
+        # stampActProps() 本來就會用 eraOk 過濾，所以這裡的 era 欄就等於
+        # 「哪個時代拿得到這個東西」—— 江戶抽菸拿的是煙管不是香菸。
+        #
+        # 修之前實測（每格 700 張）：江戶抽菸 22/22 都是香菸、維多利亞 62/62 也是；
+        # 古中國、古希臘、中世紀、江戶寫字 50/50 都是原子筆（維多利亞 40/40、
+        # 現代 30/30）—— 每一個時代都是 100%，差別只在那個時代抽到寫字幾次。
+        # 香菸與原子筆原本掛 era=["any"]，所以它們贏遍所有時代。
+        #
+        # Danbooru 共現數佐證這幾個配對是模型學過的：
+        #   kiseru+smoking 1019、cigar+smoking 2733、smoking pipe+smoking 2163
+        #   bucket+cleaning 354（跟 broom+cleaning 346 同級）、mop+cleaning 243
+        #   newspaper+reading 824、ladle+cooking 1619
+        #
+        # **刻意不收 kitchen knife**：3059 張裡 513 張同時標 blood（16.8%）、
+        # 162 張標 yandere。拿它當煮飯道具，等於有六分之一的機會畫出帶血的刀。
+        # 這跟負面詞那次加 cross-section 是同一套判準 —— 看共現率，不看語意上
+        # 「它應該是廚具」。
+        #
+        # 古希臘寫字**刻意留空**。stylus 在 Danbooru 上主要是數位繪圖筆
+        # （6268 張），用在古希臘會畫出現代觸控筆，比沒有道具更糟；
+        # writing brush 查無（0 張）。沒有道具是既有且誠實的行為 ——
+        # 麥克風在非現代時代也是這樣（實測 singing 在五個古代時代都是 0%）。
+        # book 則刻意留著 era=["any"]：各時代都有某種形式的書，
+        # 古希臘的卷軸換成書遠不如原子筆那麼刺眼。
+        env("kiseru", mutex="held_prop", era=["edo"], zh="煙管"),
+        env("smoking pipe", mutex="held_prop", era=["victorian"], zh="菸斗"),
+        env("cigar", mutex="held_prop", era=["victorian"], zh="雪茄"),
+        env("calligraphy brush", mutex="held_prop", era=["ancient_china", "edo"], zh="毛筆"),
+        env("quill", mutex="held_prop", era=["medieval", "victorian"], zh="羽毛筆"),
+        env("pencil", mutex="held_prop", era=["modern"], zh="鉛筆"),
+        env("newspaper", mutex="held_prop", era=["modern", "victorian"], zh="報紙"),
+        env("mop", mutex="held_prop", era=["modern"], zh="拖把"),
+        env("bucket", mutex="held_prop", era=["any"], zh="水桶"),
+        env("ladle", mutex="held_prop", era=["any"], zh="湯杓"),
         job("firefighter", zh="消防員"),
         job("scientist", implies=["lab coat"], zh="科學家"),
         job("farmer", zh="農夫"),
