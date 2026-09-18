@@ -97,6 +97,29 @@ const NAKED_ONLY = new Set([
 // 會被「只穿一件」排除的：身上的主要衣物與內衣。外套不算（naked coat 自己就是外套），
 // 襪子鞋子也不算（光腳穿大衣跟穿著襪子穿大衣都成立）。
 const BODY_WORN_GROUP = new Set(["onepiece", "top", "bottom", "underwear", "era"]);
+// 「只穿內衣」的方向跟 NAKED_ONLY 相反：那邊是連內衣都不能有，這邊是**只能**有內衣。
+//
+// Danbooru wiki 寫得很明確：「Wearing only underwear by itself, such as a bra and
+// panties, lingerie, boxers, etc. ... Thighhighs or socks may be worn」——
+// 襪類明文放行，外套與主要衣物不行。共現率也對得上（underwear only 共 80,742 張）：
+//
+//     panties 87.0%、bra 63.4%、thighhighs 25.5%、garter belt 6.9%、socks 4.1%
+//     jacket 1.2%、coat 0.25%
+//
+// 修之前釘住「只穿內衣」抽 600 張，**79.5% 身上穿著非內衣的衣服** ——
+// 夾克 178、大衣 157、開襟衫 69。標著只穿內衣卻套著大衣，那個字等於沒作用。
+const UNDERWEAR_ONLY_BAD = new Set(["onepiece", "top", "bottom", "outer", "era"]);
+// 袖子描述預設身上有一件「有袖子的衣服」，只穿內衣時沒有那一件。
+// fabric 那一組不能整組擋 —— see-through clothes／fishnets／latex 可以是在講內衣本身。
+const SLEEVE_WORD = new Set([
+  "long sleeves", "short sleeves", "wide sleeves", "puffy sleeves",
+  "detached sleeves", "sleeves rolled up",
+]);
+const underwearOnlyClash = (item) =>
+  !!item &&
+  item.section === "clothing" &&
+  (UNDERWEAR_ONLY_BAD.has(item.group) || SLEEVE_WORD.has(item.tag));
+
 // 泳衣底下不穿內衣。比基尼配運動內褲是穿兩層。
 const isSwimGarment = (item) =>
   !!item && item.section === "clothing" && item.layer === "garment" &&
@@ -330,7 +353,6 @@ const SLEEP_BAD_POSE = new Set([
   "presenting",
   "grinding",
   "hand on own crotch",
-  "presenting ass",
   "masturbation through clothes",
   "female masturbation",
   "fingering",
@@ -545,7 +567,6 @@ const WATER_PLACE = new Set([
   "shower (place)",
   "bathhouse",
   "ofuro",
-  "open-air bath",
   "bubble bath",
 ]);
 const WATER_ACT = new Set(["swimming", "wading", "floating", "fishing", "bathing", "showering", "shared bathing", "diving"]);
@@ -565,7 +586,6 @@ const BATH_PLACE = new Set([
   "shower (place)",
   "bathhouse",
   "ofuro",
-  "open-air bath",
   "bubble bath",
   "sauna",
 ]);
@@ -591,7 +611,7 @@ function washingNow(used) {
 //   bathroom 14.3%、bathtub 14.6%
 // 熱水池和洗澡間不是同一件事，用一個數字蓋過去會讓浴室霧茫茫。
 const STEAM_HOT = new Set([
-  "onsen", "sauna", "open-air bath", "hot spring", "bathing", "shared bathing", "steaming body",
+  "onsen", "sauna", "hot spring", "bathing", "shared bathing", "steaming body",
 ]);
 const STEAM_MILD = new Set([
   "bath", "bathroom", "bathtub", "shower (place)", "bathhouse", "ofuro", "bubble bath",
@@ -706,6 +726,26 @@ const EXPLICIT_ONLY_EXTRA = new Set([
   // 純粹的身體姿勢（spread legs、m legs、straddling、bent over）留在敏感 ——
   // 那些字配上穿著整齊的衣服仍然成立，是不是色情由衣服決定。
   "one breast out",      // 4.9x，字面就是露出來了
+  // 2026-09-18 補的四個，全部是這張表當初漏掉的同族。
+  //
+  // 漏掉的後果看得見：「只勾活動＝日常」那一檔是**借 tease 的池子**再靠
+  // hasExplicitContent() 把情色扣掉（見下面 2820 行那段），而這四個掛在
+  // feature/body_f，group 看不見、EXPLICIT_RE 也咬不到，於是整批溜進日常。
+  // 實測色情分級只勾活動抽 4200 張：breasts out 96 次、grabbing own breast 54、
+  // guided breast grab 46、grabbing another's ass 41 —— 面板上那句
+  //「沒有走光或做愛」被打臉。
+  //
+  // 比例照這張表原本的判準量（相對全站 20.2% 基準的倍率）：
+  "breasts out",          // 4.89x（e98.7%）—— one breast out 的複數，同一個意思卻漏了
+  "guided breast grab",   // 4.85x（e98.0%）
+  "grabbing another's ass", // 4.78x（e96.6%）—— 跟已收的 grabbing another's breast 同級
+  "grabbing own breast",  // 4.22x（e85.3%）—— 比已收的 hand on own crotch 4.1x 還高
+  //
+  // **刻意不收**的對照組，它們是形狀不是動作，照這張表的規矩留在敏感：
+  //   unaligned breasts 4.15x、breasts apart 3.68x、breast suppress 3.04x、
+  //   breast rest 1.96x、arm under breasts 1.63x
+  // grabbing another's hair 3.84x 也不收：倍率在範圍內，但抓頭髮本身不是
+  // 露出／性器／性行為，收它就等於只看數字不看語意。
   "covering breasts",    // 3.5x，遮胸的前提是沒穿
   "covering crotch",     // 3.9x，同上
   "bulge",               // 4.1x，性器輪廓
@@ -738,8 +778,8 @@ const EXPLICIT_ONLY_EXTRA = new Set([
 // 只有 explicit 能出現：真正的性、裸露、脫衣走光、內衣當外衣。
 // explicit 專屬的字眼。比 general 那條窄：cleavage、crotch、彎腰張腿這些
 // 「穿著衣服的性感」要留給 sensitive，所以不在這條裡面。
-// 字根要吃得下複數與複合字：nipple 配不到 "pink nipples"，
-// cum 配不到 "cumdrip" —— 兩個都真的漏過。
+// 字根要吃得下複數與複合字：加了字界的 nipple 配不到 "puffy nipples"，
+// 加了字界的 cum 配不到 "cumdrip" —— 兩個都真的漏過。
 const EXPLICIT_RE = new RegExp(
   "\\b(nipples?|areolae?|pussy|pussies|penis|testicl|cum\\w*|anus|anal|sex|erections?|" +
     "masturbat|fellatio|cunnilingus|orgasm|ahegao|condom|dildo|vibrator|" +
@@ -786,7 +826,7 @@ export function explicitOnly(item) {
 // 只要一個字的 heat 沒有 tease 就回 true，連 shopping 都被算成情色內容。
 // 這裡用的是 Danbooru 的**內容**階梯，不是本程式的**權限**階梯。兩者不一樣：
 //   權限階梯（ratingBlocked / EXPLICIT_RE）說「敏感級不准出現內衣」—— 那是使用者
-//   自己訂的門檻，`bra` 連 sports bra 都算。
+//   自己訂的門檻，加了字界的 bra 連 sports bra 都算。
 //   內容階梯說「看得見內衣 = sensitive，露點與性行為 = explicit」—— 那是訓練集
 //   實際的標法，也是這條尾巴要對齊的東西。
 // 拿權限階梯當內容判準，穿運動內衣做健身會被標成 explicit。
@@ -953,7 +993,6 @@ const INDOOR_ROOM = new Set([
   "convenience store",
   "supermarket",
   "internet cafe",
-  "dormitory",
   "prison",
   "casino",
   "nightclub",
@@ -1073,17 +1112,17 @@ const DESK_PLACE = new Set([
   // 補的是「坐得下來看書寫字的地方」。城堡、大廳、酒館、舞廳、神殿刻意不補 ——
   // 既有測試 "normal studying never castle/beach/onsen" 明講不要在城堡唸書，
   // 那是有意的內容契約，我一開始把 castle 加進來就是把它撞掉了。
-  "apartment", "dormitory", "hotel room", "mansion", "palace", "throne",
+  "apartment", "hotel room", "mansion", "palace", "throne",
   "ryokan", "balcony", "courtyard", "futon", "tent",
 ]);
 const HOME_PLACE = new Set([
   "bedroom", "living room", "hotel room", "futon",
-  "apartment", "dormitory", "mansion", "palace", "ryokan", "castle",
+  "apartment", "mansion", "palace", "ryokan", "castle",
 ]);
 const MEAL_PLACE = new Set([
   "restaurant", "cafe", "kitchen", "living room", "park", "garden", "beach", "courtyard",
-  "apartment", "dormitory", "hotel room", "mansion", "palace", "throne",
-  "balcony", "pavilion", "east asian architecture", "rooftop", "tent", "field", "food stall", "izakaya",
+  "apartment", "hotel room", "mansion", "palace", "throne",
+  "balcony", "pavilion", "east asian architecture", "rooftop", "tent", "field", "izakaya",
   "castle", "tavern", "ryokan", "ballroom",
 ]);
 // 「活動在某個時代一個場地都排不進去」是結構性的洞：開了 lockScene 會把活動整個
@@ -1099,8 +1138,8 @@ export const ACT_PLACE = {
   showering: new Set(["bathroom", "shower (place)"]),
   swimming: new Set(["pool", "ocean", "beach", "underwater"]),
   wading: new Set(["beach", "ocean", "pool", "poolside"]),
-  floating: new Set(["pool", "ocean", "bathtub", "ofuro", "onsen", "open-air bath", "bubble bath"]),
-  "shared bathing": new Set(["onsen", "bathhouse", "ofuro", "open-air bath", "bath"]),
+  floating: new Set(["pool", "ocean", "bathtub", "ofuro", "onsen", "bubble bath"]),
+  "shared bathing": new Set(["onsen", "bathhouse", "ofuro", "bath"]),
   eating: new Set([...MEAL_PLACE, "movie theater", "airplane interior", "convenience store", "izakaya", "festival", "market", "ryokan", "tavern"]),
   drinking: new Set(["cafe", "bar (place)", "restaurant", "kitchen", "living room", "movie theater", "airplane interior", "izakaya", "festival", "market", "ryokan", "tavern", "ballroom", "courtyard", "garden", "balcony", "colonnade", "village"]),
   reading: new Set([...DESK_PLACE, "train", "train interior"]),
@@ -1138,7 +1177,6 @@ export const ACT_PLACE = {
     "living room",
     "bed",
     "apartment",
-    "dormitory",
     "onsen",
     "ryokan",
     "tent",
@@ -1376,7 +1414,6 @@ const PRIVATE_SEX_PLACE = new Set([
   "ofuro",
   "onsen",
   "bathhouse",
-  "open-air bath",
   "bubble bath",
   "changing room",
   "locker room",
@@ -1833,6 +1870,19 @@ export const NEEDS_CONTEXT = {
   whiteboard: new Set(["classroom", "office", "teacher", "laboratory", "studying"]),
   "christmas tree": new Set(["christmas", "winter", "living room"]),
   "on desk": new Set(["desk", "table", "classroom", "office", "whiteboard"]),
+  // 沙發要有個放沙發的地方。這一格六個字裡，on bed 有 BED_PLACE、bunk bed 要
+  // 臥室或旅館房間、on desk 與 under table 有這張表、on chair 有一串動作衝突 ——
+  // 只有 on couch 什麼前提都沒有，於是它在傢俱這一格佔到 53～57%，
+  // 剛好在稽核那條 55% 集中度上下翻面。補上前提之後跟其他五個對稱。
+  //
+  // 名單取「會擺沙發的室內場所」。Danbooru 上 couch 有 77,265 張但只有 866 張
+  // 同時標 living room —— 那是因為多數沙發圖根本沒標房間，不是沙發不在客廳，
+  // 所以這裡按語意列，不按共現率剪。
+  "on couch": new Set([
+    "living room", "hotel room", "love hotel", "apartment", "mansion",
+    "cafe", "bar (place)", "office", "internet cafe", "karaoke box",
+    "nightclub", "casino", "movie theater", "clinic", "ryokan",
+  ]),
   shibari: new Set(["bondage", "bdsm", "restrained"]),
   "bound wrists": new Set(["bondage", "bdsm", "restrained", "handcuffs"]),
   "ball gag": new Set(["bondage", "bdsm", "restrained"]),
@@ -2097,7 +2147,7 @@ const ARM_POSE = new Set([
   "beckoning",
 ]);
 const LIE_BODY = new Set(["lying", "on back", "on stomach", "on side", "reclining"]);
-const LEG_EXTRA = new Set(["crossed legs", "legs up", "one knee up", "m legs", "leg lift"]);
+const LEG_EXTRA = new Set(["crossed legs", "legs up", "m legs", "leg lift"]);
 const HAIR_TEXTURE = new Set(["straight hair", "wavy hair", "curly hair"]);
 const PENIS_SIZE = new Set(["small penis", "large penis", "huge penis"]);
 const HANDS_BUSY_ACT = new Set([
@@ -2173,7 +2223,6 @@ const HAND_GESTURE = new Set([
   "panty pull",
   "bra pull",
   "wedgie",
-  "self fondling",
 ]);
 
 function extraMutex(item) {
@@ -2975,7 +3024,6 @@ function chooseCast(lex, settings, pinned, banned, rand, ctx) {
     else parts.unshift("1boy");
     parts.push("solo");
   }
-  parts.push("adult");
   return [...new Set(parts)];
 }
 
@@ -3591,8 +3639,13 @@ export function drawOne(lex, settings, pinned, userBanned, rand, seed) {
     if (item.tag === "skinny" && used.has("fat")) return false;
     if (item.tag === "long sleeves" && used.has("short sleeves")) return false;
     if (item.tag === "short sleeves" && used.has("long sleeves")) return false;
-    if (item.tag === "shota" && used.has("adult")) return false;
-    if (item.tag === "adult" && used.has("shota")) return false;
+    // shota 不進自動抽牌，只有明確釘選才留。
+    //
+    // 這條原本寫成「shota 與 adult 互斥」，而 adult 是無條件塞進每一張圖的，
+    // 所以效果就是 shota 永遠抽不到（實測 8400 張 0 次）。2026-09-18 拿掉 adult
+    // （Danbooru 上是 0 張、模型沒把它當 tag 學過）之後，那個效果會連帶消失 ——
+    // 這裡把它改寫成直接的規則，行為一格都不動，只是不再靠一個死字繞一圈。
+    if (item.tag === "shota" && !pinned.has(item.tag)) return false;
     if (
       (item.mutex === "clothes_action" || item.group === "flash") &&
       actionFitsWorn(item) === 0
@@ -4189,7 +4242,8 @@ export function drawOne(lex, settings, pinned, userBanned, rand, seed) {
     }
     if (
       item.tag === "bunk bed" &&
-      ![...used].some((t) => t === "bedroom" || t === "dormitory" || t === "hotel room" || t === "kids room")
+      // kids room 不在詞庫裡，Danbooru 上也是 0 張 —— 懸空的條件，拿掉。
+      ![...used].some((t) => t === "bedroom" || t === "hotel room")
     ) {
       return false;
     }
@@ -4319,7 +4373,7 @@ export function drawOne(lex, settings, pinned, userBanned, rand, seed) {
     if ((item.tag === "legs up" || item.tag === "m legs") && used.has("wading")) return false;
     if (
       (item.tag === "swimming" || item.tag === "diving") &&
-      (used.has("legs up") || used.has("m legs") || used.has("leg lift") || used.has("one knee up") || used.has("on chair"))
+      (used.has("legs up") || used.has("m legs") || used.has("leg lift") || used.has("on chair"))
     ) {
       return false;
     }
@@ -4327,7 +4381,6 @@ export function drawOne(lex, settings, pinned, userBanned, rand, seed) {
       (item.tag === "legs up" ||
         item.tag === "m legs" ||
         item.tag === "leg lift" ||
-        item.tag === "one knee up" ||
         item.tag === "on chair") &&
       (used.has("swimming") || used.has("diving"))
     ) {
@@ -4567,6 +4620,14 @@ export function drawOne(lex, settings, pinned, userBanned, rand, seed) {
           }
         } else if (BODY_WORN_GROUP.has(item.group)) {
           if ([...used].some((t) => NAKED_ONLY.has(t))) return false;
+        }
+        // 只穿內衣：外套、上衣、下身、整套、時代服裝與袖子描述都不能並存。
+        if (item.tag === "underwear only") {
+          for (const t of used) {
+            if (underwearOnlyClash(lex.byTag.get(t))) return false;
+          }
+        } else if (used.has("underwear only") && underwearOnlyClash(item)) {
+          return false;
         }
         // 泳衣與內衣二選一。
         if (isSwimGarment(item)) {
@@ -5133,6 +5194,10 @@ export function drawOne(lex, settings, pinned, userBanned, rand, seed) {
     });
   }
 
+  // 這裡曾經有一段「只穿內衣就補兩格內衣」。量過之後拿掉了：A/B 跑同一批 seed，
+  // 有沒有那段的結果**逐字相同**（400 張都留下 318 張）。原因是通用的
+  // fill("clothing") 本來就會把內衣填上，而填不上的那些是被浴場事後脫掉的 ——
+  // 在這個位置補也會被脫。真正有效的是下面那條「沒有內衣就把這個字拿掉」。
   const soloSex = (tag) =>
     tag === "masturbation" ||
     tag === "female masturbation" ||
@@ -5285,8 +5350,20 @@ export function drawOne(lex, settings, pinned, userBanned, rand, seed) {
   //
   // 同樣不能無條件填：不是每張圖都有人坐在什麼東西上。室內才擲骰子，
   // 跟天氣「室外才擲」對稱。
+  //
+  // **不套用 env 預設的「時代專屬優先」偏好。** 那個偏好是為了時代訊號而存在
+  // （寶塔說這是古中國），但傢俱不是時代訊號 —— 沙發不會告訴人這是哪個年代，
+  // 時代限制由各字自己的 era 欄過濾就夠了。套上去的後果是：現代這一格裡
+  // 「時代專屬」的只有 bunk bed／on couch／on desk 三個，而前兩者之外
+  // on couch 是**唯一沒有前提條件**的（on bed 要臥室類場地、bunk bed 要
+  // 臥室或旅館房間、on desk 與 under table 有 NEEDS_CONTEXT），於是它把
+  // 現代那一整份掃走 —— 實測佔掉這一格 53～57%，剛好在稽核那條
+  //「沒有任何一格被單一個字吃掉」的 55% 上下翻面。
+  //
+  // 這正是那條守衛自己寫的病徵：「把一個『永遠成立』的字放進一個『有優先序』
+  // 的格子，等於把那一格關掉」。拿掉偏好，六個字按各自的資格公平競爭。
   if (used.has("indoors") && rand() < 0.2) {
-    fillSlot("env", "furniture");
+    fillSlot("env", "furniture", () => false);
   }
   fillSlot("env", "day_night");
   // 光源。以前沒有人明確填這一格，lighting 只能在剩下的 fill("env") 裡跟道具、
@@ -5605,7 +5682,7 @@ export function drawOne(lex, settings, pinned, userBanned, rand, seed) {
     if (used.has("swimming") || used.has("diving")) {
       for (const t of [...used]) {
         if (pinned.has(t)) continue;
-        if (t === "sandals" || t === "one knee up") used.delete(t);
+        if (t === "sandals") used.delete(t);
       }
     }
   }
@@ -5879,6 +5956,20 @@ export function drawOne(lex, settings, pinned, userBanned, rand, seed) {
     }
   }
 
+  // 「只穿內衣」沒有內衣就是一句空話。
+  //
+  // 浴場與性愛場景會把內衣脫掉（那是對的 —— 沒有人穿內衣泡澡），但那個字留了下來，
+  // 畫面上就變成「只穿內衣」卻一件內衣都沒有。實測釘住它抽 600 張有 114 張這樣，
+  // 全部是現代的浴場（bathing／bubble bath）或性愛場景。
+  //
+  // 這裡連明確釘選一起清，所以不能走上面那個 NEEDS_CONTEXT 迴圈（它有 mustPins()
+  // 護著）。理由跟「洗澡當下不再穿袍子」同一條：場景說了算，而卡片上的
+  // 「釘選未入」會把這件事告訴使用者，不是無聲吃掉。
+  if (kept.has("underwear only")) {
+    const stillUnderwear = [...kept].some((t) => lex.byTag.get(t)?.group === "underwear");
+    if (!stillUnderwear) kept.delete("underwear only");
+  }
+
   const quality = lex.data.quality.slice();
   const style = [];
   const subject = [];
@@ -5892,7 +5983,6 @@ export function drawOne(lex, settings, pinned, userBanned, rand, seed) {
     if (kept.has(t) && !subject.includes(t)) subject.push(t);
   }
   if (people === 1 && !subject.includes("solo")) subject.push("solo");
-  if (!subject.includes("adult")) subject.push("adult");
 
   for (const tag of kept) {
     const item = lex.byTag.get(tag);
@@ -5980,7 +6070,7 @@ export function drawOne(lex, settings, pinned, userBanned, rand, seed) {
 /**
  * 真的會吃「每段目標數」的段。左欄的輸入框照這份清單生成。
  *
- * 主體段刻意不在裡面：那一段整段就是卡司（人數、solo、adult），由 chooseCast()
+ * 主體段刻意不在裡面：那一段整段就是卡司（人數、solo），由 chooseCast()
  * 依 castWeights 決定，drawOne() 從頭到尾沒有 fill("subject")。以前 UI 照樣為它
  * 畫了一個輸入框，使用者從 0 調到 10 什麼都不會變。要改卡司請用左欄的男／女開關，
  * 或直接把 1girl／2girls 這類字釘起來。
@@ -6113,7 +6203,7 @@ export function formatWeighted(tag, weight) {
   return `(${tag}:${formatWeight(n)})`;
 }
 
-const CAST_PREFIX = new Set([...FEMALE_COUNT, ...MALE_COUNT, "solo", "adult"]);
+const CAST_PREFIX = new Set([...FEMALE_COUNT, ...MALE_COUNT, "solo"]);
 
 // Danbooru 的消歧義標籤自帶括號（bow (weapon)、arrow (projectile)、1990s (style)），
 // 而括號在 ComfyUI 的提示詞語法裡是「加權群組」。實測（comfy/sd1_clip.py 的
@@ -6234,6 +6324,59 @@ export function pinMissLine(lex, positive, pinned, pinsAtDraw) {
   const miss = missingPins(positive, scope);
   if (!miss.length) return "";
   return "釘選未入：" + miss.map((t) => labelOf(lex, t)).join("、");
+}
+
+/**
+ * 這張圖自己打架的地方，講成人話。空字串代表沒問題。
+ *
+ * `contradictions()` 早就在算這件事，而且 drawOne() 每次都把結果放進回傳值的
+ * `conflicts` —— 但**沒有任何地方讀它**（改這個之前 `grep -rn conflicts web/*.js`
+ * 只命中 engine.js 自己）。也就是說引擎知道「這張圖同時是室內又室外」，
+ * 然後把結論丟掉，使用者拿到一張壞圖卻沒有任何提示。
+ *
+ * 自然抽取不會撞到（實測 8640 張 0 次，單一釘選 11080 張也是 0），
+ * 要兩個互相矛盾的釘選才會 —— 例如釘「露營」配「更衣室」：前者 implies
+ * outdoors、後者 implies indoors，兩個都是明確釘選所以都會留下。
+ * 那是「使用者說了算」的正確行為，但**至少要告訴他**。
+ * 實測 2500 組隨機配對抽 9996 張，撞到 14 張。
+ *
+ * 左欄那三條 clash 提示（角色／尺度／時代）是從**釘選**算的、在抽之前；
+ * 這一條是從**抽完的 POS** 算的，跟 pinMissLine 同一個位置、同一個形狀。
+ */
+export function clashLine(lex, tags) {
+  const list = Array.isArray(tags) ? tags : String(tags || "").split(",").map((t) => t.trim()).filter(Boolean);
+  const found = contradictions(lex, list);
+  if (!found.length) return "";
+  const L = (t) => labelOf(lex, t);
+  // 室內外會被 implies 那一圈重複報好幾筆（indoors/outdoors 本身一筆、每個
+  // implies 到它們的字各一筆）。先把具名的那些收起來，最後只講一句 ——
+  // 而且要講**具體的字**（露營、更衣室），字面上的 indoors／outdoors 沒有資訊。
+  const inOutNamed = new Set();
+  let inOut = false;
+  const seen = new Set();
+  const parts = [];
+  for (const [kind, a, b] of found) {
+    if (kind === "in_out") {
+      inOut = true;
+      for (const t of [a, b]) if (t !== "indoors" && t !== "outdoors") inOutNamed.add(t);
+      continue;
+    }
+    const key = kind === "day_night" ? kind : kind + "|" + a + "|" + b;
+    if (seen.has(key)) continue;
+    seen.add(key);
+    if (kind === "day_night") parts.push("同時是白天和夜晚");
+    else if (kind === "solo_count") parts.push("寫著單人卻有兩個以上的人");
+    else if (kind === "nude_garment") parts.push("說全裸卻還穿著衣服");
+    else parts.push(`${L(a)} 和 ${L(b)} 不能同時成立`);
+  }
+  if (inOut) {
+    parts.unshift(
+      inOutNamed.size
+        ? `同時是室內和室外（${[...inOutNamed].map(L).join("、")}）`
+        : "同時是室內和室外"
+    );
+  }
+  return "這張圖自己打架：" + parts.join("；");
 }
 
 export function knownTags(lex, tags) {

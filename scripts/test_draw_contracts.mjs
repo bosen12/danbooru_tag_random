@@ -65,7 +65,7 @@ const NEEDS = [
   ["stethoscope", ["nurse", "doctor", "clinic", "hospital"], ["nurse"]],
   ["hard hat", ["construction worker", "construction site"], ["construction worker"]],
   ["lab coat", ["scientist", "laboratory", "doctor", "clinic", "hospital"], ["scientist"]],
-  ["bunk bed", ["bedroom", "dormitory", "hotel room", "kids room"], ["dormitory"]],
+  ["bunk bed", ["bedroom", "hotel room", "kids room"], ["bedroom"]],
   ["frying pan", ["cooking", "kitchen"], ["cooking"]],
   ["golf club", ["golf", "golf course"], ["golf course"]],
   ["tennis racket", ["tennis", "tennis court", "sports court", "school gym"], ["tennis court"]],
@@ -92,7 +92,7 @@ const NEEDS = [
 const WATER_ACTS = ["partially submerged", "splashing", "washing back"];
 const WATER_SRC = [
   "onsen", "bath", "bathroom", "bathtub", "shower (place)", "sauna", "beach", "ocean",
-  "poolside", "pool", "pool ladder", "underwater", "open-air bath", "bubble bath", "waterfall",
+  "poolside", "pool", "pool ladder", "underwater", "bubble bath", "waterfall",
   "beach towel", "river", "lake", "hot spring", "fountain", "puddle",
   "rain", "steam", "water", "shower head", "fishing", "fishing rod",
   "bathing", "showering", "swimming", "shared bathing", "diving", "wading", "partially submerged",

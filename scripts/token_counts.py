@@ -39,7 +39,10 @@ def main() -> None:
     strings = {t["tag"] for t in lex["tags"]}
     for key in ("quality", "alwaysEnv", "nsfwTail", "sfwTail", "sensitiveTail"):
         strings.update(lex.get(key) or [])
-    strings.update({"solo", "adult"})            # 骨架字，不在 tags[] 裡也會出現
+    strings.add("solo")                          # 骨架字，不在 tags[] 裡也會出現
+    # 2026-09-18 之前這裡還有 adult。它是被無條件塞進每一張圖的，但 Danbooru 上
+    # 0 張、模型沒把它當 tag 學過，已經移除（它唯一的作用「擋住 shota」改寫成
+    # engine.js 裡直接的規則）。
 
     out = {s: count(s) for s in sorted(strings)}
     # ", " 的成本量出來而不是寫死，換 tokenizer 也不會錯

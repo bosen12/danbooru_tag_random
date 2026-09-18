@@ -141,8 +141,13 @@ ERA_ANCHOR_ALTS = {
     "chinese clothes": ["chinese clothes", "hanfu"],
 }
 
+# 現代**沒有錨**：Danbooru 上的 modern 是 artist 分類、post_count 0 ——
+# 那個字不是 tag，模型沒學過。而現代本來就不需要錨，因為 Danbooru 的預設
+# 就是現代；實測 2800 張現代圖有 96.8% 另外帶著現代專屬的場地或服裝
+# （jacket 714、city lights 307、sneakers 294…），只靠這個錨撐的只有 3.2%。
+# 對照 test_engine.mjs 的時代訊號測試也**刻意排除現代**，註解寫著
+#「現代不該被硬塞（它本來就有一堆專屬場地）」。2026-09-18 專案主裁決拿掉。
 ERA_ANCHORS = {
-    "modern": ["modern"],
     "ancient_china": ["chinese clothes", "east asian architecture"],
     "ancient_greece": ["ancient greek clothes"],
     "medieval": ["armor", "castle"],
@@ -263,11 +268,12 @@ ERA_OF = {
     "innertube": _M,
     # 江戶的專屬場地本來 16 個裡有 6 個是浴場（古中國 0 個），於是三分之一的
     # 江戶圖在泡澡。ofuro 跟 bath、bathhouse 跟 onsen 畫出來幾乎是同一種場景 ——
-    # 五個日式浴場各自競爭，合計機率就是單一場地的五倍。留 onsen 和
-    # open-air bath 撐江戶的沐浴文化，這兩個回歸現代。
+    # 五個日式浴場各自競爭，合計機率就是單一場地的五倍。留 onsen 撐江戶的
+    # 沐浴文化，這兩個回歸現代。
+    #（原本還留著 open-air bath，但它在 Danbooru 是 0 張、模型沒把它當 tag 學過，
+    # 已移除；露天的語意由 onsen + outdoors 承接。）
     "bathhouse": _M,
     "ofuro": _M,
-    "open-air bath": ["edo", "modern"],
     "bubble bath": _M,
     "shopping": _M,
     "karaoke": _M,
@@ -430,7 +436,6 @@ IMPLIES = {
     "reverse spitroast": ["sex"],
     "fat man": ["fat"],
     "obese": ["fat"],
-    "nerd": ["otaku"],
     "coke-bottle glasses": ["glasses"],
     "high ponytail": ["ponytail"],
     "side ponytail": ["ponytail"],
@@ -449,7 +454,6 @@ IMPLIES = {
     "ofuro": ["bath", "indoors"],
     "bathhouse": ["bath", "indoors"],
     "bubble bath": ["bath", "indoors"],
-    "open-air bath": ["outdoors"],
     "shower head": ["shower (place)"],
     "karaoke": ["singing"],
     "playing video games": ["playing games"],
@@ -738,7 +742,6 @@ NEEDS_MALE = {
     "huge penis",
     "veiny penis",
     "testicles",
-    "creampie",
     "cum in pussy",
     "cum in mouth",
     "facial",
@@ -798,8 +801,6 @@ NEEDS_FEMALE = {
     "flat chest",
     "sagging breasts",
     "nipples",
-    "areolae",
-    "milf",
     "mature female",
     "female pubic hair",
     "upright straddle",
@@ -809,7 +810,6 @@ NEEDS_FEMALE = {
     "mmf threesome",
     "ffm threesome",
     "lactation",
-    "pink nipples",
     "breastfeeding",
     "nurse",
     "waitress",
@@ -829,7 +829,6 @@ NEEDS_PAIR = {
     "straddling",
     "hug from behind",
     "sitting on lap",
-    "pinned down",
     "lifting person",
     "happy sex",
     "ass grab",
@@ -1193,10 +1192,8 @@ def extra_style_tags() -> list[dict]:
         ("flat color", "平塗", "coloring"),
         ("watercolor (medium)", "水彩", "coloring"),
         ("screentones", "網點", "coloring"),
-        ("webtoon", "條漫", "coloring"),
         ("lineart", "線稿", "coloring"),
         ("monochrome", "單色", "coloring"),
-        ("clean lines", "乾淨線條", "line_weight"),
         ("thick outlines", "粗線", "line_weight"),
         ("1990s (style)", "1990s 畫風", "era_style"),
         ("2000s (style)", "2000s 畫風", "era_style"),
@@ -1434,7 +1431,6 @@ def extra_bath_tags() -> list[dict]:
         pose("shared bathing", needs=["pair"], implies=["bathing"], zh="共浴"),
         env("bathhouse", implies=["bath", "indoors"], era=edo_mod, zh="錢湯"),
         env("ofuro", implies=["bath", "indoors"], era=edo_mod, zh="日式浴桶"),
-        env("open-air bath", implies=["outdoors"], era=edo_mod, zh="露天風呂"),
         env("bubble bath", implies=["bath", "indoors"], era=["modern"], zh="泡泡浴"),
         env("shower head", mutex=None, implies=["shower (place)"], era=["modern"], zh="蓮蓬頭"),
         env("soap bubbles", mutex=None, zh="肥皂泡"),
@@ -1625,7 +1621,6 @@ def extra_job_scene_tags() -> list[dict]:
         pose("looking around", mutex="gaze", zh="東張西望"),
         pose("furrowed brow", mutex="expression", zh="皺眉"),
         pose("dazed", mutex="expression", zh="恍神"),
-        feat("pink nipples", needs=["female"], zh="粉紅乳頭"),
         feat("lactation", needs=["female"], heat=["flash", "sex"], zh="泌乳"),
         feat("size difference", needs=["pair"], zh="體格差"),
         env("fitness gym", implies=["indoors"], zh="健身房"),
@@ -1686,7 +1681,6 @@ def extra_shot_face_tags() -> list[dict]:
         P("straight-on", mutex="camera"),
         P("head out of frame", mutex="camera"),
         P("feet out of frame", mutex="camera"),
-        P("looking away", mutex="gaze"),
         P("looking ahead", mutex="gaze"),
         P("sideways glance", mutex="gaze"),
         P("looking at breasts", mutex="gaze", heat=["tease", "flash", "sex"], needs=["female"]),
@@ -1737,7 +1731,6 @@ def extra_male_look_tags() -> list[dict]:
         F("old man"),
         F("bald", mutex="hair_length"),
         F("otaku"),
-        F("nerd", implies=["otaku"]),
         F(
             "coke-bottle glasses",
             implies=["glasses"],
@@ -1753,7 +1746,6 @@ def extra_race_tags() -> list[dict]:
     monsters = [
         "goblin",
         "orc",
-        "hobgoblin",
         "oni",
         "ogre",
         "troll",
@@ -2192,7 +2184,6 @@ def extra_expand_tags() -> list[dict]:
         env("convenience store", implies=["indoors"], zh="便利商店"),
         env("supermarket", implies=["indoors"], zh="超市"),
         env("internet cafe", implies=["indoors"], zh="網咖"),
-        env("dormitory", implies=["indoors"], zh="宿舍"),
         env("prison", implies=["indoors"], zh="監獄"),
         env("construction site", implies=["outdoors"], zh="工地"),
         env("casino", implies=["indoors"], zh="賭場"),
@@ -2215,7 +2206,6 @@ def extra_expand_tags() -> list[dict]:
         env("campfire", mutex=None, implies=["outdoors"], zh="營火"),
         env("karaoke box", implies=["indoors"], zh="KTV包廂"),
         env("market stall", implies=["outdoors"], zh="夜市"),
-        env("food stall", implies=["outdoors"], zh="小吃攤"),
         env("apartment", implies=["indoors"], zh="公寓"),
         env("basketball court", implies=["outdoors"], zh="籃球場"),
         env("tennis court", implies=["outdoors"], zh="網球場"),
@@ -2298,13 +2288,13 @@ def extra_expand_tags() -> list[dict]:
         job("construction worker", implies=["hard hat"], zh="工人"),
         job("janitor", zh="清潔工"),
         job("race queen", needs=["female"], gate="female", zh="賽車女郎"),
-        job("soldier", implies=["military uniform"], zh="軍人"),
+        job("soldier", implies=["military uniform"], zh="士兵"),
         pose("jogging", mutex="activity", implies=["outdoors"], era=modern, zh="慢跑"),
         pose("skiing", mutex="activity", implies=["outdoors", "snow"], era=modern, zh="滑雪"),
         pose("diving", mutex="activity", zh="潛水"),
         pose("weightlifting", mutex="activity", era=modern, zh="重訓"),
         pose("rape", needs=["pair"], heat=sex, zh="強姦"),
-        pose("orgy", needs=["pair"], heat=sex, implies=["group sex", "sex"], zh="群交"),
+        pose("orgy", needs=["pair"], heat=sex, implies=["group sex", "sex"], zh="狂歡雜交"),
         pose("bondage", heat=sex, zh="束縛"),
         pose("bdsm", heat=sex, zh="BDSM"),
         pose("restrained", heat=sex, zh="被拘束"),

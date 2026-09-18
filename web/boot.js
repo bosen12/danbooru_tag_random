@@ -29,6 +29,7 @@ import {
   labelOf,
   MALE_COUNT,
   pinMissLine,
+  clashLine,
   knownTags,
   mulberry32,
   applyTagWeights,
@@ -1538,26 +1539,32 @@ function pinsAtDrawOf(card) {
   }
 }
 
-function paintPinMiss(card) {
+// 卡片上的一行警告。兩種：釘選沒進圖、以及這張圖自己打架。
+// 形狀一樣，只差算的是什麼，所以共用同一個進出邏輯。
+function paintCardWarn(card, cls, line) {
   const meta = card.querySelector(".meta");
   if (!meta) return;
-  const pos = card.dataset.bare || "";
-  let warn = meta.querySelector(":scope > .warn.pin-miss");
-  if (!pos) {
-    warn?.remove();
-    return;
-  }
-  const line = pinMissLine(lex, pos, pinned, pinsAtDrawOf(card));
+  let warn = meta.querySelector(`:scope > .warn.${cls}`);
   if (!line) {
     warn?.remove();
     return;
   }
   if (!warn) {
     warn = document.createElement("p");
-    warn.className = "warn pin-miss";
+    warn.className = `warn ${cls}`;
     meta.append(warn);
   }
   warn.textContent = line;
+}
+
+function paintPinMiss(card) {
+  const pos = card.dataset.bare || "";
+  paintCardWarn(card, "pin-miss", pos ? pinMissLine(lex, pos, pinned, pinsAtDrawOf(card)) : "");
+  // 引擎每次抽完都算 contradictions()，但在這之前**沒有任何地方讀它** ——
+  // 「這張圖同時是室內又室外」被算出來然後丟掉。自然抽取撞不到（實測 8640 張
+  // 0 次），要兩個互相矛盾的釘選才會（釘露營配更衣室），而那正是最需要說一聲
+  // 的時候：兩個都是使用者明確釘的，引擎照留，但他得知道圖為什麼會怪。
+  paintCardWarn(card, "pos-clash", pos ? clashLine(lex, pos) : "");
 }
 
 function afterPin() {

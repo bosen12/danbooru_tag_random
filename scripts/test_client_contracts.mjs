@@ -392,6 +392,26 @@ function ok(name, cond, detail) {
   );
 }
 
+// --- 9. 引擎算出來的矛盾要真的顯示出來 --------------------------------------
+// drawOne() 每次都算 contradictions() 並放進回傳值的 conflicts。2026-09-18 之前
+// **沒有任何地方讀它** —— `grep -rn conflicts web/*.js` 只命中 engine.js 自己。
+// 引擎知道「這張圖同時是室內又室外」，然後把結論丟掉。
+//
+// 這一條守的是那條線接著：boot.js 要呼叫 clashLine 並畫到卡片上。
+{
+  const src = readFileSync(join(ROOT, "web", "boot.js"), "utf8");
+  const eng = readFileSync(join(ROOT, "web", "engine.js"), "utf8");
+  ok("engine 匯出 clashLine", eng.includes("export function clashLine("));
+  ok("boot.js 匯入 clashLine", src.includes("clashLine,"));
+  ok("boot.js 真的呼叫它", src.includes("clashLine(lex,"));
+  // 畫在卡片上，跟「釘選未入」同一個位置。只有匯入沒有畫等於沒接。
+  const at = src.indexOf("function paintPinMiss(");
+  const body = at >= 0 ? src.slice(at, at + 900) : "";
+  ok("找得到卡片警告那一段", at >= 0);
+  ok("矛盾畫成卡片上的一行警告", body.includes("pos-clash"), "沒有 .warn.pos-clash 就是算了不顯示");
+  ok("釘選未入那一行還在", body.includes("pin-miss"));
+}
+
 if (failed) {
   console.error(NL + failed + " failed");
   process.exit(1);

@@ -278,6 +278,101 @@ function ok(name, rows) {
   }
   ok("被 Danbooru 併走的舊 tag 名沒有留在詞庫", stale);
   ok("併走之後的正規名都在詞庫裡", missing);
+
+  // 2026-09-18：跑 verify_danbooru_tags.mjs --all 查完整個詞庫（1450 個字）之後
+  // 移除的十四個。它們跟上面那批不一樣 —— **沒有 alias 紀錄**，就是單純
+  // post_count 0：Danbooru 上一張圖都沒有用過，模型沒把它們當 tag 學過。
+  //
+  // 每一個的概念都已經有活著的字在詞庫裡承接（右欄），所以移除不會少掉功能。
+  // 刪之前實測 8400 張：死字拿到的機會跟正規名幾乎對半分，例如
+  // milf 286 對 mature female 242、violet eyes 396 對 purple eyes 498 ——
+  // 也就是有一半的圖，那個概念是用模型沒學過的字寫的。
+  const zeroPostGone = [
+    ["milf", "mature female", 49915],
+    ["violet eyes", "purple eyes", 1204091],
+    ["pink nipples", "nipples", 1143509],
+    ["presenting ass", "top-down bottom-up", 28886],
+    ["one knee up", "legs up", 47696],
+    ["pinned down", "restrained", 70854],
+    ["self fondling", "grabbing own breast", 25489],
+    ["open-air bath", "onsen", 24909],
+    ["dormitory", "bedroom", 20863],
+    ["food stall", "festival", 3588],
+    ["nerd", "otaku", 1591],
+    ["hobgoblin", "goblin", 4670],
+    ["webtoon", "lineart", 16665],
+    ["clean lines", "lineart", 16665],
+  ];
+
+  // 第二批（同一天）：這六個**曾經是真的 tag**，有過大量圖，是 2022～2023 年
+  // 被 Danbooru 停用並改標的 —— 也就是模型 2024 年的訓練快照裡它們已經是 0 張，
+  // 學到的是右欄那些替代字。判準是**停用時間 vs 訓練截止**，不是現在幾張：
+  // 停用晚於 2024 的七個（presenting、hand in panties、inset…）反而要留著，
+  // 那些在 verify_danbooru_tags.mjs 的 MODEL_VOCAB 裡各自記著日期。
+  //
+  // 移除前實測 8400 張：bangs 10.8%、amber eyes 9.9%、looking away 7.1%、
+  // silver hair 6.5% —— 四個高頻的舊名合計佔掉三分之一的圖，而它們的替代字
+  // 全部已經在詞庫裡跟它們搶同一個互斥格。
+  const deprecatedGone = [
+    ["bangs", "blunt bangs", "2023-03"],
+    ["amber eyes", "yellow eyes", "2022-07"],
+    ["silver hair", "grey hair", "2022-05"],
+    ["looking away", "averting eyes", "2023-06"],
+    ["creampie", "cum in pussy", "2022-06"],
+    ["areolae", "large areolae", "2022-05"],
+  ];
+  const depZombie = [];
+  const depNoHeir = [];
+  for (const [dead, heir, when] of deprecatedGone) {
+    if (by.has(dead)) depZombie.push(`「${dead}」已於 ${when} 被 Danbooru 停用改標，模型學到的是「${heir}」`);
+    if (!by.has(heir)) depNoHeir.push(`「${heir}」不在詞庫（${dead} 移除後由它承接）`);
+  }
+  ok("2024 之前就停用的舊 tag 沒有留在詞庫", depZombie);
+  ok("停用之後的替代字都在詞庫裡", depNoHeir);
+
+  // 現代沒有時代錨：modern 在 Danbooru 是 artist 分類、post_count 0。
+  // adult 也是 Danbooru 0 張。它唯一的作用是被無條件塞進每一張圖、藉著
+  // 「shota 與 adult 互斥」讓 shota 抽不到 —— 也就是用一個模型沒學過的字繞一圈。
+  // 那條規則已改寫成 engine.js 裡直接的「shota 不進自動抽牌」，這裡守住字別回來。
+  ok("adult 沒有回到詞庫（0 張的字，作用已改寫成直接規則）", !by.has("adult"));
+
+  // 中文標籤要能分辨。面板上的晶片只顯示中文（英文在 title 與 aria-label 裡），
+  // 兩個字給同一個中文，使用者要一個一個滑過去才知道差別。
+  // 2026-09-18 查出十三組：抬腿（legs up／leg lift）、外套（jacket／coat）、
+  // 腰帶（belt／sash）、口交（fellatio／oral）…依 Danbooru wiki 的語意分開。
+  {
+    const seen = new Map();
+    for (const t of data.tags) {
+      const z = (t.zh || "").trim();
+      if (!z) continue;
+      if (!seen.has(z)) seen.set(z, []);
+      seen.get(z).push(t.tag);
+    }
+    const dup = [...seen.entries()]
+      .filter(([, list]) => list.length > 1)
+      .map(([z, list]) => `「${z}」同時給了 ${list.join("、")}`);
+    ok("沒有兩個 tag 共用同一個中文", dup);
+  }
+
+  // add_zh.py 的 ZH 與 ITEMS 兩張表對同一個字給不同中文的問題，檢查放在
+  // add_zh.py 自己的 check_tables() 裡 —— 那是那個檔案的資料完整性，
+  // 產生的時候就該擋，不是等到這裡才發現。
+  //
+  // 這裡本來寫過一條「顏色複合字的中文要以底字結尾」的啟發式，但中文會做慣用
+  // 縮寫（藍褲 vs 長褲、黑裙 vs 裙子），那條會抓出十七件假陽性。
+  // 假陽性比漏抓更糟：它會訓練人忽略這條測試。
+
+  ok("現代沒有時代錨（modern 不是 Danbooru tag）", !(data.eraAnchors || {}).modern?.length);
+  ok("五個歷史時代的錨都還在", ["ancient_china", "ancient_greece", "medieval", "edo", "victorian"]
+    .filter((e) => !((data.eraAnchors || {})[e] || []).length));
+  const zombie = [];
+  const noHeir = [];
+  for (const [dead, heir] of zeroPostGone) {
+    if (by.has(dead)) zombie.push(`「${dead}」在 Danbooru 是 0 張，模型沒學過，不該回到詞庫`);
+    if (!by.has(heir)) noHeir.push(`「${heir}」不在詞庫（${dead} 移除後由它承接那個概念）`);
+  }
+  ok("Danbooru 0 張的字沒有留在詞庫", zombie);
+  ok("移除之後承接概念的字都還在", noHeir);
   // 反面：訓練之後才被併的舊名要留著，不能一起殺掉。
   ok("hairpin 留著（alias 是 2026-05-30 才建，晚於模型訓練）", by.has("hairpin"));
   // 時代錨換名之後要真的指到活著的字，不然古中國會沒有年代訊號。
@@ -334,7 +429,8 @@ function ok(name, rows) {
     for (const s of data[key] || []) need.add(s);
   }
   need.add("solo");
-  need.add("adult");
+  // adult 曾經也在這裡（每張圖都有的骨架字）。2026-09-18 移除之後它不再進 POS，
+  // 所以也不該再要求它有 token 數 —— 上面那條「adult 沒有回到詞庫」守著它不回來。
 
   const counts = tc.counts || {};
   const missing = [...need]

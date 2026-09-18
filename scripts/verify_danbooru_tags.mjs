@@ -2,7 +2,8 @@
 /**
  * 向 Danbooru 官方 API 核實運動 tag。只接受 category=0、post_count>0、is_deprecated=false。
  *
- *   node scripts/verify_danbooru_tags.mjs                     # 驗 allSportTags() 的完整清單
+ *   node scripts/verify_danbooru_tags.mjs                     # 驗整個詞庫（預設）
+ *   node scripts/verify_danbooru_tags.mjs --sports-only        # 只驗 allSportTags() 的清單
  *   node scripts/verify_danbooru_tags.mjs --retry 40          # API 掛掉時重試幾輪（每輪間隔 30 秒）
  *   node scripts/verify_danbooru_tags.mjs --max-created 2025  # 另外標出建立年份晚於 2025 的
  *   node scripts/verify_danbooru_tags.mjs a b c               # 只驗指定 tag（空格格式）
@@ -64,6 +65,44 @@ export const MODEL_VOCAB = new Set([
   "newest", "recent", "mid", "early", "oldest",
   // 分級
   "safe", "sfw", "nsfw", "general", "sensitive", "questionable", "explicit",
+
+  // --- 以下四個是 2026-09-18 跑完 `--all` 之後裁決的（詳見討論區）------------
+  //
+  // soft breasts／natural breasts：Danbooru 0 張，實測出現在 92% 的圖裡
+  // （女性、非全年齡時由 drawOne() 插在胸圍字後面）。專案主 2026-09-18 裁決保留：
+  // 它們是 SD／Illustrious 提示詞的常見字彙，而文字編碼器懂英文詞義、
+  // 不是只靠 Danbooru 的標註分布；當初加它們就是為了擋「不自然／假體」的胸型。
+  "soft breasts", "natural breasts",
+  //
+  // hairpin：它的 alias（hairpin -> hairclip）建立於 2026-05-30，**晚於**模型訓練，
+  // 所以舊名要留著。test_lexicon_integrity.mjs 已經有一條專門守這件事，
+  // 這裡跟著放行，免得 `--all` 每次都把它報成 BAD。
+  "hairpin",
+
+  // --- deprecated 但模型仍然學過的（2026-09-18 裁決，見討論區）---------------
+  //
+  // 這幾個跟上面那些不一樣：它們**曾經是真的 tag**，有過大量圖，後來才被
+  // Danbooru 停用並改標。所以判準不是「現在幾張」，而是**停用時間 vs 訓練截止**：
+  // 停用晚於 2024 的，模型訓練時它們還活著，那個 token 學過，留著有效。
+  //
+  //   presenting             停用 2026-07   -> presenting own body（Danbooru 建議）
+  //   hand in panties        停用 2025-12   -> hand in own panties
+  //   hands on own breasts   停用 2025-04   -> grabbing own breast
+  //   inset                  停用 2025-12   還有 2,718 張；它正是負面詞要擋的
+  //                                          「畫中畫小框」，wiki 的定義就是這個
+  //
+  // 2024 當年停用的三個落在邊界上，證據不足以判它在訓練資料的哪一邊，
+  // 所以照「不確定就不動」處理：
+  //
+  //   ass grab      停用 2024-07   -> grabbing own/another's ass
+  //   breast hold   停用 2024-07   -> arm under breasts
+  //   cel shading   停用 2024-08   -> cel rendering（而且它是風格，要釘才進）
+  //
+  // 對照組：2022～23 就停用的六個（bangs、amber eyes、silver hair、looking away、
+  // creampie、areolae）已經移除 —— 2024 的快照裡它們早就被改標完，
+  // 模型學到的是替代字，而替代字全部已經在詞庫裡跟舊名搶同一格。
+  "presenting", "hand in panties", "hands on own breasts", "inset",
+  "ass grab", "breast hold", "cel shading",
 ]);
 
 // 使用者點名必須擋掉的：deprecated、post_count 0、或 alias 舊名。
@@ -98,7 +137,7 @@ export function parseArgs(argv) {
   const args = Array.isArray(argv) ? argv : [];
   let retries = 0;
   let maxCreatedYear = null;
-  let all = false;
+  let all = true;
   const tags = [];
 
   for (let i = 0; i < args.length; i++) {
@@ -113,12 +152,17 @@ export function parseArgs(argv) {
       continue;
     }
     if (a === "--all") {
+      // 保留相容：--all 現在是預設，給它一個 no-op 以免舊指令壞掉。
       all = true;
+      continue;
+    }
+    if (a === "--sports-only") {
+      all = false;
       continue;
     }
     if (a === "--help" || a === "-h") {
       throw new CliError(
-        "用法：node scripts/verify_danbooru_tags.mjs [--retry N] [--max-created YYYY] [--all] [tag ...]"
+        "用法：node scripts/verify_danbooru_tags.mjs [--retry N] [--max-created YYYY] [--sports-only] [tag ...]"
       );
     }
     if (typeof a === "string" && a.startsWith("--")) {
@@ -311,18 +355,38 @@ function promptVocab() {
     "negative", "sfwNegative", "sensitiveNegative",
     "quality", "nsfwTail", "sfwTail", "sensitiveTail", "alwaysEnv",
   ]) eat(lex[key]);
+  // quality 這一段（畫質加成與畫風）也是提示詞骨架，不是畫面內容 —— 跟上面那幾個
+  // 清單同一種東西，只是它們住在 tags 陣列裡而不是頂層清單裡。
+  //
+  // 少了這一行，`--all` 會把 highres（818 萬張）、absurdres（300 萬張）、
+  // watercolor (medium)（2.2 萬張）判成 BAD，理由是「category 5（不是一般 tag）」。
+  // 那三個在 Danbooru 上活得好好的，只是 meta 分類。用「必須 category 0」去判
+  // 畫質字彙，就是上面 toRecord() 註解在講的套錯規則。
+  //
+  // metaOk 只放行「健康的 meta」（見 toRecord）：deprecated 或 post_count 0
+  // 的畫質字照樣會被擋下來 —— cel shading、clean lines、webtoon 就還是 BAD。
+  for (const t of lex.tags || []) {
+    if (t && t.section === "quality" && t.tag) out.add(t.tag);
+  }
   return out;
 }
 
 /**
- * 預設清單只有運動 tag ＋ 固定字彙，約 122 個 —— 詞庫有 1296 個，其餘 1170 幾個
- * 從來沒被查證過。實際後果：lotus pond、great hall、extreme close-up、washing body、
- * free use 五個 Danbooru 查無的自創字就這樣活了很久，還有十幾個早就被 alias 併走的
- * 舊名（wink、sento、cravat…）一直在用，而那些名字的 post_count 是 0。
+ * 整個詞庫都驗，這是預設。
  *
- * `--all` 把整個詞庫一起查。沒有設成預設，是因為還有一批 post_count 0 的字沒有裁決
- * （adult、soft breasts、natural breasts 那些可能是刻意的模型字彙），
- * 預設就紅會讓這支工具失去意義。裁決完之後應該改成預設。
+ * 舊版預設只驗運動 tag ＋ 固定字彙約 122 個，其餘一千多個從來沒被查證過 ——
+ * 實際後果就是 lotus pond、great hall 那五個自創字活了很久，還有十幾個早就被
+ * alias 併走的舊名（wink、sento、cravat…）一直在用。
+ *
+ * 舊註解寫著「那批 post_count 0 的字裁決完之後應該改成預設」。2026-09-18 裁決完了：
+ *   - 移除 21 個（14 個從來沒有圖的，6 個 2022～23 就停用改標的，加上 adult）
+ *   - 保留 10 個並在 MODEL_VOCAB 裡各自寫下理由（soft/natural breasts 是
+ *     專案主裁決、hairpin 與七個 deprecated 的停用日期晚於模型訓練）
+ *   - 拿掉現代的時代錨（modern 在 Danbooru 是 artist 分類、0 張）
+ *   - adult 也是 0 張，而它唯一的作用是「跟 shota 互斥」，也就是靠一個死字
+ *     繞一圈讓 shota 抽不到。那條規則已改寫成直接的「shota 不進自動抽牌」，
+ *     行為一格未動（實測同一批 seed：loli 23→23、shota 0→0、petite 164→164）。
+ * 之後 `--all` 是 0 BAD，所以這裡翻成預設。要回舊行為用 `--sports-only`。
  */
 function lexiconTags() {
   const raw = readFileSync(join(here, "..", "web", "lexicon.json"), "utf8");

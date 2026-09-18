@@ -162,7 +162,6 @@ HAIR_STYLE = {
     "single braid",
     "messy hair",
     "ahoge",
-    "bangs",
     "blunt bangs",
     "swept bangs",
     "sidelocks",
@@ -274,7 +273,9 @@ SEX = {
     # 走光＝衣服意外露出來；這幾個是性接觸或自慰，跟露不露沒有關係。
     # 分級結果本來就是「只有色情」（靠 FLASH_UNDRESS_RE 裡硬塞的 chikan|grab|tweak
     # 這些字），所以這次改的是「用對的理由得到同樣的結果」——
-    # 例外是 self fondling，它哪一條特例都沒對到，本來錯在敏感層。
+    # 例外是 self fondling，它哪一條特例都沒對到，本來錯在敏感層
+    #（該字後來查出 Danbooru 0 張、模型沒學過，已整個移除，同義的
+    # grabbing own breast 留著）。
     # 2026-09-16：同一類錯的第二次。上面那次是拿 heat（什麼時候抽得到）決定
     # group（這是什麼東西）；這次是拿**名字裡有沒有 breast** 決定 —— 下面
     # assign_group() 有一條「gate=female 且 tag 含 breast → body_f」的子字串規則，
@@ -301,7 +302,6 @@ SEX = {
     "spread pussy",
     "hand in panties",
     "masturbation through clothes",
-    "self fondling",
     "sex",
     "vaginal",
     "anal",
@@ -335,7 +335,6 @@ SEX = {
     "clothed sex",
     "public indecency",
     "happy sex",
-    "creampie",
     "cum",
     "facial",
     "ejaculation",
@@ -401,7 +400,6 @@ def assign_group(item: dict) -> str:
             "manboobs",
             "old man",
             "otaku",
-            "nerd",
         }:
             return "body_m"
         if mx == "hair_length":
@@ -427,7 +425,6 @@ def assign_group(item: dict) -> str:
                 "hip",
                 "thigh",
                 "waist",
-                "milf",
                 "mature female",
                 "nipple",
                 "areola",

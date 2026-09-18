@@ -382,23 +382,6 @@
     ]
   },
   {
-    "tag": "one knee up",
-    "section": "pose",
-    "gate": "any",
-    "heat": [
-      "tease",
-      "flash",
-      "sex"
-    ],
-    "mutex": null,
-    "bind": [],
-    "implies": [],
-    "layer": "normal",
-    "era": [
-      "any"
-    ]
-  },
-  {
     "tag": "against wall",
     "section": "pose",
     "gate": "any",
@@ -564,22 +547,6 @@
   },
   {
     "tag": "presenting",
-    "section": "pose",
-    "gate": "any",
-    "heat": [
-      "flash",
-      "sex"
-    ],
-    "mutex": null,
-    "bind": [],
-    "implies": [],
-    "layer": "normal",
-    "era": [
-      "any"
-    ]
-  },
-  {
-    "tag": "presenting ass",
     "section": "pose",
     "gate": "any",
     "heat": [
@@ -2152,22 +2119,6 @@
     ]
   },
   {
-    "tag": "self fondling",
-    "section": "pose",
-    "gate": "any",
-    "heat": [
-      "flash",
-      "sex"
-    ],
-    "mutex": null,
-    "bind": [],
-    "implies": [],
-    "layer": "normal",
-    "era": [
-      "any"
-    ]
-  },
-  {
     "tag": "caught",
     "section": "pose",
     "gate": "any",
@@ -2575,21 +2526,6 @@
     ]
   },
   {
-    "tag": "creampie",
-    "section": "pose",
-    "gate": "female",
-    "heat": [
-      "sex"
-    ],
-    "mutex": null,
-    "bind": [],
-    "implies": [],
-    "layer": "normal",
-    "era": [
-      "any"
-    ]
-  },
-  {
     "tag": "cum",
     "section": "pose",
     "gate": "any",
@@ -2972,21 +2908,6 @@
     "gate": "any",
     "heat": [
       "flash",
-      "sex"
-    ],
-    "mutex": null,
-    "bind": [],
-    "implies": [],
-    "layer": "normal",
-    "era": [
-      "any"
-    ]
-  },
-  {
-    "tag": "pinned down",
-    "section": "pose",
-    "gate": "any",
-    "heat": [
       "sex"
     ],
     "mutex": null,

@@ -564,23 +564,6 @@
     "zh": "溫室"
   },
   {
-    "tag": "modern",
-    "section": "env",
-    "gate": "any",
-    "heat": [
-      "tease",
-      "flash",
-      "sex"
-    ],
-    "mutex": null,
-    "bind": [],
-    "implies": [],
-    "layer": "normal",
-    "era": [
-      "modern"
-    ]
-  },
-  {
     "tag": "cityscape",
     "section": "env",
     "gate": "any",

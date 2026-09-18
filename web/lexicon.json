@@ -224,9 +224,6 @@
     "other": "其他"
   },
   "eraAnchors": {
-    "modern": [
-      "modern"
-    ],
     "ancient_china": [
       "chinese clothes",
       "east asian architecture"
@@ -410,25 +407,6 @@
       ],
       "group": "extra",
       "zh": "單人"
-    },
-    {
-      "tag": "adult",
-      "section": "subject",
-      "gate": "any",
-      "heat": [
-        "tease",
-        "flash",
-        "sex"
-      ],
-      "mutex": null,
-      "bind": [],
-      "implies": [],
-      "layer": "normal",
-      "era": [
-        "any"
-      ],
-      "group": "extra",
-      "zh": "成人"
     },
     {
       "tag": "multiple girls",
@@ -821,25 +799,6 @@
       "zh": "鬢髮"
     },
     {
-      "tag": "bangs",
-      "section": "feature",
-      "gate": "any",
-      "heat": [
-        "tease",
-        "flash",
-        "sex"
-      ],
-      "mutex": null,
-      "bind": [],
-      "implies": [],
-      "layer": "normal",
-      "era": [
-        "any"
-      ],
-      "group": "hair_style",
-      "zh": "瀏海"
-    },
-    {
       "tag": "blunt bangs",
       "section": "feature",
       "gate": "any",
@@ -1165,25 +1124,6 @@
       "zh": "白髮"
     },
     {
-      "tag": "silver hair",
-      "section": "feature",
-      "gate": "any",
-      "heat": [
-        "tease",
-        "flash",
-        "sex"
-      ],
-      "mutex": "hair_color",
-      "bind": [],
-      "implies": [],
-      "layer": "normal",
-      "era": [
-        "any"
-      ],
-      "group": "hair_color",
-      "zh": "銀髮"
-    },
-    {
       "tag": "blue hair",
       "section": "feature",
       "gate": "any",
@@ -1469,25 +1409,6 @@
       "zh": "紅眼"
     },
     {
-      "tag": "amber eyes",
-      "section": "feature",
-      "gate": "any",
-      "heat": [
-        "tease",
-        "flash",
-        "sex"
-      ],
-      "mutex": "eye_color",
-      "bind": [],
-      "implies": [],
-      "layer": "normal",
-      "era": [
-        "any"
-      ],
-      "group": "eyes",
-      "zh": "琥珀眼"
-    },
-    {
       "tag": "grey eyes",
       "section": "feature",
       "gate": "any",
@@ -1505,25 +1426,6 @@
       ],
       "group": "eyes",
       "zh": "灰眼"
-    },
-    {
-      "tag": "violet eyes",
-      "section": "feature",
-      "gate": "any",
-      "heat": [
-        "tease",
-        "flash",
-        "sex"
-      ],
-      "mutex": "eye_color",
-      "bind": [],
-      "implies": [],
-      "layer": "normal",
-      "era": [
-        "any"
-      ],
-      "group": "eyes",
-      "zh": "紫羅藍眼"
     },
     {
       "tag": "yellow eyes",
@@ -2571,28 +2473,6 @@
       "zh": "巨臀"
     },
     {
-      "tag": "milf",
-      "section": "feature",
-      "gate": "female",
-      "heat": [
-        "tease",
-        "flash",
-        "sex"
-      ],
-      "mutex": null,
-      "bind": [],
-      "implies": [],
-      "layer": "normal",
-      "era": [
-        "any"
-      ],
-      "group": "body_f",
-      "needs": [
-        "female"
-      ],
-      "zh": "熟女"
-    },
-    {
       "tag": "mature female",
       "section": "feature",
       "gate": "female",
@@ -2751,27 +2631,6 @@
       ],
       "group": "body_f",
       "zh": "腫脹乳頭"
-    },
-    {
-      "tag": "areolae",
-      "section": "feature",
-      "gate": "female",
-      "heat": [
-        "flash",
-        "sex"
-      ],
-      "mutex": null,
-      "bind": [],
-      "implies": [],
-      "layer": "skin",
-      "era": [
-        "any"
-      ],
-      "group": "body_f",
-      "needs": [
-        "female"
-      ],
-      "zh": "乳暈"
     },
     {
       "tag": "pubic hair",
@@ -3657,25 +3516,6 @@
       "zh": "翹腿"
     },
     {
-      "tag": "one knee up",
-      "section": "pose",
-      "gate": "any",
-      "heat": [
-        "tease",
-        "flash",
-        "sex"
-      ],
-      "mutex": null,
-      "bind": [],
-      "implies": [],
-      "layer": "normal",
-      "era": [
-        "any"
-      ],
-      "group": "tease",
-      "zh": "單膝抬起"
-    },
-    {
       "tag": "against wall",
       "section": "pose",
       "gate": "any",
@@ -3866,7 +3706,7 @@
         "any"
       ],
       "group": "tease",
-      "zh": "抬腿"
+      "zh": "雙腿上抬"
     },
     {
       "tag": "presenting",
@@ -3885,24 +3725,6 @@
       ],
       "group": "flash",
       "zh": "展示身體"
-    },
-    {
-      "tag": "presenting ass",
-      "section": "pose",
-      "gate": "any",
-      "heat": [
-        "flash",
-        "sex"
-      ],
-      "mutex": null,
-      "bind": [],
-      "implies": [],
-      "layer": "normal",
-      "era": [
-        "any"
-      ],
-      "group": "flash",
-      "zh": "展示臀部"
     },
     {
       "tag": "straddling",
@@ -5244,7 +5066,7 @@
         "any"
       ],
       "group": "flash",
-      "zh": "掀裙"
+      "zh": "掀裙子"
     },
     {
       "tag": "clothes lift",
@@ -5298,7 +5120,7 @@
         "any"
       ],
       "group": "flash",
-      "zh": "掀裙"
+      "zh": "掀洋裝"
     },
     {
       "tag": "upskirt",
@@ -5374,7 +5196,7 @@
         "any"
       ],
       "group": "tease",
-      "zh": "托胸"
+      "zh": "捧胸"
     },
     {
       "tag": "covering breasts",
@@ -5736,24 +5558,6 @@
       ],
       "group": "sex",
       "zh": "隔衣自慰"
-    },
-    {
-      "tag": "self fondling",
-      "section": "pose",
-      "gate": "any",
-      "heat": [
-        "flash",
-        "sex"
-      ],
-      "mutex": null,
-      "bind": [],
-      "implies": [],
-      "layer": "normal",
-      "era": [
-        "any"
-      ],
-      "group": "sex",
-      "zh": "自我愛撫"
     },
     {
       "tag": "caught",
@@ -6360,26 +6164,6 @@
       "zh": "坐臉"
     },
     {
-      "tag": "creampie",
-      "section": "pose",
-      "gate": "female",
-      "heat": [
-        "sex"
-      ],
-      "mutex": null,
-      "bind": [],
-      "implies": [],
-      "layer": "normal",
-      "era": [
-        "any"
-      ],
-      "group": "sex",
-      "needs": [
-        "male"
-      ],
-      "zh": "中出"
-    },
-    {
       "tag": "cum",
       "section": "pose",
       "gate": "any",
@@ -6893,26 +6677,6 @@
       "zh": "抓臀"
     },
     {
-      "tag": "pinned down",
-      "section": "pose",
-      "gate": "any",
-      "heat": [
-        "sex"
-      ],
-      "mutex": null,
-      "bind": [],
-      "implies": [],
-      "layer": "normal",
-      "era": [
-        "any"
-      ],
-      "group": "sex",
-      "needs": [
-        "pair"
-      ],
-      "zh": "被壓住"
-    },
-    {
       "tag": "breast sucking",
       "section": "pose",
       "gate": "female",
@@ -7381,7 +7145,7 @@
         "victorian"
       ],
       "group": "onepiece",
-      "zh": "燕尾服"
+      "zh": "小禮服"
     },
     {
       "tag": "school uniform",
@@ -7539,7 +7303,7 @@
         "modern"
       ],
       "group": "onepiece",
-      "zh": "連身緊身衣（體操）"
+      "zh": "連身衣"
     },
     {
       "tag": "bodysuit",
@@ -7558,7 +7322,7 @@
         "modern"
       ],
       "group": "onepiece",
-      "zh": "連身緊身衣"
+      "zh": "緊身衣"
     },
     {
       "tag": "gym uniform",
@@ -7774,7 +7538,7 @@
         "modern"
       ],
       "group": "top",
-      "zh": "露肩"
+      "zh": "露肩裝"
     },
     {
       "tag": "jacket",
@@ -7793,7 +7557,7 @@
         "modern"
       ],
       "group": "outer",
-      "zh": "外套"
+      "zh": "夾克"
     },
     {
       "tag": "open jacket",
@@ -7814,7 +7578,7 @@
         "modern"
       ],
       "group": "outer",
-      "zh": "外套敞開"
+      "zh": "夾克敞開"
     },
     {
       "tag": "lab coat",
@@ -8504,7 +8268,7 @@
         "any"
       ],
       "group": "fabric",
-      "zh": "緊身衣"
+      "zh": "緊身衣物"
     },
     {
       "tag": "open clothes",
@@ -8833,7 +8597,7 @@
         "victorian"
       ],
       "group": "acc",
-      "zh": "蝴蝶結領結"
+      "zh": "領結"
     },
     {
       "tag": "choker",
@@ -11193,25 +10957,6 @@
       "zh": "溫室"
     },
     {
-      "tag": "modern",
-      "section": "env",
-      "gate": "any",
-      "heat": [
-        "tease",
-        "flash",
-        "sex"
-      ],
-      "mutex": null,
-      "bind": [],
-      "implies": [],
-      "layer": "normal",
-      "era": [
-        "modern"
-      ],
-      "group": "other",
-      "zh": "現代"
-    },
-    {
       "tag": "cityscape",
       "section": "env",
       "gate": "any",
@@ -11867,7 +11612,7 @@
         "edo"
       ],
       "group": "era",
-      "zh": "着物"
+      "zh": "和服"
     },
     {
       "tag": "japanese clothes",
@@ -14061,7 +13806,7 @@
         "any"
       ],
       "group": "acc",
-      "zh": "露肩"
+      "zh": "裸肩"
     },
     {
       "tag": "breasts out",
@@ -14345,7 +14090,7 @@
       "mutexExtra": [
         "sex_act"
       ],
-      "zh": "口交"
+      "zh": "口部愛撫"
     },
     {
       "tag": "parted bangs",
@@ -14997,7 +14742,7 @@
         "any"
       ],
       "group": "acc",
-      "zh": "腰帶"
+      "zh": "皮帶"
     },
     {
       "tag": "office lady",
@@ -15062,7 +14807,7 @@
       "needs": [
         "female"
       ],
-      "zh": "抬腿"
+      "zh": "抬單腿"
     },
     {
       "tag": "shirt tucked in",
@@ -15420,7 +15165,7 @@
       "needs": [
         "female"
       ],
-      "zh": "托胸"
+      "zh": "托高胸部"
     },
     {
       "tag": "blue one-piece swimsuit",
@@ -15467,7 +15212,7 @@
       "needs": [
         "female"
       ],
-      "zh": "壓胸"
+      "zh": "胸部貼壓"
     },
     {
       "tag": "coat",
@@ -15486,7 +15231,7 @@
         "modern"
       ],
       "group": "outer",
-      "zh": "外套"
+      "zh": "大衣"
     },
     {
       "tag": "wet shirt",
@@ -15887,7 +15632,7 @@
         "modern"
       ],
       "group": "outer",
-      "zh": "藍外套"
+      "zh": "藍夾克"
     },
     {
       "tag": "carpet",
@@ -16030,7 +15775,7 @@
         "modern"
       ],
       "group": "outer",
-      "zh": "敞開外套"
+      "zh": "大衣敞開"
     },
     {
       "tag": "one-piece swimsuit pull",
@@ -16117,7 +15862,7 @@
         "modern"
       ],
       "group": "outer",
-      "zh": "黑外套"
+      "zh": "黑夾克"
     },
     {
       "tag": "tooth necklace",
@@ -16558,7 +16303,7 @@
         "any"
       ],
       "group": "acc",
-      "zh": "黑腰帶"
+      "zh": "黑皮帶"
     },
     {
       "tag": "green jacket",
@@ -16579,7 +16324,7 @@
         "modern"
       ],
       "group": "outer",
-      "zh": "綠外套"
+      "zh": "綠夾克"
     },
     {
       "tag": "white coat",
@@ -18040,7 +17785,7 @@
         "modern"
       ],
       "group": "onepiece",
-      "zh": "運動服"
+      "zh": "田徑服"
     },
     {
       "tag": "see-through shirt",
@@ -18300,7 +18045,7 @@
         "modern"
       ],
       "group": "outer",
-      "zh": "運動外套"
+      "zh": "運動夾克"
     },
     {
       "tag": "naked jacket",
@@ -18321,7 +18066,7 @@
         "modern"
       ],
       "group": "onepiece",
-      "zh": "只穿外套"
+      "zh": "只穿夾克"
     },
     {
       "tag": "red collar",
@@ -19210,7 +18955,7 @@
       "needs": [
         "female"
       ],
-      "zh": "壓胸"
+      "zh": "手壓胸部"
     },
     {
       "tag": "holding sex toy",
@@ -19349,7 +19094,7 @@
         "edo"
       ],
       "group": "acc",
-      "zh": "腰帶"
+      "zh": "腰封"
     },
     {
       "tag": "hair stick",
@@ -19801,30 +19546,6 @@
         "male"
       ],
       "zh": "獸人"
-    },
-    {
-      "tag": "hobgoblin",
-      "section": "feature",
-      "gate": "male",
-      "heat": [
-        "tease",
-        "flash",
-        "sex"
-      ],
-      "mutex": "race",
-      "bind": [],
-      "implies": [
-        "monster boy"
-      ],
-      "layer": "normal",
-      "era": [
-        "any"
-      ],
-      "group": "race",
-      "needs": [
-        "male"
-      ],
-      "zh": "霍布哥布林"
     },
     {
       "tag": "oni",
@@ -20787,30 +20508,6 @@
       "zh": "宅男"
     },
     {
-      "tag": "nerd",
-      "section": "feature",
-      "gate": "male",
-      "heat": [
-        "tease",
-        "flash",
-        "sex"
-      ],
-      "mutex": null,
-      "bind": [],
-      "implies": [
-        "otaku"
-      ],
-      "layer": "normal",
-      "era": [
-        "any"
-      ],
-      "group": "body_m",
-      "needs": [
-        "male"
-      ],
-      "zh": "書呆"
-    },
-    {
       "tag": "coke-bottle glasses",
       "section": "clothing",
       "gate": "male",
@@ -21006,25 +20703,6 @@
       "zh": "腳在畫面外"
     },
     {
-      "tag": "looking away",
-      "section": "pose",
-      "gate": "any",
-      "heat": [
-        "tease",
-        "flash",
-        "sex"
-      ],
-      "mutex": "gaze",
-      "bind": [],
-      "implies": [],
-      "layer": "normal",
-      "era": [
-        "any"
-      ],
-      "group": "gaze",
-      "zh": "看向別處"
-    },
-    {
       "tag": "looking ahead",
       "section": "pose",
       "gate": "any",
@@ -21101,7 +20779,7 @@
         "any"
       ],
       "group": "face",
-      "zh": "皺眉"
+      "zh": "撇嘴"
     },
     {
       "tag": "light smile",
@@ -21906,28 +21584,6 @@
       ],
       "group": "place",
       "zh": "日式浴桶"
-    },
-    {
-      "tag": "open-air bath",
-      "section": "env",
-      "gate": "any",
-      "heat": [
-        "tease",
-        "flash",
-        "sex"
-      ],
-      "mutex": "place",
-      "bind": [],
-      "implies": [
-        "outdoors"
-      ],
-      "layer": "normal",
-      "era": [
-        "edo",
-        "modern"
-      ],
-      "group": "place",
-      "zh": "露天風呂"
     },
     {
       "tag": "bubble bath",
@@ -23561,28 +23217,6 @@
       "zh": "恍神"
     },
     {
-      "tag": "pink nipples",
-      "section": "feature",
-      "gate": "female",
-      "heat": [
-        "tease",
-        "flash",
-        "sex"
-      ],
-      "mutex": null,
-      "bind": [],
-      "implies": [],
-      "layer": "normal",
-      "era": [
-        "any"
-      ],
-      "group": "body_f",
-      "needs": [
-        "female"
-      ],
-      "zh": "粉紅乳頭"
-    },
-    {
       "tag": "lactation",
       "section": "feature",
       "gate": "female",
@@ -24019,27 +23653,6 @@
       "zh": "網咖"
     },
     {
-      "tag": "dormitory",
-      "section": "env",
-      "gate": "any",
-      "heat": [
-        "tease",
-        "flash",
-        "sex"
-      ],
-      "mutex": "place",
-      "bind": [],
-      "implies": [
-        "indoors"
-      ],
-      "layer": "normal",
-      "era": [
-        "modern"
-      ],
-      "group": "place",
-      "zh": "宿舍"
-    },
-    {
       "tag": "prison",
       "section": "env",
       "gate": "any",
@@ -24440,27 +24053,6 @@
       ],
       "group": "place",
       "zh": "夜市"
-    },
-    {
-      "tag": "food stall",
-      "section": "env",
-      "gate": "any",
-      "heat": [
-        "tease",
-        "flash",
-        "sex"
-      ],
-      "mutex": "place",
-      "bind": [],
-      "implies": [
-        "outdoors"
-      ],
-      "layer": "normal",
-      "era": [
-        "modern"
-      ],
-      "group": "place",
-      "zh": "小吃攤"
     },
     {
       "tag": "apartment",
@@ -25554,7 +25146,7 @@
         "modern"
       ],
       "group": "job",
-      "zh": "軍人"
+      "zh": "士兵"
     },
     {
       "tag": "jogging",
@@ -25680,7 +25272,7 @@
       "needs": [
         "pair"
       ],
-      "zh": "群交"
+      "zh": "狂歡雜交"
     },
     {
       "tag": "bondage",
@@ -28481,25 +28073,6 @@
       "zh": "網點"
     },
     {
-      "tag": "webtoon",
-      "section": "quality",
-      "gate": "any",
-      "heat": [
-        "tease",
-        "flash",
-        "sex"
-      ],
-      "mutex": "coloring",
-      "bind": [],
-      "implies": [],
-      "layer": "normal",
-      "era": [
-        "any"
-      ],
-      "group": "style",
-      "zh": "條漫"
-    },
-    {
       "tag": "lineart",
       "section": "quality",
       "gate": "any",
@@ -28536,25 +28109,6 @@
       ],
       "group": "style",
       "zh": "單色"
-    },
-    {
-      "tag": "clean lines",
-      "section": "quality",
-      "gate": "any",
-      "heat": [
-        "tease",
-        "flash",
-        "sex"
-      ],
-      "mutex": "line_weight",
-      "bind": [],
-      "implies": [],
-      "layer": "normal",
-      "era": [
-        "any"
-      ],
-      "group": "style",
-      "zh": "乾淨線條"
     },
     {
       "tag": "thick outlines",

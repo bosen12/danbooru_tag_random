@@ -99,6 +99,12 @@ eq("3) 沒給 --max-created 時是 null", parseArgs([]).maxCreatedYear, null);
 eq("3) 只給位置參數時也是 null", parseArgs(["tennis", "golf"]).maxCreatedYear, null);
 eq("3) 位置參數原樣收集", parseArgs(["tennis", "golf"]).tags, ["tennis", "golf"]);
 
+// 2026-09-18：post_count 0 那批裁決完之後，整個詞庫都驗變成**預設**。
+// 這三條守住那個翻轉 —— 不小心翻回去的話，一千多個字又會回到沒人查證的狀態。
+eq("3b) 預設就驗整個詞庫", parseArgs([]).all, true);
+eq("3b) --sports-only 退回只驗運動清單", parseArgs(["--sports-only"]).all, false);
+eq("3b) --all 保留相容（現在等於預設）", parseArgs(["--all"]).all, true);
+
 {
   const bad = [
     ["缺值", ["--max-created"]],

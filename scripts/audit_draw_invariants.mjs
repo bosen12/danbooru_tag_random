@@ -70,19 +70,19 @@ const SKY_ONE_OF = ["blue sky", "orange sky", "starry sky"];
 /** 睡著就不可能在做的事。 */
 const SLEEP_IMPOSSIBLE = [
   "washing hair", "splashing", "partially submerged",
-  "bent over", "presenting", "grinding", "presenting ass", "fingering",
+  "bent over", "presenting", "grinding", "fingering",
   "ahegao", "surprised", "angry", "scared", "smug",
 ];
 /** 需要水的動作。 */
 const WATER_ACTS = ["partially submerged", "splashing", "washing back"];
 /**
  * 算得上有水的場地、天氣或動作。人工從詞庫挑出來的完整清單 —— 第一版只憑印象
- * 寫了一半，把「open-air bath + bathing + splashing」這種完全合理的畫面誤報成違規。
+ * 寫了一半，把「onsen + bathing + splashing」這種完全合理的畫面誤報成違規。
  */
 const WATER_SOURCES = [
   // 場地
   "onsen", "bath", "bathroom", "bathtub", "shower (place)", "sauna", "beach", "ocean",
-  "poolside", "pool", "pool ladder", "underwater", "open-air bath", "bubble bath",
+  "poolside", "pool", "pool ladder", "underwater", "bubble bath",
   "waterfall", "beach towel", "river", "lake", "hot spring", "fountain", "puddle",
   // 天氣與物件
   "rain", "steam", "water", "shower head",
@@ -102,7 +102,7 @@ const OUTDOOR_ONLY = ["tree", "bush", "sky", "blue sky", "starry sky", "ocean", 
 // 產生一個需要人審的 diff，而不是跟著一起錯。
 const WEATHER_OUTDOOR = ["rain", "overcast", "snow", "fog", "cherry blossoms"];
 const STEAM_NEEDS = [
-  "onsen", "sauna", "open-air bath", "hot spring", "bathing", "shared bathing",
+  "onsen", "sauna", "hot spring", "bathing", "shared bathing",
   "steaming body", "bath", "bathroom", "bathtub", "shower (place)", "bathhouse",
   "ofuro", "bubble bath", "showering", "after bathing",
 ];
@@ -955,7 +955,7 @@ FAIL 性行為互斥  ×${bad}/${N}`);
   const EXEMPT = new Set([
     "subject/count_f", // 1girl 本來就該是大宗
     "subject/count_m",
-    "subject/extra", // adult 是預設年齡
+    "subject/extra", // solo 本來就是大宗（單人圖）
     "env/inout", // 只有 indoors / outdoors
     "feature/sex", // 整組只有兩個字
     "clothing/nude", // 整組只有三個字
@@ -1394,6 +1394,176 @@ FAIL 性行為互斥  ×${bad}/${N}`);
     for (const b of bad) console.log("  " + b);
     console.log("  規格：器材只靠通用 fill(\"env\") 搶配額是搶不到的（實測 300 張網球只有 2 張有球拍），");
     console.log("        要有 CTX_PULLS_GEAR 那樣的正向拉取；機率取自 Danbooru 共現率。");
+    console.log("");
+    console.log("1 條 hard 不變式被違反");
+    process.exit(1);
+  }
+}
+
+// 只勾活動＝日常，不該出現「露出／性接觸」。
+//
+// 「活動」這一檔的池子太小（詞庫沒有那麼多日常姿勢），所以 engine.js 讓它
+// **借 tease 的池子**，再靠 hasExplicitContent() 把情色扣掉。那個函式只認
+// group==="sex"、mutex==="sex_act"／"clothes_action"、EXPLICIT_ONLY_EXTRA 名單
+// 與一條正規式 —— 掛在 feature/body_f 的字它全部看不見。
+//
+// 專案修過一次（breast bondage、grabbing another's breast 從 body_f 移進 sex），
+// 但同族還有四個漏著。2026-09-18 實測色情分級只勾活動抽 4200 張：
+//
+//     breasts out 96、grabbing own breast 54、guided breast grab 46、
+//     grabbing another's ass 41
+//
+// 四個的 Danbooru q+e 倍率（相對全站 20.2% 基準）分別是 4.89／4.22／4.85／4.78，
+// 全部落在 EXPLICIT_ONLY_EXTRA 原本的收錄範圍（3.5x～5.0x）內。
+// 最明顯的是 breasts out：那張表裡早就有它的單數版 one breast out（4.9x，
+// 註解寫著「字面就是露出來了」），複數那個卻漏了。
+//
+// 下面的清單是**這裡自己寫的**，不從 EXPLICIT_ONLY_EXTRA 反射 —— 反射的話，
+// 把字從那張表拿掉，這條會跟著鬆掉，等於沒在守。
+{
+  const N = 700;
+  const MUST_NOT = [
+    "breasts out",
+    "grabbing own breast",
+    "guided breast grab",
+    "grabbing another's ass",
+    "grabbing another's breast",
+    "breast bondage",
+    "groping",
+    "masturbation through clothes",
+  ];
+  // 對照組：這些是形狀或誘惑級，借池子本來就該進得來。整組都不見的話，
+  // 代表扣得太兇（把 tease 池子整個扣掉了），那也是壞掉。
+  const SHOULD_STILL_APPEAR = ["breast rest", "arm under breasts", "breasts apart"];
+  let drew = 0;
+  const leaked = new Map();
+  const seenSoft = new Set();
+  let firstBad = null;
+  for (const era of ERAS) {
+    for (let i = 0; i < N; i += 1) {
+      const s = defaultSettings(data);
+      s.eras = [era];
+      s.girl = true;
+      s.boy = true;
+      s.heats = ["activity"];
+      s.weights = { activity: 1, tease: 0, flash: 0, sex: 0 };
+      const seed = 680000 + i;
+      drew += 1;
+      const names = drawOne(lex, s, new Set(), new Set(), mulberry32(seed), seed)
+        .positive.split(",").map((x) => x.trim());
+      for (const t of names) {
+        if (MUST_NOT.includes(t)) {
+          leaked.set(t, (leaked.get(t) || 0) + 1);
+          if (!firstBad) firstBad = { seed, era, t, pos: names.join(", ") };
+        }
+        if (SHOULD_STILL_APPEAR.includes(t)) seenSoft.add(t);
+      }
+    }
+  }
+  const tooTight = SHOULD_STILL_APPEAR.filter((t) => !seenSoft.has(t));
+  if (!leaked.size && !tooTight.length) {
+    console.log(`ok   只勾活動不會漏出露出／性接觸：${drew} 張，${MUST_NOT.length} 個字 0 次，誘惑級的 ${SHOULD_STILL_APPEAR.length} 個仍然進得來`);
+  } else {
+    console.log("");
+    if (leaked.size) {
+      console.log(`FAIL 日常圖裡出現露出／性接觸  ${[...leaked.values()].reduce((a, b) => a + b, 0)} 次`);
+      console.log("  " + [...leaked.entries()].sort((a, b) => b[1] - a[1]).map(([k, v]) => `${k} ${v}`).join("、"));
+      console.log("  規格：面板上寫著「只勾活動＝日常（購物、煮飯、游泳），沒有走光或做愛」。");
+      console.log("        活動借 tease 的池子，情色要靠 hasExplicitContent() 扣掉 ——");
+      console.log("        掛在 feature/body_f 的字那個函式看不見，要進 EXPLICIT_ONLY_EXTRA。");
+      if (firstBad) {
+        console.log(`  重播：seed=${firstBad.seed} ${firstBad.era} 出現 ${firstBad.t}`);
+        console.log(`  POS：${firstBad.pos}`);
+      }
+    }
+    if (tooTight.length) {
+      console.log(`FAIL 扣過頭了  誘惑級的字整個不見：${tooTight.join("、")}`);
+      console.log("  規格：借池子照借、只扣情色。短裙去買菜沒問題，裸身外套去買菜不是日常。");
+    }
+    console.log("");
+    console.log("1 條 hard 不變式被違反");
+    process.exit(1);
+  }
+}
+
+// 「只穿內衣」要名副其實：身上只有內衣（襪子鞋子可以），而且真的有內衣。
+//
+// 專案主回報「釘只穿內衣還是會抽到其他衣服」。實測釘住它抽 600 張：
+//
+//     79.5% 身上穿著非內衣的衣服 —— 夾克 178、大衣 157、開襟衫 69
+//     21.3% 連一件內衣都沒有
+//
+// 兩件事都要守，而且方向相反，缺一邊都是壞的：
+//   只守「不能穿別的」—— 一張什麼都沒穿的圖也會過，而那不是「只穿內衣」。
+//   只守「要有內衣」—— 內衣外面套著大衣也會過。
+//
+// 界線照 Danbooru 的 wiki 畫（「Wearing only underwear by itself... Thighhighs or
+// socks may be worn」）與共現率（80,742 張裡 panties 87.0%、bra 63.4%、
+// thighhighs 25.5%、garter belt 6.9%，而 jacket 只有 1.2%、coat 0.25%）。
+//
+// 浴場與性愛場景會把內衣脫掉，那是對的；那種時候 engine 會把「只穿內衣」整個
+// 拿掉（留著就是空話），所以下面只檢查**這個字還在**的那些圖。
+{
+  const N = 400;
+  const OK_GROUP = new Set(["underwear", "legs", "feet", "acc", "fabric"]);
+  // 袖子描述預設身上有一件有袖子的衣服。fabric 其餘的（see-through clothes 那些）
+  // 可以是在講內衣本身，所以不能整組擋。
+  const SLEEVE = new Set([
+    "long sleeves", "short sleeves", "wide sleeves", "puffy sleeves",
+    "detached sleeves", "sleeves rolled up",
+  ]);
+  const pin = applyPin(lex, new Set(), new Set(), "underwear only");
+  let drew = 0;
+  let kept = 0;
+  let dressed = 0;
+  let bare = 0;
+  let firstBad = null;
+  for (let i = 0; i < N; i += 1) {
+    const s = defaultSettings(data);
+    s.eras = [...ERAS];
+    s.girl = true;
+    s.boy = false;
+    s.heats = ["tease", "flash", "sex"];
+    const seed = 690000 + i;
+    drew += 1;
+    const names = drawOne(lex, s, pin.pinned, pin.userBanned, mulberry32(seed), seed)
+      .positive.split(",").map((x) => x.trim());
+    if (!names.includes("underwear only")) continue;
+    kept += 1;
+    const worn = names.filter((t) => {
+      const it = lex.byTag.get(t);
+      return it && it.section === "clothing" && it.layer !== "normal" && t !== "underwear only";
+    });
+    const illegal = worn.filter((t) => !OK_GROUP.has(lex.byTag.get(t)?.group) || SLEEVE.has(t));
+    if (illegal.length) {
+      dressed += 1;
+      if (!firstBad) firstBad = { seed, why: `還穿著 ${illegal.join("、")}`, pos: names.join(", ") };
+    }
+    if (!worn.some((t) => lex.byTag.get(t)?.group === "underwear")) {
+      bare += 1;
+      if (!firstBad) firstBad = { seed, why: "一件內衣都沒有", pos: names.join(", ") };
+    }
+  }
+  // 這個字被場景清光也是壞掉：那代表規則把它擋死了，不是「只穿內衣」而是抽不到。
+  const tooFew = kept < N * 0.5;
+  if (!dressed && !bare && !tooFew) {
+    console.log(`ok   只穿內衣名副其實：釘住抽 ${drew} 張、留下 ${kept} 張，多穿 0、沒內衣 0`);
+  } else {
+    console.log("");
+    if (tooFew) {
+      console.log(`FAIL 只穿內衣幾乎抽不到  ${drew} 張只留下 ${kept} 張`);
+      console.log("  規格：浴場與性愛會脫掉內衣、那時候整個字會被清掉，那是對的；");
+      console.log("        但一半以上都被清掉就代表規則擋過頭了。");
+    }
+    if (dressed || bare) {
+      console.log(`FAIL 只穿內衣名不副實  多穿 ${dressed} 張、沒內衣 ${bare} 張`);
+      console.log("  規格：Danbooru wiki「Wearing only underwear by itself…Thighhighs or socks may be worn」。");
+      console.log("        外套／上衣／下身／整套／時代服裝與袖子描述都不能並存，而且要真的有內衣。");
+      if (firstBad) {
+        console.log(`  重播：seed=${firstBad.seed}  ${firstBad.why}`);
+        console.log(`  POS：${firstBad.pos}`);
+      }
+    }
     console.log("");
     console.log("1 條 hard 不變式被違反");
     process.exit(1);

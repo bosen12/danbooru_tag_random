@@ -28,6 +28,7 @@ import {
   labelOf,
   missingPins,
   pinMissLine,
+  clashLine,
   knownTags,
   mulberry32,
   mutexSiblings,
@@ -1257,9 +1258,12 @@ function indoorOutdoorClash(have) {
   ok("fat man mutexes plump", mutexSiblings(lex, "fat man").includes("plump"));
   ok("fat man does not mutex otaku", !mutexSiblings(lex, "fat man").includes("otaku"));
   ok("fat man does not mutex ugly bastard", !mutexSiblings(lex, "fat man").includes("ugly bastard"));
-  ok("nerd does not mutex otaku", !mutexSiblings(lex, "nerd").includes("otaku"));
-  const pinNerd = applyPin(lex, new Set(), new Set(), "nerd");
-  ok("pin nerd also pins otaku", pinNerd.pinned.has("nerd") && pinNerd.pinned.has("otaku"));
+  // 原本這兩條用 nerd/otaku。nerd 在 Danbooru 是 0 張、2026-09-18 移除，
+  // 所以換成同型的 coke-bottle glasses/glasses —— 守的是同一件事：
+  // 父子相依不互斥，而且釘子項會連父項一起釘。
+  ok("coke-bottle glasses does not mutex glasses", !mutexSiblings(lex, "coke-bottle glasses").includes("glasses"));
+  const pinCoke = applyPin(lex, new Set(), new Set(), "coke-bottle glasses");
+  ok("pin coke-bottle glasses also pins glasses", pinCoke.pinned.has("coke-bottle glasses") && pinCoke.pinned.has("glasses"));
   const pinFat = applyPin(lex, new Set(), new Set(), "fat man");
   ok("pin fat man also pins fat", pinFat.pinned.has("fat") && pinFat.pinned.has("fat man"));
   const s = settings();
@@ -1280,7 +1284,7 @@ function indoorOutdoorClash(have) {
   for (let i = 0; i < 40; i++) {
     const d = drawOne(lex, sg, new Set(), new Set(), mulberry32(25200 + i), 25200 + i);
     const h = tagsOf(d);
-    if (h.has("ugly bastard") || h.has("fat man") || h.has("otaku") || h.has("nerd")) girlUgly += 1;
+    if (h.has("ugly bastard") || h.has("fat man") || h.has("otaku")) girlUgly += 1;
   }
   eq("girl-only does not draw ugly/fat/otaku men", girlUgly, 0);
 }
@@ -1295,7 +1299,9 @@ function indoorOutdoorClash(have) {
   ok("dutch angle is in lexicon", lex.byTag.has("dutch angle"));
   ok("light smile is in lexicon", lex.byTag.has("light smile"));
   eq("dutch angle mutex", lex.byTag.get("dutch angle")?.mutex, "camera");
-  eq("looking away mutex", lex.byTag.get("looking away")?.mutex, "gaze");
+  // 原本問 looking away（2023-06 被 Danbooru 停用改標，2026-09-18 移除），
+  // 換成它的替代字 averting eyes —— 同一格、同一件事。
+  eq("averting eyes mutex", lex.byTag.get("averting eyes")?.mutex, "gaze");
   ok("dutch angle mutexes cowboy shot", mutexSiblings(lex, "dutch angle").includes("cowboy shot"));
   eq("smile mutex", lex.byTag.get("smile")?.mutex, "expression");
   ok("smile mutexes frown", mutexSiblings(lex, "smile").includes("frown"));
@@ -1343,13 +1349,33 @@ function indoorOutdoorClash(have) {
   s.eras = ["modern"];
   s.heats = ["tease"];
   s.weights = { tease: 1, flash: 0, sex: 0 };
+  // 承諾是「誘惑尺度不會硬脫光」，但**洗澡當下例外** —— 那是既有且刻意的行為
+  // （泡澡不穿袍子）。原本這條寫成「40 張裡全裸 0 張」，而它會過只是因為
+  // seed 26000～26039 剛好沒有一顆落在浴場：擴大到 6000 張量出來全裸 32 張，
+  // **32 張全部在浴場、浴場外 0 張**。規則沒破，是斷言表達錯了。
+  // 跟同一輪裡「must beats era」那條（39/40 其實是淋浴間）是同一種病。
+  const BATH_OK = [
+    "bath", "bathtub", "bathing", "onsen", "shower (place)", "ofuro", "bathhouse",
+    "sauna", "bubble bath", "showering", "hot spring", "washing hair", "shared bathing",
+  ];
   const nude = [];
+  let nudeInBath = 0;
+  let bathScenes = 0;
   for (let i = 0; i < 40; i++) {
     const d = drawOne(lex, s, new Set(), new Set(), mulberry32(26000 + i), 26000 + i);
     const h = tagsOf(d);
-    if (h.has("nude") || h.has("completely nude")) nude.push(i);
+    const inBath = BATH_OK.some((t) => h.has(t));
+    if (inBath) bathScenes += 1;
+    if (h.has("nude") || h.has("completely nude")) {
+      if (inBath) nudeInBath += 1;
+      else nude.push(i);
+    }
   }
-  eq("tease never force-nudes", nude.length, 0);
+  eq("tease never force-nudes outside the bath", nude.length, 0);
+  // 護欄：上面那條若因為 40 張裡一顆浴場都沒抽到而「空過」，這條會紅。
+  // 沒有它的話，把整個浴場例外寫死成永不觸發也照樣通過。
+  ok("tease sample actually reaches a bath scene", bathScenes > 0,
+     `40 張裡浴場 ${bathScenes} 張、其中全裸 ${nudeInBath} 張`);
 }
 
 {
@@ -1551,7 +1577,6 @@ function indoorOutdoorClash(have) {
     "retro artstyle",
     "thick outlines",
     "drop shadow",
-    "webtoon",
   ];
   const boostTags = ["newest", "highly aesthetic"];
   for (const tag of styleTags) {
@@ -1586,8 +1611,9 @@ function indoorOutdoorClash(have) {
   const pinEra = applyPin(lex, new Set(["1990s (style)"]), new Set(), "retro artstyle");
   ok("retro pin drops 1990s", !pinEra.pinned.has("1990s (style)"));
 
-  const pinLine = applyPin(lex, new Set(["clean lines"]), new Set(), "thick outlines");
-  ok("thick outlines pin drops clean lines", !pinLine.pinned.has("clean lines"));
+  // 原本這裡用 thick outlines/clean lines 示範同格互斥。clean lines 是 0 張、
+  // 2026-09-18 移除，line_weight 只剩 thick outlines 一個成員，沒有同伴可以擠掉。
+  // 同一件事上面兩條（watercolor 擠掉 cel shading、retro 擠掉 1990s）還在守。
 
   const pinAes = applyPin(lex, new Set(["very aesthetic"]), new Set(), "highly aesthetic");
   ok("highly aesthetic pin drops very aesthetic", !pinAes.pinned.has("very aesthetic"));
@@ -2070,7 +2096,6 @@ function indoorOutdoorClash(have) {
   // 拆掉父子關係之後，兩者回到正常的互斥關係：同一個 breast_size 格只能有一個值。
   ok("flat chest 與 small breasts 互斥（同一個 breast_size 格）",
      mutexSiblings(lex, "flat chest").includes("small breasts"));
-  ok("loli does not mutex milf", !mutexSiblings(lex, "loli").includes("milf"));
   ok("loli does not mutex mature female", !mutexSiblings(lex, "loli").includes("mature female"));
   const pin = applyPin(lex, new Set(), new Set(), "loli");
   ok(
@@ -2090,12 +2115,11 @@ function indoorOutdoorClash(have) {
   for (let i = 0; i < 30; i++) {
     const d = drawOne(lex, s, pin.pinned, new Set(), mulberry32(31500 + i), 31500 + i);
     const h = tagsOf(d);
-    if (
-      !h.has("loli") ||
-      !h.has("petite") ||
-      !h.has("flat chest") ||
-      !h.has("adult")
-    ) {
+    // 原本這裡還要求 h.has("adult")。adult 在 Danbooru 是 0 張、模型沒把它當 tag
+    // 學過，2026-09-18 移除 —— 它當初是被無條件塞進每一張圖的，所以出現在這條
+    // 斷言裡只是順帶，不是這條要守的東西。這條守的是「釘 loli 會連帶釘住並保留
+    // petite 與 flat chest」，那部分一個字都沒放鬆。
+    if (!h.has("loli") || !h.has("petite") || !h.has("flat chest")) {
       miss += 1;
     }
     if (h.has("tall female")) tall += 1;
@@ -2103,7 +2127,7 @@ function indoorOutdoorClash(have) {
       big += 1;
     }
   }
-  eq("pin loli keeps adult petite flat chest", miss, 0);
+  eq("pin loli keeps petite flat chest", miss, 0);
   eq("pin loli never draws tall female", tall, 0);
   eq("pin loli never draws a larger bust", big, 0);
   const sb = settings();
@@ -2152,10 +2176,27 @@ function indoorOutdoorClash(have) {
   for (let i = 0; i < 30; i++) {
     const d = drawOne(lex, s, pin.pinned, new Set(), mulberry32(31700 + i), 31700 + i);
     const h = tagsOf(d);
-    if (!h.has("shota") || !h.has("short male") || !h.has("adult")) miss += 1;
+    if (!h.has("shota") || !h.has("short male")) miss += 1;
     if (h.has("tall male")) tall += 1;
   }
-  eq("pin shota keeps adult short male", miss, 0);
+  eq("pin shota keeps short male", miss, 0);
+  // shota 從來就抽不到，只有明確釘選才會出現。原本那是「shota 與 adult 互斥」
+  // 的副作用（adult 塞在每一張圖裡），adult 移除之後改寫成直接的規則，
+  // 行為要一模一樣 —— 這兩條守住它。
+  {
+    const sAuto = settings();
+    sAuto.girl = false;
+    sAuto.boy = true;
+    sAuto.eras = ["modern"];
+    sAuto.heats = ["tease", "flash", "sex"];
+    let auto = 0;
+    for (let i = 0; i < 300; i++) {
+      const h = tagsOf(drawOne(lex, sAuto, new Set(), new Set(), mulberry32(31800 + i), 31800 + i));
+      if (h.has("shota")) auto += 1;
+    }
+    eq("shota never comes from auto-draw", auto, 0);
+  }
+  ok("adult is gone from the lexicon", !lex.byTag.has("adult"));
   eq("pin shota never draws tall male", tall, 0);
   const sg = settings();
   sg.girl = true;
@@ -2170,26 +2211,35 @@ function indoorOutdoorClash(have) {
 }
 
 {
+  // 觸發詞插在卡司前綴之後。2026-09-18 之前這些例子都寫著 adult，因為那時候
+  // 它是無條件掛在每一張圖上的卡司字之一；移除之後卡司前綴就只剩人數與 solo。
+  // 守的東西沒變：觸發詞要落在人數／solo 之後、其餘內容之前。
   eq(
-    "trigger after 1girl solo adult",
-    insertTriggerAfterCast("1girl, solo, adult, long hair, masterpiece", "char"),
-    "1girl, solo, adult, char, long hair, masterpiece"
+    "trigger after 1girl solo",
+    insertTriggerAfterCast("1girl, solo, long hair, masterpiece", "char"),
+    "1girl, solo, char, long hair, masterpiece"
   );
   eq(
     "empty trigger leaves pos",
-    insertTriggerAfterCast("1girl, solo, adult, long hair", ""),
-    "1girl, solo, adult, long hair"
+    insertTriggerAfterCast("1girl, solo, long hair", ""),
+    "1girl, solo, long hair"
   );
   eq("empty pos is just trigger", insertTriggerAfterCast("", "char"), "char");
   eq(
-    "trigger after mixed counts and adult",
-    insertTriggerAfterCast("1girl, 1boy, adult, nsfw", "foo, bar"),
-    "1girl, 1boy, adult, foo, bar, nsfw"
+    "trigger after mixed counts",
+    insertTriggerAfterCast("1girl, 1boy, nsfw", "foo, bar"),
+    "1girl, 1boy, foo, bar, nsfw"
   );
   eq(
     "trigger respects weighted count",
-    insertTriggerAfterCast("(1girl:1.1), solo, adult, long hair", "char"),
-    "(1girl:1.1), solo, adult, char, long hair"
+    insertTriggerAfterCast("(1girl:1.1), solo, long hair", "char"),
+    "(1girl:1.1), solo, char, long hair"
+  );
+  // adult 不再是卡司前綴的一部分：就算字面上出現，觸發詞也不該再等它。
+  eq(
+    "adult is no longer part of the cast prefix",
+    insertTriggerAfterCast("1girl, solo, adult, long hair", "char"),
+    "1girl, solo, char, adult, long hair"
   );
   eq(
     "no prefix puts trigger first",
@@ -2241,6 +2291,30 @@ function indoorOutdoorClash(have) {
 
 {
   const pos = "1girl, solo";
+  // 這張圖自己打架的那一行。引擎每次抽完都算 contradictions()，但在 2026-09-18
+  // 之前**沒有任何地方讀它** —— 算出「同時是室內又室外」然後丟掉，使用者拿到
+  // 一張壞圖卻沒有提示。自然抽取撞不到（8640 張 0 次、單一釘選 11080 張 0 次），
+  // 要兩個互相矛盾的釘選才會（釘露營配更衣室，實測 2500 組配對抽 9996 張撞 14 張）。
+  eq("clash line is empty when the picture agrees with itself",
+     clashLine(lex, ["1girl", "solo", "park", "outdoors", "day"]), "");
+  ok("clash line catches indoors + outdoors",
+     clashLine(lex, ["1girl", "indoors", "outdoors"]).includes("室內和室外"));
+  ok("clash line catches day + night",
+     clashLine(lex, ["1girl", "day", "night"]).includes("白天和夜晚"));
+  ok("clash line catches solo with a crowd",
+     clashLine(lex, ["solo", "2girls"]).includes("單人"));
+  ok("clash line catches nude with a garment",
+     clashLine(lex, ["nude", "dress"]).includes("全裸"));
+  // 室內外會被 implies 那一圈重複報好幾筆。只能講一次，而且要點名具體的字 ——
+  // 字面上的 indoors／outdoors 對使用者沒有資訊，他要知道的是「哪一個釘選害的」。
+  {
+    const line = clashLine(lex, ["1girl", "camping", "changing room", "indoors", "outdoors"]);
+    eq("clash line says indoors/outdoors once", line.split("同時是室內和室外").length - 1, 1);
+    ok("clash line names the culprit tags", line.includes(labelOf(lex, "camping")), line);
+  }
+  // 接受字串也接受陣列 —— 卡片上存的是 POS 字串。
+  eq("clash line accepts a POS string",
+     clashLine(lex, "1girl, indoors, outdoors"), clashLine(lex, ["1girl", "indoors", "outdoors"]));
   eq("pin miss line empty with no pins", pinMissLine(lex, pos, new Set()), "");
   const withPin = pinMissLine(lex, pos, new Set(["bikini"]));
   ok("pin miss line lists current miss", withPin.startsWith("釘選未入：") && withPin.includes(labelOf(lex, "bikini")));
@@ -2250,14 +2324,14 @@ function indoorOutdoorClash(have) {
     pinMissLine(lex, "1girl, bikini", new Set(["bikini"])) === ""
   );
   const atDraw = new Set(["bikini"]);
-  const later = new Set(["bikini", "1boy", "milf", "huge breasts"]);
+  const later = new Set(["bikini", "1boy", "mature female", "huge breasts"]);
   const scoped = pinMissLine(lex, pos, later, atDraw);
   ok(
     "later extra pins not dumped into miss line",
     scoped.startsWith("釘選未入：") &&
       scoped.includes(labelOf(lex, "bikini")) &&
       !scoped.includes(labelOf(lex, "1boy")) &&
-      !scoped.includes(labelOf(lex, "milf"))
+      !scoped.includes(labelOf(lex, "mature female"))
   );
   eq("unpin after draw clears scoped miss", pinMissLine(lex, pos, new Set(), atDraw), "");
   eq("empty draw snapshot shows no miss", pinMissLine(lex, pos, later, new Set()), "");
@@ -2383,7 +2457,7 @@ function indoorOutdoorClash(have) {
 
 {
   ok("holding sex toy does not need pair", !((lex.byTag.get("holding sex toy")?.needs || []).includes("pair")));
-  for (const tag of ["pinned down", "lifting person", "happy sex", "ass grab", "breast sucking"]) {
+  for (const tag of ["lifting person", "happy sex", "ass grab", "breast sucking"]) {
     ok(`${tag} needs pair`, (lex.byTag.get(tag)?.needs || []).includes("pair"));
   }
   ok("jack-o' challenge implies all fours", (lex.byTag.get("jack-o' challenge")?.implies || []).includes("all fours"));
@@ -2412,9 +2486,7 @@ function indoorOutdoorClash(have) {
   ok("mixed-sex bathing implies bathing", (lex.byTag.get("mixed-sex bathing")?.implies || []).includes("bathing"));
   eq("ofuro is env", lex.byTag.get("ofuro")?.section, "env");
   eq("bathhouse is env", lex.byTag.get("bathhouse")?.section, "env");
-  eq("open-air bath is env", lex.byTag.get("open-air bath")?.section, "env");
   ok("ofuro implies bath", (lex.byTag.get("ofuro")?.implies || []).includes("bath"));
-  ok("open-air bath implies outdoors", (lex.byTag.get("open-air bath")?.implies || []).includes("outdoors"));
   const pinShower = applyPin(lex, new Set(), new Set(), "showering");
   ok("pin showering pins shower (place)", pinShower.pinned.has("showering") && pinShower.pinned.has("shower (place)"));
   const pinBath = applyPin(lex, new Set(["swimming"]), new Set(), "bathing");
@@ -2523,7 +2595,8 @@ function indoorOutdoorClash(have) {
   ok("object insertion mutex is sex_act", lex.byTag.get("object insertion")?.mutex === "sex_act");
   ok("dildo implies sex toy", (lex.byTag.get("dildo")?.implies || []).includes("sex toy"));
   ok("breastfeeding implies lactation", (lex.byTag.get("breastfeeding")?.implies || []).includes("lactation"));
-  ok("pink nipples needs female", (lex.byTag.get("pink nipples")?.needs || []).includes("female"));
+  // 原本用 pink nipples（0 張，2026-09-18 移除），換成同格同 gate 的 nipples。
+  ok("nipples needs female", (lex.byTag.get("nipples")?.needs || []).includes("female"));
   ok("furrowed brow mutex is expression", lex.byTag.get("furrowed brow")?.mutex === "expression");
   ok("looking around mutex is gaze", lex.byTag.get("looking around")?.mutex === "gaze");
   eq("office lady mutex is job", lex.byTag.get("office lady")?.mutex, "job");
@@ -2835,7 +2908,7 @@ function indoorOutdoorClash(have) {
   }
   eq("pin outdoors never auto indoor places", indoorOnOut, 0);
   const pinIn = applyPin(lex, new Set(), new Set(), "indoors").pinned;
-  const outdoorAct = ["camping", "picnic", "hiking", "sunbathing", "open-air bath", "beach"];
+  const outdoorAct = ["camping", "picnic", "hiking", "sunbathing", "beach"];
   let outOnIn = 0;
   for (let i = 0; i < 40; i++) {
     const h = tagsOf(drawOne(lex, s, pinIn, new Set(), mulberry32(153000 + i), 153000 + i));
@@ -3337,7 +3410,7 @@ function indoorOutdoorClash(have) {
   s.lockScene = true;
   s.counts.env = 6;
   const pinSwim = applyPin(lex, new Set(), new Set(), "swimming").pinned;
-  const WATER = ["pool", "poolside", "pool ladder", "beach", "ocean", "underwater", "bathtub", "bathroom", "shower (place)", "onsen", "ofuro", "bathhouse", "open-air bath", "bubble bath", "bath"];
+  const WATER = ["pool", "poolside", "pool ladder", "beach", "ocean", "underwater", "bathtub", "bathroom", "shower (place)", "onsen", "ofuro", "bathhouse", "bubble bath", "bath"];
   let dry = 0;
   for (let i = 0; i < 40; i++) {
     const h = tagsOf(drawOne(lex, s, pinSwim, new Set(), mulberry32(160000 + i), 160000 + i));
@@ -3532,10 +3605,10 @@ function indoorOutdoorClash(have) {
     "train",
     "train interior",
     // 2026-09-15 加的：這些也是坐得下來看書的地方。判斷標準是「一個人會不會
-    // 在那裡坐著看書」—— 公寓、宿舍、旅館房間、宅邸、宮殿、王座、旅籠、陽台、
+    // 在那裡坐著看書」—— 公寓、旅館房間、宅邸、宮殿、王座、旅籠、陽台、
     // 中庭、被爐、帳篷都會；城堡、大廳、酒館、舞廳不算，所以沒有列進來。
+    //（原本還有宿舍，但 dormitory 在 Danbooru 是 0 張，2026-09-18 移除。）
     "apartment",
-    "dormitory",
     "hotel room",
     "mansion",
     "palace",
@@ -4100,7 +4173,7 @@ function indoorOutdoorClash(have) {
       }
       return n;
     }
-    const LEGS = ["crossed legs", "legs up", "one knee up", "m legs"];
+    const LEGS = ["crossed legs", "legs up", "m legs"];
     let twoLegs = 0;
     for (let i = 0; i < 40; i++) {
       const h = tagsOf(drawOne(lex, sTease, new Set(), new Set(), mulberry32(286000 + i), 286000 + i));
@@ -4115,7 +4188,9 @@ function indoorOutdoorClash(have) {
     eq("on one knee never auto crossed legs", neverAuto(sTease, "on one knee", ["crossed legs"], 286240), 0);
     eq("squatting never auto legs up", neverAuto(sTease, "squatting", ["legs up"], 286280), 0);
     eq("seiza never auto crossed legs", neverAuto(sTease, "seiza", ["crossed legs"], 286320), 0);
-    eq("indian style never auto one knee up", neverAuto(sTease, "indian style", ["one knee up"], 286360), 0);
+    // 原本問的是 one knee up（0 張，2026-09-18 移除）。盤腿跟「抬腿」系列全部
+    // 矛盾，所以改問還活著的那兩個，守的是同一件事。
+    eq("indian style never auto legs up/m legs", neverAuto(sTease, "indian style", ["legs up", "m legs"], 286360), 0);
     eq("dancing never auto crossed legs", neverAuto(sTease, "dancing", ["crossed legs"], 286400), 0);
     eq("dancing never auto legs up", neverAuto(sTease, "dancing", ["legs up"], 286440), 0);
     eq("standing never auto legs up", neverAuto(sTease, "standing", ["legs up", "m legs"], 286480), 0);
@@ -4960,6 +5035,27 @@ function indoorOutdoorClash(have) {
     42,
   );
   eq("shadow integration keeps seed 42 POS byte-identical", shadowIntegrationDraw.positive,
+    // 第十四次：跑完 verify_danbooru_tags.mjs --all（整個詞庫 1450 個字）之後的清理，
+    // 一共移除二十個模型沒把它們當 tag 學過的字，外加一個假的時代錨：
+    //
+    //   十四個「從來沒有圖用過」（post_count 0 且沒有 alias 紀錄）：milf、
+    //   violet eyes、pink nipples、presenting ass、one knee up、pinned down、
+    //   self fondling、open-air bath、dormitory、food stall、nerd、hobgoblin、
+    //   webtoon、clean lines
+    //
+    //   六個「2022～23 就被 Danbooru 停用改標」（2024 的訓練快照裡已經是 0 張，
+    //   模型學到的是替代字，而替代字都已經在詞庫裡跟舊名搶同一格）：bangs、
+    //   amber eyes、silver hair、looking away、creampie、areolae
+    //
+    //   時代錨 modern（Danbooru 上是 artist 分類、post_count 0，而現代本來就
+    //   不需要錨 —— 實測 96.8% 的現代圖另外帶著現代專屬的場地或服裝）
+    //
+    // 二十一個字從候選池消失，牌序整條位移，所以差很多 —— 不是金標壞掉。
+    // 另外少了開頭的 adult：它同樣是 0 張、模型沒學過，而且不是抽來的、是被
+    // 無條件塞進每一張圖的，所以拿掉它**不會**動到牌序（同一批 seed 的
+    // loli 23→23、petite 164→164 逐字相同），只是這一個字不見了。
+    // 新的這張仍然自洽，而且**沒有 modern 這個字**卻明顯是現代：love hotel、
+    // 檯燈、散景、夾克。詳細裁決與量測見討論區。
     // 衣著權重的時代層從 12/9 提到 40/30（修時代還原度）後 RNG 路徑刻意改變；
     // 2026-09-15 再次重產兩次：先是 PRIVATE_SEX_PLACE 擴到含各時代的私密場地，
     // 後是光源那一格開始真的會填（以前 14 個光源只有 3% 機率出現）。兩次都讓
@@ -5007,7 +5103,7 @@ function indoorOutdoorClash(have) {
     // 候選池變大 13%，牌序整條位移，所以這次差異很大 —— 不是哪條規則變鬆。
     // 新的這一張自洽：bathtub + indoors + nude + female masturbation 說得通，
     // 而且裡面就有兩個這次新加的字（nervous smile、surreal），正好是這次改動的示範。
-    "1girl, solo, adult, very short hair, grey eyes, grey hair, bangs, large breasts, soft breasts, natural breasts, tareme, nail polish, red nails, jeans, pants, off shoulder, black panties, panties, bra visible through clothes, masturbation through clothes, crawling, portrait, looking at mirror, sleepy, bouncing, modern, love hotel, indoors, day, lamp, surreal, nsfw, explicit, masterpiece, best quality, amazing quality");
+    "1girl, solo, very short hair, aqua eyes, blue hair, straight hair, huge breasts, soft breasts, natural breasts, dark-skinned female, dark skin, inverted nipples, long eyelashes, lingerie, white bra, bra, red panties, panties, puffy sleeves, black jacket, jacket, fingering, indian style, wide shot, looking back, pout, parted lips, love hotel, indoors, night, lamp, reflection, bokeh, nsfw, explicit, masterpiece, best quality, amazing quality");
   ok("drawOne exposes shadow diagnostics", Array.isArray(shadowIntegrationDraw.shadowViolations));
 
   const eatProneShadow = validateSupportShadow({
@@ -6614,7 +6710,7 @@ function indoorOutdoorClash(have) {
   s.girl = true;
   const BATH = new Set([
     "bath", "bathtub", "bathing", "onsen", "shower", "shower (place)",
-    "open-air bath", "sauna", "bathhouse", "ofuro", "bubble bath",
+    "sauna", "bathhouse", "ofuro", "bubble bath",
   ]);
   const bad = [];
   let bathSeen = 0;
@@ -7179,7 +7275,7 @@ function indoorOutdoorClash(have) {
   s.heats = ["activity"];
   const BATH = new Set([
     "bath", "bathtub", "bathing", "onsen", "shower", "shower (place)",
-    "open-air bath", "bathhouse", "ofuro", "bubble bath",
+    "bathhouse", "ofuro", "bubble bath",
   ]);
   let skin = 0;
   let bath = 0;
@@ -7260,9 +7356,15 @@ function indoorOutdoorClash(have) {
     ["microskirt", "sensitive"], ["fishnet thighhighs", "sensitive"],
     ["nude", "explicit"], ["sex", "explicit"], ["bra", "explicit"],
     ["panties", "explicit"], ["skirt lift", "explicit"], ["upskirt", "explicit"],
-    ["ejaculation", "explicit"], ["cumdrip", "explicit"], ["pink nipples", "explicit"],
+    ["ejaculation", "explicit"], ["cumdrip", "explicit"], ["nipples", "explicit"],
   ];
   const wrong = [];
+  // 字不在詞庫就**紅**，不要靜默跳過 —— 原本是 `if (!it) continue;`，
+  // 於是 2026-09-18 移除 pink nipples 之後這一條就無聲少掉一個案例，
+  // 測試縮水而沒有人會發現。這跟 kiss/undefined 那條是同一種病。
+  for (const [tag] of line) {
+    if (!lex.byTag.get(tag)) wrong.push(`${tag} 不在詞庫（這條界線案例失效了）`);
+  }
   for (const [tag, firstAllowed] of line) {
     const it = lex.byTag.get(tag);
     if (!it) continue;
@@ -7462,17 +7564,37 @@ function indoorOutdoorClash(have) {
   eq(`穿好了又沒脫衣動作就不該標內衣（${n} 張）`, ghost, 0);
 
   // 反面一：只穿內衣的造型不能被這條規則抹掉。
+  //
+  // 「underwear only」有一個**別條規則**的合法例外：泡澡游泳會把內衣脫掉，
+  // 而那個字的意思是「身上只有內衣」，內衣沒了它就是空話，所以 drawOne() 會把它
+  // 整個拿掉（2026-09-19 加的，Danbooru 上 underwear only + bathing 只有 0.12%）。
+  // 那跟這裡要守的「看不見的內衣」規則無關，所以這條改成：**留下來，或者是水景**，
+  // 除此之外的任何理由消失都算紅。張數一格都沒放鬆 —— 40 張每一張都要合格。
+  const WATER_SCENE = new Set([
+    "bath", "bathtub", "bathing", "onsen", "shower (place)", "ofuro", "bathhouse",
+    "sauna", "bubble bath", "showering", "hot spring", "washing hair", "shared bathing",
+    "swimming", "diving", "pool", "underwater", "ocean", "beach", "poolside", "pool ladder",
+  ]);
   for (const t of ["lingerie", "underwear only", "bra", "panties"]) {
     if (!lex.byTag.has(t)) continue;
     const pin = applyPin(lex, new Set(), new Set(), t).pinned;
+    let ok40 = 0;
     let kept = 0;
+    let excused = 0;
     for (let i = 1; i <= 40; i++) {
       const s = defaultSettings(data);
       s.girl = true;
       s.rating = "explicit";
-      if (tagsOf(drawOne(lex, s, pin, new Set(), mulberry32(i * 29), i * 29)).has(t)) kept += 1;
+      const have = tagsOf(drawOne(lex, s, pin, new Set(), mulberry32(i * 29), i * 29));
+      if (have.has(t)) { kept += 1; ok40 += 1; continue; }
+      if (t === "underwear only" && [...have].some((x) => WATER_SCENE.has(x))) {
+        excused += 1;
+        ok40 += 1;
+      }
     }
-    eq(`釘了「${t}」不會被「看不見的內衣」規則刪掉`, kept, 40);
+    eq(`釘了「${t}」只會因為水景消失，不會被「看不見的內衣」規則刪掉`, ok40, 40);
+    // 護欄：全部被「水景」放行掉的話上面那條就空過了。這個字要真的還留得住。
+    ok(`釘了「${t}」大多數時候真的留著`, kept >= 30, `留 ${kept}/40、水景放行 ${excused}`);
   }
 
   // 反面二：兜襠布的 mutex 是 underwear_bottom，group 卻是 era。兩邊判準不一致時
@@ -7486,7 +7608,7 @@ function indoorOutdoorClash(have) {
     s.eras = ["medieval"];
     let bare = 0;
     let bath = 0;
-    const BATH = new Set(["bath", "bathtub", "bathing", "onsen", "shower", "open-air bath", "ofuro"]);
+    const BATH = new Set(["bath", "bathtub", "bathing", "onsen", "shower", "ofuro"]);
     for (let i = 1; i <= 400; i++) {
       const have = tagsOf(drawOne(lex, s, new Set(), new Set(), mulberry32(i), i));
       if (![...have].some((t) => BATH.has(t))) continue;
