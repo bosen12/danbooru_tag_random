@@ -1753,7 +1753,8 @@ function indoorOutdoorClash(have) {
     "pin side ponytail also pins ponytail",
     pinSide.pinned.has("side ponytail") && pinSide.pinned.has("ponytail")
   );
-  ok("bangs is not a hair_style mutex", !lex.byTag.get("bangs")?.mutex);
+  ok("swept bangs is in the lexicon", !!lex.byTag.get("swept bangs"));
+  ok("swept bangs is not a hair_style mutex", !lex.byTag.get("swept bangs")?.mutex);
   const s = settings();
   s.girl = true;
   s.boy = false;
@@ -3306,9 +3307,27 @@ function indoorOutdoorClash(have) {
   let sleepLook = 0;
   for (let i = 0; i < 40; i++) {
     const h = tagsOf(drawOne(lex, s, pinSleep3, new Set(), mulberry32(208000 + i), 208000 + i));
-    if ([...h].some((t) => t.startsWith("looking ") || t === "kissing")) sleepLook += 1;
+    if ([...h].some((t) => t.startsWith("looking ") || t === "kiss")) sleepLook += 1;
   }
-  eq("sleeping never auto looking/kissing leftovers", sleepLook, 0);
+  eq("sleeping never auto looking/kiss leftovers", sleepLook, 0);
+  // kissing 在 2026-09-17 被 Danbooru 別名併成 kiss 之後，allow() 裡兩處
+  // `t === "kissing"` 變成永遠比不到。睡著擋視線那條有 `/^looking /` 仍活著，
+  // 但「先釘接吻再抽睡著」只靠那個死字。詞庫裡 kiss 要 pair，所以上面那條
+  // 單人測試看不見這條路。同一組 seed 218000 起 400 張，修前 1 張睡著。
+  const pinKissSleep = applyPin(lex, new Set(), new Set(), "kiss").pinned;
+  const kissPair = {
+    ...s,
+    girl: true,
+    boy: true,
+    heats: ["tease"],
+    weights: { activity: 0, tease: 1, flash: 0, sex: 0 },
+  };
+  let kissSleep = 0;
+  for (let i = 0; i < 400; i++) {
+    const h = tagsOf(drawOne(lex, kissPair, pinKissSleep, new Set(), mulberry32(218000 + i), 218000 + i));
+    if (h.has("sleeping")) kissSleep += 1;
+  }
+  eq("pinned kiss never auto sleeping", kissSleep, 0);
   const boyN = { ...s, girl: false, boy: true, heats: ["tease"], weights: { activity: 0, tease: 1, flash: 0, sex: 0 } };
   let raceMale = 0;
   for (let i = 0; i < 40; i++) {
@@ -4041,6 +4060,25 @@ function indoorOutdoorClash(have) {
       if (h.has("cooking") && !COOK_OK.some((t) => h.has(t))) cookOut += 1;
     }
     eq("medieval cooking always has a cook place", cookOut, 0);
+    // 江戶 + 性愛 + 煮飯：COOK_PLACE ∩ PRIVATE_SEX_PLACE ∩ edo 曾經是空集合。
+    // castle 是江戶唯一的煮飯場地，但不在私密性愛場地裡；kitchen 在私密清單
+    // 但 era 只有 modern/victorian。預設混合尺度 40% 抽到性愛，釘煮飯就會
+    // 畫出沒有場地的圖（實測 200/200）。ryokan 是江戶旅館、已在私密清單、
+    // 也會開飯，補進去之後這條才有地方可去。
+    const COOK_OK_EDO = ["kitchen", "castle", "palace", "courtyard", "ryokan"];
+    const pinCookEdo = applyPin(lex, new Set(), new Set(), "cooking").pinned;
+    const edoSexCook = {
+      ...s,
+      eras: ["edo"],
+      heats: ["sex"],
+      weights: { activity: 0, tease: 0, flash: 0, sex: 1 },
+    };
+    let edoCookOut = 0;
+    for (let i = 0; i < 80; i++) {
+      const h = tagsOf(drawOne(lex, edoSexCook, pinCookEdo, new Set(), mulberry32(910000 + i), 910000 + i));
+      if (h.has("cooking") && !COOK_OK_EDO.some((t) => h.has(t))) edoCookOut += 1;
+    }
+    eq("edo sex cooking always has a cook place", edoCookOut, 0);
     const flashS = { ...s, heats: ["flash"], weights: { activity: 0, tease: 0, flash: 1, sex: 0 }, eras: ["victorian"] };
     let flashSleep = 0;
     for (let i = 0; i < 40; i++) {
@@ -6659,7 +6697,7 @@ function indoorOutdoorClash(have) {
   for (let i = 1; i <= 500; i++) {
     for (const t of tagsOf(drawOne(lex, s, new Set(), new Set(), mulberry32(i), i))) seen.add(t);
   }
-  const STARVED = ["french kiss", "creampie", "clothed sex", "cum in mouth", "happy sex", "imminent penetration"];
+  const STARVED = ["french kiss", "cum in pussy", "clothed sex", "cum in mouth", "happy sex", "imminent penetration"];
   const alive = STARVED.filter((t) => seen.has(t));
   ok(
     `sex 內容可達：mutex=null 的性愛字不被臉部細節餓死（${STARVED.length} 個裡至少 4 個）`,

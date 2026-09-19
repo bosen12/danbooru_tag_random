@@ -1094,12 +1094,17 @@ const FISH_PLACE = new Set(["beach", "ocean", "poolside", "pool"]);
 // 排不進去的活動 —— 開了 lockScene 會被整個刪掉，沒開就畫出一張沒有場地的圖。
 // 庭院爐灶補上之後，古希臘、中世紀、古中國都有地方煮飯了（江戶本來就有 castle）。
 //
-// 只補 courtyard，是因為它的 era 不含 modern：現代的抽法一個字都不會變。
-// 另外兩個候選 tent 和 food stall 都含 modern，補下去會讓現代的煮飯跑到帳篷和
-// 路邊攤 —— 那本身不難看，但 engine 另有一條「lockScene 的煮飯就是要在廚房」
-// （見下面 used.has("cooking") 那段），兩邊會打架。要放寬得先改那條規則，
-// 不是趁補時代空洞的時候順手夾帶。field 同理不收：曠野生火最弱，也不需要。
-const COOK_PLACE = new Set(["kitchen", "castle", "palace", "courtyard"]);
+// 古希臘那次只補 courtyard，因為它的 era 不含 modern：現代的抽法一個字都不會變。
+// tent / food stall 含 modern，補下去會跟「lockScene 的煮飯就是要在廚房」打架。
+// field 不收：曠野生火最弱。
+//
+// ryokan 是後來為了江戶 × 性愛 × 煮飯才加的。COOK_PLACE ∩ PRIVATE_SEX_PLACE ∩ edo
+// 以前是空的：castle 是江戶唯一的煮飯場地但不在私密清單，kitchen 在私密清單
+// 但 era 沒有 edo。開了 lockScene 又抽到性愛，釘煮飯的圖 100% 沒有場地。
+// 旅館會開飯、era 含 edo、已經在 PRIVATE_SEX_PLACE。它也含 modern，但 lockScene
+// 仍會把現代的煮飯換成廚房，所以現代的測試一個字都不會變。不把 courtyard
+// 再加進女僕場地：那會讓女僕去運動，見 JOB_PLACE.maid。
+const COOK_PLACE = new Set(["kitchen", "castle", "palace", "courtyard", "ryokan"]);
 const INDOOR_FURN = new Set(["on bed", "on chair", "office chair", "gaming chair", "swivel chair", "bunk bed"]);
 // 能坐下來讀書寫字的地方。原本這三組只列了現代的房間，而正常模式下
 // 「有 ACT_PLACE 表的活動必須把場地列進去」—— 沒被列到的場地等於做不了那件事。
@@ -3738,12 +3743,12 @@ export function drawOne(lex, settings, pinned, userBanned, rand, seed) {
     if (item.tag === "sleeping" && [...used].some((t) => SLEEP_BAD_POSE.has(t))) return false;
     if (used.has("sleeping") && SLEEP_BAD_EXPR.has(item.tag)) return false;
     if (item.tag === "sleeping") {
-      if ([...used].some((t) => lex.byTag.get(t)?.mutex === "gaze" || /^looking /.test(t) || t === "kissing")) {
+      if ([...used].some((t) => lex.byTag.get(t)?.mutex === "gaze" || /^looking /.test(t) || t === "kiss")) {
         return false;
       }
     }
     if (used.has("sleeping")) {
-      if (item.mutex === "gaze" || /^looking /.test(item.tag) || item.tag === "kissing") return false;
+      if (item.mutex === "gaze" || /^looking /.test(item.tag) || item.tag === "kiss") return false;
       for (const d of item.implies || []) {
         if (lex.byTag.get(d)?.mutex === "gaze") return false;
       }
