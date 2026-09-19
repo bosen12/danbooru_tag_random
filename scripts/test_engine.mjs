@@ -4106,6 +4106,64 @@ function indoorOutdoorClash(have) {
     eq("sex+pin driving always has a place", sexPinPlaceMiss("driving", "modern", 920080), 0);
     eq("sex+pin tennis always has a place", sexPinPlaceMiss("tennis", "modern", 920160), 0);
     eq("sex+pin victorian sports always has a place", sexPinPlaceMiss("playing sports", "victorian", 920240), 0);
+    // 同一類洞換到職業：性愛熱度在場上有職業時會擋掉 PUBLIC_SEX_PLACE。
+    // 消防員的 JOB_PLACE 全是 street／city／cityscape，三個都在公開清單裡，
+    // 釘消防員開著性愛就 40/40 沒場地。偵探有辦公室／圖書館，不是這個洞。
+    function sexPinJobPlaceMiss(job, era, seed) {
+      const st = {
+        ...s,
+        eras: [era],
+        heats: ["sex"],
+        weights: { activity: 0, tease: 0, flash: 0, sex: 1 },
+      };
+      const pin = applyPin(lex, new Set(), new Set(), job).pinned;
+      let miss = 0;
+      const places = [];
+      for (let i = 0; i < 40; i++) {
+        const h = tagsOf(drawOne(lex, st, pin, new Set(), mulberry32(seed + i), seed + i));
+        if (!h.has(job)) continue;
+        let place = null;
+        for (const t of h) {
+          const it = lex.byTag.get(t);
+          if (it && (it.mutex === "place" || it.group === "place")) {
+            place = t;
+            break;
+          }
+        }
+        if (!place) miss += 1;
+        else places.push(place);
+      }
+      return { miss, places };
+    }
+    const fireSex = sexPinJobPlaceMiss("firefighter", "modern", 930000);
+    eq("sex+pin firefighter always has a place", fireSex.miss, 0);
+    ok(
+      "sex+pin firefighter stays on the job's streets",
+      fireSex.places.length === 40 &&
+        fireSex.places.every((p) => p === "street" || p === "city" || p === "cityscape"),
+      `places=${[...new Set(fireSex.places)]}`
+    );
+    const detSex = sexPinJobPlaceMiss("detective", "modern", 930080);
+    eq("sex+pin detective always has a place", detSex.miss, 0);
+    ok(
+      "sex+pin detective never auto public sex place",
+      detSex.places.every((p) => !["street", "city", "cityscape", "alley", "park", "beach", "ocean", "rooftop"].includes(p)),
+      `places=${[...new Set(detSex.places)]}`
+    );
+    {
+      const st = {
+        ...s,
+        eras: ["modern"],
+        heats: ["sex"],
+        weights: { activity: 0, tease: 0, flash: 0, sex: 1 },
+      };
+      let pub = 0;
+      for (let i = 0; i < 80; i++) {
+        const h = tagsOf(drawOne(lex, st, new Set(), new Set(), mulberry32(930160 + i), 930160 + i));
+        if (["street", "city", "cityscape", "alley", "park", "beach", "ocean", "rooftop"].some((t) => h.has(t))) pub += 1;
+      }
+      eq("unpinned modern sex never auto public sex place", pub, 0);
+    }
     const flashS = { ...s, heats: ["flash"], weights: { activity: 0, tease: 0, flash: 1, sex: 0 }, eras: ["victorian"] };
     let flashSleep = 0;
     for (let i = 0; i < 40; i++) {

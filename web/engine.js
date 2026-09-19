@@ -2920,6 +2920,38 @@ function actHasPrivatePlace(act, era, lex) {
   return false;
 }
 
+// 這個職業在這個時代的場地是不是「有地方可去、而且全是公開性愛場地」。
+// 場上有職業時，性愛會擋掉 PUBLIC_SEX_PLACE；消防員的清單全是大街，
+// 擋完就 100% 沒場地。偵探有辦公室，不是這個洞，不能放行。
+function jobHasOnlyPublicPlaces(job, era, lex) {
+  const set = JOB_PLACE[job];
+  if (!set) return false;
+  let any = false;
+  for (const p of set) {
+    const it = lex.byTag.get(p);
+    if (!it || !eraOk(it, era)) continue;
+    any = true;
+    if (!PUBLIC_SEX_PLACE.has(p)) return false;
+  }
+  return any;
+}
+
+// 職業場地全是室外時，室內專用姿勢（胸壓桌／玻璃）會先佔場，場地格再填
+// 就 100% 空。allow() 本來就擋「已經有 outdoors」的這兩個姿勢；釘消防員時
+// outdoors 是場地暗示進來的，場地還沒抽，這一關看不見。
+function jobHasOnlyOutdoorPlaces(job, era, lex) {
+  const set = JOB_PLACE[job];
+  if (!set) return false;
+  let any = false;
+  for (const p of set) {
+    const it = lex.byTag.get(p);
+    if (!it || !eraOk(it, era)) continue;
+    any = true;
+    if (INDOOR_ROOM.has(p)) return false;
+  }
+  return any;
+}
+
 function eraSpecific(item, era) {
   const eras = item.era;
   return Array.isArray(eras) && eras.length && !eras.includes("any") && eras.includes(era);
@@ -4232,6 +4264,10 @@ export function drawOne(lex, settings, pinned, userBanned, rand, seed) {
     ) {
       return false;
     }
+    if (item.tag === "breasts on table" || item.tag === "breasts on glass") {
+      const listed = [...usedJobs(used, lex)].filter((j) => JOB_PLACE[j]);
+      if (listed.length > 0 && listed.every((j) => jobHasOnlyOutdoorPlaces(j, era, lex))) return false;
+    }
     if (item.tag === "hand in panties" && [...used].some((t) => MOVE_ACT.has(t))) return false;
     if (MOVE_ACT.has(item.tag) && used.has("hand in panties")) return false;
     if (
@@ -4859,7 +4895,13 @@ export function drawOne(lex, settings, pinned, userBanned, rand, seed) {
             if (!noPrivateVenue) return false;
           }
         } else if (PUBLIC_SEX_PLACE.has(item.tag)) {
-          return false;
+          // 自動抽的有職業性愛仍避開大街。只有「場上已有職業、且那些職業在這個
+          // 時代的場地全是公開場所」才放行 —— 否則釘消防員開著性愛會 100% 沒場地
+          // （實測 40/40）。偵探的辦公室不在公開清單，繼續走室內。
+          const listed = [...jobs].filter((j) => JOB_PLACE[j]);
+          const onlyPublic =
+            listed.length > 0 && listed.every((j) => jobHasOnlyPublicPlaces(j, era, lex));
+          if (!onlyPublic) return false;
         }
       }
       if (item.tag === "outdoors" && [...jobPlacesOf(jobs)].some((p) => INDOOR_ROOM.has(p))) return false;
