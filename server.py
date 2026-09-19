@@ -23,9 +23,14 @@ import urllib.request
 from http.server import BaseHTTPRequestHandler, ThreadingHTTPServer
 from pathlib import Path
 
-import lora_scan
-
+# ComfyUI 的 embedded Python 透過 ._pth 隔離匯入路徑，直接執行本檔時不一定會
+# 把腳本目錄放進 sys.path。先固定本地模組根目錄，否則第一個 import 就會因
+# 找不到 lora_scan 而退出；一般 Python 下此操作是冪等的。
 ROOT = Path(__file__).resolve().parent
+if str(ROOT) not in sys.path:
+    sys.path.insert(0, str(ROOT))
+
+import lora_scan
 
 # 這支程式原本把機器專屬的路徑寫死在原始碼裡（checkpoint 目錄、ComfyUI 位址…），
 # 別人要跑就得改 server.py。全部搬到 config.json，優先序是：

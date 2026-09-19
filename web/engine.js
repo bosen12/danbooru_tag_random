@@ -1839,6 +1839,8 @@ function isBathOkGarment(item) {
 // police hat、lab coat 有，goggles、swim cap、boxing gloves、microphone 沒有 ——
 // 結果辦公室裡有人戴蛙鏡、教堂裡有人拿麥克風、溫泉裡有人戴拳擊手套。
 export const NEEDS_CONTEXT = {
+  "beach umbrella": new Set(["beach", "poolside"]),
+  innertube: new Set(["swimming", "wading", "floating", "pool", "poolside", "beach", "ocean"]),
   goggles: new Set([
     "swimming", "diving", "pool", "poolside", "underwater", "ocean", "skiing",
     "laboratory", "scientist", "construction site", "construction worker",
@@ -4379,7 +4381,13 @@ export function drawOne(lex, settings, pinned, userBanned, rand, seed) {
       const acts = usedActs(used, lex);
       if (![...acts].some((a) => (ACT_PROP[a] || []).includes(item.tag))) return false;
     }
-    if (item.tag === "innertube" && ![...used].some((t) => WATER_PLACE.has(t) || WATER_ACT.has(t) || BATH_PLACE.has(t))) {
+    // 這兩個是 env prop，而且 mustDraw 跑在一般場景 fill 之前。只靠最後的
+    // NEEDS_CONTEXT cleanup 不夠：mustDraw 會把抽中的字鎖住，錯場也不能刪。
+    // 因此在已釘／已選的水域情境不存在時，候選階段就不讓它們進池。
+    if (
+      (item.tag === "beach umbrella" || item.tag === "innertube") &&
+      ![...used].some((t) => NEEDS_CONTEXT[item.tag].has(t))
+    ) {
       return false;
     }
     if (item.tag === "stethoscope" && ![...used].some((t) => t === "nurse" || t === "doctor" || t === "clinic" || t === "hospital")) {
@@ -5182,6 +5190,26 @@ export function drawOne(lex, settings, pinned, userBanned, rand, seed) {
   // 性愛體位跟雙手抱胸）仍然照擋，抽不到就在 mustReport 如實回報。
   const mustPins = () => (mustLocked.size ? new Set([...pinned, ...mustLocked]) : pinned);
 
+  // 少量 tease 畫面先決定「無臉構圖」，再讓後續 feature/pose 配合它。
+  //
+  // 這兩個 camera 以前排在眼睛、表情與活動後面，所以 allow() 每次都看到衝突，
+  // 自然抽取是 0。單純把所有 camera 提前又會讓 lower body 擋掉 flash/sex 必須有的
+  // 手部與胸部動作；因此只在沒有核心活動保證的 tease 尺度建立低機率 profile。
+  // pin 與 mustDraw 若已佔 camera，使用者意圖優先，不再擲這次 profile。
+  //
+  // 構圖 profile 使用由 seed 派生的獨立亂數流。若在主 rand() 多抽一次，所有 tease
+  // 結果（包括職業場地、衣服與姿勢）都會整串位移；新增一個 camera 不該改寫其餘
+  // 94% 畫面的既有行為。UI 與正式測試都會傳數字 seed，fallback 僅供外部呼叫者。
+  const compositionRand = Number.isFinite(seed)
+    ? mulberry32(((seed >>> 0) ^ 0x0051f15e) >>> 0)
+    : rand;
+  if (heat === "tease" && !mutexTaken.has("camera") && compositionRand() < 0.06) {
+    const faceless = ["head out of frame", "lower body"]
+      .map((tag) => lex.byTag.get(tag))
+      .filter((item) => item && allow(item));
+    takeFromPool(faceless, 1, compositionRand, commit, null, allow);
+  }
+
   fillSlot("feature", "hair_length");
   fillSlot("feature", "eye_color");
   if (!used.has("bald")) {
@@ -5335,12 +5363,9 @@ export function drawOne(lex, settings, pinned, userBanned, rand, seed) {
     takeFromPool(acts, 1, rand, commit, null, allow);
   }
   fillSlot("pose", "body_pose");
-  // camera 排在臉部特徵之後，所以 head out of frame / lower body 這兩個禁止眼睛
-  // 特徵的鏡頭，自動抽取永遠選不到（釘選仍然可用）。試過把這一槽移到臉部之前：
-  // 兩個鏡頭確實變成各約 4.5% 可達，但同時打破四條既有承諾 —— lower body 會擋掉
-  // 手臂動作和忙手活動，於是「活動尺度一定有活動」「全裸單人性愛一定有自慰動作」
-  // 「flash 一定有衣服」全部失效。這兩個構圖和這工具的多數保證天生不相容，
-  // 留給明確釘選比較誠實。詳見 docs/pose-tag-deep-review.md §2。
+  // 一般 camera 仍放在臉部特徵後；只有上方 tease profile 會先保留無臉構圖。
+  // 這可讓 head out of frame / lower body 自然可達，又不會讓它們擋掉 flash/sex
+  // 必須保證的手臂、胸部或性愛動作。詳見 docs/pose-tag-deep-review.md §2。
   fillSlot("pose", "camera");
   fillSlot("pose", "gaze");
   fillSlot("pose", "expression");

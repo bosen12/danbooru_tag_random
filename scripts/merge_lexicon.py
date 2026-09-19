@@ -529,6 +529,10 @@ for _act, _pose in SEX_POSE_BODY.items():
     IMPLIES[_act] = _im
 
 RECLASS = {
+    # 這是畫面裡的場景道具，不是穿在人物身上的配件。採集把它放進
+    # clothing/accessory/mutex=None，normal/diverse 的服裝白名單因此永遠不會抽到。
+    # 放在覆寫表而不是改 05-harvest.json，因為 harvest 會被重新產生。
+    "beach umbrella": {"section": "env", "mutex": None, "layer": "normal"},
     "dress shirt": {"mutex": "top", "gate": "any", "section": "clothing", "layer": "garment"},
     "dress pull": {"section": "pose", "mutex": "clothes_action", "layer": "normal", "heat": ["flash", "sex"], "era": ["modern"]},
     "shirt pull": {"section": "pose", "mutex": "clothes_action", "layer": "normal", "heat": ["flash", "sex"], "era": ["modern"]},
@@ -1435,7 +1439,8 @@ def extra_bath_tags() -> list[dict]:
         env("shower head", mutex=None, implies=["shower (place)"], era=["modern"], zh="蓮蓬頭"),
         env("soap bubbles", mutex=None, zh="肥皂泡"),
         cloth("towel", zh="毛巾"),
-        cloth("innertube", era=["modern"], zh="泳圈"),
+        # 泳圈是水域場景道具，不是穿戴物；context 由 engine.NEEDS_CONTEXT 守。
+        env("innertube", mutex=None, era=["modern"], zh="泳圈"),
     ]
 
 

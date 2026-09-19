@@ -246,8 +246,17 @@ def start_server(comfy_port: int):
             socket.create_connection(("127.0.0.1", port), 0.2).close()
             return proc, port
         except OSError:
+            if proc.poll() is not None:
+                log = proc.stdout.read() or ""
+                raise RuntimeError(f"server.py 啟動後立即退出（code={proc.returncode}）\n{log}")
             time.sleep(0.1)
-    raise RuntimeError("server.py 起不來")
+    proc.terminate()
+    try:
+        proc.wait(5)
+    except subprocess.TimeoutExpired:
+        proc.kill()
+    log = proc.stdout.read() or ""
+    raise RuntimeError(f"server.py 15 秒內沒有開始監聽\n{log}")
 
 
 def sse_events(port: int, timeout: float = 45, cut_after=None):

@@ -34,6 +34,18 @@ if errorlevel 1 (
   pause
   exit /b 1
 )
+echo == draw optimization contracts ==
+call node scripts\test_draw_optimization.mjs
+if errorlevel 1 (
+  pause
+  exit /b 1
+)
+echo == panel and pin matrix ==
+call node scripts\test_panel_pin_matrix.mjs
+if errorlevel 1 (
+  pause
+  exit /b 1
+)
 echo == Danbooru verifier ==
 call node scripts\test_verify_danbooru_tags.mjs
 if errorlevel 1 (

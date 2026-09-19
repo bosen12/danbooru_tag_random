@@ -18583,7 +18583,7 @@
     },
     {
       "tag": "beach umbrella",
-      "section": "clothing",
+      "section": "env",
       "gate": "any",
       "heat": [
         "tease",
@@ -18593,11 +18593,11 @@
       "mutex": null,
       "bind": [],
       "implies": [],
-      "layer": "accessory",
+      "layer": "normal",
       "era": [
         "modern"
       ],
-      "group": "acc",
+      "group": "other",
       "zh": "海灘傘"
     },
     {
@@ -21668,7 +21668,7 @@
     },
     {
       "tag": "innertube",
-      "section": "clothing",
+      "section": "env",
       "gate": "any",
       "heat": [
         "tease",
@@ -21678,11 +21678,11 @@
       "mutex": null,
       "bind": [],
       "implies": [],
-      "layer": "accessory",
+      "layer": "normal",
       "era": [
         "modern"
       ],
-      "group": "acc",
+      "group": "other",
       "zh": "泳圈"
     },
     {
