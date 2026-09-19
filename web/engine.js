@@ -1094,12 +1094,17 @@ const FISH_PLACE = new Set(["beach", "ocean", "poolside", "pool"]);
 // 排不進去的活動 —— 開了 lockScene 會被整個刪掉，沒開就畫出一張沒有場地的圖。
 // 庭院爐灶補上之後，古希臘、中世紀、古中國都有地方煮飯了（江戶本來就有 castle）。
 //
-// 只補 courtyard，是因為它的 era 不含 modern：現代的抽法一個字都不會變。
-// 另外兩個候選 tent 和 food stall 都含 modern，補下去會讓現代的煮飯跑到帳篷和
-// 路邊攤 —— 那本身不難看，但 engine 另有一條「lockScene 的煮飯就是要在廚房」
-// （見下面 used.has("cooking") 那段），兩邊會打架。要放寬得先改那條規則，
-// 不是趁補時代空洞的時候順手夾帶。field 同理不收：曠野生火最弱，也不需要。
-const COOK_PLACE = new Set(["kitchen", "castle", "palace", "courtyard"]);
+// 古希臘那次只補 courtyard，因為它的 era 不含 modern：現代的抽法一個字都不會變。
+// tent / food stall 含 modern，補下去會跟「lockScene 的煮飯就是要在廚房」打架。
+// field 不收：曠野生火最弱。
+//
+// ryokan 是後來為了江戶 × 性愛 × 煮飯才加的。COOK_PLACE ∩ PRIVATE_SEX_PLACE ∩ edo
+// 以前是空的：castle 是江戶唯一的煮飯場地但不在私密清單，kitchen 在私密清單
+// 但 era 沒有 edo。開了 lockScene 又抽到性愛，釘煮飯的圖 100% 沒有場地。
+// 旅館會開飯、era 含 edo、已經在 PRIVATE_SEX_PLACE。它也含 modern，但 lockScene
+// 仍會把現代的煮飯換成廚房，所以現代的測試一個字都不會變。不把 courtyard
+// 再加進女僕場地：那會讓女僕去運動，見 JOB_PLACE.maid。
+const COOK_PLACE = new Set(["kitchen", "castle", "palace", "courtyard", "ryokan"]);
 const INDOOR_FURN = new Set(["on bed", "on chair", "office chair", "gaming chair", "swivel chair", "bunk bed"]);
 // 能坐下來讀書寫字的地方。原本這三組只列了現代的房間，而正常模式下
 // 「有 ACT_PLACE 表的活動必須把場地列進去」—— 沒被列到的場地等於做不了那件事。
@@ -1144,7 +1149,19 @@ export const ACT_PLACE = {
   drinking: new Set(["cafe", "bar (place)", "restaurant", "kitchen", "living room", "movie theater", "airplane interior", "izakaya", "festival", "market", "ryokan", "tavern", "ballroom", "courtyard", "garden", "balcony", "colonnade", "village"]),
   reading: new Set([...DESK_PLACE, "train", "train interior"]),
   cooking: COOK_PLACE,
-  shopping: new Set(["street", "city", "cityscape", "fitting room", "convenience store", "supermarket", "market stall", "market", "festival", "village"]),
+  shopping: new Set([
+    "street",
+    "city",
+    "cityscape",
+    "fitting room",
+    "changing room",
+    "convenience store",
+    "supermarket",
+    "market stall",
+    "market",
+    "festival",
+    "village",
+  ]),
   singing: new Set(["living room", "bar (place)", "park", "rooftop", "karaoke box", "church", "shrine", "festival", "ballroom", "ryokan", "colonnade", "tavern", "market", "courtyard", "castle"]),
   karaoke: new Set(["bar (place)", "living room", "karaoke box"]),
   "playing guitar": new Set(["bedroom", "living room", "park", "rooftop", "balcony", "garden"]),
@@ -2889,6 +2906,80 @@ function eraOk(item, era) {
   return eras.includes(era);
 }
 
+// 這個活動在這個時代有沒有「私密又合時代」的場地。性愛熱度平常只准
+// PRIVATE_SEX_PLACE；交集為空時（購物的場館全是大街、網球只有球場）
+// 釘住該活動會 100% 沒場地。allow() 那一關拿這個判斷要不要放行 ACT_PLACE。
+function actHasPrivatePlace(act, era, lex) {
+  const set = ACT_PLACE[act];
+  if (!set) return false;
+  for (const p of set) {
+    if (!PRIVATE_SEX_PLACE.has(p)) continue;
+    const it = lex.byTag.get(p);
+    if (it && eraOk(it, era)) return true;
+  }
+  return false;
+}
+
+// 這個職業在這個時代的場地是不是「有地方可去、而且全是公開性愛場地」。
+// 場上有職業時，性愛會擋掉 PUBLIC_SEX_PLACE；消防員的清單全是大街，
+// 擋完就 100% 沒場地。偵探有辦公室，不是這個洞，不能放行。
+function jobHasOnlyPublicPlaces(job, era, lex) {
+  const set = JOB_PLACE[job];
+  if (!set) return false;
+  let any = false;
+  for (const p of set) {
+    const it = lex.byTag.get(p);
+    if (!it || !eraOk(it, era)) continue;
+    any = true;
+    if (!PUBLIC_SEX_PLACE.has(p)) return false;
+  }
+  return any;
+}
+
+// 職業場地全是室外時，室內專用姿勢（胸壓桌／玻璃）會先佔場，場地格再填
+// 就 100% 空。allow() 本來就擋「已經有 outdoors」的這兩個姿勢；釘消防員時
+// outdoors 是場地暗示進來的，場地還沒抽，這一關看不見。
+function jobHasOnlyOutdoorPlaces(job, era, lex) {
+  const set = JOB_PLACE[job];
+  if (!set) return false;
+  let any = false;
+  for (const p of set) {
+    const it = lex.byTag.get(p);
+    if (!it || !eraOk(it, era)) continue;
+    any = true;
+    if (INDOOR_ROOM.has(p)) return false;
+  }
+  return any;
+}
+
+// 職業場地全是室內時才擋 outdoors。舊寫法是「清單裡有一個室內就擋」，
+// 偵探同時有辦公室和大街，抽菸／騎車只能去街上，街上 implies outdoors，
+// 場地格就空了（實測 tease 14/40）。OL 只有辦公室，仍然擋。
+function jobHasOnlyIndoorPlaces(job, era, lex) {
+  const set = JOB_PLACE[job];
+  if (!set) return false;
+  let any = false;
+  for (const p of set) {
+    const it = lex.byTag.get(p);
+    if (!it || !eraOk(it, era)) continue;
+    any = true;
+    if (!INDOOR_ROOM.has(p)) return false;
+  }
+  return any;
+}
+
+function jobHasSleepPlace(job, era, lex) {
+  const set = JOB_PLACE[job];
+  const sleepAt = ACT_PLACE.sleeping;
+  if (!set || !sleepAt) return false;
+  for (const p of set) {
+    if (!sleepAt.has(p)) continue;
+    const it = lex.byTag.get(p);
+    if (it && eraOk(it, era)) return true;
+  }
+  return false;
+}
+
 function eraSpecific(item, era) {
   const eras = item.era;
   return Array.isArray(eras) && eras.length && !eras.includes("any") && eras.includes(era);
@@ -3738,12 +3829,12 @@ export function drawOne(lex, settings, pinned, userBanned, rand, seed) {
     if (item.tag === "sleeping" && [...used].some((t) => SLEEP_BAD_POSE.has(t))) return false;
     if (used.has("sleeping") && SLEEP_BAD_EXPR.has(item.tag)) return false;
     if (item.tag === "sleeping") {
-      if ([...used].some((t) => lex.byTag.get(t)?.mutex === "gaze" || /^looking /.test(t) || t === "kissing")) {
+      if ([...used].some((t) => lex.byTag.get(t)?.mutex === "gaze" || /^looking /.test(t) || t === "kiss")) {
         return false;
       }
     }
     if (used.has("sleeping")) {
-      if (item.mutex === "gaze" || /^looking /.test(item.tag) || item.tag === "kissing") return false;
+      if (item.mutex === "gaze" || /^looking /.test(item.tag) || item.tag === "kiss") return false;
       for (const d of item.implies || []) {
         if (lex.byTag.get(d)?.mutex === "gaze") return false;
       }
@@ -4200,6 +4291,10 @@ export function drawOne(lex, settings, pinned, userBanned, rand, seed) {
       [...used].some((t) => (lex.byTag.get(t)?.implies || []).includes("outdoors"))
     ) {
       return false;
+    }
+    if (item.tag === "breasts on table" || item.tag === "breasts on glass") {
+      const listed = [...usedJobs(used, lex)].filter((j) => JOB_PLACE[j]);
+      if (listed.length > 0 && listed.every((j) => jobHasOnlyOutdoorPlaces(j, era, lex))) return false;
     }
     if (item.tag === "hand in panties" && [...used].some((t) => MOVE_ACT.has(t))) return false;
     if (MOVE_ACT.has(item.tag) && used.has("hand in panties")) return false;
@@ -4726,6 +4821,12 @@ export function drawOne(lex, settings, pinned, userBanned, rand, seed) {
       if (RAPE_BAD_PLACE.has(item.tag) && used.has("rape")) return false;
     }
     if (lockSceneOn(settings)) {
+      // 辦公室／大街都不在睡覺場地裡。自動抽睡著會讓釘偵探／OL 的場地格空掉。
+      // 明確釘睡著仍可自相衝突。清潔工的客廳在清單裡，還是可以睡。
+      if (item.tag === "sleeping" && !pinned.has("sleeping")) {
+        const listed = [...usedJobs(used, lex)].filter((j) => JOB_PLACE[j]);
+        if (listed.length > 0 && listed.every((j) => !jobHasSleepPlace(j, era, lex))) return false;
+      }
       const acts = usedActs(used, lex);
       const places = usedPlaces(used, lex);
       const real = realisticOn(settings);
@@ -4816,12 +4917,31 @@ export function drawOne(lex, settings, pinned, userBanned, rand, seed) {
         if (water) {
           if (!WATER_PLACE.has(item.tag) && !BATH_PLACE.has(item.tag)) return false;
         } else if (!jobs.size) {
-          if (!PRIVATE_SEX_PLACE.has(item.tag)) return false;
+          if (!PRIVATE_SEX_PLACE.has(item.tag)) {
+            // 自動抽的性愛仍進臥室／溫泉。只有「場上已有活動、且那些活動在這個
+            // 時代一個私密場地都沒有」才放行 ACT_PLACE —— 否則釘購物／開車／網球
+            // 開著性愛會 100% 沒場地（實測各 40/40）。
+            const listed = [...acts].filter(
+              (a) => ACT_PLACE[a] && !WATER_ACT.has(a) && !BATH_ACT.has(a)
+            );
+            const noPrivateVenue =
+              listed.length > 0 && listed.every((a) => !actHasPrivatePlace(a, era, lex));
+            if (!noPrivateVenue) return false;
+          }
         } else if (PUBLIC_SEX_PLACE.has(item.tag)) {
-          return false;
+          // 自動抽的有職業性愛仍避開大街。只有「場上已有職業、且那些職業在這個
+          // 時代的場地全是公開場所」才放行 —— 否則釘消防員開著性愛會 100% 沒場地
+          // （實測 40/40）。偵探的辦公室不在公開清單，繼續走室內。
+          const listed = [...jobs].filter((j) => JOB_PLACE[j]);
+          const onlyPublic =
+            listed.length > 0 && listed.every((j) => jobHasOnlyPublicPlaces(j, era, lex));
+          if (!onlyPublic) return false;
         }
       }
-      if (item.tag === "outdoors" && [...jobPlacesOf(jobs)].some((p) => INDOOR_ROOM.has(p))) return false;
+      if (item.tag === "outdoors") {
+        const listed = [...jobs].filter((j) => JOB_PLACE[j]);
+        if (listed.length > 0 && listed.every((j) => jobHasOnlyIndoorPlaces(j, era, lex))) return false;
+      }
     }
     for (const g of extraMutex(item)) {
       if (mutexTaken.has(g)) return false;

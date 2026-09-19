@@ -28,6 +28,12 @@ if errorlevel 1 (
   pause
   exit /b 1
 )
+echo == scene/place merge contracts ==
+call node scripts\test_scene_place_contracts.mjs
+if errorlevel 1 (
+  pause
+  exit /b 1
+)
 echo == Danbooru verifier ==
 call node scripts\test_verify_danbooru_tags.mjs
 if errorlevel 1 (

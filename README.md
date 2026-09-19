@@ -125,7 +125,7 @@ Telegram 的 bot token **不走環境變數**，在畫面右上角的齒輪面�
 
 LoRA Manager 是獨立程式（埠 7861），不在這個 MIT repo 裡（它是 GPLv3，在 `C:\projects\flux2klein\lora-manager`）。雙擊 `start_lora_manager.bat` 會去啟動那一份。在 Manager 裡點「送到 workflow」，開著的排字匣分頁會自動選入。
 
-`server.py` 沒有讀設定檔，換 checkpoint／換埠都靠上面這張表。
+`server.py` 會讀 `config.json`（環境變數優先）。換 checkpoint／換埠也可以只靠上面這張表，不改程式。
 
 生圖參數（`steps` 25、`cfg` 6.5、`euler_ancestral`）寫死在 `server.py` 上方的常數，要改就改那裡。
 
