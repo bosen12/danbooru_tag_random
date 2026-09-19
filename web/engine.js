@@ -1149,7 +1149,19 @@ export const ACT_PLACE = {
   drinking: new Set(["cafe", "bar (place)", "restaurant", "kitchen", "living room", "movie theater", "airplane interior", "izakaya", "festival", "market", "ryokan", "tavern", "ballroom", "courtyard", "garden", "balcony", "colonnade", "village"]),
   reading: new Set([...DESK_PLACE, "train", "train interior"]),
   cooking: COOK_PLACE,
-  shopping: new Set(["street", "city", "cityscape", "fitting room", "convenience store", "supermarket", "market stall", "market", "festival", "village"]),
+  shopping: new Set([
+    "street",
+    "city",
+    "cityscape",
+    "fitting room",
+    "changing room",
+    "convenience store",
+    "supermarket",
+    "market stall",
+    "market",
+    "festival",
+    "village",
+  ]),
   singing: new Set(["living room", "bar (place)", "park", "rooftop", "karaoke box", "church", "shrine", "festival", "ballroom", "ryokan", "colonnade", "tavern", "market", "courtyard", "castle"]),
   karaoke: new Set(["bar (place)", "living room", "karaoke box"]),
   "playing guitar": new Set(["bedroom", "living room", "park", "rooftop", "balcony", "garden"]),
@@ -2892,6 +2904,20 @@ function eraOk(item, era) {
     return true;
   }
   return eras.includes(era);
+}
+
+// 這個活動在這個時代有沒有「私密又合時代」的場地。性愛熱度平常只准
+// PRIVATE_SEX_PLACE；交集為空時（購物的場館全是大街、網球只有球場）
+// 釘住該活動會 100% 沒場地。allow() 那一關拿這個判斷要不要放行 ACT_PLACE。
+function actHasPrivatePlace(act, era, lex) {
+  const set = ACT_PLACE[act];
+  if (!set) return false;
+  for (const p of set) {
+    if (!PRIVATE_SEX_PLACE.has(p)) continue;
+    const it = lex.byTag.get(p);
+    if (it && eraOk(it, era)) return true;
+  }
+  return false;
 }
 
 function eraSpecific(item, era) {
@@ -4821,7 +4847,17 @@ export function drawOne(lex, settings, pinned, userBanned, rand, seed) {
         if (water) {
           if (!WATER_PLACE.has(item.tag) && !BATH_PLACE.has(item.tag)) return false;
         } else if (!jobs.size) {
-          if (!PRIVATE_SEX_PLACE.has(item.tag)) return false;
+          if (!PRIVATE_SEX_PLACE.has(item.tag)) {
+            // 自動抽的性愛仍進臥室／溫泉。只有「場上已有活動、且那些活動在這個
+            // 時代一個私密場地都沒有」才放行 ACT_PLACE —— 否則釘購物／開車／網球
+            // 開著性愛會 100% 沒場地（實測各 40/40）。
+            const listed = [...acts].filter(
+              (a) => ACT_PLACE[a] && !WATER_ACT.has(a) && !BATH_ACT.has(a)
+            );
+            const noPrivateVenue =
+              listed.length > 0 && listed.every((a) => !actHasPrivatePlace(a, era, lex));
+            if (!noPrivateVenue) return false;
+          }
         } else if (PUBLIC_SEX_PLACE.has(item.tag)) {
           return false;
         }

@@ -4079,6 +4079,33 @@ function indoorOutdoorClash(have) {
       if (h.has("cooking") && !COOK_OK_EDO.some((t) => h.has(t))) edoCookOut += 1;
     }
     eq("edo sex cooking always has a cook place", edoCookOut, 0);
+    // 同一類洞：性愛熱度只准私密場地，但有些活動的 ACT_PLACE 全是公共／專用場館。
+    // 釘住那個活動（自動抽牌不會抽，因為不在 SEX_OK_ACTIVITY）場地格就空掉。
+    // 實測 40/40：購物、開車、網球、維多利亞「做運動」。
+    function sexPinPlaceMiss(act, era, seed) {
+      const st = {
+        ...s,
+        eras: [era],
+        heats: ["sex"],
+        weights: { activity: 0, tease: 0, flash: 0, sex: 1 },
+      };
+      const pin = applyPin(lex, new Set(), new Set(), act).pinned;
+      let miss = 0;
+      for (let i = 0; i < 40; i++) {
+        const h = tagsOf(drawOne(lex, st, pin, new Set(), mulberry32(seed + i), seed + i));
+        if (!h.has(act)) continue;
+        const has = [...h].some((t) => {
+          const it = lex.byTag.get(t);
+          return it && (it.mutex === "place" || it.group === "place");
+        });
+        if (!has) miss += 1;
+      }
+      return miss;
+    }
+    eq("sex+pin shopping always has a place", sexPinPlaceMiss("shopping", "modern", 920000), 0);
+    eq("sex+pin driving always has a place", sexPinPlaceMiss("driving", "modern", 920080), 0);
+    eq("sex+pin tennis always has a place", sexPinPlaceMiss("tennis", "modern", 920160), 0);
+    eq("sex+pin victorian sports always has a place", sexPinPlaceMiss("playing sports", "victorian", 920240), 0);
     const flashS = { ...s, heats: ["flash"], weights: { activity: 0, tease: 0, flash: 1, sex: 0 }, eras: ["victorian"] };
     let flashSleep = 0;
     for (let i = 0; i < 40; i++) {
