@@ -2952,6 +2952,34 @@ function jobHasOnlyOutdoorPlaces(job, era, lex) {
   return any;
 }
 
+// 職業場地全是室內時才擋 outdoors。舊寫法是「清單裡有一個室內就擋」，
+// 偵探同時有辦公室和大街，抽菸／騎車只能去街上，街上 implies outdoors，
+// 場地格就空了（實測 tease 14/40）。OL 只有辦公室，仍然擋。
+function jobHasOnlyIndoorPlaces(job, era, lex) {
+  const set = JOB_PLACE[job];
+  if (!set) return false;
+  let any = false;
+  for (const p of set) {
+    const it = lex.byTag.get(p);
+    if (!it || !eraOk(it, era)) continue;
+    any = true;
+    if (!INDOOR_ROOM.has(p)) return false;
+  }
+  return any;
+}
+
+function jobHasSleepPlace(job, era, lex) {
+  const set = JOB_PLACE[job];
+  const sleepAt = ACT_PLACE.sleeping;
+  if (!set || !sleepAt) return false;
+  for (const p of set) {
+    if (!sleepAt.has(p)) continue;
+    const it = lex.byTag.get(p);
+    if (it && eraOk(it, era)) return true;
+  }
+  return false;
+}
+
 function eraSpecific(item, era) {
   const eras = item.era;
   return Array.isArray(eras) && eras.length && !eras.includes("any") && eras.includes(era);
@@ -4793,6 +4821,12 @@ export function drawOne(lex, settings, pinned, userBanned, rand, seed) {
       if (RAPE_BAD_PLACE.has(item.tag) && used.has("rape")) return false;
     }
     if (lockSceneOn(settings)) {
+      // 辦公室／大街都不在睡覺場地裡。自動抽睡著會讓釘偵探／OL 的場地格空掉。
+      // 明確釘睡著仍可自相衝突。清潔工的客廳在清單裡，還是可以睡。
+      if (item.tag === "sleeping" && !pinned.has("sleeping")) {
+        const listed = [...usedJobs(used, lex)].filter((j) => JOB_PLACE[j]);
+        if (listed.length > 0 && listed.every((j) => !jobHasSleepPlace(j, era, lex))) return false;
+      }
       const acts = usedActs(used, lex);
       const places = usedPlaces(used, lex);
       const real = realisticOn(settings);
@@ -4904,7 +4938,10 @@ export function drawOne(lex, settings, pinned, userBanned, rand, seed) {
           if (!onlyPublic) return false;
         }
       }
-      if (item.tag === "outdoors" && [...jobPlacesOf(jobs)].some((p) => INDOOR_ROOM.has(p))) return false;
+      if (item.tag === "outdoors") {
+        const listed = [...jobs].filter((j) => JOB_PLACE[j]);
+        if (listed.length > 0 && listed.every((j) => jobHasOnlyIndoorPlaces(j, era, lex))) return false;
+      }
     }
     for (const g of extraMutex(item)) {
       if (mutexTaken.has(g)) return false;

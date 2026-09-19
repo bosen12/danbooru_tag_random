@@ -4164,6 +4164,32 @@ function indoorOutdoorClash(have) {
       }
       eq("unpinned modern sex never auto public sex place", pub, 0);
     }
+    // 職業場地若「有一個室內」就擋 outdoors，偵探／女警這種室內外都有的職業
+    // 會 100% 抽不到大街：抽菸／騎車／開車的場地只剩街上，街上又 implies
+    // outdoors，場地格空掉（實測偵探 tease 14/40、女警 12/40）。
+    // 改成「場地全是室內才擋」。OL 只有辦公室，既有那條 outdoors=0 繼續守。
+    function teasePinJobPlaceMiss(job, era, seed) {
+      const st = {
+        ...s,
+        eras: [era],
+        heats: ["tease"],
+        weights: { activity: 0, tease: 1, flash: 0, sex: 0 },
+      };
+      const pin = applyPin(lex, new Set(), new Set(), job).pinned;
+      let miss = 0;
+      for (let i = 0; i < 40; i++) {
+        const h = tagsOf(drawOne(lex, st, pin, new Set(), mulberry32(seed + i), seed + i));
+        if (!h.has(job)) continue;
+        const has = [...h].some((t) => {
+          const it = lex.byTag.get(t);
+          return it && (it.mutex === "place" || it.group === "place");
+        });
+        if (!has) miss += 1;
+      }
+      return miss;
+    }
+    eq("tease+pin detective always has a place", teasePinJobPlaceMiss("detective", "modern", 940000), 0);
+    eq("tease+pin policewoman always has a place", teasePinJobPlaceMiss("policewoman", "modern", 940080), 0);
     const flashS = { ...s, heats: ["flash"], weights: { activity: 0, tease: 0, flash: 1, sex: 0 }, eras: ["victorian"] };
     let flashSleep = 0;
     for (let i = 0; i < 40; i++) {
