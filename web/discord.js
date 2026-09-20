@@ -8,6 +8,7 @@
 // 這樣不用再寫一份 CSS，兩邊的外觀也一定一致。
 
 import { lockScroll, unlockScroll } from "./scroll-lock.js";
+import { setServiceStatus } from "./service-settings.js";
 
 const $ = (id) => document.getElementById(id);
 
@@ -27,24 +28,9 @@ async function getJson(url, init) {
   return r.json();
 }
 
-function mastTools() {
-  return $("mast-tools");
-}
-
 const LOGO = `<svg viewBox="0 0 24 24" fill="currentColor" aria-hidden="true"><path d="M19.27 5.33A16.2 16.2 0 0 0 15.23 4c-.2.35-.42.82-.58 1.2a15 15 0 0 0-4.3 0A11 11 0 0 0 9.76 4a16.2 16.2 0 0 0-4.04 1.33C3.16 9.15 2.46 12.87 2.8 16.54a16.3 16.3 0 0 0 5 2.54c.4-.55.76-1.14 1.07-1.76-.59-.22-1.15-.49-1.68-.8.14-.11.28-.22.41-.34 3.24 1.5 6.75 1.5 9.95 0 .14.12.28.23.42.34-.53.31-1.1.58-1.69.8.31.62.67 1.21 1.07 1.76a16.2 16.2 0 0 0 5-2.54c.4-4.26-.71-7.95-2.99-11.21ZM9.35 14.3c-.97 0-1.77-.9-1.77-2s.78-2 1.77-2 1.79.9 1.77 2c0 1.1-.78 2-1.77 2Zm5.3 0c-.97 0-1.77-.9-1.77-2s.78-2 1.77-2 1.79.9 1.77 2c0 1.1-.78 2-1.77 2Z"/></svg>`;
 
 function ensureDom() {
-  const tools = mastTools();
-  if (!$("dc-btn") && tools) {
-    const btn = document.createElement("button");
-    btn.type = "button";
-    btn.className = "ghost tg-btn dc-btn";
-    btn.id = "dc-btn";
-    btn.title = "設定：送到 Discord";
-    btn.setAttribute("aria-label", "設定：送到 Discord");
-    btn.innerHTML = `${LOGO}<span class="tg-dot" aria-hidden="true"></span>`;
-    tools.insertBefore(btn, tools.firstChild);
-  }
   if ($("dc-modal")) return;
   const wrap = document.createElement("div");
   wrap.className = "tg-modal";
@@ -144,13 +130,7 @@ function paint() {
   // 有沒存的改動時，把「存設定」點出來，不然使用者不知道還缺一步。
   const saveLabel = document.querySelector("#dc-save span");
   if (saveLabel) saveLabel.textContent = pending ? "存設定 · 尚未套用" : "存設定";
-  const dot = document.querySelector("#dc-btn .tg-dot");
-  if (dot) dot.dataset.on = status.configured && status.enabled ? "1" : "0";
-  const btn = $("dc-btn");
-  if (btn) {
-    btn.title =
-      status.configured && status.enabled ? "送到 Discord：開著" : "設定：送到 Discord";
-  }
+  setServiceStatus("discord", status.configured && status.enabled);
   const sw = $("dc-enabled");
   if (sw) {
     sw.classList.toggle("is-on", !!status.enabled);
@@ -255,7 +235,7 @@ function close() {
     delete el.dataset.closing;
     el.classList.remove("open", "is-closing");
     unlockScroll("dc-modal");
-    $("dc-btn")?.focus();
+    $("service-settings-btn")?.focus();
   }, ms);
 }
 
@@ -371,7 +351,6 @@ function markCard(card) {
 
 export function initDiscord() {
   ensureDom();
-  $("dc-btn")?.addEventListener("click", () => (isOpen() ? close() : open()));
   $("dc-close")?.addEventListener("click", close);
   $("dc-modal")?.addEventListener("click", (e) => {
     if (e.target.id === "dc-modal") close();
@@ -400,6 +379,10 @@ export function initDiscord() {
     });
   }
   refresh();
+}
+
+export function openDiscordSettings() {
+  if (!isOpen()) open();
 }
 
 export function dcHandleKeys(e) {

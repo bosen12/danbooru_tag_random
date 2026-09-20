@@ -59,13 +59,13 @@
   overflow: hidden;
   text-overflow: ellipsis;
 }
-#ckpt-pick-btn .ckpt-gear {
+#ckpt-pick-btn .ckpt-layers {
   display: inline-flex;
   width: 15px;
   height: 15px;
   flex: none;
 }
-#ckpt-pick-btn .ckpt-gear svg {
+#ckpt-pick-btn .ckpt-layers svg {
   width: 15px;
   height: 15px;
 }

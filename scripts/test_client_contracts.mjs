@@ -15,7 +15,7 @@
  * localStorage，所以下面補了四個最小的替身。那不是為了繞過什麼，
  * 是把「這個模組載入時到底碰了哪些瀏覽器介面」寫下來。
  */
-import { readFileSync } from "fs";
+import { existsSync, readFileSync } from "fs";
 import { dirname, join } from "path";
 import { fileURLToPath } from "url";
 
@@ -410,6 +410,46 @@ function ok(name, cond, detail) {
   ok("找得到卡片警告那一段", at >= 0);
   ok("矛盾畫成卡片上的一行警告", body.includes("pos-clash"), "沒有 .warn.pos-clash 就是算了不顯示");
   ok("釘選未入那一行還在", body.includes("pin-miss"));
+}
+
+// --- 10. 頂欄通知設定：一個入口、兩個服務 -----------------------------------
+// Telegram 和 Discord 各放一顆頂欄按鈕時，狀態分散又擠壓小螢幕的工具列。
+// 這裡不測某個 CSS 像素值，而是守住互動的結構：一個設定入口、兩個可辨識
+// 的服務選項，並要求選單切換只走 compositor-friendly 的屬性。
+{
+  const servicePath = join(ROOT, "web", "service-settings.js");
+  const src = existsSync(servicePath) ? readFileSync(servicePath, "utf8") : "";
+  const tg = readFileSync(join(ROOT, "web", "telegram.js"), "utf8");
+  const dc = readFileSync(join(ROOT, "web", "discord.js"), "utf8");
+  const lora = readFileSync(join(ROOT, "web", "lora.js"), "utf8");
+  const css = readFileSync(join(ROOT, "web", "boot.css"), "utf8");
+
+  ok("通知設定有共用模組", src.length > 0, "缺少 web/service-settings.js，頂欄會回到兩顆分散按鈕");
+  ok(
+    "通知設定只有一個齒輪入口",
+    (src.match(/id="service-settings-btn"/g) || []).length === 1 && src.includes('aria-label="通知設定"'),
+    "入口應該是一顆具名的設定按鈕，不是 Telegram／Discord 各一顆"
+  );
+  ok(
+    "通知選單保留 Telegram 與 Discord 兩個品牌選項",
+    src.includes('data-service="telegram"') && src.includes('data-service="discord"') && src.includes("TELEGRAM_ICON") && src.includes("DISCORD_ICON"),
+    "服務不能只剩文字或其中一個品牌圖示"
+  );
+  ok(
+    "Telegram 與 Discord 不再自行注入頂欄按鈕",
+    !tg.includes('id = "tg-btn"') && !dc.includes('id = "dc-btn"'),
+    "留下舊按鈕會重新出現兩個入口"
+  );
+  ok(
+    "服務選單的開關只轉場透明度與位移",
+    css.includes(".service-menu") && css.includes("opacity var(--dur-ui)") && css.includes("transform var(--dur-ui)") && !css.includes(".service-menu {\n  transition: height"),
+    "切換若動畫高度會推動頂欄，造成畫面跳動"
+  );
+  ok(
+    "底模按鈕使用模型層疊圖示，不再誤用齒輪",
+    lora.includes("ckpt-layers") && !lora.includes("ckpt-gear"),
+    "底模應使用 layers 語意圖示，避免與通知設定齒輪混淆"
+  );
 }
 
 if (failed) {

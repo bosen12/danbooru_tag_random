@@ -1861,7 +1861,147 @@ html.is-booting *::after {
   color: var(--color-accent-2);
 }
 
-/* —— 桅杆上的齒輪 —— */
+/* —— 桅杆上的通知設定 —— */
+
+.service-settings-wrap {
+  position: relative;
+  flex: 0 0 auto;
+}
+
+.service-settings-btn {
+  width: 44px;
+  min-height: 44px;
+  padding: 0;
+  display: inline-grid;
+  place-items: center;
+}
+
+.service-settings-btn svg {
+  width: 18px;
+  height: 18px;
+}
+
+/* 絕對定位讓選單不改變 mast 的高度；開關只改合成層屬性，所以不會把整個
+   工作區往下推。transform-origin 放在齒輪右下方，展開的來源才跟點擊一致。 */
+.service-menu {
+  position: absolute;
+  z-index: 160;
+  top: calc(100% + var(--space-2));
+  right: 0;
+  width: min(17rem, calc(100vw - 24px));
+  padding: var(--space-2);
+  display: grid;
+  gap: var(--space-1);
+  border: var(--rule) solid var(--color-rule);
+  border-radius: var(--radius);
+  background: var(--color-paper-2);
+  box-shadow: 0 18px 36px -22px oklch(0% 0 0 / 0.9);
+  opacity: 0;
+  visibility: hidden;
+  pointer-events: none;
+  transform: translateY(-4px) scale(0.98);
+  transform-origin: top right;
+  transition:
+    opacity var(--dur-ui) var(--ease-out),
+    transform var(--dur-ui) var(--ease-out),
+    visibility 0s linear var(--dur-ui);
+}
+
+.service-settings-wrap[data-open="1"] .service-menu {
+  opacity: 1;
+  visibility: visible;
+  pointer-events: auto;
+  transform: none;
+  transition:
+    opacity var(--dur-ui) var(--ease-out),
+    transform var(--dur-ui) var(--ease-out),
+    visibility 0s;
+}
+
+.service-menu-title {
+  margin: var(--space-1) var(--space-2) var(--space-1);
+  color: var(--color-muted);
+  font-size: var(--text-xs);
+  font-weight: 500;
+}
+
+.service-choice {
+  width: 100%;
+  min-height: 52px;
+  display: grid;
+  grid-template-columns: 28px minmax(0, 1fr) 10px;
+  align-items: center;
+  gap: var(--space-2);
+  padding: var(--space-2);
+  border: var(--rule) solid transparent;
+  border-radius: calc(var(--radius) - 1px);
+  background: transparent;
+  color: var(--color-ink);
+  font: inherit;
+  text-align: left;
+  cursor: pointer;
+  touch-action: manipulation;
+  transition:
+    border-color var(--dur-micro) var(--ease-out),
+    background-color var(--dur-micro) var(--ease-out),
+    transform var(--dur-micro) var(--ease-out);
+}
+
+.service-choice:hover,
+.service-choice:focus-visible {
+  border-color: var(--color-rule);
+  background: var(--color-paper-3);
+}
+
+.service-choice:active {
+  transform: scale(0.985);
+}
+
+.service-icon {
+  display: inline-grid;
+  width: 28px;
+  height: 28px;
+  place-items: center;
+  border-radius: 99px;
+  background: color-mix(in oklab, var(--color-accent) 13%, var(--color-paper));
+  color: var(--color-accent-2);
+}
+
+.service-icon svg {
+  width: 16px;
+  height: 16px;
+}
+
+.service-copy {
+  min-width: 0;
+  display: grid;
+  gap: 1px;
+}
+
+.service-copy strong {
+  font-size: var(--text-sm);
+}
+
+.service-copy small {
+  overflow: hidden;
+  color: var(--color-muted);
+  font-size: var(--text-xs);
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.service-dot {
+  width: 8px;
+  height: 8px;
+  border-radius: 99px;
+  background: var(--color-ban);
+  transition: background var(--dur-ui) var(--ease-out), box-shadow var(--dur-ui) var(--ease-out);
+}
+
+.service-dot[data-on="1"] {
+  background: var(--color-ok);
+  box-shadow: 0 0 0 2px var(--color-paper-2);
+}
 
 .tg-btn {
   position: relative;
@@ -2153,6 +2293,13 @@ html.is-booting *::after {
 }
 
 @media (prefers-reduced-motion: reduce) {
+  .service-menu,
+  .service-settings-wrap[data-open="1"] .service-menu,
+  .service-choice,
+  .service-dot {
+    transition: none;
+  }
+
   .same-switch.inf-switch.is-on .same-knob i,
   .same-switch.inf-switch.is-on::after {
     animation: none;

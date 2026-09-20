@@ -4,6 +4,7 @@
 // 送圖是 fire-and-forget —— 伺服器收下就回，實際上傳在它的背景執行緒，抽圖不等它。
 
 import { lockScroll, unlockScroll } from "./scroll-lock.js";
+import { setServiceStatus } from "./service-settings.js";
 
 const $ = (id) => document.getElementById(id);
 
@@ -19,33 +20,7 @@ async function getJson(url, init) {
   return r.json();
 }
 
-function ensureMastTools() {
-  let tools = $("mast-tools");
-  const ping = $("ping");
-  if (!tools && ping && ping.parentNode) {
-    tools = document.createElement("div");
-    tools.id = "mast-tools";
-    tools.className = "mast-tools";
-    ping.parentNode.insertBefore(tools, ping);
-    tools.appendChild(ping);
-  }
-  return tools;
-}
-
-const GEAR = `<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><circle cx="12" cy="12" r="3"/><path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 1 1-2.83 2.83l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 1 1-4 0v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 1 1-2.83-2.83l.06-.06a1.65 1.65 0 0 0 .33-1.82 1.65 1.65 0 0 0-1.51-1H3a2 2 0 1 1 0-4h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 1 1 2.83-2.83l.06.06A1.65 1.65 0 0 0 9 4.6a1.65 1.65 0 0 0 1-1.51V3a2 2 0 1 1 4 0v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 1 1 2.83 2.83l-.06.06a1.65 1.65 0 0 0-.33 1.82V9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 1 1 0 4h-.09a1.65 1.65 0 0 0-1.51 1z"/></svg>`;
-
 function ensureDom() {
-  const tools = ensureMastTools();
-  if (!$("tg-btn") && tools) {
-    const btn = document.createElement("button");
-    btn.type = "button";
-    btn.className = "ghost tg-btn";
-    btn.id = "tg-btn";
-    btn.title = "設定：送到 Telegram";
-    btn.setAttribute("aria-label", "設定：送到 Telegram");
-    btn.innerHTML = `${GEAR}<span class="tg-dot" aria-hidden="true"></span>`;
-    tools.insertBefore(btn, tools.firstChild);
-  }
   if ($("tg-modal")) return;
   const wrap = document.createElement("div");
   wrap.className = "tg-modal";
@@ -96,15 +71,7 @@ function paint() {
       ? `已設定 · token ${status.tokenTail} · ${status.chatId || "沒填 chat id"}`
       : "尚未設定。填好下面兩格再按存設定。";
   }
-  const dot = document.querySelector("#tg-btn .tg-dot");
-  if (dot) dot.dataset.on = status.configured && status.enabled ? "1" : "0";
-  const btn = $("tg-btn");
-  if (btn) {
-    btn.title =
-      status.configured && status.enabled
-        ? "送到 Telegram：開著"
-        : "設定：送到 Telegram";
-  }
+  setServiceStatus("telegram", status.configured && status.enabled);
   const sw = $("tg-enabled");
   if (sw) {
     sw.classList.toggle("is-on", !!status.enabled);
@@ -196,7 +163,7 @@ function close() {
     delete el.dataset.closing;
     el.classList.remove("open", "is-closing");
     unlockScroll("tg-modal");
-    $("tg-btn")?.focus();
+    $("service-settings-btn")?.focus();
   }, ms);
 }
 
@@ -302,7 +269,6 @@ function markCard(card) {
 
 export function initTelegram() {
   ensureDom();
-  $("tg-btn")?.addEventListener("click", () => (isOpen() ? close() : open()));
   $("tg-close")?.addEventListener("click", close);
   $("tg-modal")?.addEventListener("click", (e) => {
     if (e.target.id === "tg-modal") close();
@@ -323,6 +289,10 @@ export function initTelegram() {
     });
   }
   refresh();
+}
+
+export function openTelegramSettings() {
+  if (!isOpen()) open();
 }
 
 export function tgHandleKeys(e) {

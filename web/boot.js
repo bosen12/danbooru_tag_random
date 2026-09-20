@@ -77,6 +77,7 @@ import {
 } from "./infinite.js";
 import { initTelegram, tgHandleKeys, tgSendCard, tgUiOpen } from "./telegram.js";
 import { initDiscord, dcHandleKeys, dcSendCard, dcUiOpen } from "./discord.js";
+import { initServiceSettings } from "./service-settings.js";
 import {
   clearAllMustDraw,
   initMustDraw,
@@ -3252,6 +3253,7 @@ async function main() {
   trackChrome();
   initTelegram();
   initDiscord();
+  initServiceSettings();
   initInfinite({
     onStart: () => {
       failStreak = 0;
