@@ -26,6 +26,7 @@ const GEN_LORA_SLOT_SCOPE = [
 
 const CKPT_STORE = "yz-ckpt";
 let GEN_CKPTS = null;
+let GEN_CKPT_SOURCE = "";
 let GEN_CKPT = "";
 try {
   GEN_CKPT = localStorage.getItem(CKPT_STORE) || "";
@@ -35,6 +36,11 @@ try {
 
 export function currentCkpt() {
   return GEN_CKPT || "";
+}
+
+export function invalidateModelLists() {
+  GEN_LORAS = null;
+  GEN_CKPTS = null;
 }
 
 function curSlot() {
@@ -1219,6 +1225,7 @@ async function fetchCkpts() {
   try {
     const data = await fetch("/api/checkpoints").then((r) => r.json());
     GEN_CKPTS = data.items || [];
+    GEN_CKPT_SOURCE = data.source || "";
     const names = new Set(GEN_CKPTS.map((c) => c.ckpt_name));
     if (GEN_CKPT && !names.has(GEN_CKPT)) GEN_CKPT = "";
     if (!GEN_CKPT && data.current && names.has(data.current)) GEN_CKPT = data.current;
@@ -1265,7 +1272,12 @@ function renderCkptList(filter) {
   if (!items.length) {
     const empty = document.createElement("div");
     empty.className = "lora-empty";
-    empty.textContent = GEN_CKPTS && GEN_CKPTS.length ? "找不到底模" : "這個資料夾沒有 checkpoint";
+    empty.textContent =
+      GEN_CKPTS && GEN_CKPTS.length
+        ? "找不到底模"
+        : GEN_CKPT_SOURCE === "comfy"
+          ? "ComfyUI 沒有回報 checkpoint"
+          : "這個資料夾沒有 checkpoint。連上 ComfyUI 後會改問它要清單。";
     box.appendChild(empty);
     return;
   }

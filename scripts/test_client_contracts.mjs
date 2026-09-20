@@ -74,11 +74,13 @@ function ok(name, cond, detail) {
     loras: [{ folder: "a", file: "b.safetensors", strength: 0.8 }],
     ckpt: "drawn.safetensors",
     rating: "explicit",
+    workflowId: "my-wai",
   };
   const LIVE = {
     loras: [{ folder: "z", file: "later.safetensors", strength: 0.2 }],
     ckpt: "now.safetensors",
     rating: "general",
+    workflowId: "other",
   };
 
   const wrong = [];
@@ -97,13 +99,16 @@ function ok(name, cond, detail) {
     "卡片沒存的欄位退回即時設定",
     JSON.stringify(fellBack.loras) === JSON.stringify(LIVE.loras) &&
       fellBack.ckpt === LIVE.ckpt &&
-      fellBack.rating === LIVE.rating,
+      fellBack.rating === LIVE.rating &&
+      fellBack.workflowId === LIVE.workflowId,
     JSON.stringify(fellBack)
   );
 
   // 空陣列是有意義的：那張卡就是沒掛 LoRA，不可以被現在掛著的蓋過去。
   const noLora = jobFields({ positive: "x", loras: [] }, LIVE);
   ok("卡片的 loras 是空陣列時不被即時設定蓋過去", noLora.loras.length === 0, JSON.stringify(noLora.loras));
+  const builtinCard = jobFields({ positive: "x", workflowId: "" }, LIVE);
+  ok("卡片的 workflowId 空字串是內建，不被即時設定蓋過去", builtinCard.workflowId === "", JSON.stringify(builtinCard));
 
   // 兩邊都沒有時要有安全的預設，不能吐出 undefined 讓伺服器自己猜。
   const bare = jobFields(null, null);
@@ -450,6 +455,20 @@ function ok(name, cond, detail) {
     lora.includes("ckpt-layers") && !lora.includes("ckpt-gear"),
     "底模應使用 layers 語意圖示，避免與通知設定齒輪混淆"
   );
+}
+
+// --- 11. Workflow 面板保留 ComfyUI 位址設定 --------------------------------
+// README 對使用者承諾可以從畫面改 ComfyUI 位址。Workflow 面板改版時若只留下
+// profile 選擇，遠端／區網 Comfy 就只能回頭改設定檔，且既有 /api/comfy 入口變死碼。
+{
+  const src = readFileSync(join(ROOT, "web", "workflow.js"), "utf8");
+  ok("workflow 面板有 ComfyUI 網址欄位", src.includes('id="wf-url"') && src.includes('id="wf-url-save"'));
+  ok("workflow 面板會讀取 ComfyUI 網址", src.includes('getJson("/api/comfy")'));
+  ok("workflow 面板會儲存 ComfyUI 網址", src.includes('getJson("/api/comfy", {') && src.includes('method: "POST"'));
+  const openAt = src.indexOf("function openModal(");
+  const closeAt = src.indexOf("function closeModal(", openAt);
+  const openBody = openAt >= 0 && closeAt > openAt ? src.slice(openAt, closeAt) : "";
+  ok("workflow 面板開啟後把焦點移進 dialog", openBody.includes('$("wf-close")?.focus()'));
 }
 
 if (failed) {

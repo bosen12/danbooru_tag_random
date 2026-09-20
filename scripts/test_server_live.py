@@ -12,6 +12,7 @@ import hashlib
 import json
 import os
 import socket
+import tempfile
 import struct
 import subprocess
 import sys
@@ -62,9 +63,10 @@ class FakeComfy(threading.Thread):
 
     daemon = True
 
-    def __init__(self, plan: str):
+    def __init__(self, plan: str, save_node: str = "200"):
         super().__init__()
         self.plan = plan
+        self.save_node = str(save_node)
         self.srv = socket.socket()
         self.srv.setsockopt(socket.SOL_SOCKET, socket.SO_REUSEADDR, 1)
         self.srv.bind(("127.0.0.1", 0))
@@ -73,6 +75,7 @@ class FakeComfy(threading.Thread):
         self.interrupted = threading.Event()
         self.stopping = threading.Event()
         self.have_image = threading.Event()
+        self.last_prompt = None
 
     def run(self) -> None:
         while not self.stopping.is_set():
@@ -114,10 +117,27 @@ class FakeComfy(threading.Thread):
                 self._json(conn, {"ok": True})
                 return
             if method == "POST":
+                try:
+                    self.last_prompt = json.loads(raw.decode("utf-8") or "{}")
+                except Exception:
+                    self.last_prompt = None
                 self._json(conn, {"prompt_id": "p1"})
                 return
             if path.startswith("/system_stats"):
                 self._json(conn, {"system": {"comfyui_version": "fake-1.0"}})
+                return
+            if path.startswith("/object_info/"):
+                self._json(
+                    conn,
+                    {
+                        "CheckpointLoaderSimple": {
+                            "input": {"required": {"ckpt_name": [["fake.safetensors"], {}]}}
+                        },
+                        "LoraLoader": {
+                            "input": {"required": {"lora_name": [["style\\a.safetensors"], {}]}}
+                        },
+                    },
+                )
                 return
             if path.startswith("/history/"):
                 if not self.have_image.is_set():
@@ -128,7 +148,7 @@ class FakeComfy(threading.Thread):
                     {
                         "p1": {
                             "outputs": {
-                                "200": {
+                                self.save_node: {
                                     "images": [
                                         {
                                             "filename": "out.png",
@@ -187,14 +207,14 @@ class FakeComfy(threading.Thread):
         conn.sendall(frame(PREVIEW))
         time.sleep(0.3)
         self.have_image.set()
-        conn.sendall(text_frame({"type": "executed", "data": {"node": "200"}}))
+        conn.sendall(text_frame({"type": "executed", "data": {"node": self.save_node}}))
         time.sleep(6)
 
     def _plan_quiet(self, conn: socket.socket) -> None:
         # 完全不說話 —— 模擬換底模那種長時間靜默。心跳必須自己跑出來。
         time.sleep(14)
         self.have_image.set()
-        conn.sendall(text_frame({"type": "executed", "data": {"node": "200"}}))
+        conn.sendall(text_frame({"type": "executed", "data": {"node": self.save_node}}))
         time.sleep(6)
 
     def _plan_torn(self, conn: socket.socket) -> None:
@@ -206,7 +226,7 @@ class FakeComfy(threading.Thread):
         conn.sendall(wire[10:])
         time.sleep(0.4)
         self.have_image.set()
-        conn.sendall(text_frame({"type": "executed", "data": {"node": "200"}}))
+        conn.sendall(text_frame({"type": "executed", "data": {"node": self.save_node}}))
         time.sleep(6)
 
     def _plan_hang(self, conn: socket.socket) -> None:
@@ -230,6 +250,8 @@ def start_server(comfy_port: int):
         PYTHONUTF8="1",
         PORT=str(port),
         COMFY_API=f"http://127.0.0.1:{comfy_port}",
+        WORKFLOW_DATA_DIR=tempfile.mkdtemp(),
+        APP_SETTINGS=str(Path(tempfile.mkdtemp()) / "settings.json"),
     )
     proc = subprocess.Popen(
         [sys.executable, str(ROOT / "server.py")],
@@ -259,10 +281,10 @@ def start_server(comfy_port: int):
     raise RuntimeError(f"server.py 15 秒內沒有開始監聽\n{log}")
 
 
-def sse_events(port: int, timeout: float = 45, cut_after=None):
+def sse_events(port: int, timeout: float = 45, cut_after=None, payload=None):
     """打 /api/gen 並把 SSE 拆成事件。cut_after 是讀到第幾則就把連線砍掉。"""
     body = json.dumps(
-        {"positive": "1girl", "seed": 7, "width": 512, "height": 512}
+        payload or {"positive": "1girl", "seed": 7, "width": 512, "height": 512}
     ).encode()
     req = urllib.request.Request(
         f"http://127.0.0.1:{port}/api/gen",
@@ -294,6 +316,27 @@ def sse_events(port: int, timeout: float = 45, cut_after=None):
     finally:
         resp.close()
     return out
+
+
+def http_json(port: int, method: str, path: str, body=None):
+    data = None if body is None else json.dumps(body).encode("utf-8")
+    req = urllib.request.Request(
+        f"http://127.0.0.1:{port}{path}",
+        data=data,
+        method=method,
+        headers={"Content-Type": "application/json"} if data is not None else {},
+    )
+    try:
+        with urllib.request.urlopen(req, timeout=20) as resp:
+            raw = resp.read()
+            return resp.status, json.loads(raw.decode("utf-8") or "{}")
+    except urllib.error.HTTPError as exc:
+        raw = exc.read()
+        try:
+            parsed = json.loads(raw.decode("utf-8") or "{}")
+        except Exception:
+            parsed = {"error": raw.decode("utf-8", "replace")}
+        return exc.code, parsed
 
 
 def run(plan: str, **kw):
@@ -365,6 +408,96 @@ ok("幀被切開時主控台沒有 traceback", "Traceback" not in log, log[-800:
 events, comfy, log = run("hang", cut_after=1, timeout=25)
 ok("斷線後有叫 Comfy 停手", comfy.interrupted.is_set(), "沒收到 /interrupt")
 ok("斷線時主控台沒有 traceback", "Traceback" not in log, log[-800:])
+
+# === 5. 使用者 API workflow：SaveImage 不是 200，原始節點原封不動 ========
+_PROFILE = {
+    "4": {"class_type": "CheckpointLoaderSimple", "inputs": {"ckpt_name": "kept.safetensors"}},
+    "6": {"class_type": "CLIPTextEncode", "inputs": {"text": "OLD POS", "clip": ["4", 1]}},
+    "7": {"class_type": "CLIPTextEncode", "inputs": {"text": "OLD NEG", "clip": ["4", 1]}},
+    "3": {
+        "class_type": "KSampler",
+        "inputs": {
+            "seed": 1,
+            "steps": 20,
+            "cfg": 7,
+            "sampler_name": "euler",
+            "scheduler": "normal",
+            "denoise": 1,
+            "model": ["4", 0],
+            "positive": ["6", 0],
+            "negative": ["7", 0],
+            "latent_image": ["5", 0],
+        },
+    },
+    "5": {"class_type": "EmptyLatentImage", "inputs": {"width": 512, "height": 512, "batch_size": 1}},
+    "8": {"class_type": "VAEDecode", "inputs": {"samples": ["3", 0], "vae": ["4", 2]}},
+    "9": {"class_type": "SaveImage", "inputs": {"filename_prefix": "x", "images": ["8", 0]}},
+    "40": {"class_type": "ControlNetLoader", "inputs": {"control_net_name": "keep_me.safetensors"}},
+}
+comfy = FakeComfy("happy", save_node="9")
+comfy.start()
+proc, port = start_server(comfy.port)
+try:
+    code, body = http_json(
+        port,
+        "POST",
+        "/api/workflows",
+        {"name": "ui", "workflow": {"nodes": [], "links": [], "version": 0.4}},
+    )
+    ok("live UI format is 400", code == 400 and body.get("code") == "ui_format", str((code, body)))
+    code, body = http_json(
+        port,
+        "POST",
+        "/api/workflows",
+        {
+            "name": "custom",
+            "workflow": _PROFILE,
+            "mapping": {
+                "positive": {"node": "6", "input": "text", "mode": "control"},
+                "checkpoint": {"node": "4", "input": "ckpt_name", "mode": "keep"},
+            },
+        },
+    )
+    ok("live API workflow imported", code == 200 and bool(body.get("id")), str(body))
+    pid = body.get("id")
+    events = sse_events(
+        port,
+        payload={
+            "positive": "1girl from profile",
+            "workflowId": pid,
+            "seed": 7,
+            "width": 512,
+            "height": 512,
+        },
+    )
+    kinds = [e for e, _ in events]
+    ok("profile gen last event is done", bool(kinds) and kinds[-1] == "done", str(kinds))
+    prompt = ((comfy.last_prompt or {}).get("prompt") or {})
+    ok(
+        "runtime positive injected",
+        (prompt.get("6") or {}).get("inputs", {}).get("text") == "1girl from profile",
+        str(prompt.get("6")),
+    )
+    ok(
+        "runtime checkpoint kept",
+        (prompt.get("4") or {}).get("inputs", {}).get("ckpt_name") == "kept.safetensors",
+        str(prompt.get("4")),
+    )
+    ok("runtime keeps ControlNet", (prompt.get("40") or {}).get("class_type") == "ControlNetLoader")
+    ok("runtime has SaveImage 9", (prompt.get("9") or {}).get("class_type") == "SaveImage")
+    ok("runtime does not add builtin node 200", "200" not in prompt)
+    code, ping_body = http_json(port, "GET", "/api/ping")
+    ok("ping still reports connected", ping_body.get("ok") is True, str(ping_body))
+finally:
+    time.sleep(1.2)
+    proc.terminate()
+    try:
+        proc.wait(10)
+    except subprocess.TimeoutExpired:
+        proc.kill()
+    log = proc.stdout.read() or ""
+    comfy.close()
+ok("profile gen 主控台沒有 traceback", "Traceback" not in log, log[-800:])
 
 if failed:
     print(f"\n{failed} failed")

@@ -56,6 +56,13 @@ _cache = {"data": None, "at": 0.0, "refreshing": False}
 _lock = threading.Lock()
 
 
+def reset_cache() -> None:
+    with _lock:
+        _cache["data"] = None
+        _cache["at"] = 0.0
+        _cache["refreshing"] = False
+
+
 def is_video_preview(name: str) -> bool:
     n = (name or "").lower()
     return n.endswith(".mp4") or n.endswith(".webm")

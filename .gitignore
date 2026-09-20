@@ -15,3 +15,6 @@ docs/
 
 # 機器專屬設定（ComfyUI 路徑、checkpoint 資料夾…）。範本見 config.example.json
 config.json
+
+# 使用者匯入的 workflow profile、畫面存的 Comfy URL
+data/

@@ -78,6 +78,7 @@ import {
 import { initTelegram, tgHandleKeys, tgSendCard, tgUiOpen } from "./telegram.js";
 import { initDiscord, dcHandleKeys, dcSendCard, dcUiOpen } from "./discord.js";
 import { initServiceSettings } from "./service-settings.js";
+import { currentWorkflowId, initWorkflow, wfHandleKeys, workflowUiOpen } from "./workflow.js";
 import {
   clearAllMustDraw,
   initMustDraw,
@@ -2385,6 +2386,7 @@ async function streamCardJob(card, seedNum, extra) {
       loras: currentLorasPayload(),
       ckpt: currentCkpt(),
       rating: settings.rating,
+      workflowId: currentWorkflowId(),
     });
     await streamGen(
       {
@@ -2396,6 +2398,7 @@ async function streamCardJob(card, seedNum, extra) {
         ckpt: job.ckpt,
         // 伺服器要靠這個決定負面詞。
         rating: job.rating,
+        workflowId: job.workflowId,
       },
       (event, data) => {
         kick();
@@ -2492,6 +2495,7 @@ async function regenerateCard(card) {
     loras,
     ckpt: card.dataset.ckpt || currentCkpt(),
     rating: card.dataset.rating || "",
+    workflowId: card.dataset.workflowId != null ? card.dataset.workflowId : currentWorkflowId(),
   };
   showPos(extra.positive);
   setLive(card, { status: "重新生成…" });
@@ -2617,6 +2621,7 @@ async function runBatch() {
       card.dataset.rating = settings.rating || "explicit";
       card.dataset.loras = JSON.stringify(currentLorasPayload());
       card.dataset.ckpt = currentCkpt() || "";
+      card.dataset.workflowId = currentWorkflowId();
       if (settings.samePerson && i > 0) {
         card.dataset.same = "1";
         const shot = card.querySelector(".shot");
@@ -2637,6 +2642,7 @@ async function runBatch() {
         eraClash: drawn.eraClash,
         loras: currentLorasPayload(),
         ckpt: currentCkpt(),
+        workflowId: currentWorkflowId(),
       });
       clearLive(card);
 
@@ -2938,6 +2944,7 @@ function bindUi() {
     if (handleViewerKeys(e)) return;
     if (tgHandleKeys(e)) return;
     if (dcHandleKeys(e)) return;
+    if (wfHandleKeys(e)) return;
     if (handleLoraKeys(e)) return;
     if (isTyping()) return;
     if (e.key === "i" || e.key === "I") {
@@ -2951,7 +2958,7 @@ function bindUi() {
       return;
     }
     if (e.key === "Enter") {
-      if (isLoraUiOpen() || isViewerOpen() || tgUiOpen() || dcUiOpen() || running) return;
+      if (isLoraUiOpen() || isViewerOpen() || tgUiOpen() || dcUiOpen() || workflowUiOpen() || running) return;
       e.preventDefault();
       runBatch();
     }
@@ -3254,6 +3261,7 @@ async function main() {
   initTelegram();
   initDiscord();
   initServiceSettings();
+  initWorkflow();
   initInfinite({
     onStart: () => {
       failStreak = 0;

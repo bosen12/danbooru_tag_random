@@ -121,6 +121,12 @@ if errorlevel 1 (
   pause
   exit /b 1
 )
+echo == workflow profiles ==
+%PY% scripts\test_workflows.py
+if errorlevel 1 (
+  pause
+  exit /b 1
+)
 echo == server live (fake comfy) ==
 %PY% scripts\test_server_live.py
 if errorlevel 1 (

@@ -139,11 +139,13 @@ cp config.example.json config.json
 然後把 `config.json` 裡的路徑改成你自己的。`config.json` 已經 gitignore，不會被推出去；
 `config.example.json` 才是版控裡的範本。每一項留空就退回內建預設值。
 
-新 clone 至少要改這兩個：
+新 clone 通常只要 ComfyUI 開在 `http://127.0.0.1:8188`。底模清單改問 ComfyUI，不必填安裝路徑。畫面右上「Comfy…」或「工作流」可改網址、匯入自己的 API workflow。
+
+若清單仍對不上，再改：
 
 | `config.json` 的位置 | 說明 |
 |---|---|
-| `comfy.ckpt` | 底模檔名，要跟 ComfyUI 選單裡的字**一模一樣** |
+| `comfy.ckpt` | 內建 workflow 的預設底模檔名，要跟 ComfyUI 選單裡的字**一模一樣** |
 | `paths.loraRoot` | LoRA 收藏根目錄。**留空的話會改問 ComfyUI**，見下面 |
 
 ### LoRA 清單：三種設定深度
@@ -156,9 +158,20 @@ cp config.example.json config.json
 
 換句話說**兩個都不填也能用**。清單為什麼是空的、或為什麼沒有預覽圖，畫面上會直接講。
 
-`comfy.checkpointDir` 沒填 → 「換底模」清單是空的，生圖本身不受影響。開機時也會印出來。
+`comfy.checkpointDir` 沒填 → 底模預覽圖沒有，清單仍問 ComfyUI。生圖本身不受影響。
 
-其他常用的：`comfy.api`（ComfyUI 位置）、`comfy.checkpointDir`（給「換底模」清單用，留空就不列）、
+### 用自己的 ComfyUI workflow
+
+預設仍是專案內建的 Illustrious 流程。要改用自己的圖：
+
+1. 在 ComfyUI 用 **檔案 → 匯出工作流 (API)**（不是一般 Save）。
+2. 點狀態列的 Comfy 指示燈或「工作流」，把 JSON 拖進面板（或選檔）。
+3. 指定 Positive Prompt 要寫進哪個 node / input。其餘欄位預設 Keep workflow value。
+4. Generate 只改 mapping 指定的欄位，原始 JSON 不會被改。
+
+一般 ComfyUI workflow（有 `nodes` / `links`）會被拒絕並提示改匯出 API 格式。複雜圖（ControlNet、upscale、custom nodes）只要不刪 node，都可以只注入 prompt。
+
+其他常用的：`comfy.api`（ComfyUI 位置，畫面也可以改）、`comfy.checkpointDir`（只給底模預覽圖）、
 `server.port` / `server.host` / `server.allowNet`、`paths.webDir`（版面 `web`／`web1`／`web2`／`web3`）、
 `client.streamIdleMs`（Comfy 靜默多久就放棄該張；**慢顯卡例如 AMD ROCm 建議調大**，見〈跑到一半自己停〉）。
 

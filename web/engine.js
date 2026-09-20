@@ -6535,7 +6535,7 @@ export function stepTagWeight(weight, dir) {
 // 因為這個判斷散在兩個函式裡、沒有一個地方需要把清單寫完整。
 //
 // 抽到這裡來的用意就是「有一個地方需要寫完整」：欄位少一個，測試會紅。
-export const JOB_CARD_FIELDS = ["positive", "loras", "ckpt", "rating"];
+export const JOB_CARD_FIELDS = ["positive", "loras", "ckpt", "rating", "workflowId"];
 
 export function jobFields(card, live) {
   const c = card || {};
@@ -6547,6 +6547,8 @@ export function jobFields(card, live) {
     loras: Array.isArray(c.loras) ? c.loras : Array.isArray(l.loras) ? l.loras : [],
     ckpt: c.ckpt || l.ckpt || "",
     rating: c.rating || l.rating || "explicit",
+    // 空字串是有意義的：那張卡用內建 workflow。沒有這個欄位才退回即時選擇。
+    workflowId: c.workflowId != null ? String(c.workflowId) : String(l.workflowId || ""),
   };
 }
 
