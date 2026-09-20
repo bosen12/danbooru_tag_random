@@ -310,6 +310,31 @@ for (const [prop, seed] of [
   ok("pinned painting (action) still has a paintbrush", miss === 0, `miss=${miss}/40`);
 }
 
+// 釘室內物件／雨之後活動先填。戶外專屬活動（騎馬／足球／游泳）過關，
+// 場地格被 INDOOR_PROP 擋住 outdoors，就空場。雨則擋住室內房間，煮飯／洗澡
+// 過關同樣空場。實測 candle／desk／nightstand／rain 各 8～16/80 沒場地。
+for (const [prop, heat, era, seed] of [
+  ["nightstand", "tease", "modern", 991000],
+  ["desk", "tease", "modern", 991080],
+  ["candle", "tease", "modern", 991160],
+  ["rain", "tease", "modern", 991240],
+]) {
+  const rows = samples({ pin: prop, heat, era, seed });
+  const miss = rows.filter((tags) => tags.has(prop) && !placeOf(tags)).length;
+  ok(`pinned ${prop} still gets a place`, miss === 0, `noPlace=${miss}/40`);
+}
+{
+  const s = sceneSettings("tease");
+  let pin = applyPin(lex, new Set(), new Set(), "nightstand").pinned;
+  pin = applyPin(lex, pin, new Set(), "soccer").pinned;
+  let kept = 0;
+  for (let i = 0; i < 20; i += 1) {
+    const tags = tagsOf(drawOne(lex, s, pin, new Set(), mulberry32(991320 + i), 991320 + i));
+    if (tags.has("nightstand") && tags.has("soccer")) kept += 1;
+  }
+  ok("dual-pin nightstand + soccer still keeps both", kept === 20, `kept=${kept}/20`);
+}
+
 if (failed) {
   console.error(`\n${failed} scene/place contract test(s) failed`);
   process.exit(1);

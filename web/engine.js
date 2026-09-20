@@ -3001,6 +3001,45 @@ function jobHasSleepPlace(job, era, lex) {
   return false;
 }
 
+// 活動在這個時代有沒有室內／室外場地。釘了室內物件之後 outdoors 被擋，
+// 只剩室外場地的活動（騎馬、足球、游泳）會把場地格抽空；釘了雨之後
+// 室內房間被擋，只剩室內場地的活動（煮飯、打掃、洗澡）同一種空場。
+function placeCountsIndoor(place, lex) {
+  if (INDOOR_ROOM.has(place)) return true;
+  const it = lex.byTag.get(place);
+  return !!(it && (it.implies || []).includes("indoors"));
+}
+
+function placeCountsOutdoor(place, lex) {
+  const it = lex.byTag.get(place);
+  if (!it) return false;
+  if ((it.implies || []).includes("outdoors")) return true;
+  if (INDOOR_ROOM.has(place) || (it.implies || []).includes("indoors")) return false;
+  return true;
+}
+
+function actHasIndoorPlace(act, era, lex) {
+  const set = ACT_PLACE[act];
+  if (!set) return false;
+  for (const p of set) {
+    if (!placeCountsIndoor(p, lex)) continue;
+    const it = lex.byTag.get(p);
+    if (it && eraOk(it, era)) return true;
+  }
+  return false;
+}
+
+function actHasOutdoorPlace(act, era, lex) {
+  const set = ACT_PLACE[act];
+  if (!set) return false;
+  for (const p of set) {
+    if (!placeCountsOutdoor(p, lex)) continue;
+    const it = lex.byTag.get(p);
+    if (it && eraOk(it, era)) return true;
+  }
+  return false;
+}
+
 function eraSpecific(item, era) {
   const eras = item.era;
   return Array.isArray(eras) && eras.length && !eras.includes("any") && eras.includes(era);
@@ -4873,6 +4912,16 @@ export function drawOne(lex, settings, pinned, userBanned, rand, seed) {
         const listed = [...usedJobs(used, lex)].filter((j) => JOB_PLACE[j]);
         if (listed.length > 0 && listed.every((j) => !jobHasSleepPlace(j, era, lex))) return false;
       }
+      if (item.mutex === "activity" && !pinned.has(item.tag)) {
+        const indoorFix = [...used].some((t) => INDOOR_PROP.has(t) || INDOOR_FURN.has(t));
+        const outdoorWx =
+          [...used].some((t) => OUTDOOR_WEATHER.has(t)) && !used.has("outdoors");
+        if (indoorFix || outdoorWx) {
+          if (!ACT_PLACE[item.tag]) return false;
+          if (indoorFix && !actHasIndoorPlace(item.tag, era, lex)) return false;
+          if (outdoorWx && !actHasOutdoorPlace(item.tag, era, lex)) return false;
+        }
+      }
       const acts = usedActs(used, lex);
       const places = usedPlaces(used, lex);
       const real = realisticOn(settings);
@@ -4919,6 +4968,7 @@ export function drawOne(lex, settings, pinned, userBanned, rand, seed) {
         if (
           (places.size > 0 && !currentPlaceWorks) ||
           (used.has("outdoors") && !used.has("indoors")) ||
+          ([...used].some((t) => OUTDOOR_WEATHER.has(t)) && !used.has("outdoors")) ||
           (!places.size && !canStillPickIndoorPlace)
         ) {
           return false;
