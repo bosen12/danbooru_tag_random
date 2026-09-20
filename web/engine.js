@@ -1009,7 +1009,7 @@ const INDOOR_ROOM = new Set([
   "school gym",
 ]);
 const INDOOR_PROP = new Set([
-  "shoji",
+  "shouji",
   "carpet",
   "curtains",
   "bed sheet",
@@ -1040,6 +1040,19 @@ const INDOOR_PROP = new Set([
   "piano",
   "clock",
   "birdcage",
+  // 書桌。不在這張表時，釘 desk 場地後填，18/40 張跑去公園／球場。
+  // 鏡子不加：mirror selfie 在公園靠 implies mirror，加進去會把戶外鏡自拍掐死。
+  // 桌子／櫃檯／置物櫃不加：野餐、攤位、海灘置物櫃是合法戶外。
+  "desk",
+  // 床頭櫃／洗手台／白板／牌桌／檯燈：釘了之後 in_out 後填，17～25/40 張
+  // 跑去公園／泳池。lamp 已在表裡，desk lamp 是同一類實體燈具。
+  // 詞庫鍵是 shouji 不是 shoji（舊鍵是死字）。fusuma 是襖，跟紙拉門一樣不能擺戶外。
+  "nightstand",
+  "sink",
+  "whiteboard",
+  "poker table",
+  "desk lamp",
+  "fusuma",
 ]);
 const SPORT_PLACE = new Set([
   "fitness gym",
@@ -1103,7 +1116,7 @@ const FISH_PLACE = new Set(["beach", "ocean", "poolside", "pool"]);
 // 仍會把現代的煮飯換成廚房，所以現代的測試一個字都不會變。不把 courtyard
 // 再加進女僕場地：那會讓女僕去運動，見 JOB_PLACE.maid。
 const COOK_PLACE = new Set(["kitchen", "castle", "palace", "courtyard", "ryokan"]);
-const INDOOR_FURN = new Set(["on bed", "on chair", "office chair", "gaming chair", "swivel chair", "bunk bed"]);
+const INDOOR_FURN = new Set(["on bed", "on chair", "office chair", "gaming chair", "swivel chair", "bunk bed", "on couch", "on desk"]);
 // 能坐下來讀書寫字的地方。原本這三組只列了現代的房間，而正常模式下
 // 「有 ACT_PLACE 表的活動必須把場地列進去」—— 沒被列到的場地等於做不了那件事。
 // 結果是 130 個場地裡有 39 個只配得到一個活動（carrying），73 個配不到 4 個：
@@ -1273,12 +1286,20 @@ const ACT_PROP = {
   smoking: ["kiseru", "smoking pipe", "cigar", "cigarette"],
   cooking: ["frying pan", "ladle"],
   shopping: ["shopping bag"],
+  driving: ["steering wheel"],
+  "riding bicycle": ["bicycle"],
   cleaning: ["broom", "mop", "bucket"],
   fishing: ["fishing rod"],
   "playing video games": ["game controller"],
   "painting (action)": ["paintbrush"],
+  // 跟 writing 同一組筆，由 eraOk 篩。不蓋 paintbrush：那是繪畫的身份。
+  // 實測釘 drawing (action) 40/40 沒有鉛筆／原子筆。
+  "drawing (action)": ["calligraphy brush", "quill", "pen", "pencil"],
   karaoke: ["microphone"],
   singing: ["microphone"],
+  // 直播蓋手機，不蓋麥克風：麥克風是唱歌／卡拉 OK 的身份。cellphone 沒有
+  // NEEDS_CONTEXT，stamp 後不會被剝。實測釘 livestream 40/40 沒道具。
+  livestream: ["cellphone"],
 };
 const JOB_PLACE = {
   "office lady": new Set(["office"]),
@@ -2980,6 +3001,45 @@ function jobHasSleepPlace(job, era, lex) {
   return false;
 }
 
+// 活動在這個時代有沒有室內／室外場地。釘了室內物件之後 outdoors 被擋，
+// 只剩室外場地的活動（騎馬、足球、游泳）會把場地格抽空；釘了雨之後
+// 室內房間被擋，只剩室內場地的活動（煮飯、打掃、洗澡）同一種空場。
+function placeCountsIndoor(place, lex) {
+  if (INDOOR_ROOM.has(place)) return true;
+  const it = lex.byTag.get(place);
+  return !!(it && (it.implies || []).includes("indoors"));
+}
+
+function placeCountsOutdoor(place, lex) {
+  const it = lex.byTag.get(place);
+  if (!it) return false;
+  if ((it.implies || []).includes("outdoors")) return true;
+  if (INDOOR_ROOM.has(place) || (it.implies || []).includes("indoors")) return false;
+  return true;
+}
+
+function actHasIndoorPlace(act, era, lex) {
+  const set = ACT_PLACE[act];
+  if (!set) return false;
+  for (const p of set) {
+    if (!placeCountsIndoor(p, lex)) continue;
+    const it = lex.byTag.get(p);
+    if (it && eraOk(it, era)) return true;
+  }
+  return false;
+}
+
+function actHasOutdoorPlace(act, era, lex) {
+  const set = ACT_PLACE[act];
+  if (!set) return false;
+  for (const p of set) {
+    if (!placeCountsOutdoor(p, lex)) continue;
+    const it = lex.byTag.get(p);
+    if (it && eraOk(it, era)) return true;
+  }
+  return false;
+}
+
 function eraSpecific(item, era) {
   const eras = item.era;
   return Array.isArray(eras) && eras.length && !eras.includes("any") && eras.includes(era);
@@ -4470,6 +4530,17 @@ export function drawOne(lex, settings, pinned, userBanned, rand, seed) {
       if (n >= 3) return false;
     }
     if (OUTDOOR_WEATHER.has(item.tag) && used.has("indoors") && !used.has("outdoors")) return false;
+    // 反向。雪／櫻花在 OUTDOOR_LEFTOVER 裡，釘了不會進室內；雨／霧／陰天不在，
+    // 也不 implies outdoors。釘雨時場地還沒填，客廳照收（實測 20～27/40 indoors）。
+    if (
+      [...used].some((t) => OUTDOOR_WEATHER.has(t)) &&
+      !used.has("outdoors") &&
+      (item.tag === "indoors" ||
+        (item.implies || []).includes("indoors") ||
+        INDOOR_ROOM.has(item.tag))
+    ) {
+      return false;
+    }
     if (item.tag === "wading" && (used.has("legs up") || used.has("m legs"))) return false;
     if ((item.tag === "legs up" || item.tag === "m legs") && used.has("wading")) return false;
     if (
@@ -4746,6 +4817,14 @@ export function drawOne(lex, settings, pinned, userBanned, rand, seed) {
         if (used.has("outdoors")) return false;
         if ([...used].some((t) => UPRIGHT_BODY.has(t))) return false;
       }
+      // 釘沙發／床時姿勢還沒填。standing → 傢俱已擋，反向沒擋，實測釘沙發
+      // 6/40 張站著。on chair 另有雙向規則。on desk 站著合理，不擋。
+      if (
+        UPRIGHT_BODY.has(item.tag) &&
+        (used.has("on bed") || used.has("on couch") || used.has("bunk bed") || used.has("under table"))
+      ) {
+        return false;
+      }
       if (HANDS_BUSY_BODY.has(item.tag) && [...used].some((t) => ARM_POSE.has(t))) return false;
       if (HANDS_BUSY_ACT.has(item.tag) && [...used].some((t) => HANDS_BUSY_BODY.has(t))) return false;
       if (HANDS_BUSY_ACT.has(item.tag) && [...used].some((t) => HANDS_BUSY_ACT.has(t))) return false;
@@ -4833,6 +4912,16 @@ export function drawOne(lex, settings, pinned, userBanned, rand, seed) {
         const listed = [...usedJobs(used, lex)].filter((j) => JOB_PLACE[j]);
         if (listed.length > 0 && listed.every((j) => !jobHasSleepPlace(j, era, lex))) return false;
       }
+      if (item.mutex === "activity" && !pinned.has(item.tag)) {
+        const indoorFix = [...used].some((t) => INDOOR_PROP.has(t) || INDOOR_FURN.has(t));
+        const outdoorWx =
+          [...used].some((t) => OUTDOOR_WEATHER.has(t)) && !used.has("outdoors");
+        if (indoorFix || outdoorWx) {
+          if (!ACT_PLACE[item.tag]) return false;
+          if (indoorFix && !actHasIndoorPlace(item.tag, era, lex)) return false;
+          if (outdoorWx && !actHasOutdoorPlace(item.tag, era, lex)) return false;
+        }
+      }
       const acts = usedActs(used, lex);
       const places = usedPlaces(used, lex);
       const real = realisticOn(settings);
@@ -4879,6 +4968,7 @@ export function drawOne(lex, settings, pinned, userBanned, rand, seed) {
         if (
           (places.size > 0 && !currentPlaceWorks) ||
           (used.has("outdoors") && !used.has("indoors")) ||
+          ([...used].some((t) => OUTDOOR_WEATHER.has(t)) && !used.has("outdoors")) ||
           (!places.size && !canStillPickIndoorPlace)
         ) {
           return false;
@@ -4892,8 +4982,16 @@ export function drawOne(lex, settings, pinned, userBanned, rand, seed) {
         return false;
       }
       if (used.has("outdoors") && INDOOR_PROP.has(item.tag)) return false;
-      if (used.has("outdoors") && item.tag === "on bed") return false;
-      if (used.has("outdoors") && item.tag === "bunk bed") return false;
+      // 釘 on bed 時場地／in_out 還沒填。outdoors → 床已擋，反向沒擋，
+      // 實測釘床／椅／沙發 15～20/40 張自動 outdoors。bunk bed 本來就雙向。
+      if (used.has("outdoors") && INDOOR_FURN.has(item.tag)) return false;
+      if (item.tag === "outdoors" && [...used].some((t) => INDOOR_FURN.has(t))) return false;
+      if (
+        (item.implies || []).includes("outdoors") &&
+        [...used].some((t) => INDOOR_FURN.has(t))
+      ) {
+        return false;
+      }
       if (used.has("indoors") && item.tag === "starry sky") return false;
       if (
         INDOOR_FURN.has(item.tag) &&
