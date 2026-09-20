@@ -27934,50 +27934,6 @@
       "zh": "正太"
     },
     {
-      "tag": "soft breasts",
-      "section": "feature",
-      "gate": "female",
-      "heat": [
-        "tease",
-        "flash",
-        "sex"
-      ],
-      "mutex": null,
-      "bind": [],
-      "implies": [],
-      "layer": "normal",
-      "era": [
-        "any"
-      ],
-      "group": "body_f",
-      "needs": [
-        "female"
-      ],
-      "zh": "柔軟胸"
-    },
-    {
-      "tag": "natural breasts",
-      "section": "feature",
-      "gate": "female",
-      "heat": [
-        "tease",
-        "flash",
-        "sex"
-      ],
-      "mutex": null,
-      "bind": [],
-      "implies": [],
-      "layer": "normal",
-      "era": [
-        "any"
-      ],
-      "group": "body_f",
-      "needs": [
-        "female"
-      ],
-      "zh": "自然胸"
-    },
-    {
       "tag": "cel shading",
       "section": "quality",
       "gate": "any",

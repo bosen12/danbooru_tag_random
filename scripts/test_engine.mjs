@@ -430,8 +430,10 @@ function eraDraws(era, n = 60, seed0 = 9000) {
   ok("girl-only draws female clothing", femCloth > 0, `femCloth=${femCloth}`);
   ok("girl-only draws female features", femFeat > 0, `femFeat=${femFeat}`);
   ok("girl-only can draw breasts", breasts > 0, `breasts=${breasts}`);
-  eq("girl-only always has soft breasts", soft, 50);
-  eq("girl-only always has natural breasts", natural, 50);
+  eq("girl-only never emits non-Danbooru soft breasts", soft, 0);
+  eq("girl-only never emits non-Danbooru natural breasts", natural, 0);
+  ok("soft breasts is absent from lexicon", !lex.byTag.has("soft breasts"));
+  ok("natural breasts is absent from lexicon", !lex.byTag.has("natural breasts"));
 }
 
 {
@@ -455,25 +457,6 @@ function eraDraws(era, n = 60, seed0 = 9000) {
   eq("boy-only sets male flag", maleFlag, 40);
   ok("boy-only draws male features", maleFeat > 0, `maleFeat=${maleFeat}`);
   eq("boy-only has no breast feel tags", breastFeel, 0);
-}
-
-{
-  const s = settings();
-  s.girl = true;
-  s.boy = false;
-  s.eras = ["modern"];
-  const d = drawOne(lex, s, new Set(), new Set(["soft breasts"]), mulberry32(14000), 14000);
-  const have = tagsOf(d);
-  ok("ban soft breasts is respected", !have.has("soft breasts") && have.has("natural breasts"));
-  const parts = d.positive.split(", ").map((t) => t.trim());
-  const sizeAt = parts.findIndex((t) => lex.byTag.get(t)?.mutex === "breast_size");
-  const softAt = parts.indexOf("soft breasts");
-  const natAt = parts.indexOf("natural breasts");
-  ok(
-    "breast feel sits after breast size",
-    sizeAt < 0 || (natAt > sizeAt && (softAt < 0 || softAt > sizeAt)),
-    `size@${sizeAt} soft@${softAt} natural@${natAt}`
-  );
 }
 
 {
@@ -4190,6 +4173,24 @@ function indoorOutdoorClash(have) {
     }
     eq("tease+pin detective always has a place", teasePinJobPlaceMiss("detective", "modern", 940000), 0);
     eq("tease+pin policewoman always has a place", teasePinJobPlaceMiss("policewoman", "modern", 940080), 0);
+    {
+      // 刪掉兩個自創胸型詞後，候選池位移曾讓這顆 seed 抽到
+      // detective + taking picture + breasts on table：前兩者只交集 street，
+      // 後者又強制室內，最後整張圖沒有任何 place。自動特徵必須讓場景骨架優先。
+      const st = {
+        ...s,
+        eras: ["modern"],
+        heats: ["tease"],
+        weights: { activity: 0, tease: 1, flash: 0, sex: 0 },
+      };
+      const pin = applyPin(lex, new Set(), new Set(), "detective").pinned;
+      const h = tagsOf(drawOne(lex, st, pin, new Set(), mulberry32(940014), 940014));
+      const places = [...h].filter((t) => {
+        const it = lex.byTag.get(t);
+        return it && (it.mutex === "place" || it.group === "place");
+      });
+      ok("detective photo seed keeps a real place", places.length > 0, `places=${places}`);
+    }
     const flashS = { ...s, heats: ["flash"], weights: { activity: 0, tease: 0, flash: 1, sex: 0 }, eras: ["victorian"] };
     let flashSleep = 0;
     for (let i = 0; i < 40; i++) {
@@ -5252,7 +5253,10 @@ function indoorOutdoorClash(have) {
     // 候選池變大 13%，牌序整條位移，所以這次差異很大 —— 不是哪條規則變鬆。
     // 新的這一張自洽：bathtub + indoors + nude + female masturbation 說得通，
     // 而且裡面就有兩個這次新加的字（nervous smile、surreal），正好是這次改動的示範。
-    "1girl, solo, very short hair, aqua eyes, blue hair, straight hair, huge breasts, soft breasts, natural breasts, dark-skinned female, dark skin, inverted nipples, long eyelashes, lingerie, white bra, bra, red panties, panties, puffy sleeves, black jacket, jacket, fingering, indian style, wide shot, looking back, pout, parted lips, love hotel, indoors, night, lamp, reflection, bokeh, nsfw, explicit, masterpiece, best quality, amazing quality");
+    // 第十五次：移除不是 Danbooru tag 的 soft breasts / natural breasts。
+    // 候選池縮小會讓同一串 RNG 映射到不同候選；新結果仍有完整人物、動作、場景與光線，
+    // 且固定快照依然逐字驗證，避免後續變更悄悄改掉 seed 42。
+    "1girl, solo, very short hair, aqua eyes, blue hair, straight hair, huge breasts, mature female, hair between eyes, blush, bathrobe, masturbation, standing, cowboy shot, looking around, sad, rolling eyes, onsen, indoors, steam, sunrise, backlighting, stained glass, nsfw, explicit, masterpiece, best quality, amazing quality");
   ok("drawOne exposes shadow diagnostics", Array.isArray(shadowIntegrationDraw.shadowViolations));
 
   const eatProneShadow = validateSupportShadow({

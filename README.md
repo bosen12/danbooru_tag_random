@@ -457,7 +457,7 @@ node scripts/audit_tag_reachability.mjs 300
 - 釘選的一定優先留
 - 只有一個人時會帶 `solo`；兩個人以上不會帶 `solo`
 - 女用 tag（巨乳、比基尼）只在有女人時抽；男用 tag 只在有男人時抽
-- 有女人時，胸型後面固定帶 `soft breasts`、`natural breasts`（詞庫關掉的除外）
+- 胸部尺寸與外觀只使用詞庫中已驗證的 Danbooru tag，不額外注入自創胸型詞
 - 需要兩人的（接吻、體位）在單人圖不會抽
 
 ---

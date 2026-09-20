@@ -304,6 +304,14 @@ function ok(name, rows) {
     ["clean lines", "lineart", 16665],
   ];
 
+  // 兩者在 Danbooru 都沒有 tag、wiki、alias 或貼文；也不屬於 WAI 官方的
+  // 品質／年代／分級模型字彙。它們不應靠例外白名單繞過完整詞庫驗證。
+  const inventedBreastTags = ["soft breasts", "natural breasts"];
+  ok(
+    "非 Danbooru 胸型詞沒有留在詞庫",
+    inventedBreastTags.filter((tag) => by.has(tag))
+  );
+
   // 第二批（同一天）：這六個**曾經是真的 tag**，有過大量圖，是 2022～2023 年
   // 被 Danbooru 停用並改標的 —— 也就是模型 2024 年的訓練快照裡它們已經是 0 張，
   // 學到的是右欄那些替代字。判準是**停用時間 vs 訓練截止**，不是現在幾張：

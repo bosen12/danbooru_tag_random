@@ -1639,25 +1639,6 @@ def extra_job_scene_tags() -> list[dict]:
     ]
 
 
-def extra_breast_feel_tags() -> list[dict]:
-    """Always-on breast feel. No mutex so they sit beside breast_size."""
-    return [
-        {
-            "tag": tag,
-            "section": "feature",
-            "gate": "female",
-            "heat": list(HEATS),
-            "mutex": None,
-            "bind": [],
-            "implies": [],
-            "layer": "normal",
-            "era": ["any"],
-            "needs": ["female"],
-        }
-        for tag in ("soft breasts", "natural breasts")
-    ]
-
-
 def extra_shot_face_tags() -> list[dict]:
     """More camera framings, gaze, and expressions. Camera/gaze still one each."""
     all_h = list(HEATS)
@@ -2352,7 +2333,6 @@ def main() -> None:
     rows.extend(extra_corpus_tags())
     rows.extend(extra_loli_tags())
     rows.extend(extra_shota_tags())
-    rows.extend(extra_breast_feel_tags())
     rows.extend(extra_style_tags())
     rows.extend(extra_quality_boost_tags())
 

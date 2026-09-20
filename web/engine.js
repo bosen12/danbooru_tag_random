@@ -644,8 +644,6 @@ const SFW_EXTRA = new Set([
   // 語意上也確實是「性感取向」而不是中性 —— 往上挪一層到敏感。
   "biting own lip",      // 3.1x
   "legs up",             // 3.2x
-  "soft breasts",
-  "natural breasts",
   "thigh gap",
   "mole on breast",
   "wet shirt",
@@ -4854,6 +4852,39 @@ export function drawOne(lex, settings, pinned, userBanned, rand, seed) {
         }
       }
       if (
+        (item.tag === "breasts on table" || item.tag === "breasts on glass") &&
+        !pinned.has(item.tag)
+      ) {
+        // 這兩個構圖會把後續場地限制為室內。若場上的職業／活動只剩戶外交集，
+        // 先收下它們會讓 place 池變空（例如 detective + taking picture 只交集 street）。
+        // 自動特徵應讓路；使用者明確釘選仍由上面的 pinned 例外保留。
+        const jobs = usedJobs(used, lex);
+        const acts = usedActs(used, lex);
+        const places = usedPlaces(used, lex);
+        const currentPlaceWorks =
+          places.size > 0 && [...places].some((place) => INDOOR_ROOM.has(place));
+        const canStillPickIndoorPlace = lex.bySection.env.some(
+          (candidate) =>
+            (candidate.mutex === "place" || candidate.group === "place") &&
+            INDOOR_ROOM.has(candidate.tag) &&
+            !banned.has(candidate.tag) &&
+            eraOk(candidate, era) &&
+            heatOk(candidate, heat) &&
+            gateOk(candidate, female, male) &&
+            placeFitsActs(candidate.tag, acts, realisticOn(settings)) &&
+            placeFitsJob(candidate.tag, jobs, used) &&
+            sportPlaceOk(candidate, used) &&
+            sportGearPlaceOk(candidate, used, lex)
+        );
+        if (
+          (places.size > 0 && !currentPlaceWorks) ||
+          (used.has("outdoors") && !used.has("indoors")) ||
+          (!places.size && !canStillPickIndoorPlace)
+        ) {
+          return false;
+        }
+      }
+      if (
         (used.has("breasts on table") || used.has("breasts on glass")) &&
         (item.mutex === "place" || item.group === "place") &&
         !INDOOR_ROOM.has(item.tag)
@@ -6140,17 +6171,6 @@ export function drawOne(lex, settings, pinned, userBanned, rand, seed) {
       bucket[item.section].push(tag);
     }
   }
-  if (female && !sfw) {
-    const feel = ["soft breasts", "natural breasts"];
-    const after = feature.findLastIndex((t) => lex.byTag.get(t)?.mutex === "breast_size");
-    let at = after >= 0 ? after + 1 : feature.length;
-    for (const t of feel) {
-      if (userBanned.has(t) || feature.includes(t)) continue;
-      feature.splice(at, 0, t);
-      at += 1;
-    }
-  }
-
   // 尾巴就是滑桿選的那一級。選色情就寫 nsfw, explicit。
   //
   // 這裡曾經是「照實際抽到的內容推一級出來，滑桿只當上限」，動機是實測到

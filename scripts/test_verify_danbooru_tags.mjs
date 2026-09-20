@@ -292,6 +292,12 @@ eq("createdYear 壞格式", createdYear("not-a-date"), null);
     ok(`白名單含分級 ${t}`, MODEL_VOCAB.has(t));
   }
 
+  // 這兩個從未是 Danbooru tag，也不是 WAI 官方品質／分級 token。
+  // 若放回例外白名單，完整詞庫驗證就無法阻止它們重新混入 prompt。
+  for (const t of ["soft breasts", "natural breasts"]) {
+    ok(`非 Danbooru 胸型詞不在模型白名單 ${t}`, !MODEL_VOCAB.has(t));
+  }
+
   // 真的 Danbooru tag 不可以混進白名單 —— 它們要照常驗
   for (const t of ["censored", "lowres", "jpeg artifacts", "blurry", "bad anatomy", "artist name"]) {
     ok(`白名單不收真 Danbooru tag ${t}`, !MODEL_VOCAB.has(t));

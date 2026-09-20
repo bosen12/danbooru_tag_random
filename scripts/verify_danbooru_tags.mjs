@@ -66,13 +66,7 @@ export const MODEL_VOCAB = new Set([
   // 分級
   "safe", "sfw", "nsfw", "general", "sensitive", "questionable", "explicit",
 
-  // --- 以下四個是 2026-09-18 跑完 `--all` 之後裁決的（詳見討論區）------------
-  //
-  // soft breasts／natural breasts：Danbooru 0 張，實測出現在 92% 的圖裡
-  // （女性、非全年齡時由 drawOne() 插在胸圍字後面）。專案主 2026-09-18 裁決保留：
-  // 它們是 SD／Illustrious 提示詞的常見字彙，而文字編碼器懂英文詞義、
-  // 不是只靠 Danbooru 的標註分布；當初加它們就是為了擋「不自然／假體」的胸型。
-  "soft breasts", "natural breasts",
+  // --- 以下兩類是 2026-09-18 跑完 `--all` 之後裁決的（詳見討論區）------------
   //
   // hairpin：它的 alias（hairpin -> hairclip）建立於 2026-05-30，**晚於**模型訓練，
   // 所以舊名要留著。test_lexicon_integrity.mjs 已經有一條專門守這件事，
@@ -380,8 +374,7 @@ function promptVocab() {
  *
  * 舊註解寫著「那批 post_count 0 的字裁決完之後應該改成預設」。2026-09-18 裁決完了：
  *   - 移除 21 個（14 個從來沒有圖的，6 個 2022～23 就停用改標的，加上 adult）
- *   - 保留 10 個並在 MODEL_VOCAB 裡各自寫下理由（soft/natural breasts 是
- *     專案主裁決、hairpin 與七個 deprecated 的停用日期晚於模型訓練）
+ *   - 保留 hairpin 與七個 deprecated 舊名；它們的 alias／停用日期晚於模型訓練
  *   - 拿掉現代的時代錨（modern 在 Danbooru 是 artist 分類、0 張）
  *   - adult 也是 0 張，而它唯一的作用是「跟 shota 互斥」，也就是靠一個死字
  *     繞一圈讓 shota 抽不到。那條規則已改寫成直接的「shota 不進自動抽牌」，
