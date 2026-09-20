@@ -1009,7 +1009,7 @@ const INDOOR_ROOM = new Set([
   "school gym",
 ]);
 const INDOOR_PROP = new Set([
-  "shoji",
+  "shouji",
   "carpet",
   "curtains",
   "bed sheet",
@@ -1042,7 +1042,17 @@ const INDOOR_PROP = new Set([
   "birdcage",
   // 書桌。不在這張表時，釘 desk 場地後填，18/40 張跑去公園／球場。
   // 鏡子不加：mirror selfie 在公園靠 implies mirror，加進去會把戶外鏡自拍掐死。
+  // 桌子／櫃檯／置物櫃不加：野餐、攤位、海灘置物櫃是合法戶外。
   "desk",
+  // 床頭櫃／洗手台／白板／牌桌／檯燈：釘了之後 in_out 後填，17～25/40 張
+  // 跑去公園／泳池。lamp 已在表裡，desk lamp 是同一類實體燈具。
+  // 詞庫鍵是 shouji 不是 shoji（舊鍵是死字）。fusuma 是襖，跟紙拉門一樣不能擺戶外。
+  "nightstand",
+  "sink",
+  "whiteboard",
+  "poker table",
+  "desk lamp",
+  "fusuma",
 ]);
 const SPORT_PLACE = new Set([
   "fitness gym",
@@ -1106,7 +1116,7 @@ const FISH_PLACE = new Set(["beach", "ocean", "poolside", "pool"]);
 // 仍會把現代的煮飯換成廚房，所以現代的測試一個字都不會變。不把 courtyard
 // 再加進女僕場地：那會讓女僕去運動，見 JOB_PLACE.maid。
 const COOK_PLACE = new Set(["kitchen", "castle", "palace", "courtyard", "ryokan"]);
-const INDOOR_FURN = new Set(["on bed", "on chair", "office chair", "gaming chair", "swivel chair", "bunk bed", "on couch"]);
+const INDOOR_FURN = new Set(["on bed", "on chair", "office chair", "gaming chair", "swivel chair", "bunk bed", "on couch", "on desk"]);
 // 能坐下來讀書寫字的地方。原本這三組只列了現代的房間，而正常模式下
 // 「有 ACT_PLACE 表的活動必須把場地列進去」—— 沒被列到的場地等於做不了那件事。
 // 結果是 130 個場地裡有 39 個只配得到一個活動（carrying），73 個配不到 4 個：
@@ -1282,6 +1292,9 @@ const ACT_PROP = {
   fishing: ["fishing rod"],
   "playing video games": ["game controller"],
   "painting (action)": ["paintbrush"],
+  // 跟 writing 同一組筆，由 eraOk 篩。不蓋 paintbrush：那是繪畫的身份。
+  // 實測釘 drawing (action) 40/40 沒有鉛筆／原子筆。
+  "drawing (action)": ["calligraphy brush", "quill", "pen", "pencil"],
   karaoke: ["microphone"],
   singing: ["microphone"],
   // 直播蓋手機，不蓋麥克風：麥克風是唱歌／卡拉 OK 的身份。cellphone 沒有

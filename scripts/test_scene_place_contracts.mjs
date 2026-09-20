@@ -238,6 +238,78 @@ for (const [w, seed] of [
   ok("pinned karaoke still has a microphone", miss === 0, `miss=${miss}/40`);
 }
 
+// 床頭櫃／洗手台／白板／牌桌／檯燈都是搬不出去的室內物件，卻不在 INDOOR_PROP。
+// 釘了之後 in_out 後填，實測 17～25/40 張自動 outdoors。鏡子／桌子／櫃子不加：
+// 公園鏡自拍、野餐桌、攤位櫃檯、海灘置物櫃都是合法戶外。
+for (const [prop, seed] of [
+  ["nightstand", 990000],
+  ["sink", 990080],
+  ["whiteboard", 990160],
+  ["poker table", 990240],
+  ["desk lamp", 990320],
+]) {
+  const rows = samples({ pin: prop, heat: "tease", seed });
+  const out = rows.filter((tags) => tags.has(prop) && tags.has("outdoors")).length;
+  ok(`pinned ${prop} never auto outdoors`, out === 0, `outdoors=${out}/40`);
+}
+{
+  const s = sceneSettings("tease");
+  let pin = applyPin(lex, new Set(), new Set(), "nightstand").pinned;
+  pin = applyPin(lex, pin, new Set(), "park").pinned;
+  let kept = 0;
+  for (let i = 0; i < 20; i += 1) {
+    const tags = tagsOf(drawOne(lex, s, pin, new Set(), mulberry32(990400 + i), 990400 + i));
+    if (tags.has("nightstand") && tags.has("park")) kept += 1;
+  }
+  ok("dual-pin nightstand + park still keeps both", kept === 20, `kept=${kept}/20`);
+}
+
+// on desk 是傢俱格，跟 on couch 同一類填序洞：釘了之後 outdoors 後填。
+// under table 不加進 INDOOR_FURN：野餐桌底下是合法戶外。
+{
+  const rows = samples({ pin: "on desk", heat: "tease", seed: 990480 });
+  const out = rows.filter((tags) => tags.has("on desk") && tags.has("outdoors")).length;
+  ok("pinned on desk never auto outdoors", out === 0, `outdoors=${out}/40`);
+}
+{
+  const s = sceneSettings("tease");
+  let pin = applyPin(lex, new Set(), new Set(), "on desk").pinned;
+  pin = applyPin(lex, pin, new Set(), "street").pinned;
+  let kept = 0;
+  for (let i = 0; i < 20; i += 1) {
+    const tags = tagsOf(drawOne(lex, s, pin, new Set(), mulberry32(990560 + i), 990560 + i));
+    if (tags.has("on desk") && tags.has("street")) kept += 1;
+  }
+  ok("dual-pin on desk + street still keeps both", kept === 20, `kept=${kept}/20`);
+}
+
+// 詞庫是 shouji／fusuma，INDOOR_PROP 舊鍵 shoji 是死字。江戶紙拉門／襖釘了
+// 不該自動 outdoors。
+for (const [prop, seed] of [
+  ["shouji", 990640],
+  ["fusuma", 990720],
+]) {
+  const rows = samples({ pin: prop, heat: "tease", era: "edo", seed });
+  const out = rows.filter((tags) => tags.has(prop) && tags.has("outdoors")).length;
+  ok(`pinned ${prop} never auto outdoors`, out === 0, `outdoors=${out}/40`);
+}
+
+// drawing (action) 沒有 ACT_PROP，寫字有筆、畫畫沒有。不蓋 paintbrush：那是
+// painting (action) 的身份。時代篩選跟 writing 同一組。
+{
+  const rows = samples({ pin: "drawing (action)", heat: "activity", seed: 990800 });
+  const tools = ["pencil", "pen", "calligraphy brush", "quill"];
+  const miss = rows.filter(
+    (tags) => tags.has("drawing (action)") && !tools.some((t) => tags.has(t))
+  ).length;
+  ok("pinned drawing (action) always has a writing tool", miss === 0, `miss=${miss}/40`);
+}
+{
+  const rows = samples({ pin: "painting (action)", heat: "activity", seed: 990880 });
+  const miss = rows.filter((tags) => tags.has("painting (action)") && !tags.has("paintbrush")).length;
+  ok("pinned painting (action) still has a paintbrush", miss === 0, `miss=${miss}/40`);
+}
+
 if (failed) {
   console.error(`\n${failed} scene/place contract test(s) failed`);
   process.exit(1);
