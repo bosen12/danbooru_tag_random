@@ -209,6 +209,35 @@ for (const [w, seed] of [
   ok("pinned standing never auto on couch", couch === 0, `on couch=${couch}/40`);
 }
 
+// desk 是書桌，不在 INDOOR_PROP。釘書桌時場地後填，實測 18/40 張 outdoors
+// （公園／球場）。鏡子不加進去：mirror selfie 在公園要靠 implies mirror。
+{
+  const rows = samples({ pin: "desk", heat: "tease", seed: 980000 });
+  const out = rows.filter((tags) => tags.has("desk") && tags.has("outdoors")).length;
+  ok("pinned desk never auto outdoors", out === 0, `outdoors=${out}/40`);
+}
+{
+  const s = sceneSettings("tease");
+  let pin = applyPin(lex, new Set(), new Set(), "desk").pinned;
+  pin = applyPin(lex, pin, new Set(), "street").pinned;
+  let kept = 0;
+  for (let i = 0; i < 20; i += 1) {
+    const tags = tagsOf(drawOne(lex, s, pin, new Set(), mulberry32(980080 + i), 980080 + i));
+    if (tags.has("desk") && tags.has("street")) kept += 1;
+  }
+  ok("dual-pin desk + street still keeps both", kept === 20, `kept=${kept}/20`);
+}
+{
+  const rows = samples({ pin: "livestream", heat: "activity", seed: 980160 });
+  const miss = rows.filter((tags) => tags.has("livestream") && !tags.has("cellphone")).length;
+  ok("pinned livestream always has a cellphone", miss === 0, `miss=${miss}/40`);
+}
+{
+  const rows = samples({ pin: "karaoke", heat: "activity", seed: 980240 });
+  const miss = rows.filter((tags) => tags.has("karaoke") && !tags.has("microphone")).length;
+  ok("pinned karaoke still has a microphone", miss === 0, `miss=${miss}/40`);
+}
+
 if (failed) {
   console.error(`\n${failed} scene/place contract test(s) failed`);
   process.exit(1);

@@ -1040,6 +1040,9 @@ const INDOOR_PROP = new Set([
   "piano",
   "clock",
   "birdcage",
+  // 書桌。不在這張表時，釘 desk 場地後填，18/40 張跑去公園／球場。
+  // 鏡子不加：mirror selfie 在公園靠 implies mirror，加進去會把戶外鏡自拍掐死。
+  "desk",
 ]);
 const SPORT_PLACE = new Set([
   "fitness gym",
@@ -1281,6 +1284,9 @@ const ACT_PROP = {
   "painting (action)": ["paintbrush"],
   karaoke: ["microphone"],
   singing: ["microphone"],
+  // 直播蓋手機，不蓋麥克風：麥克風是唱歌／卡拉 OK 的身份。cellphone 沒有
+  // NEEDS_CONTEXT，stamp 後不會被剝。實測釘 livestream 40/40 沒道具。
+  livestream: ["cellphone"],
 };
 const JOB_PLACE = {
   "office lady": new Set(["office"]),
