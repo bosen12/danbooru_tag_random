@@ -5,6 +5,8 @@ from __future__ import annotations
 import json
 import sys
 import tempfile
+import threading
+import time
 from copy import deepcopy
 from pathlib import Path
 
@@ -325,6 +327,20 @@ ok("inspect link input", clip_in["kind"] == "link", clip_in)
 ok("ckpt_name_of", workflows.ckpt_name_of(API_WF) == "wai.safetensors")
 ok("save image nodes", workflows.image_output_nodes(API_WF) == ["9"])
 
+multi_output = deepcopy(API_WF)
+multi_output["2"] = {
+    "class_type": "PreviewImage",
+    "inputs": {"images": ["8", 0]},
+}
+ok(
+    "final SaveImage wins over an earlier PreviewImage",
+    workflows.image_output_nodes(multi_output) == ["9"],
+    str(workflows.image_output_nodes(multi_output)),
+)
+preview_only = deepcopy(API_WF)
+preview_only["9"]["class_type"] = "PreviewImage"
+ok("PreviewImage remains supported when there is no SaveImage", workflows.image_output_nodes(preview_only) == ["9"])
+
 suggested = workflows.suggest_mapping(API_WF)
 ok("suggest positive from KSampler link", suggested.get("positive") == {"node": "6", "input": "text", "mode": "control"}, str(suggested))
 ok("suggest negative keep", suggested.get("negative", {}).get("node") == "7" and suggested["negative"]["mode"] == "keep", str(suggested.get("negative")))
@@ -392,6 +408,12 @@ ok("list has one", len(workflows.list_profiles()) == 1)
 loaded = workflows.get_profile(prof["id"])
 ok("loaded workflow intact", loaded["workflow"]["40"]["inputs"]["control_net_name"] == "keep_me.safetensors")
 ok("loaded mapping positive node", loaded["mapping"]["positive"]["node"] == "6")
+view = workflows.profile_view(loaded)
+ok("profile response does not expose arbitrary node inputs", "nodes" not in view, str(view.keys()))
+
+slug_once = workflows._slug("中文工作流")
+slug_twice = workflows._slug("中文工作流")
+ok("non-ASCII workflow id uses a stable digest", slug_once == slug_twice and len(slug_once) >= 17, slug_once)
 
 # original on disk must not change when apply_mapping runs
 on_disk = json.loads((workflows.DATA_DIR / prof["id"] / "workflow.json").read_text(encoding="utf-8"))
@@ -422,6 +444,50 @@ workflows.update_mapping(
 )
 after = workflows.get_profile(prof["id"])
 ok("update mapping seed control", after["mapping"]["seed"]["mode"] == "control")
+
+# Readers must never observe a profile between its workflow/mapping/meta writes.
+# Pause an overwrite after workflow.json; a correct store lock keeps get_profile blocked.
+replacement = deepcopy(API_WF)
+replacement["6"]["inputs"]["text"] = "REPLACEMENT POS"
+replacement_mapping = {"positive": {"node": "6", "input": "text", "mode": "control"}}
+write_paused = threading.Event()
+release_write = threading.Event()
+read_done = threading.Event()
+read_value = {}
+real_write_json = workflows._write_json
+
+def paused_write(path, data):
+    real_write_json(path, data)
+    if path.name == "workflow.json" and path.parent.name == dup["id"]:
+        write_paused.set()
+        release_write.wait(3)
+
+def overwrite_profile():
+    workflows.save_profile("My WAI replacement", replacement, replacement_mapping, pid=dup["id"])
+
+def read_profile_during_write():
+    read_value["profile"] = workflows.get_profile(dup["id"])
+    read_done.set()
+
+workflows._write_json = paused_write
+writer = threading.Thread(target=overwrite_profile)
+reader = threading.Thread(target=read_profile_during_write)
+writer.start()
+ok("profile overwrite reaches controlled pause", write_paused.wait(3))
+reader.start()
+time.sleep(0.1)
+ok("profile reader waits for the complete atomic update", not read_done.is_set())
+release_write.set()
+writer.join(3)
+reader.join(3)
+workflows._write_json = real_write_json
+consistent = read_value.get("profile") or {}
+ok(
+    "profile reader receives one complete version",
+    consistent.get("workflow", {}).get("6", {}).get("inputs", {}).get("text") == "REPLACEMENT POS"
+    and consistent.get("mapping") == replacement_mapping,
+    str(consistent),
+)
 
 ok("delete unknown false", workflows.delete_profile("missing") is False)
 ok("delete existing", workflows.delete_profile(prof["id"]) is True)

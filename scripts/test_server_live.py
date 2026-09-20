@@ -318,13 +318,16 @@ def sse_events(port: int, timeout: float = 45, cut_after=None, payload=None):
     return out
 
 
-def http_json(port: int, method: str, path: str, body=None):
+def http_json(port: int, method: str, path: str, body=None, headers=None):
     data = None if body is None else json.dumps(body).encode("utf-8")
+    request_headers = dict(headers or {})
+    if data is not None and "Content-Type" not in request_headers:
+        request_headers["Content-Type"] = "application/json"
     req = urllib.request.Request(
         f"http://127.0.0.1:{port}{path}",
         data=data,
         method=method,
-        headers={"Content-Type": "application/json"} if data is not None else {},
+        headers=request_headers,
     )
     try:
         with urllib.request.urlopen(req, timeout=20) as resp:
@@ -488,6 +491,22 @@ try:
     ok("runtime does not add builtin node 200", "200" not in prompt)
     code, ping_body = http_json(port, "GET", "/api/ping")
     ok("ping still reports connected", ping_body.get("ok") is True, str(ping_body))
+    code, body = http_json(
+        port,
+        "POST",
+        "/api/comfy",
+        {"api": "https://attacker.example"},
+        {"Content-Type": "application/json", "Origin": "https://attacker.example"},
+    )
+    ok("cross-site settings mutation is rejected", code == 403, str((code, body)))
+    code, body = http_json(
+        port,
+        "POST",
+        "/api/comfy",
+        {"api": "https://attacker.example"},
+        {"Content-Type": "text/plain", "Origin": f"http://127.0.0.1:{port}"},
+    )
+    ok("non-JSON settings mutation is rejected", code == 415, str((code, body)))
 finally:
     time.sleep(1.2)
     proc.terminate()

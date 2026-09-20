@@ -2341,7 +2341,7 @@ function stopNow(reason) {
     /* ignore */
   }
   // 這條是使用者自己按「停」／「取消」，全域中斷是對的：他要的就是現在停掉。
-  fetch("/api/interrupt", { method: "POST", body: "{}" }).catch(() => {
+  fetch("/api/interrupt", { method: "POST", headers: { "Content-Type": "application/json" }, body: "{}" }).catch(() => {
     /* ignore */
   });
 }
@@ -2462,6 +2462,7 @@ async function streamCardJob(card, seedNum, extra) {
       try {
         await fetch("/api/interrupt", {
           method: "POST",
+          headers: { "Content-Type": "application/json" },
           body: JSON.stringify(jobPromptId ? { prompt_id: jobPromptId } : {}),
         });
       } catch {

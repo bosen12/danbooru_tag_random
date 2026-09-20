@@ -207,6 +207,18 @@ def allowed_client(addr: str, nets=None) -> bool:
     return any(ip in net for net in (ALLOW_NETS if nets is None else nets))
 
 
+def mutation_request_error(origin: str, host: str, content_type: str, require_json: bool = True):
+    """Return an HTTP error for browser cross-site/non-JSON mutations."""
+    if origin:
+        parsed = urllib.parse.urlparse(origin)
+        if not parsed.netloc or parsed.netloc.casefold() != str(host or "").casefold():
+            return 403, "跨站寫入已拒絕。"
+    media_type = str(content_type or "").split(";", 1)[0].strip().casefold()
+    if require_json and media_type != "application/json":
+        return 415, "寫入 API 只接受 application/json。"
+    return None
+
+
 STEPS = int(cfg("comfy.steps", "", 25))
 CFG = float(cfg("comfy.cfg", "", 6.5))
 SAMPLER = str(cfg("comfy.sampler", "", "euler_ancestral"))
@@ -570,8 +582,14 @@ def image_error_code(exc: BaseException) -> int:
     return 404 if getattr(exc, "code", None) == 404 else 502
 
 
-def first_image_src(history: dict) -> str | None:
-    for node_out in (history.get("outputs") or {}).values():
+def first_image_src(history: dict, preferred_nodes=None) -> str | None:
+    outputs = history.get("outputs") or {}
+    node_ids = list(outputs)
+    if preferred_nodes:
+        preferred = {str(n) for n in preferred_nodes}
+        node_ids = [nid for nid in node_ids if str(nid) in preferred]
+    for nid in node_ids:
+        node_out = outputs.get(nid) or {}
         for img in node_out.get("images") or []:
             q = comfy_view_query(
                 img.get("filename") or "",
@@ -701,15 +719,17 @@ def ws_connect(http_base: str, client_id: str, timeout: float = 30) -> Ws:
     u = urllib.parse.urlparse(http_base)
     host = u.hostname or "127.0.0.1"
     port = u.port or (443 if u.scheme == "https" else 80)
-    path = "/ws?clientId=" + urllib.parse.quote(client_id)
+    base_path = (u.path or "").rstrip("/")
+    path = base_path + "/ws?clientId=" + urllib.parse.quote(client_id)
     sock = socket.create_connection((host, port), timeout=timeout)
     if u.scheme == "https":
         sock = ssl.create_default_context().wrap_socket(sock, server_hostname=host)
     sock.settimeout(timeout)
     key = base64.b64encode(os.urandom(16)).decode("ascii")
+    host_header = f"[{host}]" if ":" in host else host
     req = (
         f"GET {path} HTTP/1.1\r\n"
-        f"Host: {host}:{port}\r\n"
+        f"Host: {host_header}:{port}\r\n"
         f"Upgrade: websocket\r\n"
         f"Connection: Upgrade\r\n"
         f"Sec-WebSocket-Key: {key}\r\n"
@@ -775,7 +795,7 @@ def gen_via_ws(width: int, height: int, seed: int, positive: str, wf: dict):
             except socket.timeout:
                 hist = api("GET", f"/history/{prompt_id}", timeout=20)
                 if hist and prompt_id in hist:
-                    image = first_image_src(hist[prompt_id])
+                    image = first_image_src(hist[prompt_id], save_ids)
                     if image:
                         yield ("done", _job(seed, width, height, positive, image, ckpt))
                         return
@@ -789,7 +809,7 @@ def gen_via_ws(width: int, height: int, seed: int, positive: str, wf: dict):
             if op == 8:
                 # 對面收線。先撈一次 history —— 圖可能已經存好了，只是收線比 executed 快。
                 hist = api("GET", f"/history/{prompt_id}", timeout=20)
-                image = first_image_src(hist[prompt_id]) if hist and prompt_id in hist else None
+                image = first_image_src(hist[prompt_id], save_ids) if hist and prompt_id in hist else None
                 if image:
                     yield ("done", _job(seed, width, height, positive, image, ckpt))
                     return
@@ -829,7 +849,7 @@ def gen_via_ws(width: int, height: int, seed: int, positive: str, wf: dict):
                     continue
                 hist = api("GET", f"/history/{prompt_id}", timeout=30)
                 if hist and prompt_id in hist:
-                    image = first_image_src(hist[prompt_id])
+                    image = first_image_src(hist[prompt_id], save_ids)
                     if image:
                         yield ("done", _job(seed, width, height, positive, image, ckpt))
                         return
@@ -1765,6 +1785,23 @@ class Handler(BaseHTTPRequestHandler):
         self._json(403, {"ok": False, "error": "forbidden"})
         return False
 
+    def _mutation_allowed(self, path: str, require_json: bool = True) -> bool:
+        # LoRA manager runs on another local port and intentionally uses CORS.
+        if path == "/api/lora-push":
+            return True
+        error = mutation_request_error(
+            self.headers.get("Origin") or "",
+            self.headers.get("Host") or "",
+            self.headers.get("Content-Type") or "",
+            require_json,
+        )
+        if error is None:
+            return True
+        code, message = error
+        self.close_connection = True
+        self._json(code, {"ok": False, "error": message, "code": "forbidden" if code == 403 else "content_type"})
+        return False
+
     def _sse(self, events) -> None:
         self.send_response(200)
         self.send_header("Content-Type", "text/event-stream; charset=utf-8")
@@ -1986,6 +2023,8 @@ class Handler(BaseHTTPRequestHandler):
         if not self._allowed():
             return
         path = urllib.parse.urlparse(self.path).path
+        if not self._mutation_allowed(path):
+            return
         length = int(self.headers.get("Content-Length") or 0)
         if length > workflows.MAX_WORKFLOW_BYTES:
             self._json(413, {"ok": False, "error": "JSON 太大（上限 5MB）", "code": "too_large"})
@@ -2068,6 +2107,8 @@ class Handler(BaseHTTPRequestHandler):
         if not self._allowed():
             return
         path = urllib.parse.urlparse(self.path).path
+        if not self._mutation_allowed(path, require_json=False):
+            return
         pid = self._workflow_pid(path)
         if not pid:
             self._json(404, {"ok": False, "error": "not found"})

@@ -6,6 +6,8 @@ import { invalidateModelLists } from "./lora.js";
 const $ = (id) => document.getElementById(id);
 const REDUCE_MOTION = matchMedia("(prefers-reduced-motion: reduce)").matches;
 const STORE = "yz-workflow";
+const REQUEST_TIMEOUT_MS = 15000;
+const MAX_WORKFLOW_BYTES = 5 * 1024 * 1024;
 const ICON_CLOSE =
   '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" aria-hidden="true"><line x1="6" y1="6" x2="18" y2="18"/><line x1="18" y1="6" x2="6" y2="18"/></svg>';
 
@@ -19,6 +21,8 @@ try {
 let profiles = [];
 let current = null;
 let lastFocus = null;
+let workflowRequestGeneration = 0;
+let mappingWrite = Promise.resolve();
 
 export function currentWorkflowId() {
   return WORKFLOW_ID || "";
@@ -36,8 +40,17 @@ function saveId() {
   }
 }
 
-async function getJson(url, init) {
-  const r = await fetch(url, init);
+async function getJson(url, init = {}) {
+  let r;
+  try {
+    r = await fetch(url, {
+      ...init,
+      signal: init.signal || AbortSignal.timeout(REQUEST_TIMEOUT_MS),
+    });
+  } catch (e) {
+    const timedOut = e?.name === "TimeoutError" || e?.name === "AbortError";
+    return { ok: false, error: timedOut ? "連線逾時，請確認伺服器或 ComfyUI 是否仍有回應。" : String(e?.message || e) };
+  }
   let j = {};
   try {
     j = await r.json();
@@ -296,19 +309,28 @@ function baseMapping() {
 
 async function putMapping(mapping, note) {
   if (!WORKFLOW_ID) return;
-  const j = await getJson("/api/workflows/" + encodeURIComponent(WORKFLOW_ID), {
-    method: "PUT",
-    headers: { "Content-Type": "application/json" },
-    body: JSON.stringify({ mapping }),
-  });
-  if (!j.ok) {
-    say(j.error || "存不起來", "err");
-    return;
-  }
-  current = j;
+  const requestedId = WORKFLOW_ID;
+  current = { ...(current || {}), mapping };
   renderCurrent();
-  if (note) say(note, "err");
-  else say(j.ready ? "已存。" : "還要選正向節點。", j.ready ? "" : "err");
+  mappingWrite = mappingWrite.then(async () => {
+    if (requestedId !== WORKFLOW_ID) return;
+    const j = await getJson("/api/workflows/" + encodeURIComponent(requestedId), {
+      method: "PUT",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ mapping }),
+    });
+    if (requestedId !== WORKFLOW_ID) return;
+    if (!j.ok) {
+      say(j.error || "存不起來", "err");
+      await loadCurrent();
+      return;
+    }
+    current = j;
+    renderCurrent();
+    if (note) say(note, "err");
+    else say(j.ready ? "已存。" : "還要選正向節點。", j.ready ? "" : "err");
+  });
+  return mappingWrite;
 }
 
 async function savePrompt(field, item) {
@@ -344,12 +366,15 @@ async function saveLoras(ids, nodes) {
 }
 
 async function loadCurrent() {
+  const requestedId = WORKFLOW_ID;
+  const generation = ++workflowRequestGeneration;
   current = null;
-  if (!WORKFLOW_ID) {
+  if (!requestedId) {
     renderCurrent();
     return;
   }
-  const j = await getJson("/api/workflows/" + encodeURIComponent(WORKFLOW_ID));
+  const j = await getJson("/api/workflows/" + encodeURIComponent(requestedId));
+  if (generation !== workflowRequestGeneration || requestedId !== WORKFLOW_ID) return;
   if (!j.ok) {
     WORKFLOW_ID = "";
     saveId();
@@ -410,6 +435,7 @@ async function importWorkflow(data, name) {
     return;
   }
   WORKFLOW_ID = j.id;
+  workflowRequestGeneration += 1;
   saveId();
   profiles = (await getJson("/api/workflows")).items || profiles;
   current = j;
@@ -419,6 +445,10 @@ async function importWorkflow(data, name) {
 }
 
 async function importFile(file) {
+  if (file.size > MAX_WORKFLOW_BYTES) {
+    say("JSON 太大（上限 5 MB）。", "err");
+    return;
+  }
   let text;
   try {
     text = await file.text();
@@ -446,6 +476,7 @@ async function deleteCurrent() {
     return;
   }
   WORKFLOW_ID = "";
+  workflowRequestGeneration += 1;
   current = null;
   saveId();
   await refreshList();
@@ -533,6 +564,21 @@ export function wfHandleKeys(e) {
     e.preventDefault();
     closeModal();
     return true;
+  }
+  if (e.key === "Tab") {
+    const modal = $("wf-modal");
+    const focusable = [...(modal?.querySelectorAll('button:not([disabled]), input:not([disabled]), [tabindex]:not([tabindex="-1"])') || [])]
+      .filter((el) => !el.hidden && el.offsetParent !== null);
+    if (!focusable.length) return true;
+    const first = focusable[0];
+    const last = focusable[focusable.length - 1];
+    if (e.shiftKey && document.activeElement === first) {
+      e.preventDefault();
+      last.focus();
+    } else if (!e.shiftKey && document.activeElement === last) {
+      e.preventDefault();
+      first.focus();
+    }
   }
   return true;
 }

@@ -469,6 +469,45 @@ function ok(name, cond, detail) {
   const closeAt = src.indexOf("function closeModal(", openAt);
   const openBody = openAt >= 0 && closeAt > openAt ? src.slice(openAt, closeAt) : "";
   ok("workflow 面板開啟後把焦點移進 dialog", openBody.includes('$("wf-close")?.focus()'));
+  ok(
+    "workflow API 有逾時，不會永遠卡在讀取中",
+    src.includes("AbortSignal.timeout") && src.includes("連線逾時"),
+    "fetch 必須有截止時間，且要把逾時轉成畫面可讀的錯誤"
+  );
+  ok(
+    "快速切換 workflow 會丟棄舊回應",
+    src.includes("workflowRequestGeneration") && src.includes("requestedId !== WORKFLOW_ID"),
+    "舊 profile 回應不可覆蓋使用者後選的新 profile"
+  );
+  ok(
+    "mapping 寫入會依序執行",
+    src.includes("mappingWrite") && src.includes("mappingWrite.then"),
+    "連點 mapping 不可讓舊回應最後寫回"
+  );
+  ok(
+    "大型 workflow 在讀入記憶體前就被拒絕",
+    src.indexOf("file.size") >= 0 && src.indexOf("file.size") < src.indexOf("file.text()"),
+    "必須先檢查 5 MB 上限再呼叫 file.text()"
+  );
+  ok(
+    "workflow dialog 會攔住 Tab 焦點",
+    src.includes('e.key === "Tab"') && src.includes("focusable"),
+    "鍵盤焦點不可跑到 modal 背後"
+  );
+
+  const css = readFileSync(join(ROOT, "web", "lora.css"), "utf8");
+  const mobileAt = css.indexOf("@media (max-width: 760px)");
+  const mobileCss = mobileAt >= 0 ? css.slice(mobileAt) : "";
+  ok(
+    "手機版 workflow selector 能覆蓋桌面雙欄",
+    mobileCss.includes(".wf-modal .lora-modal-inner") && mobileCss.includes("grid-template-columns: 1fr"),
+    "手機 selector specificity 必須至少等於桌面規則"
+  );
+  ok(
+    "手機 ComfyUI 網址輸入不觸發 iOS 自動縮放",
+    mobileCss.includes(".wf-url-row input") && mobileCss.includes("font-size: 16px"),
+    "mobile input font-size 必須至少 16px"
+  );
 }
 
 if (failed) {

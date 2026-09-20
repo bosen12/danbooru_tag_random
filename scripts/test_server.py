@@ -433,6 +433,28 @@ finally:
     else:
         del server.ssl
 
+_proxy_sock = HandshakeSock()
+try:
+    server.socket.create_connection = lambda *_a, **_k: _proxy_sock
+    server.ws_connect("http://[::1]:8188/comfy", "client id", timeout=1)
+    request = b"".join(_proxy_sock.sent).decode("ascii")
+    ok("websocket keeps reverse-proxy base path", request.startswith("GET /comfy/ws?clientId=client%20id HTTP/1.1"), request)
+    ok("IPv6 websocket Host header is bracketed", "Host: [::1]:8188\r\n" in request, request)
+finally:
+    server.socket.create_connection = _old_create_connection
+
+multi_history = {
+    "outputs": {
+        "2": {"images": [{"filename": "preview.png", "subfolder": "", "type": "temp"}]},
+        "9": {"images": [{"filename": "final.png", "subfolder": "", "type": "output"}]},
+    }
+}
+ok(
+    "preferred output node returns the final image",
+    "filename=final.png" in (first_image_src(multi_history, {"9"}) or ""),
+    str(first_image_src(multi_history, {"9"})),
+)
+
 # === /api/image 的快取：鑰匙必須是內容，不能是檔名 =============================
 # ComfyUI 的 SaveImage 依輸出資料夾現有檔案編號，資料夾清空後編號從頭開始，
 # 檔名就會重複。舊版送的是一天份的 max-age，於是瀏覽器連問都不問，直接拿同檔名
@@ -652,6 +674,39 @@ import workflows as wfmod
 wf_td = Path(tempfile.mkdtemp())
 wfmod.DATA_DIR = wf_td / "workflows"
 wfmod.SETTINGS_PATH = wf_td / "settings.json"
+
+# LoRA discovery must use the same saved Comfy URL as ping/checkpoints/generation.
+import os as _os  # noqa: E402
+import urllib.request as _urllib_request  # noqa: E402
+
+_old_comfy_env = _os.environ.pop("COMFY_API", None)
+_old_urlopen = _urllib_request.urlopen
+_lora_urls = []
+
+class _LoraResponse:
+    def __enter__(self):
+        return self
+
+    def __exit__(self, *_args):
+        return False
+
+    def read(self):
+        return json.dumps({"LoraLoader": {"input": {"required": {"lora_name": [["style\\saved.safetensors"], {}]}}}}).encode()
+
+def _lora_urlopen(req, timeout=0):
+    _lora_urls.append((req.full_url, timeout))
+    return _LoraResponse()
+
+try:
+    wfmod.set_comfy_api("http://saved.example:9191/base")
+    _urllib_request.urlopen = _lora_urlopen
+    names = server.lora_scan.lora_names_from_comfy()
+    ok("LoRA discovery uses saved Comfy URL", _lora_urls == [("http://saved.example:9191/base/object_info/LoraLoader", 10)], str(_lora_urls))
+    ok("LoRA discovery still parses names", names == ["style\\saved.safetensors"], str(names))
+finally:
+    _urllib_request.urlopen = _old_urlopen
+    if _old_comfy_env is not None:
+        _os.environ["COMFY_API"] = _old_comfy_env
 
 _PROFILE_WF = {
     "4": {"class_type": "CheckpointLoaderSimple", "inputs": {"ckpt_name": "kept.safetensors"}},

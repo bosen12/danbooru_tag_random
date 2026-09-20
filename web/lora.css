@@ -1160,7 +1160,8 @@
     align-items: flex-end;
   }
   .lora-modal-inner,
-  .ckpt-modal .lora-modal-inner {
+  .ckpt-modal .lora-modal-inner,
+  .wf-modal .lora-modal-inner {
     grid-template-columns: 1fr;
     height: auto;
     max-height: calc(100dvh - 24px - env(safe-area-inset-top) - env(safe-area-inset-bottom));
@@ -1183,7 +1184,8 @@
   .lm-right {
     max-height: 32vh;
   }
-  .lm-search-wrap input {
+  .lm-search-wrap input,
+  .wf-url-row input {
     font-size: 16px;
   }
   .lora-tarot-card {

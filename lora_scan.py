@@ -13,6 +13,7 @@ from pathlib import Path
 import sys
 sys.path.insert(0, str(Path(__file__).resolve().parent / "scripts"))
 from app_config import cfg  # noqa: E402
+import workflows  # noqa: E402
 
 # LoRA 收藏根目錄。原本寫死成某台機器的 E:\Comfyui\loras。
 # 沒設定就是 None，不要退回 Path("")：那會變成專案根目錄，然後我們會安靜地
@@ -102,7 +103,9 @@ def lora_names_from_comfy() -> list:
     """
     import urllib.request
 
-    base = str(cfg("comfy.api", "COMFY_API", "http://127.0.0.1:8188")).rstrip("/")
+    env = os.environ.get("COMFY_API", "").strip()
+    saved = workflows.saved_comfy_api()
+    base = (env or saved or str(cfg("comfy.api", "", workflows.DEFAULT_COMFY_API))).rstrip("/")
     req = urllib.request.Request(base + "/object_info/LoraLoader", method="GET")
     with urllib.request.urlopen(req, timeout=10) as r:
         info = json.loads(r.read().decode("utf-8"))

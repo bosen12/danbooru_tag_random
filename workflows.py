@@ -3,9 +3,12 @@
 from __future__ import annotations
 
 import copy
+import hashlib
 import json
 import os
 import re
+import tempfile
+import threading
 import unicodedata
 import urllib.parse
 from pathlib import Path
@@ -16,6 +19,7 @@ SETTINGS_PATH = Path(os.environ.get("APP_SETTINGS") or ROOT / "data" / "settings
 DEFAULT_COMFY_API = "http://127.0.0.1:8188"
 MAX_WORKFLOW_BYTES = 5 * 1024 * 1024
 _ID_RE = re.compile(r"[^a-z0-9]+")
+_STORE_LOCK = threading.RLock()
 
 
 class WorkflowError(ValueError):
@@ -370,7 +374,6 @@ def profile_view(prof: dict) -> dict:
         "id": prof.get("id"),
         "name": prof.get("name"),
         "mapping": mapping,
-        "nodes": inspect_nodes(wf),
         "ready": mapping_ready(mapping),
         "suggested": suggest_mapping(wf),
         "prompts": prompt_candidates(wf),
@@ -379,13 +382,16 @@ def profile_view(prof: dict) -> dict:
 
 
 def image_output_nodes(workflow: dict) -> list[str]:
-    ids = []
+    saved = []
+    previews = []
     for nid, node in (workflow or {}).items():
         if not isinstance(node, dict):
             continue
-        if node.get("class_type") in ("SaveImage", "PreviewImage"):
-            ids.append(str(nid))
-    return ids
+        if node.get("class_type") == "SaveImage":
+            saved.append(str(nid))
+        elif node.get("class_type") == "PreviewImage":
+            previews.append(str(nid))
+    return saved or previews
 
 
 def _slug(name: str) -> str:
@@ -393,7 +399,7 @@ def _slug(name: str) -> str:
     ascii_part = _ID_RE.sub("-", text.lower()).strip("-")
     if ascii_part:
         return ascii_part[:60]
-    digest = abs(hash(text)) % 10_000_000
+    digest = hashlib.sha256(text.encode("utf-8")).hexdigest()[:12]
     return f"workflow-{digest}"
 
 
@@ -416,21 +422,36 @@ def _read_json(path: Path):
 
 def _write_json(path: Path, data) -> None:
     path.parent.mkdir(parents=True, exist_ok=True)
-    path.write_text(json.dumps(data, ensure_ascii=False, indent=2) + "\n", encoding="utf-8")
+    raw = json.dumps(data, ensure_ascii=False, indent=2) + "\n"
+    fd, temp_name = tempfile.mkstemp(prefix=f".{path.name}.", suffix=".tmp", dir=path.parent)
+    temp_path = Path(temp_name)
+    try:
+        with os.fdopen(fd, "w", encoding="utf-8", newline="\n") as handle:
+            handle.write(raw)
+            handle.flush()
+            os.fsync(handle.fileno())
+        os.replace(temp_path, path)
+    finally:
+        try:
+            temp_path.unlink()
+        except FileNotFoundError:
+            pass
 
 
 def load_settings() -> dict:
-    try:
-        raw = _read_json(SETTINGS_PATH)
-    except (OSError, ValueError):
-        return {}
-    return raw if isinstance(raw, dict) else {}
+    with _STORE_LOCK:
+        try:
+            raw = _read_json(SETTINGS_PATH)
+        except (OSError, ValueError):
+            return {}
+        return raw if isinstance(raw, dict) else {}
 
 
 def save_settings(data: dict) -> None:
-    cur = load_settings()
-    cur.update(data)
-    _write_json(SETTINGS_PATH, cur)
+    with _STORE_LOCK:
+        cur = load_settings()
+        cur.update(data)
+        _write_json(SETTINGS_PATH, cur)
 
 
 def saved_comfy_api() -> str:
@@ -449,51 +470,53 @@ def _profile_dir(pid: str) -> Path:
 
 
 def list_profiles() -> list[dict]:
-    if not DATA_DIR.is_dir():
-        return []
-    out = []
-    for d in sorted(DATA_DIR.iterdir(), key=lambda p: p.name):
-        if not d.is_dir():
-            continue
-        meta_path = d / "meta.json"
-        if not meta_path.is_file():
-            continue
-        try:
-            meta = _read_json(meta_path)
-        except (OSError, ValueError):
-            continue
-        if not isinstance(meta, dict):
-            continue
-        out.append(
-            {
-                "id": d.name,
-                "name": str(meta.get("name") or d.name),
-            }
-        )
-    return out
+    with _STORE_LOCK:
+        if not DATA_DIR.is_dir():
+            return []
+        out = []
+        for d in sorted(DATA_DIR.iterdir(), key=lambda p: p.name):
+            if not d.is_dir():
+                continue
+            meta_path = d / "meta.json"
+            if not meta_path.is_file():
+                continue
+            try:
+                meta = _read_json(meta_path)
+            except (OSError, ValueError):
+                continue
+            if not isinstance(meta, dict):
+                continue
+            out.append(
+                {
+                    "id": d.name,
+                    "name": str(meta.get("name") or d.name),
+                }
+            )
+        return out
 
 
 def get_profile(pid: str | None):
-    if not pid or pid in (".", "..") or "/" in pid or "\\" in pid:
-        return None
-    folder = _profile_dir(str(pid))
-    wf_path = folder / "workflow.json"
-    if not wf_path.is_file():
-        return None
-    try:
-        workflow = _read_json(wf_path)
-        mapping = _read_json(folder / "mapping.json") if (folder / "mapping.json").is_file() else {}
-        meta = _read_json(folder / "meta.json") if (folder / "meta.json").is_file() else {}
-    except (OSError, ValueError):
-        return None
-    if not isinstance(workflow, dict):
-        return None
-    return {
-        "id": folder.name,
-        "name": str((meta or {}).get("name") or folder.name),
-        "workflow": workflow,
-        "mapping": mapping if isinstance(mapping, dict) else {},
-    }
+    with _STORE_LOCK:
+        if not pid or pid in (".", "..") or "/" in pid or "\\" in pid:
+            return None
+        folder = _profile_dir(str(pid))
+        wf_path = folder / "workflow.json"
+        if not wf_path.is_file():
+            return None
+        try:
+            workflow = _read_json(wf_path)
+            mapping = _read_json(folder / "mapping.json") if (folder / "mapping.json").is_file() else {}
+            meta = _read_json(folder / "meta.json") if (folder / "meta.json").is_file() else {}
+        except (OSError, ValueError):
+            return None
+        if not isinstance(workflow, dict):
+            return None
+        return {
+            "id": folder.name,
+            "name": str((meta or {}).get("name") or folder.name),
+            "workflow": workflow,
+            "mapping": mapping if isinstance(mapping, dict) else {},
+        }
 
 
 def _validate_mapping(workflow: dict, mapping: dict | None) -> dict:
@@ -517,39 +540,36 @@ def save_profile(name: str, workflow: dict, mapping: dict | None = None, pid: st
         mapping = suggest_mapping(workflow)
     mapping = _validate_mapping(workflow, mapping)
     label = str(name or "").strip() or "Workflow"
-    if pid and get_profile(pid):
-        ident = str(pid)
-    else:
-        ident = _unique_id(label)
-    folder = _profile_dir(ident)
-    folder.mkdir(parents=True, exist_ok=True)
-    _write_json(folder / "workflow.json", workflow)
-    _write_json(folder / "mapping.json", mapping)
-    _write_json(folder / "meta.json", {"name": label, "id": ident})
-    return {"id": ident, "name": label}
+    with _STORE_LOCK:
+        if pid and get_profile(pid):
+            ident = str(pid)
+        else:
+            ident = _unique_id(label)
+        folder = _profile_dir(ident)
+        folder.mkdir(parents=True, exist_ok=True)
+        _write_json(folder / "workflow.json", workflow)
+        _write_json(folder / "mapping.json", mapping)
+        _write_json(folder / "meta.json", {"name": label, "id": ident})
+        return {"id": ident, "name": label}
 
 
 def update_mapping(pid: str, mapping: dict) -> dict:
-    prof = get_profile(pid)
-    if prof is None:
-        raise WorkflowError("找不到這個 workflow profile。", "missing_profile")
-    mapping = _validate_mapping(prof["workflow"], mapping)
-    _write_json(_profile_dir(pid) / "mapping.json", mapping)
-    return {"id": pid, "name": prof["name"], "mapping": mapping}
+    with _STORE_LOCK:
+        prof = get_profile(pid)
+        if prof is None:
+            raise WorkflowError("找不到這個 workflow profile。", "missing_profile")
+        mapping = _validate_mapping(prof["workflow"], mapping)
+        _write_json(_profile_dir(pid) / "mapping.json", mapping)
+        return {"id": pid, "name": prof["name"], "mapping": mapping}
 
 
 def delete_profile(pid: str) -> bool:
-    prof = get_profile(pid)
-    if prof is None:
-        return False
-    folder = _profile_dir(pid)
-    for name in ("workflow.json", "mapping.json", "meta.json"):
-        try:
-            (folder / name).unlink()
-        except OSError:
-            pass
-    try:
+    with _STORE_LOCK:
+        prof = get_profile(pid)
+        if prof is None:
+            return False
+        folder = _profile_dir(pid)
+        for name in ("workflow.json", "mapping.json", "meta.json"):
+            (folder / name).unlink(missing_ok=True)
         folder.rmdir()
-    except OSError:
-        pass
-    return True
+        return True
