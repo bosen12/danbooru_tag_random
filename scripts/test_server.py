@@ -547,6 +547,16 @@ def _fallback_negative() -> str:
 
 _fb = [t.strip() for t in _fallback_negative().split(",") if t.strip()]
 _live = [t.strip() for t in server.NEGATIVE.split(",") if t.strip()]
+_requested_base_negative = [
+    "worst quality", "bad quality", "worst detail", "sketch", "bad hands", "extra digits",
+    "censored", "bar censor", "mosaic censoring", "watermark", "signature", "english text",
+    "speech bubble", "multiple views", "3d", "photorealistic", "cross-section", "x-ray", "inset",
+]
+ok(
+    "基礎 negative prompt 使用指定的 19 個 tag 且順序一致",
+    _live == _requested_base_negative,
+    f"實際為 {_live}",
+)
 ok(
     "server.py 的備援負面字串跟 lexicon.json 一致",
     _fb == _live,

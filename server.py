@@ -100,16 +100,9 @@ def _negative() -> str:
     except Exception:
         pass
     # Last resort if lexicon.json is missing. Source of truth: merge_lexicon.NEGATIVE
-    # —— 而且 test_server.py 會比對兩者，脫節就紅燈。它曾經脫節過：正式那份已經把
-    # censor / extra fingers / fused fingers / missing fingers / extra limbs /
-    # disfigured / ugly 換掉了，這裡還留著，也缺了新加的 multiple views /
-    # artistic error / extra digits / fewer digits / extra arms。
-    #
-    # 這裡刻意**不**多塞 loli / shota / teen / child。以前有，但正式的負面沒有 ——
-    # 備援比正式嚴格是最糟的組合：真的少了 lexicon.json 時行為會跟平常不一樣，
-    # 而平常那個才是每張圖在用的。要不要加未成年防護是產品決定，要加就加在正式那份。
+    # —— test_server.py 會比對兩者，避免正式詞庫與備援路徑漂移。
     return (
-        "bad quality, worst quality, worst detail, displeasing, lowres, sketch, censored, bar censor, mosaic censoring, english text, watermark, signature, artist name, username, logo, speech bubble, multiple views, artistic error, bad anatomy, bad hands, extra digits, fewer digits, extra arms, deformed, blurry, jpeg artifacts, 3d, realistic, photorealistic, cross-section, x-ray, uterus, inset"
+        "worst quality, bad quality, worst detail, sketch, bad hands, extra digits, censored, bar censor, mosaic censoring, watermark, signature, english text, speech bubble, multiple views, 3d, photorealistic, cross-section, x-ray, inset"
     )
 
 

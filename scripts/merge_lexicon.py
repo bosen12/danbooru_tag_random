@@ -49,41 +49,12 @@ POSE_CLIMAX = {
 SECTIONS = {"quality", "subject", "feature", "pose", "clothing", "env"}
 GATES = {"any", "female", "male"}
 
-# 前五個是 WAI 發布頁上作者自己給的建議負面，原封不動 —— bad/worst quality 與
-# worst detail 在 Danbooru 上 post_count 是 0，因為它們是 Illustrious 標註器插入的
-# 品質分級 token，不是 Danbooru 標籤，不能拿 post_count 判斷它們有沒有被訓練過。
-#
-# 其餘每一個都對過 Danbooru API。2026-09-16 那輪換掉了六個從 SD1.5 抄來的字：
-#   extra fingers(0，是 extra_digits 的 active alias) -> extra digits(534)
-#   missing fingers(0)                               -> fewer digits(6233)
-#   extra limbs(0)                                   -> extra arms(15897)
-#   fused fingers(Danbooru 根本沒這個 tag)            -> 刪
-#   ugly(0) / disfigured(103)                        -> 刪
-#   censor(0，是 censored 的 active alias，而 censored 已在同一串) -> 刪
-# 並補上通行 Illustrious 負面裡有、我們漏掉的兩個：
-#   multiple views(272192) 擋分鏡與多視角、artistic error(9793)（error 是它的別名）
-#
-# 2026-09-18 補四個擋解剖剖面圖的。專案主回報兩張圖：一張左下角多了一個內臟示意
-# 的小框，一張的陰莖直接透視畫在身體上。查 Danbooru 的共現率就知道不是意外 ——
-#   internal cumshot                 12597 張
-#     其中同時標 cross-section        7330 張（58.2%）
-#     其中同時標 x-ray                4328 張（34.4%）
-# 「中出」的圖有將近六成是剖面圖，模型學到的就是這個關聯。deep penetration 與
-# cum overflow 也有同樣傾向（配剖面 2784、2223 張）。
-#
-#   cross-section(18686) 剖面本體、x-ray(17548) 疊在身上的透視版、
-#   uterus(11907) 剖面裡最常畫的器官、inset(2718) 角落那種內嵌小框
-#
-# multiple views 擋不住這一類：它擋的是多格分鏡，而那個小框是單圖內嵌。
-# internal view 與 cutaway 查過是 0 張，沒放進來 —— 模型沒學過的字只會稀釋。
+# 這是目前專案採用的共同基礎負面；全年齡／敏感分級會在此之外追加自己的限制。
+# 順序依使用者指定，避免生成檔與 ComfyUI 後備路徑各自漂移。
 NEGATIVE = (
-    "bad quality, worst quality, worst detail, displeasing, lowres, sketch, censored, "
-    "bar censor, mosaic censoring, english text, watermark, signature, artist name, "
-    "username, logo, "
-    "speech bubble, multiple views, artistic error, bad anatomy, bad hands, "
-    "extra digits, fewer digits, extra arms, deformed, blurry, jpeg artifacts, "
-    "3d, realistic, photorealistic, "
-    "cross-section, x-ray, uterus, inset"
+    "worst quality, bad quality, worst detail, sketch, bad hands, extra digits, "
+    "censored, bar censor, mosaic censoring, watermark, signature, english text, "
+    "speech bubble, multiple views, 3d, photorealistic, cross-section, x-ray, inset"
 )
 
 BANNED = {
