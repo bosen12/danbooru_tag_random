@@ -136,6 +136,35 @@ for (const job of ["office lady", "detective"]) {
   ok("pinned kiss never auto-draws sleeping", sleeping === 0, `sleeping=${sleeping}/400`);
 }
 
+// 釘室內傢俱時，in_out 還在後面才填。outdoors → on bed／bunk bed 已擋，
+// 反向沒擋，實測釘 on bed／on chair／on couch 各有 20～28/80 張自動 outdoors。
+for (const [furn, seed] of [
+  ["on bed", 960000],
+  ["on chair", 960080],
+  ["on couch", 960160],
+  ["bunk bed", 960240],
+]) {
+  const rows = samples({ pin: furn, heat: "tease", seed });
+  const out = rows.filter((tags) => tags.has(furn) && tags.has("outdoors")).length;
+  ok(`pinned ${furn} never auto outdoors`, out === 0, `outdoors=${out}/40`);
+}
+{
+  const s = sceneSettings("tease");
+  let pin = applyPin(lex, new Set(), new Set(), "on bed").pinned;
+  pin = applyPin(lex, pin, new Set(), "street").pinned;
+  let kept = 0;
+  for (let i = 0; i < 20; i += 1) {
+    const tags = tagsOf(drawOne(lex, s, pin, new Set(), mulberry32(960320 + i), 960320 + i));
+    if (tags.has("on bed") && tags.has("street")) kept += 1;
+  }
+  ok("dual-pin on bed + street still keeps both", kept === 20, `kept=${kept}/20`);
+}
+{
+  const rows = samples({ pin: "driving", heat: "activity", seed: 960400 });
+  const miss = rows.filter((tags) => tags.has("driving") && !tags.has("steering wheel")).length;
+  ok("pinned driving always has a steering wheel", miss === 0, `miss=${miss}/40`);
+}
+
 if (failed) {
   console.error(`\n${failed} scene/place contract test(s) failed`);
   process.exit(1);

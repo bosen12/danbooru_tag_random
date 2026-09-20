@@ -1103,7 +1103,7 @@ const FISH_PLACE = new Set(["beach", "ocean", "poolside", "pool"]);
 // 仍會把現代的煮飯換成廚房，所以現代的測試一個字都不會變。不把 courtyard
 // 再加進女僕場地：那會讓女僕去運動，見 JOB_PLACE.maid。
 const COOK_PLACE = new Set(["kitchen", "castle", "palace", "courtyard", "ryokan"]);
-const INDOOR_FURN = new Set(["on bed", "on chair", "office chair", "gaming chair", "swivel chair", "bunk bed"]);
+const INDOOR_FURN = new Set(["on bed", "on chair", "office chair", "gaming chair", "swivel chair", "bunk bed", "on couch"]);
 // 能坐下來讀書寫字的地方。原本這三組只列了現代的房間，而正常模式下
 // 「有 ACT_PLACE 表的活動必須把場地列進去」—— 沒被列到的場地等於做不了那件事。
 // 結果是 130 個場地裡有 39 個只配得到一個活動（carrying），73 個配不到 4 個：
@@ -1273,6 +1273,7 @@ const ACT_PROP = {
   smoking: ["kiseru", "smoking pipe", "cigar", "cigarette"],
   cooking: ["frying pan", "ladle"],
   shopping: ["shopping bag"],
+  driving: ["steering wheel"],
   cleaning: ["broom", "mop", "bucket"],
   fishing: ["fishing rod"],
   "playing video games": ["game controller"],
@@ -4892,8 +4893,16 @@ export function drawOne(lex, settings, pinned, userBanned, rand, seed) {
         return false;
       }
       if (used.has("outdoors") && INDOOR_PROP.has(item.tag)) return false;
-      if (used.has("outdoors") && item.tag === "on bed") return false;
-      if (used.has("outdoors") && item.tag === "bunk bed") return false;
+      // 釘 on bed 時場地／in_out 還沒填。outdoors → 床已擋，反向沒擋，
+      // 實測釘床／椅／沙發 15～20/40 張自動 outdoors。bunk bed 本來就雙向。
+      if (used.has("outdoors") && INDOOR_FURN.has(item.tag)) return false;
+      if (item.tag === "outdoors" && [...used].some((t) => INDOOR_FURN.has(t))) return false;
+      if (
+        (item.implies || []).includes("outdoors") &&
+        [...used].some((t) => INDOOR_FURN.has(t))
+      ) {
+        return false;
+      }
       if (used.has("indoors") && item.tag === "starry sky") return false;
       if (
         INDOOR_FURN.has(item.tag) &&
