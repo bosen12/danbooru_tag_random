@@ -150,6 +150,28 @@ ok("control negative", rt2["7"]["inputs"]["text"] == "NEG")
 ok("control seed", rt2["3"]["inputs"]["seed"] == 42)
 ok("control checkpoint", rt2["4"]["inputs"]["ckpt_name"] == "b.safetensors")
 
+sdxl = deepcopy(API_WF)
+sdxl["6"]["class_type"] = "CLIPTextEncodeSDXL"
+sdxl["6"]["inputs"] = {"text_g": "OLD G", "text_l": "OLD L", "clip": ["4", 1]}
+rt_sdxl = workflows.apply_mapping(
+    sdxl,
+    {"positive": {"node": "6", "input": "text_g", "mode": "control"}},
+    {"positive": "NEW POS"},
+)
+ok("SDXL text_g patched", rt_sdxl["6"]["inputs"]["text_g"] == "NEW POS")
+ok("SDXL text_l follows", rt_sdxl["6"]["inputs"]["text_l"] == "NEW POS")
+rt_size = workflows.apply_mapping(
+    API_WF,
+    {
+        "positive": {"node": "6", "input": "text", "mode": "control"},
+        "width": {"node": "5", "input": "width", "mode": "control"},
+        "height": {"node": "5", "input": "height", "mode": "control"},
+    },
+    {"positive": "x", "width": 768, "height": 512},
+)
+ok("width patched", rt_size["5"]["inputs"]["width"] == 768)
+ok("height patched", rt_size["5"]["inputs"]["height"] == 512)
+
 lora_wf = deepcopy(API_WF)
 lora_wf["12"] = {
     "class_type": "LoraLoader",
@@ -202,9 +224,28 @@ try:
 except workflows.WorkflowError as exc:
     ok("missing input code", getattr(exc, "code", None) == "missing_input", str(exc))
 
+try:
+    workflows._validate_mapping(
+        API_WF,
+        {
+            "positive": {"node": "6", "input": "text", "mode": "control"},
+            "width": {"node": "999", "input": "width", "mode": "control"},
+        },
+    )
+    ok("invalid controlled width is rejected on save", False)
+except workflows.WorkflowError as exc:
+    ok("invalid controlled width is rejected on save", getattr(exc, "code", None) == "missing_node", str(exc))
+
 ok(
     "no mapping returns copy equal to original",
     workflows.apply_mapping(API_WF, {}, {"positive": "x"})["6"]["inputs"]["text"] == "ORIGINAL POS",
+)
+modeless_positive = {"positive": {"node": "6", "input": "text"}}
+ok("modeless positive is ready", workflows.mapping_ready(modeless_positive) is True)
+ok(
+    "modeless positive is actually injected",
+    workflows.apply_mapping(API_WF, modeless_positive, {"positive": "MODELESS POS"})["6"]["inputs"]["text"]
+    == "MODELESS POS",
 )
 
 ok(
@@ -227,6 +268,7 @@ ok("plain host gets http", workflows.normalize_comfy_url("127.0.0.1:8188") == "h
 ok("default local ok", workflows.normalize_comfy_url("http://127.0.0.1:8188") == "http://127.0.0.1:8188")
 ok("lan ip ok", workflows.normalize_comfy_url("http://192.168.1.50:8188") == "http://192.168.1.50:8188")
 ok("https ok", workflows.normalize_comfy_url("https://gpu.local:8188") == "https://gpu.local:8188")
+ok("IPv6 localhost keeps brackets", workflows.normalize_comfy_url("http://[::1]:8188/") == "http://[::1]:8188")
 ok("strips trailing slash", workflows.normalize_comfy_url("http://127.0.0.1:8188/") == "http://127.0.0.1:8188")
 ok("empty is default", workflows.normalize_comfy_url("  ") == "http://127.0.0.1:8188")
 
@@ -282,6 +324,53 @@ clip_in = next(i for i in clip["inputs"] if i["name"] == "clip")
 ok("inspect link input", clip_in["kind"] == "link", clip_in)
 ok("ckpt_name_of", workflows.ckpt_name_of(API_WF) == "wai.safetensors")
 ok("save image nodes", workflows.image_output_nodes(API_WF) == ["9"])
+
+suggested = workflows.suggest_mapping(API_WF)
+ok("suggest positive from KSampler link", suggested.get("positive") == {"node": "6", "input": "text", "mode": "control"}, str(suggested))
+ok("suggest negative keep", suggested.get("negative", {}).get("node") == "7" and suggested["negative"]["mode"] == "keep", str(suggested.get("negative")))
+ok("suggest checkpoint keep", suggested.get("checkpoint", {}).get("mode") == "keep", str(suggested.get("checkpoint")))
+ok("suggest seed follows the app", suggested.get("seed") == {"node": "3", "input": "seed", "mode": "control"}, str(suggested.get("seed")))
+ok("suggest latent size follows the app", suggested.get("width", {}).get("node") == "5" and suggested.get("height", {}).get("mode") == "control", str(suggested))
+prompts = workflows.prompt_candidates(API_WF)
+ok("prompt candidates include both CLIP nodes", {p["id"] for p in prompts} >= {"6", "7"}, str(prompts))
+ok("prompt preview is the original text", any(p["id"] == "6" and "ORIGINAL POS" in p.get("preview", "") for p in prompts), str(prompts))
+
+with_unrelated_positive = deepcopy(API_WF)
+with_unrelated_positive["98"] = {
+    "class_type": "PromptMetadata",
+    "inputs": {"positive": ["7", 0]},
+}
+unrelated = workflows.suggest_mapping(with_unrelated_positive)
+ok(
+    "unrelated positive consumer does not hide the sampler prompt",
+    unrelated.get("positive") == {"node": "6", "input": "text", "mode": "control"},
+    str(unrelated),
+)
+ok("API_WF has no lora nodes", workflows.lora_candidates(API_WF) == [])
+lora_only = deepcopy(API_WF)
+lora_only["12"] = {
+    "class_type": "LoraLoader",
+    "inputs": {"lora_name": "old.safetensors", "strength_model": 0.5, "model": ["4", 0], "clip": ["4", 1]},
+    "_meta": {"title": "Load LoRA"},
+}
+lc = workflows.lora_candidates(lora_only)
+ok("lora candidate id", lc and lc[0]["id"] == "12", str(lc))
+ok("lora candidate preview", lc and lc[0]["preview"] == "old.safetensors", str(lc))
+
+ambiguous = deepcopy(API_WF)
+ambiguous["3"]["inputs"]["positive"] = ["6", 0]
+ambiguous["99"] = {
+    "class_type": "KSampler",
+    "inputs": {
+        "seed": 2,
+        "positive": ["7", 0],
+        "negative": ["7", 0],
+        "model": ["4", 0],
+        "latent_image": ["5", 0],
+    },
+}
+amb = workflows.suggest_mapping(ambiguous)
+ok("two sampler positives stay unmapped", "positive" not in amb, str(amb))
 
 
 # --- profile store ---------------------------------------------------------

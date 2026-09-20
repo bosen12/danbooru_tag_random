@@ -1,4 +1,4 @@
-// Comfy URL + 使用者 API workflow profile。內建 7 節點圖仍是預設；匯入只 overlay。
+// 工作流彈窗：跟選 LoRA / 底模同一套置中 overlay。
 
 import { lockScroll, unlockScroll } from "./scroll-lock.js";
 import { invalidateModelLists } from "./lora.js";
@@ -6,12 +6,8 @@ import { invalidateModelLists } from "./lora.js";
 const $ = (id) => document.getElementById(id);
 const REDUCE_MOTION = matchMedia("(prefers-reduced-motion: reduce)").matches;
 const STORE = "yz-workflow";
-const FIELDS = [
-  { key: "positive", label: "Positive Prompt", required: true },
-  { key: "negative", label: "Negative Prompt" },
-  { key: "seed", label: "Seed" },
-  { key: "checkpoint", label: "Checkpoint" },
-];
+const ICON_CLOSE =
+  '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" aria-hidden="true"><line x1="6" y1="6" x2="18" y2="18"/><line x1="18" y1="6" x2="6" y2="18"/></svg>';
 
 let WORKFLOW_ID = "";
 try {
@@ -22,8 +18,7 @@ try {
 
 let profiles = [];
 let current = null;
-let comfyCfg = { api: "http://127.0.0.1:8188", fromEnv: false, saved: "" };
-let models = { checkpoints: 0, loras: 0 };
+let lastFocus = null;
 
 export function currentWorkflowId() {
   return WORKFLOW_ID || "";
@@ -61,350 +56,350 @@ function say(text, kind) {
   el.dataset.kind = kind || "";
 }
 
+function previewLine(text) {
+  const t = String(text || "").replace(/\s+/g, " ").trim();
+  if (!t) return "（空）";
+  return t.length > 96 ? t.slice(0, 95) + "…" : t;
+}
+
 function ensureDom() {
-  if ($("wf-modal")) return;
   const tools = $("mast-tools");
   if (tools && !$("wf-pick-btn")) {
     const btn = document.createElement("button");
     btn.type = "button";
     btn.className = "ghost";
     btn.id = "wf-pick-btn";
-    btn.title = "ComfyUI 與 workflow";
+    btn.title = "工作流";
     btn.setAttribute("aria-haspopup", "dialog");
     btn.innerHTML = `<span class="gen-pick-label">工作流</span>`;
     const ckpt = $("ckpt-pick-btn");
-    if (ckpt && ckpt.nextSibling) tools.insertBefore(btn, ckpt.nextSibling);
-    else if (ckpt) ckpt.after(btn);
+    if (ckpt) ckpt.after(btn);
     else {
       const ping = $("ping");
       if (ping && ping.parentNode === tools) tools.insertBefore(btn, ping);
       else tools.appendChild(btn);
     }
   }
-  const wrap = document.createElement("div");
-  wrap.className = "wf-modal";
-  wrap.id = "wf-modal";
-  wrap.innerHTML = `
-    <div class="wf-inner" role="dialog" aria-modal="true" aria-labelledby="wf-title">
-      <header class="wf-head">
-        <div>
-          <h2 id="wf-title">ComfyUI 與 workflow</h2>
-          <p class="wf-state" id="wf-state">讀取中…</p>
+  if ($("wf-modal")) return;
+  const modal = document.createElement("div");
+  modal.id = "wf-modal";
+  modal.className = "lora-modal wf-modal";
+  modal.inert = true;
+  modal.setAttribute("role", "dialog");
+  modal.setAttribute("aria-modal", "true");
+  modal.setAttribute("aria-labelledby", "wf-head-title");
+  modal.innerHTML = `
+    <div class="lora-modal-inner">
+      <button class="lora-modal-close" id="wf-close" aria-label="關閉 (Esc)" title="關閉 (Esc)">${ICON_CLOSE}</button>
+      <div class="lm-left">
+        <div class="ckpt-head">
+          <div class="ckpt-head-title" id="wf-head-title">工作流</div>
+          <p class="ckpt-head-hint">沒選就是內建。要自己的圖，匯入 ComfyUI「匯出工作流 (API)」的 JSON。</p>
         </div>
-        <button type="button" class="ghost wf-close" id="wf-close" aria-label="關閉">✕</button>
-      </header>
-      <div class="wf-body">
-        <label class="wf-field">
-          <span>ComfyUI 網址</span>
-          <input id="wf-url" type="url" autocomplete="off" spellcheck="false" placeholder="http://127.0.0.1:8188" />
-          <em id="wf-url-hint">預設本機 8188。區網 GPU 填 http://192.168.x.x:8188。不必填安裝路徑。</em>
-        </label>
-        <div class="wf-actions">
-          <button type="button" class="primary" id="wf-url-save"><span>存網址</span></button>
-          <button type="button" class="ghost" id="wf-refresh">重新整理清單</button>
+        <div id="wf-list" class="lm-list"></div>
+        <button type="button" class="wf-drop" id="wf-drop">匯入 API JSON…<br>拖進來或點這裡選檔</button>
+        <input id="wf-file" type="file" accept="application/json,.json" hidden />
+      </div>
+      <div class="lm-right">
+        <div class="lm-right-head">目前選擇</div>
+        <div class="wf-url-row">
+          <input id="wf-url" type="url" autocomplete="off" spellcheck="false" aria-label="ComfyUI 網址" placeholder="http://127.0.0.1:8188" />
+          <button type="button" class="ghost" id="wf-url-save">存位址</button>
         </div>
-        <p class="wf-counts" id="wf-counts"></p>
-        <label class="wf-field">
-          <span>Workflow</span>
-          <select id="wf-select"></select>
-          <em>沒選就是內建 Illustrious 流程。匯入的 JSON 只改你 mapping 的欄位。</em>
-        </label>
-        <div class="wf-actions">
-          <button type="button" class="ghost" id="wf-import">匯入 JSON</button>
-          <button type="button" class="ghost" id="wf-delete">刪除</button>
-          <input id="wf-file" type="file" accept="application/json,.json" hidden />
-        </div>
-        <div class="wf-drop" id="wf-drop" tabindex="0">
-          把 ComfyUI API workflow JSON 拖進來，或點「匯入 JSON」。
-        </div>
-        <div id="wf-map"></div>
+        <div id="wf-current" class="lm-current"></div>
         <p class="wf-msg" id="wf-msg" role="status"></p>
       </div>
     </div>`;
-  document.body.append(wrap);
-}
-
-function renderSelect() {
-  const sel = $("wf-select");
-  if (!sel) return;
-  const keep = WORKFLOW_ID;
-  sel.replaceChildren();
-  const builtin = document.createElement("option");
-  builtin.value = "";
-  builtin.textContent = "內建（目前這套）";
-  sel.append(builtin);
-  for (const p of profiles) {
-    const opt = document.createElement("option");
-    opt.value = p.id;
-    opt.textContent = p.name || p.id;
-    sel.append(opt);
-  }
-  if (keep && !profiles.some((p) => p.id === keep)) {
-    WORKFLOW_ID = "";
-    saveId();
-  }
-  sel.value = WORKFLOW_ID || "";
-  renderPickBtn();
-  $("wf-delete").disabled = !WORKFLOW_ID;
+  document.body.appendChild(modal);
 }
 
 function renderPickBtn() {
   const btn = $("wf-pick-btn");
   if (!btn) return;
-  const label = btn.querySelector(".gen-pick-label");
+  const lab = btn.querySelector(".gen-pick-label");
   const p = profiles.find((x) => x.id === WORKFLOW_ID);
-  if (label) label.textContent = p ? p.name : "工作流";
+  if (lab) lab.textContent = p ? p.name : "工作流";
   btn.classList.toggle("has", !!WORKFLOW_ID);
+  btn.title = p ? `工作流：${p.name}` : "工作流：內建";
+  btn.setAttribute("aria-expanded", workflowUiOpen() ? "true" : "false");
 }
 
-function widgetInputs(node) {
-  return (node?.inputs || []).filter((i) => i.kind === "widget");
-}
-
-function fieldSpec(mapping, key) {
-  const spec = (mapping || {})[key] || {};
-  return {
-    node: String(spec.node || ""),
-    input: String(spec.input || ""),
-    mode: spec.mode || (key === "positive" ? "control" : "keep"),
-  };
-}
-
-function collectMapping() {
-  if (!current) return {};
-  const mapping = {};
-  for (const field of FIELDS) {
-    const node = $("wf-node-" + field.key)?.value || "";
-    const input = $("wf-input-" + field.key)?.value || "";
-    const mode = field.required ? "control" : $("wf-mode-" + field.key)?.dataset.mode || "keep";
-    if (!node || !input) continue;
-    mapping[field.key] = { node, input, mode };
-  }
-  const loras = [];
-  for (const node of current.nodes || []) {
-    if (node.class_type !== "LoraLoader") continue;
-    const mode = $("wf-lora-mode-" + node.id)?.dataset.mode || "keep";
-    const inputEl = $("wf-lora-input-" + node.id);
-    const input = inputEl?.value || "lora_name";
-    loras.push({ node: node.id, input, strengthInput: "strength_model", mode });
-  }
-  if (loras.length) mapping.loras = loras;
-  return mapping;
-}
-
-function modeToggle(id, mode, onChange) {
-  const wrap = document.createElement("div");
-  wrap.className = "wf-mode";
-  wrap.id = id;
-  wrap.dataset.mode = mode;
-  for (const [val, label] of [
-    ["keep", "Keep workflow value"],
-    ["control", "由排字匣控制"],
-  ]) {
-    const b = document.createElement("button");
-    b.type = "button";
-    b.className = "ghost wf-mode-btn" + (mode === val ? " on" : "");
-    b.textContent = label;
-    b.addEventListener("click", () => {
-      wrap.dataset.mode = val;
-      wrap.querySelectorAll(".wf-mode-btn").forEach((x) => x.classList.toggle("on", x === b));
-      if (onChange) onChange();
-    });
-    wrap.append(b);
-  }
-  return wrap;
-}
-
-function fillInputSelect(sel, nodeId, preferred) {
-  sel.replaceChildren();
-  const node = (current?.nodes || []).find((n) => n.id === nodeId);
-  const widgets = widgetInputs(node);
-  if (!widgets.length) {
-    const opt = document.createElement("option");
-    opt.value = "";
-    opt.textContent = nodeId ? "這個節點沒有可寫入的欄位" : "先選節點";
-    sel.append(opt);
-    return;
-  }
-  for (const w of widgets) {
-    const opt = document.createElement("option");
-    opt.value = w.name;
-    opt.textContent = w.name;
-    sel.append(opt);
-  }
-  sel.value = widgets.some((w) => w.name === preferred) ? preferred : widgets[0].name;
-}
-
-function renderMapping() {
-  const box = $("wf-map");
+function renderList() {
+  const box = $("wf-list");
   if (!box) return;
   box.replaceChildren();
-  if (!WORKFLOW_ID || !current) {
-    const p = document.createElement("p");
-    p.className = "wf-hint";
-    p.textContent = "使用內建 workflow：Positive / Negative / Seed / Checkpoint / LoRA 都由排字匣組裝。";
-    box.append(p);
-    return;
-  }
-  if (!current.ready) {
-    const warn = document.createElement("p");
-    warn.className = "wf-warn";
-    warn.textContent = "還不能生圖：請指定 Positive Prompt 要寫進哪個節點。";
-    box.append(warn);
-  }
-  for (const field of FIELDS) {
-    const spec = fieldSpec(current.mapping, field.key);
-    const row = document.createElement("fieldset");
-    row.className = "wf-map-row";
-    const legend = document.createElement("legend");
-    legend.textContent = field.label + (field.required ? "（必填）" : "");
-    row.append(legend);
-    const nodeSel = document.createElement("select");
-    nodeSel.id = "wf-node-" + field.key;
-    const blank = document.createElement("option");
-    blank.value = "";
-    blank.textContent = "（未指定）";
-    nodeSel.append(blank);
-    for (const n of current.nodes || []) {
-      const opt = document.createElement("option");
-      opt.value = n.id;
-      opt.textContent = `#${n.id} ${n.title || n.class_type}`;
-      nodeSel.append(opt);
-    }
-    nodeSel.value = spec.node;
-    const inputSel = document.createElement("select");
-    inputSel.id = "wf-input-" + field.key;
-    fillInputSelect(inputSel, spec.node, spec.input);
-    nodeSel.addEventListener("change", () => fillInputSelect(inputSel, nodeSel.value, spec.input));
-    row.append(nodeSel, inputSel);
-    if (!field.required) {
-      const tog = modeToggle("wf-mode-" + field.key, spec.mode);
-      row.append(tog);
-    }
+  const add = (id, title, sub) => {
+    const row = document.createElement("button");
+    row.type = "button";
+    row.className = "lora-row" + ((id || "") === (WORKFLOW_ID || "") ? " on" : "");
+    if ((id || "") === (WORKFLOW_ID || "")) row.setAttribute("aria-current", "true");
+    const ph = document.createElement("span");
+    ph.className = "ph";
+    const rn = document.createElement("span");
+    rn.className = "rn";
+    const rt = document.createElement("span");
+    rt.className = "rt";
+    rt.textContent = title;
+    const rf = document.createElement("span");
+    rf.className = "rf";
+    rf.textContent = sub;
+    rn.append(rt, rf);
+    row.append(ph, rn);
+    row.addEventListener("click", () => selectWorkflow(id));
     box.append(row);
+  };
+  add("", "內建", "排字匣那套 Illustrious 流程");
+  for (const p of profiles) add(p.id, p.name || p.id, "匯入的 API workflow");
+  if (WORKFLOW_ID && !profiles.some((p) => p.id === WORKFLOW_ID)) {
+    WORKFLOW_ID = "";
+    saveId();
   }
-  const loraNodes = (current.nodes || []).filter((n) => n.class_type === "LoraLoader");
-  if (loraNodes.length) {
-    const h = document.createElement("h3");
-    h.className = "wf-sub";
-    h.textContent = "LoRA";
-    box.append(h);
-    const mapped = Array.isArray(current.mapping?.loras) ? current.mapping.loras : [];
-    for (const n of loraNodes) {
-      const spec = mapped.find((x) => String(x.node) === n.id) || { mode: "keep", input: "lora_name" };
-      const row = document.createElement("fieldset");
-      row.className = "wf-map-row";
-      const legend = document.createElement("legend");
-      legend.textContent = `#${n.id} ${n.title || "LoraLoader"}`;
-      const inputSel = document.createElement("select");
-      inputSel.id = "wf-lora-input-" + n.id;
-      fillInputSelect(inputSel, n.id, spec.input || "lora_name");
-      row.append(legend, inputSel, modeToggle("wf-lora-mode-" + n.id, spec.mode || "keep"));
-      box.append(row);
-    }
-  }
-  const save = document.createElement("button");
-  save.type = "button";
-  save.className = "primary";
-  save.id = "wf-map-save";
-  save.innerHTML = "<span>存 mapping</span>";
-  save.addEventListener("click", saveMapping);
-  box.append(save);
+  renderPickBtn();
 }
 
-async function saveMapping() {
+async function selectWorkflow(id) {
+  WORKFLOW_ID = id || "";
+  saveId();
+  renderList();
+  await loadCurrent();
+}
+
+function pickedNode(field) {
+  const mapped = current?.mapping?.[field] || {};
+  if (mapped.mode === "keep") return "";
+  if (mapped.node) return String(mapped.node);
+  const sug = current?.suggested?.[field] || {};
+  if (sug.mode === "keep") return "";
+  return String(sug.node || "");
+}
+
+function pickedLoraIds() {
+  const specs = Array.isArray(current?.mapping?.loras) ? current.mapping.loras : current?.suggested?.loras;
+  if (!Array.isArray(specs)) return [];
+  return specs.filter((s) => s && s.mode === "control" && s.node).map((s) => String(s.node));
+}
+
+function heading(text) {
+  const el = document.createElement("div");
+  el.className = "wf-sec";
+  el.textContent = text;
+  return el;
+}
+
+function nodeButton(item, on, onClick, badge) {
+  const b = document.createElement("button");
+  b.type = "button";
+  b.className = "wf-prompt" + (on ? " on" : "");
+  const wrap = document.createElement("span");
+  const strong = document.createElement("strong");
+  strong.textContent = `${item.title || item.class_type || "節點"} · #${item.id}${badge ? " · " + badge : ""}`;
+  const em = document.createElement("em");
+  em.textContent = previewLine(item.preview);
+  wrap.append(strong, em);
+  b.append(wrap);
+  b.addEventListener("click", onClick);
+  return b;
+}
+
+function keepButton(on, label, onClick) {
+  const b = document.createElement("button");
+  b.type = "button";
+  b.className = "wf-prompt" + (on ? " on" : "");
+  const strong = document.createElement("strong");
+  strong.textContent = label;
+  b.append(strong);
+  b.addEventListener("click", onClick);
+  return b;
+}
+
+function renderCurrent() {
+  const box = $("wf-current");
+  if (!box) return;
+  box.replaceChildren();
+  if (!WORKFLOW_ID) {
+    const t = document.createElement("div");
+    t.className = "lm-cur-title";
+    t.textContent = "內建";
+    const h = document.createElement("p");
+    h.className = "ckpt-cur-hint";
+    h.textContent = "正向、負向、LoRA 都由排字匣組裝。";
+    box.append(t, h);
+    return;
+  }
+  if (!current) {
+    const h = document.createElement("p");
+    h.className = "ckpt-cur-hint";
+    h.textContent = "讀取中…";
+    box.append(h);
+    return;
+  }
+  const t = document.createElement("div");
+  t.className = "lm-cur-title";
+  t.textContent = current.name || WORKFLOW_ID;
+  const h = document.createElement("p");
+  h.className = "ckpt-cur-hint";
+  h.textContent = current.ready ? "下面三欄決定排字匣要改哪些節點。沒選的會保留 workflow 原值。" : "至少選一個正向節點才能生圖。";
+  box.append(t, h);
+
+  const prompts = current.prompts || [];
+  const sugPos = String(current.suggested?.positive?.node || "");
+  const sugNeg = String(current.suggested?.negative?.node || "");
+  const posId = pickedNode("positive");
+  box.append(heading("正向"));
+  for (const item of prompts) {
+    box.append(nodeButton(item, item.id === posId, () => savePrompt("positive", item), item.id === sugPos ? "建議" : ""));
+  }
+
+  const negId = pickedNode("negative");
+  box.append(heading("負向"));
+  box.append(keepButton(!negId, "不改，保留 workflow 原值", () => savePrompt("negative", null)));
+  for (const item of prompts) {
+    box.append(nodeButton(item, item.id === negId, () => savePrompt("negative", item), item.id === sugNeg ? "建議" : ""));
+  }
+
+  const loras = current.loraNodes || [];
+  const loraOn = new Set(pickedLoraIds());
+  box.append(heading("LoRA"));
+  if (!loras.length) {
+    const none = document.createElement("p");
+    none.className = "ckpt-cur-hint";
+    none.textContent = "這張圖沒有 LoRA 節點。";
+    box.append(none);
+  } else {
+    box.append(keepButton(loraOn.size === 0, "不改，保留 workflow 裡的 LoRA", () => saveLoras([])));
+    for (const item of loras) {
+      box.append(
+        nodeButton(item, loraOn.has(item.id), () => {
+          const next = new Set(loraOn);
+          if (next.has(item.id)) next.delete(item.id);
+          else if (next.size >= 2) {
+            say("最多對兩個 LoRA 節點，跟排字匣槽數一樣。", "err");
+            return;
+          } else next.add(item.id);
+          saveLoras([...next], loras);
+        })
+      );
+    }
+  }
+
+  const del = document.createElement("button");
+  del.type = "button";
+  del.className = "ghost wf-del";
+  del.textContent = "刪掉這套";
+  del.addEventListener("click", deleteCurrent);
+  box.append(del);
+}
+
+function baseMapping() {
+  return { ...(current?.suggested || {}), ...(current?.mapping || {}) };
+}
+
+async function putMapping(mapping, note) {
   if (!WORKFLOW_ID) return;
-  const mapping = collectMapping();
   const j = await getJson("/api/workflows/" + encodeURIComponent(WORKFLOW_ID), {
     method: "PUT",
     headers: { "Content-Type": "application/json" },
     body: JSON.stringify({ mapping }),
   });
   if (!j.ok) {
-    say(j.error || "mapping 存檔失敗", "err");
+    say(j.error || "存不起來", "err");
     return;
   }
   current = j;
-  renderMapping();
-  say(j.ready ? "mapping 已存，可以生圖。" : "已存，但還需要指定 Positive Prompt 節點。", j.ready ? "" : "err");
+  renderCurrent();
+  if (note) say(note, "err");
+  else say(j.ready ? "已存。" : "還要選正向節點。", j.ready ? "" : "err");
+}
+
+async function savePrompt(field, item) {
+  const mapping = baseMapping();
+  let note = "";
+  if (!item) {
+    if (mapping[field]) mapping[field] = { ...mapping[field], mode: "keep" };
+    else delete mapping[field];
+  } else {
+    mapping[field] = { node: item.id, input: item.input || "text", mode: "control" };
+    const other = field === "positive" ? "negative" : "positive";
+    if (mapping[other] && String(mapping[other].node) === String(item.id) && mapping[other].mode === "control") {
+      mapping[other] = { ...mapping[other], mode: "keep" };
+      note = "正向／負向不能是同一個節點，另一邊改成不改。";
+    }
+  }
+  await putMapping(mapping, note);
+}
+
+async function saveLoras(ids, nodes) {
+  const mapping = baseMapping();
+  const byId = Object.fromEntries((nodes || current?.loraNodes || []).map((n) => [n.id, n]));
+  mapping.loras = ids.map((id) => {
+    const n = byId[id] || {};
+    return {
+      node: id,
+      input: n.input || "lora_name",
+      strengthInput: n.strengthInput || "strength_model",
+      mode: "control",
+    };
+  });
+  await putMapping(mapping);
 }
 
 async function loadCurrent() {
   current = null;
   if (!WORKFLOW_ID) {
-    renderMapping();
+    renderCurrent();
     return;
   }
   const j = await getJson("/api/workflows/" + encodeURIComponent(WORKFLOW_ID));
   if (!j.ok) {
     WORKFLOW_ID = "";
     saveId();
-    renderSelect();
-    renderMapping();
-    say(j.error || "這個 profile 讀不到，已改回內建。", "err");
+    current = null;
+    renderList();
+    renderCurrent();
+    say(j.error || "讀不到，已改回內建。", "err");
     return;
   }
   current = j;
-  renderMapping();
+  renderCurrent();
+  if (!j.ready) say("選右邊一個 CLIP 節點。", "err");
+  else say("");
 }
 
 async function refreshList() {
   const j = await getJson("/api/workflows");
   profiles = j.items || [];
-  renderSelect();
+  renderList();
   await loadCurrent();
 }
 
 async function refreshComfy() {
-  const cfg = await getJson("/api/comfy");
-  if (cfg && cfg.api) comfyCfg = cfg;
-  const url = $("wf-url");
-  if (url && document.activeElement !== url) url.value = comfyCfg.saved || comfyCfg.api || "";
-  const hint = $("wf-url-hint");
-  if (hint) {
-    hint.dataset.pending = comfyCfg.fromEnv ? "1" : "0";
-    hint.textContent = comfyCfg.fromEnv
-      ? "目前被環境變數 COMFY_API 鎖定。畫面存的值下次沒設環境變數才會生效。"
-      : "預設本機 8188。區網 GPU 填 http://192.168.x.x:8188。不必填安裝路徑。";
+  const j = await getJson("/api/comfy");
+  if (!j.ok) {
+    say(j.error || "讀不到 ComfyUI 設定", "err");
+    return;
   }
-  const ping = await getJson("/api/ping");
-  const st = $("wf-state");
-  if (st) {
-    st.dataset.ok = ping.ok ? "1" : "0";
-    st.textContent = ping.ok ? `Connected · ${ping.version || "ok"} · ${ping.base || comfyCfg.api}` : `Disconnected · ${ping.base || comfyCfg.api}`;
-  }
-  let ck = { count: 0 },
-    lr = { count: 0 };
-  if (ping.ok) {
-    ck = await getJson("/api/models?kind=checkpoints");
-    lr = await getJson("/api/models?kind=loras");
-  }
-  models = { checkpoints: ck.count || 0, loras: lr.count || 0 };
-  invalidateModelLists();
-  const counts = $("wf-counts");
-  if (counts) {
-    counts.textContent = ping.ok
-      ? `Checkpoints: ${models.checkpoints}　LoRAs: ${models.loras}`
-      : "Comfy 未連上時仍可抽 tag、複製 POS，但不能生圖。";
-  }
+  const input = $("wf-url");
+  if (input && document.activeElement !== input) input.value = j.saved || j.api || "";
+  if (j.note) say(j.note, "err");
 }
 
-async function saveUrl() {
-  const api = $("wf-url")?.value || "";
+async function saveComfy() {
   const j = await getJson("/api/comfy", {
     method: "POST",
     headers: { "Content-Type": "application/json" },
-    body: JSON.stringify({ api }),
+    body: JSON.stringify({ api: $("wf-url")?.value || "" }),
   });
   if (!j.ok) {
-    say(j.error || "網址無效", "err");
+    say(j.error || "ComfyUI 網址存不起來", "err");
     return;
   }
-  say(j.note || "已存 ComfyUI 網址。", j.note ? "err" : "");
-  await refreshComfy();
+  invalidateModelLists();
+  if ($("wf-url")) $("wf-url").value = j.saved || j.api || "";
+  say(j.note || "ComfyUI 網址已儲存。", j.note ? "err" : "");
 }
 
 async function importWorkflow(data, name) {
+  say("匯入中…");
   const j = await getJson("/api/workflows", {
     method: "POST",
     headers: { "Content-Type": "application/json" },
@@ -416,8 +411,11 @@ async function importWorkflow(data, name) {
   }
   WORKFLOW_ID = j.id;
   saveId();
-  await refreshList();
-  say(j.ready ? "已匯入。" : "已匯入。請指定 Positive Prompt 要寫進哪個節點。", j.ready ? "" : "err");
+  profiles = (await getJson("/api/workflows")).items || profiles;
+  current = j;
+  renderList();
+  renderCurrent();
+  say(j.ready ? `已匯入「${j.name}」。` : "已匯入。選 tags 要寫進哪個節點。", j.ready ? "" : "err");
 }
 
 async function importFile(file) {
@@ -435,13 +433,12 @@ async function importFile(file) {
     say("不是有效的 JSON。", "err");
     return;
   }
-  const name = String(file.name || "").replace(/\.json$/i, "") || "Workflow";
-  await importWorkflow(data, name);
+  await importWorkflow(data, String(file.name || "").replace(/\.json$/i, "") || "Workflow");
 }
 
 async function deleteCurrent() {
   if (!WORKFLOW_ID) return;
-  if (!window.confirm("刪掉這個 workflow profile？內建流程不會受影響。")) return;
+  if (!window.confirm("刪掉這套自己匯入的 workflow？內建還在。")) return;
   const r = await fetch("/api/workflows/" + encodeURIComponent(WORKFLOW_ID), { method: "DELETE" });
   const j = await r.json().catch(() => ({}));
   if (!r.ok && !j.ok) {
@@ -449,94 +446,69 @@ async function deleteCurrent() {
     return;
   }
   WORKFLOW_ID = "";
+  current = null;
   saveId();
   await refreshList();
-  say("已刪除，改回內建 workflow。");
+  say("已刪除，改回內建。");
 }
 
 function openModal() {
   ensureDom();
+  lastFocus = document.activeElement;
   const el = $("wf-modal");
-  el.classList.remove("is-closing");
+  el._closeGen = (el._closeGen || 0) + 1;
   delete el.dataset.closing;
+  el.classList.remove("is-closing");
   el.inert = false;
   el.classList.add("open");
   lockScroll("wf-modal");
+  renderPickBtn();
+  $("wf-close")?.focus();
   say("");
-  refreshComfy();
-  refreshList();
-  $("wf-url")?.focus();
+  Promise.all([refreshList(), refreshComfy()]).catch((e) => say(String(e.message || e), "err"));
 }
 
 function closeModal() {
   const el = $("wf-modal");
   if (!el || !el.classList.contains("open") || el.dataset.closing === "1") return;
+  const gen = (el._closeGen = (el._closeGen || 0) + 1);
   el.dataset.closing = "1";
   el.classList.add("is-closing");
   el.inert = true;
   window.setTimeout(
     () => {
+      if (el._closeGen !== gen) return;
       el.classList.remove("open", "is-closing");
       delete el.dataset.closing;
       unlockScroll("wf-modal");
+      renderPickBtn();
+      (lastFocus || $("wf-pick-btn"))?.focus?.();
     },
-    REDUCE_MOTION ? 0 : 160
+    REDUCE_MOTION ? 0 : 180
   );
-}
-
-function bindPing() {
-  const ping = $("ping");
-  if (!ping || ping.dataset.wfBound === "1") return;
-  ping.dataset.wfBound = "1";
-  ping.tabIndex = 0;
-  ping.setAttribute("role", "button");
-  ping.title = "ComfyUI 與 workflow 設定";
-  ping.addEventListener("click", openModal);
-  ping.addEventListener("keydown", (e) => {
-    if (e.key === "Enter" || e.key === " ") {
-      e.preventDefault();
-      openModal();
-    }
-  });
-}
-
-function onDrop(e) {
-  const file = [...(e.dataTransfer?.files || [])].find((f) => /\.json$/i.test(f.name) || f.type.includes("json"));
-  if (!file) {
-    say("請拖入 .json 檔。", "err");
-    return;
-  }
-  importFile(file);
 }
 
 export function initWorkflow() {
   ensureDom();
-  bindPing();
   renderPickBtn();
   $("wf-pick-btn")?.addEventListener("click", openModal);
   $("wf-close")?.addEventListener("click", closeModal);
   $("wf-modal")?.addEventListener("click", (e) => {
     if (e.target.id === "wf-modal") closeModal();
   });
-  $("wf-url-save")?.addEventListener("click", saveUrl);
-  $("wf-refresh")?.addEventListener("click", () => {
-    refreshComfy();
-    refreshList();
+  $("wf-drop")?.addEventListener("click", () => $("wf-file")?.click());
+  $("wf-url-save")?.addEventListener("click", saveComfy);
+  $("wf-url")?.addEventListener("keydown", (e) => {
+    if (e.key === "Enter") {
+      e.preventDefault();
+      saveComfy();
+    }
   });
-  $("wf-select")?.addEventListener("change", () => {
-    WORKFLOW_ID = $("wf-select").value || "";
-    saveId();
-    renderPickBtn();
-    $("wf-delete").disabled = !WORKFLOW_ID;
-    loadCurrent();
-  });
-  $("wf-import")?.addEventListener("click", () => $("wf-file")?.click());
   $("wf-file")?.addEventListener("change", () => {
     const file = $("wf-file").files?.[0];
     $("wf-file").value = "";
     if (file) importFile(file);
   });
-  $("wf-delete")?.addEventListener("click", deleteCurrent);
   const drop = $("wf-drop");
   drop?.addEventListener("dragover", (e) => {
     e.preventDefault();
@@ -548,14 +520,9 @@ export function initWorkflow() {
   drop?.addEventListener("drop", (e) => {
     e.preventDefault();
     delete drop.dataset.over;
-    onDrop(e);
-  });
-  document.addEventListener("keydown", (e) => {
-    if (!workflowUiOpen()) return;
-    if (e.key === "Escape") {
-      e.preventDefault();
-      closeModal();
-    }
+    const file = [...(e.dataTransfer?.files || [])].find((f) => /\.json$/i.test(f.name) || f.type.includes("json"));
+    if (!file) say("請拖入 .json 檔。", "err");
+    else importFile(file);
   });
   refreshList().catch(() => {});
 }

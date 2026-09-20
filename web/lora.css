@@ -96,6 +96,99 @@
 .ckpt-mgr-inline {
   margin: 16px 0 0;
 }
+
+.wf-modal .lora-modal-inner {
+  width: min(860px, 95vw);
+  height: min(720px, 88vh);
+  grid-template-columns: 320px 1fr;
+}
+.wf-drop {
+  display: block;
+  width: calc(100% - 24px);
+  margin: 0 12px 12px;
+  padding: 12px;
+  border: 1px dashed var(--line-2);
+  border-radius: 10px;
+  background: var(--sunk);
+  color: var(--dim);
+  font: inherit;
+  font-size: 12.5px;
+  text-align: left;
+  cursor: pointer;
+}
+.wf-drop:hover,
+.wf-drop[data-over="1"] {
+  border-color: var(--amber);
+  color: var(--ink);
+}
+.wf-sec {
+  margin: 14px 0 6px;
+  font-size: 12px;
+  font-weight: 650;
+  color: var(--faint);
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+}
+.wf-prompt {
+  display: flex;
+  align-items: flex-start;
+  gap: 10px;
+  width: 100%;
+  margin: 0 0 8px;
+  padding: 10px 12px;
+  border: 1px solid var(--line);
+  border-radius: 10px;
+  background: var(--sunk);
+  color: var(--ink);
+  text-align: left;
+  cursor: pointer;
+  font: inherit;
+}
+.wf-prompt.on {
+  border-color: var(--amber);
+  background: var(--amber-soft);
+}
+.wf-prompt strong {
+  display: block;
+  font-size: 13px;
+}
+.wf-prompt em {
+  display: block;
+  margin-top: 4px;
+  font-style: normal;
+  font-size: 12px;
+  color: var(--dim);
+  overflow-wrap: anywhere;
+}
+.wf-del {
+  margin-top: 12px;
+}
+.wf-msg {
+  min-height: 1.3em;
+  margin: 8px 0 0;
+  font-size: 12.5px;
+  color: var(--dim);
+}
+.wf-msg[data-kind="err"] {
+  color: var(--err);
+}
+.wf-url-row {
+  display: flex;
+  gap: 8px;
+  margin-top: 12px;
+}
+.wf-url-row input {
+  flex: 1;
+  min-width: 0;
+  height: 36px;
+  padding: 0 10px;
+  border: 1px solid var(--line);
+  border-radius: 8px;
+  background: var(--sunk);
+  color: var(--ink);
+  font: inherit;
+  font-size: 13px;
+}
 .ckpt-head {
   padding: 16px 16px 8px;
   padding-right: 48px;

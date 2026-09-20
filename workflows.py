@@ -85,7 +85,8 @@ def apply_mapping(workflow: dict, mapping: dict | None, values: dict | None) -> 
         spec = spec if spec is not None else mapping.get(field)
         if not isinstance(spec, dict):
             return
-        if (spec.get("mode") or "keep") == "keep":
+        default_mode = "control" if field == "positive" else "keep"
+        if (spec.get("mode") or default_mode) == "keep":
             return
         if value is None:
             return
@@ -98,11 +99,20 @@ def apply_mapping(workflow: dict, mapping: dict | None, values: dict | None) -> 
         if not isinstance(inputs, dict) or inp not in inputs:
             raise WorkflowError(f"node {nid} 沒有 input「{inp}」", "missing_input")
         inputs[inp] = value
+        # CLIPTextEncodeSDXL 有 text_g / text_l，只改一個會讓另一邊留舊詞。
+        if field in ("positive", "negative"):
+            for extra in ("text", "text_g", "text_l"):
+                if extra != inp and extra in inputs and not _is_link(inputs.get(extra)):
+                    inputs[extra] = value
 
     patch("positive", values.get("positive"))
     patch("negative", values.get("negative"))
     if "seed" in values:
         patch("seed", values.get("seed"))
+    if "width" in values:
+        patch("width", values.get("width"))
+    if "height" in values:
+        patch("height", values.get("height"))
     patch("checkpoint", values.get("checkpoint"))
 
     lora_specs = mapping.get("loras")
@@ -145,10 +155,11 @@ def normalize_comfy_url(raw: str | None) -> str:
         port = parsed.port
     except ValueError as exc:
         raise WorkflowError("ComfyUI 網址不是有效的 http(s) 位址。", "bad_url") from exc
+    url_host = f"[{host}]" if ":" in host else host
     if port:
-        netloc = f"{host}:{port}"
+        netloc = f"{url_host}:{port}"
     else:
-        netloc = host
+        netloc = url_host
     path = parsed.path.rstrip("/")
     if path in ("", "/"):
         path = ""
@@ -203,6 +214,168 @@ def ckpt_name_of(workflow: dict) -> str | None:
             if name:
                 return str(name)
     return None
+
+
+_TEXT_INPUTS = ("text", "text_g", "text_l", "prompt", "positive")
+
+
+def _text_input_name(node: dict | None) -> str:
+    if not isinstance(node, dict):
+        return ""
+    inputs = node.get("inputs") or {}
+    if not isinstance(inputs, dict):
+        return ""
+    for name in _TEXT_INPUTS:
+        if name in inputs and not _is_link(inputs.get(name)):
+            return name
+    return ""
+
+
+def _link_src(value) -> str:
+    return str(value[0]) if _is_link(value) else ""
+
+
+def _only_id(ids: list[str]) -> str:
+    seen = list(dict.fromkeys(i for i in ids if i))
+    return seen[0] if len(seen) == 1 else ""
+
+
+def lora_candidates(workflow: dict) -> list[dict]:
+    require_api_workflow(workflow)
+    out = []
+    for nid, node in workflow.items():
+        if str(nid).startswith("_") or not isinstance(node, dict):
+            continue
+        ct = str(node.get("class_type") or "")
+        if ct not in ("LoraLoader", "LoraLoaderModelOnly") and "lora_name" not in (node.get("inputs") or {}):
+            continue
+        if "lora" not in ct.lower() and ct not in ("LoraLoader", "LoraLoaderModelOnly"):
+            continue
+        inputs = node.get("inputs") or {}
+        name = inputs.get("lora_name") if isinstance(inputs, dict) else ""
+        preview = "" if _is_link(name) else str(name or "")
+        title = str(((node.get("_meta") or {}).get("title")) or ct or nid)
+        out.append(
+            {
+                "id": str(nid),
+                "input": "lora_name",
+                "strengthInput": "strength_model" if isinstance(inputs, dict) and "strength_model" in inputs else "",
+                "title": title,
+                "class_type": ct,
+                "preview": preview[:240],
+            }
+        )
+    return out
+
+
+def prompt_candidates(workflow: dict) -> list[dict]:
+    require_api_workflow(workflow)
+    out = []
+    for nid, node in workflow.items():
+        if str(nid).startswith("_") or not isinstance(node, dict):
+            continue
+        inp = _text_input_name(node)
+        if not inp:
+            continue
+        raw = (node.get("inputs") or {}).get(inp)
+        preview = "" if _is_link(raw) else str(raw or "")
+        title = str(((node.get("_meta") or {}).get("title")) or node.get("class_type") or nid)
+        out.append(
+            {
+                "id": str(nid),
+                "input": inp,
+                "title": title,
+                "class_type": str(node.get("class_type") or ""),
+                "preview": preview[:240],
+            }
+        )
+    return out
+
+
+def suggest_mapping(workflow: dict) -> dict:
+    """Best-effort mapping. Unique KSampler.positive → CLIP is high confidence; otherwise leave positive unset."""
+    require_api_workflow(workflow)
+    pos_ids: list[str] = []
+    neg_ids: list[str] = []
+    sampler_pos_ids: list[str] = []
+    sampler_neg_ids: list[str] = []
+    seed_ids: list[str] = []
+    ckpt_ids: list[str] = []
+    lora_ids: list[str] = []
+    latent_ids: list[str] = []
+    for nid, node in workflow.items():
+        if str(nid).startswith("_") or not isinstance(node, dict):
+            continue
+        inputs = node.get("inputs") or {}
+        if not isinstance(inputs, dict):
+            continue
+        ct = str(node.get("class_type") or "")
+        src = _link_src(inputs.get("positive"))
+        if src:
+            pos_ids.append(src)
+            if "sampler" in ct.lower():
+                sampler_pos_ids.append(src)
+        srcn = _link_src(inputs.get("negative"))
+        if srcn:
+            neg_ids.append(srcn)
+            if "sampler" in ct.lower():
+                sampler_neg_ids.append(srcn)
+        if "seed" in inputs and not _is_link(inputs.get("seed")):
+            seed_ids.append(str(nid))
+        if ct in ("CheckpointLoaderSimple", "CheckpointLoader") and "ckpt_name" in inputs:
+            ckpt_ids.append(str(nid))
+        if (ct in ("LoraLoader", "LoraLoaderModelOnly") or "lora" in ct.lower()) and "lora_name" in inputs:
+            lora_ids.append(str(nid))
+        if ct == "EmptyLatentImage" and "width" in inputs and "height" in inputs:
+            latent_ids.append(str(nid))
+
+    mapping: dict = {}
+    pos = _only_id(sampler_pos_ids or pos_ids)
+    texts = prompt_candidates(workflow)
+    if pos:
+        inp = _text_input_name(_node(workflow, pos))
+        if inp:
+            mapping["positive"] = {"node": pos, "input": inp, "mode": "control"}
+    elif len(texts) == 1:
+        only = texts[0]
+        mapping["positive"] = {"node": only["id"], "input": only["input"], "mode": "control"}
+    neg = _only_id(sampler_neg_ids or neg_ids)
+    if neg:
+        inp = _text_input_name(_node(workflow, neg))
+        if inp:
+            mapping["negative"] = {"node": neg, "input": inp, "mode": "keep"}
+    ckpt = _only_id(ckpt_ids)
+    if ckpt:
+        mapping["checkpoint"] = {"node": ckpt, "input": "ckpt_name", "mode": "keep"}
+    seed = _only_id(seed_ids)
+    if seed:
+        mapping["seed"] = {"node": seed, "input": "seed", "mode": "control"}
+    latent = _only_id(latent_ids)
+    if latent:
+        mapping["width"] = {"node": latent, "input": "width", "mode": "control"}
+        mapping["height"] = {"node": latent, "input": "height", "mode": "control"}
+    if lora_ids:
+        mapping["loras"] = [
+            {"node": lid, "input": "lora_name", "strengthInput": "strength_model", "mode": "keep"}
+            for lid in lora_ids
+        ]
+    return mapping
+
+
+def profile_view(prof: dict) -> dict:
+    wf = prof.get("workflow") or {}
+    mapping = prof.get("mapping") or {}
+    return {
+        "ok": True,
+        "id": prof.get("id"),
+        "name": prof.get("name"),
+        "mapping": mapping,
+        "nodes": inspect_nodes(wf),
+        "ready": mapping_ready(mapping),
+        "suggested": suggest_mapping(wf),
+        "prompts": prompt_candidates(wf),
+        "loraNodes": lora_candidates(wf),
+    }
 
 
 def image_output_nodes(workflow: dict) -> list[str]:
@@ -329,6 +502,8 @@ def _validate_mapping(workflow: dict, mapping: dict | None) -> dict:
         "positive": "",
         "negative": "",
         "seed": 0,
+        "width": 1024,
+        "height": 1024,
         "checkpoint": "",
         "loras": [("x.safetensors", 1.0)] * 8,
     }
@@ -338,6 +513,8 @@ def _validate_mapping(workflow: dict, mapping: dict | None) -> dict:
 
 def save_profile(name: str, workflow: dict, mapping: dict | None = None, pid: str | None = None) -> dict:
     require_api_workflow(workflow)
+    if not mapping:
+        mapping = suggest_mapping(workflow)
     mapping = _validate_mapping(workflow, mapping)
     label = str(name or "").strip() or "Workflow"
     if pid and get_profile(pid):

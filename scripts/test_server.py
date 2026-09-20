@@ -168,6 +168,35 @@ found = list_ckpts(td, "illurtrious")
 ok("list skips non-ckpt", [x["file"] for x in found] == ["alpha.safetensors", "beta.safetensors"])
 ok("list ckpt_name prefix", found[0]["ckpt_name"] == r"illurtrious\alpha.safetensors")
 ok("list preview next to weights", found[0]["preview"] == "alpha.png")
+
+_old_list_ckpts = server.list_ckpts
+_old_models_from_comfy = server.models_from_comfy
+try:
+    server.list_ckpts = lambda: [
+        {
+            "file": "alpha.safetensors",
+            "ckpt_name": r"illurtrious\alpha.safetensors",
+            "title": "Alpha local title",
+            "preview": "alpha.png",
+        }
+    ]
+    server.models_from_comfy = lambda kind: [
+        r"illurtrious\alpha.safetensors",
+        r"extra\remote.safetensors",
+    ]
+    merged_ckpts, merged_source = server.checkpoints_for_ui()
+    ok(
+        "local previews do not hide Comfy extra_model_paths",
+        [x["ckpt_name"] for x in merged_ckpts]
+        == [r"illurtrious\alpha.safetensors", r"extra\remote.safetensors"],
+        str(merged_ckpts),
+    )
+    ok("Comfy checkpoint source is reported", merged_source == "comfy", merged_source)
+    ok("local checkpoint preview is attached", merged_ckpts[0]["preview"] == "alpha.png", str(merged_ckpts[0]))
+finally:
+    server.list_ckpts = _old_list_ckpts
+    server.models_from_comfy = _old_models_from_comfy
+
 ok("resolve by file", resolve_ckpt("beta.safetensors", found) == r"illurtrious\beta.safetensors")
 ok("resolve by full name", resolve_ckpt(r"illurtrious\beta.safetensors", found) == r"illurtrious\beta.safetensors")
 ok("resolve rejects parent", resolve_ckpt(r"..\evil.safetensors", found) == resolve_ckpt(None, found))
@@ -349,6 +378,60 @@ try:
     ok("ws closed raises", False, "沒有報錯")
 except ConnectionError as exc:
     ok("ws closed raises", "closed" in str(exc), str(exc))
+
+
+class HandshakeSock:
+    def __init__(self):
+        self.sent = []
+        self.replied = False
+
+    def settimeout(self, _t):
+        pass
+
+    def sendall(self, data):
+        self.sent.append(data)
+
+    def recv(self, _n):
+        if self.replied:
+            return b""
+        self.replied = True
+        return b"HTTP/1.1 101 Switching Protocols\r\n\r\n"
+
+
+_raw_tls_sock = HandshakeSock()
+_tls_wrapped = []
+
+
+class FakeSslContext:
+    def wrap_socket(self, sock, server_hostname=None):
+        _tls_wrapped.append((sock, server_hostname))
+        return sock
+
+
+class FakeSslModule:
+    @staticmethod
+    def create_default_context():
+        return FakeSslContext()
+
+
+_old_create_connection = server.socket.create_connection
+_had_ssl = hasattr(server, "ssl")
+_old_ssl = getattr(server, "ssl", None)
+try:
+    server.socket.create_connection = lambda *_a, **_k: _raw_tls_sock
+    server.ssl = FakeSslModule()
+    server.ws_connect("https://gpu.example:8188", "client", timeout=1)
+    ok(
+        "https Comfy websocket is wrapped in TLS",
+        _tls_wrapped == [(_raw_tls_sock, "gpu.example")],
+        str(_tls_wrapped),
+    )
+finally:
+    server.socket.create_connection = _old_create_connection
+    if _had_ssl:
+        server.ssl = _old_ssl
+    else:
+        del server.ssl
 
 # === /api/image 的快取：鑰匙必須是內容，不能是檔名 =============================
 # ComfyUI 的 SaveImage 依輸出資料夾現有檔案編號，資料夾清空後編號從頭開始，
@@ -638,6 +721,8 @@ ok(
 )
 
 _bare = wfmod.save_profile("bare", _PROFILE_WF, {})
+ok("import without mapping auto-detects positive", wfmod.mapping_ready(wfmod.get_profile(_bare["id"])["mapping"]))
+wfmod.update_mapping(_bare["id"], {})
 try:
     server.prepare_workflow({"positive": "1girl", "workflowId": _bare["id"]})
     ok("unmapped profile refused", False)
@@ -669,4 +754,3 @@ if failed:
     print(f"\n{failed} failed")
     sys.exit(1)
 print("\nok")
-

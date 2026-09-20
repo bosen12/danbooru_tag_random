@@ -12,6 +12,7 @@ import os
 import queue
 import random
 import socket
+import ssl
 import struct
 import sys
 import threading
@@ -76,7 +77,26 @@ CKPT = str(cfg("comfy.ckpt", "COMFY_CKPT", r"illurtrious\waiIllustriousSDXL_v170
 # 沒設定就是 None，不要退回 Path("")：那會變成專案根目錄，然後被當成
 # checkpoint 資料夾掃一遍。沒設定時 /api/checkpoints 就回空清單。
 _ckpt_dir = cfg("comfy.checkpointDir", "COMFY_CKPT_DIR", "")
-CKPT_DIR = Path(str(_ckpt_dir)) if _ckpt_dir else None
+
+
+def _existing_dir(raw) -> Path | None:
+    text = str(raw or "").strip().strip('"')
+    if not text:
+        return None
+    cands = [Path(text)]
+    # WSL 讀 Windows 路徑：C:\foo → /mnt/c/foo
+    if len(text) >= 3 and text[1] == ":" and text[0].isalpha() and text[2] in "\\/":
+        cands.append(Path("/mnt") / text[0].lower() / text[3:].replace("\\", "/"))
+    for p in cands:
+        try:
+            if p.is_dir():
+                return p
+        except OSError:
+            continue
+    return cands[0]
+
+
+CKPT_DIR = _existing_dir(_ckpt_dir)
 CKPT_PREFIX = str(cfg("comfy.checkpointPrefix", "COMFY_CKPT_PREFIX", "illurtrious"))
 CKPT_EXTS = {".safetensors", ".ckpt", ".pt"}
 CKPT_PREVIEW_EXTS = (
@@ -411,16 +431,16 @@ def models_from_comfy(kind: str) -> list[str]:
 
 
 def checkpoints_for_ui() -> tuple[list[dict], str]:
+    """Use Comfy as the model source and attach local preview metadata when available."""
     local = list_ckpts()
     by_file = {it["file"]: it for it in local}
     by_name = {str(it.get("ckpt_name") or "").replace("/", "\\"): it for it in local}
-    names: list[str] = []
     try:
         names = [str(n).replace("/", "\\") for n in models_from_comfy("checkpoints")]
     except Exception:
         names = []
     if not names:
-        return local, "local"
+        return local, "local" if local else "none"
     items = []
     for raw in names:
         fn = raw.split("\\")[-1]
@@ -483,6 +503,12 @@ def prepare_workflow(payload: dict):
     seed_spec = mapping.get("seed") if isinstance(mapping.get("seed"), dict) else {}
     if (seed_spec.get("mode") or "keep") == "control":
         values["seed"] = seed
+    w_spec = mapping.get("width") if isinstance(mapping.get("width"), dict) else {}
+    if (w_spec.get("mode") or "keep") == "control":
+        values["width"] = width
+    h_spec = mapping.get("height") if isinstance(mapping.get("height"), dict) else {}
+    if (h_spec.get("mode") or "keep") == "control":
+        values["height"] = height
     ckpt_spec = mapping.get("checkpoint") if isinstance(mapping.get("checkpoint"), dict) else {}
     if (ckpt_spec.get("mode") or "keep") == "control":
         try:
@@ -677,6 +703,8 @@ def ws_connect(http_base: str, client_id: str, timeout: float = 30) -> Ws:
     port = u.port or (443 if u.scheme == "https" else 80)
     path = "/ws?clientId=" + urllib.parse.quote(client_id)
     sock = socket.create_connection((host, port), timeout=timeout)
+    if u.scheme == "https":
+        sock = ssl.create_default_context().wrap_socket(sock, server_hostname=host)
     sock.settimeout(timeout)
     key = base64.b64encode(os.urandom(16)).decode("ascii")
     req = (
@@ -1616,17 +1644,7 @@ class Handler(BaseHTTPRequestHandler):
         if prof is None:
             self._json(404, {"ok": False, "error": "找不到這個 workflow profile。", "code": "missing_profile"})
             return
-        self._json(
-            200,
-            {
-                "ok": True,
-                "id": prof["id"],
-                "name": prof["name"],
-                "mapping": prof["mapping"],
-                "nodes": workflows.inspect_nodes(prof["workflow"]),
-                "ready": workflows.mapping_ready(prof["mapping"]),
-            },
-        )
+        self._json(200, workflows.profile_view(prof))
 
     def _serve_workflow_save(self, payload: dict) -> None:
         name = str((payload or {}).get("name") or "").strip() or "Workflow"
@@ -1638,17 +1656,7 @@ class Handler(BaseHTTPRequestHandler):
             self._json(400, {"ok": False, "error": str(exc), "code": exc.code})
             return
         loaded = workflows.get_profile(prof["id"])
-        self._json(
-            200,
-            {
-                "ok": True,
-                "id": prof["id"],
-                "name": prof["name"],
-                "mapping": (loaded or {}).get("mapping") or {},
-                "nodes": workflows.inspect_nodes((loaded or {}).get("workflow") or wf),
-                "ready": workflows.mapping_ready((loaded or {}).get("mapping") or {}),
-            },
-        )
+        self._json(200, workflows.profile_view(loaded or prof))
 
     def _serve_workflow_put(self, pid: str, payload: dict) -> None:
         try:
@@ -1665,17 +1673,7 @@ class Handler(BaseHTTPRequestHandler):
         except workflows.WorkflowError as exc:
             self._json(400, {"ok": False, "error": str(exc), "code": exc.code})
             return
-        self._json(
-            200,
-            {
-                "ok": True,
-                "id": loaded["id"],
-                "name": loaded["name"],
-                "mapping": loaded["mapping"],
-                "nodes": workflows.inspect_nodes(loaded["workflow"]),
-                "ready": workflows.mapping_ready(loaded["mapping"]),
-            },
-        )
+        self._json(200, workflows.profile_view(loaded))
 
     def _serve_ckpt_preview(self) -> None:
         qs = urllib.parse.parse_qs(urllib.parse.urlparse(self.path).query)
@@ -2224,8 +2222,12 @@ def main() -> None:
         if lora_scan.LORA_ROOT
         else "loras    （未設定 config.json 的 paths.loraRoot，LoRA 面板會是空的）"
     )
-    if CKPT_DIR is None:
-        print("ckptdir  （未設定 config.json 的 comfy.checkpointDir，換底模清單會是空的）")
+    if not _ckpt_dir:
+        print("ckptdir  （未設定 config.json 的 comfy.checkpointDir，換底模清單改問 Comfy）")
+    elif CKPT_DIR is not None and CKPT_DIR.is_dir():
+        print(f"ckptdir  {CKPT_DIR}")
+    else:
+        print(f"ckptdir  {_ckpt_dir}（路徑不存在，換底模清單改問 Comfy）")
     st = tg_status()
     if st["configured"]:
         print(f"telegram {st['chatId']}  token {st['tokenTail']}  自動送 {'開' if st['enabled'] else '關'}")

@@ -457,6 +457,20 @@ function ok(name, cond, detail) {
   );
 }
 
+// --- 11. Workflow 面板保留 ComfyUI 位址設定 --------------------------------
+// README 對使用者承諾可以從畫面改 ComfyUI 位址。Workflow 面板改版時若只留下
+// profile 選擇，遠端／區網 Comfy 就只能回頭改設定檔，且既有 /api/comfy 入口變死碼。
+{
+  const src = readFileSync(join(ROOT, "web", "workflow.js"), "utf8");
+  ok("workflow 面板有 ComfyUI 網址欄位", src.includes('id="wf-url"') && src.includes('id="wf-url-save"'));
+  ok("workflow 面板會讀取 ComfyUI 網址", src.includes('getJson("/api/comfy")'));
+  ok("workflow 面板會儲存 ComfyUI 網址", src.includes('getJson("/api/comfy", {') && src.includes('method: "POST"'));
+  const openAt = src.indexOf("function openModal(");
+  const closeAt = src.indexOf("function closeModal(", openAt);
+  const openBody = openAt >= 0 && closeAt > openAt ? src.slice(openAt, closeAt) : "";
+  ok("workflow 面板開啟後把焦點移進 dialog", openBody.includes('$("wf-close")?.focus()'));
+}
+
 if (failed) {
   console.error(NL + failed + " failed");
   process.exit(1);
