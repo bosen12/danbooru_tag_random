@@ -157,6 +157,26 @@ ok("mapped wifi blocked", not allowed_client("::ffff:192.168.1.101", nets))
 ok("garbage blocked", not allowed_client("not-an-ip", nets))
 ok("allow-all env", allowed_client("192.168.1.101", parse_allow_nets("0.0.0.0/0")))
 
+
+class _BlockedConsole:
+    def write(self, _text):
+        raise AssertionError("HTTP access log touched the blocking console")
+
+
+_handler = Handler.__new__(Handler)
+_handler.address_string = lambda: "client"
+_old_stderr = server.sys.stderr
+try:
+    server.sys.stderr = _BlockedConsole()
+    try:
+        _handler.log_message('"%s" %s', "GET /", "200")
+    except AssertionError as exc:
+        ok("HTTP requests never write to the Windows console", False, str(exc))
+    else:
+        ok("HTTP requests never write to the Windows console", True)
+finally:
+    server.sys.stderr = _old_stderr
+
 import tempfile
 
 td = Path(tempfile.mkdtemp())

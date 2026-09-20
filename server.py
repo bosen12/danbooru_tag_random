@@ -1549,7 +1549,11 @@ class Handler(BaseHTTPRequestHandler):
     protocol_version = "HTTP/1.1"
 
     def log_message(self, fmt: str, *args) -> None:
-        sys.stderr.write("%s - %s\n" % (self.address_string(), fmt % args))
+        # Windows Console 的 QuickEdit／文字選取會阻塞同步 WriteConsole。
+        # BaseHTTPRequestHandler 又會在送 response headers 前記 access log，於是只要
+        # 黑窗被選到，每個新請求都卡在這裡，連重新整理 HTML 都載不回來。一般 access
+        # log 沒有診斷價值；真正未處理的例外仍由 socketserver 印出 traceback。
+        return
 
     def handle_one_request(self) -> None:
         try:
