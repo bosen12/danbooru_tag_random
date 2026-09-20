@@ -165,6 +165,50 @@ for (const [furn, seed] of [
   ok("pinned driving always has a steering wheel", miss === 0, `miss=${miss}/40`);
 }
 
+// 雨／霧／陰天是 OUTDOOR_WEATHER，卻不像雪／櫻花在 OUTDOOR_LEFTOVER 裡，
+// 也不 implies outdoors。釘雨時場地還沒填，室內房間照收。實測 rain 20/40
+// indoors。反向（釘臥室不抽雨）本來就有。
+for (const [w, seed] of [
+  ["rain", 970000],
+  ["fog", 970080],
+  ["overcast", 970160],
+]) {
+  const rows = samples({ pin: w, heat: "tease", seed });
+  const indoor = rows.filter((tags) => tags.has(w) && tags.has("indoors")).length;
+  ok(`pinned ${w} never auto indoors`, indoor === 0, `indoors=${indoor}/40`);
+}
+{
+  const rows = samples({ pin: "snow", heat: "tease", seed: 970240 });
+  const indoor = rows.filter((tags) => tags.has("snow") && tags.has("indoors")).length;
+  ok("pinned snow still never auto indoors", indoor === 0, `indoors=${indoor}/40`);
+}
+{
+  const s = sceneSettings("tease");
+  let pin = applyPin(lex, new Set(), new Set(), "rain").pinned;
+  pin = applyPin(lex, pin, new Set(), "living room").pinned;
+  let kept = 0;
+  for (let i = 0; i < 20; i += 1) {
+    const tags = tagsOf(drawOne(lex, s, pin, new Set(), mulberry32(970320 + i), 970320 + i));
+    if (tags.has("rain") && tags.has("living room")) kept += 1;
+  }
+  ok("dual-pin rain + living room still keeps both", kept === 20, `kept=${kept}/20`);
+}
+{
+  const rows = samples({ pin: "riding bicycle", heat: "activity", seed: 970400 });
+  const miss = rows.filter((tags) => tags.has("riding bicycle") && !tags.has("bicycle")).length;
+  ok("pinned riding bicycle always has a bicycle", miss === 0, `miss=${miss}/40`);
+}
+{
+  const rows = samples({ pin: "on couch", heat: "tease", seed: 970480 });
+  const stand = rows.filter((tags) => tags.has("on couch") && tags.has("standing")).length;
+  ok("pinned on couch never auto standing", stand === 0, `standing=${stand}/40`);
+}
+{
+  const rows = samples({ pin: "standing", heat: "tease", seed: 970560 });
+  const couch = rows.filter((tags) => tags.has("standing") && tags.has("on couch")).length;
+  ok("pinned standing never auto on couch", couch === 0, `on couch=${couch}/40`);
+}
+
 if (failed) {
   console.error(`\n${failed} scene/place contract test(s) failed`);
   process.exit(1);

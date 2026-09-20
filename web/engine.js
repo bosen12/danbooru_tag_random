@@ -1274,6 +1274,7 @@ const ACT_PROP = {
   cooking: ["frying pan", "ladle"],
   shopping: ["shopping bag"],
   driving: ["steering wheel"],
+  "riding bicycle": ["bicycle"],
   cleaning: ["broom", "mop", "bucket"],
   fishing: ["fishing rod"],
   "playing video games": ["game controller"],
@@ -4471,6 +4472,17 @@ export function drawOne(lex, settings, pinned, userBanned, rand, seed) {
       if (n >= 3) return false;
     }
     if (OUTDOOR_WEATHER.has(item.tag) && used.has("indoors") && !used.has("outdoors")) return false;
+    // 反向。雪／櫻花在 OUTDOOR_LEFTOVER 裡，釘了不會進室內；雨／霧／陰天不在，
+    // 也不 implies outdoors。釘雨時場地還沒填，客廳照收（實測 20～27/40 indoors）。
+    if (
+      [...used].some((t) => OUTDOOR_WEATHER.has(t)) &&
+      !used.has("outdoors") &&
+      (item.tag === "indoors" ||
+        (item.implies || []).includes("indoors") ||
+        INDOOR_ROOM.has(item.tag))
+    ) {
+      return false;
+    }
     if (item.tag === "wading" && (used.has("legs up") || used.has("m legs"))) return false;
     if ((item.tag === "legs up" || item.tag === "m legs") && used.has("wading")) return false;
     if (
@@ -4746,6 +4758,14 @@ export function drawOne(lex, settings, pinned, userBanned, rand, seed) {
       if (item.mutex === "furniture") {
         if (used.has("outdoors")) return false;
         if ([...used].some((t) => UPRIGHT_BODY.has(t))) return false;
+      }
+      // 釘沙發／床時姿勢還沒填。standing → 傢俱已擋，反向沒擋，實測釘沙發
+      // 6/40 張站著。on chair 另有雙向規則。on desk 站著合理，不擋。
+      if (
+        UPRIGHT_BODY.has(item.tag) &&
+        (used.has("on bed") || used.has("on couch") || used.has("bunk bed") || used.has("under table"))
+      ) {
+        return false;
       }
       if (HANDS_BUSY_BODY.has(item.tag) && [...used].some((t) => ARM_POSE.has(t))) return false;
       if (HANDS_BUSY_ACT.has(item.tag) && [...used].some((t) => HANDS_BUSY_BODY.has(t))) return false;
