@@ -9,6 +9,61 @@
 > **成人向。** 這個工具會產生成人內容。詞庫和負向 prompt 會擋 `loli`、`shota`、`teen`、`child`。
 > 只在自己的機器上跑，伺服器預設只收 loopback 和 Tailscale 的連線。
 
+## 架構總覽
+
+```mermaid
+flowchart LR
+  subgraph CLIENT[瀏覽器端]
+    UI[四套前端版面<br/>web / web1 / web2 / web3]
+    GAME[猜字棚遊戲<br/>game/]
+    UI -->|設定、釘選、抽圖| ENGINE
+    GAME -->|題目與抽取資料| ENGINE
+  end
+
+  subgraph TAGS[詞庫與規則]
+    PARTS[分類詞庫<br/>web/lexicon_parts/]
+    BUILD[詞庫建置<br/>merge_lexicon.py<br/>→ add_zh.py<br/>→ token_counts.py]
+    LEX[生成詞庫<br/>web/lexicon.json]
+    PARTS --> BUILD --> LEX
+  end
+
+  ENGINE[Tag 抽取引擎<br/>web/engine.js]
+  CONFIG[設定<br/>config.json / 環境變數]
+  SERVER[API、佇列、預覽<br/>server.py]
+  COMFY[ComfyUI<br/>WAI / Illustrious SDXL]
+  TG[Telegram<br/>可選通知]
+  DC[Discord<br/>可選通知]
+
+  LEX --> ENGINE
+  CONFIG --> SERVER
+  ENGINE -->|POS + 分級 NEG<br/>+ LoRA 觸發詞| SERVER
+  SERVER -->|workflow、checkpoint、LoRA| COMFY
+  COMFY -->|SSE 進度、預覽、成品| SERVER
+  SERVER -->|結果與狀態| UI
+  SERVER -.->|成圖通知| TG
+  SERVER -.->|成圖通知| DC
+
+  subgraph VERIFY[品質閘門]
+    TEST[test.bat<br/>engine / lexicon / panel / server / audit]
+  end
+  TEST -.-> ENGINE
+  TEST -.-> LEX
+  TEST -.-> SERVER
+
+  classDef runtime fill:#e8f1ff,stroke:#3572c6,color:#102a43
+  classDef data fill:#fff4d6,stroke:#c58a00,color:#4a3200
+  classDef external fill:#e9f7ef,stroke:#2f855a,color:#173b2a
+  classDef verify fill:#f4e8ff,stroke:#805ad5,color:#32205f
+  class UI,GAME,ENGINE,SERVER,CONFIG runtime
+  class PARTS,BUILD,LEX data
+  class COMFY,TG,DC external
+  class TEST verify
+```
+
+實際生圖的執行路徑是「前端設定／釘選 → `engine.js` 抽出 POS → `server.py` 組合
+分級負面與 workflow → ComfyUI → 預覽／成品回到前端」。詞庫建置與測試是獨立的
+驗證路徑，不會在每次抽圖時重新生成詞庫。
+
 ---
 
 ## 你需要先有什麼
