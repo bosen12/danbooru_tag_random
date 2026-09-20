@@ -31,6 +31,7 @@ if str(ROOT) not in sys.path:
     sys.path.insert(0, str(ROOT))
 
 import lora_scan
+import workflows
 
 # 這支程式原本把機器專屬的路徑寫死在原始碼裡（checkpoint 目錄、ComfyUI 位址…），
 # 別人要跑就得改 server.py。全部搬到 config.json，優先序是：
@@ -206,7 +207,13 @@ _LORA_CORS = {
 
 
 def comfy_base() -> str:
-    return str(cfg("comfy.api", "COMFY_API", "http://127.0.0.1:8188")).rstrip("/")
+    env = os.environ.get("COMFY_API", "").strip()
+    if env:
+        return env.rstrip("/")
+    saved = workflows.saved_comfy_api()
+    if saved:
+        return saved
+    return str(cfg("comfy.api", "", "http://127.0.0.1:8188")).rstrip("/")
 
 
 def api(method: str, path: str, data=None, timeout: float = 60):
@@ -376,6 +383,121 @@ def build_workflow(positive: str, width: int, height: int, seed: int, loras=None
     for lora_name, strength in convert_loras(loras):
         inject_lora(wf, lora_name, strength)
     return wf
+
+
+_MODEL_CACHE = {"t": 0.0, "data": {}}
+
+
+def models_from_comfy(kind: str) -> list[str]:
+    table = {
+        "checkpoints": ("CheckpointLoaderSimple", "ckpt_name"),
+        "loras": ("LoraLoader", "lora_name"),
+        "vae": ("VAELoader", "vae_name"),
+    }
+    if kind not in table:
+        return []
+    now = time.time()
+    hit = _MODEL_CACHE["data"].get(kind)
+    if hit is not None and now - _MODEL_CACHE["t"] < 30:
+        return hit
+    class_type, field = table[kind]
+    info = api("GET", f"/object_info/{class_type}", timeout=8)
+    names = workflows.combo_list(info, class_type, field)
+    if now - _MODEL_CACHE["t"] >= 30:
+        _MODEL_CACHE["data"] = {}
+        _MODEL_CACHE["t"] = now
+    _MODEL_CACHE["data"][kind] = names
+    return names
+
+
+def checkpoints_for_ui() -> tuple[list[dict], str]:
+    local = list_ckpts()
+    by_file = {it["file"]: it for it in local}
+    by_name = {str(it.get("ckpt_name") or "").replace("/", "\\"): it for it in local}
+    names: list[str] = []
+    try:
+        names = [str(n).replace("/", "\\") for n in models_from_comfy("checkpoints")]
+    except Exception:
+        names = []
+    if not names:
+        return local, "local"
+    items = []
+    for raw in names:
+        fn = raw.split("\\")[-1]
+        loc = by_name.get(raw) or by_file.get(fn) or {}
+        items.append(
+            {
+                "file": fn,
+                "ckpt_name": raw,
+                "title": loc.get("title") or Path(fn).stem,
+                "preview": loc.get("preview") or "",
+            }
+        )
+    return items, "comfy"
+
+
+def prepare_workflow(payload: dict):
+    """Builtin graph, or deepcopy of a stored API workflow with mapping applied."""
+    payload = payload or {}
+    positive = str(payload.get("positive") or "").strip()
+    if not positive:
+        raise ValueError("missing positive")
+    width = max(256, min(int(payload.get("width") or 1024), 2048))
+    height = max(256, min(int(payload.get("height") or 1024), 2048))
+    seed = payload.get("seed")
+    if seed is None or seed == "":
+        seed = random.randint(0, SEED_MAX)
+    seed = int(seed) & SEED_MAX
+    meta = {
+        "kind": "builtin",
+        "seed": seed,
+        "width": width,
+        "height": height,
+        "positive": positive,
+    }
+    wid = str(payload.get("workflowId") or "").strip()
+    if not wid:
+        wf = build_workflow(
+            positive,
+            width,
+            height,
+            seed,
+            payload.get("loras"),
+            payload.get("ckpt"),
+            sfw=bool(payload.get("sfw")),
+            rating=payload.get("rating"),
+        )
+        return wf, meta
+    prof = workflows.get_profile(wid)
+    if prof is None:
+        raise workflows.WorkflowError("找不到這個 workflow profile。", "missing_profile")
+    if not workflows.mapping_ready(prof["mapping"]):
+        raise workflows.WorkflowError("先指定 Positive Prompt 要寫進哪個節點。", "need_mapping")
+    mapping = prof["mapping"]
+    values = {"positive": positive}
+    neg_spec = mapping.get("negative") if isinstance(mapping.get("negative"), dict) else {}
+    if (neg_spec.get("mode") or "keep") == "control":
+        values["negative"] = negative_for(
+            payload.get("rating") if payload.get("rating") is not None else bool(payload.get("sfw"))
+        )
+    seed_spec = mapping.get("seed") if isinstance(mapping.get("seed"), dict) else {}
+    if (seed_spec.get("mode") or "keep") == "control":
+        values["seed"] = seed
+    ckpt_spec = mapping.get("checkpoint") if isinstance(mapping.get("checkpoint"), dict) else {}
+    if (ckpt_spec.get("mode") or "keep") == "control":
+        try:
+            pool, _ = checkpoints_for_ui()
+        except Exception:
+            pool = list_ckpts()
+        values["checkpoint"] = resolve_ckpt(payload.get("ckpt"), pool)
+    lora_specs = mapping.get("loras") if isinstance(mapping.get("loras"), list) else []
+    if any(isinstance(s, dict) and (s.get("mode") or "keep") == "control" for s in lora_specs):
+        values["loras"] = convert_loras(payload.get("loras"))
+    wf = workflows.apply_mapping(prof["workflow"], mapping, values)
+    meta["kind"] = "profile"
+    meta["id"] = wid
+    meta["name"] = prof.get("name") or wid
+    return wf, meta
 
 
 def comfy_interrupt(prompt_id=None) -> None:
@@ -601,6 +723,8 @@ class WsUnavailable(Exception):
 
 def gen_via_ws(width: int, height: int, seed: int, positive: str, wf: dict):
     cid = uuid.uuid4().hex
+    ckpt = workflows.ckpt_name_of(wf) or CKPT
+    save_ids = set(workflows.image_output_nodes(wf))
     try:
         ws = ws_connect(comfy_base(), cid, timeout=20)
     except Exception as exc:
@@ -625,7 +749,7 @@ def gen_via_ws(width: int, height: int, seed: int, positive: str, wf: dict):
                 if hist and prompt_id in hist:
                     image = first_image_src(hist[prompt_id])
                     if image:
-                        yield ("done", _job(seed, width, height, positive, image, wf["13"]["inputs"].get("ckpt_name")))
+                        yield ("done", _job(seed, width, height, positive, image, ckpt))
                         return
                 # 心跳：載模型的時候 Comfy 可以安靜一分鐘以上。沒有這一下，前端分不出
                 # 「還在載」和「伺服器這條執行緒卡死了」，寫也寫不出去的斷線也發現不了。
@@ -639,7 +763,7 @@ def gen_via_ws(width: int, height: int, seed: int, positive: str, wf: dict):
                 hist = api("GET", f"/history/{prompt_id}", timeout=20)
                 image = first_image_src(hist[prompt_id]) if hist and prompt_id in hist else None
                 if image:
-                    yield ("done", _job(seed, width, height, positive, image, wf["13"]["inputs"].get("ckpt_name")))
+                    yield ("done", _job(seed, width, height, positive, image, ckpt))
                     return
                 raise ConnectionError("Comfy 關掉了 websocket")
             if op == 9:
@@ -672,13 +796,14 @@ def gen_via_ws(width: int, height: int, seed: int, positive: str, wf: dict):
             elif typ == "execution_error":
                 raise RuntimeError(str(d.get("exception_message") or d or "Comfy error"))
             elif typ in ("execution_success", "executed"):
-                if typ == "executed" and d.get("node") not in (None, "200"):
+                nid = str(d.get("node") or "")
+                if typ == "executed" and save_ids and nid not in save_ids:
                     continue
                 hist = api("GET", f"/history/{prompt_id}", timeout=30)
                 if hist and prompt_id in hist:
                     image = first_image_src(hist[prompt_id])
                     if image:
-                        yield ("done", _job(seed, width, height, positive, image, wf["13"]["inputs"].get("ckpt_name")))
+                        yield ("done", _job(seed, width, height, positive, image, ckpt))
                         return
         raise TimeoutError(f"Comfy 超過 {GEN_TIMEOUT} 秒沒有產出（prompt {prompt_id}）")
     finally:
@@ -686,20 +811,15 @@ def gen_via_ws(width: int, height: int, seed: int, positive: str, wf: dict):
 
 
 def gen_events(payload: dict):
-    positive = str(payload.get("positive") or "").strip()
-    if not positive:
-        yield ("error", {"error": "missing positive"})
+    try:
+        wf, meta = prepare_workflow(payload)
+    except workflows.WorkflowError as exc:
+        yield ("error", {"error": str(exc), "code": exc.code})
         return
-    width = max(256, min(int(payload.get("width") or 1024), 2048))
-    height = max(256, min(int(payload.get("height") or 1024), 2048))
-    seed = payload.get("seed")
-    if seed is None or seed == "":
-        seed = random.randint(0, SEED_MAX)
-    seed = int(seed) & SEED_MAX
-    wf = build_workflow(
-        positive, width, height, seed, payload.get("loras"), payload.get("ckpt"),
-        sfw=bool(payload.get("sfw")), rating=payload.get("rating"),
-    )
+    except (ValueError, TypeError) as exc:
+        yield ("error", {"error": str(exc)})
+        return
+    seed, width, height, positive = meta["seed"], meta["width"], meta["height"], meta["positive"]
     yield ("queued", {"seed": seed, "width": width, "height": height})
     try:
         yield from gen_via_ws(width, height, seed, positive, wf)
@@ -716,21 +836,8 @@ def gen_events(payload: dict):
 
 
 def gen(payload: dict) -> dict:
-    positive = str(payload.get("positive") or "").strip()
-    if not positive:
-        raise ValueError("missing positive")
-    width = int(payload.get("width") or 1024)
-    height = int(payload.get("height") or 1024)
-    width = max(256, min(width, 2048))
-    height = max(256, min(height, 2048))
-    seed = payload.get("seed")
-    if seed is None or seed == "":
-        seed = random.randint(0, SEED_MAX)
-    seed = int(seed) & SEED_MAX
-    wf = build_workflow(
-        positive, width, height, seed, payload.get("loras"), payload.get("ckpt"),
-        sfw=bool(payload.get("sfw")), rating=payload.get("rating"),
-    )
+    wf, meta = prepare_workflow(payload)
+    seed, width, height, positive = meta["seed"], meta["width"], meta["height"], meta["positive"]
     prompt_id = api("POST", "/prompt", {"prompt": wf}, timeout=60)["prompt_id"]
     hist = wait_done(prompt_id)
     image = first_image_src(hist)
@@ -740,7 +847,7 @@ def gen(payload: dict) -> dict:
         "ok": True,
         "image": image,
         "seed": seed,
-        "ckpt": wf["13"]["inputs"].get("ckpt_name") or CKPT,
+        "ckpt": workflows.ckpt_name_of(wf) or CKPT,
         "width": width,
         "height": height,
         "positive": positive,
@@ -1429,14 +1536,144 @@ class Handler(BaseHTTPRequestHandler):
         self._json(200, lora_scan.list_loras())
 
     def _serve_checkpoints(self) -> None:
-        items = list_ckpts()
+        try:
+            items, source = checkpoints_for_ui()
+        except Exception:
+            items, source = list_ckpts(), "local"
         self._json(
             200,
             {
                 "ok": True,
                 "dir": str(CKPT_DIR) if CKPT_DIR else "",
+                "source": source,
                 "current": resolve_ckpt(None, items),
                 "items": items,
+            },
+        )
+
+    def _serve_models(self) -> None:
+        qs = urllib.parse.parse_qs(urllib.parse.urlparse(self.path).query)
+        kind = ((qs.get("kind") or ["checkpoints"])[0] or "checkpoints").strip()
+        try:
+            names = models_from_comfy(kind)
+            self._json(200, {"ok": True, "kind": kind, "items": names, "count": len(names)})
+        except Exception as exc:
+            self._json(502, {"ok": False, "kind": kind, "error": str(exc), "items": [], "count": 0})
+
+    def _serve_comfy_config(self) -> None:
+        env = os.environ.get("COMFY_API", "").strip()
+        self._json(
+            200,
+            {
+                "ok": True,
+                "api": comfy_base(),
+                "saved": workflows.saved_comfy_api(),
+                "fromEnv": bool(env),
+                "default": workflows.DEFAULT_COMFY_API,
+            },
+        )
+
+    def _apply_comfy_config(self, payload: dict) -> None:
+        try:
+            saved = workflows.set_comfy_api((payload or {}).get("api"))
+        except workflows.WorkflowError as exc:
+            self._json(400, {"ok": False, "error": str(exc), "code": exc.code})
+            return
+        _PING["val"] = None
+        _MODEL_CACHE["t"] = 0
+        _MODEL_CACHE["data"] = {}
+        lora_scan.reset_cache()
+        env = os.environ.get("COMFY_API", "").strip()
+        self._json(
+            200,
+            {
+                "ok": True,
+                "api": comfy_base(),
+                "saved": saved,
+                "fromEnv": bool(env),
+                "note": "目前被環境變數 COMFY_API 鎖定，畫面存的值下次沒設環境變數才會生效。" if env else "",
+            },
+        )
+
+    def _workflow_pid(self, path: str):
+        prefix = "/api/workflows/"
+        if not path.startswith(prefix):
+            return None
+        rest = path[len(prefix) :].strip("/")
+        if not rest or "/" in rest or rest in {".", ".."}:
+            return None
+        return urllib.parse.unquote(rest)
+
+    def _serve_workflow_get(self, path: str) -> None:
+        if path == "/api/workflows":
+            self._json(200, {"ok": True, "items": workflows.list_profiles()})
+            return
+        pid = self._workflow_pid(path)
+        if not pid:
+            self._json(404, {"ok": False, "error": "not found"})
+            return
+        prof = workflows.get_profile(pid)
+        if prof is None:
+            self._json(404, {"ok": False, "error": "找不到這個 workflow profile。", "code": "missing_profile"})
+            return
+        self._json(
+            200,
+            {
+                "ok": True,
+                "id": prof["id"],
+                "name": prof["name"],
+                "mapping": prof["mapping"],
+                "nodes": workflows.inspect_nodes(prof["workflow"]),
+                "ready": workflows.mapping_ready(prof["mapping"]),
+            },
+        )
+
+    def _serve_workflow_save(self, payload: dict) -> None:
+        name = str((payload or {}).get("name") or "").strip() or "Workflow"
+        wf = (payload or {}).get("workflow")
+        mapping = (payload or {}).get("mapping")
+        try:
+            prof = workflows.save_profile(name, wf, mapping)
+        except workflows.WorkflowError as exc:
+            self._json(400, {"ok": False, "error": str(exc), "code": exc.code})
+            return
+        loaded = workflows.get_profile(prof["id"])
+        self._json(
+            200,
+            {
+                "ok": True,
+                "id": prof["id"],
+                "name": prof["name"],
+                "mapping": (loaded or {}).get("mapping") or {},
+                "nodes": workflows.inspect_nodes((loaded or {}).get("workflow") or wf),
+                "ready": workflows.mapping_ready((loaded or {}).get("mapping") or {}),
+            },
+        )
+
+    def _serve_workflow_put(self, pid: str, payload: dict) -> None:
+        try:
+            if "mapping" in (payload or {}):
+                workflows.update_mapping(pid, payload.get("mapping"))
+            if payload.get("name"):
+                prof = workflows.get_profile(pid)
+                if prof is None:
+                    raise workflows.WorkflowError("找不到這個 workflow profile。", "missing_profile")
+                workflows.save_profile(str(payload.get("name")), prof["workflow"], payload.get("mapping") or prof["mapping"], pid=pid)
+            loaded = workflows.get_profile(pid)
+            if loaded is None:
+                raise workflows.WorkflowError("找不到這個 workflow profile。", "missing_profile")
+        except workflows.WorkflowError as exc:
+            self._json(400, {"ok": False, "error": str(exc), "code": exc.code})
+            return
+        self._json(
+            200,
+            {
+                "ok": True,
+                "id": loaded["id"],
+                "name": loaded["name"],
+                "mapping": loaded["mapping"],
+                "nodes": workflows.inspect_nodes(loaded["workflow"]),
+                "ready": workflows.mapping_ready(loaded["mapping"]),
             },
         )
 
@@ -1721,6 +1958,15 @@ class Handler(BaseHTTPRequestHandler):
         if path == "/api/checkpoints":
             self._serve_checkpoints()
             return
+        if path == "/api/models":
+            self._serve_models()
+            return
+        if path == "/api/comfy":
+            self._serve_comfy_config()
+            return
+        if path == "/api/workflows" or path.startswith("/api/workflows/"):
+            self._serve_workflow_get(path)
+            return
         if path == "/api/ckpt-preview":
             self._serve_ckpt_preview()
             return
@@ -1743,11 +1989,24 @@ class Handler(BaseHTTPRequestHandler):
             return
         path = urllib.parse.urlparse(self.path).path
         length = int(self.headers.get("Content-Length") or 0)
+        if length > workflows.MAX_WORKFLOW_BYTES:
+            self._json(413, {"ok": False, "error": "JSON 太大（上限 5MB）", "code": "too_large"})
+            return
         raw = self.rfile.read(length) if length else b"{}"
         try:
             payload = json.loads(raw.decode("utf-8") or "{}")
         except json.JSONDecodeError:
-            self._json(400, {"ok": False, "error": "bad json"})
+            self._json(400, {"ok": False, "error": "不是有效的 JSON。", "code": "invalid"})
+            return
+        if path == "/api/comfy":
+            self._apply_comfy_config(payload)
+            return
+        if path == "/api/workflows":
+            self._serve_workflow_save(payload)
+            return
+        pid = self._workflow_pid(path)
+        if pid:
+            self._serve_workflow_put(pid, payload)
             return
         if path == "/api/gen":
             if not ping().get("ok"):
@@ -1804,6 +2063,23 @@ class Handler(BaseHTTPRequestHandler):
             return
         self._json(404, {"ok": False, "error": "not found"})
 
+    def do_PUT(self) -> None:
+        self.do_POST()
+
+    def do_DELETE(self) -> None:
+        if not self._allowed():
+            return
+        path = urllib.parse.urlparse(self.path).path
+        pid = self._workflow_pid(path)
+        if not pid:
+            self._json(404, {"ok": False, "error": "not found"})
+            return
+        ok = workflows.delete_profile(pid)
+        if not ok:
+            self._json(404, {"ok": False, "error": "找不到這個 workflow profile。", "code": "missing_profile"})
+            return
+        self._json(200, {"ok": True})
+
     def do_OPTIONS(self) -> None:
         if not self._allowed():
             return
@@ -1855,8 +2131,17 @@ def list_ckpts(root: Path | None = None, prefix: str | None = None) -> list[dict
 
 
 def resolve_ckpt(name: str | None, items: list | None = None) -> str:
-    """Only allow files from the Illustrious folder. Unknown names fall back to default."""
-    pool = items if items is not None else list_ckpts()
+    """Allow names from the provided list (local folder or Comfy object_info).
+
+    空清單代表「沒有白名單、但檔名仍要安全」——遠端 Comfy 的 extra_model_paths
+    不會出現在本機 checkpointDir 裡，不能因此退回作者機器的預設檔名。
+    """
+    if items is None:
+        try:
+            items, _ = checkpoints_for_ui()
+        except Exception:
+            items = list_ckpts()
+    pool = items
     allowed = {}
     for it in pool:
         key = str(it.get("ckpt_name") or "").replace("/", "\\")
@@ -1876,6 +2161,8 @@ def resolve_ckpt(name: str | None, items: list | None = None) -> str:
         return allowed[raw]
     if parts[-1] in allowed:
         return allowed[parts[-1]]
+    if not allowed:
+        return raw
     return allowed.get(fallback, fallback)
 
 

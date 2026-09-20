@@ -74,11 +74,13 @@ function ok(name, cond, detail) {
     loras: [{ folder: "a", file: "b.safetensors", strength: 0.8 }],
     ckpt: "drawn.safetensors",
     rating: "explicit",
+    workflowId: "my-wai",
   };
   const LIVE = {
     loras: [{ folder: "z", file: "later.safetensors", strength: 0.2 }],
     ckpt: "now.safetensors",
     rating: "general",
+    workflowId: "other",
   };
 
   const wrong = [];
@@ -97,13 +99,16 @@ function ok(name, cond, detail) {
     "卡片沒存的欄位退回即時設定",
     JSON.stringify(fellBack.loras) === JSON.stringify(LIVE.loras) &&
       fellBack.ckpt === LIVE.ckpt &&
-      fellBack.rating === LIVE.rating,
+      fellBack.rating === LIVE.rating &&
+      fellBack.workflowId === LIVE.workflowId,
     JSON.stringify(fellBack)
   );
 
   // 空陣列是有意義的：那張卡就是沒掛 LoRA，不可以被現在掛著的蓋過去。
   const noLora = jobFields({ positive: "x", loras: [] }, LIVE);
   ok("卡片的 loras 是空陣列時不被即時設定蓋過去", noLora.loras.length === 0, JSON.stringify(noLora.loras));
+  const builtinCard = jobFields({ positive: "x", workflowId: "" }, LIVE);
+  ok("卡片的 workflowId 空字串是內建，不被即時設定蓋過去", builtinCard.workflowId === "", JSON.stringify(builtinCard));
 
   // 兩邊都沒有時要有安全的預設，不能吐出 undefined 讓伺服器自己猜。
   const bare = jobFields(null, null);

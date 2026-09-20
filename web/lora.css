@@ -36,13 +36,15 @@
 }
 
 #lora-pick-btn,
-#ckpt-pick-btn {
+#ckpt-pick-btn,
+#wf-pick-btn {
   max-width: min(220px, 100%);
   overflow: hidden;
   text-overflow: ellipsis;
   white-space: nowrap;
 }
-#lora-pick-btn {
+#lora-pick-btn,
+#wf-pick-btn {
   flex: 0 0 auto;
 }
 #ckpt-pick-btn {
@@ -54,7 +56,8 @@
   gap: 6px;
 }
 #lora-pick-btn .gen-pick-label,
-#ckpt-pick-btn .gen-pick-label {
+#ckpt-pick-btn .gen-pick-label,
+#wf-pick-btn .gen-pick-label {
   min-width: 0;
   overflow: hidden;
   text-overflow: ellipsis;
@@ -75,7 +78,8 @@
   border-radius: 3px;
 }
 #lora-pick-btn.has,
-#ckpt-pick-btn.has {
+#ckpt-pick-btn.has,
+#wf-pick-btn.has {
   border-color: var(--color-accent);
   color: var(--color-ink);
 }
@@ -1044,7 +1048,8 @@
 
 @media (max-width: 900px) {
   #lora-pick-btn,
-  #ckpt-pick-btn {
+  #ckpt-pick-btn,
+  #wf-pick-btn {
     min-height: 36px;
     padding: 0 10px;
   }

@@ -563,6 +563,108 @@ ok(
     f"備援多了 {[t for t in _fb if t not in _live]}，少了 {[t for t in _live if t not in _fb]}",
 )
 
+# --- user workflow profiles -----------------------------------------------
+import workflows as wfmod
+
+wf_td = Path(tempfile.mkdtemp())
+wfmod.DATA_DIR = wf_td / "workflows"
+wfmod.SETTINGS_PATH = wf_td / "settings.json"
+
+_PROFILE_WF = {
+    "4": {"class_type": "CheckpointLoaderSimple", "inputs": {"ckpt_name": "kept.safetensors"}},
+    "6": {"class_type": "CLIPTextEncode", "inputs": {"text": "OLD POS", "clip": ["4", 1]}},
+    "7": {"class_type": "CLIPTextEncode", "inputs": {"text": "OLD NEG", "clip": ["4", 1]}},
+    "3": {
+        "class_type": "KSampler",
+        "inputs": {
+            "seed": 1,
+            "steps": 20,
+            "cfg": 7,
+            "sampler_name": "euler",
+            "scheduler": "normal",
+            "denoise": 1,
+            "model": ["4", 0],
+            "positive": ["6", 0],
+            "negative": ["7", 0],
+            "latent_image": ["5", 0],
+        },
+    },
+    "5": {"class_type": "EmptyLatentImage", "inputs": {"width": 512, "height": 512, "batch_size": 1}},
+    "8": {"class_type": "VAEDecode", "inputs": {"samples": ["3", 0], "vae": ["4", 2]}},
+    "9": {"class_type": "SaveImage", "inputs": {"filename_prefix": "x", "images": ["8", 0]}},
+    "40": {"class_type": "ControlNetLoader", "inputs": {"control_net_name": "keep_me.safetensors"}},
+}
+
+builtin_wf, builtin_meta = server.prepare_workflow(
+    {"positive": "1girl", "width": 512, "height": 512, "seed": 7}
+)
+ok("no workflowId uses builtin SaveImage 200", builtin_wf.get("200", {}).get("class_type") == "SaveImage")
+ok("no workflowId uses builtin ckpt node 13", builtin_wf.get("13", {}).get("class_type") == "CheckpointLoaderSimple")
+ok("builtin meta kind", builtin_meta.get("kind") == "builtin", str(builtin_meta))
+ok("blank workflowId still builtin", server.prepare_workflow({"positive": "1girl", "workflowId": ""})[1].get("kind") == "builtin")
+
+_prof = wfmod.save_profile(
+    "case",
+    _PROFILE_WF,
+    {
+        "positive": {"node": "6", "input": "text", "mode": "control"},
+        "negative": {"node": "7", "input": "text", "mode": "keep"},
+        "seed": {"node": "3", "input": "seed", "mode": "keep"},
+        "checkpoint": {"node": "4", "input": "ckpt_name", "mode": "keep"},
+    },
+)
+user_wf, user_meta = server.prepare_workflow(
+    {
+        "positive": "1girl, from profile",
+        "negative": "SHOULD NOT",
+        "seed": 99,
+        "ckpt": "other.safetensors",
+        "workflowId": _prof["id"],
+        "width": 1024,
+        "height": 1024,
+    }
+)
+ok("profile kind", user_meta.get("kind") == "profile", str(user_meta))
+ok("profile injects positive", user_wf["6"]["inputs"]["text"] == "1girl, from profile")
+ok("profile keeps negative", user_wf["7"]["inputs"]["text"] == "OLD NEG")
+ok("profile keeps seed", user_wf["3"]["inputs"]["seed"] == 1)
+ok("profile keeps checkpoint", user_wf["4"]["inputs"]["ckpt_name"] == "kept.safetensors")
+ok("profile keeps ControlNet", user_wf["40"]["inputs"]["control_net_name"] == "keep_me.safetensors")
+ok("profile does not grow builtin node 200", "200" not in user_wf)
+ok(
+    "on-disk original still OLD POS",
+    json.loads((wfmod.DATA_DIR / _prof["id"] / "workflow.json").read_text(encoding="utf-8"))["6"]["inputs"]["text"]
+    == "OLD POS",
+)
+
+_bare = wfmod.save_profile("bare", _PROFILE_WF, {})
+try:
+    server.prepare_workflow({"positive": "1girl", "workflowId": _bare["id"]})
+    ok("unmapped profile refused", False)
+except Exception as exc:
+    ok("unmapped profile refused", "Positive" in str(exc) or "positive" in str(exc).lower() or "節點" in str(exc), str(exc))
+
+try:
+    server.prepare_workflow({"positive": "1girl", "workflowId": "no-such"})
+    ok("missing profile refused", False)
+except Exception as exc:
+    ok("missing profile refused", True, str(exc))
+
+ok(
+    "empty ckpt pool accepts a Comfy-style name",
+    server.resolve_ckpt(r"extra\remote.safetensors", []) == r"extra\remote.safetensors",
+)
+ok(
+    "empty ckpt pool still rejects parent",
+    server.resolve_ckpt(r"..\evil.safetensors", []) == str(server.CKPT).replace("/", "\\"),
+)
+
+src = (ROOT / "server.py").read_text(encoding="utf-8")
+ok(
+    "gen no longer waits only on node 200",
+    'd.get("node") not in (None, "200")' not in src,
+)
+
 if failed:
     print(f"\n{failed} failed")
     sys.exit(1)
