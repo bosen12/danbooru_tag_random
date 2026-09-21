@@ -3436,6 +3436,26 @@ export function drawOne(lex, settings, pinned, userBanned, rand, seed, opts) {
   };
   allow = (item, opts) => {
     if (banned.has(item.tag) || used.has(item.tag)) return false;
+    // 這三道關卡只看候選字自己：O(1)、沒有副作用、不消耗 rand。
+    // 它們原本排在第 9、第 10、和 272 道關卡裡的最後一道，而量出來每抽一張圖
+    // allow() 被呼叫 2141 次、擋掉 1180 次，其中
+    //   尺度／人選  319 次（27%）
+    //   時代        265 次（22%）
+    //   互斥格      195 次（16.5%）
+    // ——— 三道合計 66% 的拒絕，卻排在整串的第 9、10 和最後。排在它們前面的
+    // supportCandidateAllowed 每次呼叫配置一個物件字面值、佔總時間 6.5%，
+    // 由那 66% 一起埋單。
+    //
+    // 純判斷式重排不改變任何結果（全部是 `if (...) return false` 的 AND 串，
+    // 沒有一道會寫東西或抽亂數）。實測 12 種情境 × seed 42..241 共 2400 張
+    // 逐字指紋不變，而每張快 29%（與 HEAD 交錯跑三輪取中位數）。
+    // 守衛在 test_draw_baseline.mjs：指紋一條、順序三條。
+    if (!heatOk(item, heat) || !gateOk(item, female, male)) return false;
+    // 必抽（opts.skipEra）只繞過時代這一關。互斥、尺度、性別、物理支撐照擋。
+    if (!(opts && opts.skipEra) && !eraOk(item, era)) return false;
+    for (const g of extraMutex(item)) {
+      if (mutexTaken.has(g)) return false;
+    }
     // 關掉色情模式：情色的字一個都不准進場。放在最前面，後面所有補救邏輯
     // （浴場補衣、上衣補下著、必抽）也都走 allow，所以不會有人從側門把它們塞回來。
     if (sfw && blockedByRating(item)) return false;
@@ -3459,9 +3479,6 @@ export function drawOne(lex, settings, pinned, userBanned, rand, seed, opts) {
       mode: sceneModeOf(settings),
       people,
     })) return false;
-    if (!heatOk(item, heat) || !gateOk(item, female, male)) return false;
-    // 必抽（opts.skipEra）只繞過時代這一關。互斥、尺度、性別、物理支撐照擋。
-    if (!(opts && opts.skipEra) && !eraOk(item, era)) return false;
     if (!castOk(item, female, male, people, genderCount(used, true), genderCount(used, false))) return false;
     if (used.has("bald") && (item.mutex === "hair_color" || item.group === "hair_style" || item.group === "hair_color")) return false;
     if (item.tag === "bald" && someUsed((it) => it.group === "hair_color" || it.group === "hair_style")) return false;
@@ -4758,9 +4775,6 @@ export function drawOne(lex, settings, pinned, userBanned, rand, seed, opts) {
         const listed = [...jobs].filter((j) => JOB_PLACE[j]);
         if (listed.length > 0 && listed.every((j) => jobHasOnlyIndoorPlaces(j, era, lex))) return false;
       }
-    }
-    for (const g of extraMutex(item)) {
-      if (mutexTaken.has(g)) return false;
     }
     return true;
   };
