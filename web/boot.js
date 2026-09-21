@@ -56,6 +56,7 @@ import {
   toggleNamedPreset,
 } from "./engine.js";
 import {
+  applyRecipeModels,
   currentCkpt,
   currentLorasPayload,
   currentTriggerText,
@@ -78,7 +79,10 @@ import {
 import { initTelegram, tgHandleKeys, tgSendCard, tgUiOpen } from "./telegram.js";
 import { initDiscord, dcHandleKeys, dcSendCard, dcUiOpen } from "./discord.js";
 import { initServiceSettings } from "./service-settings.js";
-import { currentWorkflowId, initWorkflow, wfHandleKeys, workflowUiOpen } from "./workflow.js";
+import { applyWorkflowId, currentWorkflowId, initWorkflow, wfHandleKeys, workflowUiOpen } from "./workflow.js";
+import { albumHandleKeys, ensureFavButton, initAlbum, paintFavButton, paintWhy } from "./album.js";
+import { createCommands } from "./commands.js";
+import { traceSummaryForRecipe } from "./trace.js";
 import {
   clearAllMustDraw,
   initMustDraw,
@@ -125,6 +129,7 @@ let failStreak = 0;
 // 留寬一點是因為換底模那下可以整整安靜一分鐘。
 // 由 config.json 的 client.streamIdleMs 覆寫（透過 /api/ping 帶下來）。
 let STREAM_IDLE_MS = 90000;
+let genSampler = { sampler: "", scheduler: "", steps: 25, cfg: 6.5 };
 // /api/ping 走到底也只要八秒（伺服器那邊對 Comfy 的 timeout 就是 8）。
 const PING_TIMEOUT_MS = 10000;
 // 被取消／停過之後，下一次按抽圖要把八格牆先清掉重來，不要跟上一輪的殘局混在一起。
@@ -212,6 +217,10 @@ async function ping() {
     const r = await fetch("/api/ping", { signal: AbortSignal.timeout(PING_TIMEOUT_MS) });
     const j = await r.json();
     if (Number(j.streamIdleMs) > 0) STREAM_IDLE_MS = Number(j.streamIdleMs);
+    if (j.sampler) genSampler.sampler = j.sampler;
+    if (j.scheduler) genSampler.scheduler = j.scheduler;
+    if (Number(j.steps) > 0) genSampler.steps = Number(j.steps);
+    if (Number(j.cfg) > 0) genSampler.cfg = Number(j.cfg);
     el.dataset.ok = j.ok ? "1" : "0";
     el.querySelector("span").textContent = j.ok
       ? `Comfy ${j.version || "ok"}`
@@ -1600,6 +1609,128 @@ function afterPin() {
   for (const card of document.querySelectorAll(".card")) paintPinMiss(card);
 }
 
+function recipeFromDraw(drawn, sent, seedNum) {
+  return {
+    name: (ERA_LABELS[drawn.era] || drawn.era || "配方") + " · seed " + seedNum,
+    positive: drawn.positive,
+    positiveWeighted: sent,
+    seed: seedNum,
+    width: settings.width,
+    height: settings.height,
+    checkpoint: currentCkpt() || "",
+    loras: (currentLorasPayload() || []).map((l, i) => ({
+      ...l,
+      trigger: currentTriggerText(),
+      order: i,
+    })),
+    workflowId: currentWorkflowId(),
+    sampler: genSampler.sampler,
+    scheduler: genSampler.scheduler,
+    steps: genSampler.steps,
+    cfg: genSampler.cfg,
+    rating: settings.rating || "explicit",
+    heats: [...(settings.heats || [])],
+    era: drawn.era || "",
+    sceneMode: sceneModeOf(settings),
+    counts: { ...(settings.counts || {}) },
+    mustDraw: { ...(settings.mustDraw || {}) },
+    pinned: [...pinned],
+    userBanned: [...userBanned],
+    presetOwned: [...(presetOwned instanceof Set ? presetOwned : presetOwned || [])],
+    traceSummary: traceSummaryForRecipe(drawn.trace || { kept: [], rejected: [] }),
+  };
+}
+
+function applyRecipeToBench(recipe) {
+  if (!recipe) return;
+  pinned = new Set(recipe.pinned || []);
+  userBanned = new Set(recipe.userBanned || []);
+  presetOwned = new Set(recipe.presetOwned || []);
+  settings = sanitizeSettings(
+    {
+      ...settings,
+      rating: recipe.rating,
+      heats: recipe.heats,
+      sceneMode: recipe.sceneMode,
+      counts: recipe.counts,
+      mustDraw: recipe.mustDraw,
+      width: recipe.width,
+      height: recipe.height,
+      eras: recipe.era ? [recipe.era] : settings.eras,
+    },
+    lex.data,
+  );
+  saveStore();
+  applyWorkflowId(recipe.workflowId || "");
+  const missing = applyRecipeModels({ checkpoint: recipe.checkpoint, loras: recipe.loras });
+  afterPin();
+  syncRating();
+  syncHeat();
+  syncSceneMode();
+  renderCounts();
+  if (missing && missing.length) speak("已套用，但缺少：" + missing.join("、"));
+  else speak("已套用到工作台，尚未生圖");
+}
+
+async function generateFromRecipe(recipe) {
+  if (!recipe) return;
+  if (!(await comfyUp())) {
+    speak("ComfyUI 連不上，先開本機 8188");
+    return;
+  }
+  const payload = {
+    positive: recipe.positiveWeighted || recipe.positive,
+    width: recipe.width,
+    height: recipe.height,
+    seed: recipe.seed,
+    loras: recipe.loras,
+    ckpt: recipe.checkpoint,
+    rating: recipe.rating,
+    workflowId: recipe.workflowId != null ? recipe.workflowId : "",
+  };
+  const card = placeCard(cardSkeleton(recipe.width, recipe.height));
+  markLive(card);
+  card.dataset.seed = String(recipe.seed);
+  card.dataset.era = recipe.era || "";
+  card.dataset.bare = recipe.positive || "";
+  card.dataset.positive = payload.positive || "";
+  card.dataset.rating = recipe.rating || "explicit";
+  card.dataset.loras = JSON.stringify(recipe.loras || []);
+  card.dataset.ckpt = recipe.checkpoint || "";
+  card.dataset.workflowId = recipe.workflowId != null ? String(recipe.workflowId) : "";
+  card._recipe = recipe;
+  if (recipe.id) card.dataset.recipeId = recipe.id;
+  showPos(payload.positive);
+  setPosLine(card, payload.positive);
+  setLive(card, { status: "依配方重現…" });
+  const wasRunning = running;
+  running = true;
+  aborting = false;
+  skipping = false;
+  genAbort = new AbortController();
+  try {
+    await streamCardJob(card, recipe.seed, {
+      positive: payload.positive,
+      era: recipe.era,
+      eraClash: [],
+      loras: recipe.loras,
+      ckpt: recipe.checkpoint,
+      rating: recipe.rating,
+      workflowId: payload.workflowId,
+      width: recipe.width,
+      height: recipe.height,
+    });
+  } finally {
+    clearLive(card);
+    if (!wasRunning) {
+      running = false;
+      $("go").disabled = false;
+      $("go").removeAttribute("aria-busy");
+      $("cancel").hidden = true;
+    }
+  }
+}
+
 function weightedPos(positive) {
   return applyTagWeights(positive, tagWeights);
 }
@@ -1705,7 +1836,7 @@ function cardSkeleton(width, height) {
   el.className = "card is-wait";
   el.style.setProperty("--shot-w", String(width || 1024));
   el.style.setProperty("--shot-h", String(height || 1024));
-  el.innerHTML = `<div class="shot"><div class="skel" aria-hidden="true"></div><img class="shot-img" alt="" width="${width || 1024}" height="${height || 1024}"><div class="meter" hidden><i></i><span></span></div><button type="button" class="skip-shot" aria-label="跳過這張，接著下一張" title="跳過這張"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" aria-hidden="true"><line x1="6" y1="6" x2="18" y2="18"/><line x1="18" y1="6" x2="6" y2="18"/></svg></button><button type="button" class="redo-shot" aria-label="重新生成這張" title="重新生成"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M21 12a9 9 0 1 1-2.6-6.3"/><polyline points="21 3 21 9 15 9"/></svg></button></div><div class="meta"><div class="bar">排隊中…</div><div class="pos"></div></div>`;
+  el.innerHTML = `<div class="shot"><div class="skel" aria-hidden="true"></div><img class="shot-img" alt="" width="${width || 1024}" height="${height || 1024}"><div class="meter" hidden><i></i><span></span></div><button type="button" class="skip-shot" aria-label="跳過這張，接著下一張" title="跳過這張"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" aria-hidden="true"><line x1="6" y1="6" x2="18" y2="18"/><line x1="18" y1="6" x2="6" y2="18"/></svg></button><button type="button" class="redo-shot" aria-label="重新生成這張" title="重新生成"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M21 12a9 9 0 1 1-2.6-6.3"/><polyline points="21 3 21 9 15 9"/></svg></button><button type="button" class="fav-shot" aria-pressed="false" aria-label="收藏這張" title="收藏"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linejoin="round" aria-hidden="true"><polygon points="12 3 14.9 9.6 22 10.3 16.6 15.2 18.2 22.3 12 18.7 5.8 22.3 7.4 15.2 2 10.3 9.1 9.6"/></svg></button></div><div class="meta"><div class="bar">排隊中…</div><div class="pos"></div></div>`;
   return el;
 }
 
@@ -1934,6 +2065,9 @@ function fillCard(el, job, err) {
   });
   meta.replaceChildren(bar, pos || document.createElement("div"));
   paintPinMiss(el);
+  ensureFavButton(el);
+  paintFavButton(el);
+  paintWhy(el, lex, labelOf);
   if (job.eraClash && job.eraClash.length) {
     const warn = document.createElement("p");
     warn.className = "warn";
@@ -2405,8 +2539,8 @@ async function streamCardJob(card, seedNum, extra) {
     await streamGen(
       {
         positive: job.positive,
-        width: settings.width,
-        height: settings.height,
+        width: extra.width || settings.width,
+        height: extra.height || settings.height,
         seed: seedNum,
         loras: job.loras,
         ckpt: job.ckpt,
@@ -2614,7 +2748,10 @@ async function runBatch() {
         settings.samePerson && identBan.size
           ? new Set([...userBanned, ...identBan])
           : userBanned;
-      const drawn = drawOne(lex, settings, pinForDraw, banForDraw, rng, seedNum);
+      const drawn = drawOne(lex, settings, pinForDraw, banForDraw, rng, seedNum, {
+        trace: true,
+        presetOwned: presetOwned instanceof Set ? presetOwned : new Set(presetOwned || []),
+      });
       if (settings.samePerson && ident.size === 0) {
         ident = identityPins(lex, drawn.positive);
         identBan = identityBans(lex, drawn.positive);
@@ -2637,6 +2774,7 @@ async function runBatch() {
       card.dataset.loras = JSON.stringify(currentLorasPayload());
       card.dataset.ckpt = currentCkpt() || "";
       card.dataset.workflowId = currentWorkflowId();
+      card._recipe = recipeFromDraw(drawn, sent, seedNum);
       if (settings.samePerson && i > 0) {
         card.dataset.same = "1";
         const shot = card.querySelector(".shot");
@@ -2960,6 +3098,7 @@ function bindUi() {
     if (tgHandleKeys(e)) return;
     if (dcHandleKeys(e)) return;
     if (wfHandleKeys(e)) return;
+    if (albumHandleKeys(e)) return;
     if (handleLoraKeys(e)) return;
     if (isTyping()) return;
     if (e.key === "i" || e.key === "I") {
@@ -3277,6 +3416,27 @@ async function main() {
   initDiscord();
   initServiceSettings();
   initWorkflow();
+  initAlbum({
+    speak,
+    applyRecipe: applyRecipeToBench,
+    generateFromRecipe,
+    onFavChange() {
+      for (const card of document.querySelectorAll(".card")) paintFavButton(card);
+    },
+  });
+  window.tagCaseCommands = createCommands({
+    pin(tag) {
+      onTagClick(tag);
+    },
+    ban(tag) {
+      const next = applyBan(lex, pinned, userBanned, tag);
+      pinned = next.pinned;
+      userBanned = next.userBanned;
+      afterPin();
+    },
+    applyRecipe: applyRecipeToBench,
+    generate: generateFromRecipe,
+  });
   initInfinite({
     onStart: () => {
       failStreak = 0;

@@ -32,6 +32,7 @@ if str(ROOT) not in sys.path:
     sys.path.insert(0, str(ROOT))
 
 import lora_scan
+import recipes
 import workflows
 
 # 這支程式原本把機器專屬的路徑寫死在原始碼裡（checkpoint 目錄、ComfyUI 位址…），
@@ -295,6 +296,10 @@ def ping() -> dict:
             # 慢顯卡（AMD ROCm 載模型／搬顯存）可能安靜很久，前端的放棄門檻
             # 得跟著機器走，所以由 config.json 決定而不是寫死在 boot.js。
             "streamIdleMs": int(cfg("client.streamIdleMs", "", 90000)),
+            "sampler": SAMPLER,
+            "scheduler": SCHEDULER,
+            "steps": STEPS,
+            "cfg": CFG,
         }
     except Exception as exc:
         val = {
@@ -302,6 +307,10 @@ def ping() -> dict:
             "base": comfy_base(),
             "error": str(exc),
             "streamIdleMs": int(cfg("client.streamIdleMs", "", 90000)),
+            "sampler": SAMPLER,
+            "scheduler": SCHEDULER,
+            "steps": STEPS,
+            "cfg": CFG,
         }
     _PING["t"] = now
     _PING["val"] = val
@@ -1699,6 +1708,136 @@ class Handler(BaseHTTPRequestHandler):
             return
         self._json(200, workflows.profile_view(loaded))
 
+    def _recipe_pid(self, path: str):
+        prefix = "/api/recipes/"
+        if not path.startswith(prefix):
+            return None
+        rest = path[len(prefix) :].strip("/")
+        if not rest or rest in {"export", "import"}:
+            return None
+        if rest.startswith("files/"):
+            return None
+        if "/image" in rest:
+            return urllib.parse.unquote(rest.split("/image", 1)[0])
+        if "/" in rest or rest in {".", ".."}:
+            return None
+        return urllib.parse.unquote(rest)
+
+    def _recipe_missing(self, rec: dict) -> dict:
+        miss = {"checkpoint": False, "loras": [], "workflow": False}
+        ckpt = str(rec.get("checkpoint") or "").replace("/", "\\")
+        names = set()
+        try:
+            items, _ = checkpoints_for_ui()
+            for it in items:
+                names.add(str(it.get("ckpt_name") or "").replace("/", "\\"))
+                names.add(str(it.get("file") or ""))
+        except Exception:
+            names = set()
+        if ckpt and names and ckpt not in names and ckpt.split("\\")[-1] not in names:
+            miss["checkpoint"] = True
+        have_lora = set()
+        try:
+            for it in lora_scan.list_loras().get("items") or []:
+                have_lora.add(str(it.get("file") or it.get("name") or ""))
+                have_lora.add(str(it.get("name") or ""))
+        except Exception:
+            have_lora = set()
+        for lora in rec.get("loras") or []:
+            fn = str(lora.get("file") or lora.get("name") or "")
+            if fn and have_lora and fn not in have_lora and Path(fn).name not in have_lora:
+                miss["loras"].append(fn)
+        wid = str(rec.get("workflowId") or "")
+        if wid:
+            if workflows.get_profile(wid) is None:
+                miss["workflow"] = True
+        return miss
+
+    def _serve_recipe_get(self, path: str) -> None:
+        if path == "/api/recipes":
+            self._json(200, {"ok": True, "items": recipes.list_recipes()})
+            return
+        if path == "/api/recipes/export":
+            self._json(200, {"ok": True, "payload": recipes.export_payload()})
+            return
+        if path.startswith("/api/recipes/files/"):
+            name = urllib.parse.unquote(path.split("/api/recipes/files/", 1)[-1])
+            stored = recipes.resolve_stored_file(name)
+            if stored is None:
+                self._json(404, {"ok": False, "error": "not found", "code": "path"})
+                return
+            raw = stored.read_bytes()
+            mime = mimetypes.guess_type(stored.name)[0] or "application/octet-stream"
+            self._bytes(200, raw, mime)
+            return
+        pid = self._recipe_pid(path)
+        if not pid:
+            self._json(404, {"ok": False, "error": "not found"})
+            return
+        try:
+            rec = recipes.get_recipe(pid)
+        except recipes.RecipeError as exc:
+            self._json(400, {"ok": False, "error": str(exc), "code": exc.code})
+            return
+        if rec is None:
+            self._json(404, {"ok": False, "error": "找不到這個配方。", "code": "missing"})
+            return
+        self._json(200, {"ok": True, "recipe": rec, "missing": self._recipe_missing(rec), "reproduce": recipes.reproduce_payload(rec)})
+
+    def _serve_recipe_write(self, path: str, payload: dict) -> None:
+        try:
+            if path == "/api/recipes/import":
+                saved = recipes.import_payload(payload)
+                self._json(200, {"ok": True, "items": saved})
+                return
+            if path == "/api/recipes":
+                rec = recipes.save_recipe(payload)
+                self._json(200, {"ok": True, "recipe": rec})
+                return
+            if path.endswith("/image"):
+                pid = self._recipe_pid(path)
+                if not pid:
+                    self._json(404, {"ok": False, "error": "not found"})
+                    return
+                fn = str((payload or {}).get("filename") or "")
+                q = comfy_view_query(fn, (payload or {}).get("subfolder"), (payload or {}).get("type") or "output")
+                if not q:
+                    self._json(400, {"ok": False, "error": "圖片路徑不合法。", "code": "path"})
+                    return
+                raw = api("GET", f"/view?{q}", timeout=60)
+                if not isinstance(raw, (bytes, bytearray)):
+                    self._json(502, {"ok": False, "error": "not an image"})
+                    return
+                ext = Path(fn).suffix.lower() or ".png"
+                rec = recipes.save_image_bytes(pid, bytes(raw), suffix=ext)
+                self._json(200, {"ok": True, "recipe": rec})
+                return
+            pid = self._recipe_pid(path)
+            if not pid:
+                self._json(404, {"ok": False, "error": "not found"})
+                return
+            rec = recipes.save_recipe(payload, rid=pid)
+            self._json(200, {"ok": True, "recipe": rec})
+        except recipes.RecipeError as exc:
+            self._json(400, {"ok": False, "error": str(exc), "code": exc.code})
+        except Exception as exc:
+            self._json(502, {"ok": False, "error": str(exc)})
+
+    def _serve_recipe_delete(self, path: str) -> None:
+        pid = self._recipe_pid(path)
+        if not pid:
+            self._json(404, {"ok": False, "error": "not found"})
+            return
+        try:
+            rec = recipes.delete_recipe(pid)
+        except recipes.RecipeError as exc:
+            self._json(400, {"ok": False, "error": str(exc), "code": exc.code})
+            return
+        if rec is None:
+            self._json(404, {"ok": False, "error": "找不到這個配方。", "code": "missing"})
+            return
+        self._json(200, {"ok": True, "recipe": rec})
+
     def _serve_ckpt_preview(self) -> None:
         qs = urllib.parse.parse_qs(urllib.parse.urlparse(self.path).query)
         fn = ((qs.get("file") or [""])[0] or "")
@@ -2021,6 +2160,9 @@ class Handler(BaseHTTPRequestHandler):
         if path == "/api/discord/config":
             self._json(200, dc_status())
             return
+        if path == "/api/recipes" or path.startswith("/api/recipes/"):
+            self._serve_recipe_get(path)
+            return
         self._serve_static(True)
 
     def do_POST(self) -> None:
@@ -2089,6 +2231,9 @@ class Handler(BaseHTTPRequestHandler):
         if path == "/api/discord/config":
             self._json(200, dc_apply_config(payload))
             return
+        if path == "/api/recipes" or path.startswith("/api/recipes/"):
+            self._serve_recipe_write(path, payload)
+            return
         if path == "/api/discord":
             if payload.get("test"):
                 # 測試是同步的：面板要當場看到 Discord 回什麼。
@@ -2112,6 +2257,9 @@ class Handler(BaseHTTPRequestHandler):
             return
         path = urllib.parse.urlparse(self.path).path
         if not self._mutation_allowed(path, require_json=False):
+            return
+        if path.startswith("/api/recipes/"):
+            self._serve_recipe_delete(path)
             return
         pid = self._workflow_pid(path)
         if not pid:

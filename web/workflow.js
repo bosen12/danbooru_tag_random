@@ -28,6 +28,12 @@ export function currentWorkflowId() {
   return WORKFLOW_ID || "";
 }
 
+export function applyWorkflowId(id) {
+  WORKFLOW_ID = id == null ? "" : String(id);
+  saveId();
+  renderPickBtn();
+}
+
 export function workflowUiOpen() {
   return $("wf-modal")?.classList.contains("open") && $("wf-modal")?.dataset.closing !== "1";
 }

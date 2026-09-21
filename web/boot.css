@@ -1059,6 +1059,109 @@ input[type="number"] {
   color: var(--color-paper);
   transform: scale(1.06);
 }
+.fav-shot {
+  position: absolute;
+  top: 8px;
+  left: 8px;
+  z-index: 6;
+  width: 36px;
+  height: 36px;
+  padding: 0;
+  display: none;
+  place-items: center;
+  border: 0;
+  border-radius: 99px;
+  background: oklch(24% 0.022 38 / 0.92);
+  color: var(--color-ink);
+  cursor: pointer;
+  opacity: 0;
+  pointer-events: none;
+  touch-action: manipulation;
+  transform: scale(0.84);
+  transform-origin: top left;
+  transition:
+    opacity 120ms var(--ease-out),
+    transform 180ms var(--ease-out),
+    color var(--dur-micro) var(--ease-out),
+    background var(--dur-micro) var(--ease-out);
+}
+.fav-shot svg {
+  width: 16px;
+  height: 16px;
+}
+.card.is-done .fav-shot {
+  display: grid;
+  opacity: 1;
+  pointer-events: auto;
+  transform: scale(1);
+}
+.fav-shot.is-on svg,
+.fav-shot[aria-pressed="true"] svg {
+  fill: currentColor;
+}
+.fav-shot:hover,
+.fav-shot:focus-visible {
+  color: var(--color-accent);
+  transform: scale(1.06);
+}
+.why-wrap {
+  margin-top: var(--space-2);
+}
+.why-btn {
+  font-size: var(--text-xs);
+}
+.why-panel {
+  margin-top: var(--space-2);
+  max-height: 14rem;
+  overflow: auto;
+  overscroll-behavior: contain;
+  font-size: var(--text-xs);
+  color: var(--color-muted);
+}
+.why-panel h3 {
+  margin: var(--space-2) 0 var(--space-1);
+  font-size: var(--text-xs);
+  color: var(--color-ink);
+}
+.why-panel ul {
+  margin: 0;
+  padding-left: 1.1em;
+}
+.why-panel li {
+  margin: 0.15em 0;
+}
+.why-tag,
+.why-rel {
+  background: none;
+  border: 0;
+  padding: 0;
+  color: inherit;
+  cursor: pointer;
+  text-decoration: underline dotted;
+  font: inherit;
+}
+.why-reason {
+  display: block;
+}
+.pos span.is-locate,
+.tag.is-locate {
+  outline: 2px solid var(--color-focus);
+  outline-offset: 2px;
+}
+.album-tools {
+  display: flex;
+  gap: var(--space-2);
+  margin: var(--space-2) 0;
+}
+.album-tools input {
+  flex: 1;
+  min-width: 0;
+}
+.album-io {
+  display: flex;
+  gap: var(--space-2);
+  margin-top: var(--space-2);
+}
 @media (hover: none) {
   .card.is-gen .skip-shot,
   .card.is-done .redo-shot {
