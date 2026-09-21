@@ -103,6 +103,17 @@ except recipes.RecipeError as exc:
     ok("future schema rejected", exc.code == "schema")
 
 try:
+    recipes.migrate_recipe({"schemaVersion": "nope", "positive": "x"})
+    ok("garbage schema rejected", False)
+except recipes.RecipeError as exc:
+    ok("garbage schema rejected", exc.code == "schema")
+except Exception as exc:
+    ok("garbage schema rejected", False, type(exc).__name__)
+
+arr = recipes.import_payload([{"positive": "1girl, solo", "name": "array-import"}])
+ok("import accepts a JSON array", arr and arr[0]["positive"] == "1girl, solo")
+
+try:
     recipes.normalize_recipe("nope")
     ok("corrupt type rejected", False)
 except recipes.RecipeError:

@@ -274,7 +274,10 @@ def _clean_image_ref(raw) -> dict | None:
 def migrate_recipe(raw) -> dict:
     if not isinstance(raw, dict):
         raise RecipeError("不是有效的配方 JSON。", "invalid")
-    version = int(raw.get("schemaVersion") or 1)
+    try:
+        version = int(raw.get("schemaVersion") or 1)
+    except (TypeError, ValueError) as exc:
+        raise RecipeError("配方版本無法辨識。", "schema") from exc
     if version > SCHEMA_VERSION:
         raise RecipeError("配方版本太新，這個程式讀不了。", "schema")
     body = {k: raw.get(k) for k in KNOWN_FIELDS if k in raw}
@@ -503,6 +506,8 @@ def import_payload(raw) -> list[dict]:
         except json.JSONDecodeError as exc:
             raise RecipeError("不是有效的 JSON。", "invalid") from exc
     elif isinstance(raw, dict):
+        data = raw
+    elif isinstance(raw, list):
         data = raw
     else:
         raise RecipeError("不是有效的 JSON。", "invalid")

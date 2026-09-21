@@ -66,10 +66,6 @@ import {
   evaluateClothingLayer,
   evaluateUnderwearVisibility,
 } from "./rules/clothing.js";
-import { evaluatePlaceActivity, evaluateIndoorOutdoor } from "./rules/scene.js";
-import { evaluateSportKit, evaluateSportPlace } from "./rules/sports.js";
-import { evaluateActivityBody } from "./rules/body.js";
-import { evaluateHeat, evaluateEra } from "./rules/adult.js";
 import { diffKept, rejectRemoved } from "./rules/reconcile.js";
 
 export {
@@ -99,13 +95,6 @@ export {
   evaluateCast,
   evaluateClothingLayer,
   evaluateUnderwearVisibility,
-  evaluatePlaceActivity,
-  evaluateIndoorOutdoor,
-  evaluateSportKit,
-  evaluateSportPlace,
-  evaluateActivityBody,
-  evaluateHeat,
-  evaluateEra,
   SOURCES,
   REASONS,
   STAGES,
@@ -3329,12 +3318,7 @@ export function drawOne(lex, settings, pinned, userBanned, rand, seed, opts) {
 
   const forcePin = (tag, parent) => {
     if (!tag || used.has(tag)) return;
-    if (userBanned.has(tag) && !pinned.has(tag)) {
-      if (tracer.enabled && pinned.has(tag)) {
-        tracer.reject({ tag, source: SOURCES.pin, stage: STAGES.pin, reason: REASONS.user_ban });
-      }
-      return;
-    }
+    if (userBanned.has(tag) && !pinned.has(tag)) return;
     const item = lex.byTag.get(tag);
     if (item) {
       for (const g of extraMutex(item)) {

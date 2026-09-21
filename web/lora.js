@@ -620,7 +620,9 @@ export function slotTriggerText(slot) {
 export function currentTriggerText() {
   return joinTriggerParts(GEN_LORA_SLOTS.map((slot) => (slot.strength > 0 ? slotTriggerText(slot) : "")));
 }
-export function applyRecipeModels({ checkpoint, loras } = {}) {
+export async function applyRecipeModels({ checkpoint, loras } = {}) {
+  if (GEN_CKPTS === null) await fetchCkpts();
+  if (GEN_LORAS === null) await fetchGenLoras();
   const missing = [];
   if (checkpoint) {
     const hit = (GEN_CKPTS || []).find(

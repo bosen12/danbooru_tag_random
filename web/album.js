@@ -354,27 +354,22 @@ const SECTION_ZH = { subject: "人物", feature: "特徵", clothing: "服裝", p
 export function paintWhy(card, lex, labelOf) {
   const meta = card?.querySelector(".meta");
   if (!meta) return;
-  let wrap = meta.querySelector(".why-wrap");
-  if (!wrap) {
-    wrap = document.createElement("div");
-    wrap.className = "why-wrap";
-    const btn = document.createElement("button");
-    btn.type = "button";
-    btn.className = "ghost why-btn";
-    btn.setAttribute("aria-expanded", "false");
-    btn.textContent = "為什麼是這些？";
-    const panel = document.createElement("div");
+  const btn = card.querySelector(".bar .why-btn");
+  let panel = meta.querySelector(":scope > .why-panel");
+  if (!panel) {
+    panel = document.createElement("div");
     panel.className = "why-panel";
     panel.hidden = true;
+    meta.append(panel);
+  }
+  if (btn && btn.dataset.bound !== "1") {
+    btn.dataset.bound = "1";
     btn.addEventListener("click", () => {
       const open = panel.hidden;
       panel.hidden = !open;
       btn.setAttribute("aria-expanded", open ? "true" : "false");
     });
-    wrap.append(btn, panel);
-    meta.append(wrap);
   }
-  const panel = wrap.querySelector(".why-panel");
   const trace = card._recipe?.traceSummary;
   if (!trace) {
     panel.replaceChildren();
@@ -439,8 +434,14 @@ function whyItem(ev, lex, labelOf, card) {
   return li;
 }
 
+function cssAttr(tag) {
+  if (typeof CSS !== "undefined" && typeof CSS.escape === "function") return CSS.escape(tag);
+  return String(tag).replace(/\\/g, "\\\\").replace(/"/g, '\\"');
+}
+
 function locateTag(card, tag) {
-  const hit = card.querySelector(`.pos span[data-tag="${CSS.escape(tag)}"]`) || document.querySelector(`.tag[data-tag="${CSS.escape(tag)}"]`);
+  const sel = cssAttr(tag);
+  const hit = card.querySelector(`.pos span[data-tag="${sel}"]`) || document.querySelector(`.tag[data-tag="${sel}"]`);
   if (!hit) return;
   hit.scrollIntoView({ block: "nearest", inline: "nearest" });
   hit.classList.add("is-locate");
@@ -495,5 +496,4 @@ export function initAlbum(nextHooks) {
       await refresh();
     }
   });
-  refresh().catch(() => {});
 }

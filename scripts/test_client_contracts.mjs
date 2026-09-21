@@ -532,12 +532,31 @@ function ok(name, cond, detail) {
 
 {
   const src = readFileSync(join(ROOT, "web", "boot.js"), "utf8");
+  const album = readFileSync(join(ROOT, "web", "album.js"), "utf8");
   ok("抽牌會開 trace", src.includes("trace: true"));
   ok("卡片有收藏按鈕", src.includes("fav-shot"));
   ok("有作品冊入口", existsSync(join(ROOT, "web", "album.js")));
   ok("有 commands 介面", existsSync(join(ROOT, "web", "commands.js")));
   ok("有 trace 模組", existsSync(join(ROOT, "web", "trace.js")));
   ok("有 rating 規則模組", existsSync(join(ROOT, "web", "rules", "rating.js")));
+  ok(
+    "commands pin 用 applyPin，不會誤切成封禁",
+    /pin\(tag\) \{[\s\S]{0,180}applyPin\(lex/.test(src),
+    "onTagClick 會在釘選上再點一次變成封禁",
+  );
+  ok(
+    "配方重現時若正在抽圖就先退出",
+    /async function generateFromRecipe[\s\S]{0,400}if \(running\)/.test(src),
+  );
+  ok(
+    "為什麼入口做在卡片 bar 裡，收合不加高",
+    src.includes("why-btn") && src.includes("複製 POS") && src.includes("ghost why-btn"),
+  );
+  ok("作品冊打開才拉清單", album.includes("function openModal") && /function openModal\(\) \{[\s\S]*refresh\(/.test(album));
+  ok(
+    "initAlbum 啟動時不預先打 /api/recipes",
+    !/export function initAlbum[\s\S]*refresh\(\)\.catch/.test(album),
+  );
 }
 
 if (failed) {

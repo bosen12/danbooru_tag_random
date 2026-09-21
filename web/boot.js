@@ -1,5 +1,6 @@
 import {
   applyBan,
+  applyPin,
   applyClear,
   autoBannedFromPins,
   cycleTag,
@@ -1641,7 +1642,7 @@ function recipeFromDraw(drawn, sent, seedNum) {
   };
 }
 
-function applyRecipeToBench(recipe) {
+async function applyRecipeToBench(recipe) {
   if (!recipe) return;
   pinned = new Set(recipe.pinned || []);
   userBanned = new Set(recipe.userBanned || []);
@@ -1662,7 +1663,7 @@ function applyRecipeToBench(recipe) {
   );
   saveStore();
   applyWorkflowId(recipe.workflowId || "");
-  const missing = applyRecipeModels({ checkpoint: recipe.checkpoint, loras: recipe.loras });
+  const missing = await applyRecipeModels({ checkpoint: recipe.checkpoint, loras: recipe.loras });
   afterPin();
   syncRating();
   syncHeat();
@@ -1674,6 +1675,10 @@ function applyRecipeToBench(recipe) {
 
 async function generateFromRecipe(recipe) {
   if (!recipe) return;
+  if (running) {
+    speak("正在抽圖，這一張結束後再重現");
+    return;
+  }
   if (!(await comfyUp())) {
     speak("ComfyUI 連不上，先開本機 8188");
     return;
@@ -1703,11 +1708,13 @@ async function generateFromRecipe(recipe) {
   showPos(payload.positive);
   setPosLine(card, payload.positive);
   setLive(card, { status: "依配方重現…" });
-  const wasRunning = running;
   running = true;
   aborting = false;
   skipping = false;
   genAbort = new AbortController();
+  $("go").disabled = true;
+  $("go").setAttribute("aria-busy", "true");
+  $("cancel").hidden = false;
   try {
     await streamCardJob(card, recipe.seed, {
       positive: payload.positive,
@@ -1722,12 +1729,10 @@ async function generateFromRecipe(recipe) {
     });
   } finally {
     clearLive(card);
-    if (!wasRunning) {
-      running = false;
-      $("go").disabled = false;
-      $("go").removeAttribute("aria-busy");
-      $("cancel").hidden = true;
-    }
+    running = false;
+    $("go").disabled = false;
+    $("go").removeAttribute("aria-busy");
+    $("cancel").hidden = true;
   }
 }
 
@@ -2055,7 +2060,10 @@ function fillCard(el, job, err) {
   bar.innerHTML =
     `<span>seed ${job.seed}${job.era ? " · " + (ERA_LABELS[job.era] || job.era) : ""}` +
     ` · <span class="cost">${costTxt}</span></span>` +
-    `<button type="button" class="ghost copy">複製 POS</button>`;
+    `<span class="bar-actions">` +
+    `<button type="button" class="ghost why-btn" aria-expanded="false">為什麼是這些？</button>` +
+    `<button type="button" class="ghost copy">複製 POS</button>` +
+    `</span>`;
   setPosLine(el, job.positive);
   const pos = el.querySelector(".pos");
   bar.querySelector(".copy").addEventListener("click", async () => {
@@ -3426,7 +3434,10 @@ async function main() {
   });
   window.tagCaseCommands = createCommands({
     pin(tag) {
-      onTagClick(tag);
+      const next = applyPin(lex, pinned, userBanned, tag);
+      pinned = next.pinned;
+      userBanned = next.userBanned;
+      afterPin();
     },
     ban(tag) {
       const next = applyBan(lex, pinned, userBanned, tag);
