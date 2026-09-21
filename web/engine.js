@@ -18,40 +18,99 @@ import {
   sportTagAllowed,
 } from "./sports.js";
 
-export const HEATS = ["activity", "tease", "flash", "sex"];
-export const MIXED_HEATS = ["tease", "flash", "sex"];
+import {
+  HEATS,
+  MIXED_HEATS,
+  toggleHeat,
+  heatPresetOf,
+  weightsForHeats,
+} from "./heats.js";
+import {
+  createTracer,
+  summarizeTrace,
+  SOURCES,
+  REASONS,
+  STAGES,
+} from "./trace.js";
+import {
+  explicitOnly,
+  ratingOf,
+  ratingBlocked,
+  sfwBlocked,
+  sfwOn,
+  ratingOfDrawnTags,
+  RATINGS,
+  RATING_LABEL,
+  hasExplicitContent,
+  hasSensitiveContent,
+  evaluateRating,
+} from "./rules/rating.js";
+import {
+  FEMALE_COUNT,
+  MALE_COUNT,
+  COUNT_NUM,
+  hasFemale,
+  hasMale,
+  personCount,
+  genderCount,
+  gateOk,
+  castOk,
+  evaluateCast,
+} from "./rules/cast.js";
+import {
+  actionGarmentKeys,
+  needsBodyClothes,
+  clothingWearsKey,
+  actionFitsClothes,
+  wornBodyGarments,
+  evaluateClothingLayer,
+  evaluateUnderwearVisibility,
+} from "./rules/clothing.js";
+import { evaluatePlaceActivity, evaluateIndoorOutdoor } from "./rules/scene.js";
+import { evaluateSportKit, evaluateSportPlace } from "./rules/sports.js";
+import { evaluateActivityBody } from "./rules/body.js";
+import { evaluateHeat, evaluateEra } from "./rules/adult.js";
+import { diffKept, rejectRemoved } from "./rules/reconcile.js";
 
-export function toggleHeat(heats, heat) {
-  const on = new Set((heats || []).filter((h) => HEATS.includes(h)));
-  if (heat === "mixed") return MIXED_HEATS.slice();
-  if (!HEATS.includes(heat)) return HEATS.filter((h) => on.has(h));
-  if (on.has(heat)) {
-    if (on.size <= 1) return HEATS.filter((h) => on.has(h));
-    on.delete(heat);
-  } else {
-    on.add(heat);
-  }
-  return HEATS.filter((h) => on.has(h));
-}
-
-export function heatPresetOf(heats) {
-  const h = HEATS.filter((x) => (heats || []).includes(x));
-  if (h.length === 3 && MIXED_HEATS.every((x) => h.includes(x))) return "mixed";
-  if (h.length === 1) return h[0];
-  return "custom";
-}
-
-export function weightsForHeats(heats, heatWeights) {
-  const h = HEATS.filter((x) => (heats || []).includes(x));
-  if (!h.length) return { activity: 0, tease: 1, flash: 0, sex: 0 };
-  if (h.length === 3 && MIXED_HEATS.every((x) => h.includes(x)) && heatWeights && heatWeights.mixed) {
-    return { activity: 0, tease: 0, flash: 0, sex: 0, ...heatWeights.mixed };
-  }
-  const w = { activity: 0, tease: 0, flash: 0, sex: 0 };
-  const share = 1 / h.length;
-  for (const x of h) w[x] = share;
-  return w;
-}
+export {
+  HEATS,
+  MIXED_HEATS,
+  toggleHeat,
+  heatPresetOf,
+  weightsForHeats,
+  explicitOnly,
+  ratingOf,
+  ratingBlocked,
+  sfwBlocked,
+  sfwOn,
+  ratingOfDrawnTags,
+  RATINGS,
+  RATING_LABEL,
+  FEMALE_COUNT,
+  MALE_COUNT,
+  hasFemale,
+  hasMale,
+  personCount,
+  actionGarmentKeys,
+  needsBodyClothes,
+  clothingWearsKey,
+  actionFitsClothes,
+  evaluateRating,
+  evaluateCast,
+  evaluateClothingLayer,
+  evaluateUnderwearVisibility,
+  evaluatePlaceActivity,
+  evaluateIndoorOutdoor,
+  evaluateSportKit,
+  evaluateSportPlace,
+  evaluateActivityBody,
+  evaluateHeat,
+  evaluateEra,
+  SOURCES,
+  REASONS,
+  STAGES,
+  summarizeTrace,
+};
 // 可以跟性愛動作並存的活動。其餘會動的活動（打球、騎馬、跑步）跟性愛互斥 ——
 // 那是物理，不是尺度。
 //
@@ -624,308 +683,6 @@ const STEAM_CTX = new Set([...STEAM_HOT, ...STEAM_MILD]);
 // in_out 在 fillSlot("env","in_out") 就定了，排在天氣那格和 fill("env") 前面，
 // 所以這裡問得到答案。（Danbooru 佐證：snow 在室內只有 2.1%、cherry blossoms 2.5%。）
 const OUTDOOR_WEATHER = new Set(["rain", "overcast", "snow", "fog", "cherry blossoms"]);
-// ---------------------------------------------------------------- SFW 模式
-// 關掉色情模式之後，哪些字不能出現。
-//
-// heat 欄位幫不上忙：1304 個字裡有 1092 個都是 ["tease","flash","sex"]，
-// 從 blue sky 到 bra 全在同一格。所以這裡另外定一套規則，而且是「留下來的要
-// 逐個看過」而不是「擋掉的列一列就算」—— 漏掉一個就是一張不該出現的圖。
-//
-// 身體「尺寸」是體型描述（large breasts），留著；對身體「做什麼」一律擋。
-const SFW_NSFW_RE =
-  /\b(nipples?|areolae?|pussy|pussies|penis|testicl|cum\w*|anus|anal|sex|erections?|bulge|masturbat|fellatio|paizuri|cunnilingus|orgasm|ahegao|condoms?|dildos?|vibrators?|bondage|bdsm|rape|molest|groping|lewd|cameltoe|upskirt|downblouse|crotch|cleavage|naked|nude|topless|bottomless|panties|panty|bra|lingerie|underwear|thong|garter|fundoshi|pubic|drool|ejaculat|lactation)\b/i;
-
-// 這幾個字會被上面的規則誤傷，但它們本身不情色：流汗、淋濕、蒸氣。
-const SFW_KEEP = new Set(["sweat", "wet", "wet hair", "steam"]);
-
-// regex 抓不到、但一樣不該出現的。
-const SFW_EXTRA = new Set([
-  // 這兩個本來全年齡就抽得到，但實測帶著 3 倍於基準的成人圖，
-  // 語意上也確實是「性感取向」而不是中性 —— 往上挪一層到敏感。
-  "biting own lip",      // 3.1x
-  "legs up",             // 3.2x
-  "thigh gap",
-  "mole on breast",
-  "wet shirt",
-  "spread cleavage",
-  "breast focus",
-  "pov crotch",
-  "collar",
-  "leash",
-  "pet play",
-  "torn clothes",
-  "wardrobe malfunction",
-  "public indecency",
-  "exhibitionism",
-  "saliva",
-  "heart-shaped pupils",
-  "fucked silly",
-  "rolling eyes",
-  // 實際抽 4320 張之後看出來的漏網：規則對了，但這些字規則抓不到。
-  // 透視與極度暴露的衣著
-  "see-through shirt",
-  "micro bikini",
-  "slingshot swimsuit",
-  "revealing clothes",
-  "tight clothes",
-  "microskirt",
-  "unbuttoned shirt",
-  "wet clothes",
-  // 臀部特寫
-  "ass",
-  "huge ass",
-  "ass ripple",
-  "grabbing another's ass",
-  "hand on own ass",
-  // 挑逗的表情與動作
-  "naughty face",
-  "seductive smile",
-  "licking lips",
-  "clothes tug",
-  "come hither",
-  "cheating (relationship)",
-  // 全年齡＝連暗示都沒有。這幾個沒有露點，但畫面上讀起來就是性感取向 ——
-  // 兩段制的時候它們待在「關掉色情」那一檔，正是那時候會生出
-  // 網襪＋極短洋裝＋背向蹲姿的原因。現在它們有 sensitive 可以去。
-  "fishnet thighhighs",
-  "fishnets",
-  "short dress",
-  "garter belt",
-  "thigh strap",
-  "bare shoulders",
-  "off shoulder",
-]);
-
-// 三段分級，對齊 Danbooru 自己的 rating 階梯。
-//
-//   general    全年齡：連暗示都沒有
-//   sensitive  敏感：性感，但沒有露點、沒有性行為、沒有內衣外穿、沒有走光
-//   explicit   色情：現狀
-//
-// 中間這段是為了解掉一個兩段制解不掉的問題：兩段的時候「關掉色情」同時要
-// 負責「乾淨」和「不色情」，結果兩件事都做不好 —— 實測會生出網襪＋極短洋裝＋
-// 背向蹲姿的圖，沒有露點卻明顯是性感取向。
-//
-// group="flash" 這一組混了兩種東西，不能整組處理：
-//   掀裙、拉衣、走光、滑落  -> 那是脫衣，只有 explicit 能有
-//   彎腰、張腿、跪趴、跨坐  -> 穿著衣服擺姿勢，正是 sensitive 的內容
-// 這正是「規則掛錯層級」那條教訓：group 不等於概念。
-const FLASH_UNDRESS_RE =
-  /\b(lift|pull|aside|slip|undress|flashing|exhibitionism|wedgie|grab|tweak|chikan|nude|spread pussy)\b/i;
-
-// 這些不是暴露，是明講的性 —— 不管穿多少都只能在 explicit。
-const EXPLICIT_ONLY_EXTRA = new Set([
-  // 2026-09-15 逐字對 Danbooru 的實際 rating 分布查過之後補的。
-  // 判準是「相對全站基準的倍率」而不是原始百分比 —— 全站有 20.2% 的圖是 q+e，
-  // 所以一個字帶著 20% 成人圖只代表它很普通。第一版直接看百分比，
-  // 把 v（比 YA）、head tilt（歪頭）都判成敏感，明顯是被基準騙了。
-  //
-  // 收進來的只有語意上本來就是「露出／性器／性行為／高潮狀態」的字，
-  // 純粹的身體姿勢（spread legs、m legs、straddling、bent over）留在敏感 ——
-  // 那些字配上穿著整齊的衣服仍然成立，是不是色情由衣服決定。
-  "one breast out",      // 4.9x，字面就是露出來了
-  // 2026-09-18 補的四個，全部是這張表當初漏掉的同族。
-  //
-  // 漏掉的後果看得見：「只勾活動＝日常」那一檔是**借 tease 的池子**再靠
-  // hasExplicitContent() 把情色扣掉（見下面 2820 行那段），而這四個掛在
-  // feature/body_f，group 看不見、EXPLICIT_RE 也咬不到，於是整批溜進日常。
-  // 實測色情分級只勾活動抽 4200 張：breasts out 96 次、grabbing own breast 54、
-  // guided breast grab 46、grabbing another's ass 41 —— 面板上那句
-  //「沒有走光或做愛」被打臉。
-  //
-  // 比例照這張表原本的判準量（相對全站 20.2% 基準的倍率）：
-  "breasts out",          // 4.89x（e98.7%）—— one breast out 的複數，同一個意思卻漏了
-  "guided breast grab",   // 4.85x（e98.0%）
-  "grabbing another's ass", // 4.78x（e96.6%）—— 跟已收的 grabbing another's breast 同級
-  "grabbing own breast",  // 4.22x（e85.3%）—— 比已收的 hand on own crotch 4.1x 還高
-  //
-  // **刻意不收**的對照組，它們是形狀不是動作，照這張表的規矩留在敏感：
-  //   unaligned breasts 4.15x、breasts apart 3.68x、breast suppress 3.04x、
-  //   breast rest 1.96x、arm under breasts 1.63x
-  // grabbing another's hair 3.84x 也不收：倍率在範圍內，但抓頭髮本身不是
-  // 露出／性器／性行為，收它就等於只看數字不看語意。
-  "covering breasts",    // 3.5x，遮胸的前提是沒穿
-  "covering crotch",     // 3.9x，同上
-  "bulge",               // 4.1x，性器輪廓
-  "hand on own crotch",  // 4.1x
-  "grinding",            // 5.0x，性行為
-  "moaning",             // 5.0x，e98%
-  "fucked silly",        // 4.9x，e98%
-  "rolling eyes",        // 4.8x，e94%，翻白眼是 ahegao 的一部分
-  "aroused",             // 4.5x
-  "heavy breathing",     // 3.9x
-  // 3.9x
-  "see-through shirt",
-  "micro bikini",
-  "slingshot swimsuit",
-  "naked coat",
-  "naked jacket",
-  "pussy focus",
-  "cameltoe",
-  "masturbation through clothes",
-  "groping",
-  "netorare",
-  "cheating (relationship)",
-  "voyeurism",
-  "breastfeeding",
-  "used condom",
-  "dildo",
-  "condom",
-]);
-
-// 只有 explicit 能出現：真正的性、裸露、脫衣走光、內衣當外衣。
-// explicit 專屬的字眼。比 general 那條窄：cleavage、crotch、彎腰張腿這些
-// 「穿著衣服的性感」要留給 sensitive，所以不在這條裡面。
-// 字根要吃得下複數與複合字：加了字界的 nipple 配不到 "puffy nipples"，
-// 加了字界的 cum 配不到 "cumdrip" —— 兩個都真的漏過。
-const EXPLICIT_RE = new RegExp(
-  "\\b(nipples?|areolae?|pussy|pussies|penis|testicl|cum\\w*|anus|anal|sex|erections?|" +
-    "masturbat|fellatio|cunnilingus|orgasm|ahegao|condom|dildo|vibrator|" +
-    "bondage|bdsm|rape|molest|nude|naked|topless|bottomless|panties|panty|bra|" +
-    "lingerie|underwear|thong|garter|fundoshi|pubic|ejaculat|lactation|" +
-    "upskirt|downblouse|cameltoe)\\b",
-  "i"
-);
-
-export function explicitOnly(item) {
-  if (!item) return false;
-  const tag = item.tag;
-  if (SFW_KEEP.has(tag)) return false;
-  if (item.layer === "skin") return true;
-  // 用 group 不用 mutex：ejaculation、cumdrip、masturbation 都是 group="sex"
-  // 但 mutex 是 null，寫成 mutex === "sex_act" 的話它們會整批從旁邊走過去
-  // 混進 sensitive。這是這個 session 第四次踩到「規則掛錯層級」。
-  if (item.group === "sex" || item.mutex === "sex_act") return true;
-  // 脫衣動作是 explicit，但「穿著衣服擺姿勢」不是 —— 所以不用 heat 判斷。
-  // flash 那一檔的姿勢（彎腰、張腿、跨坐）heat 裡本來就沒有 tease，
-  // 拿 heat 當鑰匙會把整個 sensitive 檔位掏空。
-  if (item.mutex === "clothes_action") return true;
-  if (item.mutex === "underwear_top" || item.mutex === "underwear_bottom") return true;
-  if (item.group === "flash" && FLASH_UNDRESS_RE.test(tag)) return true;
-  if (EXPLICIT_ONLY_EXTRA.has(tag)) return true;
-  if (EXPLICIT_RE.test(tag)) return true;
-  return false;
-}
-
-// 畫面上真的有什麼，決定這張圖是哪一級 —— 而不是滑桿說了算。
-//
-// Danbooru 的 rating 是從內容推出來的，WAI 也是照那個對應訓練的。滑桿只代表
-// 「我最多接受到哪一級」，不代表「每張都要標到那一級」。兩者混為一談的後果是：
-// 滑桿放色情、尺度選「活動」，一張全身穿好、在超市買東西的圖照樣被寫上
-// nsfw, explicit —— 那個組合在訓練集裡不存在，模型只能往色情的方向硬拉。
-//
-// 實測（每格 400 張，六個時代都一樣）：
-//   尺度=活動 或 誘惑 -> 100% 的圖沒有任何情色內容，卻都標著 explicit
-//   預設尺度（誘惑＋走光＋性愛）-> 29%
-//   走光、性愛 -> 0%（這兩個本來就名副其實）
-//
-// 判準只認畫面上的東西，不碰 heat/gate 那些「能不能抽」的欄位 ——
-// 我一開始拿 explicitOnly() 來當判準是錯的：那是閘不是分類器，
-// 只要一個字的 heat 沒有 tease 就回 true，連 shopping 都被算成情色內容。
-// 這裡用的是 Danbooru 的**內容**階梯，不是本程式的**權限**階梯。兩者不一樣：
-//   權限階梯（ratingBlocked / EXPLICIT_RE）說「敏感級不准出現內衣」—— 那是使用者
-//   自己訂的門檻，加了字界的 bra 連 sports bra 都算。
-//   內容階梯說「看得見內衣 = sensitive，露點與性行為 = explicit」—— 那是訓練集
-//   實際的標法，也是這條尾巴要對齊的東西。
-// 拿權限階梯當內容判準，穿運動內衣做健身會被標成 explicit。
-const EXPLICIT_CONTENT_RE = new RegExp(
-  "\\b(pussy|pussies|penis|testicl|cum\\w*|anus|anal|sex|erections?|" +
-    "masturbat|fellatio|paizuri|cunnilingus|orgasm|ahegao|fucked|" +
-    "rape|molest|groping|ejaculat|lactation|nude|naked|topless|bottomless|" +
-    "nipples?|areolae?|pubic|dildos?|vibrators?|condoms?)\\b",
-  "i"
-);
-
-// 看得出尺度但還沒到露點的：內衣外露、泳裝、透視、乳溝、走光。
-const SENSITIVE_CONTENT_RE = new RegExp(
-  "\\b(panty|panties|bra|lingerie|underwear|thong|garter|fundoshi|" +
-    "bikini|swimsuit|see-through|wet clothes|cleavage|underboob|sideboob|" +
-    "cameltoe|upskirt|downblouse|crotch|bulge|revealing)\\b",
-  "i"
-);
-
-function hasExplicitContent(item) {
-  if (!item) return false;
-  // sweat / wet / steam 會被字面規則誤傷，沿用既有的例外名單。
-  if (SFW_KEEP.has(item.tag)) return false;
-  if (item.layer === "skin") return true;
-  if (item.mutex === "sex_act" || item.group === "sex") return true;
-  if (item.mutex === "clothes_action") return true;
-  if (EXPLICIT_ONLY_EXTRA.has(item.tag)) return true;
-  // group="flash" 混了脫衣跟穿著衣服擺姿勢，不能整組算。但光看
-  // FLASH_UNDRESS_RE 會漏掉 masturbation through clothes、hand on own crotch
-  // 這種同屬 flash 卻明確情色的字 —— 實測就出過「masturbation through clothes
-  // + fucked silly」被標成 sfw, general 的圖，比原本的問題還糟。
-  return EXPLICIT_CONTENT_RE.test(item.tag);
-}
-
-function hasSensitiveContent(item) {
-  if (!item) return false;
-  if (SFW_KEEP.has(item.tag)) return false;
-  if (item.mutex === "underwear_top" || item.mutex === "underwear_bottom") return true;
-  if (item.group === "flash") return true;
-  return SENSITIVE_CONTENT_RE.test(item.tag);
-}
-
-// 照畫面推一級出來，再被滑桿壓上限（滑桿是天花板，不是目標）。
-export function ratingOfDrawnTags(items, cap) {
-  let level = "general";
-  for (const it of items) {
-    if (hasExplicitContent(it)) { level = "explicit"; break; }
-    if (hasSensitiveContent(it)) level = "sensitive";
-  }
-  const order = { general: 0, sensitive: 1, explicit: 2 };
-  return order[level] <= order[cap] ? level : cap;
-}
-
-export const RATINGS = ["general", "sensitive", "explicit"];
-export const RATING_LABEL = { general: "全年齡", sensitive: "敏感", explicit: "色情" };
-
-export function ratingOf(settings) {
-  const r = settings && settings.rating;
-  return RATINGS.includes(r) ? r : "explicit";
-}
-
-// 某個字在某一級之下能不能出現。
-// general 沿用已經逐字審過、實抽 4320 張驗證過的 sfwBlocked()，不重寫。
-export function ratingBlocked(item, rating) {
-  if (rating === "explicit") return false;
-  if (rating === "sensitive") return explicitOnly(item);
-  // 全年齡是階梯的最底層，所以「敏感擋掉的，這裡一定也擋」。
-  //
-  // 以前這兩層各用各的判準：敏感看 explicitOnly()（含 EXPLICIT_ONLY_EXTRA 名單），
-  // 全年齡看 sfwBlocked()（字面 regex）。兩邊沒有任何東西保證是階梯，於是
-  // netorare、voyeurism、breastfeeding 在敏感被擋、在全年齡卻放行 ——
-  // 因為那三個字裡沒有任何一個 regex 認得的詞。實抽 2800 張全年齡的圖，
-  // netorare 47 次、voyeurism 72 次。
-  //
-  // 補名單只能修掉這三個，補階梯才是修掉這一類。
-  return sfwBlocked(item) || explicitOnly(item);
-}
-
-export function sfwBlocked(item) {
-  if (!item) return false;
-  const tag = item.tag;
-  if (SFW_KEEP.has(tag)) return false;
-  if (item.layer === "skin") return true;
-  if (item.mutex === "sex_act") return true;
-  if (item.group === "flash") return true;
-  if (item.mutex === "clothes_action") return true;
-  if (item.mutex === "underwear_top" || item.mutex === "underwear_bottom") return true;
-  const heat = item.heat && item.heat.length ? item.heat : MIXED_HEATS;
-  // 只在 flash/sex 才出現的字，本來就是為了那兩檔而存在的。
-  if (!heat.includes("tease")) return true;
-  if (SFW_EXTRA.has(tag)) return true;
-  // 胸部：mutex=breast_size 是體型，其餘（抓、托、夾、特寫）都擋。
-  if (/\bbreasts?\b/i.test(tag) && item.mutex !== "breast_size") return true;
-  if (SFW_NSFW_RE.test(tag)) return true;
-  return false;
-}
-
-// 舊的布林開關還留著給既有呼叫端用：非 explicit 就代表要過濾。
-export function sfwOn(settings) {
-  return ratingOf(settings) !== "explicit";
-}
 
 const BATH_BAD_CLOTHES = new Set([
   "geta",
@@ -2804,46 +2561,8 @@ export function cycleTag(lex, pinned, userBanned, tag) {
   return applyClear(pinned, userBanned, tag);
 }
 
-export const FEMALE_COUNT = new Set(["1girl", "2girls", "3girls", "4girls", "multiple girls"]);
-export const MALE_COUNT = new Set(["1boy", "2boys", "3boys", "multiple boys"]);
-const COUNT_NUM = {
-  "1girl": 1,
-  "2girls": 2,
-  "3girls": 3,
-  "4girls": 4,
-  "multiple girls": 2,
-  "1boy": 1,
-  "2boys": 2,
-  "3boys": 3,
-  "multiple boys": 2,
-};
-
-export function hasFemale(cast) {
-  return cast.some((t) => FEMALE_COUNT.has(t));
-}
-export function hasMale(cast) {
-  return cast.some((t) => MALE_COUNT.has(t));
-}
-export function personCount(cast) {
-  let n = 0;
-  for (const t of cast) {
-    const add = COUNT_NUM[t];
-    if (add) n += add;
-  }
-  return n;
-}
-
 const FEMALE_SEQ = ["1girl", "2girls", "3girls", "4girls"];
 const MALE_SEQ = ["1boy", "2boys", "3boys"];
-
-function genderCount(cast, female) {
-  const keys = female ? FEMALE_COUNT : MALE_COUNT;
-  let n = 0;
-  for (const t of cast) {
-    if (keys.has(t)) n += COUNT_NUM[t] || 0;
-  }
-  return n;
-}
 
 function bumpGender(parts, female, want) {
   const seq = female ? FEMALE_SEQ : MALE_SEQ;
@@ -3043,25 +2762,6 @@ function actHasOutdoorPlace(act, era, lex) {
 function eraSpecific(item, era) {
   const eras = item.era;
   return Array.isArray(eras) && eras.length && !eras.includes("any") && eras.includes(era);
-}
-
-function gateOk(item, female, male) {
-  if (item.gate === "female") return female;
-  if (item.gate === "male") return male;
-  return true;
-}
-
-function castOk(item, female, male, people, girls = 0, boys = 0) {
-  const needs = item.needs || [];
-  if (needs.includes("pair") && people < 2) return false;
-  if (needs.includes("group") && people < 3) return false;
-  if (needs.includes("crowd") && people < 4) return false;
-  if (needs.includes("male") && !male) return false;
-  if (needs.includes("female") && !female) return false;
-  if (needs.includes("2male") && boys < 2) return false;
-  if (needs.includes("2female") && girls < 2) return false;
-  if (needs.includes("yuri") && male) return false;
-  return true;
 }
 
 function pinContext(lex, pinned) {
@@ -3350,124 +3050,6 @@ function isColorVariant(item) {
   return parts.length >= 2 && COLOR_WORD.has(parts[0]);
 }
 
-const GARMENT_KEYS = [
-  "shirt",
-  "dress",
-  "skirt",
-  "sweater",
-  "bikini",
-  "swimsuit",
-  "bra",
-  "panties",
-  "panty",
-  "leotard",
-  "coat",
-  "jacket",
-  "kimono",
-  "yukata",
-  "pants",
-  "shorts",
-  "jeans",
-  "hoodie",
-  "blouse",
-  "towel",
-];
-
-const KEY_WEAR = {
-  panty: ["panties", "thong", "panty"],
-  panties: ["panties", "thong", "panty"],
-  pants: ["pants", "jeans", "shorts"],
-  jeans: ["jeans", "pants"],
-  shorts: ["shorts"],
-};
-
-function tagTokens(tag) {
-  return String(tag || "")
-    .toLowerCase()
-    .match(/[a-z0-9]+/g) || [];
-}
-
-export function actionGarmentKeys(actionTag) {
-  const toks = new Set(tagTokens(actionTag));
-  const keys = GARMENT_KEYS.filter((g) => toks.has(g));
-  if (/blouse/.test(actionTag) && !keys.includes("blouse")) keys.push("blouse");
-  if (/upskirt/.test(actionTag)) {
-    if (!keys.includes("skirt")) keys.push("skirt");
-    if (!keys.includes("dress")) keys.push("dress");
-  }
-  if (/(cameltoe|wedgie)/.test(actionTag) && !keys.includes("panty")) keys.push("panty");
-  return keys;
-}
-
-export function needsBodyClothes(actionTag) {
-  const t = String(actionTag || "").toLowerCase();
-  return (
-    /through clothes|under clothes/.test(t) ||
-    t === "clothed sex" ||
-    t === "clothed female nude male" ||
-    t === "clothes lift" ||
-    t === "clothes pull" ||
-    t === "clothing aside" ||
-    t === "undressing" ||
-    t === "upskirt" ||
-    t === "cameltoe" ||
-    t === "wedgie" ||
-    t === "strap slip" ||
-    t === "areola slip" ||
-    t === "nipple slip" ||
-    t === "one breast out" ||
-    t === "flashing" ||
-    t === "erection under clothes" ||
-    t === "bulge" ||
-    t === "adjusting clothes" ||
-    t === "clothes tug"
-  );
-}
-
-export function clothingWearsKey(clothingTag, key) {
-  const tag = String(clothingTag || "").toLowerCase();
-  if (!tag || tag.startsWith("no ")) return false;
-  const aliases = KEY_WEAR[key] || [key];
-  const toks = new Set(tagTokens(tag));
-  return aliases.some((w) => {
-    if (tag === w || tag.endsWith(" " + w) || tag.endsWith(w)) return true;
-    return tagTokens(w).every((t) => toks.has(t));
-  });
-}
-
-const CLOTHES_ACCESSORY = new Set([
-  "towel",
-  "belt",
-  "earrings",
-  "kanzashi",
-  "necklace",
-  "bracelet",
-  "choker",
-  "ring",
-  "hairband",
-  "hair ornament",
-]);
-
-function wornBodyGarments(clothingTags) {
-  return (clothingTags || []).filter((t) => {
-    if (!t || t.startsWith("no ") || t === "nude" || t === "completely nude") return false;
-    if (CLOTHES_ACCESSORY.has(t)) return false;
-    return GARMENT_KEYS.some((k) => k !== "towel" && clothingWearsKey(t, k));
-  });
-}
-
-export function actionFitsClothes(actionTag, clothingTags) {
-  const worn = (clothingTags || []).filter(Boolean);
-  const keys = actionGarmentKeys(actionTag);
-  if (needsBodyClothes(actionTag)) {
-    if (worn.some((t) => t === "nude" || t === "completely nude")) return 0;
-    if (keys.length) return keys.some((k) => worn.some((c) => clothingWearsKey(c, k))) ? 2 : 0;
-    return wornBodyGarments(worn).length ? 2 : 0;
-  }
-  if (!keys.length) return 1;
-  return keys.some((k) => worn.some((c) => clothingWearsKey(c, k))) ? 2 : 0;
-}
-
 function takeFromPool(pool, count, rand, commit, prefer, allow) {
   let buckets;
   if (prefer && Array.isArray(prefer.softTiers) && prefer.softTiers.length) {
@@ -3663,7 +3245,16 @@ export function contradictions(lex, tags) {
   return found;
 }
 
-export function drawOne(lex, settings, pinned, userBanned, rand, seed) {
+export function drawOne(lex, settings, pinned, userBanned, rand, seed, opts) {
+  const drawOpts = opts && typeof opts === "object" ? opts : {};
+  const tracer = createTracer({ enabled: !!drawOpts.trace, debug: !!drawOpts.debugTrace });
+  const presetOwned =
+    drawOpts.presetOwned instanceof Set
+      ? drawOpts.presetOwned
+      : new Set(Array.isArray(drawOpts.presetOwned) ? drawOpts.presetOwned : []);
+  const requestedPins = new Set(pinned);
+  const tagSources = tracer.enabled ? new Map() : null;
+  const commitMeta = { source: SOURCES.random, stage: STAGES.fill, parent: null };
   const rating = ratingOf(settings);
   const sfw = rating !== "explicit";
   const blockedByRating = (item) => ratingBlocked(item, rating);
@@ -3675,6 +3266,14 @@ export function drawOne(lex, settings, pinned, userBanned, rand, seed) {
     const cleaned = new Set();
     for (const t of pinned) {
       if (!blockedByRating(lex.byTag.get(t))) cleaned.add(t);
+      else if (tracer.enabled) {
+        tracer.reject({
+          tag: t,
+          source: presetOwned.has(t) ? SOURCES.preset : SOURCES.pin,
+          stage: STAGES.pin,
+          reason: REASONS.rating_mismatch,
+        });
+      }
     }
     pinned = cleaned;
   }
@@ -3687,7 +3286,40 @@ export function drawOne(lex, settings, pinned, userBanned, rand, seed) {
   const heat = chooseHeat(settings, pinned, lex, rand, ctx);
   const era = chooseEra(settings, pinned, lex, rand, ctx);
   let allow = () => true;
-  const commit = makeCommit(lex, used, mutexTaken, banned, era, (item) => allow(item));
+  const innerCommit = makeCommit(lex, used, mutexTaken, banned, era, (item) => allow(item));
+  const commit = tracer.enabled
+    ? (tag) => {
+        const before = new Set(used);
+        const ok = innerCommit(tag);
+        if (ok) {
+          for (const t of used) {
+            if (before.has(t)) continue;
+            if (t === tag) {
+              tagSources.set(t, commitMeta.source);
+              tracer.keep({ tag: t, source: commitMeta.source, stage: commitMeta.stage, parent: commitMeta.parent });
+            } else {
+              const item = lex.byTag.get(tag);
+              const bound = !!(item && (item.bind || []).includes(t));
+              const src = bound ? SOURCES.bind : SOURCES.implies;
+              tagSources.set(t, src);
+              tracer.keep({ tag: t, source: src, stage: commitMeta.stage, parent: tag });
+            }
+          }
+          for (const t of before) {
+            if (used.has(t)) continue;
+            tracer.reject({
+              tag: t,
+              source: tagSources.get(t) || SOURCES.random,
+              stage: commitMeta.stage,
+              reason: REASONS.replaced,
+              related: [tag],
+            });
+            tagSources.delete(t);
+          }
+        }
+        return ok;
+      }
+    : innerCommit;
   const cast = chooseCast(lex, settings, pinned, banned, rand, ctx);
   let female = hasFemale(cast);
   let male = hasMale(cast);
@@ -3695,25 +3327,49 @@ export function drawOne(lex, settings, pinned, userBanned, rand, seed) {
 
   for (const t of cast) commit(t);
 
-  const forcePin = (tag) => {
+  const forcePin = (tag, parent) => {
     if (!tag || used.has(tag)) return;
-    if (userBanned.has(tag) && !pinned.has(tag)) return;
+    if (userBanned.has(tag) && !pinned.has(tag)) {
+      if (tracer.enabled && pinned.has(tag)) {
+        tracer.reject({ tag, source: SOURCES.pin, stage: STAGES.pin, reason: REASONS.user_ban });
+      }
+      return;
+    }
     const item = lex.byTag.get(tag);
     if (item) {
       for (const g of extraMutex(item)) {
         const old = mutexTaken.get(g);
         if (old && old !== tag && !pinned.has(old) && !parentChild(lex, tag, old)) {
+          if (tracer.enabled) {
+            tracer.reject({
+              tag: old,
+              source: tagSources.get(old) || SOURCES.random,
+              stage: STAGES.pin,
+              reason: REASONS.replaced,
+              related: [tag],
+            });
+            tagSources.delete(old);
+          }
           used.delete(old);
         }
       }
     }
     used.add(tag);
+    if (tracer.enabled) {
+      let source = SOURCES.pin;
+      if (parent) {
+        const pItem = lex.byTag.get(parent);
+        source = pItem && (pItem.bind || []).includes(tag) ? SOURCES.bind : SOURCES.implies;
+      } else if (presetOwned.has(tag)) source = SOURCES.preset;
+      tagSources.set(tag, source);
+      tracer.keep({ tag, source, stage: STAGES.pin, parent: parent || undefined });
+    }
     if (item) {
       for (const g of extraMutex(item)) mutexTaken.set(g, tag);
       for (const d of dependents(lex, tag)) {
         if (banned.has(d) && !pinned.has(d)) continue;
         if (!pinned.has(d) && era && !depAllowed(lex, d, era)) continue;
-        forcePin(d);
+        forcePin(d, tag);
       }
     }
   };
@@ -5233,7 +4889,11 @@ export function drawOne(lex, settings, pinned, userBanned, rand, seed) {
       if (pick.mutex === "place") {
         if (rand() >= PLACE_ANCHOR_CHANCE) continue;
       }
+      commitMeta.source = SOURCES.era_anchor;
+      commitMeta.stage = STAGES.fill;
       commit(pick.tag);
+      commitMeta.source = SOURCES.random;
+      commitMeta.stage = STAGES.fill;
     }
   };
 
@@ -5317,7 +4977,11 @@ export function drawOne(lex, settings, pinned, userBanned, rand, seed) {
         indexed || lex.bySection[section].filter((item) => item.group === group)
       ).filter((item) => mustAllow(item));
       const before = new Set(used);
+      commitMeta.source = SOURCES.must_draw;
+      commitMeta.stage = STAGES.must_draw;
       takeFromPool(pool, want - have, rand, commit, null, mustAllow);
+      commitMeta.source = SOURCES.random;
+      commitMeta.stage = STAGES.fill;
       for (const t of used) if (!before.has(t)) mustLocked.add(t);
     }
   }
@@ -5840,11 +5504,15 @@ export function drawOne(lex, settings, pinned, userBanned, rand, seed) {
         // 機率沿用作者原本寫的 0.34，不自己另外發明一個數字。
         // 只勾「活動」時仍然不准拿裸體交差（上面那條既有規則）。
         const skins = rescue.filter((item) => item.layer === "skin");
+        commitMeta.source = SOURCES.repair;
+        commitMeta.stage = STAGES.repair;
         if (kind === "bath" && heat !== "activity" && skins.length && rand() < 0.34) {
           takeFromPool(skins, 1, rand, commit, null, allow);
         } else {
           takeFromPool(rescue, 1, rand, commit, clothingPrefer, allow);
         }
+        commitMeta.source = SOURCES.random;
+        commitMeta.stage = STAGES.fill;
       }
       for (const t of [...used]) {
         if (pinned.has(t)) continue;
@@ -6216,6 +5884,7 @@ export function drawOne(lex, settings, pinned, userBanned, rand, seed) {
     }
   }
 
+  const enteredUsed = tracer.enabled ? new Set(used) : used;
   const kept = reconcile(lex, used, female, male, people, mustPins(), lockSceneOn(settings));
 
   // NEEDS_CONTEXT 要在 reconcile **之後**再掃一次。
@@ -6320,6 +5989,43 @@ export function drawOne(lex, settings, pinned, userBanned, rand, seed) {
     return { key, section, group, want, got };
   });
 
+  let trace = null;
+  if (tracer.enabled) {
+    const final = new Set(positive);
+    const { removed } = diffKept(enteredUsed, final);
+    rejectRemoved(tracer, removed, {
+      sourceOf: (t) => tagSources.get(t) || SOURCES.random,
+      reason: REASONS.reconcile,
+      stage: STAGES.reconcile,
+    });
+    const qualitySet = new Set(lex.data.quality || []);
+    const envSet = new Set(lex.data.alwaysEnv || []);
+    const nsfwSet = new Set(nsfw);
+    for (const t of positive) {
+      let source = tagSources.get(t) || SOURCES.random;
+      if (qualitySet.has(t) || envSet.has(t) || nsfwSet.has(t)) source = SOURCES.fixed;
+      if (presetOwned.has(t)) source = SOURCES.preset;
+      else if (pinned.has(t)) source = SOURCES.pin;
+      tracer.keep({ tag: t, source, stage: STAGES.tail });
+    }
+    for (const t of mustLocked) {
+      if (final.has(t)) continue;
+      tracer.reject({
+        tag: t,
+        source: SOURCES.must_draw,
+        stage: STAGES.must_draw,
+        reason: REASONS.mutex,
+      });
+    }
+    trace = summarizeTrace(tracer.events(), {
+      finalTags: positive,
+      pinned: requestedPins,
+      presetOwned,
+      mustTags: mustLocked,
+      debug: !!drawOpts.debugTrace,
+    });
+  }
+
   return {
     heat,
     era,
@@ -6334,6 +6040,7 @@ export function drawOne(lex, settings, pinned, userBanned, rand, seed) {
     conflicts: contradictions(lex, positive),
     eraClash: eraMismatches(lex, pinned, era),
     heatClash: heatMismatches(lex, pinned, settings.heats),
+    trace,
   };
 }
 
