@@ -166,7 +166,9 @@ def _clean_loras(raw) -> list:
         file = str(item.get("file") or item.get("name") or "").strip()
         if not file or ".." in file:
             continue
-        folder = str(item.get("folder") or "").replace("..", "").strip()
+        folder = str(item.get("folder") or "").strip()
+        if ".." in folder:
+            continue
         try:
             strength = float(item.get("strength") if item.get("strength") is not None else 1)
         except (TypeError, ValueError):
@@ -183,6 +185,21 @@ def _clean_loras(raw) -> list:
             }
         )
     return out
+
+
+def _clean_preset_owned(raw):
+    if isinstance(raw, dict):
+        ident = str(raw.get("id") or "").strip()[:80]
+        tags = _clean_str_list(raw.get("tags"))
+        if not tags:
+            return None
+        return {"id": ident or "imported", "tags": tags}
+    if isinstance(raw, list):
+        tags = _clean_str_list(raw)
+        if tags:
+            return {"id": "imported", "tags": tags}
+        return None
+    return None
 
 
 def _clean_str_list(raw, limit=200) -> list[str]:
@@ -348,7 +365,9 @@ def normalize_recipe(raw, *, rid: str | None = None, existing: dict | None = Non
         "mustDraw": _clean_must(src.get("mustDraw") if src.get("mustDraw") is not None else (existing or {}).get("mustDraw")),
         "pinned": _clean_str_list(src.get("pinned") if src.get("pinned") is not None else (existing or {}).get("pinned")),
         "userBanned": _clean_str_list(src.get("userBanned") if src.get("userBanned") is not None else (existing or {}).get("userBanned")),
-        "presetOwned": _clean_str_list(src.get("presetOwned") if src.get("presetOwned") is not None else (existing or {}).get("presetOwned")),
+        "presetOwned": _clean_preset_owned(
+            src.get("presetOwned") if src.get("presetOwned") is not None else (existing or {}).get("presetOwned")
+        ),
         "traceSummary": _clean_trace(src.get("traceSummary") if src.get("traceSummary") is not None else (existing or {}).get("traceSummary")),
     }
     if ".." in out["checkpoint"]:
@@ -556,5 +575,5 @@ def reproduce_payload(rec: dict) -> dict:
         "mustDraw": rec.get("mustDraw") or {},
         "pinned": rec.get("pinned") or [],
         "userBanned": rec.get("userBanned") or [],
-        "presetOwned": rec.get("presetOwned") or [],
+        "presetOwned": rec.get("presetOwned") or None,
     }

@@ -104,8 +104,11 @@ export function createTracer({ enabled = false, debug = false } = {}) {
 
 export function summarizeTrace(events, { finalTags, pinned, presetOwned, mustTags, debug = false } = {}) {
   const final = new Set(finalTags || []);
-  const pin = pinned instanceof Set ? pinned : new Set(pinned || []);
-  const preset = presetOwned instanceof Set ? presetOwned : new Set(presetOwned || []);
+  const pin = pinned instanceof Set ? pinned : new Set(Array.isArray(pinned) ? pinned : []);
+  const preset =
+    presetOwned instanceof Set
+      ? presetOwned
+      : new Set(Array.isArray(presetOwned) ? presetOwned : Array.isArray(presetOwned?.tags) ? presetOwned.tags : []);
   const must = mustTags instanceof Set ? mustTags : new Set(mustTags || []);
   const kept = [];
   const seenKeep = new Set();

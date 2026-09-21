@@ -1623,7 +1623,6 @@ function recipeFromDraw(drawn, sent, seedNum) {
     checkpoint: currentCkpt() || "",
     loras: (currentLorasPayload() || []).map((l, i) => ({
       ...l,
-      trigger: currentTriggerText(),
       order: i,
     })),
     workflowId: currentWorkflowId(),

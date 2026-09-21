@@ -205,6 +205,30 @@ function counted(seed, opts) {
     threw = true;
   }
   ok("raw Set(presetOwned object) throws, so draw must not do that", threw);
+  const pinK = applyPin(lex, new Set(), new Set(), "kimono").pinned;
+  const withObj = draw(11, pinK, new Set(), settings, {
+    trace: true,
+    presetOwned: { id: "edo-kit", tags: ["kimono"] },
+  });
+  ok(
+    "drawOne accepts {id,tags} without wrapping Set",
+    withObj.trace.kept.find((e) => e.tag === "kimono")?.source === SOURCES.preset,
+    JSON.stringify(withObj.trace.kept.find((e) => e.tag === "kimono")),
+  );
+  const tracer = createTracer({ enabled: true });
+  tracer.keep({ tag: "kimono", source: SOURCES.preset, stage: "pin" });
+  let sumThrew = false;
+  try {
+    summarizeTrace(tracer.events(), {
+      finalTags: ["kimono"],
+      pinned: ["kimono"],
+      presetOwned: { id: "edo-kit", tags: ["kimono"] },
+      mustTags: new Set(),
+    });
+  } catch {
+    sumThrew = true;
+  }
+  ok("summarizeTrace accepts named preset object", !sumThrew);
 }
 
 if (failed) {

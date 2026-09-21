@@ -69,6 +69,25 @@ got = recipes.get_recipe(rec["id"])
 ok("read back same positive", got["positive"] == "1girl, solo, kimono")
 ok("read back lora file", got["loras"][0]["file"].endswith("a.safetensors"))
 
+named = recipes.save_recipe(sample(name="組合所有權", presetOwned={"id": "edo-kit", "tags": ["kimono", "obi"]}))
+ok(
+    "named preset ownership survives save",
+    isinstance(named.get("presetOwned"), dict)
+    and named["presetOwned"]["id"] == "edo-kit"
+    and named["presetOwned"]["tags"] == ["kimono", "obi"],
+    str(named.get("presetOwned")),
+)
+ok(
+    "reproduce keeps named preset id",
+    recipes.reproduce_payload(named)["presetOwned"]["id"] == "edo-kit",
+)
+legacy = recipes.save_recipe(sample(name="舊陣列所有權", presetOwned=["kimono"]))
+ok(
+    "legacy tag list still has kimono",
+    isinstance(legacy.get("presetOwned"), dict) and "kimono" in legacy["presetOwned"]["tags"],
+    str(legacy.get("presetOwned")),
+)
+
 rec["name"] = "改名"
 updated = recipes.save_recipe(rec, rid=rec["id"])
 ok("update keeps id", updated["id"] == rec["id"] and updated["name"] == "改名")
@@ -183,6 +202,26 @@ else:
 
 old = recipes.migrate_recipe({"positive": "1girl", "seed": 3})
 ok("missing schema migrates to v1", old["schemaVersion"] == 1)
+
+anon = recipes.save_recipe(sample(name="無 id 所有權", presetOwned={"id": "", "tags": ["kimono"]}))
+ok(
+    "ownership without id keeps tags as imported",
+    anon.get("presetOwned") == {"id": "imported", "tags": ["kimono"]},
+    str(anon.get("presetOwned")),
+)
+evil_folder = recipes.save_recipe(
+    sample(name="壞資料夾", loras=[{"folder": "style/../other", "file": "a.safetensors", "strength": 0.8}])
+)
+ok(
+    "lora folder with .. is dropped",
+    evil_folder.get("loras") == [],
+    str(evil_folder.get("loras")),
+)
+ok(
+    "normal lora folder still saved",
+    recipes.save_recipe(sample(name="正常資料夾", loras=[{"folder": "style", "file": "a.safetensors", "strength": 0.8}]))["loras"][0]["folder"]
+    == "style",
+)
 
 if failed:
     print(f"\n{failed} failed")

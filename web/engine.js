@@ -42,7 +42,6 @@ import {
   RATINGS,
   RATING_LABEL,
   hasExplicitContent,
-  hasSensitiveContent,
   evaluateRating,
 } from "./rules/rating.js";
 import {
@@ -62,7 +61,6 @@ import {
   needsBodyClothes,
   clothingWearsKey,
   actionFitsClothes,
-  wornBodyGarments,
   evaluateClothingLayer,
   evaluateUnderwearVisibility,
 } from "./rules/clothing.js";
@@ -3254,10 +3252,7 @@ export function contradictions(lex, tags) {
 export function drawOne(lex, settings, pinned, userBanned, rand, seed, opts) {
   const drawOpts = opts && typeof opts === "object" ? opts : {};
   const tracer = createTracer({ enabled: !!drawOpts.trace, debug: !!drawOpts.debugTrace });
-  const presetOwned =
-    drawOpts.presetOwned instanceof Set
-      ? drawOpts.presetOwned
-      : new Set(Array.isArray(drawOpts.presetOwned) ? drawOpts.presetOwned : []);
+  const presetOwned = ownedTagSet(drawOpts.presetOwned);
   const requestedPins = new Set(pinned);
   const tagSources = tracer.enabled ? new Map() : null;
   const commitMeta = { source: SOURCES.random, stage: STAGES.fill, parent: null };

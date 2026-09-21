@@ -620,6 +620,27 @@ export function slotTriggerText(slot) {
 export function currentTriggerText() {
   return joinTriggerParts(GEN_LORA_SLOTS.map((slot) => (slot.strength > 0 ? slotTriggerText(slot) : "")));
 }
+export function loraStrengthFromSpec(spec) {
+  const n = Number(spec?.strength);
+  if (!Number.isFinite(n)) return 0.8;
+  return Math.max(0, Math.min(2, n));
+}
+function twPicksFromTrigger(lora, trigger) {
+  const tw = lora?.trainedWords || [];
+  if (!tw.length) return new Set();
+  if (tw.length <= 1) return new Set([0]);
+  const parts = new Set(
+    String(trigger || "")
+      .split(",")
+      .map((s) => s.trim())
+      .filter(Boolean),
+  );
+  const picks = new Set();
+  tw.forEach((word, i) => {
+    if (parts.has(word)) picks.add(i);
+  });
+  return picks.size ? picks : new Set([0]);
+}
 export async function applyRecipeModels({ checkpoint, loras } = {}) {
   if (GEN_CKPTS === null) await fetchCkpts();
   if (GEN_LORAS === null) await fetchGenLoras();
@@ -643,17 +664,20 @@ export async function applyRecipeModels({ checkpoint, loras } = {}) {
     );
     if (hit) {
       GEN_LORA_SLOTS[i].lora = hit;
-      GEN_LORA_SLOTS[i].strength = Number(spec.strength) || 0.8;
+      GEN_LORA_SLOTS[i].strength = loraStrengthFromSpec(spec);
+      GEN_LORA_SLOTS[i].twPicks = twPicksFromTrigger(hit, spec.trigger);
     } else missing.push(spec.file || spec.name);
   }
   return missing;
 }
 
 export function currentLorasPayload() {
-  return GEN_LORA_SLOTS.filter((s) => s.lora && s.strength > 0).map((s) => ({
+  return GEN_LORA_SLOTS.filter((s) => s.lora && s.strength > 0).map((s, i) => ({
     folder: s.lora.folder,
     file: s.lora.file,
     strength: s.strength,
+    trigger: slotTriggerText(s),
+    order: i,
   }));
 }
 

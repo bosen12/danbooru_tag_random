@@ -54,7 +54,16 @@ globalThis.document = {
 
 const { JOB_CARD_FIELDS, jobFields } = await import("../web/engine.js");
 const { lockScroll, unlockScroll, scrollLockCount } = await import("../web/scroll-lock.js");
-const { joinTriggerParts, slotTriggerText, loraPollDelay } = await import("../web/lora.js");
+const {
+  joinTriggerParts,
+  slotTriggerText,
+  loraPollDelay,
+  loraStrengthFromSpec,
+  applyRecipeModels,
+  currentLorasPayload,
+  currentTriggerText,
+  invalidateModelLists,
+} = await import("../web/lora.js");
 
 let failed = 0;
 function ok(name, cond, detail) {
@@ -570,6 +579,56 @@ function ok(name, cond, detail) {
     "卡片取消收藏要確認",
     album.includes("window.confirm") && /dataset.recipeId[\s\S]{0,400}confirm/.test(album),
   );
+  ok(
+    "配方 LoRA 觸發詞不把兩槽合成一串再寫進每一槽",
+    !/trigger:\s*currentTriggerText\(\)/.test(src),
+  );
+}
+
+{
+  ok("強度 0 要保留", typeof loraStrengthFromSpec === "function" && loraStrengthFromSpec({ strength: 0 }) === 0);
+  ok("缺強度時用 0.8", typeof loraStrengthFromSpec === "function" && loraStrengthFromSpec({}) === 0.8);
+  ok("強度 1 原樣", typeof loraStrengthFromSpec === "function" && loraStrengthFromSpec({ strength: 1 }) === 1);
+
+  const prevFetch = globalThis.fetch;
+  globalThis.fetch = async (url) => {
+    const u = String(url);
+    if (u.includes("/api/loras")) {
+      return {
+        json: async () => ({
+          items: [
+            { file: "a.safetensors", name: "a", folder: "style", trainedWords: ["alpha", "beta"] },
+            { file: "b.safetensors", name: "b", folder: "style", trainedWords: ["gamma", "delta"] },
+          ],
+        }),
+      };
+    }
+    if (u.includes("/api/checkpoints")) {
+      return { json: async () => ({ items: [{ ckpt_name: "wai.safetensors", file: "wai.safetensors", title: "wai" }] }) };
+    }
+    throw new Error("unexpected fetch " + u);
+  };
+  invalidateModelLists();
+  const missing = await applyRecipeModels({
+    loras: [
+      { file: "a.safetensors", name: "a", strength: 0.5, trigger: "beta" },
+      { file: "b.safetensors", name: "b", strength: 1, trigger: "gamma" },
+    ],
+  });
+  globalThis.fetch = prevFetch;
+  ok("套用配方時清單都找得到", Array.isArray(missing) && missing.length === 0, JSON.stringify(missing));
+  const payload = currentLorasPayload();
+  ok(
+    "套用後每槽觸發詞跟配方一樣",
+    payload[0]?.trigger === "beta" && payload[1]?.trigger === "gamma",
+    JSON.stringify(payload),
+  );
+  ok(
+    "套用後強度跟配方一樣",
+    payload[0]?.strength === 0.5 && payload[1]?.strength === 1,
+    JSON.stringify(payload),
+  );
+  ok("currentTriggerText 是兩槽分開組的", currentTriggerText() === "beta, gamma", currentTriggerText());
 }
 
 if (failed) {
