@@ -56,6 +56,8 @@ globalThis.document = {
 
 const { JOB_CARD_FIELDS, jobFields, addPinPreset } = await import("../web/engine.js");
 const { lockScroll, unlockScroll, scrollLockCount } = await import("../web/scroll-lock.js");
+const { albumRows, albumChipOptions, captionMeta, recipeThumbUrl, missingLines, canReproduce } =
+  await import("../web/album.js");
 const {
   joinTriggerParts,
   slotTriggerText,
@@ -773,6 +775,131 @@ function ok(name, cond, detail) {
   );
   document.body.children = prevKids;
   style.overflow = "clip";
+}
+
+// --- 作品冊：印樣、篩選、缺件 -------------------------------------------------
+// 這一組守的是「重新設計之後不要又退回檔名列表」。三個篩選變數以前被讀、
+// 卻從來沒有人寫，整組篩選器是空殼而且沒有任何測試看得見 —— 所以先把純的
+// 那一半（篩選、排序、籤條選項、說明行）抽出來，讓它們有斷言可守。
+
+const ALBUM_FIXTURE = [
+  { id: "a", name: "江戶 · 煮飯", era: "edo", rating: "explicit", seed: 1, checkpoint: "m/wai17.safetensors", loras: ["s/film.safetensors"], updatedAt: "2026-09-03T00:00:00Z", image: { file: "a.png" } },
+  { id: "b", name: "泳池 · 逆光", era: "modern", rating: "sensitive", seed: 2, checkpoint: "m/wai17.safetensors", loras: [], updatedAt: "2026-09-05T00:00:00Z" },
+  { id: "c", name: "維多利亞舞會", era: "victorian", rating: "general", seed: 3, checkpoint: "m/wai14.safetensors", loras: ["s/film.safetensors", "c/nurse.safetensors"], updatedAt: "2026-09-01T00:00:00Z", image: { file: "c.png" }, thumbnail: { file: "c-thumb.png" } },
+];
+
+{
+  const names = (rows) => rows.map((r) => r.id).join("");
+
+  ok("沒有篩選就是全部", names(albumRows(ALBUM_FIXTURE, {})) === "bac", names(albumRows(ALBUM_FIXTURE, {})));
+  ok(
+    "預設照 updatedAt 由新到舊",
+    names(albumRows(ALBUM_FIXTURE, { sort: "time" })) === "bac",
+    names(albumRows(ALBUM_FIXTURE, { sort: "time" })),
+  );
+  ok("照名稱排是用 zh-Hant 的規則", albumRows(ALBUM_FIXTURE, { sort: "name" }).length === 3);
+
+  // 搜得到中文時代名，是這次才加的：詞庫裡存的是 edo／victorian，
+  // 畫面上寫的是江戶／維多利亞，使用者搜的一定是後者。
+  ok(
+    "搜尋吃得下中文時代名",
+    names(albumRows(ALBUM_FIXTURE, { query: "江戶" })) === "a",
+    names(albumRows(ALBUM_FIXTURE, { query: "江戶" })),
+  );
+  ok("搜尋吃得下底模檔名", names(albumRows(ALBUM_FIXTURE, { query: "wai14" })) === "c");
+  ok("搜尋不分大小寫", names(albumRows(ALBUM_FIXTURE, { query: "WAI14" })) === "c");
+  ok("搜不到就是空的，不是全部", albumRows(ALBUM_FIXTURE, { query: "zzz" }).length === 0);
+
+  // 這三條以前都是死的：變數被讀，沒有任何一行寫進去。
+  ok(
+    "底模籤條篩得動",
+    names(albumRows(ALBUM_FIXTURE, { ckpt: "m/wai17.safetensors" })) === "ba",
+    names(albumRows(ALBUM_FIXTURE, { ckpt: "m/wai17.safetensors" })),
+  );
+  ok("底模是整條比對，不是字串包含", albumRows(ALBUM_FIXTURE, { ckpt: "wai17.safetensors" }).length === 0);
+  ok("時代籤條篩得動", names(albumRows(ALBUM_FIXTURE, { era: "victorian" })) === "c");
+  ok(
+    "LoRA 籤條篩得動",
+    names(albumRows(ALBUM_FIXTURE, { lora: "s/film.safetensors" })) === "ac",
+    names(albumRows(ALBUM_FIXTURE, { lora: "s/film.safetensors" })),
+  );
+  ok("兩條籤疊起來是交集", names(albumRows(ALBUM_FIXTURE, { ckpt: "m/wai17.safetensors", era: "edo" })) === "a");
+  ok("篩不到任何一筆就回空陣列", albumRows(ALBUM_FIXTURE, { ckpt: "m/wai14.safetensors", era: "edo" }).length === 0);
+  ok("傳進來的陣列不會被就地排序", ALBUM_FIXTURE[0].id === "a", ALBUM_FIXTURE.map((r) => r.id).join(""));
+}
+
+{
+  const opts = albumChipOptions(ALBUM_FIXTURE);
+  ok(
+    "底模籤條照出現次數排",
+    opts.ckpt.map((o) => `${o.value}:${o.count}`).join(" ") === "m/wai17.safetensors:2 m/wai14.safetensors:1",
+    JSON.stringify(opts.ckpt),
+  );
+  ok("LoRA 籤條把每一個都算進去", opts.lora.length === 2 && opts.lora[0].count === 2, JSON.stringify(opts.lora));
+  ok("時代籤條三種各一", opts.era.length === 3, JSON.stringify(opts.era));
+
+  // 只有一種值的那條籤，按下去篩不掉任何東西 —— 列出來只是佔掉印樣的高度。
+  const same = ALBUM_FIXTURE.map((it) => ({ ...it, checkpoint: "only.safetensors" }));
+  ok("整本只有一個底模時整條籤不列", albumChipOptions(same).ckpt.length === 0, JSON.stringify(albumChipOptions(same).ckpt));
+  ok("空的作品冊不會炸", albumChipOptions([]).era.length === 0 && albumChipOptions(null).ckpt.length === 0);
+}
+
+{
+  // 自動命名是「現代 · seed 2928072855」。說明行再印一次時代和 seed，
+  // 同一格就把同一件事講兩遍，第二遍不帶任何新消息。
+  const auto = { name: "現代 · seed 2928072855", era: "modern", rating: "explicit", seed: 2928072855, checkpoint: "m/wai17.safetensors" };
+  const line = captionMeta(auto);
+  ok("說明行不重複名字裡已經有的時代", !line.includes("現代"), line);
+  ok("說明行不重複名字裡已經有的 seed", !line.includes("seed"), line);
+  ok("說明行留下名字沒講的分級", line.includes("色情"), line);
+  ok("底模只留最後一段路徑", line.includes("wai17.safetensors") && !line.includes("m/"), line);
+  ok(
+    "整本同一個底模時說明行不印底模",
+    !captionMeta(auto, { showCkpt: false }).includes("wai17"),
+    captionMeta(auto, { showCkpt: false }),
+  );
+  const named = captionMeta({ name: "我自己取的", era: "edo", rating: "general", seed: 7, checkpoint: "a.safetensors" });
+  ok("名字沒提到的就照常印出來", named === "江戶 · 全年齡 · seed 7 · a.safetensors", named);
+}
+
+{
+  ok("有縮圖就用縮圖", recipeThumbUrl(ALBUM_FIXTURE[2]) === "/api/recipes/files/c-thumb.png", recipeThumbUrl(ALBUM_FIXTURE[2]));
+  ok("沒縮圖就退回原圖", recipeThumbUrl(ALBUM_FIXTURE[0]) === "/api/recipes/files/a.png");
+  ok("兩個都沒有就給空字串，不是 undefined", recipeThumbUrl(ALBUM_FIXTURE[1]) === "");
+  ok("檔名要跳脫，不能直接串進網址", recipeThumbUrl({ image: { file: "a b&c.png" } }).includes("a%20b%26c.png"));
+}
+
+{
+  // 底模或工作流不在就真的生不出來；LoRA 不在只是風格會掉。
+  ok("底模不在就重現不了", canReproduce({ checkpoint: true, loras: [], workflow: false }) === false);
+  ok("工作流不在就重現不了", canReproduce({ checkpoint: false, loras: [], workflow: true }) === false);
+  ok("只有 LoRA 不在仍然重現得了", canReproduce({ checkpoint: false, loras: ["x"], workflow: false }) === true);
+  ok("什麼都不缺當然可以", canReproduce({}) === true && canReproduce(null) === true);
+
+  const lines = missingLines({ checkpoint: true, loras: ["a.safetensors", "b.safetensors"], workflow: false }, { checkpoint: "gone.safetensors" });
+  ok("缺件是一行一件，不是用分號串成一句", lines.length === 3, JSON.stringify(lines));
+  ok("缺件講得出是哪一個底模", lines[0].includes("gone.safetensors"), lines[0]);
+  ok("沒缺件就回空陣列", missingLines({}, {}).length === 0);
+}
+
+{
+  const src = readFileSync(join(ROOT, "web", "album.js"), "utf8");
+  ok("印樣真的畫圖出來，不是印檔名", src.includes('createElement("img")') && src.includes("recipeThumbUrl("), "作品冊又變回檔名列表了");
+  ok("縮圖延後載入", src.includes('img.loading = "lazy"'), "一次把幾十張原圖全塞進去");
+  // <button> 當 grid item 時貢獻給 auto 列的高度是錯的，每一列會疊在上一列身上。
+  ok("格線的項目是外層 div 不是按鈕", src.includes('wrap.className = "album-cell-wrap"'), "列高會被算錯，格子互相重疊");
+  ok("容器 role=list 的話項目要有 role=listitem", src.includes('wrap.setAttribute("role", "listitem")'));
+  ok("重現不了的時候那顆鈕按不下去", /go\.disabled = true/.test(src), "以前按得下去，按了才失敗");
+  ok("套用到工作台會先問過", /album-apply[\s\S]{0,400}?window\.confirm\(/.test(src) || /apply\.addEventListener[\s\S]{0,400}?window\.confirm\(/.test(src), "這顆會把工作臺整組換掉且不能復原");
+  ok("籤條真的寫得進那三個篩選變數", /filterCkpt = v/.test(src) && /filterEra = v/.test(src) && /filterLora = v/.test(src), "篩選器又變回空殼");
+  ok("按籤條不重建整排（不然焦點會掉）", src.includes("paintChipStates"), "用鍵盤連按兩條籤會掉焦點");
+  ok("改得了名字", src.includes("async function rename("), "只能靠「複製後微調」改名");
+
+  const css = readFileSync(join(ROOT, "web", "lora.css"), "utf8").split(CR).join("");
+  ok("作品冊有自己的版面，不再借 LoRA 挑選器的比例", css.includes(".album-modal .album-inner"), "又回去用 320px 檔名側欄");
+  ok("印樣是格線", css.includes(".album-grid {") && css.includes("grid-template-columns: repeat(auto-fill"), "");
+  ok("標題／工具列／籤條不准被壓縮", /\.album-head,\s*\n\.album-tools,\s*\n\.album-chips \{\s*\n\s*flex: 0 0 auto;/.test(css), "籤條會被 max-height 壓扁並溢出容器");
+  ok("印樣自己捲，不會蓋到右邊詳情", /\.album-main \{[\s\S]*?overflow: hidden;/.test(css), "手機版格子會畫到「目前選擇」上面");
 }
 
 if (failed) {

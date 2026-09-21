@@ -1193,6 +1193,600 @@
   }
 }
 
+/* ===== 作品冊 ==============================================================
+   在這之前 .album-modal 一條專屬規則都沒有，整個借用 .lora-modal 的
+   「320px 檔名側欄 ＋ 詳情頁」。那個比例是為了從幾百個檔名裡挑一個而設計的；
+   作品冊要回答的是「我上次喜歡的那張長什麼樣」，答案是圖，不是檔名。
+   所以把比例倒過來：印樣吃掉全部寬度，詳情退成右邊固定的 320。 */
+.album-modal .album-inner {
+  grid-template-columns: 1fr 320px;
+}
+
+.album-main {
+  display: flex;
+  flex-direction: column;
+  min-width: 0;
+  min-height: 0;
+  /* 印樣自己捲，不能整片長出去蓋到右邊的詳情。手機版給 .album-main 設了
+     max-height，少了這一行，格子就會直接畫在「目前選擇」上面。 */
+  overflow: hidden;
+  border-right: 1px solid var(--line);
+}
+
+/* .album-main 有 max-height（手機版 62vh），而 flex 項目預設會被壓縮。
+   標題、工具列、籤條都不准縮 —— 只有印樣該伸縮。少了這三行，籤條會從 32px
+   被壓成 16px，籤本身則整個溢出到容器外面。 */
+.album-head,
+.album-tools,
+.album-chips {
+  flex: 0 0 auto;
+}
+
+.album-head {
+  padding: 20px 22px 0;
+}
+.album-head .ckpt-head-title {
+  margin: 0;
+}
+/* 「12 / 12」要在篩掉東西時一眼看得出少了幾份，所以數字等寬。 */
+.album-count {
+  font-family: var(--mono);
+  font-size: 12px;
+  font-variant-numeric: tabular-nums;
+  color: var(--faint);
+  font-weight: 400;
+}
+
+.album-tools {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 8px;
+  padding: 12px 22px;
+}
+.album-tools input[type="search"] {
+  flex: 1 1 200px;
+  min-width: 0;
+  padding: 8px 10px;
+  border-radius: 10px;
+  border: 1px solid var(--line-2);
+  background: var(--sunk);
+  color: var(--ink);
+  font-family: inherit;
+  font-size: 13px;
+}
+.album-tools input[type="search"]:focus-visible,
+.album-tools select:focus-visible {
+  outline: 2px solid var(--amber);
+  outline-offset: 1px;
+}
+.album-sort {
+  font-size: 12px;
+  color: var(--faint);
+}
+/* Windows 上原生 select 不給明確的 background-color / color 會變成白底黑字。 */
+.album-tools select {
+  padding: 7px 8px;
+  border-radius: 10px;
+  border: 1px solid var(--line-2);
+  background-color: var(--sunk);
+  color: var(--ink);
+  font-family: inherit;
+  font-size: 13px;
+}
+/* 匯出／匯入是收納，不是瀏覽。放在右欄最底下，跟工具列分開 ——
+   在窄螢幕上它們本來會把搜尋列擠成三行。 */
+.album-io {
+  flex: 0 0 auto;
+  display: flex;
+  gap: 6px;
+  margin-top: 10px;
+  padding-top: 10px;
+  border-top: 1px solid var(--line);
+}
+
+/* 籤條：接上 filterCkpt／filterEra／filterLora 那三個以前沒人寫的變數。 */
+.album-chips {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  padding: 0 22px 10px;
+}
+/* 一個維度一行，橫著捲。換行的話光是底模那一排就可能吃掉三行，
+   把印樣擠到只剩一條縫 —— 而印樣才是來這裡的理由。 */
+.album-chip-row {
+  display: flex;
+  flex-wrap: nowrap;
+  align-items: center;
+  gap: 6px;
+  overflow-x: auto;
+  overscroll-behavior-x: contain;
+  scrollbar-width: none;
+}
+.album-chip-row::-webkit-scrollbar {
+  display: none;
+}
+.album-chip-label {
+  width: 3.2em;
+  flex: 0 0 auto;
+  font-size: 11px;
+  font-family: var(--mono);
+  color: var(--faint);
+}
+.album-chip {
+  flex: 0 0 auto;
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
+  min-height: 26px;
+  max-width: 11em;
+  padding: 0 9px;
+  border-radius: 99px;
+  border: 1px solid var(--line-2);
+  background: var(--sunk);
+  color: var(--dim);
+  font-family: inherit;
+  font-size: 12px;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  cursor: pointer;
+  touch-action: manipulation;
+  transition:
+    border-color var(--d-micro) var(--ease-out),
+    background var(--d-micro) var(--ease-out),
+    color var(--d-micro) var(--ease-out);
+}
+.album-chip:hover {
+  color: var(--ink);
+  border-color: var(--dim);
+}
+.album-chip[aria-pressed="true"] {
+  background: var(--amber-soft);
+  border-color: var(--amber-d);
+  color: var(--amber);
+}
+.album-chip:focus-visible {
+  outline: 2px solid var(--amber);
+  outline-offset: 2px;
+}
+.album-chip-n {
+  font-family: var(--mono);
+  font-size: 10px;
+  font-variant-numeric: tabular-nums;
+  color: var(--faint);
+}
+.album-chip[aria-pressed="true"] .album-chip-n {
+  color: var(--amber-d);
+}
+
+/* 印樣本體。格子等寬等高：不等高的瀑布流看起來比較「有設計」，
+   可是掃一排縮圖靠的是眼睛不用重新對焦，等高才掃得快。 */
+.album-grid {
+  flex: 1 1 auto;
+  min-height: 0;
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(148px, 1fr));
+  align-content: start;
+  /* 格子是 <button>，而 <button> 當 flex 容器時貢獻給格線的內在高度是錯的
+     （實測整列被算成 16px，縮圖被壓成 2px）。拉伸關掉，讓每一格自己算高度。
+     而且這本來就是想要的：一排裡某個名字比較長，不該把整排拉高。 */
+  align-items: start;
+  gap: 14px;
+  padding: 4px 22px 22px;
+  overflow-y: auto;
+  overscroll-behavior: contain;
+}
+.album-empty {
+  grid-column: 1 / -1;
+  padding: 40px 0;
+  text-align: center;
+}
+
+/* 格線的項目是這層，按鈕在裡面。理由寫在 album.js 的 makeCell 上面：
+   <button> 當 grid item 會把 auto 列的高度算錯，每一列疊在上一列身上。 */
+.album-cell-wrap {
+  min-width: 0;
+}
+
+.album-cell {
+  width: 100%;
+  display: flex;
+  flex-direction: column;
+  gap: 7px;
+  padding: 0;
+  border: 0;
+  background: none;
+  color: inherit;
+  font-family: inherit;
+  text-align: left;
+  cursor: pointer;
+  touch-action: manipulation;
+}
+.album-thumb {
+  position: relative;
+  flex: 0 0 auto;
+  aspect-ratio: 4 / 5;
+  border-radius: 12px;
+  border: 1px solid var(--line-2);
+  background: var(--sunk);
+  overflow: hidden;
+  display: grid;
+  place-items: center;
+  transition:
+    border-color var(--d-micro) var(--ease-out),
+    transform var(--d-micro) var(--ease-out);
+}
+.album-thumb img {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+  display: block;
+}
+.album-ph {
+  font-family: var(--mono);
+  font-size: 11px;
+  color: var(--faint);
+}
+.album-cell:hover .album-thumb {
+  border-color: var(--dim);
+  transform: translateY(-2px);
+}
+.album-cell:focus-visible {
+  outline: none;
+}
+.album-cell:focus-visible .album-thumb {
+  outline: 2px solid var(--amber);
+  outline-offset: 2px;
+}
+.album-cell[aria-current="true"] .album-thumb {
+  border-color: var(--amber);
+  box-shadow: 0 0 0 2px var(--amber-soft);
+}
+
+.album-cap {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  min-width: 0;
+}
+/* 名字長度是使用者說了算，兩行封頂，不讓一個長名字把整排格子撐高。 */
+.album-cap-name {
+  font-size: 12.5px;
+  line-height: 1.35;
+  color: var(--ink);
+  display: -webkit-box;
+  -webkit-line-clamp: 2;
+  line-clamp: 2;
+  -webkit-box-orient: vertical;
+  overflow: hidden;
+  overflow-wrap: anywhere;
+}
+.album-cap-meta {
+  font-family: var(--mono);
+  font-size: 10.5px;
+  font-variant-numeric: tabular-nums;
+  color: var(--faint);
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+/* 壞掉的配方在格子上就看得出來，不必點進去才發現重現不了。
+   顏色不是唯一的線索 —— 角落有徽章，徽章裡有給螢幕閱讀器的字。 */
+.album-badge {
+  position: absolute;
+  top: 6px;
+  right: 6px;
+  width: 22px;
+  height: 22px;
+  display: grid;
+  place-items: center;
+  border-radius: 99px;
+  background: var(--sunk);
+  color: var(--amber);
+  box-shadow: 0 0 0 1px var(--line-2);
+}
+.album-badge svg {
+  width: 13px;
+  height: 13px;
+}
+.album-cell.is-broken .album-badge {
+  color: var(--err);
+}
+.album-cell.is-broken .album-thumb img {
+  filter: grayscale(0.8);
+  opacity: 0.55;
+}
+.album-modal .sr-only {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  padding: 0;
+  margin: -1px;
+  overflow: hidden;
+  clip-path: inset(50%);
+  white-space: nowrap;
+}
+
+/* 右欄詳情 */
+.album-side {
+  display: flex;
+  flex-direction: column;
+  min-width: 0;
+  min-height: 0;
+  padding: 20px 22px 16px;
+  background: var(--rail);
+}
+.album-side .lm-right-head {
+  flex: 0 0 auto;
+}
+.album-detail {
+  flex: 1 1 auto;
+  min-height: 0;
+  overflow-y: auto;
+  overscroll-behavior: contain;
+}
+.album-side .wf-msg {
+  flex: 0 0 auto;
+}
+.album-detail:empty::after {
+  content: "點左邊任何一張，設定會出現在這裡。";
+  display: block;
+  padding: 40px 0;
+  text-align: center;
+  font-size: 12.5px;
+  color: var(--faint);
+}
+.album-detail-shot {
+  border-radius: 12px;
+  border: 1px solid var(--line-2);
+  background: var(--sunk);
+  overflow: hidden;
+  display: grid;
+  place-items: center;
+  min-height: 90px;
+  margin-bottom: 12px;
+}
+.album-detail-shot img {
+  width: 100%;
+  height: auto;
+  display: block;
+}
+.album-detail-title {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 8px;
+  margin-bottom: 10px;
+}
+.album-detail-title strong {
+  font-size: 14px;
+  line-height: 1.35;
+  min-width: 0;
+  overflow-wrap: anywhere;
+}
+.album-detail-title .ghost.mini {
+  flex: 0 0 auto;
+}
+
+/* 缺件：一行一件。以前是用「；」串成一句塞進 <p>，兩個 LoRA 就讀不完了。 */
+.album-miss {
+  margin-bottom: 12px;
+  padding: 9px 11px;
+  border-radius: 10px;
+  border: 1px solid var(--err);
+  background: color-mix(in oklab, var(--err) 12%, transparent);
+  font-size: 12px;
+}
+.album-miss.is-soft {
+  border-color: var(--amber-d);
+  background: var(--amber-soft);
+}
+.album-miss strong {
+  display: block;
+  margin-bottom: 4px;
+  color: var(--err);
+}
+.album-miss.is-soft strong {
+  color: var(--amber);
+}
+.album-miss ul {
+  margin: 0;
+  padding-left: 1.1em;
+  color: var(--dim);
+}
+.album-miss li {
+  overflow-wrap: anywhere;
+}
+
+.album-meta {
+  display: flex;
+  flex-direction: column;
+  gap: 3px;
+  margin-bottom: 14px;
+  font-size: 12px;
+}
+.album-meta-row {
+  display: flex;
+  gap: 8px;
+  min-width: 0;
+}
+.album-meta-k {
+  flex: 0 0 3.4em;
+  font-family: var(--mono);
+  font-size: 10.5px;
+  color: var(--faint);
+  padding-top: 1px;
+}
+.album-meta-v {
+  flex: 1 1 auto;
+  min-width: 0;
+  color: var(--dim);
+  font-variant-numeric: tabular-nums;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+/* 動作分三層。以前這五顆長得一模一樣，其中一顆會直接覆蓋工作臺、
+   一顆會真的去生圖、一顆會刪檔案 —— 相同的重量就是相同的誤觸機率。 */
+.album-actions {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 8px;
+}
+.album-go {
+  flex: 1 1 auto;
+  min-height: 38px;
+  padding: 0 16px;
+  border-radius: 10px;
+  border: 1px solid var(--amber-d);
+  background: var(--amber);
+  color: #1b1405;
+  font-family: inherit;
+  font-size: 13px;
+  font-weight: 600;
+  cursor: pointer;
+  touch-action: manipulation;
+  transition:
+    filter var(--d-micro) var(--ease-out),
+    transform var(--d-micro) var(--ease-out);
+}
+.album-go:hover:not(:disabled) {
+  filter: brightness(1.08);
+}
+.album-go:active:not(:disabled) {
+  transform: scale(0.98);
+}
+.album-go:focus-visible {
+  outline: 2px solid var(--amber);
+  outline-offset: 2px;
+}
+.album-go:disabled {
+  background: var(--sunk);
+  border-color: var(--line-2);
+  color: var(--faint);
+  cursor: not-allowed;
+}
+.album-go-why {
+  flex: 1 1 100%;
+  font-size: 11.5px;
+  color: var(--err);
+}
+.album-apply {
+  flex: 1 1 auto;
+}
+.album-actions-quiet {
+  flex: 1 1 100%;
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+  margin-top: 4px;
+  padding-top: 10px;
+  border-top: 1px solid var(--line);
+}
+/* 刪除跟複製／匯出隔一段距離，而且自己一種顏色。 */
+.album-danger {
+  margin-left: auto;
+}
+.album-danger:hover {
+  color: var(--err);
+  border-color: var(--err);
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .album-cell:hover .album-thumb {
+    transform: none;
+  }
+}
+
+@media (max-width: 900px) {
+  .album-modal .album-inner {
+    grid-template-columns: 1fr;
+  }
+  .album-main {
+    border-right: 0;
+    border-bottom: 1px solid var(--line);
+    min-height: 0;
+  }
+  .album-side {
+    max-height: 40vh;
+  }
+}
+
+@media (max-width: 760px) {
+  .album-modal .album-inner {
+    grid-template-columns: 1fr;
+  }
+  /* 來作品冊就是為了看圖，所以印樣排第一、有保底高度，詳情在下面自己捲。
+     兩段的上限加起來要留在 100dvh 以內，否則詳情會被推出 overflow:hidden 的外面。 */
+  .album-main {
+    order: -1;
+    max-height: 56vh;
+  }
+  .album-grid {
+    min-height: 100px;
+    grid-template-columns: repeat(auto-fill, minmax(116px, 1fr));
+    gap: 10px;
+    padding: 4px 14px 14px;
+  }
+  /* 窄螢幕上 head ＋ tools ＋ 三排籤條會吃掉 250px，在一個 367px 的面板裡
+     等於還沒看到任何一張圖就用完了。三件事各讓一步： */
+  /* 1. 說明那一句在手機上不是第一次要讀的東西，詳情欄還會再講一次。 */
+  .album-head .ckpt-head-hint {
+    display: none;
+  }
+  /* 2. 三排籤條併成一條橫捲的帶子。 */
+  .album-chips {
+    flex-direction: row;
+    flex-wrap: nowrap;
+    gap: 14px;
+    overflow-x: auto;
+    overscroll-behavior-x: contain;
+    scrollbar-width: none;
+  }
+  .album-chips::-webkit-scrollbar {
+    display: none;
+  }
+  .album-chip-row {
+    flex: 0 0 auto;
+    overflow: visible;
+  }
+  /* 3. 印樣多拿一點高度，詳情少拿一點 —— 來這裡是為了先看圖。 */
+  .album-main {
+    max-height: 62vh;
+  }
+  .album-side {
+    max-height: 30vh;
+  }
+  .album-head,
+  .album-tools,
+  .album-chips {
+    padding-left: 14px;
+    padding-right: 14px;
+  }
+  .album-side {
+    padding: 14px;
+  }
+  .album-tools input[type="search"],
+  .album-tools select {
+    font-size: 16px;
+  }
+  .album-chip,
+  .album-cell {
+    min-height: 0;
+  }
+  .album-chip {
+    min-height: 32px;
+  }
+  .album-go,
+  .album-apply {
+    min-height: 44px;
+  }
+}
+
 .shortcuts-overlay {
   position: fixed;
   inset: 0;
