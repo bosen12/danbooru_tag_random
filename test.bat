@@ -28,6 +28,18 @@ if errorlevel 1 (
   pause
   exit /b 1
 )
+echo == draw baselines ==
+call node scripts\test_draw_baseline.mjs
+if errorlevel 1 (
+  pause
+  exit /b 1
+)
+echo == draw trace ==
+call node scripts\test_trace.mjs
+if errorlevel 1 (
+  pause
+  exit /b 1
+)
 echo == scene/place merge contracts ==
 call node scripts\test_scene_place_contracts.mjs
 if errorlevel 1 (
@@ -111,6 +123,12 @@ if errorlevel 1 (
   exit /b 1
 )
 call node scripts\prompt_audit\validate_gold.mjs scripts\prompt_audit\r42.json scripts\prompt_audit\r42_gold.json
+if errorlevel 1 (
+  pause
+  exit /b 1
+)
+echo == recipes ==
+%PY% scripts\test_recipes.py
 if errorlevel 1 (
   pause
   exit /b 1

@@ -54,7 +54,7 @@ globalThis.document = {
 
 const { JOB_CARD_FIELDS, jobFields } = await import("../web/engine.js");
 const { lockScroll, unlockScroll, scrollLockCount } = await import("../web/scroll-lock.js");
-const { joinTriggerParts, slotTriggerText } = await import("../web/lora.js");
+const { joinTriggerParts, slotTriggerText, loraPollDelay } = await import("../web/lora.js");
 
 let failed = 0;
 function ok(name, cond, detail) {
@@ -522,6 +522,22 @@ function ok(name, cond, detail) {
     body.includes("catDomIndex") && !body.includes(".closest(") && !body.includes("querySelectorAll("),
     "每打一個字都對上千個 tag 做 closest/querySelectorAll，會製造同步 layout 與大量 DOM traversal"
   );
+}
+
+{
+  ok("前景輪詢是 2500ms", loraPollDelay(false, 8000) === 2500);
+  ok("背景輪詢會拉長", loraPollDelay(true, 2500) === 4000);
+  ok("背景輪詢有上限", loraPollDelay(true, 30000) === 30000);
+}
+
+{
+  const src = readFileSync(join(ROOT, "web", "boot.js"), "utf8");
+  ok("抽牌會開 trace", src.includes("trace: true"));
+  ok("卡片有收藏按鈕", src.includes("fav-shot"));
+  ok("有作品冊入口", existsSync(join(ROOT, "web", "album.js")));
+  ok("有 commands 介面", existsSync(join(ROOT, "web", "commands.js")));
+  ok("有 trace 模組", existsSync(join(ROOT, "web", "trace.js")));
+  ok("有 rating 規則模組", existsSync(join(ROOT, "web", "rules", "rating.js")));
 }
 
 if (failed) {

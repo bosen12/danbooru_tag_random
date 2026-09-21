@@ -620,6 +620,33 @@ export function slotTriggerText(slot) {
 export function currentTriggerText() {
   return joinTriggerParts(GEN_LORA_SLOTS.map((slot) => (slot.strength > 0 ? slotTriggerText(slot) : "")));
 }
+export function applyRecipeModels({ checkpoint, loras } = {}) {
+  const missing = [];
+  if (checkpoint) {
+    const hit = (GEN_CKPTS || []).find(
+      (c) => c.ckpt_name === checkpoint || c.file === checkpoint || String(c.ckpt_name).endsWith(checkpoint),
+    );
+    if (hit) selectCkpt(hit);
+    else missing.push(checkpoint);
+  }
+  for (const slot of GEN_LORA_SLOTS) {
+    slot.lora = null;
+    slot.twPicks = new Set();
+  }
+  for (let i = 0; i < 2; i += 1) {
+    const spec = (loras || [])[i];
+    if (!spec) continue;
+    const hit = (GEN_LORAS || []).find(
+      (l) => l.file === spec.file || l.name === spec.name || l.name === spec.file,
+    );
+    if (hit) {
+      GEN_LORA_SLOTS[i].lora = hit;
+      GEN_LORA_SLOTS[i].strength = Number(spec.strength) || 0.8;
+    } else missing.push(spec.file || spec.name);
+  }
+  return missing;
+}
+
 export function currentLorasPayload() {
   return GEN_LORA_SLOTS.filter((s) => s.lora && s.strength > 0).map((s) => ({
     folder: s.lora.folder,
@@ -843,6 +870,12 @@ function closeLoraTarot() {
 
 let LORA_PUSH_EPOCH = localStorage.getItem("yz-lora-push-epoch") || "";
 let LORA_PUSH_VER = +(localStorage.getItem("yz-lora-push-ver") || 0);
+let LORA_POLL_MS = 2500;
+let LORA_POLL_TIMER = 0;
+export function loraPollDelay(hidden, prev) {
+  if (!hidden) return 2500;
+  return Math.min(30000, Math.round((prev || 2500) * 1.6));
+}
 async function pollLoraPush() {
   try {
     const st = await fetch("/api/lora-push?since=" + LORA_PUSH_VER).then((r) => r.json());
@@ -859,8 +892,17 @@ async function pollLoraPush() {
   } catch {
     /* 下一輪再試 */
   }
-  setTimeout(pollLoraPush, document.hidden ? 4000 : 2500);
+  LORA_POLL_MS = loraPollDelay(document.hidden, LORA_POLL_MS);
+  clearTimeout(LORA_POLL_TIMER);
+  LORA_POLL_TIMER = setTimeout(pollLoraPush, LORA_POLL_MS);
 }
+document.addEventListener("visibilitychange", () => {
+  if (!document.hidden) {
+    LORA_POLL_MS = 2500;
+    clearTimeout(LORA_POLL_TIMER);
+    LORA_POLL_TIMER = setTimeout(pollLoraPush, 0);
+  }
+});
 async function applyLoraPush(d) {
   await openLoraModal();
   const match = (GEN_LORAS || []).find((l) => l.name === d.name && (!d.folder || l.folder === d.folder));
