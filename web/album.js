@@ -288,6 +288,7 @@ export async function saveRecipeFromCard(card) {
   const rec = card?._recipe;
   if (!rec) return { ok: false, error: "這張卡沒有可存的配方。" };
   if (card.dataset.recipeId) {
+    if (!window.confirm("取消收藏會刪除這份配方。確定？")) return { ok: true, removed: false };
     const gone = await getJson("/api/recipes/" + encodeURIComponent(card.dataset.recipeId), { method: "DELETE" });
     if (gone.ok) {
       favIds.delete(card.dataset.recipeId);

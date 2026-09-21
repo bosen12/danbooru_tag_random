@@ -557,6 +557,19 @@ function ok(name, cond, detail) {
     "initAlbum 啟動時不預先打 /api/recipes",
     !/export function initAlbum[\s\S]*refresh\(\)\.catch/.test(album),
   );
+  ok(
+    "抽圖把 presetOwned 交給 ownedTagSet，不當 Set 展開物件",
+    src.includes("ownedTagSet(") && !src.includes("new Set(presetOwned || [])"),
+  );
+  ok(
+    "套用配方會重畫時代與尺寸按鈕",
+    /async function applyRecipeToBench[\s\S]{0,900}renderEras\(\)/.test(src) &&
+      /async function applyRecipeToBench[\s\S]{0,900}syncSizeButtons\(\)/.test(src),
+  );
+  ok(
+    "卡片取消收藏要確認",
+    album.includes("window.confirm") && /dataset.recipeId[\s\S]{0,400}confirm/.test(album),
+  );
 }
 
 if (failed) {

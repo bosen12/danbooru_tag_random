@@ -2,6 +2,10 @@ import {
   applyBan,
   applyPin,
   applyClear,
+  ownedTagSet,
+  snapshotPresetOwned,
+  sanitizePresetOwned,
+  prunePresetOwned,
   autoBannedFromPins,
   cycleTag,
   defaultSettings,
@@ -49,8 +53,6 @@ import {
   BUILTIN_PRESETS,
   sanitizePinPresets,
   presetState,
-  prunePresetOwned,
-  sanitizePresetOwned,
   sportHeatWarnings,
   sportPinWarnings,
   sportPlacePinWarnings,
@@ -1637,7 +1639,7 @@ function recipeFromDraw(drawn, sent, seedNum) {
     mustDraw: { ...(settings.mustDraw || {}) },
     pinned: [...pinned],
     userBanned: [...userBanned],
-    presetOwned: [...(presetOwned instanceof Set ? presetOwned : presetOwned || [])],
+    presetOwned: snapshotPresetOwned(presetOwned),
     traceSummary: traceSummaryForRecipe(drawn.trace || { kept: [], rejected: [] }),
   };
 }
@@ -1646,7 +1648,7 @@ async function applyRecipeToBench(recipe) {
   if (!recipe) return;
   pinned = new Set(recipe.pinned || []);
   userBanned = new Set(recipe.userBanned || []);
-  presetOwned = new Set(recipe.presetOwned || []);
+  presetOwned = prunePresetOwned(sanitizePresetOwned(recipe.presetOwned, lex), new Set(recipe.pinned || []), lex);
   settings = sanitizeSettings(
     {
       ...settings,
@@ -1669,6 +1671,10 @@ async function applyRecipeToBench(recipe) {
   syncHeat();
   syncSceneMode();
   renderCounts();
+  renderEras();
+  syncSizeButtons();
+  syncMustDraw();
+  syncDrawJob();
   if (missing && missing.length) speak("已套用，但缺少：" + missing.join("、"));
   else speak("已套用到工作台，尚未生圖");
 }
@@ -2758,7 +2764,7 @@ async function runBatch() {
           : userBanned;
       const drawn = drawOne(lex, settings, pinForDraw, banForDraw, rng, seedNum, {
         trace: true,
-        presetOwned: presetOwned instanceof Set ? presetOwned : new Set(presetOwned || []),
+        presetOwned: ownedTagSet(presetOwned),
       });
       if (settings.samePerson && ident.size === 0) {
         ident = identityPins(lex, drawn.positive);

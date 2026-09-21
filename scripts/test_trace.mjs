@@ -5,6 +5,8 @@ import { dirname, join } from "path";
 import { fileURLToPath } from "url";
 import {
   applyPin,
+  ownedTagSet,
+  snapshotPresetOwned,
   defaultSettings,
   drawOne,
   evaluateCast,
@@ -183,6 +185,26 @@ function counted(seed, opts) {
   const kit = evaluateSportKit(racket, new Set(["living room"]));
   ok("sport kit returns ok or sport_place_mismatch", kit.ok === true || kit.reason === REASONS.sport_place_mismatch);
   ok("solo not a sport kit fail", evaluateSportKit(solo, new Set()).ok === true);
+}
+
+{
+  ok("named preset object becomes a tag set", ownedTagSet({ id: "edo-kit", tags: ["kimono", "obi"] }).has("kimono"));
+  ok("named preset object does not throw", ownedTagSet({ id: "edo-kit", tags: ["kimono"] }).size === 1);
+  ok("null owned is empty", ownedTagSet(null).size === 0);
+  ok("Set owned passes through", ownedTagSet(new Set(["kimono"])).has("kimono"));
+  ok("array owned works", ownedTagSet(["kimono"]).has("kimono"));
+  ok(
+    "recipe snapshot keeps named preset id",
+    snapshotPresetOwned({ id: "edo-kit", tags: ["kimono"] })?.id === "edo-kit",
+  );
+  ok("recipe snapshot of Set is null", snapshotPresetOwned(new Set(["kimono"])) == null);
+  let threw = false;
+  try {
+    new Set({ id: "edo-kit", tags: ["kimono"] });
+  } catch {
+    threw = true;
+  }
+  ok("raw Set(presetOwned object) throws, so draw must not do that", threw);
 }
 
 if (failed) {

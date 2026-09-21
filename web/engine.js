@@ -2447,6 +2447,23 @@ export function sanitizePresetOwned(raw, lex) {
   return tags.length ? { id: raw.id.trim(), tags } : null;
 }
 
+/** Named preset ownership is `{ id, tags }`. `new Set(owned)` throws. */
+export function ownedTagSet(owned) {
+  if (!owned) return new Set();
+  if (owned instanceof Set) return owned;
+  if (Array.isArray(owned)) return new Set(owned);
+  if (Array.isArray(owned.tags)) return new Set(owned.tags);
+  return new Set();
+}
+
+export function snapshotPresetOwned(owned) {
+  if (!owned || typeof owned !== "object") return null;
+  if (typeof owned.id === "string" && Array.isArray(owned.tags)) {
+    return { id: owned.id, tags: owned.tags.slice() };
+  }
+  return null;
+}
+
 /** Keep ownership aligned after the user removes or bans one of the preset-added tags. */
 export function prunePresetOwned(raw, pinned, lex) {
   const owned = sanitizePresetOwned(raw, lex);
