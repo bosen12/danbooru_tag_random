@@ -3471,28 +3471,29 @@ export function actionFitsClothes(actionTag, clothingTags) {
 function takeFromPool(pool, count, rand, commit, prefer, allow) {
   let buckets;
   if (prefer && Array.isArray(prefer.softTiers) && prefer.softTiers.length) {
-    const candidates = [...pool];
     const tiers = prefer.softTiers;
     const weights = prefer.weights || [];
-    const weightOf = (item) => {
+    // Tier predicates are pure for one takeFromPool call. Cache their result once per candidate;
+    // the old loop recomputed every tier for every remaining candidate after each pick.
+    const candidates = pool.map((item) => {
       const tier = tiers.findIndex((fn) => fn(item));
       const index = tier < 0 ? tiers.length : tier;
-      return Math.max(0.01, Number(weights[index]) || 1);
-    };
+      return { item, weight: Math.max(0.01, Number(weights[index]) || 1) };
+    });
     let n = 0;
     while (n < count && candidates.length) {
       let total = 0;
-      for (const item of candidates) total += weightOf(item);
+      for (const candidate of candidates) total += candidate.weight;
       let cursor = rand() * total;
       let index = candidates.length - 1;
       for (let i = 0; i < candidates.length; i += 1) {
-        cursor -= weightOf(candidates[i]);
+        cursor -= candidates[i].weight;
         if (cursor <= 0) {
           index = i;
           break;
         }
       }
-      const [item] = candidates.splice(index, 1);
+      const [{ item }] = candidates.splice(index, 1);
       if (allow && !allow(item)) continue;
       if (commit(item.tag)) n += 1;
     }
@@ -3723,6 +3724,12 @@ export function drawOne(lex, settings, pinned, userBanned, rand, seed) {
     const it = lex.byTag.get(t);
     return it && it.section === "subject";
   });
+  // Candidate filtering is the hottest path in a draw. Iterate the Set directly instead of
+  // repeatedly spreading it into short-lived arrays just to call Array#some.
+  const hasUsed = (predicate) => {
+    for (const tag of used) if (predicate(tag)) return true;
+    return false;
+  };
   if (subjectNow.length) {
     female = hasFemale(subjectNow);
     male = hasMale(subjectNow);
@@ -3771,8 +3778,8 @@ export function drawOne(lex, settings, pinned, userBanned, rand, seed) {
     // 裸手性愛是單人 sex 場景的主要可用活動；非運動情境不要隨機抽入拳擊手套
     // 把整個 sex_act 槽堵死。使用者或拳擊 preset 明確釘選時仍完整尊重。
     if (item.tag === "boxing gloves" && heat === "sex" && !pinned.has(item.tag)) return false;
-    if (NEEDS_FREE_HAND.has(item.tag) && [...used].some((tag) => HANDS_OCCUPIED.has(tag))) return false;
-    if (HANDS_OCCUPIED.has(item.tag) && [...used].some((tag) => NEEDS_FREE_HAND.has(tag))) return false;
+    if (NEEDS_FREE_HAND.has(item.tag) && hasUsed((tag) => HANDS_OCCUPIED.has(tag))) return false;
+    if (HANDS_OCCUPIED.has(item.tag) && hasUsed((tag) => NEEDS_FREE_HAND.has(tag))) return false;
     if (!supportCandidateAllowed({
       used,
       candidate: item.tag,
@@ -3839,8 +3846,8 @@ export function drawOne(lex, settings, pinned, userBanned, rand, seed) {
       item.tag === "tears" ||
       item.tag === "one eye closed" ||
       /^looking /.test(item.tag);
-    if (needsFace && [...used].some((t) => FACELESS_CAM.has(t))) return false;
-    if ([...used].some((t) => FACELESS_CAM.has(t))) {
+    if (needsFace && hasUsed((t) => FACELESS_CAM.has(t))) return false;
+    if (hasUsed((t) => FACELESS_CAM.has(t))) {
       for (const d of item.implies || []) {
         const di = lex.byTag.get(d);
         if (
@@ -3879,17 +3886,17 @@ export function drawOne(lex, settings, pinned, userBanned, rand, seed) {
     // sunset / dusk 是日夜過渡，兩側都相容，刻意不參與這條硬擋 —— 黃昏看見星星或
     // 月光本來就合理，夜市在日落時分開張也是。它們和 day / night 同屬 day_night
     // 互斥，該擋的那一半互斥系統已經擋掉了。
-    if (NIGHT_MARK.has(item.tag) && [...used].some((t) => DAY_MARK.has(t))) return false;
-    if (DAY_MARK.has(item.tag) && [...used].some((t) => NIGHT_MARK.has(t))) return false;
+    if (NIGHT_MARK.has(item.tag) && hasUsed((t) => DAY_MARK.has(t))) return false;
+    if (DAY_MARK.has(item.tag) && hasUsed((t) => NIGHT_MARK.has(t))) return false;
     // 正午的篝火、白天的街燈。天生對稱：光源先進場或白天先進場都擋得住。
-    if (DARK_LIGHT.has(item.tag) && [...used].some((t) => DAY_MARK.has(t))) return false;
-    if (DAY_MARK.has(item.tag) && [...used].some((t) => DARK_LIGHT.has(t))) return false;
+    if (DARK_LIGHT.has(item.tag) && hasUsed((t) => DAY_MARK.has(t))) return false;
+    if (DAY_MARK.has(item.tag) && hasUsed((t) => DARK_LIGHT.has(t))) return false;
     if (heat === "flash" && item.tag === "sleeping" && !pinned.has("sleeping")) return false;
     if (used.has("sleeping") && SLEEP_BAD_POSE.has(item.tag)) return false;
-    if (item.tag === "sleeping" && [...used].some((t) => SLEEP_BAD_POSE.has(t))) return false;
+    if (item.tag === "sleeping" && hasUsed((t) => SLEEP_BAD_POSE.has(t))) return false;
     if (used.has("sleeping") && SLEEP_BAD_EXPR.has(item.tag)) return false;
     if (item.tag === "sleeping") {
-      if ([...used].some((t) => lex.byTag.get(t)?.mutex === "gaze" || /^looking /.test(t) || t === "kiss")) {
+      if (hasUsed((t) => lex.byTag.get(t)?.mutex === "gaze" || /^looking /.test(t) || t === "kiss")) {
         return false;
       }
     }
@@ -3910,8 +3917,8 @@ export function drawOne(lex, settings, pinned, userBanned, rand, seed) {
         return false;
       }
     }
-    if (EYE_EXTRA.has(item.tag) && [...used].some((t) => EYE_EXTRA.has(t))) return false;
-    if (MOUTH_EXTRA.has(item.tag) && [...used].some((t) => MOUTH_EXTRA.has(t))) return false;
+    if (EYE_EXTRA.has(item.tag) && hasUsed((t) => EYE_EXTRA.has(t))) return false;
+    if (MOUTH_EXTRA.has(item.tag) && hasUsed((t) => MOUTH_EXTRA.has(t))) return false;
     if (used.has("sleeping") && (EYE_EXTRA.has(item.tag) || MOUTH_EXTRA.has(item.tag))) return false;
     if (used.has("closed eyes")) {
       if (EYE_EXTRA.has(item.tag) || item.mutex === "gaze" || /^looking /.test(item.tag)) return false;
@@ -3925,10 +3932,10 @@ export function drawOne(lex, settings, pinned, userBanned, rand, seed) {
     ) {
       return false;
     }
-    if ((item.tag === "closed mouth" || item.tag === "covering own mouth") && [...used].some((t) => MOUTH_EXTRA.has(t))) {
+    if ((item.tag === "closed mouth" || item.tag === "covering own mouth") && hasUsed((t) => MOUTH_EXTRA.has(t))) {
       return false;
     }
-    if (SKY_EXTRA.has(item.tag) && [...used].some((t) => SKY_EXTRA.has(t))) return false;
+    if (SKY_EXTRA.has(item.tag) && hasUsed((t) => SKY_EXTRA.has(t))) return false;
     if ((item.tag === "on bed" || item.tag === "bed sheet") && usedPlaces(used, lex).size && ![...usedPlaces(used, lex)].some((p) => BED_PLACE.has(p))) {
       return false;
     }
@@ -3946,8 +3953,8 @@ export function drawOne(lex, settings, pinned, userBanned, rand, seed) {
     // （futon → indoors、open-air bath → outdoors）。但 commit() 現在會把暗示鏈
     // 的每一個字送進 allow()，所以這兩行是那條路徑真正的閘門：少了它們，釘一個
     // 戶外景物之後 indoors 照樣補得進來（釘 tree、seed 700005 → tree, futon, indoors）。
-    if (item.tag === "indoors" && [...used].some((t) => OUTDOOR_LEFTOVER.has(t))) return false;
-    if (item.tag === "outdoors" && [...used].some((t) => INDOOR_PROP.has(t))) return false;
+    if (item.tag === "indoors" && hasUsed((t) => OUTDOOR_LEFTOVER.has(t))) return false;
+    if (item.tag === "outdoors" && hasUsed((t) => INDOOR_PROP.has(t))) return false;
     if (used.has("outdoors") && item.tag === "bunk bed") return false;
     if (item.tag === "outdoors" && used.has("bunk bed")) return false;
     if (
@@ -4191,7 +4198,7 @@ export function drawOne(lex, settings, pinned, userBanned, rand, seed) {
     if (item.tag === "ojou-sama pose" && [...used].some((t) => MOVE_ACT.has(t))) return false;
     if (MOVE_ACT.has(item.tag) && used.has("spread legs")) return false;
     if (item.tag === "spread legs" && [...used].some((t) => MOVE_ACT.has(t))) return false;
-    if (item.tag === "hat" && [...used].some((t) => FACELESS_CAM.has(t))) return false;
+    if (item.tag === "hat" && hasUsed((t) => FACELESS_CAM.has(t))) return false;
     if (
       (item.tag === "necktie" || item.tag === "bowtie") &&
       [...used].some((t) => WATER_ACT.has(t) && t !== "fishing")
@@ -4578,7 +4585,7 @@ export function drawOne(lex, settings, pinned, userBanned, rand, seed) {
     if (item.tag === "leaning back" && used.has("hanging breasts")) return false;
     if (item.tag === "selfie" && [...used].some((t) => BOTH_ARMS.has(t))) return false;
     if (BOTH_ARMS.has(item.tag) && used.has("selfie")) return false;
-    if (item.tag === "lipstick" && [...used].some((t) => FACELESS_CAM.has(t))) return false;
+    if (item.tag === "lipstick" && hasUsed((t) => FACELESS_CAM.has(t))) return false;
     if (item.tag === "sunbathing" && used.has("rain")) return false;
     if (item.tag === "rain" && used.has("sunbathing")) return false;
     if (item.tag === "facing away" && (used.has("one eye closed") || used.has("selfie") || used.has("looking at viewer"))) return false;
@@ -4707,7 +4714,7 @@ export function drawOne(lex, settings, pinned, userBanned, rand, seed) {
       (used.has("one eye closed") ||
         used.has("clenched teeth") ||
         used.has("fucked silly") ||
-        [...used].some((t) => EYE_EXTRA.has(t)))
+        hasUsed((t) => EYE_EXTRA.has(t)))
     ) {
       return false;
     }

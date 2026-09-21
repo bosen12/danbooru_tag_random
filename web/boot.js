@@ -137,6 +137,7 @@ let viewMode = "all";
 let eraOnly = true;
 let lastPositive = "";
 const btnByTag = new Map();
+let catDomIndex = { rows: [], families: [], subs: [], cats: [] };
 const userOpen = new Set(["sec-quality"]);
 let lastIdent = new Set();
 let paintPrev = { pin: new Set(), auto: new Set(), user: new Set() };
@@ -1278,6 +1279,31 @@ function collectDirty(auto) {
   return dirty;
 }
 
+function indexCatDom(root) {
+  const rows = [];
+  for (const [tag, btns] of btnByTag) {
+    const item = catalogItem(tag);
+    if (!item) continue;
+    for (const btn of btns) {
+      rows.push({ item, btn, fam: btn.closest(".family"), sub: btn.closest(".sub"), cat: btn.closest(".cat") });
+    }
+  }
+  const families = [...root.querySelectorAll(".family")];
+  const subs = [...root.querySelectorAll(".sub")].map((el) => ({
+    el,
+    closer: el.querySelector(":scope > .sub-head .ghost.mini"),
+    buttons: [...el.querySelectorAll(".tag[data-tag]")],
+  }));
+  const cats = [...root.querySelectorAll(".cat")].map((el) => ({
+    el,
+    sec: SECTIONS.find((section) => el.id === "sec-" + section.id),
+    hint: el.querySelector(".cat-actions > span"),
+    closer: el.querySelector(":scope > header .ghost.mini"),
+    buttons: [...el.querySelectorAll(".tag[data-tag]")],
+  }));
+  catDomIndex = { rows, families, subs, cats };
+}
+
 function syncVisibility(auto) {
   const root = $("cats");
   if (!root) return;
@@ -1285,53 +1311,40 @@ function syncVisibility(auto) {
   const famShow = new Map();
   const subShow = new Map();
   const catN = new Map();
-  for (const [tag, btns] of btnByTag) {
-    const item = catalogItem(tag);
-    if (!item) continue;
+  for (const { item, btn, fam, sub, cat } of catDomIndex.rows) {
     const show = chipShouldShow(item, auto, q);
-    for (const btn of btns) {
-      if (btn.hidden !== !show) btn.hidden = !show;
-      if (!show) continue;
-      const fam = btn.closest(".family");
-      const sub = btn.closest(".sub");
-      const cat = btn.closest(".cat");
-      if (fam) famShow.set(fam, true);
-      if (sub) subShow.set(sub, true);
-      if (cat) catN.set(cat, (catN.get(cat) || 0) + 1);
-    }
+    if (btn.hidden !== !show) btn.hidden = !show;
+    if (!show) continue;
+    if (fam) famShow.set(fam, true);
+    if (sub) subShow.set(sub, true);
+    if (cat) catN.set(cat, (catN.get(cat) || 0) + 1);
   }
-  for (const fam of root.querySelectorAll(".family")) fam.hidden = !famShow.get(fam);
-  for (const sub of root.querySelectorAll(".sub")) sub.hidden = !subShow.get(sub);
+  for (const fam of catDomIndex.families) fam.hidden = !famShow.get(fam);
+  for (const { el: sub } of catDomIndex.subs) sub.hidden = !subShow.get(sub);
   const filtering = !!q || viewMode !== "all";
   let any = false;
-  for (const wrap of root.querySelectorAll(".cat")) {
+  for (const { el: wrap, sec, hint, closer, buttons } of catDomIndex.cats) {
     const n = catN.get(wrap) || 0;
     wrap.hidden = n === 0;
     if (n) any = true;
     const shouldOpen = filtering ? n > 0 : userOpen.has(wrap.id);
     applyCatOpen(wrap, shouldOpen);
-    const sec = SECTIONS.find((s) => wrap.id === "sec-" + s.id);
-    const hint = wrap.querySelector(".cat-actions > span");
     if (hint && sec) hint.textContent = hintFor(sec, { length: n });
-    const closer = wrap.querySelector(":scope > header .ghost.mini");
     if (closer) {
       const tags = [];
-      for (const btn of wrap.querySelectorAll(".tag[data-tag]")) {
+      for (const btn of buttons) {
         if (!btn.hidden) tags.push(btn.dataset.tag);
       }
       const closed = tagsBanned(tags);
       closer.textContent = closed ? "開啟全部" : "關閉全部";
     }
-    for (const sub of wrap.querySelectorAll(":scope .sub")) {
-      const subClose = sub.querySelector(":scope > .sub-head .ghost.mini");
-      if (!subClose) continue;
-      const tags = [];
-      for (const btn of sub.querySelectorAll(".tag[data-tag]")) {
-        if (!btn.hidden) tags.push(btn.dataset.tag);
-      }
-      const closed = tagsBanned(tags);
-      subClose.textContent = closed ? "開啟全部" : "關閉全部";
-    }
+  }
+  for (const { closer, buttons } of catDomIndex.subs) {
+    if (!closer) continue;
+    const tags = [];
+    for (const btn of buttons) if (!btn.hidden) tags.push(btn.dataset.tag);
+    const closed = tagsBanned(tags);
+    closer.textContent = closed ? "開啟全部" : "關閉全部";
   }
   let empty = root.querySelector(":scope > .empty-filter");
   if (!any) {
@@ -1504,6 +1517,7 @@ function buildCats() {
     frag.append(wrap);
   }
   root.replaceChildren(frag);
+  indexCatDom(root);
   syncVisibility(auto);
 }
 

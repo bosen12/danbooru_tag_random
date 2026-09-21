@@ -510,6 +510,20 @@ function ok(name, cond, detail) {
   );
 }
 
+// --- 9. 左欄搜尋：重用建表時的 DOM 索引，不在每次輸入重走祖先與選擇器 ----------
+{
+  const src = readFileSync(join(ROOT, "web", "boot.js"), "utf8");
+  const at = src.indexOf("function syncVisibility(");
+  const end = src.indexOf("function renderCats(", at);
+  const body = at >= 0 && end > at ? src.slice(at, end) : "";
+  ok("找得到左欄可見性同步函式", body.length > 0);
+  ok(
+    "搜尋熱路徑使用預先建立的 DOM 索引",
+    body.includes("catDomIndex") && !body.includes(".closest(") && !body.includes("querySelectorAll("),
+    "每打一個字都對上千個 tag 做 closest/querySelectorAll，會製造同步 layout 與大量 DOM traversal"
+  );
+}
+
 if (failed) {
   console.error(NL + failed + " failed");
   process.exit(1);

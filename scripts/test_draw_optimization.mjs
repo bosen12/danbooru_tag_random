@@ -12,6 +12,7 @@ import {
 const ROOT = join(dirname(fileURLToPath(import.meta.url)), "..");
 const data = JSON.parse(readFileSync(join(ROOT, "web", "lexicon.json"), "utf8"));
 const lex = indexLexicon(data);
+const engineSource = readFileSync(join(ROOT, "web", "engine.js"), "utf8");
 
 let failed = 0;
 function ok(name, cond, detail = "") {
@@ -54,6 +55,23 @@ function propHits(tag, place, seed0, n = 600) {
     if (samples.length < 2) samples.push(drawn.positive);
   }
   return { hits, samples };
+}
+
+// allow() is invoked for nearly every candidate in every pool. Its common global guards used to
+// materialise `used` repeatedly before `.some()`. Keep those first-line checks allocation-free.
+// This is a source-level performance contract on purpose: output-only tests cannot detect an
+// allocation regression because the selected tags remain identical.
+{
+  const start = engineSource.indexOf("export function drawOne(");
+  const end = engineSource.indexOf("export const QUOTA_SECTIONS", start);
+  const body = start >= 0 && end > start ? engineSource.slice(start, end) : "";
+  const common = ["FACELESS_CAM", "DAY_MARK", "NIGHT_MARK", "DARK_LIGHT", "EYE_EXTRA", "MOUTH_EXTRA"];
+  const stale = common.filter((name) => body.includes(`[...used].some((t) => ${name}.has(t))`));
+  ok(
+    "drawOne 常用互斥守門不為集合掃描建立暫存陣列",
+    body.includes("const hasUsed =") && stale.length === 0,
+    stale.join(", ")
+  );
 }
 
 // 這兩個字描述畫面裡的物件，不是穿在人物身上的配件。舊分類是
