@@ -1098,6 +1098,12 @@ function ensureDom() {
           <div class="shortcut-row"><div class="shortcut-keys"><span class="kbd">/</span></div><div class="shortcut-desc">面板開著搜 LoRA，否則搜詞庫</div></div>
         </div>
         <div class="shortcut-group">
+          <h3>詞庫</h3>
+          <div class="shortcut-row"><div class="shortcut-keys"><span class="kbd">W</span></div><div class="shortcut-desc">焦點在字牌上時開權重（再按一次關）</div></div>
+          <div class="shortcut-row"><div class="shortcut-keys"><span class="kbd">↑</span><span class="kbd">↓</span></div><div class="shortcut-desc">權重開著時加減 0.1</div></div>
+          <div class="shortcut-row"><div class="shortcut-keys"><span class="kbd">I</span></div><div class="shortcut-desc">無限抽：開始／停下</div></div>
+        </div>
+        <div class="shortcut-group">
           <h3>生圖／大圖</h3>
           <div class="shortcut-row"><div class="shortcut-keys"><span class="kbd">Enter</span></div><div class="shortcut-desc">沒開疊層時曝光生圖；疊層開著時關閉</div></div>
           <div class="shortcut-row"><div class="shortcut-keys"><span class="kbd">Esc</span></div><div class="shortcut-desc">關閉最上層（說明／大圖／LoRA）</div></div>

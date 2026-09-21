@@ -22,6 +22,7 @@ import { fileURLToPath } from "url";
 const ROOT = join(dirname(fileURLToPath(import.meta.url)), "..");
 // 反斜線在這個專案的編輯路徑上被吃掉過太多次，換行一律用碼點組，不寫字面值。
 const NL = String.fromCharCode(10);
+const CR = String.fromCharCode(13);
 
 globalThis.matchMedia = () => ({ matches: false, addEventListener() {}, removeEventListener() {} });
 globalThis.location = { href: "http://127.0.0.1:8787/", origin: "http://127.0.0.1:8787", search: "", hash: "", pathname: "/" };
@@ -45,14 +46,15 @@ globalThis.document = {
   documentElement: { style: { overflow: "" } },
   // body 也要給，而且要真的能寫 —— 少了它，「鎖錯元素」會變成當場拋例外，
   // 那是崩潰不是紅燈，斷言等於沒在守。有了它才量得出「body 有沒有被動過」。
-  body: { style: { overflow: "" } },
+  // children 也要給：彈窗開著時背景要進 inert，那條規則掃的就是 body 的直系子節點。
+  body: { style: { overflow: "" }, children: [] },
   getElementById: () => null,
   querySelector: () => null,
   querySelectorAll: () => [],
   addEventListener() {},
 };
 
-const { JOB_CARD_FIELDS, jobFields } = await import("../web/engine.js");
+const { JOB_CARD_FIELDS, jobFields, addPinPreset } = await import("../web/engine.js");
 const { lockScroll, unlockScroll, scrollLockCount } = await import("../web/scroll-lock.js");
 const {
   joinTriggerParts,
@@ -629,6 +631,148 @@ function ok(name, cond, detail) {
     JSON.stringify(payload),
   );
   ok("currentTriggerText 是兩槽分開組的", currentTriggerText() === "beta, gamma", currentTriggerText());
+}
+
+// --- 介面與交互的六道守衛 -----------------------------------------------------
+// 這六條各自對應一個量到的洞，不是泛用的可及性清單。寫在這裡的理由跟檔頭一樣：
+// 能抽成純函式的就抽（存組合、背景 inert），抽不動的就守原始碼的形狀。
+
+// 1. 生圖失敗不是斷頭路：重抽鈕在 .card.is-done 以外也要露出來。
+//    redo 的機制（resetCardForRedo 會清掉 is-fail）本來就吃得下失敗的卡片，
+//    擋住它的一直只有這幾條 CSS 選擇器。
+{
+  // 工作目錄的行尾是 CRLF（.gitattributes 是 text=auto），跨行比對前先正規化，
+  // 不然這條守衛會因為 git 換了一次行尾就無聲地變成永遠綠。
+  const css = readFileSync(join(ROOT, "web", "boot.css"), "utf8").split(CR).join("");
+  ok(
+    "失敗的卡片看得到重抽鈕",
+    css.includes(".card.is-fail .redo-shot") && css.includes(".card.is-img-fail .redo-shot"),
+    "boot.css 只讓 .card.is-done 顯示 .redo-shot",
+  );
+  // display:grid 只讓它進版面，.redo-shot 的基準是 opacity:0 / pointer-events:none。
+  // 少了這一組就是畫出來卻永遠透明、按不到。
+  // 同一組選擇器出現兩次：一次開 display，一次開 opacity。要的是後者。
+  const sel = ".card.is-fail .redo-shot," + NL + ".card.is-img-fail .redo-shot {";
+  let alwaysOn = false;
+  for (let at = css.indexOf(sel); at >= 0; at = css.indexOf(sel, at + 1)) {
+    const body = css.slice(at, css.indexOf("}", at));
+    if (body.includes("opacity: 1;") && body.includes("pointer-events: auto;")) alwaysOn = true;
+  }
+  ok("失敗卡片的重抽鈕不必滑過就看得見、按得到", alwaysOn, "只有 display:grid，沒有把 opacity／pointer-events 打開");
+  const touchBlock = css.slice(css.indexOf("@media (hover: none) {"));
+  ok(
+    "觸控裝置上失敗卡片的重抽鈕直接常亮",
+    touchBlock.includes(".card.is-fail .redo-shot"),
+    "手機沒有 hover，不常亮就等於沒有",
+  );
+}
+
+// 2.「清除釘選」會連封禁一起清掉 —— 那就得說出口，而且要收得回來。
+{
+  const html = readFileSync(join(ROOT, "web", "index.html"), "utf8");
+  const src = readFileSync(join(ROOT, "web", "boot.js"), "utf8");
+  ok(
+    "清除鈕的字面說得出它也清封禁",
+    /id="clear-pins"[^>]*>[^<]*關掉/.test(html) || /id="clear-pins"[^>]*>[^<]*封禁/.test(html),
+    "按鈕只寫「清除釘選」，但 handler 同時清掉 userBanned",
+  );
+  ok("清除釘選有復原窗", src.includes("clearedSnapshot"), "清掉就沒了，沒有任何回頭路");
+  ok(
+    "復原窗開著時又動了釘選，窗要收掉",
+    src.includes("onPinsTouched") && /onPinsTouched = \(\) => \{[\s\S]{0,200}?endClearUndo\(\)/.test(src),
+    "七秒內新釘的字會被「復原」連帶抹掉",
+  );
+  ok(
+    "清除釘選會出聲（跟清除權重／清除必抽一致）",
+    /clear-pins[\s\S]{0,900}?speak\(/.test(src),
+    "隔壁兩顆都有 speak()，只有這顆靜悄悄",
+  );
+}
+
+// 3. 存釘選組合：sanitize 丟掉的時候不准還說「已存」。
+{
+  // knownTags 查的是 lex.byTag，兩個字夠了。
+  const lexStub = { byTag: new Map([["a", {}], ["b", {}]]) };
+  const base = [{ name: "有的", tags: ["a"] }];
+  const blank = addPinPreset(base, { name: "   ", tags: ["a"] }, lexStub);
+  ok("空白名稱存不進去，而且說得出原因", blank.ok === false && blank.reason === "empty", JSON.stringify(blank));
+  const dup = addPinPreset(base, { name: "有的", tags: ["b"] }, lexStub);
+  ok("重名存不進去，而且說得出原因", dup.ok === false && dup.reason === "duplicate", JSON.stringify(dup));
+  const full = Array.from({ length: 16 }, (_, i) => ({ name: "n" + i, tags: ["a"] }));
+  const over = addPinPreset(full, { name: "第十七個", tags: ["b"] }, lexStub);
+  ok("滿 16 組之後存不進去，而且說得出原因", over.ok === false && over.reason === "full", JSON.stringify(over));
+  const good = addPinPreset(base, { name: "新的", tags: ["b"] }, lexStub);
+  ok("正常的存得進去", good.ok === true && good.list.length === 2, JSON.stringify(good));
+  ok("存進去不會動到原本那份", base.length === 1, JSON.stringify(base));
+  const src = readFileSync(join(ROOT, "web", "boot.js"), "utf8");
+  ok("存組合的 handler 走 addPinPreset", src.includes("addPinPreset("), "還在自己 push 完就無條件說已存");
+}
+
+// 4. 權重要有鍵盤進得去的路。.w-flag 是 <button> 裡的 span[role=button]，
+//    永遠拿不到焦點 —— 唯一能補的位置是字牌自己身上的一個按鍵。
+{
+  const src = readFileSync(join(ROOT, "web", "boot.js"), "utf8");
+  ok("字牌上有按鍵可以打開權重彈窗", src.includes("openWeightPopFromFocus"), "權重只有滑鼠進得去");
+  const help = readFileSync(join(ROOT, "web", "lora.js"), "utf8");
+  const panelStart = help.indexOf("shortcuts-panel");
+  const panel = help.slice(panelStart, help.indexOf("document.body.appendChild(ov)", panelStart));
+  ok("快捷鍵面板列了開權重那顆鍵", panel.includes(">W<"), "加了鍵卻沒寫在說明裡，等於沒加");
+  ok("快捷鍵面板也列了無限抽的 I", panel.includes(">I<"), "I 早就綁了，面板一直沒寫");
+}
+
+// 5. 權重彈窗關掉要把焦點還回去 —— 大圖檢視器（VIEW_RETURN）做對了，這裡漏了。
+{
+  const src = readFileSync(join(ROOT, "web", "boot.js"), "utf8");
+  ok("權重彈窗記得從哪裡開的", src.includes("weightPopReturn"), "關掉之後焦點掉到 body，Tab 要從頭來過");
+}
+
+// 6. 彈窗開著時背景要 inert —— 七個疊層都是 aria-modal，但背後的 .shell／.dock
+//    還在 tab 序裡，Tab 會直接走出去。共同的掛勾是 lockScroll：七個都呼叫它。
+{
+  const style = document.documentElement.style;
+  const prevKids = document.body.children;
+  style.overflow = "clip";
+  const mk = (id) => ({ id, tagName: "DIV", inert: false });
+  const mast = mk("mast");
+  const shell = mk("shell");
+  const dock = mk("dock");
+  const live = mk("live");
+  const loraModal = mk("lora-modal");
+  const tarot = mk("lora-tarot");
+  const closedModal = mk("tg-modal");
+  closedModal.inert = true;
+  document.body.children = [mast, shell, dock, live, loraModal, tarot, closedModal];
+
+  loraModal.inert = false;
+  lockScroll("lora-modal");
+  ok(
+    "彈窗開著時背景進 inert",
+    mast.inert === true && shell.inert === true && dock.inert === true,
+    `mast=${mast.inert} shell=${shell.inert} dock=${dock.inert}`,
+  );
+  ok("開著的那個彈窗自己不會被 inert", loraModal.inert === false, String(loraModal.inert));
+  ok("aria-live 區不能被 inert，不然彈窗裡的播報會消失", live.inert === false, String(live.inert));
+
+  tarot.inert = false;
+  lockScroll("lora-tarot");
+  ok("疊第二層時兩層都是活的", loraModal.inert === false && tarot.inert === false, `${loraModal.inert} ${tarot.inert}`);
+
+  unlockScroll("lora-tarot");
+  ok("關掉第二層，第一層還是活的、背景還鎖著", loraModal.inert === false && shell.inert === true, `${loraModal.inert} ${shell.inert}`);
+
+  unlockScroll("lora-modal");
+  ok(
+    "全部關掉，背景放出來",
+    mast.inert === false && shell.inert === false && dock.inert === false,
+    `mast=${mast.inert} shell=${shell.inert} dock=${dock.inert}`,
+  );
+  ok(
+    "本來就關著的彈窗不會被順手打開",
+    closedModal.inert === true,
+    "解鎖時不分青紅皂白清 inert，會把關著的彈窗放回 tab 序",
+  );
+  document.body.children = prevKids;
+  style.overflow = "clip";
 }
 
 if (failed) {

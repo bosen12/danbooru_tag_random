@@ -52,6 +52,8 @@ import {
   tagState,
   BUILTIN_PRESETS,
   sanitizePinPresets,
+  addPinPreset,
+  PIN_PRESET_LIMIT,
   presetState,
   sportHeatWarnings,
   sportPinWarnings,
@@ -923,6 +925,9 @@ function paintWeightMark(el, tag) {
 
 let weightPopTag = "";
 let weightPopAnchor = null;
+// 從哪個字牌開的。彈窗裡的 ↑↓ ＋ − Esc 早就做好了，但關掉之後焦點掉在 body，
+// 鍵盤使用者要從頭 Tab 回來 —— 大圖檢視器用 VIEW_RETURN 解過同一件事。
+let weightPopReturn = null;
 
 function ensureWeightPop() {
   let pop = $("w-pop");
@@ -1030,6 +1035,7 @@ function openWeightPop(host) {
   document.querySelectorAll(".is-w-open").forEach((el) => el.classList.remove("is-w-open"));
   host.classList.add("is-w-open");
   weightPopTag = tag;
+  weightPopReturn = host;
   weightPopAnchor = host.querySelector(":scope > .w-flag") || host;
   pop.setAttribute("aria-hidden", "false");
   paintWeightPop();
@@ -1043,14 +1049,20 @@ function openWeightPop(host) {
   else requestAnimationFrame(open);
 }
 
-function closeWeightPop() {
+// keepFocus：點到別處而關掉的那一條路要傳 true。pointerdown 比焦點移動早一步，
+// 這時彈窗仍然持有焦點，照常還回字牌就等於把人從他正要點的地方拉回來。
+function closeWeightPop({ keepFocus = false } = {}) {
   const pop = $("w-pop");
   if (!pop || !pop.classList.contains("is-open")) return;
+  const back = weightPopReturn;
+  const hadFocus = !keepFocus && pop.contains(document.activeElement);
   pop.classList.remove("is-open");
   pop.setAttribute("aria-hidden", "true");
   document.querySelectorAll(".is-w-open").forEach((el) => el.classList.remove("is-w-open"));
   weightPopTag = "";
   weightPopAnchor = null;
+  weightPopReturn = null;
+  if (hadFocus && back && back.isConnected && back.focus) back.focus({ preventScroll: true });
 }
 
 function paintTrayChip(btn, tag, auto) {
@@ -1595,7 +1607,12 @@ function paintPinMiss(card) {
   paintCardWarn(card, "pos-clash", pos ? clashLine(lex, pos) : "");
 }
 
+// 清除釘選的復原窗要在使用者又動了釘選時收掉 —— 否則七秒內新釘的字會被
+// 「復原」連帶抹掉，那是拿一個資料損失換另一個。bindUi 會把收尾函式掛上來。
+let onPinsTouched = null;
+
 function afterPin() {
+  if (onPinsTouched) onPinsTouched();
   presetOwned = prunePresetOwned(presetOwned, pinned, lex);
   saveStore();
   renderCats();
@@ -1781,6 +1798,20 @@ function setTagWeight(tag, value) {
   refreshWeights();
   paintWeightPop();
   speak(`${labelOf(lex, tag)} 權重 ${formatWeight(next)}`);
+}
+
+// .w-flag 是 <button> 裡的 span[role=button] —— 按鈕不准包互動元素，所以它
+// 永遠拿不到焦點（boot.css 那條 .w-flag:focus-visible 一直是死規則）。
+// 唯一能補的位置是字牌自己身上：焦點在字牌上按 W 就開它的權重。
+function openWeightPopFromFocus() {
+  if (weightPopOpen()) {
+    closeWeightPop();
+    return true;
+  }
+  const host = document.activeElement?.closest?.(".tag[data-tag], .pos span[data-tag]");
+  if (!host || !host.dataset.tag) return false;
+  openWeightPop(host);
+  return true;
 }
 
 function onTagWeight(tag, dir = 1) {
@@ -2977,7 +3008,7 @@ function bindUi() {
     const pop = $("w-pop");
     if (!pop || !pop.classList.contains("is-open")) return;
     if (pop.contains(e.target) || e.target.closest(".w-flag")) return;
-    closeWeightPop();
+    closeWeightPop({ keepFocus: true });
   });
   document.addEventListener("keydown", (e) => {
     const pop = $("w-pop");
@@ -3007,8 +3038,10 @@ function bindUi() {
       onTagWeight(weightPopTag, -1);
     }
   });
-  window.addEventListener("scroll", closeWeightPop, true);
-  window.addEventListener("resize", closeWeightPop);
+  // 這兩個都帶著事件物件呼叫，不能直接掛 closeWeightPop（第一個參數會變成 Event）。
+  const closeWeightPopOnViewport = () => closeWeightPop();
+  window.addEventListener("scroll", closeWeightPopOnViewport, true);
+  window.addEventListener("resize", closeWeightPopOnViewport);
   $("n").addEventListener("change", () => {
     settings.n = Math.max(1, Math.min(10, Number($("n").value) || 1));
     syncSamePerson();
@@ -3119,6 +3152,11 @@ function bindUi() {
       $("infinite")?.click();
       return;
     }
+    if (e.key === "w" || e.key === "W") {
+      if (!openWeightPopFromFocus()) return;
+      e.preventDefault();
+      return;
+    }
     if (e.key === "/") {
       e.preventDefault();
       $("q").focus();
@@ -3144,10 +3182,59 @@ function bindUi() {
       playCatsSwap();
     }
   });
-  $("clear-pins").addEventListener("click", () => {
+  // 這顆鈕一直同時清掉釘選和封禁，字面卻只講釘選；而且隔壁兩顆清除都會出聲，
+  // 只有它靜悄悄。一次按錯就是幾十個字沒了，所以除了正名和播報，再給一個復原窗：
+  // 按完原地變成「復原」，七秒內按得回來。快照只留一份，不做多層 undo。
+  const clearPins = $("clear-pins");
+  const clearPinsLabel = clearPins.textContent;
+  let clearedSnapshot = null;
+  let clearedTimer = 0;
+  // 清除本身和復原本身都會呼叫 afterPin，那兩次不算「使用者又動了釘選」。
+  let clearing = false;
+  let restoring = false;
+  onPinsTouched = () => {
+    if (clearing || restoring || !clearedSnapshot) return;
+    endClearUndo();
+  };
+  const endClearUndo = () => {
+    window.clearTimeout(clearedTimer);
+    clearedTimer = 0;
+    clearedSnapshot = null;
+    clearPins.textContent = clearPinsLabel;
+    delete clearPins.dataset.undo;
+  };
+  clearPins.addEventListener("click", () => {
+    if (clearedSnapshot) {
+      pinned = new Set(clearedSnapshot.pinned);
+      userBanned = new Set(clearedSnapshot.userBanned);
+      presetOwned = clearedSnapshot.presetOwned;
+      endClearUndo();
+      restoring = true;
+      afterPin();
+      restoring = false;
+      speak("已復原");
+      return;
+    }
+    const nPin = pinned.size;
+    const nBan = userBanned.size;
+    if (!nPin && !nBan) {
+      speak("本來就沒有釘選或關掉的字");
+      return;
+    }
+    clearedSnapshot = { pinned: new Set(pinned), userBanned: new Set(userBanned), presetOwned };
     pinned = new Set();
     userBanned = new Set();
+    clearing = true;
     afterPin();
+    clearing = false;
+    const bits = [];
+    if (nPin) bits.push(`${nPin} 個釘選`);
+    if (nBan) bits.push(`${nBan} 個關掉`);
+    speak(`已清除 ${bits.join("、")}，七秒內可以按同一顆鈕復原`);
+    clearPins.textContent = "復原清除";
+    clearPins.dataset.undo = "1";
+    window.clearTimeout(clearedTimer);
+    clearedTimer = window.setTimeout(endClearUndo, 7000);
   });
   const drawJobBtn = $("draw-job");
   if (drawJobBtn) {
@@ -3213,10 +3300,25 @@ function bindUi() {
       }
       const name = window.prompt("組合名稱", "");
       if (name == null) return;
-      userPresets = sanitizePinPresets([...userPresets, { name, tags }], lex);
+      // sanitize 會把空白名稱、重名、第 17 組默默丟掉。以前這裡不看結果就喊
+      // 「已存」，於是最容易撞到的三種情形全都是「畫面說存好了，其實沒有」。
+      const res = addPinPreset(userPresets, { name, tags }, lex);
+      if (!res.ok) {
+        speak(
+          res.reason === "empty"
+            ? "組合要有名字才存得起來"
+            : res.reason === "duplicate"
+              ? `已經有一組叫「${res.name}」了，換個名字`
+              : res.reason === "full"
+                ? `最多 ${PIN_PRESET_LIMIT} 組，先按 × 刪掉一組`
+                : "這些字不在詞庫裡，存不起來",
+        );
+        return;
+      }
+      userPresets = res.list;
       saveStore();
       renderPresets();
-      speak("已存釘選組合");
+      speak(`已存「${res.name}」`);
     });
   }
   const weightsBtn = $("clear-weights");

@@ -1043,7 +1043,13 @@ input[type="number"] {
   outline: 2px solid var(--color-focus);
   outline-offset: 2px;
 }
-.card.is-done .redo-shot {
+/* 失敗的卡片以前只給「複製 POS」，重抽鈕畫在 DOM 裡卻被這幾條選擇器擋著。
+   Comfy 打嗝或 OOM 之後，那張卡的 seed 和釘選就只能整批重跑 —— 那是斷頭路，
+   而 resetCardForRedo 本來就會清掉 is-fail／is-img-fail，機制一直是通的。
+   .shot 有 aspect-ratio，圖沒出來框也還在，鈕不會浮在零高度上。 */
+.card.is-done .redo-shot,
+.card.is-fail .redo-shot,
+.card.is-img-fail .redo-shot {
   display: grid;
 }
 .card.is-done .shot:hover .redo-shot,
@@ -1052,6 +1058,19 @@ input[type="number"] {
   opacity: 1;
   pointer-events: auto;
   transform: scale(1);
+}
+/* 成品上的重抽鈕要等滑過才出現，因為蓋著的是圖，那張圖才是主角。
+   失敗的卡片沒有圖可看，重抽是它唯一剩下的動作 —— 藏起來沒有任何好處。 */
+.card.is-fail .redo-shot,
+.card.is-img-fail .redo-shot {
+  opacity: 1;
+  pointer-events: auto;
+  transform: scale(1);
+}
+/* 連 POS 都還沒抽出來就失敗的卡片，queueRedo 拿不到東西可以重送。
+   畫一顆按了沒反應的鈕，比不畫更糟。 */
+.card:not([data-positive]) .redo-shot {
+  display: none;
 }
 .redo-shot:hover,
 .redo-shot:focus-visible {
@@ -1167,6 +1186,8 @@ input[type="number"] {
 }
 @media (hover: none) {
   .card.is-gen .skip-shot,
+  .card.is-fail .redo-shot,
+  .card.is-img-fail .redo-shot,
   .card.is-done .redo-shot {
     opacity: 1;
     pointer-events: auto;
@@ -1181,6 +1202,14 @@ input[type="number"] {
     top: 10px;
     right: 10px;
   }
+}
+
+/* 「清除釘選與關掉」按下去之後原地變成復原鈕，七秒。換個顏色，免得看起來
+   像同一顆鈕還沒反應 —— 那正是會讓人再按一次的樣子，而再按一次是復原，
+   不是再清一次，所以這一下必須看得出來換了身分。 */
+.ghost[data-undo] {
+  border-color: var(--color-weight);
+  color: var(--color-weight);
 }
 
 .card.is-skip .shot-img.is-on {

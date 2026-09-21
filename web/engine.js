@@ -2531,6 +2531,26 @@ export function sanitizePinPresets(raw, lex) {
   return out;
 }
 
+// 面板上「存目前釘選」那顆鈕的判斷。sanitizePinPresets 是防禦性的：讀 localStorage
+// 時遇到壞資料就默默丟掉，那是對的。但同一個函式拿來處理「使用者剛剛按下存檔」
+// 就變成災難 —— 空白名稱、重名、第 17 組全都是靜靜消失，畫面卻照樣說「已存」。
+// 拒絕的理由要帶得出來，呼叫端才能把它講給人聽。
+export const PIN_PRESET_LIMIT = 16;
+export const PIN_PRESET_NAME_MAX = 20;
+
+export function addPinPreset(list, entry, lex) {
+  const current = Array.isArray(list) ? list : [];
+  const name = typeof entry?.name === "string" ? entry.name.trim().slice(0, PIN_PRESET_NAME_MAX) : "";
+  if (!name) return { ok: false, reason: "empty", list: current };
+  const tags = knownTags(lex, Array.isArray(entry?.tags) ? entry.tags : []);
+  if (!tags.length) return { ok: false, reason: "no-tags", list: current };
+  if (current.some((p) => p && typeof p.name === "string" && p.name.trim() === name)) {
+    return { ok: false, reason: "duplicate", list: current, name };
+  }
+  if (current.length >= PIN_PRESET_LIMIT) return { ok: false, reason: "full", list: current, name };
+  return { ok: true, list: [...current, { name, tags }], name };
+}
+
 export function applyClear(pinned, userBanned, tag) {
   const nextPin = new Set(pinned);
   const nextBan = new Set(userBanned);
