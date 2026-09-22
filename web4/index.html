@@ -35,7 +35,7 @@
     <header class="mast studio-mast">
       <h1 class="wordmark" translate="no">
         <img class="brand-mark" src="logo.svg" width="36" height="36" alt="" aria-hidden="true" />
-        <span class="wordmark-copy">導影台<span>排字匣 · Intent → Shot</span></span>
+        <span class="wordmark-copy">導影台<span>場記 · 開拍 · 成片</span></span>
       </h1>
       <div class="mast-tools" id="mast-tools">
         <div class="ping" id="ping" data-ok="0"><i></i><span>Comfy…</span></div>
@@ -47,7 +47,7 @@
       <aside class="intent" id="sec-rules" aria-label="意圖">
         <header class="intent-head">
           <p class="eyebrow">Intent</p>
-          <h2>打光與場記</h2>
+          <h2>場記</h2>
           <p class="slate-line" id="slate-line" aria-live="polite">色情 · 混合 · 現代 · 女</p>
         </header>
 
@@ -64,7 +64,7 @@
               <button type="button" class="segmented-btn" data-rating="explicit" aria-current="true" tabindex="0">色情</button>
             </li>
           </ul>
-          <p class="hint" id="rating-hint">分級牆高於釘選。敏感／全年齡會擋下不合的 pin，但不會刪掉你的釘選狀態。</p>
+          <p class="hint" id="rating-hint">敏感／全年齡會擋不合規的釘選；釘選狀態仍留著，改回色情就回來。</p>
         </div>
 
         <div class="field step">
@@ -95,7 +95,7 @@
             <button type="button" class="chip-toggle" data-scene-mode="diverse" aria-pressed="false">多元</button>
             <button type="button" class="chip-toggle" data-scene-mode="weird" aria-pressed="false">奇葩</button>
           </div>
-          <p class="hint">正常＝活動對場景。多元＝只鎖場景與物理。奇葩＝只鎖物理。</p>
+          <p class="hint">正常：活動要對場景。多元：只鎖場景與物理。奇葩：只鎖物理。</p>
         </fieldset>
 
         <fieldset class="heat step">
@@ -156,7 +156,7 @@
           class="results"
           id="results"
           aria-label="成片"
-          data-empty="還沒有成片。&#10;左側定好場記，按「開拍」。"
+          data-empty="成片區是空的。&#10;左側改完場記，按開拍。"
         ></section>
       </main>
     </div>
@@ -233,7 +233,7 @@
         <button type="button" class="primary shoot" id="go"><span>開拍</span></button>
         <button type="button" class="ghost" id="cancel" hidden>取消</button>
       </div>
-      <div class="status" id="status">定好場記再開拍</div>
+      <div class="status" id="status">待命</div>
     </div>
     <div class="live" id="live" aria-live="polite"></div>
     <script type="module" src="app.js"></script>

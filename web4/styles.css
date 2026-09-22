@@ -4,11 +4,8 @@ html { color-scheme: dark; }
 
 body.studio {
   background-color: var(--color-paper);
-  background-image:
-    radial-gradient(900px 480px at 12% -8%, var(--color-gel), transparent 55%),
-    radial-gradient(700px 420px at 88% 0%, oklch(28% 0.06 260 / 0.45), transparent 50%);
-  background-attachment: fixed;
-  background-repeat: no-repeat;
+  background-image: none;
+  background-attachment: scroll;
   padding-bottom: calc(var(--dock-h, var(--dock)) + var(--space-5));
   min-height: 100dvh;
 }
@@ -158,14 +155,7 @@ body.studio.sheet-open { overflow: hidden; }
   background: var(--color-stage);
 }
 
-.stage-glow {
-  pointer-events: none;
-  position: absolute;
-  inset: 8% 12% auto;
-  height: 40%;
-  background: radial-gradient(ellipse at center, oklch(40% 0.08 75 / 0.18), transparent 70%);
-  filter: blur(20px);
-}
+.stage-glow { display: none; }
 
 .stage .tray { position: relative; z-index: 1; }
 .stage .results {
@@ -189,7 +179,7 @@ body.studio.sheet-open { overflow: hidden; }
   overflow: hidden;
   border: var(--rule) solid var(--color-rule);
   background: var(--color-paper-2);
-  box-shadow: 0 18px 40px oklch(0% 0 0 / 0.28);
+  box-shadow: none;
 }
 .card .pos {
   font-size: var(--text-sm);
@@ -232,8 +222,7 @@ body.studio.sheet-open { overflow: hidden; }
   font-family: var(--font-display);
   font-weight: 700;
   letter-spacing: 0.08em;
-  box-shadow: 0 0 0 1px color-mix(in oklab, var(--color-accent) 35%, transparent),
-    0 10px 28px oklch(50% 0.14 55 / 0.28);
+  box-shadow: none;
 }
 .studio-dock .status {
   flex: 1;

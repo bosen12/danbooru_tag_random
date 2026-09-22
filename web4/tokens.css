@@ -19,7 +19,7 @@
   --color-ok: oklch(72% 0.12 150);
   --color-weight: oklch(78% 0.1 210);
   --color-stage: oklch(16% 0.018 255);
-  --color-gel: oklch(72% 0.16 55 / 0.35);
+  --color-gel: oklch(72% 0.08 55 / 0.12);
 
   --font-display: "Syne", "Bricolage Grotesque", "Arial Narrow", sans-serif;
   --font-body: "IBM Plex Sans", "Noto Sans TC", "Segoe UI", sans-serif;
@@ -43,7 +43,7 @@
   --space-8: 64px;
 
   --rule: 1px;
-  --radius: 10px;
+  --radius: 4px;
   --rail: minmax(280px, 22vw);
   --dock: 84px;
   --mist: blur(14px);

@@ -1,4 +1,5 @@
-/** 導影台殼層：場記條＋釘選台／詞庫 sheet。不碰 engine／drawOne。 */
+/** 導影台殼層：場記條＋釘選台／詞庫 sheet。不碰 engine／drawOne。
+ * 文案跟棚內控制台走，不講賦能／一鍵／完美。 */
 const $ = (id) => document.getElementById(id);
 
 const RATING_ZH = { general: "全年齡", sensitive: "敏感", explicit: "色情" };
