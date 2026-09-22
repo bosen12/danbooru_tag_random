@@ -790,3 +790,84 @@ body.is-shooting .studio-dock .status {
   text-decoration: line-through;
   text-decoration-color: color-mix(in oklab, var(--color-danger, #c44) 55%, transparent);
 }
+
+
+/* Mobbin Settings 節奏：左說明、右控件，可掃列 */
+.pin-settings {
+  display: flex;
+  flex-direction: column;
+  gap: 0;
+  border: var(--rule) solid var(--color-rule);
+  border-radius: var(--radius);
+  overflow: hidden;
+  background: var(--color-paper-3);
+}
+.pin-row {
+  display: grid;
+  grid-template-columns: minmax(7.5rem, 34%) minmax(0, 1fr);
+  gap: var(--space-3);
+  align-items: start;
+  padding: var(--space-3) var(--space-4);
+  border-bottom: var(--rule) solid var(--color-rule);
+}
+.pin-row:last-child { border-bottom: 0; }
+.pin-row-copy {
+  display: grid;
+  gap: 2px;
+  min-width: 0;
+}
+.pin-row-copy strong {
+  font-size: var(--text-sm);
+  font-weight: 600;
+  color: var(--color-ink);
+}
+.pin-row-copy p {
+  margin: 0;
+  font-size: var(--text-xs);
+  line-height: 1.4;
+  color: var(--color-muted);
+}
+.pin-row-ctrl {
+  min-width: 0;
+  justify-content: flex-start;
+  align-content: flex-start;
+}
+.pin-row-ctrl.legend {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--space-2);
+}
+.pin-more.pin-row-more {
+  margin: 0;
+  padding: 0;
+  border-top: 0;
+}
+.pin-more.pin-row-more > summary {
+  display: grid;
+  grid-template-columns: minmax(7.5rem, 34%) minmax(0, 1fr);
+  gap: var(--space-3);
+  align-items: start;
+  padding: var(--space-3) var(--space-4);
+  list-style: none;
+  cursor: pointer;
+}
+.pin-more.pin-row-more > summary::-webkit-details-marker { display: none; }
+.pin-more.pin-row-more > summary::after {
+  content: "展開";
+  justify-self: end;
+  font-size: var(--text-xs);
+  color: var(--color-muted);
+}
+.pin-more.pin-row-more[open] > summary::after { content: "收合"; }
+.pin-more.pin-row-more .count-grid {
+  padding: 0 var(--space-4) var(--space-4);
+}
+.pin-actions { margin-bottom: 0; }
+@media (max-width: 560px) {
+  .pin-row,
+  .pin-more.pin-row-more > summary {
+    grid-template-columns: 1fr;
+    gap: var(--space-2);
+  }
+  .pin-more.pin-row-more > summary::after { justify-self: start; }
+}
