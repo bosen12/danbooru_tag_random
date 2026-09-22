@@ -70,8 +70,18 @@ import {
   buildMutexIndexFromLex,
   prefilterPoolByMutex,
 } from "./m-mutex-index.js";
+import {
+  SCENE_MODES,
+  SCENE_MODE_LABELS,
+  sceneModeOf,
+  lockSceneOn,
+  realisticOn,
+} from "./scene-policy.js";
 
 export {
+  SCENE_MODES,
+  SCENE_MODE_LABELS,
+  sceneModeOf,
   HEATS,
   MIXED_HEATS,
   toggleHeat,
@@ -1312,26 +1322,8 @@ const PRIVATE_SEX_PLACE = new Set([
 ]);
 const PUBLIC_SEX_PLACE = new Set(["street", "city", "cityscape", "alley", "park", "beach", "ocean", "rooftop"]);
 
-export const SCENE_MODES = ["normal", "diverse", "weird"];
-export const SCENE_MODE_LABELS = { normal: "正常", diverse: "多元", weird: "奇葩" };
-
-export function sceneModeOf(settings) {
-  const m = settings && settings.sceneMode;
-  if (SCENE_MODES.includes(m)) return m;
-  if (settings && settings.lockScene === false) return "weird";
-  return "normal";
-}
-
-function lockSceneOn(settings) {
-  const m = sceneModeOf(settings);
-  if (m === "weird") return false;
-  if (m === "normal" || m === "diverse") return true;
-  return settings.lockScene !== false;
-}
-
-function realisticOn(settings) {
-  return sceneModeOf(settings) === "normal";
-}
+// sceneMode / lockScene / realistic — single source: ./scene-policy.js
+// (re-exported above; lockSceneOn / realisticOn imported for draw gates)
 
 function usedJobs(used, lex) {
   const hit = recall(used, "_jobs");

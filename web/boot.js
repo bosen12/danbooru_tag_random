@@ -61,6 +61,12 @@ import {
   toggleNamedPreset,
 } from "./engine.js";
 import {
+  RATING_BLOCKS_HEAT,
+  heatsBlockedByRating,
+  heatBlockedByRating,
+  heatsAllowedByRating,
+} from "./scene-policy.js";
+import {
   applyRecipeModels,
   currentCkpt,
   currentLorasPayload,
@@ -319,12 +325,11 @@ const HEAT_LABELS = { activity: "活動", tease: "誘惑", flash: "走光", sex:
 // 實測（每格 400 張）：全年齡 + 走光 -> 情色內容 0%；全年齡 + 性愛 -> 0%。
 // 使用者勾了卻一張都抽不到，而且沒有任何提示 —— 這是我加三段滑桿時漏掉的一塊，
 // 舊的布林開關其實也有，只是三段之後更容易踩到。
-const RATING_BLOCKS_HEAT = { general: ["flash", "sex"], sensitive: [], explicit: [] };
+// RATING_BLOCKS_HEAT — single source: ./scene-policy.js (shared with allow / Y1)
 
 function ratingHeatClash() {
   const rating = RATINGS.includes(settings.rating) ? settings.rating : "explicit";
-  const blocked = RATING_BLOCKS_HEAT[rating] || [];
-  return (settings.heats || []).filter((h) => blocked.includes(h));
+  return heatsBlockedByRating(rating).filter((h) => (settings.heats || []).includes(h));
 }
 
 /**
@@ -366,11 +371,11 @@ function updateHeatClash() {
   if (ratingHit.length) {
     showClash(note);
     clashBox(note).textContent =
-      "分級選了「" +
+      "分級牆：現在是「" +
       (RATING_LABEL[settings.rating] || settings.rating) +
-      "」，但尺度勾了「" +
+      "」，「" +
       ratingHit.map((h) => HEAT_LABELS[h] || h).join("、") +
-      "」。這一級不會出現那種內容，這些尺度等於沒作用 —— 把分級往右拉，或改勾別的尺度。";
+      "」開不了。把分級往右拉，或改勾別的尺度。";
     return;
   }
   const sexBlock = sportHeatWarnings(lex, pinned, settings.heats);
@@ -482,12 +487,33 @@ function syncSamePerson() {
 function syncHeat() {
   const box = $("heats");
   if (!box) return;
+  const rating = RATINGS.includes(settings.rating) ? settings.rating : "explicit";
+  const blocked = new Set(heatsBlockedByRating(rating));
   const on = new Set(settings.heats || []);
   const all = MIXED_HEATS.every((h) => on.has(h)) && !on.has("activity");
   for (const btn of box.querySelectorAll(".chip-toggle")) {
     const h = btn.dataset.heat;
     const pressed = h === "mixed" ? all : on.has(h);
     btn.setAttribute("aria-pressed", pressed ? "true" : "false");
+    // Y1：跟 allow 同一道牆——被分級擋的尺度灰掉＋明示，不准只擋 UI。
+    if (h && h !== "mixed" && blocked.has(h)) {
+      btn.disabled = true;
+      btn.setAttribute("aria-disabled", "true");
+      btn.title = `分級牆：${RATING_LABEL[rating] || rating} 不開「${HEAT_LABELS[h] || h}」`;
+      btn.classList.add("is-rating-blocked");
+    } else if (h === "mixed" && MIXED_HEATS.some((x) => blocked.has(x))) {
+      // 混合含被擋尺度時仍可點，但 title 說明會被牆裁掉
+      btn.disabled = false;
+      btn.removeAttribute("aria-disabled");
+      const hit = MIXED_HEATS.filter((x) => blocked.has(x)).map((x) => HEAT_LABELS[x] || x);
+      btn.title = hit.length ? `分級牆會裁掉：${hit.join("、")}` : "";
+      btn.classList.remove("is-rating-blocked");
+    } else {
+      btn.disabled = false;
+      btn.removeAttribute("aria-disabled");
+      btn.removeAttribute("title");
+      btn.classList.remove("is-rating-blocked");
+    }
   }
   updateHeatClash();
 }
@@ -675,22 +701,34 @@ function syncRating() {
 function setRating(next, { speakIt = true } = {}) {
   if (!RATINGS.includes(next) || next === settings.rating) {
     syncRating();
+    syncHeat();
     return;
   }
   settings.rating = next;
-  // 分級會影響尺度提示（全年齡擋掉走光／性愛），改完要重算。
+  // 跟 allow 同一道牆：被擋的尺度從勾選拿掉，避免「開了卻抽不到」假故障。
+  const kept = heatsAllowedByRating(settings.heats, next);
+  if (kept.length !== (settings.heats || []).length) {
+    settings.heats = kept.length ? kept : ["tease"];
+    settings.heatPreset = heatPresetOf(settings.heats);
+    settings.weights = weightsForHeats(settings.heats, lex?.data?.heatWeights);
+  }
+  syncHeat();
   updateHeatClash();
   saveStore();
   syncRating();
-  // 能抽的字整批變了，詞庫面板要重畫。淡入由 renderCats("filter") 那條路
-  // 走 playCatsSwap()，跟時代／角色／檢視切換是同一個過場 —— 這裡本來有一段
-  // 自己的 .rating-changed 淡入，兩層疊起來會相乘，所以收掉了。
   renderCats("filter");
   if (speakIt) speak(`尺度：${RATING_LABEL[next]}`);
 }
 
 function pickHeat(h) {
+  const rating = RATINGS.includes(settings.rating) ? settings.rating : "explicit";
+  if (h && h !== "mixed" && heatBlockedByRating(h, rating)) {
+    speak(`分級牆：${RATING_LABEL[rating] || rating} 不開「${HEAT_LABELS[h] || h}」`);
+    syncHeat();
+    return;
+  }
   const next = toggleHeat(settings.heats, h);
+  // 混合若含被擋尺度，存檔仍寫入，但 allow／抽樣走 rating 牆；UI 已明示。
   settings.heats = next;
   settings.heatPreset = heatPresetOf(next);
   settings.weights = weightsForHeats(next, lex.data.heatWeights);
