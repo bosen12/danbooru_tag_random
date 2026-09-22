@@ -95,6 +95,7 @@ import {
   mustStepper,
   syncMustDraw,
 } from "./mustdraw.js";
+import { drawWithSeed } from "./draw-with-seed.js";
 
 const SECTIONS = [
   { id: "quality", title: "畫質與風格", hint: "固定畫質每張都帶。風格預設不進，釘了才進" },
@@ -2524,9 +2525,16 @@ function drawStageHooks() {
       if (event && event.stage === "intent") {
         const intent = event.intent || {};
         const bits = [intent.heat, intent.era].filter(Boolean);
-        speak(bits.length ? `整理規則…（${bits.join(" · ")}）` : "整理規則…");
+        const label = bits.length ? `整理規則…（${bits.join(" · ")}）` : "整理規則…";
+        speak(label);
+        try {
+          window.dispatchEvent(new CustomEvent("studio:stage", { detail: { stage: "intent", label } }));
+        } catch { /* ignore */ }
       } else if (event && event.stage === "composition") {
         speak("安排構圖…");
+        try {
+          window.dispatchEvent(new CustomEvent("studio:stage", { detail: { stage: "composition", label: "安排構圖…" } }));
+        } catch { /* ignore */ }
       }
       return aborting || (genAbort && genAbort.signal.aborted) ? { cancel: true } : undefined;
     },
@@ -2538,6 +2546,9 @@ function finishBatch() {
   $("go").disabled = false;
   $("go").removeAttribute("aria-busy");
   $("cancel").hidden = true;
+  try {
+    window.dispatchEvent(new CustomEvent("studio:stage", { detail: { stage: "done" } }));
+  } catch { /* ignore */ }
 }
 
 // 立刻斷：無限抽的「停」和左欄的「取消」共用這一條。
@@ -2744,6 +2755,118 @@ async function runRedoSolo(card) {
   }
 }
 
+
+function freezeIntentSnap(settingsObj, pinnedSet, bannedSet) {
+  return JSON.stringify({
+    settings: {
+      rating: settingsObj.rating,
+      heats: [...(settingsObj.heats || [])],
+      eras: [...(settingsObj.eras || [])],
+      n: settingsObj.n,
+      width: settingsObj.width,
+      height: settingsObj.height,
+      samePerson: !!settingsObj.samePerson,
+      drawJob: !!settingsObj.drawJob,
+      counts: { ...(settingsObj.counts || {}) },
+      mustDraw: { ...(settingsObj.mustDraw || {}) },
+      lockScene: settingsObj.lockScene !== false,
+      sceneMode: sceneModeOf(settingsObj),
+    },
+    pinned: [...pinnedSet],
+    banned: [...bannedSet],
+  });
+}
+
+async function runSameSeedFromCard(card) {
+  if (!card || running) {
+    speak(running ? "正在抽圖，結束後再同種子重抽" : "找不到成片");
+    return;
+  }
+  let snap;
+  try {
+    snap = JSON.parse(card.dataset.intentSnap || "");
+  } catch {
+    snap = null;
+  }
+  if (!snap || !snap.settings || card.dataset.seed == null || card.dataset.seed === "") {
+    speak("這張沒留下場記，不能同種子重抽");
+    return;
+  }
+  const seedNum = Number(card.dataset.seed) >>> 0;
+  if (!(await comfyUp())) {
+    speak("Comfy 掛了——先開本機 8188，修好可再試");
+    try { window.dispatchEvent(new CustomEvent("studio:toast", { detail: { text: "Comfy 掛了", kind: "danger" } })); } catch { /* ignore */ }
+    return;
+  }
+  running = true;
+  aborting = false;
+  skipping = false;
+  genAbort = new AbortController();
+  $("go").disabled = true;
+  $("go").setAttribute("aria-busy", "true");
+  $("cancel").hidden = false;
+  try {
+    const frozenSettings = { ...settings, ...snap.settings };
+    const drawn = drawWithSeed(
+      lex,
+      frozenSettings,
+      new Set(snap.pinned || []),
+      new Set(snap.banned || []),
+      seedNum,
+      {
+        trace: true,
+        presetOwned: ownedTagSet(presetOwned),
+        ...drawStageHooks(),
+      }
+    );
+    if (drawn.cancelled) {
+      speak("場記取消，不成片");
+      return;
+    }
+    if (!drawn.positive || !String(drawn.positive).trim()) {
+      speak("同種子重抽得到空 POS——改釘選或尺度再試");
+      try { window.dispatchEvent(new CustomEvent("studio:toast", { detail: { text: "空 POS", kind: "danger" } })); } catch { /* ignore */ }
+      return;
+    }
+    const prevBare = String(card.dataset.bare || "").trim();
+    const nextBare = String(drawn.positive).trim();
+    const ruleStable = prevBare === nextBare;
+    card.dataset.bare = drawn.positive;
+    card.dataset.era = drawn.era || card.dataset.era || "";
+    const pos = weightedPos(drawn.positive);
+    const trigger = currentTriggerText();
+    const sent = insertTriggerAfterCast(pos, trigger);
+    card.dataset.positive = sent;
+    card.dataset.trigger = trigger;
+    card._recipe = recipeFromDraw(drawn, sent, seedNum);
+    showPos(sent);
+    setPosLine(card, sent);
+    setLive(card, { status: `同種子重抽 · seed ${seedNum}` });
+    paintMustWarn(card, drawn.mustReport);
+    paintPinMiss(card);
+    await streamCardJob(card, seedNum, {
+      positive: sent,
+      era: drawn.era,
+      eraClash: drawn.eraClash,
+      loras: currentLorasPayload(),
+      ckpt: currentCkpt(),
+      workflowId: currentWorkflowId(),
+    });
+    if (ruleStable) {
+      speak("規則穩，同一張");
+      try { window.dispatchEvent(new CustomEvent("studio:toast", { detail: { text: "規則穩", kind: "neutral" } })); } catch { /* ignore */ }
+    } else {
+      speak("同種子卻漂移——場記與抽樣不一致");
+      try { window.dispatchEvent(new CustomEvent("studio:toast", { detail: { text: "同種子卻漂移", kind: "warning" } })); } catch { /* ignore */ }
+    }
+  } catch (err) {
+    speak("同種子重抽失敗——可再試一次");
+    reportCrash("同種子重抽", err);
+  } finally {
+    finishBatch();
+  }
+}
+
 async function runBatch() {
   if (running) return;
   running = true;
@@ -2771,7 +2894,8 @@ async function runBatch() {
     saveStore();
 
     if (!(await comfyUp())) {
-      speak("ComfyUI 連不上，先開本機 8188");
+      speak("Comfy 掛了——先開本機 8188，修好可再開拍");
+      try { window.dispatchEvent(new CustomEvent("studio:toast", { detail: { text: "Comfy 掛了", kind: "danger" } })); } catch { /* ignore */ }
       stopInfinite("Comfy 連不上");
       return;
     }
@@ -2791,13 +2915,13 @@ async function runBatch() {
 
     for (let i = 0; i < n; i++) {
       if (aborting) {
-        speak("已取消");
+        speak("場記取消，不成片");
         cancelRedoQueue();
         break;
       }
       await drainRedoQueue();
       if (aborting) {
-        speak("已取消");
+        speak("場記取消，不成片");
         cancelRedoQueue();
         break;
       }
@@ -2819,9 +2943,21 @@ async function runBatch() {
       });
       // 取消停在 Intent／Composition：不建卡、不暴露半套 POS。
       if (drawn.cancelled) {
-        speak("已取消");
+        speak("場記取消，不成片");
+        const results = $("results");
+        if (results) {
+          results.classList.remove("is-slating");
+          delete results.dataset.slate;
+        }
         cancelRedoQueue();
         break;
+      }
+      if (!drawn.positive || !String(drawn.positive).trim()) {
+        speak("抽樣得到空 POS——改釘選或尺度再試");
+      try { window.dispatchEvent(new CustomEvent("studio:toast", { detail: { text: "空 POS", kind: "danger" } })); } catch { /* ignore */ }
+        failed += 1;
+        failStreak += 1;
+        continue;
       }
       if (settings.samePerson && ident.size === 0) {
         ident = identityPins(lex, drawn.positive);
@@ -2833,6 +2969,7 @@ async function runBatch() {
       const card = placeCard(cardSkeleton(settings.width, settings.height));
       markLive(card);
       card.dataset.seed = String(drawn.seed);
+      card.dataset.intentSnap = freezeIntentSnap(settings, pinForDraw, banForDraw);
       card.dataset.era = drawn.era || "";
       card.dataset.bare = drawn.positive;
       card.dataset.pinsAtDraw = JSON.stringify([...pinned]);
@@ -3009,6 +3146,12 @@ function bindUi() {
       e.preventDefault();
       e.stopPropagation();
       queueRedo(e.target.closest(".card"));
+      return;
+    }
+    if (e.target.closest(".same-seed")) {
+      e.preventDefault();
+      e.stopPropagation();
+      runSameSeedFromCard(e.target.closest(".card"));
       return;
     }
     if (onWeightClick(e)) return;
