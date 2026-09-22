@@ -485,3 +485,21 @@ body.studio.sheet-open { overflow: hidden; }
   opacity: 0.45;
   cursor: not-allowed;
 }
+
+
+.slate-line.is-tick {
+  animation: slate-tick 160ms ease-out;
+}
+.slate-line.is-flash {
+  color: var(--accent, #c8e6c9);
+}
+@keyframes slate-tick {
+  from { opacity: 0.5; }
+  to { opacity: 1; }
+}
+body.is-shooting .same-seed:disabled,
+body.is-shooting #copy-last-pos:disabled,
+body.is-shooting #open-last-shot:disabled {
+  opacity: 0.4;
+  cursor: not-allowed;
+}

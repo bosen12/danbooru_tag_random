@@ -51,6 +51,23 @@ function uniqueTagCount(sel) {
   return seen.size;
 }
 
+let lastPinBanKey = "";
+let slateFlashTimer = 0;
+
+function flashSlate(msg) {
+  const line = $("slate-line");
+  if (!line) return;
+  const prev = line.dataset.base || line.textContent;
+  line.dataset.base = prev;
+  line.textContent = msg;
+  line.classList.add("is-flash");
+  window.clearTimeout(slateFlashTimer);
+  slateFlashTimer = window.setTimeout(() => {
+    line.classList.remove("is-flash");
+    refreshSlateLine();
+  }, 900);
+}
+
 export function refreshSlateLine() {
   const line = $("slate-line");
   if (!line) return;
@@ -59,7 +76,17 @@ export function refreshSlateLine() {
   const bans = uniqueTagCount('.tag[data-ban="user"][data-tag]');
   bits.push(`釘 ${pins}`);
   bits.push(`封 ${bans}`);
-  line.textContent = bits.join(" · ") || "尚未設定";
+  const text = bits.join(" · ") || "尚未設定";
+  const key = `${pins}|${bans}`;
+  if (lastPinBanKey && lastPinBanKey !== key) {
+    line.classList.remove("is-tick");
+    // reflow so tick can replay
+    void line.offsetWidth;
+    line.classList.add("is-tick");
+  }
+  lastPinBanKey = key;
+  line.dataset.base = text;
+  if (!line.classList.contains("is-flash")) line.textContent = text;
 }
 
 function setSheet(el, open) {
@@ -96,20 +123,27 @@ function bindSheets() {
 }
 
 function bindSlateWatch() {
+  const kick = () => queueMicrotask(refreshSlateLine);
   const root = $("sec-rules") || document.body;
-  root.addEventListener("click", () => queueMicrotask(refreshSlateLine));
-  root.addEventListener("change", () => queueMicrotask(refreshSlateLine));
-  const eras = $("eras");
-  if (eras && typeof MutationObserver === "function") {
-    new MutationObserver(() => refreshSlateLine()).observe(eras, { childList: true, subtree: true, attributes: true });
+  root.addEventListener("click", kick);
+  root.addEventListener("change", kick);
+  // 釘選台關著也要準：tray／cats／整份 pin-sheet 都盯
+  const pinSheet = $("pin-sheet");
+  if (pinSheet) {
+    pinSheet.addEventListener("click", kick);
+    pinSheet.addEventListener("change", kick);
   }
-  const tray = $("tray-pins");
-  if (tray && typeof MutationObserver === "function") {
-    new MutationObserver(() => refreshSlateLine()).observe(tray, { childList: true, subtree: true });
-  }
-  const cats = $("cats");
-  if (cats && typeof MutationObserver === "function") {
-    new MutationObserver(() => refreshSlateLine()).observe(cats, { attributes: true, subtree: true, attributeFilter: ["data-state", "data-ban"] });
+  document.body.addEventListener("click", (e) => {
+    if (e.target.closest?.(".tag[data-tag], [data-state], [data-ban]")) kick();
+  });
+  if (typeof MutationObserver === "function") {
+    const eras = $("eras");
+    if (eras) new MutationObserver(kick).observe(eras, { childList: true, subtree: true, attributes: true });
+    const tray = $("tray-pins");
+    if (tray) new MutationObserver(kick).observe(tray, { childList: true, subtree: true });
+    const cats = $("cats");
+    if (cats) new MutationObserver(kick).observe(cats, { attributes: true, subtree: true, attributeFilter: ["data-state", "data-ban"] });
+    if (pinSheet) new MutationObserver(kick).observe(pinSheet, { childList: true, subtree: true, attributes: true, attributeFilter: ["data-state", "data-ban", "hidden"] });
   }
   refreshSlateLine();
   window.setTimeout(refreshSlateLine, 80);
@@ -180,7 +214,8 @@ function ensureSameSeedBtn(card) {
   btn.title = hasSnap
     ? "同一意圖快照＋同一 seed，驗規則穩不穩"
     : "這張沒留下場記，不能同種子重抽";
-  btn.disabled = !hasSnap || !!card.classList.contains("is-gen");
+  const batchBusy = document.body.classList.contains("is-shooting");
+  btn.disabled = !hasSnap || batchBusy || !!card.classList.contains("is-gen");
   btn.setAttribute("aria-disabled", btn.disabled ? "true" : "false");
 }
 
@@ -228,6 +263,7 @@ function syncSlating() {
   } else {
     delete results.dataset.slate;
   }
+  syncShootBusy();
 }
 
 function watchSlating() {
@@ -247,45 +283,93 @@ function latestDoneCard() {
   return cards.length ? cards[cards.length - 1] : null;
 }
 
+function setStatus(msg) {
+  const status = $("status");
+  if (status) status.textContent = msg;
+}
+
 async function copyLastPos() {
+  if (document.body.classList.contains("is-shooting")) {
+    flashSlate("開拍中，先別拷");
+    setStatus("開拍中，先別拷 POS");
+    return;
+  }
   const card = latestDoneCard();
   const pos = card?.dataset?.positive || "";
   if (!pos) {
-    const status = $("status");
-    if (status) status.textContent = "還沒有可拷的 POS";
+    flashSlate("沒有可拷的 POS");
+    setStatus("還沒有可拷的 POS——先開拍成片");
     return;
   }
-  await navigator.clipboard.writeText(pos);
-  const status = $("status");
-  if (status) status.textContent = "已拷貝 POS";
+  try {
+    await navigator.clipboard.writeText(pos);
+    flashSlate("已拷貝");
+    setStatus("已拷貝 POS");
+  } catch {
+    flashSlate("拷貝失敗：權限");
+    setStatus("拷貝失敗——瀏覽器不給剪貼簿權限");
+  }
 }
 
 function openLastShot() {
   const card = latestDoneCard();
   const shot = card?.querySelector(".shot");
   if (!shot) {
-    const status = $("status");
-    if (status) status.textContent = "還沒有成片可放大";
+    flashSlate("還沒有成片");
+    setStatus("還沒有成片可放大");
     return;
   }
   shot.click();
 }
 
+function syncShootBusy() {
+  const go = $("go");
+  if (!go) return;
+  const busy = go.getAttribute("aria-busy") === "true" || go.disabled;
+  document.body.classList.toggle("is-shooting", busy);
+  const label = go.querySelector("span") || go;
+  if (!go.dataset.labelIdle) go.dataset.labelIdle = (label.textContent || "開拍").trim() || "開拍";
+  label.textContent = busy ? "場記中 · 可取消" : go.dataset.labelIdle;
+
+  const copyBtn = $("copy-last-pos");
+  if (copyBtn) {
+    copyBtn.disabled = busy;
+    copyBtn.title = busy ? "開拍中不可拷" : "Ctrl+Shift+C";
+  }
+  const openBtn = $("open-last-shot");
+  if (openBtn) openBtn.disabled = busy;
+
+  for (const btn of document.querySelectorAll(".same-seed")) {
+    const card = btn.closest(".card");
+    const hasSnap = !!(card?.dataset?.intentSnap && card?.dataset?.seed);
+    btn.disabled = busy || !hasSnap || !!card?.classList.contains("is-gen");
+    btn.setAttribute("aria-disabled", btn.disabled ? "true" : "false");
+  }
+}
+
+function watchShootBusy() {
+  const go = $("go");
+  if (!go || typeof MutationObserver !== "function") return;
+  const kick = () => queueMicrotask(syncShootBusy);
+  new MutationObserver(kick).observe(go, { attributes: true, attributeFilter: ["aria-busy", "disabled"] });
+  syncShootBusy();
+}
+
 function bindStageTools() {
   $("copy-last-pos")?.addEventListener("click", () => {
-    copyLastPos().catch(() => {});
+    copyLastPos();
   });
   $("open-last-shot")?.addEventListener("click", openLastShot);
   document.addEventListener("keydown", (e) => {
     if (!(e.ctrlKey || e.metaKey) || !e.shiftKey) return;
     if (e.key.toLowerCase() !== "c") return;
     e.preventDefault();
-    copyLastPos().catch(() => {});
+    copyLastPos();
   });
 }
 
 bindStageTools();
-
+watchShootBusy();
 
 function bindCancelClear() {
   const cancel = $("cancel");
@@ -293,9 +377,9 @@ function bindCancelClear() {
   cancel.addEventListener("click", () => {
     const results = $("results");
     if (!results) return;
-    // 立刻拿掉場記中，不留幽靈字
     results.classList.remove("is-slating");
     delete results.dataset.slate;
+    flashSlate("場記取消");
   });
 }
 bindCancelClear();

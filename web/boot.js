@@ -2784,7 +2784,7 @@ async function runSameSeedFromCard(card) {
   }
   const seedNum = Number(card.dataset.seed) >>> 0;
   if (!(await comfyUp())) {
-    speak("Comfy 連不上，先開本機 8188");
+    speak("Comfy 掛了——先開本機 8188，修好可再試");
     return;
   }
   running = true;
@@ -2809,13 +2809,16 @@ async function runSameSeedFromCard(card) {
       }
     );
     if (drawn.cancelled) {
-      speak("已取消");
+      speak("場記取消，不成片");
       return;
     }
-    if (!drawn.positive) {
-      speak("同種子重抽得到空 POS");
+    if (!drawn.positive || !String(drawn.positive).trim()) {
+      speak("同種子重抽得到空 POS——改釘選或尺度再試");
       return;
     }
+    const prevBare = String(card.dataset.bare || "").trim();
+    const nextBare = String(drawn.positive).trim();
+    const ruleStable = prevBare === nextBare;
     card.dataset.bare = drawn.positive;
     card.dataset.era = drawn.era || card.dataset.era || "";
     const pos = weightedPos(drawn.positive);
@@ -2837,9 +2840,10 @@ async function runSameSeedFromCard(card) {
       ckpt: currentCkpt(),
       workflowId: currentWorkflowId(),
     });
-    speak(card.classList.contains("is-done") ? "同種子重抽完成" : "同種子重抽未完成");
+    if (ruleStable) speak("規則穩，同一張");
+    else speak("同種子卻漂移——場記與抽樣不一致");
   } catch (err) {
-    speak("同種子重抽失敗");
+    speak("同種子重抽失敗——可再試一次");
     reportCrash("同種子重抽", err);
   } finally {
     finishBatch();
@@ -2873,7 +2877,7 @@ async function runBatch() {
     saveStore();
 
     if (!(await comfyUp())) {
-      speak("ComfyUI 連不上，先開本機 8188");
+      speak("Comfy 掛了——先開本機 8188，修好可再開拍");
       stopInfinite("Comfy 連不上");
       return;
     }
@@ -2893,13 +2897,13 @@ async function runBatch() {
 
     for (let i = 0; i < n; i++) {
       if (aborting) {
-        speak("已取消");
+        speak("場記取消，不成片");
         cancelRedoQueue();
         break;
       }
       await drainRedoQueue();
       if (aborting) {
-        speak("已取消");
+        speak("場記取消，不成片");
         cancelRedoQueue();
         break;
       }
@@ -2929,6 +2933,12 @@ async function runBatch() {
         }
         cancelRedoQueue();
         break;
+      }
+      if (!drawn.positive || !String(drawn.positive).trim()) {
+        speak("抽樣得到空 POS——改釘選或尺度再試");
+        failed += 1;
+        failStreak += 1;
+        continue;
       }
       if (settings.samePerson && ident.size === 0) {
         ident = identityPins(lex, drawn.positive);
