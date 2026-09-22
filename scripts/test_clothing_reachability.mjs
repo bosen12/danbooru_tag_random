@@ -161,4 +161,63 @@ else {
   }
 }
 
+// --- 走光：要特定衣服的動作，衣服在場時要抽得到 ---------------------------------
+// 走光補抽原本先填 clothes_action 那一格，而那一格只有 shirt pull／dress pull 這類字；
+// 同樣要衣服、卻屬於 flash 群的 shirt lift／dress lift／skirt lift／upskirt／panty pull
+// 只能等那一格失敗才輪得到。實測 3000 張現代走光：shirt pull 17.8%、dress pull 9.8%，
+// shirt lift 0、dress lift 0，其餘這類 ≤0.3%。討論區 2026-09-21 那輪留下的待查項
+// 「pose/flash 那七個有沒有真的被抽到」就是這個。
+{
+  const { actionFitsClothes } = await import("../web/rules/clothing.js");
+  const report = (name, cond, detail) => {
+    if (cond) console.log(`ok   ${name}`);
+    else {
+      failed += 1;
+      console.error(`FAIL ${name}${detail ? " — " + detail : ""}`);
+    }
+  };
+  // downblouse 是從領口往下看，任何上衣都成立；舊規則的 /blouse/ 子字串比對讓它
+  // 只認 blouse 這一件（3000 張只有 42 張穿 blouse → 2 次）。
+  report("downblouse 穿襯衫就成立", actionFitsClothes("downblouse", ["white shirt"]) === 2);
+  report("downblouse 穿洋裝也成立", actionFitsClothes("downblouse", ["blue dress"]) === 2);
+  report("downblouse 全裸不成立", actionFitsClothes("downblouse", ["nude"]) === 0);
+
+  const flash = { ...defaultSettings(data), girl: true, boy: false, heats: ["flash"], eras: ["modern"], rating: "explicit" };
+  const N = 1500;
+  const acts = new Map();
+  for (let i = 0; i < N; i += 1) {
+    const seed = 930000 + i;
+    const out = drawOne(lex, flash, new Set(), new Set(), mulberry32(seed), seed);
+    for (const raw of out.sections.pose) acts.set(raw, (acts.get(raw) || 0) + 1);
+  }
+  const n = (t) => acts.get(t) || 0;
+  report("shirt lift 抽得到", n("shirt lift") > 0, `0/${N}`);
+  report("dress lift 抽得到", n("dress lift") > 0, `0/${N}`);
+  const garmentFlash = ["shirt lift", "dress lift", "skirt lift", "sweater lift", "upskirt", "downblouse", "panty pull", "bra pull", "pants pull"];
+  const total = garmentFlash.reduce((a, t) => a + n(t), 0);
+  report(
+    "要衣服的 flash 群動作合計至少 5%",
+    total / N >= 0.05,
+    `${total}/${N} = ${((total / N) * 100).toFixed(1)}%：${garmentFlash.map((t) => `${t} ${n(t)}`).join("、")}`,
+  );
+  // 反方向也要守：「要衣服的先抽」會讓 cameltoe／panty pull 永遠成立（內褲幾乎每張都在），
+  // 不要衣服的四十幾個動作實測從 56.9% 掉到 18.9%。
+  const { actionGarmentKeys } = await import("../web/rules/clothing.js");
+  const flashTags = data.tags.filter((t) => t.group === "flash" || t.mutex === "clothes_action");
+  const noGarment = flashTags.filter((t) => actionGarmentKeys(t.tag).length === 0).reduce((a, t) => a + n(t.tag), 0);
+  report(
+    "不要衣服的走光動作沒被擠掉（≥ 40%）",
+    noGarment / N >= 0.4,
+    `${noGarment}/${N} = ${((noGarment / N) * 100).toFixed(1)}%`,
+  );
+  const [topTag, topN] = flashTags.map((t) => [t.tag, n(t.tag)]).sort((a, b) => b[1] - a[1])[0];
+  report("沒有哪個走光動作超過 10%", topN / N <= 0.1, `${topTag} ${((topN / N) * 100).toFixed(1)}%`);
+  report("sports bra lift 只認 sports bra", actionFitsClothes("sports bra lift", ["white bra"]) === 0 && actionFitsClothes("sports bra lift", ["sports bra"]) === 2);
+  report(
+    "shirt pull 不再一家獨大（< 12%）",
+    n("shirt pull") / N < 0.12,
+    `shirt pull ${n("shirt pull")}/${N} = ${((n("shirt pull") / N) * 100).toFixed(1)}%`,
+  );
+}
+
 if (failed) process.exit(1);

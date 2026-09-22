@@ -41,7 +41,18 @@ function tagTokens(tag) {
 export function actionGarmentKeys(actionTag) {
   const toks = new Set(tagTokens(actionTag));
   const keys = GARMENT_KEYS.filter((g) => toks.has(g));
-  if (/blouse/.test(actionTag) && !keys.includes("blouse")) keys.push("blouse");
+  // downblouse 是「從領口往下看」，任何上衣都成立。舊寫法是 /blouse/ 子字串比對，
+  // 詞庫裡只命中這一個字，效果等於「只認 blouse 這一件」：3000 張現代走光裡只有
+  // 42 張穿 blouse，downblouse 抽到 2 次。
+  // sports bra lift 的 token 裡有 bra，於是任何一件胸罩都算數；它要的是 sports bra。
+  // 這個誤判在走光補抽改成一字一票之後會被放大（實測 17.2%，排第一）。
+  if (/sports bra/.test(actionTag)) {
+    const i = keys.indexOf("bra");
+    if (i >= 0) keys.splice(i, 1, "sports bra");
+  }
+  if (/(^|\s)downblouse$/.test(actionTag)) {
+    for (const k of ["shirt", "blouse", "dress", "sweater", "hoodie"]) if (!keys.includes(k)) keys.push(k);
+  }
   if (/upskirt/.test(actionTag)) {
     if (!keys.includes("skirt")) keys.push("skirt");
     if (!keys.includes("dress")) keys.push("dress");

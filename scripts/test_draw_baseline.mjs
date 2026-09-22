@@ -36,9 +36,12 @@ const GOLD = {
     rng: 349,
     pos: "1girl, solo, long hair, grey eyes, orange hair, parted bangs, medium breasts, breast bondage, body freckles, curvy, nude, masturbation, on one knee, over shoulder, looking to the side, flustered, sparkling eyes, ofuro, bath, indoors, night, nsfw, explicit, masterpiece, best quality, amazing quality",
   },
+  // 2026-09-23：走光補抽改成「所有成立的走光動作同一池、衣服吻合的權重 10」之後，
+  // 這張的走光動作從 exhibitionism 換成 cameltoe（她穿 thong，吻合），場景跟著換。
+  // 見 test_clothing_reachability.mjs 的走光段落與討論區同日那輪。
   2026: {
-    rng: 383,
-    pos: "1girl, solo, bob cut, grey eyes, black hair, straight hair, medium breasts, hair flower, hair scrunchie, hair over one eye, nightgown, coat, thong, fishnet thighhighs, thighhighs, blue bra, bra, drinking, reclining, wide shot, averting eyes, naughty face, exhibitionism, restaurant, indoors, day, sunlight, winter, nsfw, explicit, masterpiece, best quality, amazing quality",
+    rng: 360,
+    pos: "1girl, solo, bob cut, grey eyes, black hair, straight hair, medium breasts, hair flower, hair scrunchie, hair over one eye, nightgown, coat, thong, fishnet thighhighs, thighhighs, blue bra, bra, drinking, reclining, wide shot, averting eyes, naughty face, cameltoe, living room, indoors, sunrise, shadow, full-length mirror, mirror, gaming chair, nsfw, explicit, masterpiece, best quality, amazing quality",
   },
 };
 
@@ -107,8 +110,15 @@ const MATRIX_CONTEXTS = [
   { girl: true, boy: true },
 ];
 const MATRIX_SEEDS = 200;
-// 這個值是在重排 allow() 之前算出來的。重排之後必須一模一樣。
-const MATRIX_GOLD = "8d903972";
+// 8d903972 是重排 allow() 之前算的，重排之後一模一樣。
+// 2026-09-23 刻意改了抽取行為，換成 31cc5db8。改之前逐張比對過 2405 張：
+//   不同的 41 張 = 1 張走光（補抽改成同一池）+ 40 張性愛；
+//   只把 rules/clothing.js 換回舊版時，只剩那 1 張走光不同，
+//   其餘 203 張性愛／2001 張誘惑／200 張活動逐字相同。
+// 那 40 張性愛是 sports bra lift（原本任何胸罩都算）和 downblouse（原本只認 blouse）
+// 兩個衣服條件修正後，allow() 過濾出的候選池大小變了，同一個亂數挑到不同位置 ——
+// 這 40 張裡一次都沒出現那兩個字本身。
+const MATRIX_GOLD = "31cc5db8";
 
 function matrixSettings(over) {
   const s = defaultSettings(data);

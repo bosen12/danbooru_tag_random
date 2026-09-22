@@ -3569,13 +3569,25 @@ export function drawOne(lex, settings, pinned, userBanned, rand, seed, opts) {
     for (const tag of used) if (predicate(tag)) return true;
     return false;
   };
+  // 走光／衣服動作每過一次 allow() 就問一次這個，以前每次都重掃 used、重跑
+  // actionFitsClothes 的 token 與正則：走光圖的補抽對五十幾個字各問一次，
+  // 實測那一段 0.65 ms、佔整張 20%。used 沒變（_rev 相同）就不必重算。
   const actionFitsWorn = (item) => {
-    const cloth = [];
-    for (const t of used) {
-      const it = lex.byTag.get(t);
-      if (it && it.section === "clothing") cloth.push(t);
+    let memo = recall(used, "_wornFit");
+    if (memo === undefined) {
+      const cloth = [];
+      for (const t of used) {
+        const it = lex.byTag.get(t);
+        if (it && it.section === "clothing") cloth.push(t);
+      }
+      memo = remember(used, "_wornFit", { cloth, fit: new Map() });
     }
-    return actionFitsClothes(item.tag, cloth);
+    let fit = memo.fit.get(item.tag);
+    if (fit === undefined) {
+      fit = actionFitsClothes(item.tag, memo.cloth);
+      memo.fit.set(item.tag, fit);
+    }
+    return fit;
   };
   const wearsBodyClothes = () => {
     if (
@@ -5387,6 +5399,31 @@ export function drawOne(lex, settings, pinned, userBanned, rand, seed, opts) {
   if (heat === "flash") {
     const hasAct = someUsed((it) => it.mutex === "clothes_action" || it.group === "flash");
     if (!hasAct) {
+      // 補抽時所有「現在成立」的走光動作放進同一個池子，衣服吻合的字權重 10。
+      // 以前先填 clothes_action 格（shirt pull／dress pull…），失敗才輪到 flash 群；
+      // 同樣要衣服的 shirt lift／dress lift／skirt lift／upskirt 因此幾乎抽不到。
+      // 實測 3000 張現代走光：shirt pull 17.8%、shirt lift 0、dress lift 0。
+      //
+      // 試過的兩個極端：
+      //   要衣服的先抽（硬分層）：內褲、胸罩幾乎每張都在，cameltoe／panty pull 變成
+      //     永遠成立，不要衣服的四十幾個動作從 56.9% 掉到 18.9% —— 就是討論區
+      //     2026-09-19 那條：往有優先序的格子放永遠成立的字，等於把後面關掉。
+      //   一字一票：多樣性最高，但跟衣服綁在一起的動作從 48% 掉到 11%，那是原本
+      //     刻意偏好的連貫性（掀的就是身上那件）。
+      // 權重 10 讓兩類比例回到原本（綁衣服 46.2%／不綁 58.3%，原本 48.1%／56.9%），
+      // 同類裡不再一家獨大：有效種類 28.1 → 40.6，最大宗 17.8% → 6.1%。
+      // 衣服檢查（有快取、便宜）排在 allow() 前面：衣服不合的字連 allow() 都不必跑。
+      // 兩者都是純判斷式的 AND，順序不影響結果與候選順序。
+      const flashActs = lex.bySection.pose.filter(
+        (item) =>
+          (item.mutex === "clothes_action" || item.group === "flash") &&
+          actionFitsWorn(item) !== 0 &&
+          allow(item)
+      );
+      const garmentFits = (item) => actionGarmentKeys(item.tag).length > 0 && actionFitsWorn(item) === 2;
+      takeFromPool(flashActs, 1, rand, commit, { softTiers: [garmentFits], weights: [10, 1] }, allow, mPre);
+    }
+    if (!someUsed((it) => it.mutex === "clothes_action" || it.group === "flash")) {
       fillSlot("pose", "clothes_action", [
         (item) => actionFitsWorn(item) === 2,
         (item) => actionFitsWorn(item) === 1,
