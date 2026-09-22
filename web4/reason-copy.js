@@ -11,7 +11,7 @@ export const REASON_COPY = Object.freeze({
   },
   extra_mutex: {
     title: "額外互斥",
-    line: "跟已佔的互斥組撞車，不能並存。",
+    line: "跟互斥組裡另一邊並存不了，不幫你選邊。",
   },
   user_ban: {
     title: "封禁清單",
@@ -66,8 +66,8 @@ export const REASON_COPY = Object.freeze({
     line: "補洞／修場景時把這項移出。",
   },
   replaced: {
-    title: "被換掉",
-    line: "後來的字佔了同一格，這項讓位。",
+    title: "同格衝突",
+    line: "同一格出現兩邊，並存不了；不幫你選邊。",
   },
 });
 
