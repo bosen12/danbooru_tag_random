@@ -42,10 +42,23 @@ function currentMode() {
   return on ? MODE_ZH[on.dataset.sceneMode] || on.textContent.trim() : "";
 }
 
+function uniqueTagCount(sel) {
+  const seen = new Set();
+  for (const el of document.querySelectorAll(sel)) {
+    const t = el.dataset.tag;
+    if (t) seen.add(t);
+  }
+  return seen.size;
+}
+
 export function refreshSlateLine() {
   const line = $("slate-line");
   if (!line) return;
   const bits = [currentRating(), currentHeats(), currentEra(), currentCast(), currentMode()].filter(Boolean);
+  const pins = uniqueTagCount("#tray-pins .tag[data-tag]");
+  const bans = uniqueTagCount('.tag[data-ban="user"][data-tag]');
+  bits.push(`釘 ${pins}`);
+  bits.push(`封 ${bans}`);
   line.textContent = bits.join(" · ") || "尚未設定";
 }
 
@@ -90,6 +103,14 @@ function bindSlateWatch() {
   if (eras && typeof MutationObserver === "function") {
     new MutationObserver(() => refreshSlateLine()).observe(eras, { childList: true, subtree: true, attributes: true });
   }
+  const tray = $("tray-pins");
+  if (tray && typeof MutationObserver === "function") {
+    new MutationObserver(() => refreshSlateLine()).observe(tray, { childList: true, subtree: true });
+  }
+  const cats = $("cats");
+  if (cats && typeof MutationObserver === "function") {
+    new MutationObserver(() => refreshSlateLine()).observe(cats, { attributes: true, subtree: true, attributeFilter: ["data-state", "data-ban"] });
+  }
   refreshSlateLine();
   window.setTimeout(refreshSlateLine, 80);
   window.setTimeout(refreshSlateLine, 400);
@@ -130,16 +151,25 @@ function enhanceCard(card) {
     box.remove();
     return;
   }
-  sum.textContent = lines.length === 1 ? `哪裡打架 · ${lines[0]}` : `哪裡打架 · ${lines.length} 條`;
+  lines.sort((a, b) => clashSeverity(a) - clashSeverity(b));
+  sum.textContent = `哪裡打架 · ${lines[0]}`;
   for (const line of lines) {
     const p = document.createElement("p");
     p.className = "clash-line";
-    // 若之後有 reason 物件可走 clashSummary；現況沿用 boot 算出的棚內句子
     p.textContent = line;
     body.append(p);
   }
-  // keep import used for future structured events
   void clashSummary;
+}
+
+/** 分級牆／矛盾 pin 置頂；一般互斥靠後。 */
+function clashSeverity(line) {
+  const s = String(line || "");
+  if (/分級牆|分級不/.test(s)) return 0;
+  if (/並存不了|釘選互斥|矛盾/.test(s)) return 1;
+  if (/必進|沒進圖|釘選/.test(s)) return 2;
+  if (/互斥|打架/.test(s)) return 3;
+  return 4;
 }
 
 function watchResults() {
@@ -189,3 +219,47 @@ function watchSlating() {
 }
 
 watchSlating();
+
+function latestDoneCard() {
+  const cards = [...document.querySelectorAll("#results .card.is-done")];
+  return cards.length ? cards[cards.length - 1] : null;
+}
+
+async function copyLastPos() {
+  const card = latestDoneCard();
+  const pos = card?.dataset?.positive || "";
+  if (!pos) {
+    const status = $("status");
+    if (status) status.textContent = "還沒有可拷的 POS";
+    return;
+  }
+  await navigator.clipboard.writeText(pos);
+  const status = $("status");
+  if (status) status.textContent = "已拷貝 POS";
+}
+
+function openLastShot() {
+  const card = latestDoneCard();
+  const shot = card?.querySelector(".shot");
+  if (!shot) {
+    const status = $("status");
+    if (status) status.textContent = "還沒有成片可放大";
+    return;
+  }
+  shot.click();
+}
+
+function bindStageTools() {
+  $("copy-last-pos")?.addEventListener("click", () => {
+    copyLastPos().catch(() => {});
+  });
+  $("open-last-shot")?.addEventListener("click", openLastShot);
+  document.addEventListener("keydown", (e) => {
+    if (!(e.ctrlKey || e.metaKey) || !e.shiftKey) return;
+    if (e.key.toLowerCase() !== "c") return;
+    e.preventDefault();
+    copyLastPos().catch(() => {});
+  });
+}
+
+bindStageTools();

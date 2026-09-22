@@ -140,6 +140,10 @@
       <!-- Stage / 成片 -->
       <main class="stage" id="stage">
         <div class="stage-glow" aria-hidden="true"></div>
+        <div class="stage-tools" id="stage-tools">
+          <button type="button" class="ghost" id="copy-last-pos" title="Ctrl+Shift+C">拷貝 POS</button>
+          <button type="button" class="ghost" id="open-last-shot" title="放大最近成片">放大成片</button>
+        </div>
         <div class="tray" id="tray">
           <div class="tray-clip">
             <div class="tray-pad">
@@ -207,24 +211,24 @@
           </div>
           <button type="button" class="ghost" data-close-pins>關閉</button>
         </header>
-        <div class="field step">
-          <label>每段目標數</label>
-          <p class="hint">釘選與必要骨架先計入；設 0＝不補隨機。</p>
-          <div class="count-grid" id="counts"></div>
-        </div>
-        <div class="legend" aria-label="詞庫點法">
-          <span class="tag" data-state="pool" data-locked="1">池中</span>
-          <span class="tag" data-state="pinned" data-locked="1">必進</span>
-          <span class="tag" data-state="banned" data-ban="mutex" data-locked="1">互斥</span>
-          <span class="tag" data-state="banned" data-ban="user" data-locked="1">關掉</span>
-        </div>
-        <div class="row">
+        <div class="row pin-actions">
           <button type="button" class="ghost" id="clear-pins">清除釘選與關掉</button>
           <button type="button" class="ghost" id="clear-weights">清除權重</button>
           <button type="button" class="ghost" id="save-preset">存目前釘選</button>
         </div>
         <p class="hint">釘選組合。點一下套用；只換場景／服裝／職業時身材髮色會留。</p>
         <div class="row" id="presets"></div>
+        <div class="legend" aria-label="詞庫點法">
+          <span class="tag" data-state="pool" data-locked="1">池中</span>
+          <span class="tag" data-state="pinned" data-locked="1">必進</span>
+          <span class="tag" data-state="banned" data-ban="mutex" data-locked="1">互斥</span>
+          <span class="tag" data-state="banned" data-ban="user" data-locked="1">關掉</span>
+        </div>
+        <details class="pin-more">
+          <summary>每段目標數</summary>
+          <p class="hint">釘選與必要骨架先計入；設 0＝不補隨機。</p>
+          <div class="count-grid" id="counts"></div>
+        </details>
       </div>
     </div>
 
