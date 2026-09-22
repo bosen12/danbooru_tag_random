@@ -3059,9 +3059,17 @@ async function runBatch(opts = {}) {
       setPosLine(card, sent);
       lastJobError = "";
       if (posOnly) {
+        card.dataset.posOnly = "1";
+        card.querySelector(".skel")?.remove();
         setLive(card, { status: `只抽牌 · seed ${seedNum}` });
         card.classList.add("is-done");
         card.classList.remove("is-gen", "is-wait");
+        // 無圖卡：重抽鈕常顯，不被 skel／hover 閘住
+        const redo = card.querySelector(".redo-shot");
+        if (redo) {
+          redo.title = "換 seed 重抽這張（只抽牌）";
+          redo.setAttribute("aria-label", "換 seed 重抽這張");
+        }
         paintMustWarn(card, drawn.mustReport);
         paintPinMiss(card);
         clearLive(card);
@@ -3121,7 +3129,7 @@ async function runBatch(opts = {}) {
   }
 
   if (!crashed && !aborting && !stoppedByFail) {
-    const bits = [`完成 ${done} 張`];
+    const bits = [posOnly ? `抽牌完成 ${done} 張` : `完成 ${done} 張`];
     if (skipped) bits.push(`跳過 ${skipped} 張`);
     if (failed) bits.push(`失敗 ${failed} 張`);
     speak(bits.join("，"));

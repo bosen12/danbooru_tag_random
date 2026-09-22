@@ -871,3 +871,11 @@ body.is-shooting .studio-dock .status {
   }
   .pin-more.pin-row-more > summary::after { justify-self: start; }
 }
+
+
+.studio .card[data-pos-only="1"] .same-seed {
+  opacity: 1;
+}
+.studio .results.is-slating::before {
+  pointer-events: none;
+}
