@@ -1448,8 +1448,9 @@ function playCatsSwap() {
   // 四個分類、再清空，六個分類全部 cats-swap-in@running。那正是這一段
   // 刻意要避開的「每打一個字閃一下」，只是繞過 mode 從另一邊回來了。
   const cs = getComputedStyle(root);
-  const dur = parseFloat(cs.getPropertyValue("--dur-ui")) || 220;
-  const step = parseFloat(cs.getPropertyValue("--cats-stagger")) || 26;
+  // 跟 CSS --cats-swap-dur 對齊（現在是 opacity-only 的 --dur-move）。
+  const dur = parseFloat(cs.getPropertyValue("--cats-swap-dur")) || parseFloat(cs.getPropertyValue("--dur-move")) || 320;
+  const step = parseFloat(cs.getPropertyValue("--cats-stagger")) || 20;
   const gen = (catsSwapGen += 1);
   window.clearTimeout(catsSwapTimer);
   catsSwapTimer = window.setTimeout(() => {
@@ -2513,6 +2514,25 @@ function paintMustWarn(card, report) {
   meta.append(note);
 }
 
+
+/** §1／§2 進度回呼：只更新 status，不碰 results／POS。取消則回 { cancel: true }。 */
+function drawStageHooks() {
+  return {
+    signal: genAbort ? genAbort.signal : undefined,
+    onStage(event) {
+      if (aborting || (genAbort && genAbort.signal.aborted)) return { cancel: true };
+      if (event && event.stage === "intent") {
+        const intent = event.intent || {};
+        const bits = [intent.heat, intent.era].filter(Boolean);
+        speak(bits.length ? `整理規則…（${bits.join(" · ")}）` : "整理規則…");
+      } else if (event && event.stage === "composition") {
+        speak("安排構圖…");
+      }
+      return aborting || (genAbort && genAbort.signal.aborted) ? { cancel: true } : undefined;
+    },
+  };
+}
+
 function finishBatch() {
   running = false;
   $("go").disabled = false;
@@ -2795,7 +2815,14 @@ async function runBatch() {
       const drawn = drawOne(lex, settings, pinForDraw, banForDraw, rng, seedNum, {
         trace: true,
         presetOwned: ownedTagSet(presetOwned),
+        ...drawStageHooks(),
       });
+      // 取消停在 Intent／Composition：不建卡、不暴露半套 POS。
+      if (drawn.cancelled) {
+        speak("已取消");
+        cancelRedoQueue();
+        break;
+      }
       if (settings.samePerson && ident.size === 0) {
         ident = identityPins(lex, drawn.positive);
         identBan = identityBans(lex, drawn.positive);

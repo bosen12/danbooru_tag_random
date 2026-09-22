@@ -626,29 +626,34 @@ input[type="number"] {
   white-space: pre-line;
 }
 
-/* 換檢視時分類淡入。動的是六個容器不是上千個晶片 —— 逐個做動畫在這個
-   規模下既慢又雜。只碰 opacity 與 transform，走既有的時間尺度。 */
+/* 換檢視時分類淡入。動的是六個容器不是上千個晶片。
+   只碰 opacity：translateY 會讓整塊背景跟著「抬一下」，切篩選時特別明顯。 */
 @keyframes cats-swap-in {
   from {
     opacity: 0;
-    transform: translateY(6px);
   }
   to {
     opacity: 1;
-    transform: none;
   }
 }
 
 #cats {
-  /* 錯開的間隔。boot.js 收尾時要算「動畫什麼時候跑完」，從這裡讀，
-     不要兩邊各寫一份會走散的數字。 */
-  --cats-stagger: 26ms;
+  /* 錯開的間隔與時長。boot.js 收尾時從這裡讀，不要兩邊各寫一份。 */
+  --cats-stagger: 20ms;
+  --cats-swap-dur: var(--dur-move);
+  /* 篩選時高度大變，關掉 scroll anchoring，避免視窗背景被瀏覽器硬拽。 */
+  overflow-anchor: none;
 }
 
 #cats.is-swapping > .cat:not([hidden]),
 #cats.is-swapping > .empty-filter:not([hidden]) {
-  animation: cats-swap-in var(--dur-ui) var(--ease-out) both;
+  animation: cats-swap-in var(--cats-swap-dur) var(--ease-out) both;
   animation-delay: calc(var(--i, 0) * var(--cats-stagger));
+}
+
+/* 過場期間不要用估算高度，否則淡入同時 contain-intrinsic 對不齊會再跳一格。 */
+#cats.is-swapping .cat {
+  content-visibility: visible;
 }
 
 @media (prefers-reduced-motion: reduce) {
@@ -659,21 +664,26 @@ input[type="number"] {
 }
 
 .cat {
+  /* 收合時估成標題列高度；打開就關掉 content-visibility，避免 240px 假高度造成捲動跳动。 */
   content-visibility: auto;
-  contain-intrinsic-size: auto 240px;
+  contain-intrinsic-size: auto 3.25rem;
   display: grid;
   grid-template-rows: auto 0fr;
-  transition: grid-template-rows var(--dur-move) var(--ease-in-out);
+  transition: grid-template-rows var(--dur-move) var(--ease-out);
+  overflow-anchor: none;
 }
 
 .cat.is-open {
+  content-visibility: visible;
+  contain-intrinsic-size: none;
   grid-template-rows: auto 1fr;
 }
 
 .tray {
   display: grid;
   grid-template-rows: 0fr;
-  transition: grid-template-rows var(--dur-ui) var(--ease-in-out);
+  transition: grid-template-rows var(--dur-move) var(--ease-out);
+  overflow-anchor: none;
 }
 
 .tray.is-on {
