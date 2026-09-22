@@ -2654,3 +2654,13 @@ html.is-booting *::after {
   .segmented-btn:active { transform: none; }
 }
 }
+
+
+/* Y1：分級牆擋掉的尺度——灰掉，跟 allow 同一契約 */
+.chip-toggle.is-rating-blocked,
+.chip-toggle:disabled.is-rating-blocked {
+  opacity: 0.4;
+  cursor: not-allowed;
+  text-decoration: line-through;
+  text-decoration-color: color-mix(in oklab, var(--color-danger, #c44) 55%, transparent);
+}
