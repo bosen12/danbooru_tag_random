@@ -144,6 +144,23 @@
           <button type="button" class="ghost" id="copy-last-pos" title="Ctrl+Shift+C">拷貝 POS</button>
           <button type="button" class="ghost" id="open-last-shot" title="放大最近成片">放大成片</button>
         </div>
+        <div class="stage-progress" id="stage-progress" hidden aria-hidden="true">
+          <div
+            class="stage-progress-bar"
+            role="progressbar"
+            aria-valuemin="0"
+            aria-valuemax="2"
+            aria-valuenow="0"
+            aria-labelledby="stage-progress-label"
+            id="stage-progress-bar"
+          >
+            <span class="stage-progress-fill" id="stage-progress-fill"></span>
+            <span class="stage-progress-stop" data-step="1"></span>
+            <span class="stage-progress-stop" data-step="2"></span>
+          </div>
+          <p class="stage-progress-label" id="stage-progress-label">場記</p>
+        </div>
+        <div class="studio-toast" id="studio-toast" hidden role="status" aria-live="polite"></div>
         <div class="tray" id="tray">
           <div class="tray-clip">
             <div class="tray-pad">

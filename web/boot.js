@@ -2525,9 +2525,16 @@ function drawStageHooks() {
       if (event && event.stage === "intent") {
         const intent = event.intent || {};
         const bits = [intent.heat, intent.era].filter(Boolean);
-        speak(bits.length ? `整理規則…（${bits.join(" · ")}）` : "整理規則…");
+        const label = bits.length ? `整理規則…（${bits.join(" · ")}）` : "整理規則…";
+        speak(label);
+        try {
+          window.dispatchEvent(new CustomEvent("studio:stage", { detail: { stage: "intent", label } }));
+        } catch { /* ignore */ }
       } else if (event && event.stage === "composition") {
         speak("安排構圖…");
+        try {
+          window.dispatchEvent(new CustomEvent("studio:stage", { detail: { stage: "composition", label: "安排構圖…" } }));
+        } catch { /* ignore */ }
       }
       return aborting || (genAbort && genAbort.signal.aborted) ? { cancel: true } : undefined;
     },
@@ -2539,6 +2546,9 @@ function finishBatch() {
   $("go").disabled = false;
   $("go").removeAttribute("aria-busy");
   $("cancel").hidden = true;
+  try {
+    window.dispatchEvent(new CustomEvent("studio:stage", { detail: { stage: "done" } }));
+  } catch { /* ignore */ }
 }
 
 // 立刻斷：無限抽的「停」和左欄的「取消」共用這一條。
@@ -2840,8 +2850,13 @@ async function runSameSeedFromCard(card) {
       ckpt: currentCkpt(),
       workflowId: currentWorkflowId(),
     });
-    if (ruleStable) speak("規則穩，同一張");
-    else speak("同種子卻漂移——場記與抽樣不一致");
+    if (ruleStable) {
+      speak("規則穩，同一張");
+      try { window.dispatchEvent(new CustomEvent("studio:toast", { detail: { text: "規則穩", kind: "ok" } })); } catch { /* ignore */ }
+    } else {
+      speak("同種子卻漂移——場記與抽樣不一致");
+      try { window.dispatchEvent(new CustomEvent("studio:toast", { detail: { text: "同種子卻漂移", kind: "warn" } })); } catch { /* ignore */ }
+    }
   } catch (err) {
     speak("同種子重抽失敗——可再試一次");
     reportCrash("同種子重抽", err);

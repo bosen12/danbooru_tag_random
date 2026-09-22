@@ -66,6 +66,64 @@ function flashSlate(msg) {
     line.classList.remove("is-flash");
     refreshSlateLine();
   }, 900);
+  showToast(msg);
+}
+
+let toastTimer = 0;
+function showToast(text, kind = "ok") {
+  const el = $("studio-toast");
+  if (!el || !text) return;
+  el.hidden = false;
+  el.dataset.kind = kind;
+  el.textContent = text;
+  el.classList.add("is-on");
+  window.clearTimeout(toastTimer);
+  toastTimer = window.setTimeout(() => {
+    el.classList.remove("is-on");
+    el.hidden = true;
+  }, 1400);
+}
+
+/** Geist 節奏：已知兩步才用條；走完直接換建成片，不寫成功。 */
+function setStageProgress(stage, label) {
+  const wrap = $("stage-progress");
+  const bar = $("stage-progress-bar");
+  const fill = $("stage-progress-fill");
+  const lab = $("stage-progress-label");
+  if (!wrap || !bar || !fill || !lab) return;
+
+  if (stage === "done" || stage === "idle" || !stage) {
+    wrap.hidden = true;
+    wrap.setAttribute("aria-hidden", "true");
+    bar.setAttribute("aria-valuenow", "0");
+    fill.style.width = "0%";
+    lab.textContent = "場記";
+    return;
+  }
+
+  const step = stage === "composition" ? 2 : 1;
+  const text = label || (step === 1 ? "整理規則…" : "安排構圖…");
+  wrap.hidden = false;
+  wrap.setAttribute("aria-hidden", "false");
+  bar.setAttribute("aria-valuenow", String(step));
+  fill.style.width = `${(step / 2) * 100}%`;
+  lab.textContent = `§${step}/2 · ${text}`;
+  wrap.querySelectorAll(".stage-progress-stop").forEach((s) => {
+    const n = Number(s.dataset.step) || 0;
+    s.classList.toggle("is-done", n <= step);
+    s.classList.toggle("is-current", n === step);
+  });
+}
+
+function bindStageProgress() {
+  window.addEventListener("studio:stage", (e) => {
+    const d = e.detail || {};
+    setStageProgress(d.stage, d.label);
+  });
+  window.addEventListener("studio:toast", (e) => {
+    const d = e.detail || {};
+    if (d.text) showToast(d.text, d.kind || "ok");
+  });
 }
 
 export function refreshSlateLine() {
@@ -379,6 +437,7 @@ function bindCancelClear() {
     if (!results) return;
     results.classList.remove("is-slating");
     delete results.dataset.slate;
+    setStageProgress("done");
     flashSlate("場記取消");
   });
 }
