@@ -633,7 +633,7 @@ body.is-shooting #open-last-shot:disabled {
 .studio .segmented-btn:active:not(:disabled),
 .studio .clash-pair:active:not(:disabled),
 .studio .primary.shoot:active:not(:disabled) {
-  transform: scale(0.97);
+  transform: scale(0.98);
 }
 .studio .primary.shoot:hover:not(:disabled) {
   filter: brightness(1.06);
@@ -655,7 +655,7 @@ body.is-shooting #open-last-shot:disabled {
     transform var(--dur-micro) var(--ease-out);
 }
 .studio .tag[data-tag]:active {
-  transform: scale(0.96);
+  transform: scale(0.98);
 }
 
 /* sheet enter already animated; close exit */
@@ -671,20 +671,20 @@ body.is-shooting #open-last-shot:disabled {
 .lex-sheet.is-closing .lex-backdrop,
 .pin-sheet.is-closing .pin-backdrop {
   opacity: 0;
-  transition: opacity var(--dur-ui) var(--ease-in);
+  transition: opacity 140ms var(--ease-in);
 }
 .lex-sheet.is-closing .lex-panel {
-  animation: sheet-side-out var(--dur-move) var(--ease-in) both;
+  animation: sheet-side-out 160ms var(--ease-in) both;
 }
 .pin-sheet.is-closing .pin-panel {
-  animation: sheet-up-out var(--dur-move) var(--ease-in) both;
+  animation: sheet-up-out 160ms var(--ease-in) both;
 }
 @media (min-width: 901px) {
   .lex-sheet.is-closing .lex-panel {
-    animation: sheet-side-out var(--dur-move) var(--ease-in) both;
+    animation: sheet-side-out 160ms var(--ease-in) both;
   }
   .pin-sheet.is-closing .pin-panel {
-    animation: sheet-pop-out var(--dur-move) var(--ease-in) both;
+    animation: sheet-pop-out 160ms var(--ease-in) both;
   }
 }
 @keyframes sheet-up-out {
@@ -700,26 +700,32 @@ body.is-shooting #open-last-shot:disabled {
   to { opacity: 0; transform: translate(-50%, -46%) scale(0.98); }
 }
 
-/* stage progress appear/hide soft */
+/* stage progress: opacity only 120–140ms; no success banner */
 .stage-progress {
-  transition: opacity var(--dur-ui) var(--ease-out);
+  opacity: 1;
+  transition: opacity 140ms var(--ease-out);
 }
+.stage-progress.is-off,
 .stage-progress[hidden] {
-  /* keep display:none from [hidden]; enter anim via open path only */
+  opacity: 0;
+  pointer-events: none;
+}
+.stage-progress.is-off {
+  display: grid !important;
 }
 
 @keyframes slate-in {
-  from { opacity: 0; transform: translateY(6px); }
-  to { opacity: 1; transform: none; }
+  from { opacity: 0; }
+  to { opacity: 1; }
 }
 
 /* card enter — soft rise, no bounce */
 .studio .results > .card {
-  animation: card-in var(--dur-ui) var(--ease-out) both;
+  animation: card-in 140ms var(--ease-out) both;
 }
 @keyframes card-in {
-  from { opacity: 0; transform: translateY(8px); }
-  to { opacity: 1; transform: none; }
+  from { opacity: 0; }
+  to { opacity: 1; }
 }
 
 /* clash details open feel */
@@ -733,8 +739,8 @@ body.is-shooting #open-last-shot:disabled {
   animation: clash-body-in var(--dur-ui) var(--ease-out) both;
 }
 @keyframes clash-body-in {
-  from { opacity: 0; transform: translateY(-4px); }
-  to { opacity: 1; transform: none; }
+  from { opacity: 0; }
+  to { opacity: 1; }
 }
 
 /* dock status text change soft */

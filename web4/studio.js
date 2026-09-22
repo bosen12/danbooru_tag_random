@@ -126,6 +126,7 @@ function bindToastHover() {
 }
 
 /** Geist 節奏：已知兩步才用條；走完直接換建成片，不寫成功。 */
+let stageProgressHideTimer = 0;
 function setStageProgress(stage, label) {
   const wrap = $("stage-progress");
   const bar = $("stage-progress-bar");
@@ -134,18 +135,25 @@ function setStageProgress(stage, label) {
   if (!wrap || !bar || !fill || !lab) return;
 
   if (stage === "done" || stage === "idle" || !stage) {
-    wrap.hidden = true;
+    wrap.classList.add("is-off");
     wrap.setAttribute("aria-hidden", "true");
-    bar.setAttribute("aria-valuenow", "0");
-    fill.style.width = "0%";
-    lab.textContent = "場記";
+    window.clearTimeout(stageProgressHideTimer);
+    stageProgressHideTimer = window.setTimeout(() => {
+      wrap.hidden = true;
+      wrap.classList.remove("is-off");
+      bar.setAttribute("aria-valuenow", "0");
+      fill.style.width = "0%";
+      lab.textContent = "場記";
+    }, 140);
     return;
   }
 
+  window.clearTimeout(stageProgressHideTimer);
+  wrap.hidden = false;
+  wrap.classList.remove("is-off");
+  wrap.setAttribute("aria-hidden", "false");
   const step = stage === "composition" ? 2 : 1;
   const text = label || (step === 1 ? "整理規則…" : "安排構圖…");
-  wrap.hidden = false;
-  wrap.setAttribute("aria-hidden", "false");
   bar.setAttribute("aria-valuenow", String(step));
   fill.style.width = `${(step / 2) * 100}%`;
   lab.textContent = `§${step}/2 · ${text}`;
@@ -225,7 +233,7 @@ function setSheet(el, open) {
     done();
   };
   target.addEventListener("animationend", onEnd);
-  window.setTimeout(done, 420);
+  window.setTimeout(done, 200);
 }
 
 function openLex() {
