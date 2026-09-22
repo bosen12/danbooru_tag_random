@@ -3602,6 +3602,11 @@ export function drawOne(lex, settings, pinned, userBanned, rand, seed, opts) {
   };
   allow = (item, opts) => {
     if (banned.has(item.tag) || used.has(item.tag)) return false;
+    // 關掉色情模式：情色的字一個都不准進場。放在 banned/used 之後、其餘 O(1)
+    // 關卡之前：純 short-circuit，同一個 blockedByRating / sfw，只改何時判斷。
+    // 後面所有補救邏輯（浴場補衣、上衣補下著、必抽）也都走 allow，
+    // 所以不會有人從側門把它們塞回來。
+    if (sfw && blockedByRating(item)) return false;
     // 這三道關卡只看候選字自己：O(1)、沒有副作用、不消耗 rand。
     // 它們原本排在第 9、第 10、和 272 道關卡裡的最後一道，而量出來每抽一張圖
     // allow() 被呼叫 2141 次、擋掉 1180 次，其中
@@ -3622,9 +3627,6 @@ export function drawOne(lex, settings, pinned, userBanned, rand, seed, opts) {
     for (const g of extraMutex(item)) {
       if (mutexTaken.has(g)) return false;
     }
-    // 關掉色情模式：情色的字一個都不准進場。放在最前面，後面所有補救邏輯
-    // （浴場補衣、上衣補下著、必抽）也都走 allow，所以不會有人從側門把它們塞回來。
-    if (sfw && blockedByRating(item)) return false;
     if (SUPPORT_CANDIDATE_TAGS.has(item.tag) && !supportCandidateAllowed({
       used,
       candidate: item.tag,
