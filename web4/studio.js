@@ -126,6 +126,7 @@ function bindToastHover() {
 }
 
 /** Geist 節奏：已知兩步才用條；走完直接換建成片，不寫成功。 */
+let stageProgressHideTimer = 0;
 function setStageProgress(stage, label) {
   const wrap = $("stage-progress");
   const bar = $("stage-progress-bar");
@@ -134,18 +135,25 @@ function setStageProgress(stage, label) {
   if (!wrap || !bar || !fill || !lab) return;
 
   if (stage === "done" || stage === "idle" || !stage) {
-    wrap.hidden = true;
+    wrap.classList.add("is-off");
     wrap.setAttribute("aria-hidden", "true");
-    bar.setAttribute("aria-valuenow", "0");
-    fill.style.width = "0%";
-    lab.textContent = "場記";
+    window.clearTimeout(stageProgressHideTimer);
+    stageProgressHideTimer = window.setTimeout(() => {
+      wrap.hidden = true;
+      wrap.classList.remove("is-off");
+      bar.setAttribute("aria-valuenow", "0");
+      fill.style.width = "0%";
+      lab.textContent = "場記";
+    }, 140);
     return;
   }
 
+  window.clearTimeout(stageProgressHideTimer);
+  wrap.hidden = false;
+  wrap.classList.remove("is-off");
+  wrap.setAttribute("aria-hidden", "false");
   const step = stage === "composition" ? 2 : 1;
   const text = label || (step === 1 ? "整理規則…" : "安排構圖…");
-  wrap.hidden = false;
-  wrap.setAttribute("aria-hidden", "false");
   bar.setAttribute("aria-valuenow", String(step));
   fill.style.width = `${(step / 2) * 100}%`;
   lab.textContent = `§${step}/2 · ${text}`;
@@ -190,9 +198,42 @@ export function refreshSlateLine() {
 
 function setSheet(el, open) {
   if (!el) return;
-  el.hidden = !open;
-  el.classList.toggle("is-open", open);
-  document.body.classList.toggle("sheet-open", open);
+  const otherOpen = [...document.querySelectorAll(".lex-sheet.is-open, .pin-sheet.is-open")].some(
+    (n) => n !== el
+  );
+  if (open) {
+    el.hidden = false;
+    el.classList.remove("is-closing");
+    // reflow so enter animation can replay
+    void el.offsetWidth;
+    el.classList.add("is-open");
+    document.body.classList.add("sheet-open");
+    return;
+  }
+  if (el.hidden || !el.classList.contains("is-open")) {
+    el.hidden = true;
+    el.classList.remove("is-open", "is-closing");
+    if (!otherOpen) document.body.classList.remove("sheet-open");
+    return;
+  }
+  el.classList.add("is-closing");
+  el.classList.remove("is-open");
+  const done = () => {
+    el.hidden = true;
+    el.classList.remove("is-closing");
+    if (![...document.querySelectorAll(".lex-sheet.is-open, .pin-sheet.is-open")].length) {
+      document.body.classList.remove("sheet-open");
+    }
+  };
+  const panel = el.querySelector(".lex-panel, .pin-panel");
+  const target = panel || el;
+  const onEnd = (e) => {
+    if (e.target !== target && e.target !== el.querySelector(".lex-backdrop, .pin-backdrop")) return;
+    target.removeEventListener("animationend", onEnd);
+    done();
+  };
+  target.addEventListener("animationend", onEnd);
+  window.setTimeout(done, 200);
 }
 
 function openLex() {
