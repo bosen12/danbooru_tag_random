@@ -3366,6 +3366,55 @@ export function contradictions(lex, tags) {
   return found;
 }
 
+
+function stageAborted(drawOpts) {
+  return !!(drawOpts.signal && drawOpts.signal.aborted);
+}
+
+/** §1／§2 UI hooks only. Never put used/positive in the event. */
+function emitDrawStage(drawOpts, event) {
+  if (stageAborted(drawOpts)) return { cancel: true };
+  if (typeof drawOpts.onStage !== "function") {
+    return stageAborted(drawOpts) ? { cancel: true } : null;
+  }
+  try {
+    const result = drawOpts.onStage(event);
+    if (result && result.cancel) return { cancel: true };
+  } catch {
+    return { cancel: true };
+  }
+  return stageAborted(drawOpts) ? { cancel: true } : null;
+}
+
+function cancelledDrawResult({ heat, era, female, male, people, seed }) {
+  return {
+    cancelled: true,
+    heat,
+    era,
+    female,
+    male,
+    people,
+    seed,
+    mustReport: [],
+    sections: {
+      quality: [],
+      style: [],
+      subject: [],
+      feature: [],
+      pose: [],
+      clothing: [],
+      env: [],
+      nsfw: [],
+    },
+    positive: "",
+    shadowViolations: [],
+    conflicts: [],
+    eraClash: [],
+    heatClash: [],
+    trace: null,
+  };
+}
+
 export function drawOne(lex, settings, pinned, userBanned, rand, seed, opts) {
   const drawOpts = opts && typeof opts === "object" ? opts : {};
   const tracer = createTracer({ enabled: !!drawOpts.trace, debug: !!drawOpts.debugTrace });
@@ -3505,6 +3554,21 @@ export function drawOne(lex, settings, pinned, userBanned, rand, seed, opts) {
     female = hasFemale(subjectNow);
     male = hasMale(subjectNow);
     people = personCount(subjectNow);
+  }
+  // §1 Intent frozen — UI progress only; no used/positive in payload.
+  if (
+    emitDrawStage(drawOpts, {
+      stage: "intent",
+      intent: {
+        rating,
+        heat,
+        era,
+        cast: { female, male, people },
+        pinConflicts: [],
+      },
+    })?.cancel
+  ) {
+    return cancelledDrawResult({ heat, era, female, male, people, seed });
   }
   const hasUsed = (predicate) => {
     for (const tag of used) if (predicate(tag)) return true;
@@ -5129,6 +5193,23 @@ export function drawOne(lex, settings, pinned, userBanned, rand, seed, opts) {
       .map((tag) => lex.byTag.get(tag))
       .filter((item) => item && allow(item));
     takeFromPool(faceless, 1, compositionRand, commit, null, allow, mPre);
+  }
+  // §2 Composition planned — coarse flags only; never emit concrete camera/place tags.
+  {
+    const cameraProfile =
+      used.has("head out of frame") || used.has("lower body") ? "faceless" : "normal";
+    if (
+      emitDrawStage(drawOpts, {
+        stage: "composition",
+        plan: {
+          cameraProfile,
+          sceneSlots: {},
+          fallbacks: [],
+        },
+      })?.cancel
+    ) {
+      return cancelledDrawResult({ heat, era, female, male, people, seed });
+    }
   }
 
   fillSlot("feature", "hair_length");
