@@ -1880,10 +1880,13 @@ function onTagClick(tag) {
       const a = labelOf(lex, dropped[0]);
       const b = labelOf(lex, tag);
       const more = dropped.length > 1 ? `（另退 ${dropped.length - 1}）` : "";
-      speak(`互斥換邊：${a} ↔ ${b}${more}——同一格只能留一個`);
+      // 同 mutex 格替換（不是系統幫矛盾 pin 選邊）
+      speak(`同格替換：${a} → ${b}${more}——同一格只能留一個，不是系統選邊`);
       try {
         window.dispatchEvent(
-          new CustomEvent("studio:toast", { detail: { text: `${a} ↔ ${b}`, kind: "warning" } })
+          new CustomEvent("studio:toast", {
+            detail: { text: `同格替換 ${a} → ${b}`, kind: "warning" },
+          })
         );
       } catch { /* ignore */ }
     }
