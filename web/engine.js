@@ -1,6 +1,7 @@
 /** Tag-case draw: cast → heat → era → gated pools → commit mutex/bind/imply → reconcile. */
 
 import {
+  SUPPORT_CANDIDATE_TAGS,
   supportCandidateAllowed,
   validateSupportShadow,
 } from "./shadow-validator.js";
@@ -821,21 +822,67 @@ const SPORT_PLACE = new Set([
 ]);
 const DRIVE_PLACE = new Set(["car", "car interior", "street", "city", "cityscape", "alley"]);
 
+// drawOne 會在 used 上掛 _rev，每次真正新增或刪除才加一。allow() 在兩次變更之間
+// 會被呼叫上千次，場地／活動／職業都是把整份 used 掃過再做成小集合。
+// 回傳的是快取本體。sportGearPlaceOk 要加床和沙發時自己複製，不能寫進這裡。
+function recall(used, key) {
+  const rev = used._rev;
+  if (rev === undefined) return undefined;
+  const hit = used[key];
+  if (hit && hit.rev === rev) return hit.value;
+  return undefined;
+}
+
+function remember(used, key, value) {
+  const rev = used._rev;
+  if (rev !== undefined) used[key] = { rev, value };
+  return value;
+}
+
+function usedHas(used, key, pred) {
+  const hit = recall(used, key);
+  if (hit !== undefined) return hit;
+  for (const tag of used) if (pred(tag)) return remember(used, key, true);
+  return remember(used, key, false);
+}
+
+function watchUsed(used) {
+  const add = used.add;
+  const del = used.delete;
+  used._rev = 0;
+  used.add = function (tag) {
+    const had = this.has(tag);
+    const out = add.call(this, tag);
+    if (!had) this._rev += 1;
+    return out;
+  };
+  used.delete = function (tag) {
+    const had = this.has(tag);
+    const out = del.call(this, tag);
+    if (had) this._rev += 1;
+    return out;
+  };
+}
+
 function usedPlaces(used, lex) {
+  const hit = recall(used, "_places");
+  if (hit !== undefined) return hit;
   const s = new Set();
   for (const t of used) {
     const it = lex.byTag.get(t);
     if (it && (it.mutex === "place" || it.group === "place")) s.add(t);
   }
-  return s;
+  return remember(used, "_places", s);
 }
 
 function usedActs(used, lex) {
+  const hit = recall(used, "_acts");
+  if (hit !== undefined) return hit;
   const s = new Set();
   for (const t of used) {
     if (lex.byTag.get(t)?.mutex === "activity") s.add(t);
   }
-  return s;
+  return remember(used, "_acts", s);
 }
 
 const FISH_PLACE = new Set(["beach", "ocean", "poolside", "pool"]);
@@ -861,6 +908,34 @@ const FISH_PLACE = new Set(["beach", "ocean", "poolside", "pool"]);
 // 再加進女僕場地：那會讓女僕去運動，見 JOB_PLACE.maid。
 const COOK_PLACE = new Set(["kitchen", "castle", "palace", "courtyard", "ryokan"]);
 const INDOOR_FURN = new Set(["on bed", "on chair", "office chair", "gaming chair", "swivel chair", "bunk bed", "on couch", "on desk"]);
+const DRY_NO_WATER = new Set([
+  "airplane interior",
+  "cockpit",
+  "movie theater",
+  "church",
+  "classroom",
+  "office",
+  "library",
+  "living room",
+  "bedroom",
+  "hotel room",
+  "basketball court",
+  "tennis court",
+  "soccer field",
+  "baseball stadium",
+  "bowling alley",
+  "boxing ring",
+  "dojo",
+  "fitness gym",
+  "school gym",
+  "running track",
+  "bathroom",
+  "prison",
+  "colonnade",
+  "train interior",
+  "hallway",
+  "elevator",
+]);
 // 能坐下來讀書寫字的地方。原本這三組只列了現代的房間，而正常模式下
 // 「有 ACT_PLACE 表的活動必須把場地列進去」—— 沒被列到的場地等於做不了那件事。
 // 結果是 130 個場地裡有 39 個只配得到一個活動（carrying），73 個配不到 4 個：
@@ -1175,7 +1250,7 @@ function sportPlaceOk(item, used) {
 function sportGearPlaceOk(item, used, lex) {
   const own = SPORT_GEAR_IDENTITY.get(item.tag);
   if (!own || !own.size) return true;
-  const places = usedPlaces(used, lex);
+  const places = new Set(usedPlaces(used, lex));
   for (const t of used) if (SPORT_BAD_FURNITURE.has(t)) places.add(t);
   return sportIdsFitPlaces(own, places);
 }
@@ -1255,11 +1330,13 @@ function realisticOn(settings) {
 }
 
 function usedJobs(used, lex) {
+  const hit = recall(used, "_jobs");
+  if (hit !== undefined) return hit;
   const s = new Set();
   for (const t of used) {
     if (lex.byTag.get(t)?.mutex === "job") s.add(t);
   }
-  return s;
+  return remember(used, "_jobs", s);
 }
 
 function placeFitsJob(place, jobs, used) {
@@ -1358,14 +1435,16 @@ function jobPlacesOf(jobs) {
 }
 
 function isBathScene(used) {
+  const hit = recall(used, "_bath");
+  if (hit !== undefined) return hit;
   for (const t of used) {
-    if (BATH_ACT.has(t)) return true;
+    if (BATH_ACT.has(t)) return remember(used, "_bath", true);
   }
   for (const t of used) {
     if (t === "bathroom") continue;
-    if (BATH_PLACE.has(t)) return true;
+    if (BATH_PLACE.has(t)) return remember(used, "_bath", true);
   }
-  return false;
+  return remember(used, "_bath", false);
 }
 
 function isSwimAct(used) {
@@ -1373,14 +1452,18 @@ function isSwimAct(used) {
 }
 
 function isSwimScene(used) {
+  const hit = recall(used, "_swim");
+  if (hit !== undefined) return hit;
   if (used.has("fishing") && !isSwimAct(used) && !used.has("wading")) {
-    return false;
+    return remember(used, "_swim", false);
   }
-  if (isSwimAct(used) || used.has("wading")) return true;
+  if (isSwimAct(used) || used.has("wading")) return remember(used, "_swim", true);
   for (const t of used) {
-    if (t === "pool" || t === "poolside" || t === "beach" || t === "ocean" || t === "underwater") return true;
+    if (t === "pool" || t === "poolside" || t === "beach" || t === "ocean" || t === "underwater") {
+      return remember(used, "_swim", true);
+    }
   }
-  return false;
+  return remember(used, "_swim", false);
 }
 
 function isSwimClothItem(item) {
@@ -1415,6 +1498,12 @@ function garmentOkForSwim(item, era) {
 }
 
 function sceneClothKind(used) {
+  const hit = recall(used, "_scene");
+  if (hit !== undefined) return hit;
+  return remember(used, "_scene", sceneClothKindOf(used));
+}
+
+function sceneClothKindOf(used) {
   if (isSwimAct(used) || used.has("underwater")) return "swim";
   if (used.has("changing room") || used.has("locker room") || used.has("fitting room")) return "dressing";
   if (isBathScene(used)) return "bath";
@@ -1932,6 +2021,7 @@ const LIE_BODY = new Set(["lying", "on back", "on stomach", "on side", "reclinin
 const LEG_EXTRA = new Set(["crossed legs", "legs up", "m legs", "leg lift"]);
 const HAIR_TEXTURE = new Set(["straight hair", "wavy hair", "curly hair"]);
 const PENIS_SIZE = new Set(["small penis", "large penis", "huge penis"]);
+const BOOK_ACT = new Set(["reading", "studying"]);
 const HANDS_BUSY_ACT = new Set([
   "playing guitar",
   "talking on phone",
@@ -3301,6 +3391,7 @@ export function drawOne(lex, settings, pinned, userBanned, rand, seed, opts) {
   const autoBan = autoBannedFromPins(lex, pinned);
   const banned = new Set([...userBanned, ...autoBan]);
   const used = new Set();
+  watchUsed(used);
   const mutexTaken = new Map();
 
   const ctx = pinContext(lex, pinned);
@@ -3396,18 +3487,15 @@ export function drawOne(lex, settings, pinned, userBanned, rand, seed, opts) {
     const it = lex.byTag.get(t);
     return it && it.section === "subject";
   });
-  // Candidate filtering is the hottest path in a draw. Iterate the Set directly instead of
-  // repeatedly spreading it into short-lived arrays just to call Array#some.
-  const hasUsed = (predicate) => {
-    for (const tag of used) if (predicate(tag)) return true;
-    return false;
-  };
   if (subjectNow.length) {
     female = hasFemale(subjectNow);
     male = hasMale(subjectNow);
     people = personCount(subjectNow);
   }
-
+  const hasUsed = (predicate) => {
+    for (const tag of used) if (predicate(tag)) return true;
+    return false;
+  };
   const actionFitsWorn = (item) => {
     const cloth = [];
     for (const t of used) {
@@ -3434,6 +3522,14 @@ export function drawOne(lex, settings, pinned, userBanned, rand, seed, opts) {
         (it.mutex === "onepiece" || it.mutex === "top" || it.mutex === "bottom")
     );
   };
+  const genderNow = () => {
+    const rev = used._rev;
+    const hit = used._gg;
+    if (hit && hit.rev === rev) return hit;
+    const next = { rev, girls: genderCount(used, true), boys: genderCount(used, false) };
+    used._gg = next;
+    return next;
+  };
   allow = (item, opts) => {
     if (banned.has(item.tag) || used.has(item.tag)) return false;
     // 這三道關卡只看候選字自己：O(1)、沒有副作用、不消耗 rand。
@@ -3459,6 +3555,19 @@ export function drawOne(lex, settings, pinned, userBanned, rand, seed, opts) {
     // 關掉色情模式：情色的字一個都不准進場。放在最前面，後面所有補救邏輯
     // （浴場補衣、上衣補下著、必抽）也都走 allow，所以不會有人從側門把它們塞回來。
     if (sfw && blockedByRating(item)) return false;
+    if (SUPPORT_CANDIDATE_TAGS.has(item.tag) && !supportCandidateAllowed({
+      used,
+      candidate: item.tag,
+      pinned,
+      mode: sceneModeOf(settings),
+      people,
+    })) return false;
+    // 過了上面這幾道的字才進後面那串。函式本身有一千多行，絕大多數候選在
+    // 尺度、時代或互斥就離開；把它們留在同一支函式裡，光是呼叫就要付整支的進場成本。
+    return allowSlow(item);
+  };
+
+  const allowSlow = (item) => {
     // loincloth 是中世紀男性浴場的可辨識替代衣著，不是每張中世紀圖的制服。
     // 服裝先於自然場景抽取，故一般 fill 先略過；場景確定為浴場後的 repair 仍可選。
     // forcePin 不走 allow，因此使用者明確釘選在任何場景都會完整保留。
@@ -3472,14 +3581,8 @@ export function drawOne(lex, settings, pinned, userBanned, rand, seed, opts) {
     if (item.tag === "boxing gloves" && heat === "sex" && !pinned.has(item.tag)) return false;
     if (NEEDS_FREE_HAND.has(item.tag) && hasUsed((tag) => HANDS_OCCUPIED.has(tag))) return false;
     if (HANDS_OCCUPIED.has(item.tag) && hasUsed((tag) => NEEDS_FREE_HAND.has(tag))) return false;
-    if (!supportCandidateAllowed({
-      used,
-      candidate: item.tag,
-      pinned,
-      mode: sceneModeOf(settings),
-      people,
-    })) return false;
-    if (!castOk(item, female, male, people, genderCount(used, true), genderCount(used, false))) return false;
+    const cast = genderNow();
+    if (!castOk(item, female, male, people, cast.girls, cast.boys)) return false;
     if (used.has("bald") && (item.mutex === "hair_color" || item.group === "hair_style" || item.group === "hair_color")) return false;
     if (item.tag === "bald" && someUsed((it) => it.group === "hair_color" || it.group === "hair_style")) return false;
     if (item.tag === "fat" && used.has("skinny")) return false;
@@ -3535,8 +3638,9 @@ export function drawOne(lex, settings, pinned, userBanned, rand, seed, opts) {
       item.tag === "tears" ||
       item.tag === "one eye closed" ||
       /^looking /.test(item.tag);
-    if (needsFace && hasUsed((t) => FACELESS_CAM.has(t))) return false;
-    if (hasUsed((t) => FACELESS_CAM.has(t))) {
+    const faceless = usedHas(used, "_face", (t) => FACELESS_CAM.has(t));
+    if (needsFace && faceless) return false;
+    if (faceless) {
       for (const d of item.implies || []) {
         const di = lex.byTag.get(d);
         if (
@@ -4229,7 +4333,7 @@ export function drawOne(lex, settings, pinned, userBanned, rand, seed, opts) {
     // 反向。雪／櫻花在 OUTDOOR_LEFTOVER 裡，釘了不會進室內；雨／霧／陰天不在，
     // 也不 implies outdoors。釘雨時場地還沒填，客廳照收（實測 20～27/40 indoors）。
     if (
-      [...used].some((t) => OUTDOOR_WEATHER.has(t)) &&
+      usedHas(used, "_wx", (t) => OUTDOOR_WEATHER.has(t)) &&
       !used.has("outdoors") &&
       (item.tag === "indoors" ||
         (item.implies || []).includes("indoors") ||
@@ -4470,7 +4574,7 @@ export function drawOne(lex, settings, pinned, userBanned, rand, seed, opts) {
       return false;
     }
     {
-      const handsBusy = [...used].some((t) => HANDS_BUSY_ACT.has(t) || HANDS_BUSY_BODY.has(t));
+      const handsBusy = usedHas(used, "_hands", (t) => HANDS_BUSY_ACT.has(t) || HANDS_BUSY_BODY.has(t));
       if (ARM_POSE.has(item.tag) && !pinned.has(item.tag) && handsBusy) return false;
       if (BOTH_ARMS.has(item.tag) && !pinned.has(item.tag) && handsBusy) return false;
       if (HANDS_BUSY_ACT.has(item.tag) && [...used].some((t) => BOTH_ARMS.has(t))) return false;
@@ -4527,7 +4631,6 @@ export function drawOne(lex, settings, pinned, userBanned, rand, seed, opts) {
       if (HANDS_BUSY_BODY.has(item.tag) && [...usedActs(used, lex)].some((a) => HANDS_BUSY_ACT.has(a))) return false;
       if (HAND_GESTURE.has(item.tag) && [...used].some((t) => BOTH_ARMS.has(t) || HANDS_BUSY_BODY.has(t))) return false;
       {
-        const BOOK_ACT = new Set(["reading", "studying"]);
         if (BOOK_ACT.has(item.tag) && [...used].some((t) => BOTH_ARMS.has(t) || HAND_GESTURE.has(t))) return false;
         if ((BOTH_ARMS.has(item.tag) || HAND_GESTURE.has(item.tag)) && [...used].some((t) => BOOK_ACT.has(t))) {
           return false;
@@ -4541,34 +4644,6 @@ export function drawOne(lex, settings, pinned, userBanned, rand, seed, opts) {
       }
     }
     {
-      const DRY_NO_WATER = new Set([
-        "airplane interior",
-        "cockpit",
-        "movie theater",
-        "church",
-        "classroom",
-        "office",
-        "library",
-        "living room",
-        "bedroom",
-        "hotel room",
-        "basketball court",
-        "tennis court",
-        "soccer field",
-        "baseball stadium",
-        "bowling alley",
-        "boxing ring",
-        "dojo",
-        "fitness gym",
-        "school gym",
-        "running track",
-        "bathroom",
-        "prison",
-        "colonnade",
-        "train interior",
-        "hallway",
-        "elevator",
-      ]);
       const places = usedPlaces(used, lex);
       const acts = usedActs(used, lex);
       if (WATER_ACT.has(item.tag) && [...places].some((p) => DRY_NO_WATER.has(p))) return false;
@@ -4779,6 +4854,7 @@ export function drawOne(lex, settings, pinned, userBanned, rand, seed, opts) {
     return true;
   };
 
+
   const counts = settings.counts;
   // 衣著需要「偏好」而不是「硬分桶」。硬分桶會先把高順位抽到滿才看下一桶，
   // top／bottom／onepiece 各只有一格時，顏色變體的實際機率因此永遠是 0。
@@ -4866,9 +4942,10 @@ export function drawOne(lex, settings, pinned, userBanned, rand, seed, opts) {
     if (section === "clothing") want = clothingWant(want);
     const need = want - countSection(section);
     if (need <= 0) return;
-    const pool = lex.bySection[section].filter(
-      (item) => allow(item) && (!extraFilter || extraFilter(item))
-    );
+    const pool = lex.bySection[section].filter((item) => {
+      if (extraFilter && !extraFilter(item)) return false;
+      return allow(item);
+    });
     let prefer = null;
     if (section === "clothing") prefer = clothingPrefer;
     else if (section === "pose") prefer = posePrefer;
@@ -5080,7 +5157,7 @@ export function drawOne(lex, settings, pinned, userBanned, rand, seed, opts) {
     else if (heat === "sex") nudeChance = 0.2;
     if (nudeChance && rand() < nudeChance) {
       const skins = lex.bySection.clothing.filter(
-        (item) => allow(item) && (item.tag === "nude" || item.tag === "completely nude")
+        (item) => (item.tag === "nude" || item.tag === "completely nude") && allow(item)
       );
       takeFromPool(skins, 1, rand, commit, null, allow);
     }
@@ -5096,12 +5173,17 @@ export function drawOne(lex, settings, pinned, userBanned, rand, seed, opts) {
   ) {
     const cover = lex.bySection.clothing.filter(
       (item) =>
-        allow(item) &&
         (item.layer === "skin" ||
-          (item.layer === "garment" && (item.mutex === "onepiece" || item.mutex === "top" || item.mutex === "bottom")))
+          (item.layer === "garment" && (item.mutex === "onepiece" || item.mutex === "top" || item.mutex === "bottom"))) &&
+        allow(item)
     );
     takeFromPool(cover, 1, rand, commit, clothingPrefer, allow);
   }
+  const nudeAccMutex = new Set(["jewelry", "eyewear", "neckwear", "hands", "headwear", "feet"]);
+  const wornAccMutex = new Set([
+    "feet", "waist", "legs", "jewelry", "eyewear", "neckwear",
+    "underwear_top", "underwear_bottom", "outer", "hands", "headwear",
+  ]);
   const gotNude = someUsed((it) => it.section === "clothing" && it.layer === "skin");
   const hasBodyGarment = () =>
     someUsed((it) => {
@@ -5118,8 +5200,7 @@ export function drawOne(lex, settings, pinned, userBanned, rand, seed, opts) {
       if (item.tag === "hard hat") return used.has("construction worker") || used.has("construction site");
       if (item.tag === "police hat") return used.has("policewoman") || used.has("police uniform");
       if (item.tag === "lab coat") return used.has("scientist") || used.has("doctor") || used.has("laboratory");
-      const outfit = new Set(["jewelry", "eyewear", "neckwear", "hands", "headwear", "feet"]);
-      if (outfit.has(item.mutex) && !mutexTaken.has(item.mutex)) return true;
+      if (nudeAccMutex.has(item.mutex) && !mutexTaken.has(item.mutex)) return true;
       return false;
     });
   } else {
@@ -5127,9 +5208,9 @@ export function drawOne(lex, settings, pinned, userBanned, rand, seed, opts) {
     if (!hasBodyGarment()) {
       const pool = lex.bySection.clothing.filter(
         (item) =>
-          allow(item) &&
           item.layer === "garment" &&
-          (item.mutex === "onepiece" || item.mutex === "top" || item.mutex === "bottom")
+          (item.mutex === "onepiece" || item.mutex === "top" || item.mutex === "bottom") &&
+          allow(item)
       );
       takeFromPool(pool, 1, rand, commit, clothingPrefer, allow);
     }
@@ -5152,20 +5233,7 @@ export function drawOne(lex, settings, pinned, userBanned, rand, seed, opts) {
         if (item.tag === "lab coat") return used.has("scientist") || used.has("doctor") || used.has("laboratory");
         // waist 是新加的格子（obi／sash／belt）。腰上的東西以前 mutex 是空的，
         // 於是在這條路徑上一律被擋 —— 江戶的 obi 在 3000 張裡是 0。
-        const outfit = new Set([
-          "feet",
-          "waist",
-          "legs",
-          "jewelry",
-          "eyewear",
-          "neckwear",
-          "underwear_top",
-          "underwear_bottom",
-          "outer",
-          "hands",
-          "headwear",
-        ]);
-        if (outfit.has(item.mutex) && !mutexTaken.has(item.mutex)) return true;
+        if (wornAccMutex.has(item.mutex) && !mutexTaken.has(item.mutex)) return true;
         return false;
       }
       return true;
@@ -5184,12 +5252,12 @@ export function drawOne(lex, settings, pinned, userBanned, rand, seed, opts) {
     tag === "masturbation through clothes";
   if (heat === "sex" && people >= 2) {
     const acts = lex.bySection.pose.filter(
-      (item) => allow(item) && (item.mutex === "sex_act" || item.tag === "sex")
+      (item) => (item.mutex === "sex_act" || item.tag === "sex") && allow(item)
     );
     takeFromPool(acts, 1, rand, commit, null, allow);
   }
   if (heat === "sex" && people === 1) {
-    const acts = lex.bySection.pose.filter((item) => allow(item) && soloSex(item.tag));
+    const acts = lex.bySection.pose.filter((item) => soloSex(item.tag) && allow(item));
     takeFromPool(acts, 1, rand, commit, null, allow);
   }
   fillSlot("pose", "body_pose");
@@ -5481,9 +5549,9 @@ export function drawOne(lex, settings, pinned, userBanned, rand, seed, opts) {
         // 服裝；只收 onepiece/top/bottom 曾讓部分時代的浴場補救池變成空集合。
         const pool = lex.bySection.clothing.filter(
           (item) =>
-            allow(item) &&
             (item.layer === "skin" || isBodyGarment(item)) &&
-            garmentOkForKind(item, kind, era)
+            garmentOkForKind(item, kind, era) &&
+            allow(item)
         );
         // 正在洗就把袍子類排掉 —— 但只在還留得下「有穿的」選項時。
         // 光看 narrowed.length 不夠：那個池子含裸標，袍子拿掉之後可能只剩裸標，
@@ -5571,7 +5639,7 @@ export function drawOne(lex, settings, pinned, userBanned, rand, seed, opts) {
         }
       }
       if (heat === "sex" && people === 1 && !someUsed((it) => soloSex(it.tag))) {
-        const acts = lex.bySection.pose.filter((item) => allow(item) && soloSex(item.tag));
+        const acts = lex.bySection.pose.filter((item) => soloSex(item.tag) && allow(item));
         takeFromPool(acts, 1, rand, commit, null, allow);
       }
     }
@@ -5598,10 +5666,10 @@ export function drawOne(lex, settings, pinned, userBanned, rand, seed, opts) {
       const kind = sceneClothLocked(used, mustPins(), lex, era, lockSceneOn(settings));
       const pool = lex.bySection.clothing.filter(
         (item) =>
-          allow(item) &&
           item.layer === "garment" &&
           bodyGarmentSlot(item) === "bottom" &&
-          (!kind || garmentOkForKind(item, kind, era))
+          (!kind || garmentOkForKind(item, kind, era)) &&
+          allow(item)
       );
       takeFromPool(pool, 1, rand, commit, clothingPrefer, allow);
     }
@@ -5624,7 +5692,7 @@ export function drawOne(lex, settings, pinned, userBanned, rand, seed, opts) {
         }
       }
     }
-    const acts = lex.bySection.pose.filter((item) => allow(item) && soloSex(item.tag));
+    const acts = lex.bySection.pose.filter((item) => soloSex(item.tag) && allow(item));
     takeFromPool(acts, 1, rand, commit, null, allow);
   }
 

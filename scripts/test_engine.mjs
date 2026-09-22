@@ -5333,6 +5333,41 @@ function indoorOutdoorClash(have) {
     mode: "normal",
     people: 1,
   }), false);
+  eq("candidate gate ignores tags outside the four rules", supportCandidateAllowed({
+    used: new Set(["eating", "on stomach"]),
+    candidate: "blue eyes",
+    pinned: new Set(),
+    mode: "normal",
+    people: 1,
+  }), true);
+  eq("candidate gate rejects a second forbidden pose on an existing conflict", supportCandidateAllowed({
+    used: new Set(["cooking", "on back"]),
+    candidate: "lying",
+    pinned: new Set(),
+    mode: "normal",
+    people: 1,
+  }), false);
+  eq("diverse cooking on stomach is not the normal-only rule", supportCandidateAllowed({
+    used: new Set(["cooking"]),
+    candidate: "on stomach",
+    pinned: new Set(),
+    mode: "diverse",
+    people: 1,
+  }), true);
+  eq("weird still rejects wading while crawling", supportCandidateAllowed({
+    used: new Set(["wading"]),
+    candidate: "crawling",
+    pinned: new Set(),
+    mode: "weird",
+    people: 1,
+  }), false);
+  eq("two people skip the same-actor support rules", supportCandidateAllowed({
+    used: new Set(["eating"]),
+    candidate: "on stomach",
+    pinned: new Set(),
+    mode: "normal",
+    people: 2,
+  }), true);
 }
 
 

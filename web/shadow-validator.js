@@ -73,19 +73,51 @@ export function validateSupportShadow({ tags, pinned = [], mode = "normal", peop
   return violations;
 }
 
-function signature(violation) {
-  return `${violation.rule_id}\u0000${violation.tags.join("\u0000")}`;
+const SUPPORT_CANDIDATE_TAGS = new Set();
+for (const rule of SUPPORT_RULES) {
+  for (const tag of rule.actors) SUPPORT_CANDIDATE_TAGS.add(tag);
+  for (const tag of rule.forbidden) SUPPORT_CANDIDATE_TAGS.add(tag);
 }
 
+export { SUPPORT_CANDIDATE_TAGS };
+
+// 舊寫法對每個候選複製整份 used，再跑兩次 shadow。四條規則的簽名只會因為
+// 「候選字自己就是規則的一端」而變成新的 hard：字不在這張表裡、或已經在場上，
+// 簽名不會變。新的 hard 一定含這個候選字，所以不可能早已出現在 before。
+// 證據全部被釘選時仍是 warning，放行。
 export function supportCandidateAllowed({ used, candidate, pinned = [], mode = "normal", people } = {}) {
-  const beforeTags = asSet(used);
-  const before = new Set(
-    validateSupportShadow({ tags: beforeTags, pinned, mode, people })
-      .filter((violation) => violation.severity === "hard")
-      .map(signature),
-  );
-  const afterTags = new Set(beforeTags);
-  if (candidate) afterTags.add(candidate);
-  const after = validateSupportShadow({ tags: afterTags, pinned, mode, people });
-  return !after.some((violation) => violation.severity === "hard" && !before.has(signature(violation)));
+  const tags = asSet(used);
+  if (!candidate || !SUPPORT_CANDIDATE_TAGS.has(candidate) || tags.has(candidate)) return true;
+  const pinnedTags = asSet(pinned);
+  const castSize = resolvedPeople(tags, people);
+  if (castSize > 1) return true;
+  for (const rule of SUPPORT_RULES) {
+    if (!rule.modes.includes(mode)) continue;
+    const candActor = rule.actors.has(candidate);
+    const candForbidden = rule.forbidden.has(candidate);
+    if (!candActor && !candForbidden) continue;
+    let partner = false;
+    if (candActor) {
+      for (const tag of rule.forbidden) {
+        if (tags.has(tag)) {
+          partner = true;
+          break;
+        }
+      }
+    }
+    if (!partner && candForbidden) {
+      for (const tag of rule.actors) {
+        if (tags.has(tag)) {
+          partner = true;
+          break;
+        }
+      }
+    }
+    if (!partner) continue;
+    const evidence = [];
+    for (const tag of rule.actors) if (tag === candidate || tags.has(tag)) evidence.push(tag);
+    for (const tag of rule.forbidden) if (tag === candidate || tags.has(tag)) evidence.push(tag);
+    if (!evidence.every((tag) => pinnedTags.has(tag))) return false;
+  }
+  return true;
 }
