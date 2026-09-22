@@ -475,3 +475,13 @@ body.studio.sheet-open { overflow: hidden; }
   margin-bottom: var(--space-2);
 }
 .pin-actions { margin-bottom: var(--space-2); }
+
+
+.studio .same-seed {
+  margin-top: var(--space-2);
+  font-size: var(--text-xs);
+}
+.studio .same-seed:disabled {
+  opacity: 0.45;
+  cursor: not-allowed;
+}

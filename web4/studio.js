@@ -124,7 +124,7 @@ function enhanceCard(card) {
 
   const warns = [...meta.querySelectorAll(":scope > .warn")];
   if (!warns.length) {
-    // 若已有 clash-box 但 warn 被搬空過，不動
+    ensureSameSeedBtn(card);
     return;
   }
 
@@ -152,7 +152,9 @@ function enhanceCard(card) {
     return;
   }
   lines.sort((a, b) => clashSeverity(a) - clashSeverity(b));
-  sum.textContent = `哪裡打架 · ${lines[0]}`;
+  // 摘要最重一條；展開內文必須留齊，不吃掉較輕互斥。
+  sum.textContent =
+    lines.length === 1 ? `哪裡打架 · ${lines[0]}` : `哪裡打架 · ${lines[0]}（另有 ${lines.length - 1} 條）`;
   for (const line of lines) {
     const p = document.createElement("p");
     p.className = "clash-line";
@@ -160,6 +162,26 @@ function enhanceCard(card) {
     body.append(p);
   }
   void clashSummary;
+  ensureSameSeedBtn(card);
+}
+
+function ensureSameSeedBtn(card) {
+  const meta = card.querySelector(".meta");
+  if (!meta) return;
+  let btn = meta.querySelector(":scope > .same-seed");
+  const hasSnap = !!(card.dataset.intentSnap && card.dataset.seed);
+  if (!btn) {
+    btn = document.createElement("button");
+    btn.type = "button";
+    btn.className = "ghost same-seed";
+    meta.append(btn);
+  }
+  btn.textContent = "同種子重抽";
+  btn.title = hasSnap
+    ? "同一意圖快照＋同一 seed，驗規則穩不穩"
+    : "這張沒留下場記，不能同種子重抽";
+  btn.disabled = !hasSnap || !!card.classList.contains("is-gen");
+  btn.setAttribute("aria-disabled", btn.disabled ? "true" : "false");
 }
 
 /** 分級牆／矛盾 pin 置頂；一般互斥靠後。 */
@@ -263,3 +285,17 @@ function bindStageTools() {
 }
 
 bindStageTools();
+
+
+function bindCancelClear() {
+  const cancel = $("cancel");
+  if (!cancel) return;
+  cancel.addEventListener("click", () => {
+    const results = $("results");
+    if (!results) return;
+    // 立刻拿掉場記中，不留幽靈字
+    results.classList.remove("is-slating");
+    delete results.dataset.slate;
+  });
+}
+bindCancelClear();

@@ -95,6 +95,7 @@ import {
   mustStepper,
   syncMustDraw,
 } from "./mustdraw.js";
+import { drawWithSeed } from "./draw-with-seed.js";
 
 const SECTIONS = [
   { id: "quality", title: "畫質與風格", hint: "固定畫質每張都帶。風格預設不進，釘了才進" },
@@ -2744,6 +2745,107 @@ async function runRedoSolo(card) {
   }
 }
 
+
+function freezeIntentSnap(settingsObj, pinnedSet, bannedSet) {
+  return JSON.stringify({
+    settings: {
+      rating: settingsObj.rating,
+      heats: [...(settingsObj.heats || [])],
+      eras: [...(settingsObj.eras || [])],
+      n: settingsObj.n,
+      width: settingsObj.width,
+      height: settingsObj.height,
+      samePerson: !!settingsObj.samePerson,
+      drawJob: !!settingsObj.drawJob,
+      counts: { ...(settingsObj.counts || {}) },
+      mustDraw: { ...(settingsObj.mustDraw || {}) },
+      lockScene: settingsObj.lockScene !== false,
+      sceneMode: sceneModeOf(settingsObj),
+    },
+    pinned: [...pinnedSet],
+    banned: [...bannedSet],
+  });
+}
+
+async function runSameSeedFromCard(card) {
+  if (!card || running) {
+    speak(running ? "正在抽圖，結束後再同種子重抽" : "找不到成片");
+    return;
+  }
+  let snap;
+  try {
+    snap = JSON.parse(card.dataset.intentSnap || "");
+  } catch {
+    snap = null;
+  }
+  if (!snap || !snap.settings || card.dataset.seed == null || card.dataset.seed === "") {
+    speak("這張沒留下場記，不能同種子重抽");
+    return;
+  }
+  const seedNum = Number(card.dataset.seed) >>> 0;
+  if (!(await comfyUp())) {
+    speak("Comfy 連不上，先開本機 8188");
+    return;
+  }
+  running = true;
+  aborting = false;
+  skipping = false;
+  genAbort = new AbortController();
+  $("go").disabled = true;
+  $("go").setAttribute("aria-busy", "true");
+  $("cancel").hidden = false;
+  try {
+    const frozenSettings = { ...settings, ...snap.settings };
+    const drawn = drawWithSeed(
+      lex,
+      frozenSettings,
+      new Set(snap.pinned || []),
+      new Set(snap.banned || []),
+      seedNum,
+      {
+        trace: true,
+        presetOwned: ownedTagSet(presetOwned),
+        ...drawStageHooks(),
+      }
+    );
+    if (drawn.cancelled) {
+      speak("已取消");
+      return;
+    }
+    if (!drawn.positive) {
+      speak("同種子重抽得到空 POS");
+      return;
+    }
+    card.dataset.bare = drawn.positive;
+    card.dataset.era = drawn.era || card.dataset.era || "";
+    const pos = weightedPos(drawn.positive);
+    const trigger = currentTriggerText();
+    const sent = insertTriggerAfterCast(pos, trigger);
+    card.dataset.positive = sent;
+    card.dataset.trigger = trigger;
+    card._recipe = recipeFromDraw(drawn, sent, seedNum);
+    showPos(sent);
+    setPosLine(card, sent);
+    setLive(card, { status: `同種子重抽 · seed ${seedNum}` });
+    paintMustWarn(card, drawn.mustReport);
+    paintPinMiss(card);
+    await streamCardJob(card, seedNum, {
+      positive: sent,
+      era: drawn.era,
+      eraClash: drawn.eraClash,
+      loras: currentLorasPayload(),
+      ckpt: currentCkpt(),
+      workflowId: currentWorkflowId(),
+    });
+    speak(card.classList.contains("is-done") ? "同種子重抽完成" : "同種子重抽未完成");
+  } catch (err) {
+    speak("同種子重抽失敗");
+    reportCrash("同種子重抽", err);
+  } finally {
+    finishBatch();
+  }
+}
+
 async function runBatch() {
   if (running) return;
   running = true;
@@ -2819,7 +2921,12 @@ async function runBatch() {
       });
       // 取消停在 Intent／Composition：不建卡、不暴露半套 POS。
       if (drawn.cancelled) {
-        speak("已取消");
+        speak("場記取消，不成片");
+        const results = $("results");
+        if (results) {
+          results.classList.remove("is-slating");
+          delete results.dataset.slate;
+        }
         cancelRedoQueue();
         break;
       }
@@ -2833,6 +2940,7 @@ async function runBatch() {
       const card = placeCard(cardSkeleton(settings.width, settings.height));
       markLive(card);
       card.dataset.seed = String(drawn.seed);
+      card.dataset.intentSnap = freezeIntentSnap(settings, pinForDraw, banForDraw);
       card.dataset.era = drawn.era || "";
       card.dataset.bare = drawn.positive;
       card.dataset.pinsAtDraw = JSON.stringify([...pinned]);
@@ -3009,6 +3117,12 @@ function bindUi() {
       e.preventDefault();
       e.stopPropagation();
       queueRedo(e.target.closest(".card"));
+      return;
+    }
+    if (e.target.closest(".same-seed")) {
+      e.preventDefault();
+      e.stopPropagation();
+      runSameSeedFromCard(e.target.closest(".card"));
       return;
     }
     if (onWeightClick(e)) return;
