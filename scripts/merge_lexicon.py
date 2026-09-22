@@ -57,11 +57,22 @@ NEGATIVE = (
     "speech bubble, multiple views, 3d, photorealistic, cross-section, x-ray, inset"
 )
 
+# 這張表有兩個用途：norm() 用它把字擋在詞庫外，rename_custom_tag.new_tag_ok()
+# 用它擋改名。兩邊都是精確比對，所以**單數和複數要各寫一次** —— 原本只有
+# "children" 而沒有 "child"，於是改名工具會放行 `child`，儘管它自己的 docstring
+# 和 README 都寫著擋 loli／shota／teen／child。"teen" 則是整個漏掉。
+#
+# 加這兩個字不會動到詞庫：現在沒有任何一個 tag 的名字是 "child" 或 "teen"
+# （整字或子字串都沒有），而 norm() 只在完全相等時才丟掉。
 BANNED = {
     "toddler",
     "underage",
     "kid",
+    "child",
     "children",
+    "teen",
+    "teenage",
+    "teenager",
 }
 
 UMBRELLA = {
