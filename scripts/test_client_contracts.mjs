@@ -635,6 +635,92 @@ function ok(name, cond, detail) {
   ok("currentTriggerText 是兩槽分開組的", currentTriggerText() === "beta, gamma", currentTriggerText());
 }
 
+// --- 底模預覽只在底模視窗打開時才載 ------------------------------------------
+// 實測：預設底模 waiIllustriousSDXL_v170 的預覽是 2048×2688、5.9 MB 的 PNG，
+// 顯示成 55×55。開機時 fetchCkpts() 順手 renderCkptCurrent()，把它塞進**關著的**
+// 底模視窗 —— 佔每次開頁總傳輸的 95%，快取命中也要再解碼一次（約 42 ms、21 MB）。
+// 套用作品冊配方走 selectCkpt()，還會連整份清單（17 列、8.7 MB）一起畫。
+// 打開視窗的 openCkptModal() 本來就會重畫，所以關著的時候什麼都不必畫。
+{
+  const loads = [];
+  let modalOpen = false;
+  const fakeEl = (id) => {
+    const el = {
+      id,
+      value: "",
+      dataset: {},
+      style: {},
+      children: [],
+      classList: {
+        contains: (c) => id === "ckpt-modal" && c === "open" && modalOpen,
+        add() {},
+        remove() {},
+        toggle() {},
+      },
+      setAttribute() {},
+      addEventListener() {},
+      querySelector: () => fakeEl(""),
+      append(...xs) { el.children.push(...xs); },
+      appendChild(x) { el.children.push(x); return x; },
+      replaceChildren() { el.children = []; },
+    };
+    let src = "";
+    Object.defineProperty(el, "src", {
+      get: () => src,
+      set: (v) => {
+        src = String(v);
+        loads.push({ src, lazy: el.loading === "lazy" });
+      },
+    });
+    return el;
+  };
+  const prevDoc = { get: document.getElementById, create: document.createElement };
+  document.getElementById = (id) => (id === "lora-toast" ? null : fakeEl(id));
+  document.createElement = () => fakeEl("");
+  const prevFetch = globalThis.fetch;
+  globalThis.fetch = async (url) => {
+    const u = String(url);
+    if (u.includes("/api/checkpoints")) {
+      return {
+        json: async () => ({
+          items: [
+            { ckpt_name: "wai.safetensors", file: "wai.safetensors", title: "wai", preview: "wai.preview.png" },
+            { ckpt_name: "hsk.safetensors", file: "hsk.safetensors", title: "hsk", preview: "hsk.preview.png" },
+          ],
+        }),
+      };
+    }
+    if (u.includes("/api/loras")) return { json: async () => ({ items: [] }) };
+    throw new Error("unexpected fetch " + u);
+  };
+
+  invalidateModelLists();
+  await applyRecipeModels({ checkpoint: "hsk.safetensors" });
+  const closedLoads = loads.filter((l) => l.src.includes("ckpt-preview"));
+  ok(
+    "底模視窗關著時不載任何預覽圖",
+    closedLoads.length === 0,
+    `關著的視窗裡載了 ${closedLoads.length} 張：${closedLoads.map((l) => l.src).join("、")}`,
+  );
+
+  loads.length = 0;
+  modalOpen = true;
+  await applyRecipeModels({ checkpoint: "wai.safetensors" });
+  const openLoads = loads.filter((l) => l.src.includes("ckpt-preview"));
+  ok("底模視窗打開時照常畫預覽", openLoads.length > 0, "修過頭：打開視窗也看不到預覽");
+  const eagerRows = openLoads.filter((l) => !l.lazy && l.src.includes("hsk"));
+  ok(
+    "清單裡非目前底模的縮圖延後載入",
+    eagerRows.length === 0,
+    `${eagerRows.length} 張清單縮圖沒有 loading="lazy"，一打開視窗就全部下載`,
+  );
+
+  globalThis.fetch = prevFetch;
+  document.getElementById = prevDoc.get;
+  document.createElement = prevDoc.create;
+  invalidateModelLists();
+}
+
 // --- 介面與交互的六道守衛 -----------------------------------------------------
 // 這六條各自對應一個量到的洞，不是泛用的可及性清單。寫在這裡的理由跟檔頭一樣：
 // 能抽成純函式的就抽（存組合、背景 inert），抽不動的就守原始碼的形狀。
@@ -900,6 +986,82 @@ const ALBUM_FIXTURE = [
   ok("印樣是格線", css.includes(".album-grid {") && css.includes("grid-template-columns: repeat(auto-fill"), "");
   ok("標題／工具列／籤條不准被壓縮", /\.album-head,\s*\n\.album-tools,\s*\n\.album-chips \{\s*\n\s*flex: 0 0 auto;/.test(css), "籤條會被 max-height 壓扁並溢出容器");
   ok("印樣自己捲，不會蓋到右邊詳情", /\.album-main \{[\s\S]*?overflow: hidden;/.test(css), "手機版格子會畫到「目前選擇」上面");
+}
+
+// --- 卡片與左欄的版面：量到的四個洞 -------------------------------------------
+{
+  const strip = (t) => t.split(CR).join("");
+  const boot = strip(readFileSync(join(ROOT, "web", "boot.css"), "utf8"));
+  const web = strip(readFileSync(join(ROOT, "web", "styles.css"), "utf8"));
+  const w4 = strip(readFileSync(join(ROOT, "web4", "styles.css"), "utf8"));
+  const block = (css, sel) => {
+    const out = [];
+    let at = css.indexOf(sel + " {");
+    while (at >= 0) {
+      out.push(css.slice(at, css.indexOf("}", at) + 1));
+      at = css.indexOf(sel + " {", at + 1);
+    }
+    return out.join(NL);
+  };
+
+  // 只抽牌的 .shot 原本寫 min-height: 4.5rem 想要一條窄帶，但基本樣式的 aspect-ratio
+  // 照樣生效，實測 299×299 的空白方框只寫「只抽牌 · 無圖」，真正的輸出（tag）被推到下面。
+  ok(
+    "只抽牌卡片的圖片區是窄帶，不是空白方框",
+    /aspect-ratio:\s*auto/.test(block(boot, '.card[data-pos-only="1"] .shot')),
+    "基本樣式的 aspect-ratio 會把窄帶撐成正方形",
+  );
+
+  // 權重小標 15×15，::before 只往外擴 3px（21×21），低於 24px 的最小點擊範圍。
+  const flagHit = block(boot, ".w-flag::before").match(/inset:\s*-(\d+)px/);
+  ok("權重小標的點擊範圍至少 24px", !!flagHit && 15 + 2 * Number(flagHit[1]) >= 24, flagHit ? `15 + 2×${flagHit[1]}` : "找不到 inset");
+
+  // 左欄 224px 放不下五顆 52px 的尺度鈕：3+2 折行、時代七顆寬度 52～78 不等排成三行。
+  // 對齊到同一個三欄格線，每一列看起來就是刻意排的。
+  ok("排字匣左欄的選項列對齊三欄格線", /\.step > \.row \{[^}]*grid-template-columns:\s*repeat\(3,/.test(web), "");
+  ok("導影台左欄的選項列對齊三欄格線", /\.step > \.row \{[^}]*grid-template-columns:\s*repeat\(3,/.test(w4), "");
+
+  // 還沒有成片時「拷貝 POS／放大成片」按下去只會說「還沒有成片」。
+  ok(
+    "導影台沒有成片時不顯示成片工具",
+    /\.stage:has\(\.results:empty\) \.stage-tools \{[^}]*display:\s*none/.test(w4),
+    "按鈕看起來能按，按了才告訴你沒東西",
+  );
+
+  // 導影台的卡片把每個 tag 畫成有框的方塊（flex），boot.js 在中間放的 " · " 文字節點
+  // 因此各自變成一個孤立的 flex 項目，換行時掛在行尾。有框就不需要分隔點。
+  ok(
+    "導影台卡片的 tag 之間沒有孤立的分隔點",
+    /\.studio \.card \.pos \{[^}]*font-size:\s*0/.test(w4) && /\.studio \.card \.pos > \[data-tag\] \{[^}]*font-size:\s*var\(--text-sm\)/.test(w4),
+    "text node 的「·」在 flex 裡會掛在行尾",
+  );
+
+  // 導影台在手機寬度（390px）頂欄不換行：工具區只分到 166px，裡面的鈕比那寬，
+  // justify-content:flex-end 讓溢出往左跑，整排工具壓在「導影台」三個字上。
+  // 排字匣早就修過同一個洞（web/styles.css 的 .mast-tools 註解），導影台沒帶上。
+  const narrow = w4.slice(w4.indexOf("@media (max-width: 900px)"));
+  ok(
+    "導影台窄螢幕頂欄會換行，工具不壓在標題上",
+    /\.studio-mast \{[^}]*flex-wrap:\s*wrap/.test(narrow) && /\.studio-mast \.mast-tools \{[^}]*flex:\s*1 1 auto/.test(narrow),
+    "390px 寬時工具按鈕疊在品牌字上",
+  );
+
+  // 換到第二列之後還有下一個洞：工具區本身不換行、靠右對齊，七顆鈕 511px 塞進 366px，
+  // 多的往左溢出、沒有捲軸。實測兩個版面第一顆（通知設定齒輪）都在 x = -129／-133，
+  // 手機上根本按不到。
+  const webNarrow = web.slice(web.indexOf("@media (max-width: 900px)"));
+  const toolsRule = (css, sel) => {
+    const at = css.indexOf(sel + " {");
+    return at < 0 ? "" : css.slice(at, css.indexOf("}", at) + 1);
+  };
+  for (const [name, css, sel] of [["排字匣", webNarrow, ".mast-tools"], ["導影台", narrow, ".studio-mast .mast-tools"]]) {
+    const rule = toolsRule(css, sel);
+    ok(
+      `${name}窄螢幕工具列換行、靠左，齒輪不會跑出畫面`,
+      /flex-wrap:\s*wrap/.test(rule) && /justify-content:\s*flex-start/.test(rule),
+      "第一顆鈕在畫面左緣外面：" + (rule || "找不到規則"),
+    );
+  }
 }
 
 if (failed) {

@@ -1236,9 +1236,16 @@ function renderCkptBtn() {
   btn.setAttribute("aria-expanded", overlayIsOpen("ckpt-modal") ? "true" : "false");
 }
 
+// 底模視窗關著時什麼都不畫：openCkptModal() 打開後本來就會重畫。
+// 開機的 fetchCkpts() 和套用配方的 selectCkpt() 以前會把預覽塞進關著的視窗 ——
+// 預設底模那張是 5.9 MB、2048×2688，佔每次開頁傳輸的 95%，只為了一個看不見的 55px 頭像。
+function ckptModalShown() {
+  return overlayIsOpen("ckpt-modal");
+}
+
 function renderCkptCurrent() {
   const box = $("ckpt-current");
-  if (!box) return;
+  if (!box || !ckptModalShown()) return;
   box.replaceChildren();
   const cur = (GEN_CKPTS || []).find((c) => c.ckpt_name === GEN_CKPT);
   if (!cur) {
@@ -1338,7 +1345,7 @@ function selectCkpt(c) {
 
 function renderCkptList(filter) {
   const box = $("ckpt-list");
-  if (!box) return;
+  if (!box || !ckptModalShown()) return;
   const q = (filter || "").toLowerCase().trim();
   let items = GEN_CKPTS || [];
   if (q) items = items.filter((c) => (c.title || "").toLowerCase().includes(q) || c.file.toLowerCase().includes(q));
@@ -1364,6 +1371,7 @@ function renderCkptList(filter) {
       const img = document.createElement("img");
       img.alt = "";
       img.decoding = "async";
+      img.loading = "lazy";
       img.src = ckptPreviewUrl(c);
       row.appendChild(img);
     } else {

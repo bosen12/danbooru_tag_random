@@ -416,9 +416,14 @@ input[type="search"] {
   }
   /* flex-basis:0 的 .mast-tools 永遠「放得下」，所以不會換行；
      裡面的按鈕不能縮，justify-content:flex-end 又讓溢出往左跑，
-     結果整排工具壓在品牌字上面。改成 basis:auto 才會真的換到下一行。 */
+     結果整排工具壓在品牌字上面。改成 basis:auto 才會真的換到下一行。
+     換到下一行之後工具區本身也要能換行、靠左：七顆鈕 511px 塞進 366px，
+     靠右不換行時多的往左溢出、沒有捲軸，通知設定齒輪實測在 x = -129，按不到。 */
   .mast-tools {
     flex: 1 1 auto;
+    flex-wrap: wrap;
+    justify-content: flex-start;
+    row-gap: var(--space-2);
   }
   .shell {
     grid-template-columns: 1fr;
@@ -526,4 +531,18 @@ input[type="search"] {
     border-top-color: var(--color-paper);
     opacity: 0.5;
   }
+}
+
+/* 左欄的選項列對齊同一個三欄格線。
+   欄寬放不下五顆尺度鈕：原本折成 3+2、時代七顆寬度 52～78px 不等排成三行，
+   看起來像是被擠歪的。三欄等寬之後「女 男 不限」「正常 多元 奇葩」剛好一列，
+   其他列也落在同樣的欄線上。 */
+.step > .row {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+}
+.step > .row > .chip-toggle {
+  min-width: 0;
+  padding-inline: var(--space-1);
+  text-align: center;
 }

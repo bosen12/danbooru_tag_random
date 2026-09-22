@@ -1575,10 +1575,22 @@ class Handler(BaseHTTPRequestHandler):
 
     def _json(self, code: int, obj: dict, extra=None) -> None:
         blob = json.dumps(obj, ensure_ascii=False).encode("utf-8")
+        # 跟靜態檔同一條規則：過 1 KB、客戶端收 gzip、壓完真的比較小才壓。
+        # /api/loras 518 KB → 96 KB，手機開 LoRA 選單等的就是這一包。
+        packed = None
+        if len(blob) > 1024 and "gzip" in (self.headers.get("Accept-Encoding") or ""):
+            packed = gzip.compress(blob, 5)
+            if len(packed) >= len(blob):
+                packed = None
+        if packed is not None:
+            blob = packed
         self.send_response(code)
         self.send_header("Content-Type", "application/json; charset=utf-8")
         self.send_header("Content-Length", str(len(blob)))
         self.send_header("Cache-Control", "no-store")
+        if packed is not None:
+            self.send_header("Content-Encoding", "gzip")
+            self.send_header("Vary", "Accept-Encoding")
         for k, v in (extra or {}).items():
             self.send_header(k, v)
         self.end_headers()

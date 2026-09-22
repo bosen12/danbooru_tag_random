@@ -1341,10 +1341,11 @@ input[type="number"] {
     transform var(--dur-micro) var(--ease-out);
 }
 
+/* 小標本身 15×15；往外擴 5px 讓點擊範圍到 25×25（最小 24px）。 */
 .w-flag::before {
   content: "";
   position: absolute;
-  inset: -3px;
+  inset: -5px;
 }
 
 .w-flag:focus-visible {
@@ -2674,7 +2675,10 @@ html.is-booting *::after {
   pointer-events: auto;
   transform: scale(1);
 }
+/* aspect-ratio: auto —— 基本樣式的 aspect-ratio 會把這條窄帶撐成跟圖一樣的正方形
+   （實測 299×299 的空白方框），真正的輸出被推到下面。兩顆 36px 的鈕放得進 4.5rem。 */
 .card[data-pos-only="1"] .shot {
+  aspect-ratio: auto;
   min-height: 4.5rem;
   background: color-mix(in oklab, var(--color-paper-3) 80%, transparent);
 }

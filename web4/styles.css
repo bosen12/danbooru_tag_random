@@ -889,3 +889,75 @@ body.is-shooting .studio-dock .status {
 body.is-shooting #go-pos:disabled {
   opacity: 0.4;
 }
+
+/* 左欄的選項列對齊同一個三欄格線。
+   欄寬放不下五顆尺度鈕：原本折成 3+2、時代七顆寬度 52～78px 不等排成三行，
+   看起來像是被擠歪的。三欄等寬之後「女 男 不限」「正常 多元 奇葩」剛好一列，
+   其他列也落在同樣的欄線上。 */
+.step > .row {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+}
+.step > .row > .chip-toggle {
+  min-width: 0;
+  padding-inline: var(--space-1);
+  text-align: center;
+}
+
+/* 還沒有成片：拷貝 POS／放大成片按了只會說「還沒有成片」，先不顯示。 */
+.stage:has(.results:empty) .stage-tools {
+  display: none;
+}
+
+/* 空的成片區是一塊場記板：頂端一條拍板斜紋。整個導影台只有這一處裝飾。 */
+.stage .results:empty {
+  position: relative;
+  overflow: hidden;
+  padding-top: 28px;
+}
+.stage .results:empty::after {
+  content: "";
+  position: absolute;
+  inset: 0 0 auto;
+  height: 16px;
+  background: repeating-linear-gradient(
+    -45deg,
+    color-mix(in oklab, var(--color-ink) 16%, transparent) 0 14px,
+    transparent 14px 28px
+  );
+  border-bottom: var(--rule) solid color-mix(in oklab, var(--color-rule) 80%, transparent);
+  pointer-events: none;
+}
+
+/* 卡片裡每個 tag 都是有框的方塊，boot.js 在中間放的 " · " 文字節點在 flex 裡各自
+   變成孤立的項目，換行時掛在行尾。容器字級歸零把它們收掉，tag 本身設回原字級；
+   間距交給 gap。複製走 data-positive，不受影響。 */
+.studio .card .pos {
+  font-size: 0;
+}
+.studio .card .pos > [data-tag] {
+  font-size: var(--text-sm);
+}
+
+/* 手機寬度頂欄不換行時，工具區只分到 166px、裡面的鈕比那寬，justify-content:flex-end
+   讓溢出往左跑，整排工具壓在「導影台」三個字上（390px 實測）。排字匣修過同一個洞
+   （web/styles.css .mast-tools 的註解），這裡照做：允許換行、工具區 basis:auto；
+   兩列高的頂欄在手機上不釘住，把畫面還給成片。 */
+@media (max-width: 900px) {
+  .studio-mast {
+    position: static;
+    flex-wrap: wrap;
+    row-gap: var(--space-2);
+    padding-top: max(var(--space-3), env(safe-area-inset-top, 0px));
+    padding-left: max(var(--space-3), env(safe-area-inset-left, 0px));
+    padding-right: max(var(--space-3), env(safe-area-inset-right, 0px));
+  }
+  /* 工具區也要能換行、靠左：七顆鈕 511px 塞進 366px，靠右不換行時多的往左溢出，
+     通知設定齒輪實測在 x = -133，按不到。 */
+  .studio-mast .mast-tools {
+    flex: 1 1 auto;
+    flex-wrap: wrap;
+    justify-content: flex-start;
+    row-gap: var(--space-2);
+  }
+}

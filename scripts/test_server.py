@@ -827,6 +827,55 @@ ok(
     'd.get("node") not in (None, "200")' not in src,
 )
 
+# --- JSON API 也要 gzip -------------------------------------------------------
+# 靜態檔早就有 gzip + ETag，JSON 這條路漏了：/api/loras 實測 518 KB（938 顆 LoRA，
+# trainedWords 佔一半），gzip 5 級壓到 96 KB，花 5 ms。手機走 Tailscale 開 LoRA 選單
+# 等的就是這 518 KB。小回應不壓（標頭比省下的還多），沒說收 gzip 的客戶端照原樣給。
+import gzip as _gzip
+import io as _io
+
+
+class _JsonProbe:
+    def __init__(self, accept):
+        self.headers = {"Accept-Encoding": accept} if accept else {}
+        self.sent = {}
+        self.code = None
+        self.wfile = _io.BytesIO()
+
+    def send_response(self, code):
+        self.code = code
+
+    def send_header(self, k, v):
+        self.sent[k] = v
+
+    def end_headers(self):
+        pass
+
+
+def _json_via(accept, obj):
+    probe = _JsonProbe(accept)
+    Handler._json(probe, 200, obj)
+    return probe, probe.wfile.getvalue()
+
+
+_big = {"items": [{"file": f"lora_{i}.safetensors", "trainedWords": ["alpha beta gamma"] * 6} for i in range(400)]}
+_probe, _body = _json_via("gzip, deflate, br", _big)
+_gz = _probe.sent.get("Content-Encoding") == "gzip"
+ok("大的 JSON 回應在客戶端收 gzip 時壓縮", _gz, str(_probe.sent))
+if _gz:
+    _plain = _gzip.decompress(_body)
+    ok("壓縮後解開跟原本一模一樣", json.loads(_plain) == _big)
+    ok("Content-Length 是壓縮後的長度", _probe.sent.get("Content-Length") == str(len(_body)))
+    ok("壓縮後的回應標明 Vary: Accept-Encoding", _probe.sent.get("Vary") == "Accept-Encoding")
+    ok("壓縮真的有省", len(_body) < len(_plain) / 3, f"{len(_body)} vs {len(_plain)}")
+
+_probe, _body = _json_via(None, _big)
+ok("客戶端沒說收 gzip 就不壓", "Content-Encoding" not in _probe.sent and json.loads(_body) == _big)
+
+_probe, _body = _json_via("gzip", {"ok": True})
+ok("小回應不壓", "Content-Encoding" not in _probe.sent and json.loads(_body) == {"ok": True})
+ok("JSON 仍然不准快取", _probe.sent.get("Cache-Control") == "no-store")
+
 if failed:
     print(f"\n{failed} failed")
     sys.exit(1)
