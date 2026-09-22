@@ -2,7 +2,7 @@
 
 對齊：`2026-09-22-draw-stage-boundaries.md` §1／§2／§6；群聊契約（中間 POS 不進畫面、`drawOne` 殼不動、只動 `web`）。
 
-**狀態**：草稿。等 A 索引基線綠、引擎在段邊界露出回呼後，再改 `web/boot.js`。**本檔不改 `engine.js`。**
+**狀態**：`web/boot.js` 已接 `drawStageHooks()`（`signal`＋`onStage`）；取消不建卡。引擎側見 `fc68711`。
 
 ## 目標
 
@@ -61,7 +61,7 @@ type DrawStageEvent =
 
 ## 對齊檢查（給 H）
 
-- [ ] yield 只出現在 §1／§2 結束
-- [ ] 事件 payload 無 `used`／`positive`
-- [ ] 無 opts 時金標／既有測試位元相容
-- [ ] 取消不留下半成品卡；`running`／`aria-busy` 仍由 `finishBatch` 收尾
+- [x] yield 只出現在 §1／§2 結束（引擎）
+- [x] 事件 payload 無 `used`／`positive`（boot 亦不讀）
+- [x] 無 opts 時金標／既有測試位元相容（引擎測試）
+- [x] 取消不留下半成品卡；`running`／`aria-busy` 仍由 `finishBatch` 收尾

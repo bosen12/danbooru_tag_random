@@ -2513,6 +2513,25 @@ function paintMustWarn(card, report) {
   meta.append(note);
 }
 
+
+/** §1／§2 進度回呼：只更新 status，不碰 results／POS。取消則回 { cancel: true }。 */
+function drawStageHooks() {
+  return {
+    signal: genAbort ? genAbort.signal : undefined,
+    onStage(event) {
+      if (aborting || (genAbort && genAbort.signal.aborted)) return { cancel: true };
+      if (event && event.stage === "intent") {
+        const intent = event.intent || {};
+        const bits = [intent.heat, intent.era].filter(Boolean);
+        speak(bits.length ? `整理規則…（${bits.join(" · ")}）` : "整理規則…");
+      } else if (event && event.stage === "composition") {
+        speak("安排構圖…");
+      }
+      return aborting || (genAbort && genAbort.signal.aborted) ? { cancel: true } : undefined;
+    },
+  };
+}
+
 function finishBatch() {
   running = false;
   $("go").disabled = false;
@@ -2795,7 +2814,14 @@ async function runBatch() {
       const drawn = drawOne(lex, settings, pinForDraw, banForDraw, rng, seedNum, {
         trace: true,
         presetOwned: ownedTagSet(presetOwned),
+        ...drawStageHooks(),
       });
+      // 取消停在 Intent／Composition：不建卡、不暴露半套 POS。
+      if (drawn.cancelled) {
+        speak("已取消");
+        cancelRedoQueue();
+        break;
+      }
       if (settings.samePerson && ident.size === 0) {
         ident = identityPins(lex, drawn.positive);
         identBan = identityBans(lex, drawn.positive);
