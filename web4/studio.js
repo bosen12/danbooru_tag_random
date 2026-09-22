@@ -582,28 +582,40 @@ function bindCancelClear() {
 bindCancelClear();
 
 
-/** 導影台：只抽牌雙保險——boot 若已掛仍可再點；卡住時先解 busy。 */
+/** 導影台：boot 未就緒時點「只抽牌」要進佇列，不准無聲。 */
 function bindGoPos() {
   const btn = $("go-pos");
   if (!btn || btn.dataset.studioBound === "1") return;
   btn.dataset.studioBound = "1";
-  btn.addEventListener("click", (e) => {
-    e.preventDefault();
-    e.stopPropagation();
+  let pending = false;
+  const run = () => {
+    pending = false;
     const go = $("go");
-    // 清掉殘留 busy，避免 syncShootBusy 把只抽牌也鎖死
     if (go && go.getAttribute("aria-busy") === "true" && !document.querySelector("#results .card.is-gen")) {
       go.removeAttribute("aria-busy");
       go.disabled = false;
       document.body.classList.remove("is-shooting");
-      btn.disabled = false;
     }
     if (typeof window.__studioRunPosOnly === "function") {
       window.__studioRunPosOnly();
       return;
     }
-    // boot 尚未暴露時退回直接點原生（理論上不會走到）
-    btn.blur();
+    const status = $("status");
+    if (status) status.textContent = "詞庫還在載，稍後自動只抽牌…";
+    pending = true;
+  };
+  btn.addEventListener("click", (e) => {
+    // 不 stopPropagation：讓 boot 自己的 listener 也能跑（雙保險）
+    if (!window.__studioBootReady) {
+      e.preventDefault();
+      run();
+    }
+  });
+  window.addEventListener("studio:boot-ready", () => {
+    btn.disabled = false;
+    btn.removeAttribute("aria-disabled");
+    btn.title = "不送 Comfy，只抽 POS 方便品評";
+    if (pending) run();
   });
 }
 bindGoPos();

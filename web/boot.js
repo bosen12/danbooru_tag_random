@@ -3623,9 +3623,17 @@ function bindUi() {
     stopInfinite();
     runBatch({ posOnly: true });
   };
-  $("go-pos")?.addEventListener("click", kickPosOnly);
-  // 導影台殼可再掛一次；暴露給 studio.js，避免監聽沒掛上時連點無聲。
+  const goPos = $("go-pos");
+  if (goPos) {
+    goPos.disabled = false;
+    goPos.removeAttribute("aria-disabled");
+    goPos.title = "不送 Comfy，只抽 POS 方便品評";
+    goPos.addEventListener("click", kickPosOnly);
+  }
+  // 導影台殼／自動化：boot 就緒後才暴露；未就緒點了會進佇列。
   window.__studioRunPosOnly = kickPosOnly;
+  window.__studioBootReady = true;
+  window.dispatchEvent(new CustomEvent("studio:boot-ready"));
   $("cancel")?.addEventListener("click", () => stopNow("取消中…"));
 }
 
