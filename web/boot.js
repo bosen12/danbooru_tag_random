@@ -2604,9 +2604,15 @@ function drawStageHooks() {
 
 function finishBatch() {
   running = false;
-  $("go").disabled = false;
-  $("go").removeAttribute("aria-busy");
-  $("cancel").hidden = true;
+  const go = $("go");
+  if (go) {
+    go.disabled = false;
+    go.removeAttribute("aria-busy");
+  }
+  const goPos = $("go-pos");
+  if (goPos) goPos.disabled = false;
+  const cancel = $("cancel");
+  if (cancel) cancel.hidden = true;
   try {
     window.dispatchEvent(new CustomEvent("studio:stage", { detail: { stage: "done" } }));
   } catch { /* ignore */ }
@@ -2930,15 +2936,30 @@ async function runSameSeedFromCard(card) {
 
 async function runBatch(opts = {}) {
   const posOnly = !!opts.posOnly;
-  if (running) return;
+  // 只抽牌：若上一輪卡在 running（Comfy 掛／半套），先解鎖，避免連點無聲。
+  if (running) {
+    if (!posOnly) return;
+    try {
+      aborting = true;
+      genAbort?.abort();
+    } catch { /* ignore */ }
+    finishBatch();
+  }
   running = true;
   aborting = false;
   skipping = false;
   genAbort = new AbortController();
-  $("go").disabled = true;
-  $("go").setAttribute("aria-busy", "true");
-  $("cancel").hidden = false;
-  pop($("go"));
+  const go = $("go");
+  const goPos = $("go-pos");
+  if (go) {
+    go.disabled = true;
+    go.setAttribute("aria-busy", "true");
+    pop(go);
+  }
+  if (goPos) goPos.disabled = true;
+  const cancel = $("cancel");
+  if (cancel) cancel.hidden = false;
+  speak(posOnly ? "只抽牌…" : "開拍…");
 
   // 這些要活在 try 外面，finally 才收得乾淨。
   let done = 0;
@@ -3598,11 +3619,14 @@ function bindUi() {
     stopInfinite();
     runBatch();
   });
-  $("go-pos")?.addEventListener("click", () => {
+  const kickPosOnly = () => {
     stopInfinite();
     runBatch({ posOnly: true });
-  });
-  $("cancel").addEventListener("click", () => stopNow("取消中…"));
+  };
+  $("go-pos")?.addEventListener("click", kickPosOnly);
+  // 導影台殼可再掛一次；暴露給 studio.js，避免監聽沒掛上時連點無聲。
+  window.__studioRunPosOnly = kickPosOnly;
+  $("cancel")?.addEventListener("click", () => stopNow("取消中…"));
 }
 
 function bootNote(text, cls) {

@@ -580,3 +580,30 @@ function bindCancelClear() {
   });
 }
 bindCancelClear();
+
+
+/** 導影台：只抽牌雙保險——boot 若已掛仍可再點；卡住時先解 busy。 */
+function bindGoPos() {
+  const btn = $("go-pos");
+  if (!btn || btn.dataset.studioBound === "1") return;
+  btn.dataset.studioBound = "1";
+  btn.addEventListener("click", (e) => {
+    e.preventDefault();
+    e.stopPropagation();
+    const go = $("go");
+    // 清掉殘留 busy，避免 syncShootBusy 把只抽牌也鎖死
+    if (go && go.getAttribute("aria-busy") === "true" && !document.querySelector("#results .card.is-gen")) {
+      go.removeAttribute("aria-busy");
+      go.disabled = false;
+      document.body.classList.remove("is-shooting");
+      btn.disabled = false;
+    }
+    if (typeof window.__studioRunPosOnly === "function") {
+      window.__studioRunPosOnly();
+      return;
+    }
+    // boot 尚未暴露時退回直接點原生（理論上不會走到）
+    btn.blur();
+  });
+}
+bindGoPos();

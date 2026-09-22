@@ -879,3 +879,13 @@ body.is-shooting .studio-dock .status {
 .studio .results.is-slating::before {
   pointer-events: none;
 }
+
+
+.studio-dock #go-pos {
+  position: relative;
+  z-index: 2;
+  pointer-events: auto;
+}
+body.is-shooting #go-pos:disabled {
+  opacity: 0.4;
+}
