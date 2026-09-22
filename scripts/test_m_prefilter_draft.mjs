@@ -117,4 +117,4 @@ if (failed) {
   console.error(`\n${failed} failed`);
   process.exit(1);
 }
-console.log("all ok — prefilter draft gates green; engine.js still unwired");
+console.log("all ok — prefilter draft gates green");

@@ -66,6 +66,10 @@ import {
   evaluateUnderwearVisibility,
 } from "./rules/clothing.js";
 import { diffKept, rejectRemoved } from "./rules/reconcile.js";
+import {
+  buildMutexIndexFromLex,
+  prefilterPoolByMutex,
+} from "./m-mutex-index.js";
 
 export {
   HEATS,
@@ -3164,7 +3168,10 @@ function isColorVariant(item) {
   return parts.length >= 2 && COLOR_WORD.has(parts[0]);
 }
 
-function takeFromPool(pool, count, rand, commit, prefer, allow) {
+function takeFromPool(pool, count, rand, commit, prefer, allow, mPre) {
+  if (mPre && mPre.taken && mPre.taken.size) {
+    pool = prefilterPoolByMutex(mPre.idx, mPre.taken, pool).kept;
+  }
   let buckets;
   if (prefer && Array.isArray(prefer.softTiers) && prefer.softTiers.length) {
     const tiers = prefer.softTiers;
@@ -3393,6 +3400,13 @@ export function drawOne(lex, settings, pinned, userBanned, rand, seed, opts) {
   const used = new Set();
   watchUsed(used);
   const mutexTaken = new Map();
+  // M-class pool prefilter (整桶跳過). Does not replace item._mx inside allow / S path.
+  const mIdx = lex._mIdx || (lex._mIdx = buildMutexIndexFromLex(lex));
+  const mPool = (pool) => {
+    if (!mutexTaken.size) return pool;
+    return prefilterPoolByMutex(mIdx, mutexTaken, pool).kept;
+  };
+  const mPre = { idx: mIdx, taken: mutexTaken };
 
   const ctx = pinContext(lex, pinned);
   const heat = chooseHeat(settings, pinned, lex, rand, ctx);
@@ -4942,7 +4956,7 @@ export function drawOne(lex, settings, pinned, userBanned, rand, seed, opts) {
     if (section === "clothing") want = clothingWant(want);
     const need = want - countSection(section);
     if (need <= 0) return;
-    const pool = lex.bySection[section].filter((item) => {
+    const pool = mPool(lex.bySection[section]).filter((item) => {
       if (extraFilter && !extraFilter(item)) return false;
       return allow(item);
     });
@@ -4954,7 +4968,7 @@ export function drawOne(lex, settings, pinned, userBanned, rand, seed, opts) {
     // 拿走，light 群裡 10 個 era:["any"] 的字機率恆為 0。era:["any"] 的意思是每個
     // 時代都能用，不是次等候選；真正不屬於當代的字 eraOk() 已經擋掉了。
     // 年代骨架與主場地由 stampAnchors("env") 和 fillSlot("env", "place") 負責。
-    takeFromPool(pool, need, rand, commit, prefer, allow);
+    takeFromPool(pool, need, rand, commit, prefer, allow, mPre);
   };
 
   // 佔住 place 這一格的時代錨，改成「偏好」而不是「無條件蓋章」。
@@ -5007,7 +5021,7 @@ export function drawOne(lex, settings, pinned, userBanned, rand, seed, opts) {
   const fillSlot = (section, mutexName, preferOverride) => {
     if (mutexTaken.has(mutexName)) return;
     const indexed = lex.byMutex && lex.byMutex.get(section + ":" + mutexName);
-    let pool = (indexed || lex.bySection[section].filter((item) => item.mutex === mutexName)).filter(
+    let pool = mPool(indexed || lex.bySection[section].filter((item) => item.mutex === mutexName)).filter(
       (item) => allow(item)
     );
     if (section === "pose" && mutexName === "camera" && people >= 2) {
@@ -5018,7 +5032,7 @@ export function drawOne(lex, settings, pinned, userBanned, rand, seed, opts) {
       if (section === "clothing") prefer = clothingPrefer;
       else if (section === "env") prefer = (item) => eraSpecific(item, era);
     }
-    takeFromPool(pool, 1, rand, commit, prefer, allow);
+    takeFromPool(pool, 1, rand, commit, prefer, allow, mPre);
   };
 
   // 場上已經看得出是哪個運動時，活動欄優先挑那個運動自己的活動（排球場 → 做運動，
@@ -5037,10 +5051,10 @@ export function drawOne(lex, settings, pinned, userBanned, rand, seed, opts) {
   const fillGroup = (section, groupName) => {
     if (someUsed((it) => it.group === groupName)) return;
     const indexed = lex.byGroup && lex.byGroup.get(section + ":" + groupName);
-    const pool = (indexed || lex.bySection[section].filter((item) => item.group === groupName)).filter(
+    const pool = mPool(indexed || lex.bySection[section].filter((item) => item.group === groupName)).filter(
       (item) => allow(item)
     );
-    takeFromPool(pool, 1, rand, commit, null, allow);
+    takeFromPool(pool, 1, rand, commit, null, allow, mPre);
   };
 
   // 必抽：使用者在小分類旁指定「這一類至少要 N 個」。跑在骨架與通用補牌之前，
@@ -5080,13 +5094,13 @@ export function drawOne(lex, settings, pinned, userBanned, rand, seed, opts) {
       }
       if (have >= want) continue;
       const indexed = lex.byGroup && lex.byGroup.get(key);
-      const pool = (
+      const pool = mPool(
         indexed || lex.bySection[section].filter((item) => item.group === group)
       ).filter((item) => mustAllow(item));
       const before = new Set(used);
       commitMeta.source = SOURCES.must_draw;
       commitMeta.stage = STAGES.must_draw;
-      takeFromPool(pool, want - have, rand, commit, null, mustAllow);
+      takeFromPool(pool, want - have, rand, commit, null, mustAllow, mPre);
       commitMeta.source = SOURCES.random;
       commitMeta.stage = STAGES.fill;
       for (const t of used) if (!before.has(t)) mustLocked.add(t);
@@ -5114,7 +5128,7 @@ export function drawOne(lex, settings, pinned, userBanned, rand, seed, opts) {
     const faceless = ["head out of frame", "lower body"]
       .map((tag) => lex.byTag.get(tag))
       .filter((item) => item && allow(item));
-    takeFromPool(faceless, 1, compositionRand, commit, null, allow);
+    takeFromPool(faceless, 1, compositionRand, commit, null, allow, mPre);
   }
 
   fillSlot("feature", "hair_length");
@@ -5159,7 +5173,7 @@ export function drawOne(lex, settings, pinned, userBanned, rand, seed, opts) {
       const skins = lex.bySection.clothing.filter(
         (item) => (item.tag === "nude" || item.tag === "completely nude") && allow(item)
       );
-      takeFromPool(skins, 1, rand, commit, null, allow);
+      takeFromPool(skins, 1, rand, commit, null, allow, mPre);
     }
   }
   if (
@@ -5177,7 +5191,7 @@ export function drawOne(lex, settings, pinned, userBanned, rand, seed, opts) {
           (item.layer === "garment" && (item.mutex === "onepiece" || item.mutex === "top" || item.mutex === "bottom"))) &&
         allow(item)
     );
-    takeFromPool(cover, 1, rand, commit, clothingPrefer, allow);
+    takeFromPool(cover, 1, rand, commit, clothingPrefer, allow, mPre);
   }
   const nudeAccMutex = new Set(["jewelry", "eyewear", "neckwear", "hands", "headwear", "feet"]);
   const wornAccMutex = new Set([
@@ -5212,7 +5226,7 @@ export function drawOne(lex, settings, pinned, userBanned, rand, seed, opts) {
           (item.mutex === "onepiece" || item.mutex === "top" || item.mutex === "bottom") &&
           allow(item)
       );
-      takeFromPool(pool, 1, rand, commit, clothingPrefer, allow);
+      takeFromPool(pool, 1, rand, commit, clothingPrefer, allow, mPre);
     }
     fill("clothing", (item) => {
       if (item.layer === "skin") return false;
@@ -5254,11 +5268,11 @@ export function drawOne(lex, settings, pinned, userBanned, rand, seed, opts) {
     const acts = lex.bySection.pose.filter(
       (item) => (item.mutex === "sex_act" || item.tag === "sex") && allow(item)
     );
-    takeFromPool(acts, 1, rand, commit, null, allow);
+    takeFromPool(acts, 1, rand, commit, null, allow, mPre);
   }
   if (heat === "sex" && people === 1) {
     const acts = lex.bySection.pose.filter((item) => soloSex(item.tag) && allow(item));
-    takeFromPool(acts, 1, rand, commit, null, allow);
+    takeFromPool(acts, 1, rand, commit, null, allow, mPre);
   }
   fillSlot("pose", "body_pose");
   // 一般 camera 仍放在臉部特徵後；只有上方 tease profile 會先保留無臉構圖。
@@ -5437,7 +5451,7 @@ export function drawOne(lex, settings, pinned, userBanned, rand, seed, opts) {
   // 已經看得出年代就不做事，所以不會在有城堡的圖上再疊一座塔。
   if (era && era !== "modern" && !someUsed((it) => it.section === "env" && eraSpecific(it, era))) {
     const flavour = lex.bySection.env.filter((item) => eraSpecific(item, era) && allow(item));
-    takeFromPool(flavour, 1, rand, commit, (item) => !item.mutex, allow);
+    takeFromPool(flavour, 1, rand, commit, (item) => !item.mutex, allow, mPre);
   }
   // 時代道具：一件那個年代的東西。
   //
@@ -5456,7 +5470,7 @@ export function drawOne(lex, settings, pinned, userBanned, rand, seed, opts) {
     const props = lex.bySection.env.filter(
       (item) => item.group === "other" && !item.mutex && eraSpecific(item, era) && allow(item)
     );
-    takeFromPool(props, 1, rand, commit, null, allow);
+    takeFromPool(props, 1, rand, commit, null, allow, mPre);
   }
   // 環境段無條件補到目標數。以前這裡只在非正常模式跑，而正常模式是預設 ——
   // 左欄「環境」那個數字 2/4/10 給出一模一樣的結果，是個死的控制項。
@@ -5605,9 +5619,9 @@ export function drawOne(lex, settings, pinned, userBanned, rand, seed, opts) {
         commitMeta.source = SOURCES.repair;
         commitMeta.stage = STAGES.repair;
         if (kind === "bath" && heat !== "activity" && skins.length && rand() < 0.34) {
-          takeFromPool(skins, 1, rand, commit, null, allow);
+          takeFromPool(skins, 1, rand, commit, null, allow, mPre);
         } else {
-          takeFromPool(rescue, 1, rand, commit, clothingPrefer, allow);
+          takeFromPool(rescue, 1, rand, commit, clothingPrefer, allow, mPre);
         }
         commitMeta.source = SOURCES.random;
         commitMeta.stage = STAGES.fill;
@@ -5640,7 +5654,7 @@ export function drawOne(lex, settings, pinned, userBanned, rand, seed, opts) {
       }
       if (heat === "sex" && people === 1 && !someUsed((it) => soloSex(it.tag))) {
         const acts = lex.bySection.pose.filter((item) => soloSex(item.tag) && allow(item));
-        takeFromPool(acts, 1, rand, commit, null, allow);
+        takeFromPool(acts, 1, rand, commit, null, allow, mPre);
       }
     }
   }
@@ -5671,7 +5685,7 @@ export function drawOne(lex, settings, pinned, userBanned, rand, seed, opts) {
           (!kind || garmentOkForKind(item, kind, era)) &&
           allow(item)
       );
-      takeFromPool(pool, 1, rand, commit, clothingPrefer, allow);
+      takeFromPool(pool, 1, rand, commit, clothingPrefer, allow, mPre);
     }
   }
 
@@ -5693,7 +5707,7 @@ export function drawOne(lex, settings, pinned, userBanned, rand, seed, opts) {
       }
     }
     const acts = lex.bySection.pose.filter((item) => soloSex(item.tag) && allow(item));
-    takeFromPool(acts, 1, rand, commit, null, allow);
+    takeFromPool(acts, 1, rand, commit, null, allow, mPre);
   }
 
   if (
