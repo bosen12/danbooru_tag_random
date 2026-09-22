@@ -74,8 +74,8 @@ import {
   SCENE_MODES,
   SCENE_MODE_LABELS,
   sceneModeOf,
+  scenePolicyOf,
   lockSceneOn,
-  realisticOn,
 } from "./scene-policy.js";
 
 export {
@@ -1323,7 +1323,7 @@ const PRIVATE_SEX_PLACE = new Set([
 const PUBLIC_SEX_PLACE = new Set(["street", "city", "cityscape", "alley", "park", "beach", "ocean", "rooftop"]);
 
 // sceneMode / lockScene / realistic — single source: ./scene-policy.js
-// (re-exported above; lockSceneOn / realisticOn imported for draw gates)
+// (re-exported above; drawOne hoists scenePolicyOf once; lockSceneOn for pin warnings)
 
 function usedJobs(used, lex) {
   const hit = recall(used, "_jobs");
@@ -3417,6 +3417,9 @@ export function drawOne(lex, settings, pinned, userBanned, rand, seed, opts) {
   const rating = ratingOf(settings);
   const sfw = rating !== "explicit";
   const blockedByRating = (item) => ratingBlocked(item, rating);
+  // Scene policy once per draw — allow/allowSlow (and related) close over these.
+  // Values ≡ SCENE_POLICY[mode].lockScene / realistic (not raw settings flags).
+  const { mode: sceneMode, lockScene: lockOn, realistic: real } = scenePolicyOf(settings);
   // 釘選會繞過 allow()（forcePin 就是為了「使用者說了算」而存在的），所以光在
   // allow() 擋是不夠的：關掉色情模式之前釘的 nude、sex 會原封不動留在圖上，
   // 實測 60/60。關掉色情模式時，這些釘選一律當作不存在 —— 這是整個模式的
@@ -3602,6 +3605,11 @@ export function drawOne(lex, settings, pinned, userBanned, rand, seed, opts) {
   };
   allow = (item, opts) => {
     if (banned.has(item.tag) || used.has(item.tag)) return false;
+    // 關掉色情模式：情色的字一個都不准進場。放在 banned/used 之後、其餘 O(1)
+    // 關卡之前：純 short-circuit，同一個 blockedByRating / sfw，只改何時判斷。
+    // 後面所有補救邏輯（浴場補衣、上衣補下著、必抽）也都走 allow，
+    // 所以不會有人從側門把它們塞回來。
+    if (sfw && blockedByRating(item)) return false;
     // 這三道關卡只看候選字自己：O(1)、沒有副作用、不消耗 rand。
     // 它們原本排在第 9、第 10、和 272 道關卡裡的最後一道，而量出來每抽一張圖
     // allow() 被呼叫 2141 次、擋掉 1180 次，其中
@@ -3622,14 +3630,11 @@ export function drawOne(lex, settings, pinned, userBanned, rand, seed, opts) {
     for (const g of extraMutex(item)) {
       if (mutexTaken.has(g)) return false;
     }
-    // 關掉色情模式：情色的字一個都不准進場。放在最前面，後面所有補救邏輯
-    // （浴場補衣、上衣補下著、必抽）也都走 allow，所以不會有人從側門把它們塞回來。
-    if (sfw && blockedByRating(item)) return false;
     if (SUPPORT_CANDIDATE_TAGS.has(item.tag) && !supportCandidateAllowed({
       used,
       candidate: item.tag,
       pinned,
-      mode: sceneModeOf(settings),
+      mode: sceneMode,
       people,
     })) return false;
     // 過了上面這幾道的字才進後面那串。函式本身有一千多行，絕大多數候選在
@@ -4732,21 +4737,22 @@ export function drawOne(lex, settings, pinned, userBanned, rand, seed, opts) {
         return false;
       }
     }
-    if (lockSceneOn(settings) && !sportKitOk(item, used)) return false;
-    if (lockSceneOn(settings) && !sportPlaceOk(item, used)) return false;
-    if (lockSceneOn(settings) && !sportGearPlaceOk(item, used, lex)) return false;
-    if (
-      lockSceneOn(settings) &&
-      (item.mutex === "sport_ball" || item.mutex === "sport_prop") &&
-      sportIdsOf(used) === null
-    ) {
-      return false;
+    if (lockOn) {
+      if (!sportKitOk(item, used)) return false;
+      if (!sportPlaceOk(item, used)) return false;
+      if (!sportGearPlaceOk(item, used, lex)) return false;
+      if (
+        (item.mutex === "sport_ball" || item.mutex === "sport_prop") &&
+        sportIdsOf(used) === null
+      ) {
+        return false;
+      }
     }
-    if (realisticOn(settings)) {
+    if (real) {
       if (item.tag === "rape" && hasUsed((t) => RAPE_BAD_PLACE.has(t))) return false;
       if (RAPE_BAD_PLACE.has(item.tag) && used.has("rape")) return false;
     }
-    if (lockSceneOn(settings)) {
+    if (lockOn) {
       // 辦公室／大街都不在睡覺場地裡。自動抽睡著會讓釘偵探／OL 的場地格空掉。
       // 明確釘睡著仍可自相衝突。清潔工的客廳在清單裡，還是可以睡。
       if (item.tag === "sleeping" && !pinned.has("sleeping")) {
@@ -4765,7 +4771,6 @@ export function drawOne(lex, settings, pinned, userBanned, rand, seed, opts) {
       }
       const acts = usedActs(used, lex);
       const places = usedPlaces(used, lex);
-      const real = realisticOn(settings);
       if ((item.mutex === "place" || item.group === "place") && !placeFitsActs(item.tag, acts, real)) return false;
       if (item.mutex === "activity" && !actFitsPlaces(item.tag, places, real)) return false;
       if (item.section === "clothing" && isBathScene(used) && isBathBadCloth(item.tag)) return false;
@@ -4801,7 +4806,7 @@ export function drawOne(lex, settings, pinned, userBanned, rand, seed, opts) {
             eraOk(candidate, era) &&
             heatOk(candidate, heat) &&
             gateOk(candidate, female, male) &&
-            placeFitsActs(candidate.tag, acts, realisticOn(settings)) &&
+            placeFitsActs(candidate.tag, acts, real) &&
             placeFitsJob(candidate.tag, jobs, used) &&
             sportPlaceOk(candidate, used) &&
             sportGearPlaceOk(candidate, used, lex)
@@ -4841,7 +4846,7 @@ export function drawOne(lex, settings, pinned, userBanned, rand, seed, opts) {
         return false;
       }
     }
-    if (realisticOn(settings)) {
+    if (real) {
       if (used.has("sleeping") && (item.tag === "city" || item.tag === "cityscape" || item.tag === "street")) {
         return false;
       }
@@ -5002,7 +5007,7 @@ export function drawOne(lex, settings, pinned, userBanned, rand, seed, opts) {
   // 才開始 commit，計數在裡面永遠是 0（我第一版就是這樣寫的，完全沒有作用）。
   const WATER_CLOTH_WANT = 3;
   const clothingWant = (base) => {
-    const kind = sceneClothLocked(used, mustPins(), lex, era, lockSceneOn(settings));
+    const kind = sceneClothLocked(used, mustPins(), lex, era, lockOn);
     if (kind !== "bath" && kind !== "swim") return base;
     return Math.min(base, WATER_CLOTH_WANT);
   };
@@ -5211,7 +5216,7 @@ export function drawOne(lex, settings, pinned, userBanned, rand, seed, opts) {
     fillGroup("feature", "hair_style");
   }
   if (female) fillSlot("feature", "breast_size");
-  if (male && !realisticOn(settings) && rand() < 0.38) fillSlot("feature", "race");
+  if (male && !real && rand() < 0.38) fillSlot("feature", "race");
   if (settings.drawJob && !used.has("maid")) fillSlot("feature", "job");
   if (heat !== "sex" && !someUsed((it) => it.mutex === "sex_act" || it.tag === "sex")) {
     fillSlot("pose", "activity", sportActivityPrefer() || undefined);
@@ -5281,7 +5286,7 @@ export function drawOne(lex, settings, pinned, userBanned, rand, seed, opts) {
   if (gotNude) {
     fill("clothing", (item) => {
       if (!(item.layer === "accessory" || item.layer === "skin")) return false;
-      if (!lockSceneOn(settings)) return true;
+      if (!lockOn) return true;
       if (item.layer === "skin") return true;
       if (item.tag === "stethoscope" || item.tag === "nurse cap") return used.has("nurse") || used.has("doctor");
       if (item.tag === "hard hat") return used.has("construction worker") || used.has("construction site");
@@ -5312,7 +5317,7 @@ export function drawOne(lex, settings, pinned, userBanned, rand, seed, opts) {
         if (mutexTaken.has(item.mutex)) return false;
         return true;
       }
-      if (lockSceneOn(settings)) {
+      if (lockOn) {
         if (item.layer === "garment" && someUsed((it) => relOf(it).has(item.tag))) return true;
         if (item.tag === "stethoscope" || item.tag === "nurse cap") return used.has("nurse") || used.has("doctor");
         if (item.tag === "hard hat") return used.has("construction worker") || used.has("construction site");
@@ -5424,7 +5429,7 @@ export function drawOne(lex, settings, pinned, userBanned, rand, seed, opts) {
     softTiers: [(item) => eraSpecific(item, era)],
     weights: [14, 1],
   });
-  if (realisticOn(settings) && !usedPlaces(used, lex).size) {
+  if (real && !usedPlaces(used, lex).size) {
     for (const a of usedActs(used, lex)) {
       for (const p of ACT_PLACE[a] || []) {
         const item = lex.byTag.get(p);
@@ -5553,9 +5558,8 @@ export function drawOne(lex, settings, pinned, userBanned, rand, seed, opts) {
   fill("env");
   stampActProps();
 
-  if (lockSceneOn(settings)) {
+  if (lockOn) {
     const places = usedPlaces(used, lex);
-    const real = realisticOn(settings);
     const needsPlace = (act) =>
       !!ACT_PLACE[act] ||
       act === "cooking" ||
@@ -5586,7 +5590,7 @@ export function drawOne(lex, settings, pinned, userBanned, rand, seed, opts) {
 
   {
     const guard = mustPins();
-    const kind = sceneClothLocked(used, guard, lex, era, lockSceneOn(settings));
+    const kind = sceneClothLocked(used, guard, lex, era, lockOn);
     if (kind) {
       const pinRel = new Set();
       for (const p of guard) {
@@ -5750,7 +5754,7 @@ export function drawOne(lex, settings, pinned, userBanned, rand, seed, opts) {
       lowerMut.has("onepiece") ||
       someUsed((it) => coversLowerBody(it));
     if (!lowerSkin && lowerMut.has("top") && !lowerCovered) {
-      const kind = sceneClothLocked(used, mustPins(), lex, era, lockSceneOn(settings));
+      const kind = sceneClothLocked(used, mustPins(), lex, era, lockOn);
       const pool = lex.bySection.clothing.filter(
         (item) =>
           item.layer === "garment" &&
@@ -5831,7 +5835,7 @@ export function drawOne(lex, settings, pinned, userBanned, rand, seed, opts) {
       if (used.has(t) && !pinned.has(t)) used.delete(t);
     }
   }
-  if (lockSceneOn(settings) && used.has("cooking") && !used.has("kitchen")) {
+  if (lockOn && used.has("cooking") && !used.has("kitchen")) {
     const kit = lex.byTag.get("kitchen");
     if (kit && eraOk(kit, era)) {
       for (const t of [...used]) {
@@ -5849,7 +5853,7 @@ export function drawOne(lex, settings, pinned, userBanned, rand, seed, opts) {
     }
   }
   if (
-    lockSceneOn(settings) &&
+    lockOn &&
     (used.has("breasts on table") || used.has("breasts on glass")) &&
     used.has("outdoors") &&
     !used.has("indoors")
@@ -5933,7 +5937,7 @@ export function drawOne(lex, settings, pinned, userBanned, rand, seed, opts) {
   // 正向的一半：場合已經定了，把跟它成對的配件拉進來。
   // 泡澡游泳不拉 —— 那邊的配件本來就要少，不是要多。
   {
-    const kind = sceneClothLocked(used, mustPins(), lex, era, lockSceneOn(settings));
+    const kind = sceneClothLocked(used, mustPins(), lex, era, lockOn);
     // 使用者把服裝目標數設成 0，就是不要衣服。這一段是在額度花完之後才 commit 的，
     // 不擋的話會直接跨過那個 0（實測釘住場合時 1000 張裡有 442 張冒出配件）。
     //
@@ -6070,7 +6074,7 @@ export function drawOne(lex, settings, pinned, userBanned, rand, seed, opts) {
   }
 
   const enteredUsed = tracer.enabled ? new Set(used) : used;
-  const kept = reconcile(lex, used, female, male, people, mustPins(), lockSceneOn(settings));
+  const kept = reconcile(lex, used, female, male, people, mustPins(), lockOn);
 
   // NEEDS_CONTEXT 要在 reconcile **之後**再掃一次。
   //
@@ -6161,7 +6165,7 @@ export function drawOne(lex, settings, pinned, userBanned, rand, seed, opts) {
   const shadowViolations = validateSupportShadow({
     tags: positive,
     pinned,
-    mode: sceneModeOf(settings),
+    mode: sceneMode,
     people,
   });
 

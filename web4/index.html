@@ -228,24 +228,47 @@
           </div>
           <button type="button" class="ghost" data-close-pins>關閉</button>
         </header>
-        <div class="row pin-actions">
-          <button type="button" class="ghost" id="clear-pins">清除釘選與關掉</button>
-          <button type="button" class="ghost" id="clear-weights">清除權重</button>
-          <button type="button" class="ghost" id="save-preset">存目前釘選</button>
+        <div class="pin-settings">
+          <div class="pin-row">
+            <div class="pin-row-copy">
+              <strong>本鏡動作</strong>
+              <p>清釘／清權重／存成組合</p>
+            </div>
+            <div class="pin-row-ctrl row pin-actions">
+              <button type="button" class="ghost" id="clear-pins">清除釘選與關掉</button>
+              <button type="button" class="ghost" id="clear-weights">清除權重</button>
+              <button type="button" class="ghost" id="save-preset">存目前釘選</button>
+            </div>
+          </div>
+          <div class="pin-row">
+            <div class="pin-row-copy">
+              <strong>釘選組合</strong>
+              <p>點一下套用；只換場景／服裝／職業時身材髮色會留</p>
+            </div>
+            <div class="pin-row-ctrl row" id="presets"></div>
+          </div>
+          <div class="pin-row">
+            <div class="pin-row-copy">
+              <strong>詞庫點法</strong>
+              <p>池中 → 必進 → 互斥／關掉</p>
+            </div>
+            <div class="pin-row-ctrl legend" aria-label="詞庫點法">
+              <span class="tag" data-state="pool" data-locked="1">池中</span>
+              <span class="tag" data-state="pinned" data-locked="1">必進</span>
+              <span class="tag" data-state="banned" data-ban="mutex" data-locked="1">互斥</span>
+              <span class="tag" data-state="banned" data-ban="user" data-locked="1">關掉</span>
+            </div>
+          </div>
+          <details class="pin-more pin-row-more">
+            <summary>
+              <span class="pin-row-copy">
+                <strong>每段目標數</strong>
+                <p>釘選與必要骨架先計入；設 0＝不補隨機</p>
+              </span>
+            </summary>
+            <div class="count-grid" id="counts"></div>
+          </details>
         </div>
-        <p class="hint">釘選組合。點一下套用；只換場景／服裝／職業時身材髮色會留。</p>
-        <div class="row" id="presets"></div>
-        <div class="legend" aria-label="詞庫點法">
-          <span class="tag" data-state="pool" data-locked="1">池中</span>
-          <span class="tag" data-state="pinned" data-locked="1">必進</span>
-          <span class="tag" data-state="banned" data-ban="mutex" data-locked="1">互斥</span>
-          <span class="tag" data-state="banned" data-ban="user" data-locked="1">關掉</span>
-        </div>
-        <details class="pin-more">
-          <summary>每段目標數</summary>
-          <p class="hint">釘選與必要骨架先計入；設 0＝不補隨機。</p>
-          <div class="count-grid" id="counts"></div>
-        </details>
       </div>
     </div>
 
