@@ -240,6 +240,8 @@ body.studio.sheet-open { overflow: hidden; }
 }
 .lex-sheet[hidden],
 .pin-sheet[hidden] { display: none !important; }
+.lex-sheet.is-closing,
+.pin-sheet.is-closing { display: block !important; }
 
 .lex-backdrop,
 .pin-backdrop {
@@ -448,6 +450,7 @@ body.studio.sheet-open { overflow: hidden; }
   font-size: var(--text-md);
   letter-spacing: 0.12em;
   color: var(--color-muted);
+  animation: slate-in var(--dur-ui) var(--ease-out) both;
 }
 .studio .results.is-slating:empty::before {
   content: attr(data-slate);
@@ -599,4 +602,175 @@ body.is-shooting #open-last-shot:disabled {
   justify-self: start;
   font-size: var(--text-xs, 12px);
   padding: 2px 8px;
+}
+
+
+/* —— micro-motion audit fixes (console rhythm, no glow) —— */
+.studio button.ghost,
+.studio button.seg,
+.studio .chip-toggle,
+.studio .segmented-btn,
+.studio .primary.shoot,
+.studio .clash-pair {
+  transition:
+    background-color var(--dur-micro) var(--ease-out),
+    border-color var(--dur-micro) var(--ease-out),
+    color var(--dur-micro) var(--ease-out),
+    opacity var(--dur-micro) var(--ease-out),
+    transform var(--dur-micro) var(--ease-out);
+}
+.studio button.ghost:hover:not(:disabled),
+.studio button.seg:hover:not(:disabled),
+.studio .chip-toggle:hover:not(:disabled),
+.studio .segmented-btn:hover:not(:disabled),
+.studio .clash-pair:hover:not(:disabled) {
+  border-color: color-mix(in oklab, var(--color-accent) 45%, var(--color-rule));
+  background: color-mix(in oklab, var(--color-accent) 8%, var(--color-chip));
+}
+.studio button.ghost:active:not(:disabled),
+.studio button.seg:active:not(:disabled),
+.studio .chip-toggle:active:not(:disabled),
+.studio .segmented-btn:active:not(:disabled),
+.studio .clash-pair:active:not(:disabled),
+.studio .primary.shoot:active:not(:disabled) {
+  transform: scale(0.97);
+}
+.studio .primary.shoot:hover:not(:disabled) {
+  filter: brightness(1.06);
+  transition:
+    filter var(--dur-micro) var(--ease-out),
+    transform var(--dur-micro) var(--ease-out),
+    opacity var(--dur-micro) var(--ease-out);
+}
+.studio button:disabled {
+  transition: opacity var(--dur-micro) var(--ease-out);
+}
+
+.studio .tag[data-tag],
+.studio .tag[data-state] {
+  transition:
+    background-color var(--dur-micro) var(--ease-out),
+    border-color var(--dur-micro) var(--ease-out),
+    color var(--dur-micro) var(--ease-out),
+    transform var(--dur-micro) var(--ease-out);
+}
+.studio .tag[data-tag]:active {
+  transform: scale(0.96);
+}
+
+/* sheet enter already animated; close exit */
+.lex-backdrop,
+.pin-backdrop {
+  opacity: 0;
+  transition: opacity var(--dur-ui) var(--ease-out);
+}
+.lex-sheet.is-open .lex-backdrop,
+.pin-sheet.is-open .pin-backdrop {
+  opacity: 1;
+}
+.lex-sheet.is-closing .lex-backdrop,
+.pin-sheet.is-closing .pin-backdrop {
+  opacity: 0;
+  transition: opacity var(--dur-ui) var(--ease-in);
+}
+.lex-sheet.is-closing .lex-panel {
+  animation: sheet-side-out var(--dur-move) var(--ease-in) both;
+}
+.pin-sheet.is-closing .pin-panel {
+  animation: sheet-up-out var(--dur-move) var(--ease-in) both;
+}
+@media (min-width: 901px) {
+  .lex-sheet.is-closing .lex-panel {
+    animation: sheet-side-out var(--dur-move) var(--ease-in) both;
+  }
+  .pin-sheet.is-closing .pin-panel {
+    animation: sheet-pop-out var(--dur-move) var(--ease-in) both;
+  }
+}
+@keyframes sheet-up-out {
+  from { opacity: 1; transform: none; }
+  to { opacity: 0; transform: translateY(16px); }
+}
+@keyframes sheet-side-out {
+  from { opacity: 1; transform: none; }
+  to { opacity: 0; transform: translateX(24px); }
+}
+@keyframes sheet-pop-out {
+  from { opacity: 1; transform: translate(-50%, -50%) scale(1); }
+  to { opacity: 0; transform: translate(-50%, -46%) scale(0.98); }
+}
+
+/* stage progress appear/hide soft */
+.stage-progress {
+  transition: opacity var(--dur-ui) var(--ease-out);
+}
+.stage-progress[hidden] {
+  /* keep display:none from [hidden]; enter anim via open path only */
+}
+
+@keyframes slate-in {
+  from { opacity: 0; transform: translateY(6px); }
+  to { opacity: 1; transform: none; }
+}
+
+/* card enter — soft rise, no bounce */
+.studio .results > .card {
+  animation: card-in var(--dur-ui) var(--ease-out) both;
+}
+@keyframes card-in {
+  from { opacity: 0; transform: translateY(8px); }
+  to { opacity: 1; transform: none; }
+}
+
+/* clash details open feel */
+.studio .clash-box {
+  transition: border-color var(--dur-micro) var(--ease-out);
+}
+.studio .clash-box[open] {
+  border-color: color-mix(in oklab, var(--color-accent) 35%, var(--color-rule));
+}
+.studio .clash-body {
+  animation: clash-body-in var(--dur-ui) var(--ease-out) both;
+}
+@keyframes clash-body-in {
+  from { opacity: 0; transform: translateY(-4px); }
+  to { opacity: 1; transform: none; }
+}
+
+/* dock status text change soft */
+.studio-dock .status {
+  transition: color var(--dur-micro) var(--ease-out), opacity var(--dur-micro) var(--ease-out);
+}
+body.is-shooting .studio-dock .status {
+  color: var(--color-accent);
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .studio button.ghost,
+  .studio button.seg,
+  .studio .chip-toggle,
+  .studio .segmented-btn,
+  .studio .primary.shoot,
+  .studio .clash-pair,
+  .studio .tag[data-tag],
+  .lex-backdrop,
+  .pin-backdrop,
+  .stage-progress,
+  .studio-dock .status {
+    transition: none !important;
+  }
+  .lex-panel,
+  .pin-panel,
+  .lex-sheet.is-closing .lex-panel,
+  .pin-sheet.is-closing .pin-panel,
+  .studio .results > .card,
+  .results.is-slating::before,
+  .studio .clash-body,
+  .slate-line.is-tick {
+    animation: none !important;
+  }
+  .studio button.ghost:active:not(:disabled),
+  .studio .primary.shoot:active:not(:disabled) {
+    transform: none;
+  }
 }

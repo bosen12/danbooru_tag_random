@@ -190,9 +190,42 @@ export function refreshSlateLine() {
 
 function setSheet(el, open) {
   if (!el) return;
-  el.hidden = !open;
-  el.classList.toggle("is-open", open);
-  document.body.classList.toggle("sheet-open", open);
+  const otherOpen = [...document.querySelectorAll(".lex-sheet.is-open, .pin-sheet.is-open")].some(
+    (n) => n !== el
+  );
+  if (open) {
+    el.hidden = false;
+    el.classList.remove("is-closing");
+    // reflow so enter animation can replay
+    void el.offsetWidth;
+    el.classList.add("is-open");
+    document.body.classList.add("sheet-open");
+    return;
+  }
+  if (el.hidden || !el.classList.contains("is-open")) {
+    el.hidden = true;
+    el.classList.remove("is-open", "is-closing");
+    if (!otherOpen) document.body.classList.remove("sheet-open");
+    return;
+  }
+  el.classList.add("is-closing");
+  el.classList.remove("is-open");
+  const done = () => {
+    el.hidden = true;
+    el.classList.remove("is-closing");
+    if (![...document.querySelectorAll(".lex-sheet.is-open, .pin-sheet.is-open")].length) {
+      document.body.classList.remove("sheet-open");
+    }
+  };
+  const panel = el.querySelector(".lex-panel, .pin-panel");
+  const target = panel || el;
+  const onEnd = (e) => {
+    if (e.target !== target && e.target !== el.querySelector(".lex-backdrop, .pin-backdrop")) return;
+    target.removeEventListener("animationend", onEnd);
+    done();
+  };
+  target.addEventListener("animationend", onEnd);
+  window.setTimeout(done, 420);
 }
 
 function openLex() {
