@@ -64,6 +64,15 @@ const SFW_EXTRA = new Set([
   "thigh strap",
   "bare shoulders",
   "off shoulder",
+  // 2026-09-22 greylist P0：heat 掛 tease+flash+sex 的走光／成人主題漏網
+  // （!heat.includes("tease") 擋不住）。勿改成「heat 含 flash|sex 就擋」——
+  // 那會誤殺 ~1178 個三池萬用字（含 1girl）。
+  "accidental exposure",
+  "lifting own clothes",
+  "breastfeeding",
+  "voyeurism",
+  "netorare",
+  "bouncing",
 ]);
 
 // 三段分級，對齊 Danbooru 自己的 rating 階梯。
