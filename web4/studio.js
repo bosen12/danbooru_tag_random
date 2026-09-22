@@ -66,7 +66,7 @@ function flashSlate(msg) {
     line.classList.remove("is-flash");
     refreshSlateLine();
   }, 900);
-  showToast(msg);
+  // 同一事件只准一個佔視線：flashSlate 專責場記條；短暫回饋走 showToast。
 }
 
 let toastTimer = 0;
@@ -248,13 +248,56 @@ function enhanceCard(card) {
   sum.textContent =
     lines.length === 1 ? `哪裡打架 · ${lines[0]}` : `哪裡打架 · ${lines[0]}（另有 ${lines.length - 1} 條）`;
   for (const line of lines) {
-    const p = document.createElement("p");
-    p.className = "clash-line";
-    p.textContent = line;
-    body.append(p);
+    body.append(renderClashLine(line));
   }
   void clashSummary;
   ensureSameSeedBtn(card);
+}
+
+/** 從打架文案抽對立項；點一下複製「A ↔ B」，不改 Intent。 */
+function parseClashPair(line) {
+  const s = String(line || "").trim();
+  let m = s.match(/^(.+?)\s+和\s+(.+?)\s+不能同時成立/);
+  if (m) return [m[1].trim(), m[2].trim()];
+  m = s.match(/（([^）]+)）/);
+  if (m) {
+    const parts = m[1].split(/[、,／/]/).map((x) => x.trim()).filter(Boolean);
+    if (parts.length >= 2) return [parts[0], parts[1]];
+  }
+  m = s.match(/「([^」]+)」\s*[↔⟷<>]+\s*「([^」]+)」/);
+  if (m) return [m[1].trim(), m[2].trim()];
+  return null;
+}
+
+function renderClashLine(line) {
+  const wrap = document.createElement("div");
+  wrap.className = "clash-line";
+  const pair = parseClashPair(line);
+  const text = document.createElement("p");
+  text.className = "clash-text";
+  text.textContent = line;
+  wrap.append(text);
+  if (pair) {
+    const [a, b] = pair;
+    const btn = document.createElement("button");
+    btn.type = "button";
+    btn.className = "ghost clash-pair";
+    btn.textContent = `${a} ↔ ${b}`;
+    btn.title = "複製對立項，方便改下一拍釘選";
+    btn.addEventListener("click", async (e) => {
+      e.preventDefault();
+      e.stopPropagation();
+      const payload = `${a} ↔ ${b}`;
+      try {
+        await navigator.clipboard.writeText(payload);
+        showToast("已拷貝對立項", "ok");
+      } catch {
+        showToast("拷貝失敗：權限", "warn");
+      }
+    });
+    wrap.append(btn);
+  }
+  return wrap;
 }
 
 function ensureSameSeedBtn(card) {
@@ -348,23 +391,23 @@ function setStatus(msg) {
 
 async function copyLastPos() {
   if (document.body.classList.contains("is-shooting")) {
-    flashSlate("開拍中，先別拷");
+    showToast("開拍中，先別拷", "warn");
     setStatus("開拍中，先別拷 POS");
     return;
   }
   const card = latestDoneCard();
   const pos = card?.dataset?.positive || "";
   if (!pos) {
-    flashSlate("沒有可拷的 POS");
+    showToast("沒有可拷的 POS", "warn");
     setStatus("還沒有可拷的 POS——先開拍成片");
     return;
   }
   try {
     await navigator.clipboard.writeText(pos);
-    flashSlate("已拷貝");
+    showToast("已拷貝", "ok");
     setStatus("已拷貝 POS");
   } catch {
-    flashSlate("拷貝失敗：權限");
+    showToast("拷貝失敗：權限", "warn");
     setStatus("拷貝失敗——瀏覽器不給剪貼簿權限");
   }
 }
@@ -373,7 +416,7 @@ function openLastShot() {
   const card = latestDoneCard();
   const shot = card?.querySelector(".shot");
   if (!shot) {
-    flashSlate("還沒有成片");
+    showToast("還沒有成片", "warn");
     setStatus("還沒有成片可放大");
     return;
   }
@@ -392,16 +435,24 @@ function syncShootBusy() {
   const copyBtn = $("copy-last-pos");
   if (copyBtn) {
     copyBtn.disabled = busy;
-    copyBtn.title = busy ? "開拍中不可拷" : "Ctrl+Shift+C";
+    copyBtn.title = busy
+      ? "開拍中不可拷——避免半套 POS"
+      : "拷貝最近成片 POS（Ctrl+Shift+C）";
   }
   const openBtn = $("open-last-shot");
-  if (openBtn) openBtn.disabled = busy;
+  if (openBtn) {
+    openBtn.disabled = busy;
+    openBtn.title = busy ? "開拍中不可放大" : "放大最近成片";
+  }
 
   for (const btn of document.querySelectorAll(".same-seed")) {
     const card = btn.closest(".card");
     const hasSnap = !!(card?.dataset?.intentSnap && card?.dataset?.seed);
     btn.disabled = busy || !hasSnap || !!card?.classList.contains("is-gen");
     btn.setAttribute("aria-disabled", btn.disabled ? "true" : "false");
+    if (busy) btn.title = "開拍中不可同種子重抽——避免半套 POS";
+    else if (!hasSnap) btn.title = "這張沒留下場記，不能同種子重抽";
+    else btn.title = "同一意圖快照＋同一 seed，驗規則穩不穩";
   }
 }
 
@@ -438,7 +489,7 @@ function bindCancelClear() {
     results.classList.remove("is-slating");
     delete results.dataset.slate;
     setStageProgress("done");
-    flashSlate("場記取消");
+    showToast("場記取消", "warn");
   });
 }
 bindCancelClear();

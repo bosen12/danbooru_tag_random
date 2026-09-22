@@ -576,3 +576,19 @@ body.is-shooting #open-last-shot:disabled {
 .studio-toast[data-kind="ok"] {
   border-color: color-mix(in srgb, var(--accent, #9ae6b4) 45%, var(--border, #333));
 }
+
+
+.clash-line {
+  display: grid;
+  gap: 4px;
+  margin: 0 0 6px;
+}
+.clash-text {
+  margin: 0;
+  font-size: var(--text-xs, 12px);
+}
+.clash-pair {
+  justify-self: start;
+  font-size: var(--text-xs, 12px);
+  padding: 2px 8px;
+}
