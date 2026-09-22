@@ -1,0 +1,442 @@
+/* 3D 工作室。
+   視覺方向是半寫實的深夜工作室：暖桌燈、冷螢幕、受控的暗部 —— 不是玩具房，
+   也不是廉價霓虹賽博龐克。所有顏色都跟 2D 那側共用同一組 token 的感覺，
+   只是更暗一階，因為這裡是「房間」不是「工作臺」。 */
+
+/* 切到 3D 時藏起 2D 那一側。用 display:none 是刻意的：DOM 留著（引擎、佇列、
+   釘選全部掛在上面），但不佔版面、不進 tab 序、不參與 hit test。 */
+[data-studio-hidden] {
+  display: none !important;
+}
+
+.studio-root {
+  position: fixed;
+  inset: 0;
+  z-index: 40;
+  background: #0d0b0a;
+  overflow: hidden;
+  /* 淡入。不做位移，位移會讓 canvas 重新配置尺寸，那就是 layout shift。 */
+  animation: studio-in 220ms cubic-bezier(0.22, 0.61, 0.36, 1) both;
+}
+
+@keyframes studio-in {
+  from {
+    opacity: 0;
+  }
+  to {
+    opacity: 1;
+  }
+}
+
+.studio-root[hidden] {
+  display: none;
+}
+
+.studio-canvas {
+  display: block;
+  width: 100%;
+  height: 100%;
+}
+
+/* --- HUD ---------------------------------------------------------------- */
+.studio-hud {
+  position: absolute;
+  inset: 0;
+  display: flex;
+  flex-direction: column;
+  justify-content: space-between;
+  padding: max(14px, env(safe-area-inset-top)) 16px max(14px, env(safe-area-inset-bottom));
+  pointer-events: none;
+  color: #eeece4;
+  font-family: var(--font-body, system-ui, sans-serif);
+}
+
+.studio-hud > * {
+  pointer-events: auto;
+}
+
+.studio-hud-top {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+}
+
+.studio-crumb {
+  font-family: var(--font-outlier, ui-monospace, monospace);
+  font-size: 12px;
+  letter-spacing: 0.4px;
+  color: #a2a8b8;
+  background: rgba(13, 11, 10, 0.66);
+  backdrop-filter: blur(8px);
+  padding: 6px 11px;
+  border-radius: 99px;
+  border: 1px solid rgba(238, 236, 228, 0.1);
+}
+
+.studio-back {
+  min-height: 34px;
+  padding: 0 13px;
+  border-radius: 99px;
+  border: 1px solid rgba(238, 236, 228, 0.18);
+  background: rgba(13, 11, 10, 0.72);
+  color: #eeece4;
+  font-family: inherit;
+  font-size: 12.5px;
+  cursor: pointer;
+  touch-action: manipulation;
+  transition:
+    background 140ms cubic-bezier(0.22, 0.61, 0.36, 1),
+    border-color 140ms cubic-bezier(0.22, 0.61, 0.36, 1);
+}
+
+.studio-back:hover {
+  background: rgba(40, 34, 30, 0.85);
+  border-color: rgba(238, 236, 228, 0.34);
+}
+
+/* 離開 3D。跟「返回房間」是兩件事，所以推到最右邊、給一條暖色的邊 ——
+   它是唯一一個會把你帶離這個模式的東西，不該跟功能點長得一樣。 */
+.studio-exit {
+  margin-left: auto;
+  display: inline-flex;
+  align-items: center;
+  gap: 7px;
+  min-height: 34px;
+  padding: 0 13px;
+  border-radius: 99px;
+  border: 1px solid rgba(234, 173, 87, 0.34);
+  background: rgba(13, 11, 10, 0.72);
+  backdrop-filter: blur(8px);
+  color: #eaad57;
+  font-family: inherit;
+  font-size: 12.5px;
+  cursor: pointer;
+  touch-action: manipulation;
+  transition:
+    background 140ms cubic-bezier(0.22, 0.61, 0.36, 1),
+    border-color 140ms cubic-bezier(0.22, 0.61, 0.36, 1);
+}
+
+.studio-exit svg {
+  width: 15px;
+  height: 15px;
+}
+
+.studio-exit:hover {
+  background: rgba(234, 173, 87, 0.16);
+  border-color: #eaad57;
+}
+
+.studio-exit:focus-visible,
+.studio-back:focus-visible,
+.studio-key:focus-visible,
+.studio-panel-close:focus-visible,
+.studio-jump:focus-visible,
+.studio-toggle:focus-visible {
+  outline: 2px solid #eaad57;
+  outline-offset: 2px;
+}
+
+/* 指向物件的小標籤。滑鼠停在可點的東西上才出現，不是滿畫面的標記。
+   絕對定位是必要的：HUD 是 space-between 的 flex column，這一段一旦從
+   display:none 變成可見，功能點那一排就會被擠到畫面中間 —— 那是 layout shift，
+   而且是在使用者滑鼠移動時發生，最惱人的那一種。 */
+.studio-tip {
+  position: absolute;
+  left: 50%;
+  bottom: 86px;
+  transform: translateX(-50%);
+  margin: 0;
+  padding: 5px 12px;
+  border-radius: 99px;
+  background: rgba(13, 11, 10, 0.72);
+  border: 1px solid rgba(234, 173, 87, 0.3);
+  color: #eaad57;
+  font-size: 12.5px;
+}
+
+/* canvas 沒有語意也進不了 tab 序，這一排才是鍵盤與螢幕閱讀器的入口。
+   它同時也是「這個房間裡有哪些東西可以點」的答案，省掉滿畫面的 hotspot 標記。 */
+.studio-keys {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+  justify-content: center;
+}
+
+.studio-key {
+  display: flex;
+  flex-direction: column;
+  gap: 1px;
+  min-height: 44px;
+  padding: 7px 13px;
+  border-radius: 12px;
+  border: 1px solid rgba(238, 236, 228, 0.12);
+  background: rgba(13, 11, 10, 0.68);
+  backdrop-filter: blur(10px);
+  color: #a2a8b8;
+  font-family: inherit;
+  text-align: left;
+  cursor: pointer;
+  touch-action: manipulation;
+  transition:
+    color 140ms cubic-bezier(0.22, 0.61, 0.36, 1),
+    border-color 140ms cubic-bezier(0.22, 0.61, 0.36, 1),
+    background 140ms cubic-bezier(0.22, 0.61, 0.36, 1);
+}
+
+.studio-key strong {
+  font-size: 12.5px;
+  font-weight: 600;
+  color: #eeece4;
+}
+
+.studio-key small {
+  font-size: 10.5px;
+  color: #838897;
+}
+
+.studio-key:hover {
+  border-color: rgba(238, 236, 228, 0.3);
+  background: rgba(28, 24, 21, 0.8);
+}
+
+.studio-key[aria-current="true"] {
+  border-color: #eaad57;
+  background: rgba(234, 173, 87, 0.14);
+}
+
+.studio-key[aria-current="true"] strong {
+  color: #eaad57;
+}
+
+/* --- 借用 2D 面板的容器 -------------------------------------------------- */
+.studio-panel {
+  position: absolute;
+  top: 0;
+  right: 0;
+  bottom: 0;
+  width: min(560px, 100%);
+  z-index: 2;
+  display: flex;
+  flex-direction: column;
+  /* 幾乎不透明。借進來的 2D 面板自己是透明底，所以面板的底色就是文字的底色 ——
+     92% 的時候房間會從字後面透出來，量過之後讀起來很吃力。
+     留一點點透明度和模糊是為了記得「後面還有個房間」，不是為了看穿它。 */
+  background: color-mix(in oklab, #14110f 98%, transparent);
+  backdrop-filter: blur(20px);
+  border-left: 1px solid rgba(238, 236, 228, 0.1);
+  box-shadow: -24px 0 60px -30px rgba(0, 0, 0, 0.8);
+  /* 滑入 ＋ 淡入。用 transform 而不是 left/width —— transform 只在合成階段做，
+     不會觸發版面重算，所以裡面借來的 2D 元素不會被重新量一次。
+     （第一版只敢淡入，是把 transform 和會改版面的屬性搞混了。） */
+  animation: studio-panel-in 220ms cubic-bezier(0.22, 1, 0.36, 1) both;
+  will-change: transform, opacity;
+}
+
+@keyframes studio-panel-in {
+  from {
+    opacity: 0;
+    transform: translate3d(28px, 0, 0);
+  }
+  to {
+    opacity: 1;
+    transform: translate3d(0, 0, 0);
+  }
+}
+
+.studio-panel[hidden] {
+  display: none;
+}
+
+.studio-panel-head {
+  flex: 0 0 auto;
+  position: relative;
+  padding: 18px 52px 12px 20px;
+  border-bottom: 1px solid rgba(238, 236, 228, 0.08);
+}
+
+.studio-panel-head h2 {
+  margin: 0 0 3px;
+  font-size: 15px;
+  color: #eeece4;
+}
+
+.studio-panel-head p {
+  margin: 0;
+  font-size: 12px;
+  color: #838897;
+}
+
+.studio-panel-close {
+  position: absolute;
+  top: 14px;
+  right: 14px;
+  width: 32px;
+  height: 32px;
+  display: grid;
+  place-items: center;
+  padding: 0;
+  border: 0;
+  border-radius: 8px;
+  background: rgba(238, 236, 228, 0.06);
+  color: #a2a8b8;
+  cursor: pointer;
+  touch-action: manipulation;
+}
+
+.studio-panel-close:hover {
+  color: #eeece4;
+  background: rgba(238, 236, 228, 0.14);
+}
+
+.studio-panel-close svg {
+  width: 15px;
+  height: 15px;
+}
+
+.studio-panel-body {
+  flex: 1 1 auto;
+  min-height: 0;
+  overflow-y: auto;
+  overscroll-behavior: contain;
+  padding: 14px 16px 20px;
+}
+
+/* 借進來的 2D 元素原本活在 .shell 的格線裡，這裡沒有那個格線，
+   所以把它們攤平成單欄。樣式本身一律不動 —— 動了就變成兩套 UI。 */
+.studio-panel-body > .rail,
+.studio-panel-body > #results,
+.studio-panel-body > .cats,
+.studio-panel-body > .filter-bar,
+.studio-panel-body > .dock {
+  position: static;
+  width: auto;
+  max-width: none;
+  margin: 0 0 14px;
+  border: 0;
+}
+
+.studio-panel-body > .dock {
+  background: none;
+  padding: 0;
+}
+
+.studio-panel-body > .rail {
+  overflow: visible;
+  max-height: none;
+}
+
+.studio-note {
+  margin: 0;
+  padding: 28px 8px;
+  text-align: center;
+  font-size: 12.5px;
+  line-height: 1.7;
+  color: #838897;
+}
+
+.studio-jump {
+  display: block;
+  width: 100%;
+  min-height: 44px;
+  margin-bottom: 8px;
+  padding: 0 14px;
+  border-radius: 10px;
+  border: 1px solid rgba(238, 236, 228, 0.16);
+  background: rgba(238, 236, 228, 0.04);
+  color: #eeece4;
+  font-family: inherit;
+  font-size: 13px;
+  cursor: pointer;
+  touch-action: manipulation;
+}
+
+.studio-jump:hover:not(:disabled) {
+  background: rgba(238, 236, 228, 0.1);
+  border-color: rgba(238, 236, 228, 0.32);
+}
+
+.studio-jump:disabled {
+  opacity: 0.45;
+  cursor: not-allowed;
+}
+
+/* 面板開著時把功能點清單推開，免得被蓋住。 */
+/* 面板開著時，HUD 整排往左讓 —— 包含「平面工作台」那顆。
+   面板的 z-index 是 2，HUD 沒有 z-index，所以面板會蓋在它上面：
+   不讓開的話，開著面板時離開 3D 的出口又會被蓋住，跟桅杆那次同一種錯。 */
+.studio-root.has-panel .studio-hud-top,
+.studio-root.has-panel .studio-keys {
+  margin-right: min(560px, 100%);
+}
+.studio-root.has-panel .studio-tip {
+  left: calc(50% - min(280px, 50%));
+}
+
+/* --- 桅杆上的切換鈕 ------------------------------------------------------ */
+.studio-toggle {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  flex: 0 0 auto;
+}
+
+.studio-toggle svg {
+  width: 15px;
+  height: 15px;
+}
+
+.studio-toggle[aria-pressed="true"] {
+  border-color: var(--color-weight, #eaad57);
+  color: var(--color-weight, #eaad57);
+}
+
+@media (max-width: 760px) {
+  .studio-panel {
+    animation-name: studio-panel-in-sheet;
+    top: auto;
+    width: 100%;
+    height: 62%;
+    border-left: 0;
+    border-top: 1px solid rgba(238, 236, 228, 0.1);
+  }
+  .studio-root.has-panel .studio-hud-top,
+  .studio-root.has-panel .studio-keys,
+  .studio-root.has-panel .studio-tip {
+    margin-right: 0;
+  }
+  .studio-root.has-panel .studio-keys {
+    display: none;
+  }
+  .studio-key {
+    min-height: 44px;
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .studio-root,
+  .studio-panel {
+    animation-duration: 0.01ms;
+  }
+  /* 位移整個拿掉，只留淡入 —— 規格要的是「縮短或取消位移動畫」。 */
+  .studio-panel {
+    animation-name: studio-in;
+  }
+  .studio-back,
+  .studio-key {
+    transition-duration: 0.01ms;
+  }
+}
+
+/* 手機上面板是從底下升起來的，所以位移方向跟桌面版不同。 */
+@keyframes studio-panel-in-sheet {
+  from {
+    opacity: 0;
+    transform: translate3d(0, 24px, 0);
+  }
+  to {
+    opacity: 1;
+    transform: translate3d(0, 0, 0);
+  }
+}

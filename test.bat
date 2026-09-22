@@ -94,6 +94,12 @@ if errorlevel 1 (
   pause
   exit /b 1
 )
+echo == 3D studio ==
+call node scripts\test_studio.mjs
+if errorlevel 1 (
+  pause
+  exit /b 1
+)
 echo == scene x rating matrix ==
 call node scripts\test_scene_rating_matrix.mjs
 if errorlevel 1 (

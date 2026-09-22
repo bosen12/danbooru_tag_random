@@ -28,6 +28,18 @@
     <link rel="stylesheet" href="boot.css" />
     <link rel="stylesheet" href="styles.css" />
     <link rel="stylesheet" href="lora.css" />
+    <link rel="stylesheet" href="studio/studio.css" />
+    <!-- three.js 的 examples/jsm 用 bare specifier 匯入 'three'，所以需要這張對照表。
+         指到 vendor 而不是 CDN，是為了讓這個工具在沒有網路的機器上也能開 3D —— 它
+         本來就是跑在本機、對著本機 ComfyUI 的東西。授權：MIT，見 vendor/three/LICENSE。 -->
+    <script type="importmap">
+      {
+        "imports": {
+          "three": "./vendor/three/build/three.module.min.js",
+          "three/examples/jsm/": "./vendor/three/examples/jsm/"
+        }
+      }
+    </script>
   </head>
   <body>
     <a class="skip" href="#stage">跳到詞庫</a>

@@ -1,0 +1,23 @@
+{
+  "_comment": "場景清單。scene-loader 先讀這一份，再決定要不要去抓 studio.glb —— 直接對 GLB 發 HEAD 探測會在主控台留下一條 404 紅字，而『還沒有模型』是正常狀態，不該長得像壞掉。美術把 studio.glb 放進這個資料夾之後，把 glb 改成 true。",
+  "glb": false,
+  "file": "studio.glb",
+  "units": "meters",
+  "upAxis": "Y",
+  "roomOrigin": "房間中心在原點，桌子沿 -Z 牆面擺，使用者站 +Z 側",
+  "requiredNodes": [
+    "HOTSPOT_DRAW_SCREEN",
+    "HOTSPOT_TAG_BOX",
+    "HOTSPOT_MODEL_SHELF",
+    "HOTSPOT_GALLERY",
+    "HOTSPOT_COMPARE",
+    "HOTSPOT_SETTINGS",
+    "HOTSPOT_MESSAGING",
+    "HOTSPOT_TRACE"
+  ],
+  "budget": {
+    "triangles": 250000,
+    "downloadMB": 15,
+    "textureMaxPx": 2048
+  }
+}

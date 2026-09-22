@@ -3854,6 +3854,12 @@ async function main() {
   bootingDone();
   ping();
   setInterval(ping, 15000);
+  // 3D 工作室是額外的顯示模式，不是取代。用動態 import() 是重點：three.js 那
+  // 670KB 只有在真的要進 3D 時才會下載，2D 的首次可操作時間完全不受影響。
+  // 失敗了也只是沒有 3D，平面工作台照常運作。
+  import("./studio/index.js")
+    .then((m) => m.initStudio())
+    .catch((err) => console.info("[studio] 3D 工作室無法載入，維持平面工作台：", err?.message || err));
 }
 
 main();
