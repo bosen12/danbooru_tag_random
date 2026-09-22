@@ -228,6 +228,47 @@ const DRAW_N = 40;
   ok("R4", conflict && streetHits === 0, `placeFitsActs=${conflict} drawStreet=${streetHits}`);
 }
 
+{
+  // R5: general + tease must not emit greylist P0 must-block tags (走光／成人主題漏網).
+  // Confirmed leak before fix: accidental exposure (heat has tease+flash+sex, group=tease).
+  // Do NOT assert "any tag whose heat array contains flash" — multi-heat labels include 1girl.
+  const MUST_BLOCK = [
+    "accidental exposure",
+    "lifting own clothes",
+    "breastfeeding",
+    "voyeurism",
+    "netorare",
+    "bouncing",
+  ];
+  const heatVariants = [["tease"], ["tease", "flash", "sex"], ["tease", "flash"]];
+  const bad = [];
+  for (let hi = 0; hi < heatVariants.length; hi += 1) {
+    const heats = heatVariants[hi];
+    for (const mode of MODES) {
+      const s = settingsOf({ rating: "general", sceneMode: mode, heats });
+      for (let i = 0; i < DRAW_N; i += 1) {
+        const seed = 570000 + hi * 10000 + MODES.indexOf(mode) * 1000 + i;
+        const tags = posTags(drawPos(s, seed));
+        for (const t of tags) {
+          if (MUST_BLOCK.includes(t)) bad.push(`${mode}/heats=${heats.join("+")}:${t}`);
+          const it = lex.byTag.get(t);
+          if (it && ratingBlocked(it, "general")) bad.push(`${mode}:${t}:ratingBlocked`);
+        }
+      }
+    }
+  }
+  // Static gate: must-block tags themselves are ratingBlocked under general
+  const gateMiss = MUST_BLOCK.filter((t) => {
+    const it = lex.byTag.get(t);
+    return !it || !ratingBlocked(it, "general");
+  });
+  ok(
+    "R5",
+    bad.length === 0 && gateMiss.length === 0,
+    `drawLeaks=${bad.slice(0, 8).join(", ") || "none"}; gateMiss=${gateMiss.join(", ") || "none"}`
+  );
+}
+
 // --- YELLOW ------------------------------------------------------------------
 
 {

@@ -2664,3 +2664,28 @@ html.is-booting *::after {
   text-decoration: line-through;
   text-decoration-color: color-mix(in oklab, var(--color-danger, #c44) 55%, transparent);
 }
+
+
+/* 只抽牌：無圖，重抽／同種子必須常顯，不可靠 hover */
+.card[data-pos-only="1"] .skel { display: none !important; }
+.card[data-pos-only="1"].is-done .redo-shot {
+  display: grid;
+  opacity: 1;
+  pointer-events: auto;
+  transform: scale(1);
+}
+.card[data-pos-only="1"] .shot {
+  min-height: 4.5rem;
+  background: color-mix(in oklab, var(--color-paper-3) 80%, transparent);
+}
+.card[data-pos-only="1"] .shot::after {
+  content: "只抽牌 · 無圖";
+  position: absolute;
+  inset: 0;
+  display: grid;
+  place-items: center;
+  font-size: var(--text-xs);
+  letter-spacing: 0.08em;
+  color: var(--color-muted);
+  pointer-events: none;
+}

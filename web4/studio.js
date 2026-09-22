@@ -526,6 +526,11 @@ function syncShootBusy() {
     openBtn.disabled = busy;
     openBtn.title = busy ? "開拍中不可放大" : "放大最近成片";
   }
+  const goPos = $("go-pos");
+  if (goPos) {
+    goPos.disabled = busy;
+    goPos.title = busy ? "開拍中不可抽牌" : "不送 Comfy，只抽 POS 方便品評";
+  }
 
   for (const btn of document.querySelectorAll(".same-seed")) {
     const card = btn.closest(".card");
@@ -575,3 +580,42 @@ function bindCancelClear() {
   });
 }
 bindCancelClear();
+
+
+/** 導影台：boot 未就緒時點「只抽牌」要進佇列，不准無聲。 */
+function bindGoPos() {
+  const btn = $("go-pos");
+  if (!btn || btn.dataset.studioBound === "1") return;
+  btn.dataset.studioBound = "1";
+  let pending = false;
+  const run = () => {
+    pending = false;
+    const go = $("go");
+    if (go && go.getAttribute("aria-busy") === "true" && !document.querySelector("#results .card.is-gen")) {
+      go.removeAttribute("aria-busy");
+      go.disabled = false;
+      document.body.classList.remove("is-shooting");
+    }
+    if (typeof window.__studioRunPosOnly === "function") {
+      window.__studioRunPosOnly();
+      return;
+    }
+    const status = $("status");
+    if (status) status.textContent = "詞庫還在載，稍後自動只抽牌…";
+    pending = true;
+  };
+  btn.addEventListener("click", (e) => {
+    // 不 stopPropagation：讓 boot 自己的 listener 也能跑（雙保險）
+    if (!window.__studioBootReady) {
+      e.preventDefault();
+      run();
+    }
+  });
+  window.addEventListener("studio:boot-ready", () => {
+    btn.disabled = false;
+    btn.removeAttribute("aria-disabled");
+    btn.title = "不送 Comfy，只抽 POS 方便品評";
+    if (pending) run();
+  });
+}
+bindGoPos();

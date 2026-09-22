@@ -537,7 +537,7 @@ function paintPresetBtn(btn, tags, core) {
   const state = presetState(lex, tags, pinned, core);
   btn.setAttribute("aria-pressed", state === "on" ? "true" : state === "mixed" ? "mixed" : "false");
   btn.classList.toggle("is-mixed", state === "mixed");
-  if (state === "mixed") btn.title = "只剩一部分，按一下補齊整套";
+  if (state === "mixed") btn.title = "這套只釘了一部分——再按一次補齊整套必進";
   else btn.removeAttribute("title");
 }
 
@@ -656,7 +656,8 @@ function applyNamedPreset(preset) {
 }
 
 const RATING_HINT = {
-  general: "全年齡：連暗示都沒有。情色的字整批抽不到，nsfw／explicit 在負面。",
+  general:
+    "全年齡：分級牆擋「走光／性愛」熱度；「誘惑」仍可開但露點／做愛字進不了。nsfw／explicit 在負面。",
   sensitive: "敏感：性感但不露點、不做愛、不穿內衣外出、不走光。",
   explicit: "色情：現狀，什麼都抽得到。",
 };
@@ -1860,14 +1861,36 @@ function onTagWeight(tag, dir = 1) {
 }
 
 function onTagClick(tag) {
+  const before = new Set(pinned);
   const next = cycleTag(lex, pinned, userBanned, tag);
-  const becamePin = next.pinned.has(tag) && !pinned.has(tag);
+  const becamePin = next.pinned.has(tag) && !before.has(tag);
   const becameBan = next.userBanned.has(tag) && !userBanned.has(tag);
+  const dropped = [];
+  if (becamePin) {
+    for (const t of before) {
+      if (!next.pinned.has(t)) dropped.push(t);
+    }
+  }
   pinned = next.pinned;
   userBanned = next.userBanned;
   afterPin();
-  if (becamePin) flashTag(tag, "pin");
-  else if (becameBan) flashTag(tag, "ban");
+  if (becamePin) {
+    flashTag(tag, "pin");
+    if (dropped.length) {
+      const a = labelOf(lex, dropped[0]);
+      const b = labelOf(lex, tag);
+      const more = dropped.length > 1 ? `（另退 ${dropped.length - 1}）` : "";
+      // 同 mutex 格替換（不是系統幫矛盾 pin 選邊）
+      speak(`同格替換：${a} → ${b}${more}——同一格只能留一個，不是系統選邊`);
+      try {
+        window.dispatchEvent(
+          new CustomEvent("studio:toast", {
+            detail: { text: `同格替換 ${a} → ${b}`, kind: "warning" },
+          })
+        );
+      } catch { /* ignore */ }
+    }
+  } else if (becameBan) flashTag(tag, "ban");
 }
 
 function makeTagBtn(item, sec, auto) {
@@ -2581,9 +2604,15 @@ function drawStageHooks() {
 
 function finishBatch() {
   running = false;
-  $("go").disabled = false;
-  $("go").removeAttribute("aria-busy");
-  $("cancel").hidden = true;
+  const go = $("go");
+  if (go) {
+    go.disabled = false;
+    go.removeAttribute("aria-busy");
+  }
+  const goPos = $("go-pos");
+  if (goPos) goPos.disabled = false;
+  const cancel = $("cancel");
+  if (cancel) cancel.hidden = true;
   try {
     window.dispatchEvent(new CustomEvent("studio:stage", { detail: { stage: "done" } }));
   } catch { /* ignore */ }
@@ -2905,16 +2934,32 @@ async function runSameSeedFromCard(card) {
   }
 }
 
-async function runBatch() {
-  if (running) return;
+async function runBatch(opts = {}) {
+  const posOnly = !!opts.posOnly;
+  // 只抽牌：若上一輪卡在 running（Comfy 掛／半套），先解鎖，避免連點無聲。
+  if (running) {
+    if (!posOnly) return;
+    try {
+      aborting = true;
+      genAbort?.abort();
+    } catch { /* ignore */ }
+    finishBatch();
+  }
   running = true;
   aborting = false;
   skipping = false;
   genAbort = new AbortController();
-  $("go").disabled = true;
-  $("go").setAttribute("aria-busy", "true");
-  $("cancel").hidden = false;
-  pop($("go"));
+  const go = $("go");
+  const goPos = $("go-pos");
+  if (go) {
+    go.disabled = true;
+    go.setAttribute("aria-busy", "true");
+    pop(go);
+  }
+  if (goPos) goPos.disabled = true;
+  const cancel = $("cancel");
+  if (cancel) cancel.hidden = false;
+  speak(posOnly ? "只抽牌…" : "開拍…");
 
   // 這些要活在 try 外面，finally 才收得乾淨。
   let done = 0;
@@ -2931,8 +2976,8 @@ async function runBatch() {
     settings.n = n;
     saveStore();
 
-    if (!(await comfyUp())) {
-      speak("Comfy 掛了——先開本機 8188，修好可再開拍");
+    if (!posOnly && !(await comfyUp())) {
+      speak("Comfy 掛了——先開本機 8188，修好可再開拍；或改按「只抽牌」");
       try { window.dispatchEvent(new CustomEvent("studio:toast", { detail: { text: "Comfy 掛了", kind: "danger" } })); } catch { /* ignore */ }
       stopInfinite("Comfy 連不上");
       return;
@@ -2963,7 +3008,7 @@ async function runBatch() {
         cancelRedoQueue();
         break;
       }
-      speak(`生圖 ${i + 1}/${n}`);
+      speak(posOnly ? `抽牌 ${i + 1}/${n}` : `生圖 ${i + 1}/${n}`);
       const seedNum = randomSeed();
       const rng = mulberry32(seedNum);
       const pinForDraw =
@@ -3033,27 +3078,46 @@ async function runBatch() {
       }
       showPos(sent);
       setPosLine(card, sent);
-      setLive(card, { status: `抽好了，生圖 ${i + 1}/${n}…` });
       lastJobError = "";
-      await streamCardJob(card, seedNum, {
-        positive: sent,
-        era: drawn.era,
-        eraClash: drawn.eraClash,
-        loras: currentLorasPayload(),
-        ckpt: currentCkpt(),
-        workflowId: currentWorkflowId(),
-      });
-      clearLive(card);
-
-      if (card.classList.contains("is-done")) {
+      if (posOnly) {
+        card.dataset.posOnly = "1";
+        card.querySelector(".skel")?.remove();
+        setLive(card, { status: `只抽牌 · seed ${seedNum}` });
+        card.classList.add("is-done");
+        card.classList.remove("is-gen", "is-wait");
+        // 無圖卡：重抽鈕常顯，不被 skel／hover 閘住
+        const redo = card.querySelector(".redo-shot");
+        if (redo) {
+          redo.title = "換 seed 重抽這張（只抽牌）";
+          redo.setAttribute("aria-label", "換 seed 重抽這張");
+        }
+        paintMustWarn(card, drawn.mustReport);
+        paintPinMiss(card);
+        clearLive(card);
         done += 1;
         failStreak = 0;
-        paintMustWarn(card, drawn.mustReport);
-      } else if (card.classList.contains("is-skip")) {
-        skipped += 1;
-      } else if (!aborting) {
-        failed += 1;
-        failStreak += 1;
+      } else {
+        setLive(card, { status: `抽好了，生圖 ${i + 1}/${n}…` });
+        await streamCardJob(card, seedNum, {
+          positive: sent,
+          era: drawn.era,
+          eraClash: drawn.eraClash,
+          loras: currentLorasPayload(),
+          ckpt: currentCkpt(),
+          workflowId: currentWorkflowId(),
+        });
+        clearLive(card);
+
+        if (card.classList.contains("is-done")) {
+          done += 1;
+          failStreak = 0;
+          paintMustWarn(card, drawn.mustReport);
+        } else if (card.classList.contains("is-skip")) {
+          skipped += 1;
+        } else if (!aborting) {
+          failed += 1;
+          failStreak += 1;
+        }
       }
 
       // 連續三張失敗就收工，免得 Comfy 掛了還空轉一整晚。一次幾張已經沒有上限，
@@ -3086,7 +3150,7 @@ async function runBatch() {
   }
 
   if (!crashed && !aborting && !stoppedByFail) {
-    const bits = [`完成 ${done} 張`];
+    const bits = [posOnly ? `抽牌完成 ${done} 張` : `完成 ${done} 張`];
     if (skipped) bits.push(`跳過 ${skipped} 張`);
     if (failed) bits.push(`失敗 ${failed} 張`);
     speak(bits.join("，"));
@@ -3555,7 +3619,22 @@ function bindUi() {
     stopInfinite();
     runBatch();
   });
-  $("cancel").addEventListener("click", () => stopNow("取消中…"));
+  const kickPosOnly = () => {
+    stopInfinite();
+    runBatch({ posOnly: true });
+  };
+  const goPos = $("go-pos");
+  if (goPos) {
+    goPos.disabled = false;
+    goPos.removeAttribute("aria-disabled");
+    goPos.title = "不送 Comfy，只抽 POS 方便品評";
+    goPos.addEventListener("click", kickPosOnly);
+  }
+  // 導影台殼／自動化：boot 就緒後才暴露；未就緒點了會進佇列。
+  window.__studioRunPosOnly = kickPosOnly;
+  window.__studioBootReady = true;
+  window.dispatchEvent(new CustomEvent("studio:boot-ready"));
+  $("cancel")?.addEventListener("click", () => stopNow("取消中…"));
 }
 
 function bootNote(text, cls) {
