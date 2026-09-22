@@ -567,11 +567,9 @@ body.is-shooting #open-last-shot:disabled {
   transition: opacity 140ms ease-out, transform 140ms ease-out;
 }
 .studio-toast.is-on {
-  pointer-events: auto;
-}
-.studio-toast.is-on {
   opacity: 1;
   transform: translateX(-50%) translateY(0);
+  pointer-events: auto;
 }
 .studio-toast[data-kind="neutral"] {
   border-color: color-mix(in srgb, var(--border, #444) 90%, transparent);
