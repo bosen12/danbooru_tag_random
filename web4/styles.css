@@ -431,3 +431,24 @@ body.studio.sheet-open { overflow: hidden; }
   line-height: 1.45;
   color: var(--color-muted);
 }
+
+
+/* 場記中：有 busy、還沒第一張卡——只顯示工序狀態，不塞假卡。 */
+.studio .results.is-slating {
+  display: grid;
+  place-items: center;
+  min-height: 42vh;
+  border: var(--rule) solid var(--color-rule);
+  border-radius: var(--radius);
+  background: var(--color-paper-2);
+}
+.studio .results.is-slating::before {
+  content: attr(data-slate);
+  font-family: var(--font-display);
+  font-size: var(--text-md);
+  letter-spacing: 0.12em;
+  color: var(--color-muted);
+}
+.studio .results.is-slating:empty::before {
+  content: attr(data-slate);
+}

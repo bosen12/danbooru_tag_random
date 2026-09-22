@@ -162,3 +162,30 @@ function watchResults() {
 bindSheets();
 bindSlateWatch();
 watchResults();
+
+/** 抽樣尚未出卡時，成片區只標「場記中」——不准假骨架。 */
+function syncSlating() {
+  const go = $("go");
+  const results = $("results");
+  if (!go || !results) return;
+  const busy = go.getAttribute("aria-busy") === "true" || go.disabled;
+  const hasCard = !!results.querySelector(".card");
+  results.classList.toggle("is-slating", busy && !hasCard);
+  if (busy && !hasCard) {
+    results.dataset.slate = "場記中";
+  } else {
+    delete results.dataset.slate;
+  }
+}
+
+function watchSlating() {
+  const go = $("go");
+  if (!go || typeof MutationObserver !== "function") return;
+  const kick = () => queueMicrotask(syncSlating);
+  new MutationObserver(kick).observe(go, { attributes: true, attributeFilter: ["aria-busy", "disabled"] });
+  const results = $("results");
+  if (results) new MutationObserver(kick).observe(results, { childList: true });
+  syncSlating();
+}
+
+watchSlating();

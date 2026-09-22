@@ -1,9 +1,13 @@
 /** 導影台：REASONS → 棚內人話。只作文案，不改判定。禁賦能／一鍵／完美／智能。 */
 
 export const REASON_COPY = Object.freeze({
+  pin_conflict: {
+    title: "釘選互斥",
+    line: "兩邊並存不了，系統沒有幫你選邊。",
+  },
   mutex: {
     title: "互斥打架",
-    line: "同一格只能留一個，後到的被擋下。",
+    line: "同一格兩邊並存不了，請改釘選或拿掉其中一個。",
   },
   extra_mutex: {
     title: "額外互斥",
@@ -69,7 +73,7 @@ export const REASON_COPY = Object.freeze({
 
 /** @param {string} reason */
 export function reasonTitle(reason) {
-  return REASON_COPY[reason]?.title || "規則擋下";
+  return REASON_COPY[reason]?.title || "規則不合";
 }
 
 /** @param {string} reason */
