@@ -537,7 +537,7 @@ function paintPresetBtn(btn, tags, core) {
   const state = presetState(lex, tags, pinned, core);
   btn.setAttribute("aria-pressed", state === "on" ? "true" : state === "mixed" ? "mixed" : "false");
   btn.classList.toggle("is-mixed", state === "mixed");
-  if (state === "mixed") btn.title = "只剩一部分，按一下補齊整套";
+  if (state === "mixed") btn.title = "這套只釘了一部分——再按一次補齊整套必進";
   else btn.removeAttribute("title");
 }
 
@@ -656,7 +656,8 @@ function applyNamedPreset(preset) {
 }
 
 const RATING_HINT = {
-  general: "全年齡：連暗示都沒有。情色的字整批抽不到，nsfw／explicit 在負面。",
+  general:
+    "全年齡：分級牆擋「走光／性愛」熱度；「誘惑」仍可開但露點／做愛字進不了。nsfw／explicit 在負面。",
   sensitive: "敏感：性感但不露點、不做愛、不穿內衣外出、不走光。",
   explicit: "色情：現狀，什麼都抽得到。",
 };
@@ -1860,14 +1861,33 @@ function onTagWeight(tag, dir = 1) {
 }
 
 function onTagClick(tag) {
+  const before = new Set(pinned);
   const next = cycleTag(lex, pinned, userBanned, tag);
-  const becamePin = next.pinned.has(tag) && !pinned.has(tag);
+  const becamePin = next.pinned.has(tag) && !before.has(tag);
   const becameBan = next.userBanned.has(tag) && !userBanned.has(tag);
+  const dropped = [];
+  if (becamePin) {
+    for (const t of before) {
+      if (!next.pinned.has(t)) dropped.push(t);
+    }
+  }
   pinned = next.pinned;
   userBanned = next.userBanned;
   afterPin();
-  if (becamePin) flashTag(tag, "pin");
-  else if (becameBan) flashTag(tag, "ban");
+  if (becamePin) {
+    flashTag(tag, "pin");
+    if (dropped.length) {
+      const a = labelOf(lex, dropped[0]);
+      const b = labelOf(lex, tag);
+      const more = dropped.length > 1 ? `（另退 ${dropped.length - 1}）` : "";
+      speak(`互斥換邊：${a} ↔ ${b}${more}——同一格只能留一個`);
+      try {
+        window.dispatchEvent(
+          new CustomEvent("studio:toast", { detail: { text: `${a} ↔ ${b}`, kind: "warning" } })
+        );
+      } catch { /* ignore */ }
+    }
+  } else if (becameBan) flashTag(tag, "ban");
 }
 
 function makeTagBtn(item, sec, auto) {
@@ -2905,7 +2925,8 @@ async function runSameSeedFromCard(card) {
   }
 }
 
-async function runBatch() {
+async function runBatch(opts = {}) {
+  const posOnly = !!opts.posOnly;
   if (running) return;
   running = true;
   aborting = false;
@@ -2931,8 +2952,8 @@ async function runBatch() {
     settings.n = n;
     saveStore();
 
-    if (!(await comfyUp())) {
-      speak("Comfy 掛了——先開本機 8188，修好可再開拍");
+    if (!posOnly && !(await comfyUp())) {
+      speak("Comfy 掛了——先開本機 8188，修好可再開拍；或改按「只抽牌」");
       try { window.dispatchEvent(new CustomEvent("studio:toast", { detail: { text: "Comfy 掛了", kind: "danger" } })); } catch { /* ignore */ }
       stopInfinite("Comfy 連不上");
       return;
@@ -2963,7 +2984,7 @@ async function runBatch() {
         cancelRedoQueue();
         break;
       }
-      speak(`生圖 ${i + 1}/${n}`);
+      speak(posOnly ? `抽牌 ${i + 1}/${n}` : `生圖 ${i + 1}/${n}`);
       const seedNum = randomSeed();
       const rng = mulberry32(seedNum);
       const pinForDraw =
@@ -3033,27 +3054,38 @@ async function runBatch() {
       }
       showPos(sent);
       setPosLine(card, sent);
-      setLive(card, { status: `抽好了，生圖 ${i + 1}/${n}…` });
       lastJobError = "";
-      await streamCardJob(card, seedNum, {
-        positive: sent,
-        era: drawn.era,
-        eraClash: drawn.eraClash,
-        loras: currentLorasPayload(),
-        ckpt: currentCkpt(),
-        workflowId: currentWorkflowId(),
-      });
-      clearLive(card);
-
-      if (card.classList.contains("is-done")) {
+      if (posOnly) {
+        setLive(card, { status: `只抽牌 · seed ${seedNum}` });
+        card.classList.add("is-done");
+        card.classList.remove("is-gen", "is-wait");
+        paintMustWarn(card, drawn.mustReport);
+        paintPinMiss(card);
+        clearLive(card);
         done += 1;
         failStreak = 0;
-        paintMustWarn(card, drawn.mustReport);
-      } else if (card.classList.contains("is-skip")) {
-        skipped += 1;
-      } else if (!aborting) {
-        failed += 1;
-        failStreak += 1;
+      } else {
+        setLive(card, { status: `抽好了，生圖 ${i + 1}/${n}…` });
+        await streamCardJob(card, seedNum, {
+          positive: sent,
+          era: drawn.era,
+          eraClash: drawn.eraClash,
+          loras: currentLorasPayload(),
+          ckpt: currentCkpt(),
+          workflowId: currentWorkflowId(),
+        });
+        clearLive(card);
+
+        if (card.classList.contains("is-done")) {
+          done += 1;
+          failStreak = 0;
+          paintMustWarn(card, drawn.mustReport);
+        } else if (card.classList.contains("is-skip")) {
+          skipped += 1;
+        } else if (!aborting) {
+          failed += 1;
+          failStreak += 1;
+        }
       }
 
       // 連續三張失敗就收工，免得 Comfy 掛了還空轉一整晚。一次幾張已經沒有上限，
@@ -3554,6 +3586,10 @@ function bindUi() {
   $("go").addEventListener("click", () => {
     stopInfinite();
     runBatch();
+  });
+  $("go-pos")?.addEventListener("click", () => {
+    stopInfinite();
+    runBatch({ posOnly: true });
   });
   $("cancel").addEventListener("click", () => stopNow("取消中…"));
 }

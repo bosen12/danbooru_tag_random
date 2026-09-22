@@ -526,6 +526,11 @@ function syncShootBusy() {
     openBtn.disabled = busy;
     openBtn.title = busy ? "開拍中不可放大" : "放大最近成片";
   }
+  const goPos = $("go-pos");
+  if (goPos) {
+    goPos.disabled = busy;
+    goPos.title = busy ? "開拍中不可抽牌" : "不送 Comfy，只抽 POS 方便品評";
+  }
 
   for (const btn of document.querySelectorAll(".same-seed")) {
     const card = btn.closest(".card");
