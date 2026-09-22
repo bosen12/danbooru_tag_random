@@ -1448,8 +1448,9 @@ function playCatsSwap() {
   // 四個分類、再清空，六個分類全部 cats-swap-in@running。那正是這一段
   // 刻意要避開的「每打一個字閃一下」，只是繞過 mode 從另一邊回來了。
   const cs = getComputedStyle(root);
-  const dur = parseFloat(cs.getPropertyValue("--dur-ui")) || 220;
-  const step = parseFloat(cs.getPropertyValue("--cats-stagger")) || 26;
+  // 跟 CSS --cats-swap-dur 對齊（現在是 opacity-only 的 --dur-move）。
+  const dur = parseFloat(cs.getPropertyValue("--cats-swap-dur")) || parseFloat(cs.getPropertyValue("--dur-move")) || 320;
+  const step = parseFloat(cs.getPropertyValue("--cats-stagger")) || 20;
   const gen = (catsSwapGen += 1);
   window.clearTimeout(catsSwapTimer);
   catsSwapTimer = window.setTimeout(() => {
