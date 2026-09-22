@@ -3812,7 +3812,7 @@ export function drawOne(lex, settings, pinned, userBanned, rand, seed, opts) {
     }
     if (
       WATER_DETAIL.has(item.tag) &&
-      ![...used].some(
+      !hasUsed(
         (t) => WATER_PLACE.has(t) || BATH_PLACE.has(t) || WATER_SOURCE_ACT.has(t) || BATH_ACT.has(t)
       )
     ) {
@@ -3842,7 +3842,7 @@ export function drawOne(lex, settings, pinned, userBanned, rand, seed, opts) {
     }
     if (
       item.tag === "on chair" &&
-      [...used].some(
+      hasUsed(
         (t) =>
           GROUND_BODY.has(t) ||
           LOCKED_SIT.has(t) ||
@@ -3885,7 +3885,7 @@ export function drawOne(lex, settings, pinned, userBanned, rand, seed, opts) {
     }
     if (
       item.tag === "contrapposto" &&
-      [...used].some(
+      hasUsed(
         (t) =>
           STILL_BODY.has(t) ||
           GROUND_BODY.has(t) ||
@@ -3906,9 +3906,9 @@ export function drawOne(lex, settings, pinned, userBanned, rand, seed, opts) {
     ) {
       return false;
     }
-    if (item.tag === "legs up" && [...used].some((t) => LOCKED_SIT.has(t))) return false;
+    if (item.tag === "legs up" && hasUsed((t) => LOCKED_SIT.has(t))) return false;
     if (LOCKED_SIT.has(item.tag) && used.has("legs up")) return false;
-    if (item.tag === "spread legs" && [...used].some((t) => LOCKED_SIT.has(t))) return false;
+    if (item.tag === "spread legs" && hasUsed((t) => LOCKED_SIT.has(t))) return false;
     if (LOCKED_SIT.has(item.tag) && used.has("spread legs")) return false;
     {
       const legClashBody = (t) =>
@@ -3918,16 +3918,16 @@ export function drawOne(lex, settings, pinned, userBanned, rand, seed, opts) {
         t === "on one knee" ||
         t === "squatting" ||
         t === "dancing";
-      if (LEG_EXTRA.has(item.tag) && [...used].some(legClashBody)) return false;
-      if (legClashBody(item.tag) && [...used].some((t) => LEG_EXTRA.has(t))) return false;
+      if (LEG_EXTRA.has(item.tag) && hasUsed(legClashBody)) return false;
+      if (legClashBody(item.tag) && hasUsed((t) => LEG_EXTRA.has(t))) return false;
       if ((item.tag === "legs up" || item.tag === "m legs") && used.has("standing")) return false;
       if (item.tag === "standing" && (used.has("legs up") || used.has("m legs"))) return false;
     }
-    if (LEAN_POSE.has(item.tag) && [...used].some((t) => LIE_BODY.has(t))) return false;
-    if (LIE_BODY.has(item.tag) && [...used].some((t) => LEAN_POSE.has(t))) return false;
-    if (item.tag === "leaning back" && [...used].some((t) => GROUND_BODY.has(t))) return false;
+    if (LEAN_POSE.has(item.tag) && hasUsed((t) => LIE_BODY.has(t))) return false;
+    if (LIE_BODY.has(item.tag) && hasUsed((t) => LEAN_POSE.has(t))) return false;
+    if (item.tag === "leaning back" && hasUsed((t) => GROUND_BODY.has(t))) return false;
     if (GROUND_BODY.has(item.tag) && used.has("leaning back")) return false;
-    if (item.tag === "bent over" && [...used].some((t) => LIE_BODY.has(t))) return false;
+    if (item.tag === "bent over" && hasUsed((t) => LIE_BODY.has(t))) return false;
     if (LIE_BODY.has(item.tag) && used.has("bent over")) return false;
     if (item.tag === "m legs" && (used.has("on stomach") || used.has("on side"))) return false;
     if (item.tag === "crossed legs" && used.has("on stomach")) return false;
@@ -3935,7 +3935,7 @@ export function drawOne(lex, settings, pinned, userBanned, rand, seed, opts) {
     if ((item.tag === "on stomach" || item.tag === "on side") && used.has("m legs")) return false;
     if (
       (item.tag === "breasts on table" || item.tag === "breasts on glass") &&
-      [...used].some((t) => LIE_BODY.has(t) || GROUND_BODY.has(t))
+      hasUsed((t) => LIE_BODY.has(t) || GROUND_BODY.has(t))
     ) {
       return false;
     }
@@ -3947,7 +3947,7 @@ export function drawOne(lex, settings, pinned, userBanned, rand, seed, opts) {
     }
     if (item.tag === "hand in pocket" && (used.has("nude") || used.has("completely nude"))) return false;
     if ((item.tag === "nude" || item.tag === "completely nude") && used.has("hand in pocket")) return false;
-    if (item.tag === "hand in pocket" && [...used].some((t) => /\b(bikini|swimsuit)\b/.test(t))) return false;
+    if (item.tag === "hand in pocket" && hasUsed((t) => /\b(bikini|swimsuit)\b/.test(t))) return false;
     if (/\b(bikini|swimsuit)\b/.test(item.tag) && used.has("hand in pocket")) return false;
     if (
       BOTH_ARMS.has(item.tag) &&
@@ -3963,7 +3963,7 @@ export function drawOne(lex, settings, pinned, userBanned, rand, seed, opts) {
         item.tag === "female masturbation" ||
         item.tag === "masturbation" ||
         item.tag === "masturbation through clothes") &&
-      [...used].some((t) => BOTH_ARMS.has(t))
+      hasUsed((t) => BOTH_ARMS.has(t))
     ) {
       return false;
     }
@@ -3975,7 +3975,7 @@ export function drawOne(lex, settings, pinned, userBanned, rand, seed, opts) {
     }
     if (
       item.tag === "lower body" &&
-      [...used].some((t) => BOTH_ARMS.has(t) || HAND_GESTURE.has(t) || ARM_POSE.has(t) || HANDS_BUSY_ACT.has(t))
+      hasUsed((t) => BOTH_ARMS.has(t) || HAND_GESTURE.has(t) || ARM_POSE.has(t) || HANDS_BUSY_ACT.has(t))
     ) {
       return false;
     }
@@ -3988,7 +3988,7 @@ export function drawOne(lex, settings, pinned, userBanned, rand, seed, opts) {
       (used.has("dancing") ||
         used.has("diving") ||
         used.has("suspended congress") ||
-        [...used].some((t) => WATER_ACT.has(t) || t === "wading"))
+        hasUsed((t) => WATER_ACT.has(t) || t === "wading"))
     ) {
       return false;
     }
@@ -4020,15 +4020,15 @@ export function drawOne(lex, settings, pinned, userBanned, rand, seed, opts) {
     }
     if (item.tag === "horseback riding" && used.has("legs up")) return false;
     if (item.tag === "legs up" && used.has("horseback riding")) return false;
-    if (item.tag === "hanging breasts" && [...used].some((t) => LIE_BODY.has(t) || t === "on stomach")) return false;
+    if (item.tag === "hanging breasts" && hasUsed((t) => LIE_BODY.has(t) || t === "on stomach")) return false;
     if ((LIE_BODY.has(item.tag) || item.tag === "on stomach") && used.has("hanging breasts")) return false;
-    if (item.tag === "amazon position" && [...used].some((t) => LIE_BODY.has(t) || t === "on side" || t === "on stomach")) {
+    if (item.tag === "amazon position" && hasUsed((t) => LIE_BODY.has(t) || t === "on side" || t === "on stomach")) {
       return false;
     }
     if ((LIE_BODY.has(item.tag) || item.tag === "on side" || item.tag === "on stomach") && used.has("amazon position")) {
       return false;
     }
-    if (item.tag === "driving" && [...used].some((t) => BOTH_ARMS.has(t))) return false;
+    if (item.tag === "driving" && hasUsed((t) => BOTH_ARMS.has(t))) return false;
     if (BOTH_ARMS.has(item.tag) && used.has("driving")) return false;
     if (item.tag === "cooking" && used.has("sitting")) return false;
     if (item.tag === "sitting" && used.has("cooking")) return false;
@@ -4066,13 +4066,13 @@ export function drawOne(lex, settings, pinned, userBanned, rand, seed, opts) {
     if (item.tag === "leaning back" && used.has("breasts on glass")) return false;
     if (item.tag === "breasts on glass" && used.has("leaning back")) return false;
     if (MOVE_ACT.has(item.tag) && used.has("ojou-sama pose")) return false;
-    if (item.tag === "ojou-sama pose" && [...used].some((t) => MOVE_ACT.has(t))) return false;
+    if (item.tag === "ojou-sama pose" && hasUsed((t) => MOVE_ACT.has(t))) return false;
     if (MOVE_ACT.has(item.tag) && used.has("spread legs")) return false;
-    if (item.tag === "spread legs" && [...used].some((t) => MOVE_ACT.has(t))) return false;
+    if (item.tag === "spread legs" && hasUsed((t) => MOVE_ACT.has(t))) return false;
     if (item.tag === "hat" && hasUsed((t) => FACELESS_CAM.has(t))) return false;
     if (
       (item.tag === "necktie" || item.tag === "bowtie") &&
-      [...used].some((t) => WATER_ACT.has(t) && t !== "fishing")
+      hasUsed((t) => WATER_ACT.has(t) && t !== "fishing")
     ) {
       return false;
     }
@@ -4089,7 +4089,7 @@ export function drawOne(lex, settings, pinned, userBanned, rand, seed, opts) {
     }
     if (
       (item.tag === "boots" || item.tag === "sneakers") &&
-      [...used].some((t) => WATER_ACT.has(t) && t !== "fishing")
+      hasUsed((t) => WATER_ACT.has(t) && t !== "fishing")
     ) {
       return false;
     }
@@ -4112,11 +4112,11 @@ export function drawOne(lex, settings, pinned, userBanned, rand, seed, opts) {
     if (item.tag === "sleeping" && used.has("hanging breasts")) return false;
     if (item.tag === "hanging breasts" && used.has("flat chest")) return false;
     if (item.tag === "flat chest" && used.has("hanging breasts")) return false;
-    if (item.tag === "dancing" && [...used].some((t) => HANDS_BUSY_ACT.has(t))) return false;
+    if (item.tag === "dancing" && hasUsed((t) => HANDS_BUSY_ACT.has(t))) return false;
     if (HANDS_BUSY_ACT.has(item.tag) && used.has("dancing")) return false;
     if (
       (item.tag === "masturbation" || item.tag === "female masturbation" || item.tag === "male masturbation") &&
-      [...used].some((t) => HANDS_BUSY_ACT.has(t))
+      hasUsed((t) => HANDS_BUSY_ACT.has(t))
     ) {
       return false;
     }
@@ -4163,10 +4163,10 @@ export function drawOne(lex, settings, pinned, userBanned, rand, seed, opts) {
     if (item.tag === "closed eyes" && used.has("reading")) return false;
     if (item.tag === "reading" && used.has("closed eyes")) return false;
     if (MOVE_ACT.has(item.tag) && used.has("hand on own crotch")) return false;
-    if (item.tag === "hand on own crotch" && [...used].some((t) => MOVE_ACT.has(t))) return false;
-    if (item.tag === "sweater pull" && [...used].some((t) => HANDS_BUSY_ACT.has(t))) return false;
+    if (item.tag === "hand on own crotch" && hasUsed((t) => MOVE_ACT.has(t))) return false;
+    if (item.tag === "sweater pull" && hasUsed((t) => HANDS_BUSY_ACT.has(t))) return false;
     if (HANDS_BUSY_ACT.has(item.tag) && used.has("sweater pull")) return false;
-    if (item.tag === "masturbation through clothes" && [...used].some((t) => MOVE_ACT.has(t))) return false;
+    if (item.tag === "masturbation through clothes" && hasUsed((t) => MOVE_ACT.has(t))) return false;
     if (MOVE_ACT.has(item.tag) && used.has("masturbation through clothes")) return false;
     if (
       ((WATER_ACT.has(item.tag) && item.tag !== "fishing") || used.has("pool") || used.has("ocean")) &&
@@ -4174,8 +4174,8 @@ export function drawOne(lex, settings, pinned, userBanned, rand, seed, opts) {
     ) {
       return false;
     }
-    if (item.tag === "high heels" && [...used].some((t) => WATER_ACT.has(t) && t !== "fishing")) return false;
-    if (item.tag === "showering" && [...used].some((t) => LIE_BODY.has(t))) return false;
+    if (item.tag === "high heels" && hasUsed((t) => WATER_ACT.has(t) && t !== "fishing")) return false;
+    if (item.tag === "showering" && hasUsed((t) => LIE_BODY.has(t))) return false;
     if (LIE_BODY.has(item.tag) && used.has("showering")) return false;
     if (item.tag === "riding bicycle" && used.has("on chair")) return false;
     if (item.tag === "on chair" && used.has("riding bicycle")) return false;
@@ -4200,7 +4200,7 @@ export function drawOne(lex, settings, pinned, userBanned, rand, seed, opts) {
     if ((item.tag === "fingering" || item.tag === "female masturbation" || item.tag === "masturbation") && used.has("restrained")) {
       return false;
     }
-    if (item.tag === "come hither" && [...used].some((t) => HANDS_BUSY_ACT.has(t))) return false;
+    if (item.tag === "come hither" && hasUsed((t) => HANDS_BUSY_ACT.has(t))) return false;
     if (HANDS_BUSY_ACT.has(item.tag) && used.has("come hither")) return false;
     if (item.tag === "breasts on table" && used.has("leaning back")) return false;
     if (item.tag === "leaning back" && used.has("breasts on table")) return false;
@@ -4226,7 +4226,7 @@ export function drawOne(lex, settings, pinned, userBanned, rand, seed, opts) {
     }
     if (
       (item.tag === "breasts on table" || item.tag === "breasts on glass") &&
-      [...used].some((t) => (lex.byTag.get(t)?.implies || []).includes("outdoors"))
+      hasUsed((t) => (lex.byTag.get(t)?.implies || []).includes("outdoors"))
     ) {
       return false;
     }
@@ -4234,7 +4234,7 @@ export function drawOne(lex, settings, pinned, userBanned, rand, seed, opts) {
       const listed = [...usedJobs(used, lex)].filter((j) => JOB_PLACE[j]);
       if (listed.length > 0 && listed.every((j) => jobHasOnlyOutdoorPlaces(j, era, lex))) return false;
     }
-    if (item.tag === "hand in panties" && [...used].some((t) => MOVE_ACT.has(t))) return false;
+    if (item.tag === "hand in panties" && hasUsed((t) => MOVE_ACT.has(t))) return false;
     if (MOVE_ACT.has(item.tag) && used.has("hand in panties")) return false;
     if (
       item.tag === "floating" &&
@@ -4251,13 +4251,13 @@ export function drawOne(lex, settings, pinned, userBanned, rand, seed, opts) {
     ) {
       return false;
     }
-    if (BOTH_ARMS.has(item.tag) && [...used].some((t) => MOVE_ACT.has(t))) return false;
-    if (MOVE_ACT.has(item.tag) && [...used].some((t) => BOTH_ARMS.has(t))) return false;
+    if (BOTH_ARMS.has(item.tag) && hasUsed((t) => MOVE_ACT.has(t))) return false;
+    if (MOVE_ACT.has(item.tag) && hasUsed((t) => BOTH_ARMS.has(t))) return false;
     if (item.tag === "amazon position" && (used.has("crawling") || used.has("seiza") || used.has("wariza"))) return false;
     if ((item.tag === "crawling" || item.tag === "seiza" || item.tag === "wariza") && used.has("amazon position")) {
       return false;
     }
-    if (item.tag === "crossed legs" && (used.has("horseback riding") || [...used].some((t) => MOVE_ACT.has(t)))) {
+    if (item.tag === "crossed legs" && (used.has("horseback riding") || hasUsed((t) => MOVE_ACT.has(t)))) {
       return false;
     }
     if ((item.tag === "horseback riding" || MOVE_ACT.has(item.tag)) && used.has("crossed legs")) return false;
@@ -4270,13 +4270,13 @@ export function drawOne(lex, settings, pinned, userBanned, rand, seed, opts) {
         t === "leaning back" ||
         t === "leaning forward" ||
         t === "arched back";
-      if (plantedTease(item.tag) && [...used].some((t) => MOVE_ACT.has(t))) return false;
-      if (MOVE_ACT.has(item.tag) && [...used].some(plantedTease)) return false;
+      if (plantedTease(item.tag) && hasUsed((t) => MOVE_ACT.has(t))) return false;
+      if (MOVE_ACT.has(item.tag) && hasUsed(plantedTease)) return false;
     }
     if (
       item.tag === "bunk bed" &&
       // kids room 不在詞庫裡，Danbooru 上也是 0 張 —— 懸空的條件，拿掉。
-      ![...used].some((t) => t === "bedroom" || t === "hotel room")
+      !hasUsed((t) => t === "bedroom" || t === "hotel room")
     ) {
       return false;
     }
@@ -4296,8 +4296,8 @@ export function drawOne(lex, settings, pinned, userBanned, rand, seed, opts) {
         t === "hair bun" ||
         t === "single hair bun" ||
         t === "double bun";
-      if (shortHair(item.tag) && [...used].some(longStyle)) return false;
-      if (longStyle(item.tag) && [...used].some(shortHair)) return false;
+      if (shortHair(item.tag) && hasUsed(longStyle)) return false;
+      if (longStyle(item.tag) && hasUsed(shortHair)) return false;
     }
     if (item.tag === "legs up" && used.has("driving")) return false;
     if (item.tag === "driving" && used.has("legs up")) return false;
@@ -4310,8 +4310,8 @@ export function drawOne(lex, settings, pinned, userBanned, rand, seed, opts) {
         t === "on one knee" ||
         t === "standing sex" ||
         t === "contrapposto";
-      if (waterPlantBody(item.tag) && [...used].some(waterPlantAct)) return false;
-      if (waterPlantAct(item.tag) && [...used].some(waterPlantBody)) return false;
+      if (waterPlantBody(item.tag) && hasUsed(waterPlantAct)) return false;
+      if (waterPlantAct(item.tag) && hasUsed(waterPlantBody)) return false;
     }
     if (item.mutex === "held_prop") {
       const acts = usedActs(used, lex);
@@ -4322,17 +4322,17 @@ export function drawOne(lex, settings, pinned, userBanned, rand, seed, opts) {
     // 因此在已釘／已選的水域情境不存在時，候選階段就不讓它們進池。
     if (
       (item.tag === "beach umbrella" || item.tag === "innertube") &&
-      ![...used].some((t) => NEEDS_CONTEXT[item.tag].has(t))
+      !hasUsed((t) => NEEDS_CONTEXT[item.tag].has(t))
     ) {
       return false;
     }
-    if (item.tag === "stethoscope" && ![...used].some((t) => t === "nurse" || t === "doctor" || t === "clinic" || t === "hospital")) {
+    if (item.tag === "stethoscope" && !hasUsed((t) => t === "nurse" || t === "doctor" || t === "clinic" || t === "hospital")) {
       return false;
     }
-    if (item.tag === "hard hat" && ![...used].some((t) => t === "construction worker" || t === "construction site")) {
+    if (item.tag === "hard hat" && !hasUsed((t) => t === "construction worker" || t === "construction site")) {
       return false;
     }
-    if (item.tag === "lab coat" && ![...used].some((t) => t === "scientist" || t === "laboratory" || t === "doctor")) {
+    if (item.tag === "lab coat" && !hasUsed((t) => t === "scientist" || t === "laboratory" || t === "doctor")) {
       return false;
     }
     // 整套制服已經自帶外衣，不要再疊第二件。使用者明確釘的不受影響。
@@ -4389,7 +4389,7 @@ export function drawOne(lex, settings, pinned, userBanned, rand, seed, opts) {
     // 場地在 fillSlot("env","place") 就定了，排在天氣那一格前面，所以這條問得到答案，
     // 放 allow() 是對的（而不是事後刪除）—— 這樣天氣那一格也不會把名額浪費在
     // 一個注定要被刪掉的 steam 上。
-    if (item.tag === "steam" && ![...used].some((t) => STEAM_CTX.has(t))) return false;
+    if (item.tag === "steam" && !hasUsed((t) => STEAM_CTX.has(t))) return false;
     // 時代符號最多三個。以前這件事是靠 env 配額小而「隱性」成立的 —— 配額從 4 放到
     // 6 之後，中世紀 300 張裡有 28 張塞了四個以上（城堡＋火把＋掛毯＋旗幟…），
     // 整張圖變成年代符號展示。既有測試「不會塞一整排時代字」抓到的就是這個。
@@ -4454,7 +4454,7 @@ export function drawOne(lex, settings, pinned, userBanned, rand, seed, opts) {
     if (item.tag === "sitting" && used.has("cleaning")) return false;
     if (item.tag === "hanging breasts" && used.has("leaning back")) return false;
     if (item.tag === "leaning back" && used.has("hanging breasts")) return false;
-    if (item.tag === "selfie" && [...used].some((t) => BOTH_ARMS.has(t))) return false;
+    if (item.tag === "selfie" && hasUsed((t) => BOTH_ARMS.has(t))) return false;
     if (BOTH_ARMS.has(item.tag) && used.has("selfie")) return false;
     if (item.tag === "lipstick" && hasUsed((t) => FACELESS_CAM.has(t))) return false;
     if (item.tag === "sunbathing" && used.has("rain")) return false;
@@ -4476,7 +4476,7 @@ export function drawOne(lex, settings, pinned, userBanned, rand, seed, opts) {
     if (item.tag === "amazon position" && used.has("standing")) return false;
     if (item.tag === "standing" && used.has("amazon position")) return false;
     if (MOVE_ACT.has(item.tag) && (used.has("legs up") || used.has("leg lift"))) return false;
-    if ((item.tag === "legs up" || item.tag === "leg lift") && [...used].some((t) => MOVE_ACT.has(t))) return false;
+    if ((item.tag === "legs up" || item.tag === "leg lift") && hasUsed((t) => MOVE_ACT.has(t))) return false;
     if (item.tag === "horseback riding" && used.has("on one knee")) return false;
     if (item.tag === "on one knee" && used.has("horseback riding")) return false;
     if (item.tag === "singing" && used.has("paizuri gesture")) return false;
@@ -4512,7 +4512,7 @@ export function drawOne(lex, settings, pinned, userBanned, rand, seed, opts) {
     if (item.tag === "amazon position" && used.has("indian style")) return false;
     if (
       (item.tag === "breasts on table" || item.tag === "breasts on glass") &&
-      ([...used].some((t) => MOVE_ACT.has(t)) || used.has("horseback riding"))
+      (hasUsed((t) => MOVE_ACT.has(t)) || used.has("horseback riding"))
     ) {
       return false;
     }
@@ -4522,14 +4522,14 @@ export function drawOne(lex, settings, pinned, userBanned, rand, seed, opts) {
     ) {
       return false;
     }
-    if ((item.tag === "yoga" || item.tag === "stretching") && [...used].some((t) => STILL_BODY.has(t))) return false;
+    if ((item.tag === "yoga" || item.tag === "stretching") && hasUsed((t) => STILL_BODY.has(t))) return false;
     if (STILL_BODY.has(item.tag) && (used.has("yoga") || used.has("stretching"))) return false;
     if (item.mutex === "sex_act" || item.group === "sex") {
       const acts = usedActs(used, lex);
       if ([...acts].some((a) => MOVE_ACT.has(a) && !SEX_OK_ACTIVITY.has(a))) return false;
     }
     if (MOVE_ACT.has(item.tag) && !SEX_OK_ACTIVITY.has(item.tag)) {
-      if ([...used].some((t) => lex.byTag.get(t)?.mutex === "sex_act" || lex.byTag.get(t)?.group === "sex")) {
+      if (hasUsed((t) => lex.byTag.get(t)?.mutex === "sex_act" || lex.byTag.get(t)?.group === "sex")) {
         return false;
       }
     }
@@ -4537,7 +4537,7 @@ export function drawOne(lex, settings, pinned, userBanned, rand, seed, opts) {
     if (item.tag === "closed eyes" && used.has("glowing eyes")) return false;
     if (
       item.tag === "after bathing" &&
-      [...used].some(
+      hasUsed(
         (t) =>
           BATH_ACT.has(t) ||
           (WATER_ACT.has(t) && t !== "fishing") ||
@@ -4572,7 +4572,7 @@ export function drawOne(lex, settings, pinned, userBanned, rand, seed, opts) {
     }
     if (item.tag === "rain" && used.has("starry sky")) return false;
     if (item.tag === "starry sky" && used.has("rain")) return false;
-    if (item.tag === "lower body" && [...used].some((t) => CHEST_NEED_TAGS.has(t))) return false;
+    if (item.tag === "lower body" && hasUsed((t) => CHEST_NEED_TAGS.has(t))) return false;
     if (CHEST_NEED_TAGS.has(item.tag) && used.has("lower body")) return false;
     if (
       used.has("expressionless") &&
@@ -4655,12 +4655,12 @@ export function drawOne(lex, settings, pinned, userBanned, rand, seed, opts) {
       const handsBusy = usedHas(used, "_hands", (t) => HANDS_BUSY_ACT.has(t) || HANDS_BUSY_BODY.has(t));
       if (ARM_POSE.has(item.tag) && !pinned.has(item.tag) && handsBusy) return false;
       if (BOTH_ARMS.has(item.tag) && !pinned.has(item.tag) && handsBusy) return false;
-      if (HANDS_BUSY_ACT.has(item.tag) && [...used].some((t) => BOTH_ARMS.has(t))) return false;
-      if (ARM_POSE.has(item.tag) && [...used].some((t) => BOTH_ARMS.has(t)) && !BOTH_ARMS.has(item.tag)) return false;
-      if (BOTH_ARMS.has(item.tag) && [...used].some((t) => ARM_POSE.has(t) && !BOTH_ARMS.has(t))) return false;
+      if (HANDS_BUSY_ACT.has(item.tag) && hasUsed((t) => BOTH_ARMS.has(t))) return false;
+      if (ARM_POSE.has(item.tag) && hasUsed((t) => BOTH_ARMS.has(t)) && !BOTH_ARMS.has(item.tag)) return false;
+      if (BOTH_ARMS.has(item.tag) && hasUsed((t) => ARM_POSE.has(t) && !BOTH_ARMS.has(t))) return false;
       if (HAND_GESTURE.has(item.tag) && !pinned.has(item.tag) && handsBusy) return false;
-      if (HANDS_BUSY_ACT.has(item.tag) && [...used].some((t) => ARM_POSE.has(t))) return false;
-      if (HANDS_BUSY_ACT.has(item.tag) && [...used].some((t) => HAND_GESTURE.has(t))) return false;
+      if (HANDS_BUSY_ACT.has(item.tag) && hasUsed((t) => ARM_POSE.has(t))) return false;
+      if (HANDS_BUSY_ACT.has(item.tag) && hasUsed((t) => HAND_GESTURE.has(t))) return false;
       if (item.section === "clothing") {
         // 「只穿一件」：兩個方向都要擋，因為服裝那一段的填入順序不固定。
         if (NAKED_ONLY.has(item.tag)) {
@@ -4669,7 +4669,7 @@ export function drawOne(lex, settings, pinned, userBanned, rand, seed, opts) {
             if (it && it.section === "clothing" && BODY_WORN_GROUP.has(it.group)) return false;
           }
         } else if (BODY_WORN_GROUP.has(item.group)) {
-          if ([...used].some((t) => NAKED_ONLY.has(t))) return false;
+          if (hasUsed((t) => NAKED_ONLY.has(t))) return false;
         }
         // 只穿內衣：外套、上衣、下身、整套、時代服裝與袖子描述都不能並存。
         if (item.tag === "underwear only") {
@@ -4685,7 +4685,7 @@ export function drawOne(lex, settings, pinned, userBanned, rand, seed, opts) {
             if (lex.byTag.get(t)?.group === "underwear") return false;
           }
         } else if (item.group === "underwear") {
-          if ([...used].some((t) => isSwimGarment(lex.byTag.get(t)))) return false;
+          if (hasUsed((t) => isSwimGarment(lex.byTag.get(t)))) return false;
         }
       }
       // 傢俱：室內才有，而且人得在上面 —— 站著的人不會「在沙發上」。
@@ -4693,7 +4693,7 @@ export function drawOne(lex, settings, pinned, userBanned, rand, seed, opts) {
       // 也不管室內外（基準線裡 24 張有傢俱的圖，8 張是室外、4 張配站姿）。
       if (item.mutex === "furniture") {
         if (used.has("outdoors")) return false;
-        if ([...used].some((t) => UPRIGHT_BODY.has(t))) return false;
+        if (hasUsed((t) => UPRIGHT_BODY.has(t))) return false;
       }
       // 釘沙發／床時姿勢還沒填。standing → 傢俱已擋，反向沒擋，實測釘沙發
       // 6/40 張站著。on chair 另有雙向規則。on desk 站著合理，不擋。
@@ -4703,20 +4703,20 @@ export function drawOne(lex, settings, pinned, userBanned, rand, seed, opts) {
       ) {
         return false;
       }
-      if (HANDS_BUSY_BODY.has(item.tag) && [...used].some((t) => ARM_POSE.has(t))) return false;
-      if (HANDS_BUSY_ACT.has(item.tag) && [...used].some((t) => HANDS_BUSY_BODY.has(t))) return false;
-      if (HANDS_BUSY_ACT.has(item.tag) && [...used].some((t) => HANDS_BUSY_ACT.has(t))) return false;
+      if (HANDS_BUSY_BODY.has(item.tag) && hasUsed((t) => ARM_POSE.has(t))) return false;
+      if (HANDS_BUSY_ACT.has(item.tag) && hasUsed((t) => HANDS_BUSY_BODY.has(t))) return false;
+      if (HANDS_BUSY_ACT.has(item.tag) && hasUsed((t) => HANDS_BUSY_ACT.has(t))) return false;
       if (HANDS_BUSY_BODY.has(item.tag) && [...usedActs(used, lex)].some((a) => HANDS_BUSY_ACT.has(a))) return false;
-      if (HAND_GESTURE.has(item.tag) && [...used].some((t) => BOTH_ARMS.has(t) || HANDS_BUSY_BODY.has(t))) return false;
+      if (HAND_GESTURE.has(item.tag) && hasUsed((t) => BOTH_ARMS.has(t) || HANDS_BUSY_BODY.has(t))) return false;
       {
-        if (BOOK_ACT.has(item.tag) && [...used].some((t) => BOTH_ARMS.has(t) || HAND_GESTURE.has(t))) return false;
-        if ((BOTH_ARMS.has(item.tag) || HAND_GESTURE.has(item.tag)) && [...used].some((t) => BOOK_ACT.has(t))) {
+        if (BOOK_ACT.has(item.tag) && hasUsed((t) => BOTH_ARMS.has(t) || HAND_GESTURE.has(t))) return false;
+        if ((BOTH_ARMS.has(item.tag) || HAND_GESTURE.has(item.tag)) && hasUsed((t) => BOOK_ACT.has(t))) {
           return false;
         }
       }
       if (
         (BOTH_ARMS.has(item.tag) || HANDS_BUSY_BODY.has(item.tag)) &&
-        [...used].some((t) => HAND_GESTURE.has(t))
+        hasUsed((t) => HAND_GESTURE.has(t))
       ) {
         return false;
       }
@@ -4751,7 +4751,7 @@ export function drawOne(lex, settings, pinned, userBanned, rand, seed, opts) {
       return false;
     }
     if (realisticOn(settings)) {
-      if (item.tag === "rape" && [...used].some((t) => RAPE_BAD_PLACE.has(t))) return false;
+      if (item.tag === "rape" && hasUsed((t) => RAPE_BAD_PLACE.has(t))) return false;
       if (RAPE_BAD_PLACE.has(item.tag) && used.has("rape")) return false;
     }
     if (lockSceneOn(settings)) {
@@ -4762,9 +4762,9 @@ export function drawOne(lex, settings, pinned, userBanned, rand, seed, opts) {
         if (listed.length > 0 && listed.every((j) => !jobHasSleepPlace(j, era, lex))) return false;
       }
       if (item.mutex === "activity" && !pinned.has(item.tag)) {
-        const indoorFix = [...used].some((t) => INDOOR_PROP.has(t) || INDOOR_FURN.has(t));
+        const indoorFix = hasUsed((t) => INDOOR_PROP.has(t) || INDOOR_FURN.has(t));
         const outdoorWx =
-          [...used].some((t) => OUTDOOR_WEATHER.has(t)) && !used.has("outdoors");
+          hasUsed((t) => OUTDOOR_WEATHER.has(t)) && !used.has("outdoors");
         if (indoorFix || outdoorWx) {
           if (!ACT_PLACE[item.tag]) return false;
           if (indoorFix && !actHasIndoorPlace(item.tag, era, lex)) return false;
@@ -4817,7 +4817,7 @@ export function drawOne(lex, settings, pinned, userBanned, rand, seed, opts) {
         if (
           (places.size > 0 && !currentPlaceWorks) ||
           (used.has("outdoors") && !used.has("indoors")) ||
-          ([...used].some((t) => OUTDOOR_WEATHER.has(t)) && !used.has("outdoors")) ||
+          (hasUsed((t) => OUTDOOR_WEATHER.has(t)) && !used.has("outdoors")) ||
           (!places.size && !canStillPickIndoorPlace)
         ) {
           return false;
@@ -4834,17 +4834,17 @@ export function drawOne(lex, settings, pinned, userBanned, rand, seed, opts) {
       // 釘 on bed 時場地／in_out 還沒填。outdoors → 床已擋，反向沒擋，
       // 實測釘床／椅／沙發 15～20/40 張自動 outdoors。bunk bed 本來就雙向。
       if (used.has("outdoors") && INDOOR_FURN.has(item.tag)) return false;
-      if (item.tag === "outdoors" && [...used].some((t) => INDOOR_FURN.has(t))) return false;
+      if (item.tag === "outdoors" && hasUsed((t) => INDOOR_FURN.has(t))) return false;
       if (
         (item.implies || []).includes("outdoors") &&
-        [...used].some((t) => INDOOR_FURN.has(t))
+        hasUsed((t) => INDOOR_FURN.has(t))
       ) {
         return false;
       }
       if (used.has("indoors") && item.tag === "starry sky") return false;
       if (
         INDOOR_FURN.has(item.tag) &&
-        [...used].some((t) => t === "underwater" || t === "ocean" || t === "pool" || t === "car interior" || BATH_PLACE.has(t))
+        hasUsed((t) => t === "underwater" || t === "ocean" || t === "pool" || t === "car interior" || BATH_PLACE.has(t))
       ) {
         return false;
       }
