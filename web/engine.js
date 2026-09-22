@@ -4737,15 +4737,16 @@ export function drawOne(lex, settings, pinned, userBanned, rand, seed, opts) {
         return false;
       }
     }
-    if (lockOn && !sportKitOk(item, used)) return false;
-    if (lockOn && !sportPlaceOk(item, used)) return false;
-    if (lockOn && !sportGearPlaceOk(item, used, lex)) return false;
-    if (
-      lockOn &&
-      (item.mutex === "sport_ball" || item.mutex === "sport_prop") &&
-      sportIdsOf(used) === null
-    ) {
-      return false;
+    if (lockOn) {
+      if (!sportKitOk(item, used)) return false;
+      if (!sportPlaceOk(item, used)) return false;
+      if (!sportGearPlaceOk(item, used, lex)) return false;
+      if (
+        (item.mutex === "sport_ball" || item.mutex === "sport_prop") &&
+        sportIdsOf(used) === null
+      ) {
+        return false;
+      }
     }
     if (real) {
       if (item.tag === "rape" && hasUsed((t) => RAPE_BAD_PLACE.has(t))) return false;
