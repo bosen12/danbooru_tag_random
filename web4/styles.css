@@ -567,14 +567,24 @@ body.is-shooting #open-last-shot:disabled {
   transition: opacity 140ms ease-out, transform 140ms ease-out;
 }
 .studio-toast.is-on {
+  pointer-events: auto;
+}
+.studio-toast.is-on {
   opacity: 1;
   transform: translateX(-50%) translateY(0);
 }
-.studio-toast[data-kind="warn"] {
-  border-color: color-mix(in srgb, #e8a838 50%, var(--border, #333));
+.studio-toast[data-kind="neutral"] {
+  border-color: color-mix(in srgb, var(--border, #444) 90%, transparent);
 }
-.studio-toast[data-kind="ok"] {
-  border-color: color-mix(in srgb, var(--accent, #9ae6b4) 45%, var(--border, #333));
+.studio-toast[data-kind="warning"] {
+  border-color: color-mix(in srgb, #e8a838 55%, var(--border, #333));
+}
+.studio-toast[data-kind="danger"] {
+  border-color: color-mix(in srgb, #e57373 60%, var(--border, #333));
+}
+.studio-toast {
+  pointer-events: auto;
+  cursor: default;
 }
 
 

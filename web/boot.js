@@ -2795,6 +2795,7 @@ async function runSameSeedFromCard(card) {
   const seedNum = Number(card.dataset.seed) >>> 0;
   if (!(await comfyUp())) {
     speak("Comfy 掛了——先開本機 8188，修好可再試");
+    try { window.dispatchEvent(new CustomEvent("studio:toast", { detail: { text: "Comfy 掛了", kind: "danger" } })); } catch { /* ignore */ }
     return;
   }
   running = true;
@@ -2824,6 +2825,7 @@ async function runSameSeedFromCard(card) {
     }
     if (!drawn.positive || !String(drawn.positive).trim()) {
       speak("同種子重抽得到空 POS——改釘選或尺度再試");
+      try { window.dispatchEvent(new CustomEvent("studio:toast", { detail: { text: "空 POS", kind: "danger" } })); } catch { /* ignore */ }
       return;
     }
     const prevBare = String(card.dataset.bare || "").trim();
@@ -2852,10 +2854,10 @@ async function runSameSeedFromCard(card) {
     });
     if (ruleStable) {
       speak("規則穩，同一張");
-      try { window.dispatchEvent(new CustomEvent("studio:toast", { detail: { text: "規則穩", kind: "ok" } })); } catch { /* ignore */ }
+      try { window.dispatchEvent(new CustomEvent("studio:toast", { detail: { text: "規則穩", kind: "neutral" } })); } catch { /* ignore */ }
     } else {
       speak("同種子卻漂移——場記與抽樣不一致");
-      try { window.dispatchEvent(new CustomEvent("studio:toast", { detail: { text: "同種子卻漂移", kind: "warn" } })); } catch { /* ignore */ }
+      try { window.dispatchEvent(new CustomEvent("studio:toast", { detail: { text: "同種子卻漂移", kind: "warning" } })); } catch { /* ignore */ }
     }
   } catch (err) {
     speak("同種子重抽失敗——可再試一次");
@@ -2893,6 +2895,7 @@ async function runBatch() {
 
     if (!(await comfyUp())) {
       speak("Comfy 掛了——先開本機 8188，修好可再開拍");
+      try { window.dispatchEvent(new CustomEvent("studio:toast", { detail: { text: "Comfy 掛了", kind: "danger" } })); } catch { /* ignore */ }
       stopInfinite("Comfy 連不上");
       return;
     }
@@ -2951,6 +2954,7 @@ async function runBatch() {
       }
       if (!drawn.positive || !String(drawn.positive).trim()) {
         speak("抽樣得到空 POS——改釘選或尺度再試");
+      try { window.dispatchEvent(new CustomEvent("studio:toast", { detail: { text: "空 POS", kind: "danger" } })); } catch { /* ignore */ }
         failed += 1;
         failStreak += 1;
         continue;

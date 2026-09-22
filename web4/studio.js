@@ -69,19 +69,60 @@ function flashSlate(msg) {
   // 同一事件只准一個佔視線：flashSlate 專責場記條；短暫回饋走 showToast。
 }
 
+/** Web Awesome 節奏：neutral／warning／danger；hover 暫停計時。 */
+const TOAST_KIND = { ok: "neutral", neutral: "neutral", warn: "warning", warning: "warning", danger: "danger", error: "danger" };
+const TOAST_MS = { neutral: 1400, warning: 2200, danger: 3200 };
+
 let toastTimer = 0;
-function showToast(text, kind = "ok") {
-  const el = $("studio-toast");
-  if (!el || !text) return;
-  el.hidden = false;
-  el.dataset.kind = kind;
-  el.textContent = text;
-  el.classList.add("is-on");
+let toastPausedAt = 0;
+let toastRemain = 0;
+let toastKindNow = "neutral";
+
+function clearToastTimer() {
   window.clearTimeout(toastTimer);
+  toastTimer = 0;
+}
+
+function hideToastSoon(ms) {
+  clearToastTimer();
+  toastRemain = ms;
   toastTimer = window.setTimeout(() => {
+    const el = $("studio-toast");
+    if (!el) return;
     el.classList.remove("is-on");
     el.hidden = true;
-  }, 1400);
+    toastRemain = 0;
+  }, ms);
+}
+
+function showToast(text, kind = "neutral") {
+  const el = $("studio-toast");
+  if (!el || !text) return;
+  const k = TOAST_KIND[kind] || "neutral";
+  toastKindNow = k;
+  el.hidden = false;
+  el.dataset.kind = k;
+  el.textContent = text;
+  el.classList.add("is-on");
+  hideToastSoon(TOAST_MS[k] || 1400);
+}
+
+function bindToastHover() {
+  const el = $("studio-toast");
+  if (!el || el.dataset.hoverBound === "1") return;
+  el.dataset.hoverBound = "1";
+  el.addEventListener("mouseenter", () => {
+    if (!el.classList.contains("is-on")) return;
+    clearToastTimer();
+    toastPausedAt = Date.now();
+  });
+  el.addEventListener("mouseleave", () => {
+    if (!el.classList.contains("is-on")) return;
+    const spent = toastPausedAt ? Date.now() - toastPausedAt : 0;
+    const left = Math.max(400, (toastRemain || TOAST_MS[toastKindNow] || 1400) - spent);
+    hideToastSoon(left);
+    toastPausedAt = 0;
+  });
 }
 
 /** Geist 節奏：已知兩步才用條；走完直接換建成片，不寫成功。 */
@@ -290,9 +331,9 @@ function renderClashLine(line) {
       const payload = `${a} ↔ ${b}`;
       try {
         await navigator.clipboard.writeText(payload);
-        showToast("已拷貝對立項", "ok");
+        showToast("已拷貝對立項", "neutral");
       } catch {
-        showToast("拷貝失敗：權限", "warn");
+        showToast("拷貝失敗：權限", "danger");
       }
     });
     wrap.append(btn);
@@ -391,23 +432,23 @@ function setStatus(msg) {
 
 async function copyLastPos() {
   if (document.body.classList.contains("is-shooting")) {
-    showToast("開拍中，先別拷", "warn");
+    showToast("開拍中，先別拷", "warning");
     setStatus("開拍中，先別拷 POS");
     return;
   }
   const card = latestDoneCard();
   const pos = card?.dataset?.positive || "";
   if (!pos) {
-    showToast("沒有可拷的 POS", "warn");
+    showToast("沒有可拷的 POS", "warning");
     setStatus("還沒有可拷的 POS——先開拍成片");
     return;
   }
   try {
     await navigator.clipboard.writeText(pos);
-    showToast("已拷貝", "ok");
+    showToast("已拷貝", "neutral");
     setStatus("已拷貝 POS");
   } catch {
-    showToast("拷貝失敗：權限", "warn");
+    showToast("拷貝失敗：權限", "danger");
     setStatus("拷貝失敗——瀏覽器不給剪貼簿權限");
   }
 }
@@ -416,7 +457,7 @@ function openLastShot() {
   const card = latestDoneCard();
   const shot = card?.querySelector(".shot");
   if (!shot) {
-    showToast("還沒有成片", "warn");
+    showToast("還沒有成片", "warning");
     setStatus("還沒有成片可放大");
     return;
   }
@@ -489,7 +530,7 @@ function bindCancelClear() {
     results.classList.remove("is-slating");
     delete results.dataset.slate;
     setStageProgress("done");
-    showToast("場記取消", "warn");
+    showToast("場記取消", "warning");
   });
 }
 bindCancelClear();
