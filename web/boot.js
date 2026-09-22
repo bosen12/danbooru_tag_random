@@ -60,6 +60,7 @@ import {
   sportPlacePinWarnings,
   toggleNamedPreset,
 } from "./engine.js";
+import { RATING_BLOCKS_HEAT, heatsBlockedByRating } from "./scene-policy.js";
 import {
   applyRecipeModels,
   currentCkpt,
@@ -319,12 +320,11 @@ const HEAT_LABELS = { activity: "活動", tease: "誘惑", flash: "走光", sex:
 // 實測（每格 400 張）：全年齡 + 走光 -> 情色內容 0%；全年齡 + 性愛 -> 0%。
 // 使用者勾了卻一張都抽不到，而且沒有任何提示 —— 這是我加三段滑桿時漏掉的一塊，
 // 舊的布林開關其實也有，只是三段之後更容易踩到。
-const RATING_BLOCKS_HEAT = { general: ["flash", "sex"], sensitive: [], explicit: [] };
+// RATING_BLOCKS_HEAT — single source: ./scene-policy.js (shared with allow / Y1)
 
 function ratingHeatClash() {
   const rating = RATINGS.includes(settings.rating) ? settings.rating : "explicit";
-  const blocked = RATING_BLOCKS_HEAT[rating] || [];
-  return (settings.heats || []).filter((h) => blocked.includes(h));
+  return heatsBlockedByRating(rating).filter((h) => (settings.heats || []).includes(h));
 }
 
 /**
