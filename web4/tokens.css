@@ -1,0 +1,57 @@
+/* 導影台 · dark control room · gel amber · dense mist
+ * Intent left · Stage center · Lexicon sheet · one primary "開拍"
+ */
+:root {
+  --color-paper: oklch(14% 0.02 260);
+  --color-paper-2: oklch(18% 0.022 255);
+  --color-paper-3: oklch(22% 0.024 250);
+  --color-rule: oklch(30% 0.02 250);
+  --color-chip: oklch(20% 0.02 255);
+  --color-neutral: oklch(58% 0.02 250);
+  --color-muted: oklch(68% 0.02 80);
+  --color-ink: oklch(94% 0.015 90);
+  --color-accent: oklch(78% 0.14 75);
+  --color-accent-2: oklch(70% 0.12 55);
+  --color-focus: oklch(82% 0.12 85);
+  --color-pin: oklch(82% 0.12 85);
+  --color-ban: oklch(45% 0.02 250);
+  --color-danger: oklch(62% 0.18 25);
+  --color-ok: oklch(72% 0.12 150);
+  --color-weight: oklch(78% 0.1 210);
+  --color-stage: oklch(16% 0.018 255);
+  --color-gel: oklch(72% 0.16 55 / 0.35);
+
+  --font-display: "Syne", "Bricolage Grotesque", "Arial Narrow", sans-serif;
+  --font-body: "IBM Plex Sans", "Noto Sans TC", "Segoe UI", sans-serif;
+  --font-outlier: "IBM Plex Mono", ui-monospace, monospace;
+
+  --text-xs: 0.75rem;
+  --text-sm: 0.8125rem;
+  --text-base: 1rem;
+  --text-md: 1.25rem;
+  --text-lg: 1.5625rem;
+  --text-xl: 1.9531rem;
+  --text-2xl: 2.4414rem;
+
+  --space-1: 4px;
+  --space-2: 8px;
+  --space-3: 12px;
+  --space-4: 16px;
+  --space-5: 24px;
+  --space-6: 32px;
+  --space-7: 48px;
+  --space-8: 64px;
+
+  --rule: 1px;
+  --radius: 10px;
+  --rail: minmax(280px, 22vw);
+  --dock: 84px;
+  --mist: blur(14px);
+
+  --ease-out: cubic-bezier(0.16, 1, 0.3, 1);
+  --ease-in: cubic-bezier(0.55, 0, 1, 0.45);
+  --ease-in-out: cubic-bezier(0.65, 0, 0.35, 1);
+  --dur-micro: 140ms;
+  --dur-ui: 240ms;
+  --dur-move: 360ms;
+}

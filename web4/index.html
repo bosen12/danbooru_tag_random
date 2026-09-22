@@ -1,0 +1,241 @@
+<!DOCTYPE html>
+<html lang="zh-Hant">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover" />
+    <meta name="theme-color" content="#0f1118" />
+    <title>導影台 · 排字匣</title>
+    <link rel="icon" href="logo.svg" type="image/svg+xml" />
+    <link rel="preload" href="lexicon.json" as="fetch" crossorigin />
+    <link rel="modulepreload" href="boot.js" />
+    <link rel="modulepreload" href="engine.js" />
+    <link rel="modulepreload" href="lora.js" />
+    <link rel="preconnect" href="https://fonts.googleapis.com" />
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+    <link
+      rel="stylesheet"
+      href="https://fonts.googleapis.com/css2?family=IBM+Plex+Mono:wght@400&family=IBM+Plex+Sans:wght@400;500;600&family=Syne:wght@700;800&display=swap"
+      media="print"
+      onload="this.media='all'"
+    />
+    <noscript>
+      <link
+        rel="stylesheet"
+        href="https://fonts.googleapis.com/css2?family=IBM+Plex+Mono:wght@400&family=IBM+Plex+Sans:wght@400;500;600&family=Syne:wght@700;800&display=swap"
+      />
+    </noscript>
+    <link rel="stylesheet" href="tokens.css" />
+    <link rel="stylesheet" href="boot.css" />
+    <link rel="stylesheet" href="styles.css" />
+    <link rel="stylesheet" href="lora.css" />
+  </head>
+  <body class="studio">
+    <a class="skip" href="#results">跳到成片</a>
+
+    <header class="mast studio-mast">
+      <h1 class="wordmark" translate="no">
+        <img class="brand-mark" src="logo.svg" width="36" height="36" alt="" aria-hidden="true" />
+        <span class="wordmark-copy">導影台<span>排字匣 · Intent → Shot</span></span>
+      </h1>
+      <div class="mast-tools" id="mast-tools">
+        <div class="ping" id="ping" data-ok="0"><i></i><span>Comfy…</span></div>
+      </div>
+    </header>
+
+    <div class="slate" id="slate">
+      <!-- Intent / 打光台 -->
+      <aside class="intent" id="sec-rules" aria-label="意圖">
+        <header class="intent-head">
+          <p class="eyebrow">Intent</p>
+          <h2>打光與場記</h2>
+          <p class="slate-line" id="slate-line" aria-live="polite">色情 · 混合 · 現代 · 女</p>
+        </header>
+
+        <div class="field rating-field">
+          <span class="field-label" id="rating-label">分級</span>
+          <ul class="segmented" id="rating" aria-labelledby="rating-label" aria-describedby="rating-hint">
+            <li class="segmented-item">
+              <button type="button" class="segmented-btn" data-rating="general" aria-current="false" tabindex="-1">全年齡</button>
+            </li>
+            <li class="segmented-item">
+              <button type="button" class="segmented-btn" data-rating="sensitive" aria-current="false" tabindex="-1">敏感</button>
+            </li>
+            <li class="segmented-item">
+              <button type="button" class="segmented-btn" data-rating="explicit" aria-current="true" tabindex="0">色情</button>
+            </li>
+          </ul>
+          <p class="hint" id="rating-hint">分級牆高於釘選。敏感／全年齡會擋下不合的 pin，但不會刪掉你的釘選狀態。</p>
+        </div>
+
+        <div class="field step">
+          <label><span class="num">1</span> 畫面裡有誰</label>
+          <div class="row">
+            <button type="button" class="chip-toggle" id="girl" aria-pressed="true">女</button>
+            <button type="button" class="chip-toggle" id="boy" aria-pressed="false">男</button>
+            <button type="button" class="chip-toggle" id="cast-any" aria-pressed="false">不限</button>
+          </div>
+          <p class="hint clash" id="cast-clash" hidden><span></span></p>
+        </div>
+
+        <fieldset class="heat step">
+          <legend><span class="num">2</span> 尺度與場景</legend>
+          <div class="row" id="heats">
+            <button type="button" class="chip-toggle" data-heat="mixed" aria-pressed="true">混合</button>
+            <button type="button" class="chip-toggle" data-heat="activity" aria-pressed="false">活動</button>
+            <button type="button" class="chip-toggle" data-heat="tease" aria-pressed="false">誘惑</button>
+            <button type="button" class="chip-toggle" data-heat="flash" aria-pressed="false">走光</button>
+            <button type="button" class="chip-toggle" data-heat="sex" aria-pressed="false">性愛</button>
+          </div>
+          <p class="hint clash" id="heat-clash" hidden><span></span></p>
+          <div class="row">
+            <button type="button" class="chip-toggle" id="draw-job" aria-pressed="false">抽職業</button>
+          </div>
+          <div class="row" id="scene-modes">
+            <button type="button" class="chip-toggle" data-scene-mode="normal" aria-pressed="true">正常</button>
+            <button type="button" class="chip-toggle" data-scene-mode="diverse" aria-pressed="false">多元</button>
+            <button type="button" class="chip-toggle" data-scene-mode="weird" aria-pressed="false">奇葩</button>
+          </div>
+          <p class="hint">正常＝活動對場景。多元＝只鎖場景與物理。奇葩＝只鎖物理。</p>
+        </fieldset>
+
+        <fieldset class="heat step">
+          <legend><span class="num">3</span> 時代</legend>
+          <div class="row" id="eras"></div>
+          <p class="hint clash" id="era-clash" hidden><span></span></p>
+        </fieldset>
+
+        <div class="field batch-field">
+          <label for="n">一次幾張</label>
+          <div class="batch-row">
+            <input id="n" name="n" type="number" min="1" max="10" value="1" />
+            <button type="button" class="same-switch" id="same-person" role="switch" aria-checked="false" aria-describedby="same-person-hint">
+              <span class="same-knob" aria-hidden="true"><i></i></span>
+              <span class="same-copy">
+                <strong>同一個人</strong>
+                <em id="same-person-hint">多張鎖髮瞳胸</em>
+              </span>
+            </button>
+          </div>
+        </div>
+
+        <div class="field">
+          <label>紙幅</label>
+          <div class="row" id="sizes">
+            <button type="button" class="seg" data-w="1024" data-h="1024" aria-pressed="true">方</button>
+            <button type="button" class="seg" data-w="832" data-h="1216" aria-pressed="false">直</button>
+            <button type="button" class="seg" data-w="1216" data-h="832" aria-pressed="false">橫</button>
+          </div>
+          <div class="row">
+            <input id="width" name="width" type="number" min="256" max="2048" value="1024" aria-label="寬" />
+            <input id="height" name="height" type="number" min="256" max="2048" value="1024" aria-label="高" />
+          </div>
+        </div>
+
+        <div class="intent-actions">
+          <button type="button" class="ghost" id="open-pinsheet">打開釘選台</button>
+          <button type="button" class="ghost" id="open-lexicon">打開詞庫</button>
+        </div>
+      </aside>
+
+      <!-- Stage / 成片 -->
+      <main class="stage" id="stage">
+        <div class="stage-glow" aria-hidden="true"></div>
+        <div class="tray" id="tray">
+          <div class="tray-clip">
+            <div class="tray-pad">
+              <div class="tray-head">
+                <strong>本鏡必進</strong>
+                <span class="hint" id="tray-count"></span>
+              </div>
+              <div class="tags" id="tray-pins"></div>
+            </div>
+          </div>
+        </div>
+
+        <section
+          class="results"
+          id="results"
+          aria-label="成片"
+          data-empty="還沒有成片。&#10;左側定好場記，按「開拍」。"
+        ></section>
+      </main>
+    </div>
+
+    <!-- Lexicon drawer -->
+    <div class="lex-sheet" id="lex-sheet" hidden>
+      <div class="lex-backdrop" data-close-lex tabindex="-1"></div>
+      <div class="lex-panel" role="dialog" aria-label="詞庫" aria-modal="true">
+        <header class="lex-head">
+          <div>
+            <p class="eyebrow">Lexicon</p>
+            <h2>詞庫</h2>
+          </div>
+          <button type="button" class="ghost" data-close-lex>關閉</button>
+        </header>
+        <div class="filter-bar" id="filter-bar">
+          <nav class="jump" aria-label="跳到分類">
+            <a href="#sec-rules" class="jump-rules">意圖</a>
+            <a href="#sec-quality">畫質</a>
+            <a href="#sec-subject">人數</a>
+            <a href="#sec-feature">長相</a>
+            <a href="#sec-pose">姿勢</a>
+            <a href="#sec-clothing">服裝</a>
+            <a href="#sec-env">場景</a>
+          </nav>
+          <div class="filter-row">
+            <input id="q" type="search" placeholder="搜中文或英文…" autocomplete="off" spellcheck="false" />
+            <div class="row view-filters" id="view-filters">
+              <button type="button" class="seg" data-view="all" aria-pressed="true">全部</button>
+              <button type="button" class="seg" data-view="pinned" aria-pressed="false">釘選</button>
+              <button type="button" class="seg" data-view="banned" aria-pressed="false">封禁</button>
+              <button type="button" class="seg" id="era-only" aria-pressed="true">只看這時代</button>
+            </div>
+          </div>
+        </div>
+        <div class="cats" id="cats"></div>
+      </div>
+    </div>
+
+    <!-- Pin sheet -->
+    <div class="pin-sheet" id="pin-sheet" hidden>
+      <div class="pin-backdrop" data-close-pins tabindex="-1"></div>
+      <div class="pin-panel" role="dialog" aria-label="釘選台" aria-modal="true">
+        <header class="pin-head">
+          <div>
+            <p class="eyebrow">Pins</p>
+            <h2>釘選台</h2>
+          </div>
+          <button type="button" class="ghost" data-close-pins>關閉</button>
+        </header>
+        <div class="field step">
+          <label>每段目標數</label>
+          <p class="hint">釘選與必要骨架先計入；設 0＝不補隨機。</p>
+          <div class="count-grid" id="counts"></div>
+        </div>
+        <div class="legend" aria-label="詞庫點法">
+          <span class="tag" data-state="pool" data-locked="1">池中</span>
+          <span class="tag" data-state="pinned" data-locked="1">必進</span>
+          <span class="tag" data-state="banned" data-ban="mutex" data-locked="1">互斥</span>
+          <span class="tag" data-state="banned" data-ban="user" data-locked="1">關掉</span>
+        </div>
+        <div class="row">
+          <button type="button" class="ghost" id="clear-pins">清除釘選與關掉</button>
+          <button type="button" class="ghost" id="clear-weights">清除權重</button>
+          <button type="button" class="ghost" id="save-preset">存目前釘選</button>
+        </div>
+        <p class="hint">釘選組合。點一下套用；只換場景／服裝／職業時身材髮色會留。</p>
+        <div class="row" id="presets"></div>
+      </div>
+    </div>
+
+    <div class="dock studio-dock">
+      <div class="dock-main">
+        <button type="button" class="primary shoot" id="go"><span>開拍</span></button>
+        <button type="button" class="ghost" id="cancel" hidden>取消</button>
+      </div>
+      <div class="status" id="status">定好場記再開拍</div>
+    </div>
+    <div class="live" id="live" aria-live="polite"></div>
+    <script type="module" src="app.js"></script>
+  </body>
+</html>
