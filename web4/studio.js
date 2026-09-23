@@ -2,6 +2,7 @@
  * 文案跟棚內控制台走，不講賦能／一鍵／完美。 */
 
 import { clashSummary } from "./reason-copy.js";
+import { lockScroll, unlockScroll } from "./scroll-lock.js";
 
 const $ = (id) => document.getElementById(id);
 
@@ -202,15 +203,21 @@ function setSheet(el, open) {
     (n) => n !== el
   );
   if (open) {
+    // 記住是誰打開的，關掉時焦點要回到那裡。已經開著再開一次（焦點在裡面）不覆寫。
+    const from = document.activeElement;
+    if (from && from !== document.body && !el.contains(from)) el._returnFocus = from;
     el.hidden = false;
     el.classList.remove("is-closing");
     // reflow so enter animation can replay
     void el.offsetWidth;
     el.classList.add("is-open");
     document.body.classList.add("sheet-open");
+    // aria-modal 只管螢幕閱讀器，管不到 Tab：背景要關出 tab 序，跟排字匣那邊的彈窗同一把鎖。
+    lockScroll(el.id);
     return;
   }
   if (el.hidden || !el.classList.contains("is-open")) {
+    unlockScroll(el.id);
     el.hidden = true;
     el.classList.remove("is-open", "is-closing");
     if (!otherOpen) document.body.classList.remove("sheet-open");
@@ -218,6 +225,13 @@ function setSheet(el, open) {
   }
   el.classList.add("is-closing");
   el.classList.remove("is-open");
+  // 先解鎖再還焦點：背景還是 inert 的時候對它 focus() 會靜靜失敗。
+  // 只在焦點還在 sheet 裡（或掉到 body）時才還 —— 使用者自己點到別處的話不搶。
+  unlockScroll(el.id);
+  const back = el._returnFocus;
+  el._returnFocus = null;
+  const at = document.activeElement;
+  if (back && back.isConnected && (el.contains(at) || !at || at === document.body)) back.focus({ preventScroll: true });
   const done = () => {
     el.hidden = true;
     el.classList.remove("is-closing");
@@ -245,6 +259,8 @@ function openLex() {
 function openPins() {
   setSheet($("lex-sheet"), false);
   setSheet($("pin-sheet"), true);
+  // 焦點進面板（第一個可以按的是「關閉」）。詞庫進的是搜尋框。
+  $("pin-sheet")?.querySelector(".pin-panel button")?.focus();
 }
 
 function closeSheets() {

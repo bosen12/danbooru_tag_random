@@ -1552,6 +1552,21 @@ const ALBUM_FIXTURE = [
   ok("還焦點在背景解除 inert 之後", close.indexOf(".focus(") > close.indexOf("unlockScroll("));
 }
 
+// 導影台的詞庫／釘選台寫了 aria-modal="true"，卻：Esc 關掉後焦點留在已經藏起來的搜尋框；
+// 釘選台打開時焦點不進去；而且背景沒關出 tab 序，Tab 幾下就掉到被蓋住的頁面裡。
+// 排字匣那邊的彈窗全靠 scroll-lock.js 解決這件事，這裡接同一把鎖。
+{
+  const w4 = readFileSync(join(ROOT, "web4", "studio.js"), "utf8").split(CR).join("");
+  const at = w4.indexOf("function setSheet(");
+  const body = at < 0 ? "" : w4.slice(at, w4.indexOf(NL + "}" + NL, at));
+  ok("導影台的 sheet 接 scroll-lock（背景關出 tab 序）", /import \{[^}]*lockScroll[^}]*\} from "\.\/scroll-lock\.js"/.test(w4) && /lockScroll\(el\.id\)/.test(body) && /unlockScroll\(el\.id\)/.test(body));
+  ok("導影台的 sheet 打開時記住焦點在哪", /_returnFocus = /.test(body));
+  ok("導影台的 sheet 關掉時焦點回去", /_returnFocus[\s\S]*\.focus\(/.test(body));
+  // 背景還是 inert 的時候對它 focus() 會靜靜失敗（排字匣那邊第一版就栽在這裡）。
+  ok("還焦點在解鎖之後", body.lastIndexOf("unlockScroll(el.id)") >= 0 && body.indexOf(".focus(", body.indexOf("unlockScroll(el.id)")) > 0);
+  ok("打開釘選台時焦點進到面板裡", /function openPins\(\)[\s\S]{0,200}\.focus\(/.test(w4));
+}
+
 if (failed) {
   console.error(NL + failed + " failed");
   process.exit(1);
