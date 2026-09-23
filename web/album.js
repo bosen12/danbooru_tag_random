@@ -8,6 +8,7 @@
  */
 
 import { lockScroll, unlockScroll } from "./scroll-lock.js";
+import { focusEntry } from "./focus-entry.js";
 import { sourceLabel, formatTraceReason, sectionOfItem } from "./trace-copy.js";
 import { ERA_LABELS } from "./engine.js";
 
@@ -235,7 +236,7 @@ function openModal() {
   el.classList.add("open");
   lockScroll("album-modal");
   $("album-btn")?.setAttribute("aria-expanded", "true");
-  refresh().then(() => $("album-q")?.focus());
+  refresh().then(() => focusEntry($("album-q"), $("album-close")));
 }
 
 function closeModal() {

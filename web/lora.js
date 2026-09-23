@@ -1,4 +1,5 @@
 import { lockScroll, unlockScroll } from "./scroll-lock.js";
+import { focusEntry } from "./focus-entry.js";
 
 const $ = (id) => document.getElementById(id);
 const REDUCE_MOTION = matchMedia("(prefers-reduced-motion: reduce)").matches;
@@ -841,7 +842,7 @@ async function openLoraModal() {
   renderLmCats();
   renderLmSubcats();
   renderLmList($("lm-search").value, true);
-  $("lm-search").focus();
+  focusEntry($("lm-search"), $("lora-modal-close"));
 }
 function closeLoraModal() {
   const modal = $("lora-modal");
@@ -1413,7 +1414,7 @@ async function openCkptModal() {
   await fetchCkpts();
   renderCkptList($("ckpt-search")?.value);
   renderCkptCurrent();
-  $("ckpt-search")?.focus();
+  focusEntry($("ckpt-search"), $("ckpt-modal-close"));
 }
 function closeCkptModal() {
   fadeCloseOverlay($("ckpt-modal"), null, () => renderCkptBtn());

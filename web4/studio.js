@@ -3,6 +3,7 @@
 
 import { clashSummary } from "./reason-copy.js";
 import { lockScroll, unlockScroll } from "./scroll-lock.js";
+import { focusEntry } from "./focus-entry.js";
 
 const $ = (id) => document.getElementById(id);
 
@@ -253,7 +254,8 @@ function setSheet(el, open) {
 function openLex() {
   setSheet($("pin-sheet"), false);
   setSheet($("lex-sheet"), true);
-  $("q")?.focus();
+  // 桌機進搜尋框；手機給關閉鈕，不然一打開就彈鍵盤蓋掉半個抽屜。
+  focusEntry($("q"), $("lex-sheet")?.querySelector(".lex-panel [data-close-lex]"));
 }
 
 function openPins() {

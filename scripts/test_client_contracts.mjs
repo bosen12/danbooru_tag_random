@@ -17,7 +17,7 @@
  */
 import { existsSync, readFileSync } from "fs";
 import { dirname, join } from "path";
-import { fileURLToPath } from "url";
+import { fileURLToPath, pathToFileURL } from "url";
 
 const ROOT = join(dirname(fileURLToPath(import.meta.url)), "..");
 // 反斜線在這個專案的編輯路徑上被吃掉過太多次，換行一律用碼點組，不寫字面值。
@@ -1565,6 +1565,36 @@ const ALBUM_FIXTURE = [
   // 背景還是 inert 的時候對它 focus() 會靜靜失敗（排字匣那邊第一版就栽在這裡）。
   ok("還焦點在解鎖之後", body.lastIndexOf("unlockScroll(el.id)") >= 0 && body.indexOf(".focus(", body.indexOf("unlockScroll(el.id)")) > 0);
   ok("打開釘選台時焦點進到面板裡", /function openPins\(\)[\s\S]{0,200}\.focus\(/.test(w4));
+}
+
+// 打開詞庫、底模、LoRA、作品冊時直接把焦點塞進搜尋框：桌機很方便，手機上卻是一打開就
+// 彈出螢幕鍵盤，蓋掉半個底部抽屜 —— 使用者多半只是想看看。觸控時焦點給關閉鈕。
+{
+  const fe = join(ROOT, "web", "focus-entry.js");
+  ok("有共用的 focusEntry", existsSync(fe));
+  if (existsSync(fe)) {
+    const { focusEntry } = await import(pathToFileURL(fe).href);
+    const hit = [];
+    const el = (name) => ({ focus: () => hit.push(name) });
+    const prev = globalThis.matchMedia;
+    globalThis.matchMedia = (q) => ({ matches: /pointer:\s*coarse/.test(q) });
+    focusEntry(el("search"), el("close"));
+    globalThis.matchMedia = () => ({ matches: false });
+    focusEntry(el("search"), el("close"));
+    focusEntry(null, el("close"));
+    globalThis.matchMedia = prev;
+    ok("觸控時焦點給關閉鈕、桌機給搜尋框、沒有搜尋框時退回關閉鈕", hit.join(",") === "close,search,close", hit.join(","));
+  }
+  const uses = [
+    ["導影台詞庫", "web4/studio.js", /focusEntry\(\$\("q"\)/],
+    ["LoRA 選單", "web/lora.js", /focusEntry\(\$\("lm-search"\)/],
+    ["底模選單", "web/lora.js", /focusEntry\(\$\("ckpt-search"\)/],
+    ["作品冊", "web/album.js", /focusEntry\(\$\("album-q"\)/],
+  ];
+  for (const [name, file, re] of uses) {
+    const src = readFileSync(join(ROOT, ...file.split("/")), "utf8");
+    ok(`${name}打開時走 focusEntry`, re.test(src));
+  }
 }
 
 if (failed) {
