@@ -583,30 +583,28 @@ function makeController(over = {}) {
     "一個關掉時會把另一個也熄掉",
   );
 
-  // 螢幕是房間的主角。原本是一塊純色板子，那是整個場景最假的地方。
-  ok("螢幕上有畫東西", /screenTexture/.test(read("web/studio/scene-loader.js")), "");
+  // 場景從房間換成排字台（type-shop.js）。守衛的用意不變，對象換了：
+  // 主角（原本是螢幕、現在是手盒）上要真的有東西，大面積表面要有雜訊，燈要標角色。
+  const shopSrc = read("web/studio/type-shop.js");
+  ok("手盒上真的排著字（畫在貼圖上）", /map: stickTex/.test(shopSrc), "手盒是一塊素面的鐵就沒有主角");
   ok(
-    "螢幕靠自發光，不是靠打光照亮",
-    /emissiveMap: scrTex/.test(read("web/studio/scene-loader.js")),
-    "靠打光照出來的螢幕永遠像一塊反光的板子",
+    "手盒字面是金屬但不是鏡面",
+    /mat\(0xffffff, 0\.[3-9]\d*, 0\.\d+, \{ map: stickTex \}\)/.test(shopSrc),
+    "roughness 太低時工作燈會在字面上燒出一塊白斑，字就看不到了",
   );
-  ok(
-    "螢幕不是鏡面（否則反射光會燒掉畫面）",
-    /roughness: 0\.5\d/.test(read("web/studio/scene-loader.js")),
-    "roughness 太低時反射會在面板上燒出一塊白斑",
-  );
-  ok("大面積表面有雜訊 roughnessMap", /noiseRoughness/.test(read("web/studio/scene-loader.js")), "純色大面積會看起來像塑膠");
+  ok("大面積表面有雜訊 roughnessMap", /roughnessMap: grain/.test(shopSrc), "純色大面積會看起來像塑膠");
 
   // 場景裡的燈要標角色，降級才知道關哪幾盞。
-  const sceneSrc = read("web/studio/scene-loader.js");
   ok(
     "場景的燈有標角色",
-    /userData\.role = LIGHT_ROLES\./.test(sceneSrc),
+    /userData\.role = LIGHT_ROLES\./.test(shopSrc),
     "沒標就全部被當成必要的，降級等於沒降",
   );
+  // 主光是那盞吊燈。SpotLight 投影只要一張陰影貼圖，PointLight 投影要畫六張 ——
+  // 唯一投影的燈用 SpotLight，比舊房間的檯燈（PointLight 投影）便宜。
   ok(
-    "最貴的 SpotLight 歸在純裝飾那一階",
-    /SpotLight[\s\S]{0,200}?userData\.role = LIGHT_ROLES\.accent/.test(sceneSrc),
+    "唯一投影的燈是 SpotLight",
+    /SpotLight\([\s\S]{0,300}?castShadow = true/.test(shopSrc) && !/PointLight\([\s\S]{0,200}?castShadow = true/.test(shopSrc),
     "",
   );
   ok(

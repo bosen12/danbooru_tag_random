@@ -4,7 +4,7 @@
   "file": "studio.glb",
   "units": "meters",
   "upAxis": "Y",
-  "roomOrigin": "房間中心在原點，桌子沿 -Z 牆面擺，使用者站 +Z 側",
+  "roomOrigin": "排字台中心在原點附近，桌面高 0.92m，使用者站 +Z 側",
   "requiredNodes": [
     "HOTSPOT_DRAW_SCREEN",
     "HOTSPOT_TAG_BOX",

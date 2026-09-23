@@ -56,12 +56,12 @@ export async function createStudioShell(opts) {
   // 「離開 3D」一定要長在 HUD 裡。桅杆上那顆切換鈕在 .mast 裡，而 .mast 在 3D
   // 模式下是藏起來的 —— 第一版就是這樣，進了房間之後畫面上一個出口都沒有，
   // 只剩改網址。這是兩個不同層次的「回去」，要分清楚：
-  //   返回房間    離開某個功能點，回到房間總覽（還在 3D 裡）
+  //   返回排字台  離開某個功能點，回到排字台總覽（還在 3D 裡）
   //   平面工作台  整個離開 3D
   hud.innerHTML =
     '<div class="studio-hud-top">' +
-    '<span class="studio-crumb" id="studio-crumb">房間總覽</span>' +
-    '<button type="button" class="studio-back" id="studio-back" hidden>返回房間 (Esc)</button>' +
+    '<span class="studio-crumb" id="studio-crumb">排字台總覽</span>' +
+    '<button type="button" class="studio-back" id="studio-back" hidden>返回排字台 (Esc)</button>' +
     '<button type="button" class="studio-exit" id="studio-exit" aria-label="離開 3D，回到平面工作台">' +
     '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">' +
     '<path d="M9 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h4"/><path d="m16 17 5-5-5-5"/><path d="M21 12H9"/></svg>' +
@@ -142,20 +142,24 @@ export async function createStudioShell(opts) {
   // 場景要等 renderer 和 envMap 都好了才建 —— PMREM 需要 renderer，
   // 而 scene.environment 需要 PMREM 的結果。
   scene = new THREE.Scene();
-  scene.background = new THREE.Color(0x0a0807);
+  // 排字台浮在黑暗裡：背景就是工作燈照不到的地方，跟 2D 排字匣同一個暖黑。
+  scene.background = new THREE.Color(0x0b0806);
   // 指數霧：遠處的牆角自然暗下去，房間才有深度。
   // 密度要很小心 —— 相機離桌子只有 6 公尺，0.085 的時候整個畫面會蒙上一層
   // 均勻的褐色，把光影層次全部抹平。0.022 只在牆角看得出來，那才是要的。
-  scene.fog = new THREE.FogExp2(0x0a0807, 0.022);
+  // 桌子兩端與桌腳往下慢慢沒入黑暗 —— 沒有牆，深度全靠霧和光圈。
+  scene.fog = new THREE.FogExp2(0x0b0806, 0.06);
   if (envMap) scene.environment = envMap;
   scene.add(sceneData.root);
 
   // 總覽鏡位。往後退到整組家具都進得來為止：右邊的模型櫃到 x=3.4，
   // 左後方的作品牆到 z=-3.1，兩個都不能被畫面邊緣切掉 ——
   // 看不見的東西等於不存在，使用者不會去點一個他沒看到的架子。
+  // 總覽：站在排字台前，微微俯看整張桌子。3.8 米寬的桌面兩端、上方的晾紙架都要在畫面裡 ——
+  // 看不見的器具等於不存在，使用者不會去點一個沒看到的東西。
   const OVERVIEW = {
-    position: { x: 0, y: 2.2, z: 6.2 },
-    target: { x: 0, y: 1.18, z: -0.8 },
+    position: { x: 0, y: 2.45, z: 3.1 },
+    target: { x: 0, y: 1.08, z: -0.35 },
   };
 
   const cam = createCameraController({
@@ -176,7 +180,7 @@ export async function createStudioShell(opts) {
       const crumb = document.getElementById("studio-crumb");
       const back = document.getElementById("studio-back");
       const spot = STUDIO_HOTSPOTS.find((h) => h.id === id);
-      if (crumb) crumb.textContent = spot ? spot.label : "房間總覽";
+      if (crumb) crumb.textContent = spot ? spot.label : "排字台總覽";
       if (back) back.hidden = state === CAMERA_STATES.overview;
       for (const btn of keyButtons) {
         btn.setAttribute("aria-current", btn.dataset.hotspot === id ? "true" : "false");
@@ -230,6 +234,32 @@ export async function createStudioShell(opts) {
     dirty = true;
     schedule();
   };
+
+  // --- 手盒裡排的字：跟著「這張 POS」 ---------------------------------------------
+  // 2D 那邊每抽一張就重畫 #tray-pins（這張 POS 的每個 tag）。把它們的中文名排進手盒，
+  // 3D 排字台上看得到的就是剛抽出來的那一行。沒抽過時托盤列的是釘選，也照排。
+  const trayPins = document.getElementById("tray-pins");
+  let trayWatch = null;
+  const recompose = () => {
+    const labels = [...(trayPins?.querySelectorAll(".tag .label") || [])].map((el) => el.textContent.trim()).filter(Boolean);
+    sceneData.setComposed?.(labels);
+    markDirty();
+  };
+  if (trayPins && typeof MutationObserver === "function") {
+    let queued = false;
+    trayWatch = new MutationObserver(() => {
+      if (queued) return;
+      queued = true;
+      queueMicrotask(() => {
+        queued = false;
+        recompose();
+      });
+    });
+    trayWatch.observe(trayPins, { childList: true, subtree: true, characterData: true });
+    // 第一次排字要等外殼初始化完：recompose → markDirty → schedule 會讀到後面才宣告的
+    // parallax，同步呼叫會在 TDZ 丟例外，整個 3D 退回平面（實測過）。
+    queueMicrotask(recompose);
+  }
 
   // --- 總覽時的視差 --------------------------------------------------------
   // 房間會跟著滑鼠非常輕微地移動。幅度小到說不出來，但「完全靜止的 3D 畫面」
@@ -506,7 +536,7 @@ export async function createStudioShell(opts) {
     // 疊層開著時 Escape 是它們的。
     if (anyOverlayOpen()) return;
     e.preventDefault();
-    // Esc 是逐層往外退：停在某個功能點就先回房間，已經在房間總覽就整個離開 3D。
+    // Esc 是逐層往外退：停在某個功能點就先回排字台總覽，已經在總覽就整個離開 3D。
     // 「再按一次就出得去」是使用者對 Esc 的預設期待，沒有這一層就會覺得被關住。
     if (cam.state === CAMERA_STATES.overview) {
       onExit();
@@ -591,6 +621,7 @@ export async function createStudioShell(opts) {
       window.removeEventListener("resize", onResize);
       window.clearTimeout(resizeTimer);
       ro?.disconnect();
+      trayWatch?.disconnect();
       canvas.removeEventListener("pointermove", onPointerMove);
       canvas.removeEventListener("pointerleave", onPointerLeave);
       canvas.removeEventListener("click", onClick);

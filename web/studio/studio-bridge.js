@@ -11,7 +11,7 @@
  *            搬動 DOM 節點會保留它身上所有的事件監聽器與子節點，所以釘選、搜尋、
  *            展開狀態全部原封不動 —— 這比複製一份 UI 出來安全得多。
  *   trigger  那個面板本來就是彈窗，直接按原本那顆按鈕就好。
- *   note     還沒有東西可以接（例如 A／B 比較台），老實說沒有，不要假裝。
+ *   note     還沒有東西可以接（例如 A／B 對照燈台），老實說沒有，不要假裝。
  */
 
 const $ = (id) => document.getElementById(id);
@@ -44,17 +44,17 @@ function adoptNode(selector, into) {
 
 export const PANEL_SPECS = {
   "studio-panel-draw": {
-    title: "抽取與結果",
+    title: "手盒",
     sub: "抽牌、POS／NEG、出圖。這就是平面工作台上的同一塊，不是複製品。",
     adopt: ["#results", ".dock"],
   },
   "studio-panel-tags": {
-    title: "字卡盒",
+    title: "活字架",
     sub: "釘選、關掉、組合、詞庫。",
     adopt: ["#sec-rules", "#filter-bar", "#cats"],
   },
   "studio-panel-models": {
-    title: "模型櫃",
+    title: "字模櫃",
     sub: "底模與 LoRA。",
     trigger: [
       { sel: "#lora-pick-btn", label: "選 LoRA" },
@@ -62,27 +62,27 @@ export const PANEL_SPECS = {
     ],
   },
   "studio-panel-gallery": {
-    title: "牆上作品",
+    title: "晾紙架",
     sub: "收藏的配方與成品。",
     trigger: [{ sel: "#album-btn", label: "打開作品冊" }],
   },
   "studio-panel-settings": {
-    title: "控制台",
+    title: "印刷機",
     sub: "ComfyUI 連線、路徑與工作流。",
     trigger: [{ sel: "#wf-pick-btn", label: "工作流" }],
   },
   "studio-panel-messaging": {
-    title: "通訊裝置",
+    title: "送件籃",
     sub: "成圖之後送到哪裡。",
     trigger: [{ sel: "#service-settings-btn", label: "通知設定" }],
   },
   "studio-panel-trace": {
-    title: "分析儀",
+    title: "放大鏡",
     sub: "每一張成品卡片上的「為什麼」會列出這一張的每個字從哪來、哪些被淘汰。",
-    note: "抽一張圖之後，到「抽取與結果」點卡片上的「為什麼」。這裡不另外複製一份。",
+    note: "抽一張圖之後，到「手盒」點卡片上的「為什麼」。這裡不另外複製一份。",
   },
   "studio-panel-compare": {
-    title: "比較台",
+    title: "對照燈台",
     sub: "A／B 生圖實驗室。",
     note: "還沒有東西可以接。這個位置先留著，不假裝它能用。",
   },
