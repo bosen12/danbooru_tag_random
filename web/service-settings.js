@@ -20,8 +20,8 @@ function ensureDom() {
     <button type="button" class="ghost service-settings-btn" id="service-settings-btn" aria-label="通知設定" aria-haspopup="menu" aria-expanded="false" title="通知設定">${GEAR}</button>
     <div class="service-menu" id="service-menu" role="menu" aria-label="選擇通知服務">
       <p class="service-menu-title">通知傳送</p>
-      <button type="button" class="service-choice" role="menuitem" data-service="telegram"><span class="service-icon">${TELEGRAM_ICON}</span><span class="service-copy"><strong>Telegram</strong><small>Bot 與頻道設定</small></span><span class="service-dot" aria-label="Telegram 自動傳送狀態"></span></button>
-      <button type="button" class="service-choice" role="menuitem" data-service="discord"><span class="service-icon">${DISCORD_ICON}</span><span class="service-copy"><strong>Discord</strong><small>Webhook 或 Bot 設定</small></span><span class="service-dot" aria-label="Discord 自動傳送狀態"></span></button>
+      <button type="button" class="service-choice" role="menuitem" tabindex="-1" data-service="telegram"><span class="service-icon">${TELEGRAM_ICON}</span><span class="service-copy"><strong>Telegram</strong><small>Bot 與頻道設定</small></span><span class="service-dot" aria-label="Telegram 自動傳送狀態"></span></button>
+      <button type="button" class="service-choice" role="menuitem" tabindex="-1" data-service="discord"><span class="service-icon">${DISCORD_ICON}</span><span class="service-copy"><strong>Discord</strong><small>Webhook 或 Bot 設定</small></span><span class="service-dot" aria-label="Discord 自動傳送狀態"></span></button>
     </div>`;
   tools.insertBefore(wrap, tools.firstChild);
 }
@@ -37,6 +37,14 @@ function setOpen(open) {
   if (open) wrap.dataset.open = "1";
   else delete wrap.dataset.open;
   btn.setAttribute("aria-expanded", open ? "true" : "false");
+}
+
+const menuItems = () => [...document.querySelectorAll("#service-menu [role=menuitem]")];
+
+/** 焦點移到第 i 項，頭尾相接（-1 是最後一項）。 */
+function focusItem(i) {
+  const list = menuItems();
+  if (list.length) list[((i % list.length) + list.length) % list.length].focus();
 }
 
 function openService(name) {
@@ -55,7 +63,33 @@ export function setServiceStatus(name, active) {
 export function initServiceSettings() {
   ensureDom();
   const btn = $("service-settings-btn");
-  btn?.addEventListener("click", () => setOpen(!isOpen()));
+  // role="menu" 等於告訴螢幕閱讀器「用方向鍵」，所以照 APG 的 menu button 做：
+  // 鍵盤打開（Enter／空白鍵的 click 沒有 detail）焦點進第一項；滑鼠打開焦點留在齒輪上。
+  btn?.addEventListener("click", (e) => {
+    const next = !isOpen();
+    setOpen(next);
+    if (next && e.detail === 0) focusItem(0);
+  });
+  btn?.addEventListener("keydown", (e) => {
+    if (e.key !== "ArrowDown" && e.key !== "ArrowUp") return;
+    e.preventDefault();
+    setOpen(true);
+    focusItem(e.key === "ArrowDown" ? 0 : -1);
+  });
+  $("service-menu")?.addEventListener("keydown", (e) => {
+    const list = menuItems();
+    const at = list.indexOf(document.activeElement);
+    if (e.key === "ArrowDown" || e.key === "ArrowUp") {
+      e.preventDefault();
+      focusItem(at + (e.key === "ArrowDown" ? 1 : -1));
+    } else if (e.key === "Home" || e.key === "End") {
+      e.preventDefault();
+      focusItem(e.key === "Home" ? 0 : -1);
+    } else if (e.key === "Tab") {
+      // 項目不在 Tab 順序裡；Tab 就是離開選單，讓瀏覽器照常移到下一個，選單收起來。
+      setOpen(false);
+    }
+  });
   $("service-menu")?.addEventListener("click", (e) => {
     const item = e.target.closest("[data-service]");
     if (item) openService(item.dataset.service);

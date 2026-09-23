@@ -116,6 +116,8 @@ function paint() {
     for (const [el, on] of [[mBot, !hook], [mHook, hook]]) {
       el.setAttribute("aria-pressed", on ? "true" : "false");
       el.setAttribute("aria-checked", on ? "true" : "false");
+      // radiogroup：Tab 只停在選著的那一個，組內靠方向鍵。
+      el.tabIndex = on ? 0 : -1;
     }
   }
   // 提示就放在按鈕正下方 —— 在最上面點的東西，回饋不該跑到面板最底下。
@@ -370,6 +372,14 @@ export function initDiscord() {
   };
   $("dc-mode-bot")?.addEventListener("click", () => pickMode("bot"));
   $("dc-mode-hook")?.addEventListener("click", () => pickMode("webhook"));
+  // 只有兩個選項：任何方向鍵都是「換到另一個」，焦點跟著走（APG radio group）。
+  $("dc-modes")?.addEventListener("keydown", (e) => {
+    if (!["ArrowLeft", "ArrowRight", "ArrowUp", "ArrowDown"].includes(e.key)) return;
+    e.preventDefault();
+    const next = uiMode === "webhook" ? "bot" : "webhook";
+    pickMode(next);
+    $(next === "webhook" ? "dc-mode-hook" : "dc-mode-bot")?.focus();
+  });
   for (const id of ["dc-token", "dc-channel", "dc-webhook"]) {
     $(id)?.addEventListener("keydown", (e) => {
       if (e.key === "Enter") {

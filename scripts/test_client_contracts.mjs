@@ -293,6 +293,10 @@ function ok(name, cond, detail) {
   const modeRow = src.slice(src.indexOf('id="dc-modes"'), src.indexOf('id="dc-modes"') + 420);
   ok("連接方式用全站的分段控制", modeRow.split('class="seg"').length - 1 === 2, modeRow.slice(0, 160));
   ok("分段控制標得出目前選哪一個", src.includes('aria-pressed'), "選中狀態是 .seg[aria-pressed=true] 畫的");
+  // role="radiogroup" 對螢幕閱讀器的承諾：Tab 只停在選著的那一個，方向鍵換選項。
+  // 以前兩顆都在 Tab 順序裡、方向鍵沒反應 —— 宣告了 radio 卻表現得像兩顆普通按鈕。
+  ok("連接方式只有選著的那個在 Tab 順序裡", /el\.tabIndex = on \? 0 : -1/.test(src));
+  ok("連接方式用方向鍵切換", /\$\("dc-modes"\)\?\.addEventListener\("keydown"[\s\S]{0,400}Arrow/.test(src));
 }
 
 // --- 8. 切換畫面的動效：掛對地方，而且不會變成死按鈕 ------------------------
@@ -1521,7 +1525,14 @@ const ALBUM_FIXTURE = [
   const nChange = src.slice(src.indexOf('$("n").addEventListener("change"'), src.indexOf('$("n").addEventListener("change"') + 300);
   ok("一次幾張改完框裡寫實際的值", /settings\.n = clampBatch\(/.test(nChange) && /\$\("n"\)\.value = String\(settings\.n\)/.test(nChange) && !/Math\.min\(10/.test(nChange));
   // SDXL 的潛空間是 1/8：ComfyUI 收到 1000 會默默變成 1000//8*8。框裡寫的要是實際出圖的尺寸。
-  ok("寬高對齊 8 的倍數", /function clampSide\([^)]*\)\s*\{[^}]*\/ 8\)\s*\*\s*8/.test(src));
+  // 通知設定的齒輪宣告了 role="menu"：螢幕閱讀器會告訴使用者「用方向鍵」，但方向鍵完全
+  // 沒反應，焦點也從來不會進選單 —— 用鍵盤只能靠 Tab 碰運氣。照 APG 的 menu button 做。
+  const svc = readFileSync(join(ROOT, "web", "service-settings.js"), "utf8").split(CR).join("");
+  ok("用鍵盤打開通知選單時焦點進到第一項", /focusItem\(0\)/.test(svc) && /ArrowDown/.test(svc));
+  ok("通知選單裡上下鍵、Home、End 會移動", /ArrowUp/.test(svc) && /"Home"/.test(svc) && /"End"/.test(svc));
+  ok("Tab 離開通知選單時選單收起來", /e\.key === "Tab"[\s\S]{0,80}setOpen\(false\)/.test(svc));
+  ok("選單項目不在 Tab 順序裡（選單內靠方向鍵）", /tabindex="-1"[^>]*data-service="telegram"|data-service="telegram"[^>]*tabindex="-1"/.test(svc));
+  ok("寬高對齊 8 的倍數",/function clampSide\([^)]*\)\s*\{[^}]*\/ 8\)\s*\*\s*8/.test(src));
 }
 
 if (failed) {
