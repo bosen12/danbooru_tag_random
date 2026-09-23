@@ -103,13 +103,6 @@ body.studio.sheet-open { overflow: hidden; }
   font-weight: 700;
   letter-spacing: 0.02em;
 }
-.eyebrow {
-  margin: 0 0 var(--space-1);
-  font-size: var(--text-xs);
-  letter-spacing: 0.2em;
-  text-transform: uppercase;
-  color: var(--color-accent);
-}
 .slate-line {
   margin: 0;
   padding: var(--space-2) var(--space-3);
@@ -247,7 +240,7 @@ body.studio.sheet-open { overflow: hidden; }
 .pin-backdrop {
   position: absolute;
   inset: 0;
-  background: oklch(0% 0 0 / 0.55);
+  background: var(--color-scrim);
   backdrop-filter: blur(4px);
   border: 0;
   cursor: pointer;
@@ -267,9 +260,10 @@ body.studio.sheet-open { overflow: hidden; }
   border-radius: calc(var(--radius) + 6px) calc(var(--radius) + 6px) 0 0;
   border: var(--rule) solid var(--color-rule);
   border-bottom: 0;
-  background: color-mix(in oklab, var(--color-paper-2) 94%, transparent);
-  backdrop-filter: var(--mist);
-  box-shadow: 0 -24px 60px oklch(0% 0 0 / 0.4);
+  /* 實色：以前 94% 不透明再疊一層 blur(14px)，背後的模糊幾乎看不到，只是白付 GPU。
+     深色介面的層級靠亮度（paper-2 比舞台的 paper 亮一階），不是靠毛玻璃。 */
+  background: var(--color-paper-2);
+  box-shadow: var(--shadow-sheet);
   animation: sheet-up var(--dur-move) var(--ease-out) both;
 }
 
@@ -673,15 +667,16 @@ body.is-shooting #open-last-shot:disabled {
   opacity: 0;
   transition: opacity 140ms var(--ease-in);
 }
+/* 手機的詞庫是從底部上來的 sheet，關的時候也往底部下去（以前往右滑，方向對不上）。 */
 .lex-sheet.is-closing .lex-panel {
-  animation: sheet-side-out 160ms var(--ease-in) both;
+  animation: sheet-up-out 160ms var(--ease-in) both;
 }
 .pin-sheet.is-closing .pin-panel {
   animation: sheet-up-out 160ms var(--ease-in) both;
 }
 @media (min-width: 901px) {
   .lex-sheet.is-closing .lex-panel {
-    animation: sheet-side-out 160ms var(--ease-in) both;
+    animation: sheet-pop-out 160ms var(--ease-in) both;
   }
   .pin-sheet.is-closing .pin-panel {
     animation: sheet-pop-out 160ms var(--ease-in) both;
@@ -959,5 +954,212 @@ body.is-shooting #go-pos:disabled {
     flex-wrap: wrap;
     justify-content: flex-start;
     row-gap: var(--space-2);
+  }
+}
+
+/* —— 成片先看圖 ——
+   有圖的卡只留圖和一行資訊，tag 收在「POS · N」後面（web4/shots.js 加的鈕）。
+   以前圖下面直接攤開整串 tag，一張卡的 .meta 量到 843px 高，八格牆看起來是八張字條。
+   只抽牌的卡沒有圖，字就是成果，照樣攤開。 */
+.studio .card:not([data-pos-only="1"]):not(.is-pos-open) .meta > .pos {
+  display: none;
+}
+.studio .card.is-pos-open .meta > .pos {
+  animation: pos-reveal var(--dur-ui) var(--ease-out) both;
+}
+@keyframes pos-reveal {
+  from {
+    opacity: 0;
+    transform: translateY(-4px);
+  }
+  to {
+    opacity: 1;
+    transform: none;
+  }
+}
+/* 「這張 POS」托盤也預設收成一條（web4/shots.js 的「展開」鈕），圖不再被推到畫面中段。 */
+.studio .tray:not(.is-pins-open) #tray-pins {
+  display: none;
+}
+.studio .tray.is-pins-open #tray-pins {
+  animation: pos-reveal var(--dur-ui) var(--ease-out) both;
+}
+.studio .tray-toggle[aria-expanded="true"] {
+  color: var(--color-accent);
+}
+@media (prefers-reduced-motion: reduce) {
+  .studio .tray.is-pins-open #tray-pins {
+    animation: none;
+  }
+}
+/* 三顆動作鈕在 300px 的卡片裡放不下一排，讓資訊列換行而不是撐破卡片。 */
+.studio .card .bar {
+  flex-wrap: wrap;
+  row-gap: var(--space-2);
+}
+.studio .card .bar-actions {
+  flex-wrap: wrap;
+  flex-shrink: 1;
+}
+/* 卡片上的都是次要操作。沿用 44px 的大鈕，300px 寬的卡片會排成三列
+   （POS／為什麼｜複製｜同種子重抽）；縮成 32px 的緊湊鈕，一到兩列就放得下。 */
+.studio .card .bar-actions .ghost,
+.studio .card .same-seed {
+  min-height: 32px;
+  padding: 0 8px;
+  font-size: var(--text-xs);
+  white-space: nowrap;
+}
+.studio .pos-toggle {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  min-height: 32px;
+  padding: 0 10px;
+  font-size: var(--text-xs);
+  font-variant-numeric: tabular-nums;
+  letter-spacing: 0.04em;
+}
+/* 小箭頭：收起朝下、展開朝上。只轉 transform。 */
+.studio .pos-toggle::after {
+  content: "";
+  width: 5px;
+  height: 5px;
+  border-right: 1.5px solid currentColor;
+  border-bottom: 1.5px solid currentColor;
+  transform: translateY(-2px) rotate(45deg);
+  transition: transform var(--dur-ui) var(--ease-out);
+}
+.studio .pos-toggle[aria-expanded="true"] {
+  border-color: var(--color-accent);
+  color: var(--color-accent);
+}
+.studio .pos-toggle[aria-expanded="true"]::after {
+  transform: translateY(1px) rotate(-135deg);
+}
+@media (prefers-reduced-motion: reduce) {
+  .studio .card.is-pos-open .meta > .pos {
+    animation: none;
+  }
+  .studio .pos-toggle::after {
+    transition: none;
+  }
+}
+
+/* —— 詞庫：置中的選字台 ——
+   以前是右側 min(520px, 42vw) 的抽屜，1024px 寬時只有 430px：「畫質與風格」標題折成兩行，
+   一千三百多個字擠在一條窄欄裡。改成置中的大面板：左邊一條分類脊，右上是搜尋與篩選，
+   只有字庫區自己捲 —— 標題、搜尋、分類脊都不必 sticky，永遠在原位。
+   手機維持底部 sheet（那裡本來就是全寬）。 */
+@media (min-width: 901px) {
+  .lex-panel {
+    left: 50%;
+    top: 50%;
+    right: auto;
+    bottom: auto;
+    width: min(1120px, 94vw);
+    height: min(88dvh, 940px);
+    max-height: none;
+    transform: translate(-50%, -50%);
+    display: grid;
+    grid-template-columns: 10.5rem minmax(0, 1fr);
+    grid-template-rows: auto minmax(0, 1fr);
+    column-gap: var(--space-5);
+    overflow: hidden;
+    padding: var(--space-5) var(--space-5) 0;
+    border: var(--rule) solid var(--color-rule);
+    border-radius: calc(var(--radius) + 6px);
+    box-shadow: var(--shadow-float);
+    animation: sheet-pop var(--dur-move) var(--ease-out) both;
+  }
+  .lex-panel .lex-head {
+    grid-column: 1;
+    grid-row: 1;
+    margin: 0;
+    padding-bottom: var(--space-4);
+    flex-direction: column;
+    gap: var(--space-2);
+  }
+  /* 關閉是次要操作（Esc、點遮罩都能關），不該是左欄裡最重的一塊。 */
+  .lex-panel .lex-head .ghost {
+    align-self: flex-start;
+    min-height: 32px;
+    padding: 0 var(--space-3);
+    font-size: var(--text-xs);
+    color: var(--color-muted);
+  }
+  /* 讓搜尋列與分類導覽直接參與面板的格線。 */
+  .lex-panel .filter-bar {
+    display: contents;
+  }
+  .lex-panel .filter-row {
+    grid-column: 2;
+    grid-row: 1;
+    align-self: end;
+    padding-bottom: var(--space-4);
+    border-bottom: var(--rule) solid var(--color-rule);
+  }
+  .lex-panel .filter-row input[type="search"] {
+    flex: 1 1 18rem;
+  }
+  .lex-panel .jump {
+    grid-column: 1;
+    grid-row: 2;
+    align-self: start;
+    flex-direction: column;
+    flex-wrap: nowrap;
+    gap: 2px;
+    padding-top: var(--space-4);
+    border-top: var(--rule) solid var(--color-rule);
+  }
+  .lex-panel .jump a {
+    gap: 10px;
+    padding: 8px 12px;
+    border-radius: calc(var(--radius) - 2px);
+    font-size: var(--text-md);
+    transition:
+      color var(--dur-micro) var(--ease-out),
+      background-color var(--dur-micro) var(--ease-out);
+  }
+  /* 目前那一類的記號：一個小方塊，不是側邊色條。沒選到時縮成 0，選到時長出來。 */
+  .lex-panel .jump a::before {
+    content: "";
+    flex: 0 0 auto;
+    width: 6px;
+    height: 6px;
+    border-radius: 1px;
+    background: var(--color-accent);
+    transform: scale(0);
+    transition: transform var(--dur-ui) var(--ease-out);
+  }
+  .lex-panel .jump a[aria-current="true"]::before {
+    transform: scale(1);
+  }
+  .lex-panel .jump a:hover,
+  .lex-panel .jump a:focus-visible {
+    background-color: color-mix(in oklab, var(--color-ink) 6%, transparent);
+  }
+  /* 捲到哪一類，分類脊就亮哪一個（web4/lexicon-spine.js）。 */
+  .lex-panel .jump a[aria-current="true"] {
+    color: var(--color-ink);
+    background-color: color-mix(in oklab, var(--color-accent) 12%, transparent);
+  }
+  /* 「意圖」指的是左邊的場記欄，在詞庫面板裡點它只會去捲被蓋住的背景。 */
+  .lex-panel .jump a.jump-rules {
+    display: none;
+  }
+  .lex-panel .cats {
+    grid-column: 2;
+    grid-row: 2;
+    min-height: 0;
+    overflow: auto;
+    overscroll-behavior: contain;
+    padding: var(--space-4) var(--space-2) var(--space-6) 0;
+  }
+  .lex-panel .cat {
+    scroll-margin-top: var(--space-3);
+  }
+  .lex-sheet.is-closing .lex-panel {
+    animation: sheet-pop-out 160ms var(--ease-in) both;
   }
 }

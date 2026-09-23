@@ -20,8 +20,16 @@
   --color-weight: oklch(78% 0.1 210);
   --color-stage: oklch(16% 0.018 255);
   --color-gel: oklch(72% 0.08 55 / 0.12);
+  /* 遮罩與陰影往底色的藍（色相 255）靠，不用中性純黑 —— 在藍黑的畫面上純黑陰影是灰的。 */
+  --color-scrim: oklch(8% 0.03 255 / 0.62);
+  --shadow-sheet: 0 -24px 60px oklch(6% 0.03 255 / 0.45);
+  --shadow-float:
+    0 2px 8px oklch(6% 0.03 255 / 0.3),
+    0 30px 80px oklch(6% 0.03 255 / 0.5);
 
-  --font-display: "Syne", "Bricolage Grotesque", "Arial Narrow", sans-serif;
+  /* Syne 沒有中文字：以前「導影台」「場記」「詞庫」全部退回系統正黑體，標題字體等於沒設。
+     英文字母仍由 Syne 出，中文落到粗明體 —— 中文電影片頭、海報的字。只用在標題與「開拍」。 */
+  --font-display: "Syne", "Noto Serif TC", "Bricolage Grotesque", "Arial Narrow", sans-serif;
   --font-body: "IBM Plex Sans", "Noto Sans TC", "Segoe UI", sans-serif;
   --font-outlier: "IBM Plex Mono", ui-monospace, monospace;
 
