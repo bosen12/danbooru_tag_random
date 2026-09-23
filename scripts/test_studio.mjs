@@ -637,6 +637,65 @@ function makeController(over = {}) {
     );
   }
 
+  // web4 的 results observer 會在每次 childList 變更後重跑 enhanceCard。
+  // 第二次處理同一張卡若又重寫按鈕文字，就會再次觸發 observer，形成永不
+  // 結束的 microtask 迴圈；實際症狀是第一張卡出現後整個 8793 分頁卡死。
+  const web4StudioSrc = read("web4/studio.js");
+  const fnStart = web4StudioSrc.indexOf("function ensureSameSeedBtn(card)");
+  let fnEnd = -1;
+  let depth = 0;
+  for (let i = web4StudioSrc.indexOf("{", fnStart); i >= 0 && i < web4StudioSrc.length; i += 1) {
+    if (web4StudioSrc[i] === "{") depth += 1;
+    else if (web4StudioSrc[i] === "}") {
+      depth -= 1;
+      if (depth === 0) {
+        fnEnd = i + 1;
+        break;
+      }
+    }
+  }
+  let textWrites = 0;
+  let sameSeedButton = null;
+  const fakeMeta = {
+    querySelector() { return sameSeedButton; },
+    append(btn) { sameSeedButton = btn; },
+  };
+  const fakeCard = {
+    dataset: { intentSnap: "{}", seed: "1" },
+    classList: { contains() { return false; } },
+    querySelector(sel) { return sel === ".meta" ? fakeMeta : null; },
+  };
+  const fakeDocument = {
+    body: { classList: { contains() { return false; } } },
+    createElement() {
+      return {
+        className: "",
+        disabled: false,
+        title: "",
+        type: "",
+        set textContent(value) { textWrites += 1; this._text = value; },
+        get textContent() { return this._text || ""; },
+        setAttribute() {},
+      };
+    },
+  };
+  const ensureSameSeedBtn = new Function(
+    "document",
+    `${web4StudioSrc.slice(fnStart, fnEnd)}; return ensureSameSeedBtn;`,
+  )(fakeDocument);
+  ensureSameSeedBtn(fakeCard);
+  ensureSameSeedBtn(fakeCard);
+  ok(
+    "導影台重複整理同一卡片不再改 childList",
+    textWrites === 1,
+    `同一顆按鈕被重寫 ${textWrites} 次，results observer 會自我觸發直到分頁卡死`,
+  );
+  ok(
+    "導影台 boot 前的開拍會排隊，不能無聲吃掉",
+    /function bindGo\(\)[\s\S]{0,1600}?!window\.__studioBootReady[\s\S]{0,800}?pending = true[\s\S]{0,1200}?studio:boot-ready[\s\S]{0,500}?btn\.click\(\)/.test(web4StudioSrc),
+    "#go 在 boot.js 掛 listener 前就是可按的；不攔下並於 studio:boot-ready 重播，早點一下只會什麼都沒發生",
+  );
+
   const lic = read("web/vendor/three/LICENSE");
   ok("three.js 的 MIT 授權聲明有保留", /MIT License/i.test(lic) && /three\.js authors/i.test(lic));
 }

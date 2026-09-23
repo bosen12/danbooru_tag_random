@@ -393,7 +393,10 @@ function ensureSameSeedBtn(card) {
     btn.className = "ghost same-seed";
     meta.append(btn);
   }
-  btn.textContent = "同種子重抽";
+  // results observer 監看 childList；無條件重寫 textContent 會製造新的
+  // childList mutation，再次喚醒 observer，最後把整個分頁困在 microtask 迴圈。
+  // 只有文字真的不同時才碰 DOM，讓 enhanceCard 對同一卡片具備冪等性。
+  if (btn.textContent !== "同種子重抽") btn.textContent = "同種子重抽";
   btn.title = hasSnap
     ? "同一意圖快照＋同一 seed，驗規則穩不穩"
     : "這張沒留下場記，不能同種子重抽";
@@ -580,6 +583,42 @@ function bindCancelClear() {
   });
 }
 bindCancelClear();
+
+/** 導影台：boot.js 還在載詞庫時，開拍不能看似可按卻無聲失效。
+ *  先記住一次使用者意圖；boot 掛好真正的 runBatch listener 並發出 ready 後，
+ *  再用同一顆按鈕重播，因此仍只有 boot.js 擁有生成狀態與佇列。 */
+function bindGo() {
+  const btn = $("go");
+  if (!btn || btn.dataset.studioBootBound === "1") return;
+  btn.dataset.studioBootBound = "1";
+  let pending = false;
+
+  if (!window.__studioBootReady) {
+    btn.setAttribute("aria-disabled", "true");
+    btn.title = "詞庫載入中；現在按下會在就緒後自動開拍";
+  }
+
+  btn.addEventListener("click", (e) => {
+    if (window.__studioBootReady) return;
+    e.preventDefault();
+    e.stopImmediatePropagation();
+    if (!pending) {
+      pending = true;
+      setStatus("詞庫還在載，稍後自動開拍…");
+      showToast("場記載入中，已排入開拍", "neutral");
+    }
+  }, true);
+
+  window.addEventListener("studio:boot-ready", () => {
+    btn.removeAttribute("aria-disabled");
+    btn.title = "抽牌並送 ComfyUI 生圖";
+    if (!pending) return;
+    pending = false;
+    // ready 事件發出前，boot.js 已經掛好真正的 click listener。
+    btn.click();
+  });
+}
+bindGo();
 
 
 /** 導影台：boot 未就緒時點「只抽牌」要進佇列，不准無聲。 */
