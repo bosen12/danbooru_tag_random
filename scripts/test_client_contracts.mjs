@@ -1503,6 +1503,27 @@ const ALBUM_FIXTURE = [
   ok("每段目標數展開時內容淡入", /\.pin-row-more\[open\] \.count-grid\s*\{[^}]*animation:\s*pos-reveal/.test(css));
 }
 
+// 每段目標數：旁邊的「特徵」「姿勢」是 <span>，沒接到輸入框上 —— 螢幕閱讀器只念得出
+// 「數字欄位 3」，四個一模一樣。另外打 99 會存成 10，框裡卻還寫 99。
+{
+  const src = readFileSync(join(ROOT, "web", "boot.js"), "utf8").split(CR).join("");
+  const at = src.indexOf("function renderCounts(");
+  const body = at < 0 ? "" : src.slice(at, src.indexOf(NL + "}" + NL, at));
+  ok("每段目標數的輸入框有名字", /input\.setAttribute\("aria-label", `\$\{label\}/.test(body));
+  ok("超出範圍的數字存進去之後框裡也改成實際的值", /input\.value = String\(settings\.counts\[key\]\)/.test(body));
+
+  // 「一次幾張」沒有上限是刻意的（infinite.js 開頁就拿掉 max：無限抽一輪可能想排很多張）。
+  // 但 change 還留著舊的 min(10)：打 99 → settings 存 10、框裡寫 99、開拍時又從框裡讀
+  // 到 99 並存回去 —— 同一個數字三個地方三種說法。統一成一條規則，框裡寫的就是會送的。
+  ok("一次幾張只有一條規則（整數、至少 1）", /function clampBatch\([^)]*\)\s*\{[^}]*Math\.max\(1, Math\.floor\(/.test(src));
+  const run = src.slice(src.indexOf("// 整段包 try/finally"), src.indexOf("// 整段包 try/finally") + 600);
+  ok("開拍時的張數走同一條規則", /const n = clampBatch\(\$\("n"\)\.value\)/.test(run), run.slice(0, 300));
+  const nChange = src.slice(src.indexOf('$("n").addEventListener("change"'), src.indexOf('$("n").addEventListener("change"') + 300);
+  ok("一次幾張改完框裡寫實際的值", /settings\.n = clampBatch\(/.test(nChange) && /\$\("n"\)\.value = String\(settings\.n\)/.test(nChange) && !/Math\.min\(10/.test(nChange));
+  // SDXL 的潛空間是 1/8：ComfyUI 收到 1000 會默默變成 1000//8*8。框裡寫的要是實際出圖的尺寸。
+  ok("寬高對齊 8 的倍數", /function clampSide\([^)]*\)\s*\{[^}]*\/ 8\)\s*\*\s*8/.test(src));
+}
+
 if (failed) {
   console.error(NL + failed + " failed");
   process.exit(1);

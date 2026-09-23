@@ -246,6 +246,20 @@ async function ping() {
   }
 }
 
+/**
+ * 「一次幾張」只有這一條規則：整數、至少 1。沒有上限是刻意的 —— infinite.js 開頁就拿掉
+ * max，無限抽一輪可能想排很多張。框裡寫的、存起來的、開拍送出去的都是這個數。
+ */
+function clampBatch(v) {
+  return Math.max(1, Math.floor(Number(v) || 1));
+}
+
+/** 寬高：256–2048，對齊 8 —— SDXL 的潛空間是 1/8，ComfyUI 收到 1000 會默默變成 1000。 */
+function clampSide(v, fallback) {
+  const n = Math.max(256, Math.min(2048, Number(v) || fallback));
+  return Math.round(n / 8) * 8;
+}
+
 function renderCounts() {
   const box = $("counts");
   box.replaceChildren();
@@ -258,8 +272,12 @@ function renderCounts() {
     input.min = "0";
     input.max = "10";
     input.value = String(settings.counts[key] ?? 0);
+    // 旁邊的字是 <span>，沒接到框上；不給名字的話螢幕閱讀器念出來是四個一樣的「數字欄位」。
+    input.setAttribute("aria-label", `${label}目標數（0–10）`);
     input.addEventListener("change", () => {
-      settings.counts[key] = Math.max(0, Math.min(10, Number(input.value) || 0));
+      settings.counts[key] = Math.max(0, Math.min(10, Math.round(Number(input.value)) || 0));
+      // 打 99 存成 10：框裡也要寫 10，不然畫面跟實際抽牌用的數字不一樣。
+      input.value = String(settings.counts[key]);
       saveStore();
     });
     const off = document.createElement("button");
@@ -2977,8 +2995,9 @@ async function runBatch(opts = {}) {
   // finishBatch() 就永遠跑不到：running 卡在 true、「抽並生圖」永遠 disabled 又
   // aria-busy（就是那個一直轉但不生圖的狀態）、無限抽的續跑也接不上，只能重整頁面。
   try {
-    const n = Math.max(1, Math.floor(Number($("n").value) || 1));
+    const n = clampBatch($("n").value);
     settings.n = n;
+    $("n").value = String(n);
     saveStore();
 
     if (!posOnly && !(await comfyUp())) {
@@ -3325,7 +3344,8 @@ function bindUi() {
   window.addEventListener("scroll", closeWeightPopOnViewport, true);
   window.addEventListener("resize", closeWeightPopOnViewport);
   $("n").addEventListener("change", () => {
-    settings.n = Math.max(1, Math.min(10, Number($("n").value) || 1));
+    settings.n = clampBatch($("n").value);
+    $("n").value = String(settings.n);
     syncSamePerson();
     saveStore();
   });
@@ -3392,8 +3412,8 @@ function bindUi() {
   });
   for (const id of ["width", "height"]) {
     $(id).addEventListener("change", () => {
-      settings.width = Math.max(256, Math.min(2048, Number($("width").value) || 1024));
-      settings.height = Math.max(256, Math.min(2048, Number($("height").value) || 1024));
+      settings.width = clampSide($("width").value, 1024);
+      settings.height = clampSide($("height").value, 1024);
       syncSizeButtons();
       saveStore();
     });
