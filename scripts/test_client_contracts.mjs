@@ -1064,6 +1064,397 @@ const ALBUM_FIXTURE = [
   }
 }
 
+// --- 複製在非安全環境也要能用 ---------------------------------------------------
+// start.bat 印的 Tailscale 網址是 http://100.x.x.x —— 不是 HTTPS 也不是 localhost，
+// 瀏覽器在那裡根本不提供 navigator.clipboard。專案裡六個「複製」全部直接呼叫
+// navigator.clipboard.writeText，在手機上按下去是 TypeError：沒複製、沒回饋。
+{
+  const clipPath = join(ROOT, "web", "clipboard.js");
+  const have = existsSync(clipPath);
+  ok("有剪貼簿備援模組", have, "缺 web/clipboard.js");
+  const boot = readFileSync(join(ROOT, "web", "boot.js"), "utf8");
+  ok("boot.js 第一個載入剪貼簿備援", /^\s*import\s+["']\.\/clipboard\.js["'];/m.test(boot.split("\n").slice(0, 3).join("\n")), "要在其他模組碰剪貼簿之前裝好");
+
+  if (have) {
+    const { installClipboardFallback } = await import("../web/clipboard.js");
+    const fakeDoc = (execResult) => {
+      const log = { appended: 0, removed: 0, selected: false, cmd: null };
+      const doc = {
+        body: {
+          append(el) { log.appended += 1; el._in = true; },
+        },
+        createElement() {
+          return {
+            style: {},
+            setAttribute() {},
+            select() { log.selected = true; },
+            setSelectionRange() { log.selected = true; },
+            remove() { log.removed += 1; },
+            focus() {},
+          };
+        },
+        execCommand(cmd) { log.cmd = cmd; return execResult; },
+        activeElement: null,
+        getSelection: () => null,
+      };
+      return { doc, log };
+    };
+
+    // 1. 非安全環境：沒有 navigator.clipboard
+    {
+      const nav = {};
+      const { doc, log } = fakeDoc(true);
+      installClipboardFallback(nav, doc);
+      ok("沒有 clipboard 時會補上 writeText", typeof nav.clipboard?.writeText === "function");
+      let resolved = false;
+      await nav.clipboard.writeText("1girl, solo").then(() => { resolved = true; });
+      ok("補上的 writeText 用 execCommand('copy') 複製", resolved && log.cmd === "copy" && log.selected);
+      ok("暫用的 textarea 用完就拿掉", log.appended === 1 && log.removed === 1);
+    }
+    // 2. execCommand 也失敗時要 reject，讓呼叫端知道
+    {
+      const nav = {};
+      const { doc } = fakeDoc(false);
+      installClipboardFallback(nav, doc);
+      let rejected = false;
+      await nav.clipboard.writeText("x").catch(() => { rejected = true; });
+      ok("execCommand 失敗時 reject，不假裝成功", rejected);
+    }
+    // 3. 原生存在但被拒（沒權限、文件沒焦點）時改走備援
+    {
+      const nav = { clipboard: { writeText: () => Promise.reject(new Error("NotAllowedError")) } };
+      const { doc, log } = fakeDoc(true);
+      installClipboardFallback(nav, doc);
+      let resolved = false;
+      await nav.clipboard.writeText("x").then(() => { resolved = true; });
+      ok("原生 writeText 被拒時改走 execCommand", resolved && log.cmd === "copy");
+    }
+    // 4. 原生正常時不碰備援
+    {
+      let nativeCalls = 0;
+      const nav = { clipboard: { writeText: () => { nativeCalls += 1; return Promise.resolve(); } } };
+      const { doc, log } = fakeDoc(true);
+      installClipboardFallback(nav, doc);
+      await nav.clipboard.writeText("x");
+      ok("原生正常時只用原生", nativeCalls === 1 && log.cmd === null);
+    }
+  }
+}
+
+// --- 收藏星星：看起來能按就要能按，按了要有回應 --------------------------------------
+{
+  const bootJs = readFileSync(join(ROOT, "web", "boot.js"), "utf8");
+  const albumJs = readFileSync(join(ROOT, "web", "album.js"), "utf8");
+  const css = readFileSync(join(ROOT, "web", "boot.css"), "utf8").split(CR).join("");
+
+  // 只抽牌的卡片也顯示星星（.card.is-done .fav-shot），card._recipe 也有，
+  // 但 ensureFavButton() 只在生圖那條路徑呼叫 —— 按下去什麼都不會發生。
+  const posOnlyBranch = bootJs.slice(bootJs.indexOf('card.dataset.posOnly = "1";'), bootJs.indexOf("} else {", bootJs.indexOf('card.dataset.posOnly = "1";')));
+  ok("只抽牌的卡片也綁上收藏", /ensureFavButton\(card\)/.test(posOnlyBranch), "星星畫出來了但沒有 click handler");
+
+  ok("收藏星星有按壓回饋", /\.fav-shot:active/.test(css), "skip／redo 都有 :active，只有星星沒有");
+  ok(
+    "已收藏的星星用強調色，不只靠實心與否",
+    /\.fav-shot\.is-on\s*\{[^}]*color:\s*var\(--color-accent\)/.test(css),
+    "只差填色，暗底上很難一眼看出",
+  );
+  ok("收藏成功時彈一下", /@keyframes fav-pop/.test(css) && /\.fav-shot\.is-popping/.test(css));
+  ok(
+    "彈跳只在按下時觸發，不是每次重畫都跳",
+    /is-popping/.test(albumJs) && !/is-popping/.test(albumJs.slice(albumJs.indexOf("export function paintFavButton"), albumJs.indexOf("export function ensureFavButton"))),
+    "寫進 paintFavButton 的話，重新整理時每張已收藏的都會跳",
+  );
+  const reduced = css.slice(css.lastIndexOf("@media (prefers-reduced-motion: reduce)"));
+  ok("減少動態時不彈", /\.fav-shot\.is-popping[^{]*\{[^}]*animation:\s*none/.test(css), "prefers-reduced-motion 沒關掉 fav-pop");
+}
+
+// --- 抽完了，新的那張在畫面外 ---------------------------------------------------
+// 八格牆第二輪之後不自動捲（刻意的：使用者可能正捲在詞庫深處挑字），而且第 9 張起
+// 原地蓋掉最舊那格，新卡可能在牆上任何位置。實測捲到詞庫中段按只抽牌：新卡在
+// y = -376、完全在畫面外，唯一的回饋是 dock 一行「抽牌完成 1 張」。
+{
+  const cuePath = join(ROOT, "web", "new-card-cue.js");
+  const have = existsSync(cuePath);
+  ok("有「看新的一張」提示模組", have, "缺 web/new-card-cue.js");
+  const bootJs = readFileSync(join(ROOT, "web", "boot.js"), "utf8");
+  const done = bootJs.slice(bootJs.indexOf("抽牌完成 ${done} 張"), bootJs.indexOf("queueNextRound();", bootJs.indexOf("抽牌完成 ${done} 張")));
+  ok("抽完之後會提示新卡", /cueNewCard\(/.test(done), "runBatch 結束時沒呼叫 cueNewCard");
+  ok("第一次抽的自動捲動也看減少動態", !/scrollIntoView\(\{ behavior: "smooth"/.test(bootJs), "smooth 寫死，prefers-reduced-motion 的人也會被滑動");
+  const css = readFileSync(join(ROOT, "web", "boot.css"), "utf8").split(CR).join("");
+  ok("提示鈕有樣式與進場", /\.new-card-cue\s*\{/.test(css) && /@keyframes cue-in/.test(css));
+  ok("減少動態時提示鈕不做進場", /\.new-card-cue[^{]*\{[^}]*animation:\s*none/.test(css));
+
+  if (have) {
+    const mod = await import("../web/new-card-cue.js");
+    const mkEnv = (reduced = false) => {
+      const observers = [];
+      const status = { parent: null, before(el) { this.parent.kids.unshift(el); el.parentNode = this.parent; } };
+      const dock = { kids: [status] };
+      status.parent = dock;
+      const doc = {
+        documentElement: { clientHeight: 768 },
+        getElementById: (id) => (id === "status" ? status : null),
+        createElement: () => {
+          const el = {
+            hidden: true,
+            textContent: "",
+            className: "",
+            type: "",
+            attrs: {},
+            listeners: {},
+            classList: { _s: new Set(), add(c) { this._s.add(c); }, remove(c) { this._s.delete(c); }, contains(c) { return this._s.has(c); } },
+            setAttribute(k, v) { this.attrs[k] = v; },
+            addEventListener(t, fn) { (this.listeners[t] ||= []).push(fn); },
+            click() { for (const fn of this.listeners.click || []) fn({ preventDefault() {} }); },
+          };
+          return el;
+        },
+      };
+      const win = {
+        innerHeight: 768,
+        matchMedia: (q) => ({ matches: reduced && /reduce/.test(q) }),
+        IntersectionObserver: class {
+          constructor(cb) { this.cb = cb; this.targets = []; observers.push(this); }
+          observe(t) { this.targets.push(t); }
+          disconnect() { this.targets = []; }
+        },
+      };
+      const card = (top) => ({
+        isConnected: true,
+        scrolled: null,
+        focused: null,
+        attrs: {},
+        getBoundingClientRect: () => ({ top, bottom: top + 300 }),
+        getAttribute(k) { return this.attrs[k] ?? null; },
+        setAttribute(k, v) { this.attrs[k] = v; },
+        scrollIntoView(o) { this.scrolled = o; },
+        focus(o) { this.focused = o; },
+      });
+      return { doc, win, dock, observers, card };
+    };
+
+    {
+      const env = mkEnv();
+      mod.resetNewCardCue();
+      const shown = mod.cueNewCard(env.card(100), { doc: env.doc, win: env.win });
+      const pill = env.dock.kids.find((k) => k !== env.dock.kids.at(-1));
+      ok("新卡在畫面內就不提示", shown === false && (!pill || pill.hidden));
+    }
+    {
+      const env = mkEnv();
+      mod.resetNewCardCue();
+      const c = env.card(-376);
+      const shown = mod.cueNewCard(c, { doc: env.doc, win: env.win });
+      const pill = env.dock.kids[0];
+      ok("新卡在畫面上方時出現提示，箭頭朝上", shown === true && pill && !pill.hidden && /↑/.test(pill.textContent));
+      pill.click();
+      ok("按提示會捲到那張新卡（平滑）", c.scrolled && c.scrolled.behavior === "smooth" && c.scrolled.block === "center");
+      ok("捲過去之後焦點落在新卡上", c.focused && c.focused.preventScroll === true && c.attrs.tabindex === "-1");
+      ok("按完提示就收起來", pill.hidden === true);
+    }
+    {
+      const env = mkEnv();
+      mod.resetNewCardCue();
+      mod.cueNewCard(env.card(1200), { doc: env.doc, win: env.win });
+      const pill = env.dock.kids[0];
+      ok("新卡在畫面下方時箭頭朝下", !pill.hidden && /↓/.test(pill.textContent));
+      const io = env.observers.at(-1);
+      io.cb([{ isIntersecting: true, target: io.targets[0] }]);
+      ok("新卡自己捲進畫面時提示消失", pill.hidden === true);
+    }
+    {
+      const env = mkEnv(true);
+      mod.resetNewCardCue();
+      const c = env.card(-376);
+      mod.cueNewCard(c, { doc: env.doc, win: env.win });
+      env.dock.kids[0].click();
+      ok("減少動態時直接跳過去，不滑動", c.scrolled && c.scrolled.behavior === "auto");
+    }
+  }
+}
+
+// --- 導影台：詞庫置中變大，成片先看圖 ----------------------------------------------
+// 1024px 寬時詞庫是右側 430px 的抽屜：「畫質與風格」標題折成兩行，一千三百多個字擠在窄欄。
+// 成片卡圖片下面直接攤開整串 tag（一張卡的 .meta 量到 843px 高），看圖要一直往下捲。
+{
+  const w4css = readFileSync(join(ROOT, "web4", "styles.css"), "utf8").split(CR).join("");
+  const wide = w4css.slice(w4css.lastIndexOf("@media (min-width: 901px)"));
+  const rule = (css, sel) => {
+    const at = css.indexOf(sel + " {");
+    return at < 0 ? "" : css.slice(at, css.indexOf("}", at) + 1);
+  };
+  const panel = rule(wide, ".lex-panel");
+  ok("詞庫在寬螢幕是置中的大面板", /width:\s*min\(1120px/.test(panel) && /left:\s*50%/.test(panel) && /top:\s*50%/.test(panel), panel || "找不到寬螢幕的 .lex-panel");
+  ok("詞庫左邊是一條分類脊", /\.lex-panel \.filter-bar\s*\{[^}]*display:\s*contents/.test(wide) && /\.lex-panel \.jump\s*\{[^}]*flex-direction:\s*column/.test(wide));
+  ok("只有字庫區捲動，標題與搜尋不動", /\.lex-panel \.cats\s*\{[^}]*overflow:\s*auto/.test(wide) && /\.lex-panel\s*\{[^}]*overflow:\s*hidden/.test(wide));
+  ok("置中的詞庫關閉時縮回去，不是往右滑", /\.lex-sheet\.is-closing \.lex-panel\s*\{[^}]*sheet-pop-out/.test(wide));
+  const narrowClose = w4css.slice(0, w4css.indexOf("@media (min-width: 901px) {\n  .lex-sheet.is-closing"));
+  ok("手機詞庫從底部上來、也往底部下去", /\.lex-sheet\.is-closing \.lex-panel\s*\{\s*animation:\s*sheet-up-out/.test(narrowClose), "手機是底部 sheet，關閉卻往右滑出");
+
+  ok("托盤預設收起 tag", /\.studio \.tray:not\(\.is-pins-open\) #tray-pins\s*\{[^}]*display:\s*none/.test(w4css));
+  ok("有圖的成片預設收起 tag", /\.studio \.card:not\(\[data-pos-only="1"\]\):not\(\.is-pos-open\) \.meta > \.pos\s*\{[^}]*display:\s*none/.test(w4css));
+  const app = readFileSync(join(ROOT, "web4", "app.js"), "utf8");
+  ok("導影台載入成片模組", /import\s+["']\.\/shots\.js["']/.test(app));
+
+  const shotsPath = join(ROOT, "web4", "shots.js");
+  ok("有成片模組", existsSync(shotsPath));
+  if (existsSync(shotsPath)) {
+    const { enhanceShots } = await import("../web4/shots.js");
+    let writes = 0;
+    const mkEl = (tag = "div") => {
+      const el = {
+        tagName: tag.toUpperCase(),
+        children: [],
+        attrs: {},
+        dataset: {},
+        listeners: {},
+        className: "",
+        _text: "",
+        classList: {
+          _s: new Set(),
+          add(c) { this._s.add(c); },
+          remove(c) { this._s.delete(c); },
+          contains(c) { return this._s.has(c); },
+          toggle(c, on) { const v = on === undefined ? !this._s.has(c) : on; if (v) this._s.add(c); else this._s.delete(c); return v; },
+        },
+        set textContent(v) { writes += 1; this._text = v; },
+        get textContent() { return this._text; },
+        setAttribute(k, v) { this.attrs[k] = String(v); },
+        getAttribute(k) { return this.attrs[k] ?? null; },
+        addEventListener(t, fn) { (this.listeners[t] ||= []).push(fn); },
+        prepend(x) { writes += 1; this.children.unshift(x); x.parent = this; },
+        append(x) { writes += 1; this.children.push(x); x.parent = this; },
+        querySelector(sel) {
+          const want = sel.replace(/^:scope > /, "").replace(/^\./, "");
+          const walk = (n) => { for (const c of n.children || []) { if (c.className.split(" ").includes(want)) return c; const d = walk(c); if (d) return d; } return null; };
+          return walk(this);
+        },
+        click() { for (const fn of this.listeners.click || []) fn({ preventDefault() {} }); },
+      };
+      return el;
+    };
+    const doc = { createElement: (t) => mkEl(t) };
+    const mkCard = ({ posOnly = false, positive = "1girl, solo, smile" } = {}) => {
+      const card = mkEl();
+      card.className = "card is-done";
+      card.dataset.positive = positive;
+      if (posOnly) card.dataset.posOnly = "1";
+      const meta = mkEl(); meta.className = "meta";
+      const bar = mkEl(); bar.className = "bar";
+      const actions = mkEl(); actions.className = "bar-actions";
+      bar.children.push(actions);
+      meta.children.push(bar);
+      card.children.push(meta);
+      return { card, actions };
+    };
+    const img = mkCard();
+    const pos = mkCard({ posOnly: true });
+    const results = { querySelectorAll: () => [img.card, pos.card] };
+    enhanceShots(results, doc);
+    const btn = img.actions.children.find((c) => c.className.includes("pos-toggle"));
+    ok("有圖的成片多一顆 POS 切換鈕", !!btn && btn.getAttribute("aria-expanded") === "false" && /3/.test(btn.textContent), btn ? btn.textContent : "沒有");
+    ok("只抽牌的卡片不加（沒有圖，字就是成果）", !pos.actions.children.some((c) => c.className.includes("pos-toggle")));
+    btn.click();
+    ok("按了展開 tag", img.card.classList.contains("is-pos-open") && btn.getAttribute("aria-expanded") === "true");
+    btn.click();
+    ok("再按收起", !img.card.classList.contains("is-pos-open") && btn.getAttribute("aria-expanded") === "false");
+    const before = writes;
+    enhanceShots(results, doc);
+    enhanceShots(results, doc);
+    ok("重複處理同一批卡片不再動 DOM（不然觀察者會自己觸發自己）", writes === before, `多寫了 ${writes - before} 次`);
+
+    // 圖上方的「這張 POS」托盤也是整串攤開（實測 269px），圖被推到畫面中段才開始。
+    const { ensureTrayToggle } = await import("../web4/shots.js");
+    ok("有托盤展開函式", typeof ensureTrayToggle === "function");
+    if (typeof ensureTrayToggle === "function") {
+    const tray = mkEl();
+    tray.className = "tray is-on";
+    const head = mkEl(); head.className = "tray-head";
+    tray.children.push(head);
+    ensureTrayToggle(tray, doc);
+    const tbtn = head.children.find((c) => c.className.includes("tray-toggle"));
+    ok("托盤標題列多一顆展開鈕，預設收起", !!tbtn && tbtn.getAttribute("aria-expanded") === "false" && !tray.classList.contains("is-pins-open"));
+    tbtn.click();
+    ok("按了托盤展開", tray.classList.contains("is-pins-open") && tbtn.getAttribute("aria-expanded") === "true");
+    const w0 = writes;
+    ensureTrayToggle(tray, doc);
+    ok("托盤鈕只加一次", writes === w0 && head.children.filter((c) => c.className.includes("tray-toggle")).length === 1);
+    }
+  }
+}
+
+// --- 詞庫分類脊：捲到哪一類就亮哪一類 -------------------------------------------------
+{
+  const spinePath = join(ROOT, "web4", "lexicon-spine.js");
+  ok("有分類脊模組", existsSync(spinePath));
+  const app = readFileSync(join(ROOT, "web4", "app.js"), "utf8");
+  ok("導影台載入分類脊模組", /import\s+["']\.\/lexicon-spine\.js["']/.test(app));
+  if (existsSync(spinePath)) {
+    const { sectionAt, paintSpine } = await import("../web4/lexicon-spine.js");
+    const secs = [
+      { id: "sec-quality", top: -900 },
+      { id: "sec-subject", top: -120 },
+      { id: "sec-feature", top: 40 },
+      { id: "sec-pose", top: 700 },
+    ];
+    ok("頂端還沒碰到下一類時，亮的是正在看的那一類", sectionAt(secs, 24) === "sec-subject");
+    ok("下一類的標題一捲過門檻就換過去", sectionAt(secs, 60) === "sec-feature");
+    ok("一類都還沒捲到時亮第一類", sectionAt([{ id: "sec-quality", top: 300 }], 24) === "sec-quality");
+    ok("沒有分類時不亮", sectionAt([], 24) === null);
+    const mk = (hash) => ({ hash, attrs: {}, setAttribute(k, v) { this.attrs[k] = v; }, removeAttribute(k) { delete this.attrs[k]; } });
+    const links = [mk("#sec-quality"), mk("#sec-subject"), mk("#sec-feature")];
+    links[0].attrs["aria-current"] = "true";
+    paintSpine(links, "sec-feature");
+    ok("只有目前那一類是 aria-current", !links[0].attrs["aria-current"] && !links[1].attrs["aria-current"] && links[2].attrs["aria-current"] === "true");
+  }
+}
+
+// --- 導影台 hallmark audit：3 major · 3 minor ----------------------------------------
+{
+  const html = readFileSync(join(ROOT, "web4", "index.html"), "utf8");
+  const tok = readFileSync(join(ROOT, "web4", "tokens.css"), "utf8");
+  const css = readFileSync(join(ROOT, "web4", "styles.css"), "utf8").split(CR).join("");
+  // major 1：Syne 沒有中文字，導影台／場記／詞庫全部退回系統預設字，標題字體等於沒設。
+  const display = (tok.match(/--font-display:\s*([^;]+);/) || [])[1] || "";
+  ok("標題字體鏈裡有中文字體", /Noto Serif TC/.test(display) && display.indexOf("Syne") < display.indexOf("Noto Serif TC"), display);
+  ok("中文標題字體有真的載入", /family=Noto\+Serif\+TC/.test(html));
+  // major 2：Intent／Lexicon／Pins 只是把下面的中文標題用英文再講一次。
+  ok("沒有裝飾用的英文小標", !/class="eyebrow"/.test(html), "每一區上面都有一行大寫英文，跟標題講同一件事");
+  // major 3：顏色要走 token，不能在規則裡直接寫 oklch(...)。
+  const raw = css.match(/oklch\(/g) || [];
+  ok("styles.css 沒有寫死的顏色值", raw.length === 0, `還有 ${raw.length} 處 oklch(…)`);
+  // minor 4：面板本身 94% 不透明，背後的模糊看不到，只是白付 GPU。
+  const panelRule = css.slice(css.indexOf(".lex-panel,\n.pin-panel {"), css.indexOf("}", css.indexOf(".lex-panel,\n.pin-panel {")));
+  ok("詞庫／釘選面板不再疊毛玻璃", panelRule.length > 0 && !/backdrop-filter/.test(panelRule));
+  // minor 5：陰影與遮罩帶底色的色相（250 左右），不是中性純黑。
+  ok("陰影與遮罩的 token 帶藍色調", /--color-scrim:\s*oklch\([^)]*\s2[45]\d\s*\//.test(tok) && /--shadow-float:/.test(tok));
+  // minor 6：分類脊的目前項目用左側色條 —— side-stripe。
+  const spine = css.slice(css.indexOf('.lex-panel .jump a[aria-current="true"]'));
+  // 卡片的動作鈕用 44px 的大鈕，300px 寬的卡片裡排成三列（POS／為什麼｜複製｜同種子重抽）。
+  {
+    const at = css.indexOf(".studio .card .same-seed {");
+    const cardBtn = at < 0 ? "" : css.slice(css.lastIndexOf(".studio .card .bar-actions .ghost,", at), css.indexOf("}", at));
+    ok("成片卡的動作鈕是緊湊尺寸", /min-height:\s*32px/.test(cardBtn), cardBtn || "找不到 .studio .card .bar-actions .ghost / .same-seed 的規則");
+  }
+  ok("分類脊目前項目不用側邊色條", !/inset 2px 0 0/.test(spine.slice(0, spine.indexOf("}"))));
+}
+
+// --- 排字匣 hallmark audit ---------------------------------------------------------
+{
+  const html = readFileSync(join(ROOT, "web", "index.html"), "utf8");
+  const tok = readFileSync(join(ROOT, "web", "tokens.css"), "utf8");
+  const css = readFileSync(join(ROOT, "web", "styles.css"), "utf8");
+  // Bricolage Grotesque 沒有中文字：「排字匣」和所有分類標題都退回系統字。
+  // 排字匣是鉛字排版的字盒，活字就是宋體 —— 用 Chiron Sung HK，跟導影台的粗明體分開。
+  const display = (tok.match(/--font-display:\s*([^;]+);/) || [])[1] || "";
+  ok("排字匣的標題字體鏈裡有宋體", /Chiron Sung HK/.test(display) && display.indexOf("Bricolage") < display.indexOf("Chiron Sung HK"), display);
+  ok("排字匣的宋體有真的載入", /family=Chiron\+Sung\+HK/.test(html));
+  const raw = css.match(/oklch\(/g) || [];
+  ok("web/styles.css 沒有寫死的顏色值", raw.length === 0, `還有 ${raw.length} 處 oklch(…)`);
+  // 空的成片區：以前是一大片空白、兩行小字。排字匣是字盒，空的時候畫一格格的分隔。
+  ok("排字匣空的成片區是一格格的字盒", /\.stage \.results:empty\s*\{[^}]*var\(--color-case-line\)/.test(css) && /--color-case-line:/.test(tok));
+}
+
 if (failed) {
   console.error(NL + failed + " failed");
   process.exit(1);

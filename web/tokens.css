@@ -21,8 +21,15 @@
   --color-danger: oklch(62% 0.16 25);
   --color-ok: oklch(72% 0.12 145);
   --color-weight: oklch(82% 0.14 210);
+  /* 左上角那片暖光（body 背景）。 */
+  --color-glow: oklch(22% 0.03 28 / 0.55);
+  /* 空字盒的分隔線：墨色 6%，看得出格子、又不搶那兩行字。 */
+  --color-case-line: color-mix(in oklab, var(--color-ink) 6%, transparent);
 
-  --font-display: "Bricolage Grotesque", "Arial Narrow", sans-serif;
+  /* Bricolage Grotesque 沒有中文字：「排字匣」和分類標題以前全部退回系統字。
+     排字匣是鉛字排版的字盒，活字就是宋體 —— 中文落到 Chiron Sung HK。
+     跟導影台的粗明體（Noto Serif TC）刻意分開，兩個版面各有自己的聲音。 */
+  --font-display: "Bricolage Grotesque", "Chiron Sung HK", "Arial Narrow", sans-serif;
   --font-body: "IBM Plex Sans", "Segoe UI", sans-serif;
   --font-outlier: "IBM Plex Mono", ui-monospace, monospace;
 
