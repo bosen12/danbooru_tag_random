@@ -1455,6 +1455,54 @@ const ALBUM_FIXTURE = [
   ok("排字匣空的成片區是一格格的字盒", /\.stage \.results:empty\s*\{[^}]*var\(--color-case-line\)/.test(css) && /--color-case-line:/.test(tok));
 }
 
+// --- 開視窗時背景不能跳 ---------------------------------------------------------------
+// 1. 導影台的詞庫用 body { overflow: hidden } 鎖捲動。html 有 overflow-x: clip，body 的
+//    overflow 不會傳到視窗，body 反而變成自己的捲動容器（scroll-lock.js 的註解寫過這個坑），
+//    黏在頂端的頂欄改對齊 body：頁面捲了 24px 再開詞庫，頂欄實測從 y=0 跳到 y=-24
+//    （上面 24px 被切掉，看起來像縮短），關掉又跳回來。
+// 2. 右上角的視窗（LoRA／底模／工作流／作品冊）鎖 html 是對的，但捲軸被拿掉，
+//    頁面實測從 1009 變 1024px 寬，頂欄跟著變寬 15px、工具列位移。
+{
+  const w4 = readFileSync(join(ROOT, "web4", "styles.css"), "utf8").split(CR).join("");
+  const boot = readFileSync(join(ROOT, "web", "boot.css"), "utf8").split(CR).join("");
+  ok("導影台開詞庫不再鎖 body（會讓頂欄跳位）", !/body\.studio\.sheet-open\s*\{[^}]*overflow:\s*hidden/.test(w4));
+  ok("導影台開詞庫改鎖 html", /html:has\(body\.studio\.sheet-open\)\s*\{[^}]*overflow:\s*hidden/.test(w4));
+  ok("捲軸位置永遠保留，鎖捲動時寬度不變", /html\s*\{[^}]*scrollbar-gutter:\s*stable/.test(boot));
+}
+
+// --- 微互動：每個控制項都要有滑過、按下、停用的樣子 ---------------------------------------
+// 逐一盤點排字匣 38 種可互動元件（樣式表裡有沒有對應的 :hover／:active／:disabled 規則）：
+// 開關三顆滑過、按下都沒變化；19 個輸入框滑過沒變化；作品冊格子、分類展開、42 個必抽 +、
+// 99 列 LoRA 按下沒有回饋；而 .ghost／.seg／.chip-toggle 停用時滑上去照樣浮起來、變色。
+{
+  const css = readFileSync(join(ROOT, "web", "boot.css"), "utf8").split(CR).join("");
+  const has = (re) => re.test(css);
+  ok("開關滑過時圓鈕往要去的方向挪", has(/\.same-switch:hover \.same-knob i\s*\{[^}]*translate:/));
+  ok("開關按下時圓鈕拉長", has(/\.same-switch:active \.same-knob i\s*\{[^}]*scale:/));
+  ok("開關滑過時外框有反應", has(/\.same-switch:hover:not\(\.is-on\)\s*\{[^}]*border-color/));
+  ok("輸入框滑過時邊框有反應", has(/input\[type="search"\]:hover:not\(:focus\)[\s\S]{0,200}?\{[^}]*border-color/));
+  const press = (css.match(/:is\(([^)]*)\):active:not\(:disabled\)\s*\{[^}]*scale:/) || [])[1] || "";
+  for (const cls of [".cat-toggle", ".must-add", ".lora-row", ".album-cell", ".lm-cat", ".album-chip", ".w-flag"]) {
+    ok(`${cls} 按下有回饋`, press.includes(cls), press ? `按壓規則裡沒有 ${cls}` : "找不到共用的按壓規則");
+  }
+  ok("停用的按鈕游標是 not-allowed", has(/:is\(:disabled, \[aria-disabled="true"\]\)[^{]*\{[^}]*cursor:\s*not-allowed/));
+  // 用 :where() 包住排除條件：權重不變，.ghost.mini:hover 這類更具體的覆蓋仍然有效。
+  ok("停用的 ghost 滑過不會浮起來", has(/\.ghost:hover:where\(:not\(:disabled\):not\(\[aria-disabled="true"\]\)\)/));
+  ok("停用的 seg／chip 滑過不會浮起來", has(/\.chip-toggle:hover:where\(:not\(:disabled\)/));
+  ok("減少動態時開關圓鈕不做形變", has(/prefers-reduced-motion[\s\S]{0,400}\.same-knob i\s*\{[^}]*(translate|scale):\s*none/));
+}
+
+// 導影台釘選台「每段目標數」整列可點，滑過卻毫無變化，「展開」一直是灰字。
+{
+  const css = readFileSync(join(ROOT, "web4", "styles.css"), "utf8").split(CR).join("");
+  ok("每段目標數滑過整列有反應", /\.pin-row-more > summary:hover\s*\{[^}]*background/.test(css));
+  ok("每段目標數滑過時「展開」變亮", /\.pin-row-more > summary:hover::after\s*\{[^}]*color:\s*var\(--color-ink\)/.test(css));
+  ok("每段目標數按下有回饋", /\.pin-row-more > summary:active\s*\{[^}]*scale:/.test(css));
+  // 卡片的「POS · N」有會翻的小箭頭，托盤的「展開」沒有 —— 同一種操作要同一種樣子。
+  ok("托盤展開鈕跟 POS 鈕用同一個箭頭", /\.studio \.pos-toggle::after,\s*\.studio \.tray-toggle::after/.test(css) && /\.tray-toggle\[aria-expanded="true"\]::after/.test(css));
+  ok("每段目標數展開時內容淡入", /\.pin-row-more\[open\] \.count-grid\s*\{[^}]*animation:\s*pos-reveal/.test(css));
+}
+
 if (failed) {
   console.error(NL + failed + " failed");
   process.exit(1);

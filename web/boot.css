@@ -13,6 +13,10 @@ body {
 html {
   color-scheme: dark;
   background: var(--color-paper);
+  /* 開彈窗時 scroll-lock.js 把 html 設成 overflow: hidden，瀏覽器就把捲軸拿掉：
+     頁面實測從 1009 變 1024px 寬，頂欄、工具列、整片背景都往右挪 15px，關掉又挪回來。
+     stable 讓捲軸那一條永遠保留，鎖住時寬度不變。 */
+  scrollbar-gutter: stable;
 }
 
 body {
@@ -235,7 +239,10 @@ input[type="number"] {
   border-radius: 99px;
   background: var(--color-paper);
   display: block;
-  transition: transform var(--dur-ui) var(--ease-out);
+  transition:
+    transform var(--dur-ui) var(--ease-out),
+    translate var(--dur-micro) var(--ease-out),
+    scale 100ms var(--ease-out);
 }
 
 .same-switch.is-on .same-knob i {
@@ -310,8 +317,8 @@ input[type="number"] {
     transform var(--dur-micro) var(--ease-out);
 }
 
-.seg:hover,
-.chip-toggle:hover,
+.seg:hover:where(:not(:disabled):not([aria-disabled="true"])),
+.chip-toggle:hover:where(:not(:disabled):not([aria-disabled="true"])),
 .tag:hover:not([data-state="banned"]):not([data-locked="1"]) {
   border-color: var(--color-muted);
   transform: translateY(-1px);
@@ -348,11 +355,11 @@ input[type="number"] {
   background: color-mix(in oklab, currentColor 18%, transparent);
 }
 
-.seg:active,
-.chip-toggle:active,
+.seg:active:where(:not(:disabled)),
+.chip-toggle:active:where(:not(:disabled)),
 .tag:active,
-.primary:active,
-.ghost:active {
+.primary:active:where(:not(:disabled)),
+.ghost:active:where(:not(:disabled):not([aria-disabled="true"])) {
   transform: scale(0.98);
 }
 
@@ -417,7 +424,7 @@ input[type="number"] {
     transform var(--dur-micro) var(--ease-out);
 }
 
-.ghost:hover {
+.ghost:hover:where(:not(:disabled):not([aria-disabled="true"])) {
   border-color: var(--color-accent);
   background-color: color-mix(in oklab, var(--color-accent) 8%, transparent);
   transform: translateY(-1px);
@@ -2747,5 +2754,62 @@ html.is-booting *::after {
 @media (prefers-reduced-motion: reduce) {
   .new-card-cue {
     animation: none;
+  }
+}
+
+/* —— 微互動：每個控制項都有滑過、按下、停用的樣子 ——
+   逐一盤點 38 種可互動元件，樣式表裡找對應的 :hover／:active／:disabled：
+   開關滑過、按下都沒變化；19 個輸入框滑過沒變化；作品冊格子、分類展開、42 個必抽 +、
+   99 列 LoRA 按下沒回饋；停用的按鈕滑上去照樣浮起來、變色，像是可以按。 */
+
+/* 開關：滑過時圓鈕往要去的方向挪 3px（預告按下去往哪跑），按住時橫向拉長，
+   放開才滑過去。用 translate／scale 獨立屬性，跟原本的 transform: translateX 疊加。 */
+.same-switch:hover:not(.is-on) {
+  border-color: var(--color-muted);
+}
+.same-switch:hover .same-knob i {
+  translate: 3px 0;
+}
+.same-switch.is-on:hover .same-knob i {
+  translate: -3px 0;
+}
+.same-switch:active .same-knob i {
+  scale: 1.3 1;
+  transform-origin: left center;
+}
+.same-switch.is-on:active .same-knob i {
+  transform-origin: right center;
+}
+
+/* 輸入框：聚焦時本來就換邊框與底色；滑過（還沒點進去）時先亮一階，知道這裡能點。 */
+input[type="search"]:hover:not(:focus):not(:disabled),
+input[type="number"]:hover:not(:focus):not(:disabled),
+input[type="text"]:hover:not(:focus):not(:disabled),
+select:hover:not(:focus):not(:disabled) {
+  border-color: var(--color-muted);
+}
+
+/* 按下：一律用獨立的 scale 屬性，跟各元件自己的 transform（滑過抬 1px、權重小標的
+   scale(0.92)）疊加而不是蓋掉。按下是即時的，不需要過場。 */
+:is(.cat-toggle, .must-add, .lora-row, .album-cell, .lm-cat, .lm-slot-tab, .album-chip, .w-flag, .lora-page-btn, .wf-drop, .lora-modal-close, .lora-tarot-close, .shortcuts-close, .jump a, .lm-manager-link):active:not(:disabled) {
+  scale: 0.96;
+}
+/* 整列、整格的東西縮 4% 太多，收成 1%。 */
+:is(.lora-row, .album-cell):active:not(:disabled) {
+  scale: 0.99;
+}
+
+/* 停用：游標說清楚，ghost／seg／chip 淡一階。:where() 讓元件自己的停用樣式優先。 */
+:is(button, [role="button"], [role="switch"]):is(:disabled, [aria-disabled="true"]) {
+  cursor: not-allowed;
+}
+:where(.ghost, .seg, .chip-toggle):is(:disabled, [aria-disabled="true"]) {
+  opacity: 0.5;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .same-switch:is(:hover, :active) .same-knob i {
+    translate: none;
+    scale: none;
   }
 }

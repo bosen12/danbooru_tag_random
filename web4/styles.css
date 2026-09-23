@@ -10,7 +10,11 @@ body.studio {
   min-height: 100dvh;
 }
 
-body.studio.sheet-open { overflow: hidden; }
+/* 開詞庫／釘選台時鎖的是 html，不是 body。html 有 overflow-x: clip，body 的 overflow 不會
+   傳到視窗，body 反而變成自己的捲動容器，黏在頂端的頂欄改對齊 body（scrollTop 恆為 0）：
+   頁面捲了 24px 再開詞庫，頂欄實測從 y=0 跳到 y=-24，關掉又跳回來。
+   scroll-lock.js 對其他彈窗早就這樣鎖；這裡用 :has() 跟上，不必改 studio.js。 */
+html:has(body.studio.sheet-open) { overflow: hidden; }
 
 .studio-mast {
   display: flex;
@@ -854,6 +858,31 @@ body.is-shooting .studio-dock .status {
   color: var(--color-muted);
 }
 .pin-more.pin-row-more[open] > summary::after { content: "收合"; }
+/* 整列都能點，但滑過原本毫無變化、「展開」一直是灰字。 */
+.pin-more.pin-row-more > summary {
+  border-radius: calc(var(--radius) - 2px);
+  transition: background-color var(--dur-micro) var(--ease-out);
+}
+.pin-more.pin-row-more > summary::after {
+  transition: color var(--dur-micro) var(--ease-out);
+}
+.pin-more.pin-row-more > summary:hover {
+  background: color-mix(in oklab, var(--color-ink) 5%, transparent);
+}
+.pin-more.pin-row-more > summary:hover::after {
+  color: var(--color-ink);
+}
+.pin-more.pin-row-more > summary:active {
+  scale: 0.995;
+}
+.pin-more.pin-row-more[open] .count-grid {
+  animation: pos-reveal var(--dur-ui) var(--ease-out) both;
+}
+@media (prefers-reduced-motion: reduce) {
+  .pin-more.pin-row-more[open] .count-grid {
+    animation: none;
+  }
+}
 .pin-more.pin-row-more .count-grid {
   padding: 0 var(--space-4) var(--space-4);
 }
@@ -984,6 +1013,11 @@ body.is-shooting #go-pos:disabled {
 .studio .tray.is-pins-open #tray-pins {
   animation: pos-reveal var(--dur-ui) var(--ease-out) both;
 }
+.studio .tray-toggle {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+}
 .studio .tray-toggle[aria-expanded="true"] {
   color: var(--color-accent);
 }
@@ -1020,8 +1054,10 @@ body.is-shooting #go-pos:disabled {
   font-variant-numeric: tabular-nums;
   letter-spacing: 0.04em;
 }
-/* 小箭頭：收起朝下、展開朝上。只轉 transform。 */
-.studio .pos-toggle::after {
+/* 小箭頭：收起朝下、展開朝上。只轉 transform。
+   托盤的「展開」是同一種操作，用同一個箭頭。 */
+.studio .pos-toggle::after,
+.studio .tray-toggle::after {
   content: "";
   width: 5px;
   height: 5px;
@@ -1034,14 +1070,16 @@ body.is-shooting #go-pos:disabled {
   border-color: var(--color-accent);
   color: var(--color-accent);
 }
-.studio .pos-toggle[aria-expanded="true"]::after {
+.studio .pos-toggle[aria-expanded="true"]::after,
+.studio .tray-toggle[aria-expanded="true"]::after {
   transform: translateY(1px) rotate(-135deg);
 }
 @media (prefers-reduced-motion: reduce) {
   .studio .card.is-pos-open .meta > .pos {
     animation: none;
   }
-  .studio .pos-toggle::after {
+  .studio .pos-toggle::after,
+  .studio .tray-toggle::after {
     transition: none;
   }
 }
