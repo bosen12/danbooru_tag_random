@@ -526,13 +526,16 @@ export function makeTypeShop(THREE, { makeCanvas = defaultCanvas } = {}) {
   rim.userData.role = LIGHT_ROLES.ambience;
   root.add(rim);
 
-  paintStick(composeLine([]));
+  // 還沒抽過（或 POS 清空了）時手盒排著店名：它是整張桌子的主角，一條空的黑槓看起來像壞掉。
+  // 排字工收工前也是這樣 —— 手盒裡留一行，不會是空的。
+  const IDLE_LINE = ["排字匣"];
+  paintStick(composeLine(IDLE_LINE));
 
   return {
     root,
     /** 抽了新的一張：把 tag 中文名排進手盒。回傳排好的那一行。 */
     setComposed(labels) {
-      const cells = composeLine(labels);
+      const cells = composeLine(labels?.length ? labels : IDLE_LINE);
       paintStick(cells);
       return cells;
     },

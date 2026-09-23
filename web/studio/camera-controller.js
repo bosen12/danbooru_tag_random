@@ -57,6 +57,9 @@ export function createCameraController(opts) {
   const onPanelShow = typeof options.onPanelShow === "function" ? options.onPanelShow : null;
   const onPanelHide = typeof options.onPanelHide === "function" ? options.onPanelHide : null;
   const onStateChange = typeof options.onStateChange === "function" ? options.onStateChange : null;
+  // 手量的鏡位只對一個畫面比例成立；外殼可以依畫面和面板把它修成「器具落在可見區」
+  // （framing.js）。沒給就照手量的走 —— 這個檔案仍然不知道畫面長什麼樣子。
+  const resolvePose = typeof options.resolvePose === "function" ? options.resolvePose : null;
 
   let state = CAMERA_STATES.overview;
   let activeId = null;
@@ -89,6 +92,18 @@ export function createCameraController(opts) {
   function hotspot(id) {
     for (const h of hotspots) if (h && h.id === id) return h;
     return null;
+  }
+
+  function poseFor(h) {
+    const authored = { position: vec(h.cameraPosition), target: vec(h.lookAtTarget) };
+    if (!resolvePose) return authored;
+    try {
+      const r = resolvePose(h, authored);
+      return r ? { position: vec(r.position), target: vec(r.target) } : authored;
+    } catch {
+      // 算鏡位失敗不該讓器具點不開：退回手量的。
+      return authored;
+    }
   }
 
   function showPanel(panelId) {
@@ -168,7 +183,7 @@ export function createCameraController(opts) {
     }
     activeId = id;
     begin(
-      { position: vec(h.cameraPosition), target: vec(h.lookAtTarget) },
+      poseFor(h),
       nowMs,
       CAMERA_STATES.transitioning,
       h.panelId,
@@ -200,6 +215,24 @@ export function createCameraController(opts) {
     };
     if (anim.kind === CAMERA_STATES.transitioning && e >= PANEL_IN_AT) showPanel(anim.panelId);
     return api.pose;
+  };
+
+  /**
+   * 畫面大小變了：停著的鏡位直接換到新算的位置（不再運鏡一次 —— 拉視窗時鏡頭
+   * 追著跑會很吵）；還在路上的從「現在這一格」重新出發去新的目的地。
+   * 只改 anim.to 不行：同一個進度下插值出來的點會跟著變，畫面會跳一下。
+   */
+  api.reframe = (nowMs) => {
+    if (destroyed || !activeId) return false;
+    const h = hotspot(activeId);
+    if (!h) return false;
+    if (anim && anim.kind === CAMERA_STATES.transitioning) {
+      begin(poseFor(h), nowMs, CAMERA_STATES.transitioning, anim.panelId);
+      return true;
+    }
+    if (state !== CAMERA_STATES.focused) return false;
+    settle(poseFor(h));
+    return true;
   };
 
   api.setFallback = (reason) => {

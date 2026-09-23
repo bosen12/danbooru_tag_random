@@ -16,6 +16,7 @@ import { createCameraController, CAMERA_STATES } from "./camera-controller.js";
 import { STUDIO_HOTSPOTS, validateHotspots, missingNodes } from "./hotspots.js";
 import { loadStudioScene, THREE, studioEnvironment } from "./scene-loader.js";
 import { createBridge, anyOverlayOpen } from "./studio-bridge.js";
+import { fitPose } from "./framing.js";
 import {
   QUALITY_TIERS,
   clampPixelRatio,
@@ -122,6 +123,10 @@ export async function createStudioShell(opts) {
   }
   renderer.shadowMap.enabled = tierSettings(tier).shadows;
   renderer.shadowMap.type = THREE.PCFSoftShadowMap;
+  // 陰影只跟燈和幾何有關，跟相機無關，而排字台上沒有會動的東西。預設每一格都重畫
+  // 陰影貼圖，運鏡時等於每格多畫一遍所有投影的 mesh。改成畫一次，燈變了才重畫。
+  renderer.shadowMap.autoUpdate = false;
+  renderer.shadowMap.needsUpdate = true;
   // 色彩管線。這三行對觀感的影響比任何幾何細節都大：
   // 沒有 tone mapping 時，亮部會硬生生削平成一片死白，暗部則糊成一團黑 ——
   // 那正是「電腦畫的」最明顯的特徵。ACES 把高光滾下來、把暗部拉開，
@@ -162,10 +167,24 @@ export async function createStudioShell(opts) {
     target: { x: 0, y: 1.08, z: -0.35 },
   };
 
+  // 器具的包圍盒：場景是靜的，量一次就好。
+  const nodeBoxes = new Map();
   const cam = createCameraController({
     overview: OVERVIEW,
     hotspots: STUDIO_HOTSPOTS,
     reducedMotion,
+    // 面板會蓋掉右邊 560px（手機上是底下 62%）：鏡位依現在的畫面修成器具整個落在可見區。
+    resolvePose: (h, authored) => {
+      const node = sceneData.hotspotNodes.get(h.objectName);
+      if (!node) return authored;
+      let box = nodeBoxes.get(node);
+      if (!box) nodeBoxes.set(node, (box = new THREE.Box3().setFromObject(node)));
+      return fitPose(THREE, authored, box, {
+        width: rootEl.clientWidth || window.innerWidth,
+        height: rootEl.clientHeight || window.innerHeight,
+        fov: camera.fov,
+      });
+    },
     onPanelShow: (panelId) => {
       bridge.open(panelId);
       rootEl.classList.add("has-panel");
@@ -227,6 +246,11 @@ export async function createStudioShell(opts) {
   let fpsAcc = 0;
   let fpsN = 0;
   let contextLost = 0;
+  // hover 亮光：每個器具一個 0..1 的量，朝目標淡過去（setHoverLift 設目標、stepLifts 走一格）。
+  // 宣告在這裡而不是 setHoverLift 旁邊：schedule() 在初始化中途就會被同步呼叫。
+  const lifts = new Map();
+  let liftPrev = 0;
+  const LIFT_MS = 140;
   // 「有東西變了」就一定要把迴圈叫起來。按需渲染最容易出的錯就是改了狀態卻忘了
   // 排下一格 —— 實測從鍵盤那排功能點按下去時，focus() 動了狀態機，但迴圈已經
   // 停在 overview，畫面完全沒反應。把 schedule() 併進來，就不會有哪個呼叫端漏掉。
@@ -301,6 +325,7 @@ export async function createStudioShell(opts) {
       if (!s.shadows && light.castShadow) light.castShadow = false;
       else if (s.shadows && light.userData.role === "essential") light.castShadow = light.userData.wantsShadow === true;
     }
+    renderer.shadowMap.needsUpdate = true;
     markDirty();
   }
 
@@ -312,6 +337,8 @@ export async function createStudioShell(opts) {
     renderer.setSize(w, h, false);
     camera.aspect = w / h;
     camera.updateProjectionMatrix();
+    // 面板寬度是固定的 px，畫面一變，器具在可見區裡的位置就變了。
+    cam.reframe?.(performance.now());
     markDirty();
   }
 
@@ -330,7 +357,8 @@ export async function createStudioShell(opts) {
     const animating = cam.isBusy;
     cam.update(now);
     const moved = stepParallax();
-    if (animating || dirty || moved) {
+    const lifting = stepLifts(now);
+    if (animating || dirty || moved || lifting) {
       const p = cam.pose;
       camera.position.set(
         p.position.x + parallax.x,
@@ -372,7 +400,7 @@ export async function createStudioShell(opts) {
   function schedule() {
     if (rafId) return;
     const drifting = !reducedMotion && (parallax.x !== parallaxTo.x || parallax.y !== parallaxTo.y);
-    if (!shouldRender({ visible, animating: cam.isBusy || drifting, dirty })) return;
+    if (!shouldRender({ visible, animating: cam.isBusy || drifting || liftsMoving(), dirty })) return;
     rafId = requestAnimationFrame(frame);
   }
 
@@ -402,6 +430,8 @@ export async function createStudioShell(opts) {
     }
   };
   const onRestored = () => {
+    // context 掉了之後 GPU 上的陰影貼圖也沒了，要重畫一次。
+    renderer.shadowMap.needsUpdate = true;
     resize();
     markDirty();
     schedule();
@@ -432,7 +462,10 @@ export async function createStudioShell(opts) {
   // 放大會讓家具「跳」，在一個半寫實的房間裡那看起來像壞掉而不是可以點。
   // 材質先 clone 再改 —— GLB 的材質常常是好幾個節點共用的，直接改會連帶
   // 把旁邊沒滑到的東西一起點亮。
+  //
+  // 亮起與熄掉都淡過去（140ms，跟 2D 那側按鈕的 hover 同一個節奏），不是開關一切。
   const hoverBase = new WeakMap();
+  const LIFT_TINT = new THREE.Color(0xeaad57);
   function setHoverLift(node, on) {
     if (!node) return;
     node.traverse((o) => {
@@ -444,16 +477,44 @@ export async function createStudioShell(opts) {
           i: o.material.emissiveIntensity ?? 1,
         });
       }
-      const base = hoverBase.get(o);
-      if (!base.e) return;
-      if (on) {
-        o.material.emissive.copy(base.e).lerp(new THREE.Color(0xeaad57), 0.35);
-        o.material.emissiveIntensity = Math.max(base.i, 0.35) * 1.5;
-      } else {
-        o.material.emissive.copy(base.e);
-        o.material.emissiveIntensity = base.i;
-      }
     });
+    let lift = lifts.get(node);
+    if (!lift) lifts.set(node, (lift = { t: 0, to: 0 }));
+    // 從靜止開始動：計時從現在算，不是從上一次停下來的那一格。
+    if (!liftsMoving()) liftPrev = performance.now();
+    lift.to = on ? 1 : 0;
+    if (reducedMotion) {
+      lift.t = lift.to;
+      applyLift(node, lift.t);
+    }
+  }
+  function applyLift(node, t) {
+    const k = t * t * (3 - 2 * t);
+    node.traverse((o) => {
+      const base = o.isMesh ? hoverBase.get(o) : null;
+      if (!base || !base.e) return;
+      // 亮光要淡：一層均勻的自發光會把有紋路的器具（活字架的格子、字模櫃的抽屜）
+      // 洗成一塊平的亮色，看起來像被選取框蓋住，而不是被燈照到。
+      o.material.emissive.copy(base.e).lerp(LIFT_TINT, 0.2 * k);
+      o.material.emissiveIntensity = base.i + (Math.max(base.i, 0.3) * 1.25 - base.i) * k;
+    });
+  }
+  function liftsMoving() {
+    for (const lift of lifts.values()) if (lift.t !== lift.to) return true;
+    return false;
+  }
+  /** 所有還在變的亮光走一格；有東西變了就回 true（這一格要畫）。 */
+  function stepLifts(now) {
+    if (!liftsMoving()) return false;
+    // 分頁切走再回來時 now 會跳很大一段，夾住，免得一格就跳到底看不到淡入。
+    const step = Math.min(Math.max(now - liftPrev, 0), 50) / LIFT_MS;
+    liftPrev = now;
+    for (const [node, lift] of lifts) {
+      if (lift.t === lift.to) continue;
+      lift.t = lift.to > lift.t ? Math.min(lift.to, lift.t + step) : Math.max(lift.to, lift.t - step);
+      applyLift(node, lift.t);
+    }
+    return true;
   }
 
   // 鍵盤焦點的高亮跟滑鼠 hover 共用同一套材質提升，但各自記各自的，
@@ -501,16 +562,22 @@ export async function createStudioShell(opts) {
   function hotspotNodeName(id) {
     return STUDIO_HOTSPOTS.find((x) => x.id === id)?.objectName || "";
   }
+  // 滑鼠不在任何器具上了：熄亮光、游標復原、藏提示。鍵盤焦點點亮的那個不動。
+  function clearHover() {
+    if (hovered && hovered !== kbLit) setHoverLift(sceneData.hotspotNodes.get(hotspotNodeName(hovered)), false);
+    hovered = null;
+    canvas.style.cursor = "";
+    const tip = document.getElementById("studio-tip");
+    if (tip && !kbLit) tip.hidden = true;
+    markDirty();
+  }
   const onClick = (ev) => {
     if (!cam.acceptsPointerInput()) return;
     const h = pick(ev);
     if (h) {
       // 鏡頭要走了，hover 的亮度先收掉，不然它會一路亮著跟過去。
-      if (hovered) setHoverLift(sceneData.hotspotNodes.get(hotspotNodeName(hovered)), false);
-      hovered = null;
+      clearHover();
       setKeyboardLift(null);
-      const tip = document.getElementById("studio-tip");
-      if (tip) tip.hidden = true;
       cam.focus(h.id, performance.now());
       schedule();
       return;
@@ -522,6 +589,8 @@ export async function createStudioShell(opts) {
     }
   };
   const onPointerLeave = () => {
+    // 停在器具上直接移出畫布（到面板上、出視窗）不會再有 pointermove，這裡要自己收。
+    clearHover();
     parallaxTo.x = 0;
     parallaxTo.y = 0;
     schedule();
