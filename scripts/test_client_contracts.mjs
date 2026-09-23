@@ -1532,6 +1532,10 @@ const ALBUM_FIXTURE = [
   ok("通知選單裡上下鍵、Home、End 會移動", /ArrowUp/.test(svc) && /"Home"/.test(svc) && /"End"/.test(svc));
   ok("Tab 離開通知選單時選單收起來", /e\.key === "Tab"[\s\S]{0,80}setOpen\(false\)/.test(svc));
   ok("選單項目不在 Tab 順序裡（選單內靠方向鍵）", /tabindex="-1"[^>]*data-service="telegram"|data-service="telegram"[^>]*tabindex="-1"/.test(svc));
+  // 自動傳送的狀態只是一顆有顏色的點；點上掛的 aria-label 在沒有 role 的 <span> 上會被忽略，
+  // 螢幕閱讀器完全不知道它開著還是關著。狀態要寫進選項本身的名字。
+  ok("通知選單的項目名字裡有自動傳送開著還是關著", /choice\.setAttribute\("aria-label", `[^`]*自動傳送\$\{active \? "開著" : "關著"\}/.test(svc));
+  ok("狀態點本身不再掛沒用的 aria-label", !/class="service-dot" aria-label=/.test(svc));
   ok("寬高對齊 8 的倍數",/function clampSide\([^)]*\)\s*\{[^}]*\/ 8\)\s*\*\s*8/.test(src));
 }
 

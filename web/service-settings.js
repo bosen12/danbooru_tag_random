@@ -20,8 +20,8 @@ function ensureDom() {
     <button type="button" class="ghost service-settings-btn" id="service-settings-btn" aria-label="通知設定" aria-haspopup="menu" aria-expanded="false" title="通知設定">${GEAR}</button>
     <div class="service-menu" id="service-menu" role="menu" aria-label="選擇通知服務">
       <p class="service-menu-title">通知傳送</p>
-      <button type="button" class="service-choice" role="menuitem" tabindex="-1" data-service="telegram"><span class="service-icon">${TELEGRAM_ICON}</span><span class="service-copy"><strong>Telegram</strong><small>Bot 與頻道設定</small></span><span class="service-dot" aria-label="Telegram 自動傳送狀態"></span></button>
-      <button type="button" class="service-choice" role="menuitem" tabindex="-1" data-service="discord"><span class="service-icon">${DISCORD_ICON}</span><span class="service-copy"><strong>Discord</strong><small>Webhook 或 Bot 設定</small></span><span class="service-dot" aria-label="Discord 自動傳送狀態"></span></button>
+      <button type="button" class="service-choice" role="menuitem" tabindex="-1" data-service="telegram"><span class="service-icon">${TELEGRAM_ICON}</span><span class="service-copy"><strong>Telegram</strong><small>Bot 與頻道設定</small></span><span class="service-dot" aria-hidden="true"></span></button>
+      <button type="button" class="service-choice" role="menuitem" tabindex="-1" data-service="discord"><span class="service-icon">${DISCORD_ICON}</span><span class="service-copy"><strong>Discord</strong><small>Webhook 或 Bot 設定</small></span><span class="service-dot" aria-hidden="true"></span></button>
     </div>`;
   tools.insertBefore(wrap, tools.firstChild);
 }
@@ -58,6 +58,10 @@ export function setServiceStatus(name, active) {
   if (!choice) return;
   choice.dataset.active = active ? "1" : "0";
   choice.querySelector(".service-dot")?.setAttribute("data-on", active ? "1" : "0");
+  // 那顆點只有顏色；螢幕閱讀器要從名字裡聽到開著還是關著。
+  const title = choice.querySelector("strong")?.textContent || name;
+  const sub = choice.querySelector("small")?.textContent || "";
+  choice.setAttribute("aria-label", `${title}：${sub}（自動傳送${active ? "開著" : "關著"}）`);
 }
 
 export function initServiceSettings() {
