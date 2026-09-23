@@ -67,6 +67,10 @@ function overlayOpen(el) {
   delete el.dataset.closing;
   el.classList.remove("is-closing");
   el.inert = false;
+  // 記住是誰打開的：關掉時焦點要回到那裡，不能留在已經藏起來的搜尋框上。
+  // 已經開著再開一次（焦點在裡面）不覆寫。
+  const from = document.activeElement;
+  if (from && from !== document.body && !el.contains(from)) el._returnFocus = from;
   el.classList.add("open");
   lockScroll(el.id || "lora-overlay");
 }
@@ -85,6 +89,13 @@ function fadeCloseOverlay(el, _inner, onDone, msOverride) {
     delete el.dataset.closing;
     el.classList.remove("open", "is-closing");
     unlockScroll(el.id || "lora-overlay");
+    // 焦點回到打開它的地方。要在 unlockScroll 之後：開著時背景（頂欄）是 inert 的，
+    // 對裡面的鈕 focus() 會靜靜失敗。只在焦點還在浮層裡（或已經掉到 body）時才還 ——
+    // 使用者自己點到別處的話不搶。
+    const back = el._returnFocus;
+    el._returnFocus = null;
+    const at = document.activeElement;
+    if (back && back.isConnected && (el.contains(at) || !at || at === document.body)) back.focus({ preventScroll: true });
     if (onDone) onDone();
   };
   setTimeout(finish, ms);

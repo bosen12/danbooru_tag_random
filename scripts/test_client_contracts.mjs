@@ -1539,6 +1539,19 @@ const ALBUM_FIXTURE = [
   ok("寬高對齊 8 的倍數",/function clampSide\([^)]*\)\s*\{[^}]*\/ 8\)\s*\*\s*8/.test(src));
 }
 
+// 底模選單、快捷鍵說明（還有 LoRA 的兩個浮層）按 Esc 關掉之後，焦點留在已經藏起來的
+// 搜尋框／關閉鈕上 —— 鍵盤使用者被丟在一個看不見的地方。作品冊、工作流是對的（會回到開它的鈕）。
+{
+  const lora = readFileSync(join(ROOT, "web", "lora.js"), "utf8").split(CR).join("");
+  const open = lora.slice(lora.indexOf("function overlayOpen("), lora.indexOf("function fadeCloseOverlay("));
+  const close = lora.slice(lora.indexOf("function fadeCloseOverlay("), lora.indexOf("let _toastT"));
+  ok("LoRA 這一族浮層打開時記住焦點在哪", /_returnFocus = /.test(open) && /document\.activeElement/.test(open));
+  ok("關掉時焦點回到打開它的地方", /_returnFocus/.test(close) && /\.focus\(/.test(close));
+  // 浮層開著時背景（頂欄，開它的鈕就在裡面）是 inert 的，對它 focus() 會靜靜失敗。
+  // 第一版在關閉一開始就還焦點，實測完全沒用 —— 要等 unlockScroll 把背景放回來之後才還。
+  ok("還焦點在背景解除 inert 之後", close.indexOf(".focus(") > close.indexOf("unlockScroll("));
+}
+
 if (failed) {
   console.error(NL + failed + " failed");
   process.exit(1);
