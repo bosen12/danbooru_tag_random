@@ -1,3 +1,5 @@
+// 最先裝：在其他模組碰剪貼簿之前補上非安全環境（Tailscale 的 http）的備援。
+import "./clipboard.js";
 import {
   applyBan,
   applyPin,
@@ -92,6 +94,7 @@ import { initDiscord, dcHandleKeys, dcSendCard, dcUiOpen } from "./discord.js";
 import { initServiceSettings } from "./service-settings.js";
 import { applyWorkflowId, currentWorkflowId, initWorkflow, wfHandleKeys, workflowUiOpen } from "./workflow.js";
 import { albumHandleKeys, ensureFavButton, initAlbum, paintFavButton, paintWhy } from "./album.js";
+import { cueNewCard, scrollBehavior } from "./new-card-cue.js";
 import { createCommands } from "./commands.js";
 import { traceSummaryForRecipe } from "./trace.js";
 import {
@@ -2936,6 +2939,8 @@ async function runSameSeedFromCard(card) {
 
 async function runBatch(opts = {}) {
   const posOnly = !!opts.posOnly;
+  // 這一輪最後放上牆的那張：抽完如果它在畫面外，dock 會指一下方向。
+  let newest = null;
   // 只抽牌：若上一輪卡在 running（Comfy 掛／半套），先解鎖，避免連點無聲。
   if (running) {
     if (!posOnly) return;
@@ -2990,7 +2995,7 @@ async function runBatch(opts = {}) {
     }
     beginRound();
     // 八格牆平常是連續的：不再每輪清空。只有牆是空的才把畫面捲過去。
-    if (!wallHasCards()) $("results").scrollIntoView({ behavior: "smooth", block: "start" });
+    if (!wallHasCards()) $("results").scrollIntoView({ behavior: scrollBehavior(), block: "start" });
 
     let ident = new Set();
 
@@ -3050,6 +3055,7 @@ async function runBatch(opts = {}) {
       }
       // 卡片是現做的，不再預先建 n 張 —— 一次幾張已經沒有上限。
       const card = placeCard(cardSkeleton(settings.width, settings.height));
+      newest = card;
       markLive(card);
       card.dataset.seed = String(drawn.seed);
       card.dataset.intentSnap = freezeIntentSnap(settings, pinForDraw, banForDraw);
@@ -3093,6 +3099,9 @@ async function runBatch(opts = {}) {
         }
         paintMustWarn(card, drawn.mustReport);
         paintPinMiss(card);
+        // 星星在只抽牌卡上也畫出來了（.card.is-done .fav-shot），card._recipe 也在，
+        // 以前只有生圖那條路徑綁 click —— 按下去什麼都不會發生。
+        ensureFavButton(card);
         clearLive(card);
         done += 1;
         failStreak = 0;
@@ -3154,6 +3163,7 @@ async function runBatch(opts = {}) {
     if (skipped) bits.push(`跳過 ${skipped} 張`);
     if (failed) bits.push(`失敗 ${failed} 張`);
     speak(bits.join("，"));
+    if (newest) cueNewCard(newest);
   }
 
   // 還開著就接下一輪。用 setTimeout 排隊而不是遞迴，呼叫堆疊不會累積。

@@ -1133,6 +1133,26 @@ input[type="number"] {
   color: var(--color-accent);
   transform: scale(1.06);
 }
+/* 跟 skip／redo 一樣的按壓回饋。 */
+.fav-shot:active {
+  transform: scale(0.94);
+}
+/* 已收藏：填色之外再換成強調色 —— 暗底上只差實心空心，一眼看不出來。 */
+.fav-shot.is-on {
+  color: var(--color-accent);
+}
+/* 收藏成功的那一下。只由 album.js 在按下且存進去之後加上，重畫卡片不會觸發。 */
+.fav-shot.is-popping svg {
+  animation: fav-pop 360ms var(--ease-out);
+}
+@keyframes fav-pop {
+  0% { transform: scale(1); }
+  35% { transform: scale(1.32); }
+  100% { transform: scale(1); }
+}
+@media (prefers-reduced-motion: reduce) {
+  .fav-shot.is-popping svg { animation: none; }
+}
 .bar-actions {
   display: flex;
   gap: var(--space-2);
@@ -2692,4 +2712,40 @@ html.is-booting *::after {
   letter-spacing: 0.08em;
   color: var(--color-muted);
   pointer-events: none;
+}
+
+/* 「↑ 看新的一張」：抽完但新卡在畫面外時，dock 中間指一下方向（new-card-cue.js）。
+   只指不拉 —— 使用者可能正捲在詞庫深處挑字。每次從 hidden 變回來，進場都會重播。 */
+.new-card-cue {
+  display: inline-flex;
+  align-items: center;
+  animation: cue-in var(--dur-ui) var(--ease-out) both;
+}
+.new-card-cue[hidden] {
+  display: none;
+}
+/* .ghost.mini 把字壓成 muted，這顆要看得見，所以權重要壓過它。 */
+.ghost.mini.new-card-cue {
+  border-color: color-mix(in oklab, var(--color-accent) 60%, var(--color-rule));
+  background-color: color-mix(in oklab, var(--color-accent) 10%, transparent);
+  color: var(--color-accent);
+}
+.ghost.mini.new-card-cue:hover {
+  border-color: var(--color-accent);
+  color: var(--color-ink);
+}
+@keyframes cue-in {
+  from {
+    opacity: 0;
+    transform: translateY(6px);
+  }
+  to {
+    opacity: 1;
+    transform: none;
+  }
+}
+@media (prefers-reduced-motion: reduce) {
+  .new-card-cue {
+    animation: none;
+  }
 }

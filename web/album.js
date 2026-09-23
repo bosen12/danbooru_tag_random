@@ -771,7 +771,17 @@ export function ensureFavButton(card) {
     e.stopPropagation();
     const r = await saveRecipeFromCard(card);
     if (!r.ok) hooks.speak?.(r.error || "收藏失敗");
-    else hooks.speak?.(r.removed ? "已取消收藏" : "已收藏");
+    else if (r.removed) hooks.speak?.("已取消收藏");
+    else if (r.recipe) {
+      hooks.speak?.("已收藏");
+      // 彈一下只在「剛按下、真的存進去」的這一刻。放在 paintFavButton 的話，
+      // 重新整理或重畫卡片時每一張已收藏的都會跟著跳。
+      // 取消收藏時按了確認框的「取消」，什麼都沒變，也就什麼都不說。
+      btn.classList.remove("is-popping");
+      void btn.offsetWidth;
+      btn.classList.add("is-popping");
+      btn.addEventListener("animationend", () => btn.classList.remove("is-popping"), { once: true });
+    }
   });
   paintFavButton(card);
 }
