@@ -335,6 +335,44 @@ for (const [prop, heat, era, seed] of [
   ok("dual-pin nightstand + soccer still keeps both", kept === 20, `kept=${kept}/20`);
 }
 
+// --- 釘做菜的性愛圖不能沒有場地 ---------------------------------------------------------
+// 「做菜要有廚房」是最後的修復步驟保證的：先刪掉所有場地，再 allow(kitchen) 放廚房。
+// 但寫實模式下 rape 與廚房互斥，而抽 rape 的時候廚房還沒上場 —— rape 過了，修復時廚房被擋，
+// 場地卻已經刪了：實測 seed 430127 整張圖一個場地都沒有（indoors、sand、gaming chair）。
+// 以前 test_engine 那 40 個 seed 剛好都沒踩到；衣服權重一改，亂數路徑換了就踩到了。
+{
+  const cookPin = applyPin(lex, new Set(), new Set(), "cooking").pinned;
+  const isPlace = (t) => {
+    const it = lex.byTag.get(t);
+    return !!it && (it.mutex === "place" || it.group === "place");
+  };
+  let placeless = [];
+  let noKitchen = [];
+  let cookRape = [];
+  for (const cast of [{ girl: true, boy: false }, { girl: true, boy: true }]) {
+    const s = {
+      ...defaultSettings(data),
+      ...cast,
+      heats: ["sex"],
+      eras: ["modern"],
+      sceneMode: "normal",
+      lockScene: true,
+      counts: { subject: 10, feature: 10, pose: 10, clothing: 10, env: 10 },
+    };
+    for (let i = 0; i < 300; i += 1) {
+      const seed = 430000 + i;
+      const out = drawOne(lex, s, cookPin, new Set(), mulberry32(seed), seed);
+      const tags = out.positive.split(", ").map((t) => t.replace(/^\(+|:[\d.]+\)+$|\)+$/g, ""));
+      if (!tags.some(isPlace)) placeless.push(seed);
+      if (tags.includes("cooking") && !tags.includes("kitchen")) noKitchen.push(seed);
+      if (tags.includes("cooking") && tags.includes("rape")) cookRape.push(seed);
+    }
+  }
+  ok("釘做菜的性愛圖一定有場地", placeless.length === 0, `沒有場地：seed ${placeless.slice(0, 5).join(", ")}（共 ${placeless.length}）`);
+  ok("釘做菜的性愛圖一定在廚房", noKitchen.length === 0, `沒有廚房：seed ${noKitchen.slice(0, 5).join(", ")}（共 ${noKitchen.length}）`);
+  ok("做菜的時候不抽 rape（跟廚房互斥）", cookRape.length === 0, `seed ${cookRape.slice(0, 5).join(", ")}（共 ${cookRape.length}）`);
+}
+
 if (failed) {
   console.error(`\n${failed} scene/place contract test(s) failed`);
   process.exit(1);

@@ -4763,6 +4763,11 @@ export function drawOne(lex, settings, pinned, userBanned, rand, seed, opts) {
     if (real) {
       if (item.tag === "rape" && hasUsed((t) => RAPE_BAD_PLACE.has(t))) return false;
       if (RAPE_BAD_PLACE.has(item.tag) && used.has("rape")) return false;
+      // 做菜在最後的修復步驟一定會要廚房，而廚房在上面那張清單裡。抽 rape 的時候廚房
+      // 往往還沒上場，於是 rape 過關、修復時廚房被擋 —— 場地已經刪了，整張圖沒有場地
+      // （釘做菜的性愛圖實測 10/600）。所以把「會要廚房的活動」當成廚房本身來擋。
+      if (item.tag === "rape" && used.has("cooking")) return false;
+      if (item.tag === "cooking" && used.has("rape")) return false;
     }
     if (lockOn) {
       // 辦公室／大街都不在睡覺場地裡。自動抽睡著會讓釘偵探／OL 的場地格空掉。
@@ -4946,19 +4951,29 @@ export function drawOne(lex, settings, pinned, userBanned, rand, seed, opts) {
   // 衣著需要「偏好」而不是「硬分桶」。硬分桶會先把高順位抽到滿才看下一桶，
   // top／bottom／onepiece 各只有一格時，顏色變體的實際機率因此永遠是 0。
   // 權重保留年代合身、完整服裝優先，同時讓低順位衣著仍有非零機會。
+  // 時代專屬的加權，現代的鞋子與布料除外。
+  // 古代這個加權是正確性：江戶該穿木屐，不是皮鞋。可是現代的鞋子格只有 sneakers／cleats／
+  // high heels 是「現代專屬」，布料格只有 latex／fishnets —— 加權全壓在這兩三個字上：
+  // 實測現代 3000 張 sneakers 佔鞋子 47%、latex 佔布料 53%。涼鞋、靴子、襪子本來就是
+  // 現代的東西，在現代不需要靠加權「顯示年代」。主要衣服（上衣／下身／一件式／外套）照舊加權，
+  // 現代圖裡含現代專屬主衣的比例維持 91%；古代完全不變。
+  // 三層時代加權都要改：只排除第二層的話，sneakers 會掉進第三層（時代專屬＋衣服，
+  // 不管是不是顏色款）拿到 20，幾乎沒改善（實測 47% → 36%）。
+  const MODERN_PLAIN_SLOTS = new Set(["feet", "fabric"]);
+  const eraBoost = (item) => eraSpecific(item, era) && !(era === "modern" && MODERN_PLAIN_SLOTS.has(item.mutex));
   const clothingPrefer = {
     softTiers: [
       (item) =>
-        eraSpecific(item, era) &&
+        eraBoost(item) &&
         item.layer === "garment" &&
         !isColorVariant(item) &&
         (item.mutex === "onepiece" || item.mutex === "top" || item.mutex === "bottom"),
-      (item) => eraSpecific(item, era) && item.layer === "garment" && !isColorVariant(item),
+      (item) => eraBoost(item) && item.layer === "garment" && !isColorVariant(item),
       // 顏色變體也可能是這個時代專屬的 —— blue shirt 就是 modern 專屬。
       // 舊的階梯用 !isColorVariant 把它們一路壓到最底層，等於自己把時代訊號丟掉：
       // 這一層加回來之後，現代的時代衣服從 5.32 升到 6.21（比硬桶時期的 5.79 還高），
       // 同時可達的顏色款式從 26 種變成 52 種。古代時代沒有顏色變體，完全不受影響。
-      (item) => eraSpecific(item, era) && item.layer === "garment",
+      (item) => eraBoost(item) && item.layer === "garment",
       (item) =>
         item.layer === "garment" &&
         !isColorVariant(item) &&
@@ -5875,18 +5890,31 @@ export function drawOne(lex, settings, pinned, userBanned, rand, seed, opts) {
   if (lockOn && used.has("cooking") && !used.has("kitchen")) {
     const kit = lex.byTag.get("kitchen");
     if (kit && eraOk(kit, era)) {
+      // 先把原本的場地拿掉（廚房要那一格），廚房放不進去就還原 —— 不管是誰擋的，
+      // 都不能留下一張沒有場地的圖。
+      const removed = [];
       for (const t of [...used]) {
         if (pinned.has(t)) continue;
         const it = lex.byTag.get(t);
         if (!it) continue;
         if (it.mutex === "place" || it.group === "place" || t === "outdoors") {
           used.delete(t);
+          const freed = [];
           for (const g of extraMutex(it)) {
-            if (mutexTaken.get(g) === t) mutexTaken.delete(g);
+            if (mutexTaken.get(g) === t) {
+              mutexTaken.delete(g);
+              freed.push(g);
+            }
           }
+          removed.push([t, freed]);
         }
       }
-      if (allow(kit)) commit("kitchen");
+      if (!(allow(kit) && commit("kitchen"))) {
+        for (const [t, freed] of removed) {
+          used.add(t);
+          for (const g of freed) if (!mutexTaken.has(g)) mutexTaken.set(g, t);
+        }
+      }
     }
   }
   if (

@@ -30,18 +30,18 @@ const GOLD = {
   },
   100: {
     rng: 365,
-    pos: "1girl, solo, medium hair, purple eyes, red hair, ahoge, flat chest, two-tone hair, toned, armpits, qipao, fishnet thighhighs, thighhighs, sneakers, eating, indian style, profile, sideways glance, surprised, against window, izakaya, indoors, sunrise, spotlight, film grain, nsfw, explicit, masterpiece, best quality, amazing quality",
+    pos: "1girl, solo, medium hair, purple eyes, red hair, ahoge, flat chest, two-tone hair, toned, armpits, qipao, sleeves rolled up, coat, fishnet thighhighs, thighhighs, sneakers, eating, indian style, profile, sideways glance, surprised, against window, izakaya, indoors, sunrise, spotlight, film grain, nsfw, explicit, masterpiece, best quality, amazing quality",
   },
   999: {
-    rng: 349,
-    pos: "1girl, solo, long hair, grey eyes, orange hair, parted bangs, medium breasts, breast bondage, body freckles, curvy, nude, masturbation, on one knee, over shoulder, looking to the side, flustered, sparkling eyes, ofuro, bath, indoors, night, nsfw, explicit, masterpiece, best quality, amazing quality",
+    rng: 284,
+    pos: "1girl, solo, long hair, grey eyes, orange hair, parted bangs, medium breasts, breast bondage, body freckles, curvy, bathrobe, female masturbation, reclining, pov crotch, looking at viewer, scared, nipple tweak, bathhouse, bath, indoors, steam, day, shadow, nsfw, explicit, masterpiece, best quality, amazing quality",
   },
   // 2026-09-23：走光補抽改成「所有成立的走光動作同一池、衣服吻合的權重 10」之後，
   // 這張的走光動作從 exhibitionism 換成 cameltoe（她穿 thong，吻合），場景跟著換。
   // 見 test_clothing_reachability.mjs 的走光段落與討論區同日那輪。
   2026: {
     rng: 360,
-    pos: "1girl, solo, bob cut, grey eyes, black hair, straight hair, medium breasts, hair flower, hair scrunchie, hair over one eye, nightgown, coat, thong, fishnet thighhighs, thighhighs, blue bra, bra, drinking, reclining, wide shot, averting eyes, naughty face, cameltoe, living room, indoors, sunrise, shadow, full-length mirror, mirror, gaming chair, nsfw, explicit, masterpiece, best quality, amazing quality",
+    pos: "1girl, solo, bob cut, grey eyes, black hair, straight hair, medium breasts, hair flower, hair scrunchie, hair over one eye, nightgown, coat, thong, kneehighs, white bra, bra, drinking, reclining, wide shot, averting eyes, naughty face, cameltoe, living room, indoors, sunrise, shadow, full-length mirror, mirror, gaming chair, nsfw, explicit, masterpiece, best quality, amazing quality",
   },
 };
 
@@ -118,7 +118,12 @@ const MATRIX_SEEDS = 200;
 // 那 40 張性愛是 sports bra lift（原本任何胸罩都算）和 downblouse（原本只認 blouse）
 // 兩個衣服條件修正後，allow() 過濾出的候選池大小變了，同一個亂數挑到不同位置 ——
 // 這 40 張裡一次都沒出現那兩個字本身。
-const MATRIX_GOLD = "31cc5db8";
+// 2026-09-23 第二次：現代的鞋子與布料不再吃時代專屬加權（sneakers 47%→、latex 53%→），
+// 換成 2d85ba0f，seed 100／999／2026 跟著換。逐張比過 2405 張：不同 1570 張，全部是現代；
+// 古代 0 張不同。對照組 —— 同一份新引擎只把 MODERN_PLAIN_SLOTS 清空 —— 2405 張逐字相同，
+// 所以差異 100% 來自這一條。其中 184 張新舊都沒有鞋子／布料的字：衣服補抽時整個候選池的
+// 總權重變了，同一個亂數落在別件衣服上，後面整張岔開。
+const MATRIX_GOLD = "2d85ba0f";
 
 function matrixSettings(over) {
   const s = defaultSettings(data);

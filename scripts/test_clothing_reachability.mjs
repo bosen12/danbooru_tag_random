@@ -220,4 +220,54 @@ else {
   );
 }
 
+// --- 現代的鞋子與布料：時代專屬加權不該讓一兩個字獨佔 ---------------------------------
+// clothingPrefer 讓「這個時代專屬」的衣服權重 30／20、其他 4。古代這是對的（江戶該穿木屐）。
+// 但現代的鞋子格只有 sneakers／cleats／high heels 是現代專屬，布料格只有 latex／fishnets，
+// 加權全壓在它們身上：實測現代 3000 張 sneakers 佔鞋子 47%、latex 佔布料 53%。
+// 涼鞋、靴子、襪子本來就是現代的東西，在現代不需要靠加權「顯示年代」。
+{
+  const report = (name, cond, detail) => {
+    if (cond) console.log(`ok   ${name}`);
+    else {
+      failed += 1;
+      console.error(`FAIL ${name}${detail ? " — " + detail : ""}`);
+    }
+  };
+  const by = new Map(data.tags.map((t) => [t.tag, t]));
+  const share = (era, mutex, N) => {
+    const m = new Map();
+    let total = 0;
+    const casts = [{ girl: true, boy: false }, { girl: false, boy: true }, { girl: true, boy: true }];
+    const heats = [["activity"], ["tease"], ["flash"], ["sex"], ["tease", "flash", "sex"]];
+    for (let i = 0; i < N; i += 1) {
+      const s = {
+        ...defaultSettings(data),
+        ...casts[i % 3],
+        heats: heats[i % 5],
+        eras: [era],
+        rating: "explicit",
+        sceneMode: ["normal", "diverse", "weird"][Math.floor(i / 3) % 3],
+      };
+      const seed = 940000 + i;
+      const out = drawOne(lex, s, new Set(), new Set(), mulberry32(seed), seed);
+      for (const t of out.sections.clothing) {
+        if (by.get(t)?.mutex !== mutex) continue;
+        m.set(t, (m.get(t) || 0) + 1);
+        total += 1;
+      }
+    }
+    const [top, n] = [...m].sort((a, b) => b[1] - a[1])[0] || ["-", 0];
+    return { top, pct: total ? n / total : 0, m, total };
+  };
+  const feet = share("modern", "feet", 1500);
+  report("現代的鞋子沒有一雙超過 35%", feet.pct < 0.35, `${feet.top} ${(feet.pct * 100).toFixed(0)}%`);
+  report("現代的 sneakers 不再獨佔（< 25%）", (feet.m.get("sneakers") || 0) / feet.total < 0.25, `sneakers ${(((feet.m.get("sneakers") || 0) / feet.total) * 100).toFixed(0)}%`);
+  const fabric = share("modern", "fabric", 1500);
+  report("現代的 latex 不再獨佔（< 25%）", (fabric.m.get("latex") || 0) / fabric.total < 0.25, `latex ${(((fabric.m.get("latex") || 0) / fabric.total) * 100).toFixed(0)}%`);
+  // 反方向：古代的時代專屬加權照舊 —— 江戶的鞋子仍以木屐／草履為主。
+  const edo = share("edo", "feet", 900);
+  const edoOwn = ["geta", "zouri"].reduce((a, t) => a + (edo.m.get(t) || 0), 0) / edo.total;
+  report("江戶的鞋子仍以木屐／草履為主（≥ 60%）", edoOwn >= 0.6, `${(edoOwn * 100).toFixed(0)}%`);
+}
+
 if (failed) process.exit(1);
