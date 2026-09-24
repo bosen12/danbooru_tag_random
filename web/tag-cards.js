@@ -138,15 +138,37 @@ function decorateIn(node) {
   for (const btn of node.querySelectorAll(".tag")) decorate(btn);
 }
 
+/**
+ * 只裝飾打開著的分類。分類預設全部收著，一次裝飾全部 1383 張等於多出五千多個節點、
+ * 載入時白做 20ms；分類打開（.cat 多了 is-open）的那一刻才補插畫。
+ * MutationObserver 的回呼在下一次畫面之前跑，所以打開時不會先閃一下字條。
+ */
+function decorateOpen(root) {
+  if (root.matches?.(".cat.is-open")) decorateIn(root);
+  for (const cat of root.querySelectorAll(".cat.is-open")) decorateIn(cat);
+}
+
 function startDecorating() {
   const cats = document.getElementById("cats");
   if (!cats || decorated) return;
   decorated = true;
-  decorateIn(cats);
+  decorateOpen(cats);
   observer = new MutationObserver((records) => {
-    for (const rec of records) for (const n of rec.addedNodes) decorateIn(n);
+    for (const rec of records) {
+      if (rec.type === "attributes") {
+        if (rec.target.matches?.(".cat.is-open")) decorateIn(rec.target);
+        continue;
+      }
+      for (const n of rec.addedNodes) {
+        if (!(n instanceof Element)) continue;
+        const cat = n.closest(".cat");
+        if (cat) {
+          if (cat.classList.contains("is-open")) decorateIn(n);
+        } else decorateOpen(n);
+      }
+    }
   });
-  observer.observe(cats, { childList: true, subtree: true });
+  observer.observe(cats, { childList: true, subtree: true, attributes: true, attributeFilter: ["class"] });
 }
 
 function stateLine(btn) {
