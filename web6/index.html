@@ -1,0 +1,75 @@
+<!doctype html>
+<html lang="zh-Hant">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover" />
+    <meta name="theme-color" content="#0f1217" />
+    <title>排字匣 · 墨池</title>
+    <meta name="description" content="排字匣的卡牌版：把字拖進合成池，引擎抽牌補齊，每張圖底下攤開用了哪些牌。" />
+    <link rel="icon" href="favicon.svg" type="image/svg+xml" />
+    <link rel="preload" href="lexicon.json" as="fetch" crossorigin />
+    <link rel="modulepreload" href="engine.js" />
+    <link rel="preconnect" href="https://fonts.googleapis.com" />
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+    <link
+      rel="stylesheet"
+      href="https://fonts.googleapis.com/css2?family=Chiron+Hei+HK:wght@700;800&family=IBM+Plex+Mono:wght@400;500&family=Noto+Sans+TC:wght@400;500;700&display=swap"
+    />
+    <link rel="stylesheet" href="card.css" />
+    <link rel="stylesheet" href="styles.css" />
+    <link rel="stylesheet" href="lora.css" />
+  </head>
+  <body>
+    <header class="mast">
+      <h1 class="wordmark">墨池<small>排字匣・卡牌版</small></h1>
+      <a class="mode-link" href="fuse.html" title="一張牌一層墨：疊上去就看到校樣怎麼變">疊印台</a>
+      <div class="segmented" id="rating" data-kind="rating" role="radiogroup" aria-label="尺度分級"></div>
+      <div class="mast-tools" id="mast-tools">
+        <div class="ping" id="ping" data-ok=""><i></i><span>Comfy…</span></div>
+      </div>
+    </header>
+
+    <div class="layout">
+      <aside class="library panel" id="library" aria-label="字盒">
+        <div class="panel-head">
+          <h2>字盒</h2>
+          <p><span class="lib-count" id="lib-count"></span></p>
+          <button class="btn btn-small btn-ghost lib-toggle" id="lib-toggle" type="button" aria-controls="lib-grid">收起字盒</button>
+        </div>
+        <div class="lib-search">
+          <input id="lib-q" type="search" placeholder="搜尋：紅髮、kimono…（按 / 跳到這裡）" aria-label="搜尋字盒" autocomplete="off" />
+        </div>
+        <div class="suit-tabs" id="suit-tabs" role="group" aria-label="花色"></div>
+        <div class="group-chips" id="group-chips" role="group" aria-label="小分類" hidden></div>
+        <div class="lib-grid" id="lib-grid" aria-label="字盒裡的牌：點一下放進合成池，拖進廢字簍封鎖"></div>
+      </aside>
+
+      <main class="work" id="work">
+        <section class="pool panel" aria-labelledby="pool-title">
+          <div class="panel-head">
+            <h2 id="pool-title">合成池</h2>
+            <p><span id="pool-count"></span> <button class="btn btn-small btn-ghost" id="pool-clear" type="button" hidden>清空</button></p>
+          </div>
+          <div class="pool-well" id="pool-well" aria-label="合成池：放進來的字每張圖都一定有"></div>
+          <div class="rules" id="rules"></div>
+          <div class="go-bar" id="go-bar"></div>
+        </section>
+
+        <section aria-labelledby="wall-title">
+          <div class="wall-head" id="wall-head">
+            <h2 id="wall-title">成品</h2>
+            <p>每張圖用了哪些牌收在「牌 · N」裡：你放進池子的，和引擎抽到的。</p>
+            <div class="wall-tools" id="wall-tools"></div>
+          </div>
+          <p class="pool-empty" id="wall-empty" style="margin-top: 1rem">還沒有成品。放幾個字進合成池，按「抽並生圖」。</p>
+          <div class="wall" id="wall"></div>
+        </section>
+      </main>
+    </div>
+
+    <div class="go-float" id="go-float" role="group" aria-label="抽牌（浮動）" data-show="false" inert></div>
+    <button class="trash" id="trash" type="button"></button>
+    <div class="toast" id="toast" role="status" aria-live="polite"></div>
+    <script type="module" src="app.js"></script>
+  </body>
+</html>

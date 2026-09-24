@@ -1,0 +1,233 @@
+/* 墨池的卡面：墨池工作臺（index.html）和疊印台（fuse.html）共用同一種牌。
+ * 從 styles.css 拆出來，兩頁一起吃這一份，牌長得永遠一樣。 */
+
+/* ---------- 卡牌（跟字鋪同一種卡：左邊直排書脊） ---------- */
+
+.card {
+  --card-w: 88px;
+  --suit: var(--suit-look);
+  position: relative;
+  flex: none;
+  width: var(--card-w);
+  aspect-ratio: 480 / 702;
+  padding: 0;
+  border: 0;
+  border-radius: calc(var(--card-w) * 0.07);
+  background: var(--color-stock);
+  color: var(--color-stock-ink);
+  box-shadow: var(--shadow-card);
+  display: grid;
+  grid-template-columns: 26% minmax(0, 1fr);
+  overflow: hidden;
+  text-align: left;
+  font-size: calc(var(--card-w) * 0.125);
+  transform: translateY(var(--lift, 0));
+  transition:
+    transform var(--dur-short) var(--ease-out),
+    box-shadow var(--dur-short) var(--ease-out),
+    opacity var(--dur-short) var(--ease-out);
+  -webkit-tap-highlight-color: transparent;
+  user-select: none;
+  -webkit-user-select: none;
+  -webkit-touch-callout: none;
+}
+
+.card[data-suit="cast"] {
+  --suit: var(--suit-cast);
+}
+.card[data-suit="look"] {
+  --suit: var(--suit-look);
+}
+.card[data-suit="wear"] {
+  --suit: var(--suit-wear);
+}
+.card[data-suit="pose"] {
+  --suit: var(--suit-pose);
+}
+.card[data-suit="scene"] {
+  --suit: var(--suit-scene);
+}
+.card[data-suit="style"] {
+  --suit: var(--suit-style);
+}
+
+.card-spine {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 0.25em;
+  padding: 0.3em 0 0.35em;
+  background: var(--color-stock);
+  border-right: 1px solid var(--color-stock-3);
+  min-height: 0;
+}
+
+.card-suit {
+  display: grid;
+  place-items: center;
+  width: 1.45em;
+  height: 1.45em;
+  border-radius: 50%;
+  background: var(--suit);
+  color: var(--color-stock-ink);
+  font-family: var(--font-display);
+  font-weight: 800;
+  font-size: 0.95em;
+  line-height: 1;
+  flex: none;
+}
+
+.card-name {
+  writing-mode: vertical-rl;
+  text-orientation: upright;
+  font-family: var(--font-display);
+  font-weight: 800;
+  font-size: 1.12em;
+  line-height: 1;
+  letter-spacing: 0.02em;
+  flex: 1 1 auto;
+  min-height: 0;
+  overflow: hidden;
+  white-space: nowrap;
+}
+
+.card-name[data-len="4"] {
+  font-size: 0.95em;
+}
+.card-name[data-len="5"] {
+  font-size: 0.8em;
+}
+.card-name[data-len="6"],
+.card-name[data-len="7"],
+.card-name[data-len="8"] {
+  font-size: 0.66em;
+}
+
+.card-rate {
+  font-family: var(--font-display);
+  font-weight: 800;
+  font-size: 0.62em;
+  line-height: 1;
+  padding: 0.12em 0.18em;
+  border-radius: 2px;
+  flex: none;
+}
+
+.card-rate[data-r="sensitive"] {
+  background: var(--color-warn);
+  color: var(--color-stock-ink);
+}
+
+.card-rate[data-r="explicit"] {
+  background: var(--color-accent-3);
+  color: var(--color-accent-ink);
+}
+
+.card-art {
+  position: relative;
+  min-width: 0;
+  background: var(--color-stock-2);
+  overflow: hidden;
+}
+
+.card-art img {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+  object-position: 50% 22%;
+  pointer-events: none;
+}
+
+.card-glyph {
+  position: absolute;
+  inset: 0;
+  display: grid;
+  place-items: center;
+  font-family: var(--font-display);
+  font-weight: 800;
+  font-size: 2.9em;
+  color: color-mix(in oklch, var(--suit) 70%, var(--color-stock-ink));
+  background:
+    repeating-linear-gradient(0deg, transparent 0 9px, color-mix(in oklch, var(--color-stock-3) 60%, transparent) 9px 10px),
+    var(--color-stock-2);
+}
+
+.card-flag {
+  position: absolute;
+  top: 16%;
+  left: 50%;
+  translate: -50% 0;
+  padding: 0.1em 0.35em;
+  border: 2px solid currentColor;
+  border-radius: 3px;
+  font-family: var(--font-display);
+  font-weight: 800;
+  font-size: 0.9em;
+  line-height: 1.15;
+  background: color-mix(in oklch, var(--color-stock) 88%, transparent);
+  rotate: -8deg;
+  white-space: nowrap;
+  pointer-events: none;
+  color: var(--color-accent-3);
+}
+
+.card-flag[data-kind="pool"] {
+  color: var(--color-pool-2);
+}
+
+.card-flag[data-kind="src"] {
+  top: auto;
+  bottom: 6%;
+  rotate: 0deg;
+  font-size: 0.7em;
+  border-width: 1px;
+  color: var(--color-stock-muted);
+}
+
+.card[data-state="pinned"] {
+  box-shadow: 0 0 0 2px var(--color-pool), var(--shadow-card);
+}
+
+.card[data-state="banned"] {
+  opacity: 0.45;
+}
+
+.card[data-state="banned"] .card-art {
+  filter: grayscale(1);
+}
+
+.card[data-state="gone"] {
+  opacity: 0.35;
+}
+
+button.card:active {
+  --lift: 1px;
+}
+
+@media (hover: hover) and (pointer: fine) {
+  button.card:hover {
+    --lift: -3px;
+    box-shadow: var(--shadow-lift);
+    z-index: 3;
+  }
+  button.card[data-state="pinned"]:hover {
+    box-shadow: 0 0 0 2px var(--color-pool), var(--shadow-lift);
+  }
+}
+
+/* 拖著走的那張 */
+
+.drag-ghost {
+  position: fixed;
+  left: 0;
+  top: 0;
+  z-index: 90;
+  pointer-events: none;
+  rotate: -4deg;
+  box-shadow: 0 24px 40px var(--color-shade);
+  opacity: 0.95;
+}
+
+.card[data-dragging="true"] {
+  opacity: 0.3;
+}
