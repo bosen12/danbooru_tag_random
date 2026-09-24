@@ -1597,6 +1597,40 @@ const ALBUM_FIXTURE = [
   }
 }
 
+// web5（中控室）：boot.js 直接用 id 找的元素、boot.css 直接用的 CSS 變數，
+// 兩份契約都是從「排字匣」canonical 版反推出來的（見 web/index.html、web/boot.css），
+// 這裡改成量它們自己、不是把清單寫死——契約本身變了，測試才會跟著變，不必兩邊改兩次。
+// 動態元素（w-pop、shot-viewer、infinite…）boot.js 自己 createElement，不在這份清單裡；
+// 用「排字匣本身也沒有這些 id」反過來篩掉它們，不用整理一份「哪些是動態的」名單。
+{
+  const idsOf = (html) => new Set([...html.matchAll(/\sid="([a-zA-Z0-9_-]+)"/g)].map((m) => m[1]));
+  const refHtml = readFileSync(join(ROOT, "web", "index.html"), "utf8");
+  const w5Html = readFileSync(join(ROOT, "web5", "index.html"), "utf8");
+  const refIds = idsOf(refHtml);
+  const w5Ids = idsOf(w5Html);
+  const missing = [...refIds].filter((id) => !w5Ids.has(id));
+  ok("web5 有排字匣的每一個靜態 id（boot.js 用 $() 直接找）", missing.length === 0, missing.join("、"));
+
+  const bootCss = readFileSync(join(ROOT, "web", "boot.css"), "utf8");
+  const w5Tokens = readFileSync(join(ROOT, "web5", "tokens.css"), "utf8");
+  const usedVars = new Set(
+    [...bootCss.matchAll(/var\(--([a-zA-Z0-9_-]+)/g)]
+      .map((m) => m[1])
+      // JS 逐格塞進 style 的（--thumb-x、--shot-w…），tokens.css 本來就不會有，篩掉。
+      .filter((name) => !/^(i|thumb-x|thumb-w|shot-w|shot-h|cats-stagger|cats-swap-dur)$/.test(name)),
+  );
+  const definedVars = new Set([...w5Tokens.matchAll(/^\s*--([a-zA-Z0-9_-]+):/gm)].map((m) => m[1]));
+  const missingVars = [...usedVars].filter((v) => !definedVars.has(v));
+  ok("web5 的 tokens.css 定義了 boot.css 用到的每個變數", missingVars.length === 0, missingVars.map((v) => "--" + v).join("、"));
+
+  const w5Css = readFileSync(join(ROOT, "web5", "styles.css"), "utf8");
+  ok("web5 有自己的 Hallmark 印章", /Hallmark · genre:.*macrostructure:.*theme:/.test(w5Css));
+  const w5App = readFileSync(join(ROOT, "web5", "app.js"), "utf8");
+  ok("web5 的 app.js 掛了 boot.js", /import\s+"\.\/boot\.js"/.test(w5App));
+  ok("web5 掛了自己的訊號讀出條（panel-fx.js，不是照抄別套 app.js）", /import\s+"\.\/panel-fx\.js"/.test(w5App));
+  ok("讀出條會補上重建過的控制項（不是只看屬性變化）", /childList:\s*true/.test(readFileSync(join(ROOT, "web5", "panel-fx.js"), "utf8")));
+}
+
 if (failed) {
   console.error(NL + failed + " failed");
   process.exit(1);

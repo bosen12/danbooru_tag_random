@@ -1,0 +1,695 @@
+/* Hallmark · pre-emit critique: P5 H4 E4 S5 R5 V5 */
+/* Hallmark · genre: modern-minimal · macrostructure: Component Playground (app-adapted) · theme: Cobalt
+ * 中控室 — 冷白工程紙、單一電鈷藍訊號、鉚接邊框、JetBrains Mono 儀表讀數。
+ * 這一套刻意不走漸層／輝光：Cobalt 的紀律是「線條做出深度，不是模糊」——
+ * 每一塊面板都是硬邊框，沒有陰影堆疊。跟其餘四套（全部有柔光暈或陰影）反著走。
+ * 機制在 boot.css；這裡只換皮＋排字匣沒有過的排版：設定欄從「一條直落的清單」
+ * 變成「一格一格有自己邊框、自己眉標的儀表模組」，靠 CSS Grid 自動排列。
+ */
+
+html {
+  color-scheme: light;
+}
+
+body {
+  background: var(--color-paper);
+  padding-bottom: calc(var(--dock-h, var(--dock)) + var(--space-5));
+}
+
+/* --- 頂欄 -------------------------------------------------------------- */
+
+.mast {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: var(--space-4);
+  padding: var(--space-4) var(--space-5);
+  border-bottom: var(--rule) solid var(--color-rule);
+  background: color-mix(in oklab, var(--color-paper) 90%, transparent);
+  backdrop-filter: var(--mist);
+  position: sticky;
+  top: 0;
+  z-index: 8;
+}
+
+.wordmark {
+  display: flex;
+  align-items: center;
+  gap: var(--space-3);
+  flex: 0 0 auto;
+  min-width: min-content;
+  margin: 0;
+}
+
+.brand-mark {
+  width: 36px;
+  height: 36px;
+  flex: 0 0 auto;
+  display: block;
+  border-radius: var(--radius-sm);
+  box-shadow: 0 0 0 var(--rule) var(--color-rule);
+}
+
+.wordmark-copy {
+  font-family: var(--font-display);
+  font-style: normal;
+  font-weight: 700;
+  font-size: var(--text-xl);
+  letter-spacing: -0.01em;
+  line-height: 1.05;
+  white-space: nowrap;
+  color: var(--color-ink);
+}
+
+.wordmark-copy span {
+  display: block;
+  font-family: var(--font-outlier);
+  font-weight: 500;
+  font-size: var(--text-xs);
+  letter-spacing: 0.12em;
+  text-transform: uppercase;
+  color: var(--color-muted);
+  margin-top: 4px;
+  white-space: nowrap;
+}
+
+/* Comfy 連線燈：儀表板上一顆真正的指示燈，離線時暗紅、待機灰、連上綠，
+   而且連上時輕輕呼吸一下 —— 不是裝飾，是「這顆燈是活的」的唯一證據。 */
+.ping {
+  position: relative;
+  font-family: var(--font-outlier);
+  font-size: var(--text-xs);
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+  color: var(--color-muted);
+  display: flex;
+  align-items: center;
+  gap: var(--space-2);
+  font-variant-numeric: tabular-nums;
+  flex: 0 0 auto;
+  cursor: pointer;
+  padding: 6px 10px;
+  border: var(--rule) solid var(--color-rule);
+  border-radius: var(--radius-sm);
+  background: var(--color-paper-2);
+}
+
+.ping i {
+  width: 7px;
+  height: 7px;
+  border-radius: 99px;
+  background: var(--color-danger);
+  display: inline-block;
+  box-shadow: 0 0 0 3px color-mix(in oklab, var(--color-danger) 18%, transparent);
+}
+
+.ping[data-ok="1"] i {
+  background: var(--color-ok);
+  box-shadow: 0 0 0 3px color-mix(in oklab, var(--color-ok) 22%, transparent);
+  animation: ping-breathe 2.6s var(--ease-in-out) infinite;
+}
+
+@keyframes ping-breathe {
+  0%, 100% { opacity: 1; }
+  50% { opacity: 0.45; }
+}
+
+/* --- 訊號讀出條：一眼掃過就知道現在鎖了什麼 ----------------------------- */
+
+.readout {
+  display: flex;
+  align-items: center;
+  gap: var(--space-3);
+  padding: var(--space-2) var(--space-5);
+  border-bottom: var(--rule) solid var(--color-rule);
+  background: var(--color-paper-2);
+  position: sticky;
+  top: var(--mast-h, 72px);
+  z-index: 7;
+  overflow-x: auto;
+  overscroll-behavior-x: contain;
+}
+
+.readout-label {
+  flex: 0 0 auto;
+  font-family: var(--font-outlier);
+  font-size: var(--text-xs);
+  font-weight: 600;
+  letter-spacing: 0.1em;
+  text-transform: uppercase;
+  color: var(--color-neutral);
+}
+
+.readout-label::before {
+  content: "";
+  display: inline-block;
+  width: 6px;
+  height: 6px;
+  margin-right: var(--space-2);
+  border-radius: 1px;
+  background: var(--color-accent);
+  transform: rotate(45deg);
+}
+
+.readout-line {
+  flex: 1 1 auto;
+  min-width: 0;
+  white-space: nowrap;
+  font-family: var(--font-outlier);
+  font-size: var(--text-sm);
+  color: var(--color-ink);
+  font-variant-numeric: tabular-nums;
+}
+
+/* --- 版面：面板格 + 主舞台 ------------------------------------------------ */
+
+.board {
+  display: grid;
+  grid-template-columns: var(--rail) minmax(0, 1fr);
+  align-items: start;
+  min-height: calc(100dvh - var(--mast-h, 88px));
+}
+
+.panels {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(148px, 1fr));
+  gap: var(--space-3);
+  align-content: start;
+  border-right: var(--rule) solid var(--color-rule);
+  padding: var(--space-4);
+  background: var(--color-paper-2);
+  position: sticky;
+  top: var(--mast-h, 88px);
+  align-self: start;
+  max-height: calc(100dvh - var(--mast-h, 88px) - var(--dock-h, var(--dock)));
+  overflow: auto;
+  overscroll-behavior: contain;
+}
+
+/* 開頁那一下：面板像剛通電，一格一格亮起來。上限抓在 8 格內，Hallmark 的
+   規矩是總 stagger 別超過 ~500ms —— 8 格 × 45ms = 360ms，收在裡面。
+   reduced-motion 直接跳過，不排 --i。 */
+.panel {
+  --i: 0;
+  position: relative;
+  min-width: 0;
+  padding: var(--space-3) var(--space-3) var(--space-4);
+  border: var(--rule) solid var(--color-rule);
+  border-radius: var(--radius);
+  background: var(--color-paper);
+  transition: border-color var(--dur-ui) var(--ease-out);
+  animation: panel-on var(--dur-ui) var(--ease-out) both;
+  animation-delay: calc(var(--i) * 45ms);
+}
+.panel:nth-child(1) { --i: 0; }
+.panel:nth-child(2) { --i: 1; }
+.panel:nth-child(3) { --i: 2; }
+.panel:nth-child(4) { --i: 3; }
+.panel:nth-child(5) { --i: 4; }
+.panel:nth-child(6) { --i: 5; }
+.panel:nth-child(7) { --i: 6; }
+.panel:nth-child(8) { --i: 7; }
+
+@keyframes panel-on {
+  from { opacity: 0; transform: translateY(3px); }
+  to { opacity: 1; transform: none; }
+}
+
+/* 鉚接角：面板左上角一枚小小的方形記號，儀表艙門的螺絲。滑過／內部拿到
+   焦點時邊框整個轉向訊號色 —— 深度靠線條變化，不疊陰影（Cobalt 的紀律）。 */
+.panel::before {
+  content: "";
+  position: absolute;
+  top: 6px;
+  left: 6px;
+  width: 4px;
+  height: 4px;
+  background: var(--color-rule);
+  transition: background var(--dur-ui) var(--ease-out);
+}
+.panel:hover,
+.panel:focus-within {
+  border-color: var(--color-accent);
+}
+.panel:hover::before,
+.panel:focus-within::before {
+  background: var(--color-accent);
+}
+
+.panel--wide {
+  grid-column: 1 / -1;
+}
+
+.panel-eyebrow {
+  margin: 0 0 var(--space-2);
+  font-family: var(--font-outlier);
+  font-size: var(--text-xs);
+  font-weight: 600;
+  letter-spacing: 0.09em;
+  text-transform: uppercase;
+  color: var(--color-neutral);
+  padding: 0;
+  border: 0;
+}
+
+fieldset.heat {
+  border: 0;
+  margin: 0;
+  padding: 0;
+}
+
+.field {
+  margin-bottom: 0;
+}
+
+.field .hint:last-child,
+.heat .hint:last-child {
+  margin-bottom: 0;
+}
+
+.field label {
+  display: flex;
+  align-items: center;
+  font-size: var(--text-xs);
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  color: var(--color-muted);
+  margin-bottom: var(--space-2);
+}
+
+.legend {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+  margin: 0 0 var(--space-3);
+}
+
+.legend .tag {
+  cursor: default;
+  min-height: 28px;
+  padding: 6px 8px;
+  font-size: 11px;
+}
+
+.hint {
+  margin: 0 0 var(--space-2);
+  color: var(--color-muted);
+}
+
+.field .row + .row,
+.heat .row + .row {
+  margin-top: var(--space-2);
+}
+
+.step > .row {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+}
+.step > .row > .chip-toggle {
+  min-width: 0;
+  padding-inline: var(--space-1);
+  text-align: center;
+}
+
+input[type="number"],
+input[type="search"] {
+  font-family: var(--font-outlier);
+}
+
+input[type="search"] {
+  width: 100%;
+}
+
+/* --- 主舞台 -------------------------------------------------------------- */
+
+.stage {
+  min-width: 0;
+  padding: var(--space-5);
+}
+
+.filter-bar {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-2);
+  position: sticky;
+  top: calc(var(--mast-h, 72px) + var(--readout-h, 37px));
+  z-index: 7;
+  background: color-mix(in oklab, var(--color-paper) 90%, transparent);
+  backdrop-filter: var(--mist);
+  padding: var(--space-3) 0;
+  margin: 0 0 var(--space-4);
+  border-bottom: var(--rule) solid var(--color-rule);
+}
+
+.filter-bar input[type="search"] {
+  flex: 1 1 12rem;
+  min-width: 0;
+}
+
+.jump a {
+  touch-action: manipulation;
+}
+
+/* 寬螢幕的面板格一直都在左邊，不需要「面板」這個跳點；比 boot.css 的
+   `.jump a` 更 specific，不然它的 inline-flex 會贏。 */
+.jump a.jump-rules {
+  display: none;
+}
+
+.view-filters {
+  flex: 1 1 auto;
+}
+
+.cat {
+  scroll-margin-top: calc(var(--mast-h, 4.5rem) + var(--filter-h, 5rem) + var(--space-2));
+}
+
+.cats {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-6);
+}
+
+.cat header {
+  border-bottom: var(--rule) solid var(--color-rule);
+  padding-bottom: var(--space-2);
+}
+
+.sub h3 {
+  font-family: var(--font-outlier);
+  font-style: normal;
+  font-weight: 600;
+  font-size: var(--text-xs);
+  letter-spacing: 0.1em;
+  text-transform: uppercase;
+  color: var(--color-accent-2);
+  margin: 0;
+}
+
+.tags.nested {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 10px 12px;
+}
+
+.tag {
+  transition:
+    background var(--dur-ui) var(--ease-out),
+    color var(--dur-ui) var(--ease-out),
+    border-color var(--dur-ui) var(--ease-out),
+    opacity var(--dur-ui) var(--ease-out),
+    transform var(--dur-micro) var(--ease-out);
+}
+
+.pos span[data-weight] {
+  color: var(--color-weight);
+  font-weight: inherit;
+}
+
+.pos span[data-en]:hover::after,
+.pos span[data-en]:focus-visible::after {
+  content: attr(data-en);
+  position: absolute;
+  left: 0;
+  bottom: calc(100% + 4px);
+  background: var(--color-ink);
+  color: var(--color-paper);
+  font-family: var(--font-outlier);
+  font-size: 11px;
+  white-space: nowrap;
+  padding: 4px 8px;
+  z-index: 6;
+}
+
+.tag[data-state="banned"] {
+  opacity: 1;
+  background: var(--color-chip);
+  color: var(--color-ink);
+}
+
+.tag[data-ban="user"] {
+  text-decoration-color: var(--color-muted);
+}
+
+.tag[data-off-heat="1"]:not([data-state="pinned"]):not([data-off-era="1"]) {
+  opacity: 0.55;
+}
+
+.tag[data-locked="1"] {
+  cursor: default;
+  opacity: 0.7;
+}
+
+/* --- 底部主控列 ---------------------------------------------------------- */
+
+.dock {
+  position: fixed;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  min-height: var(--dock);
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: var(--space-4);
+  padding: var(--space-3) var(--space-5);
+  padding-bottom: calc(var(--space-3) + env(safe-area-inset-bottom));
+  background: color-mix(in oklab, var(--color-paper) 92%, transparent);
+  backdrop-filter: var(--mist);
+  border-top: var(--rule) solid var(--color-rule);
+  z-index: 9;
+}
+
+.dock .status {
+  font-family: var(--font-outlier);
+  font-size: var(--text-xs);
+  letter-spacing: 0.04em;
+  color: var(--color-muted);
+}
+
+/* 主鈕：硬拉桿，不是軟按鈕。按下去有實際的位移＋邊框跟著暗一階，
+   放開回彈 —— 像壓下一顆真的物理開關，而不是一片會變色的 div。 */
+.primary {
+  border-radius: var(--radius-sm);
+  box-shadow: inset 0 -2px 0 color-mix(in oklab, var(--color-accent) 55%, black);
+}
+.primary:active:where(:not(:disabled)) {
+  transform: translateY(2px);
+  box-shadow: inset 0 0 0 color-mix(in oklab, var(--color-accent) 55%, black);
+}
+
+.ghost {
+  border-radius: var(--radius-sm);
+}
+.seg,
+.chip-toggle {
+  border-radius: var(--radius-sm);
+}
+
+/* --- 成片區 -------------------------------------------------------------- */
+
+.results {
+  margin: 0 0 var(--space-6);
+  grid-template-columns: repeat(auto-fill, minmax(min(100%, 300px), 1fr));
+  gap: var(--space-4);
+}
+
+.card {
+  animation: rise-board var(--dur-move) var(--ease-out) both;
+  border-radius: var(--radius);
+}
+
+.card img,
+.shot-img {
+  background: var(--color-paper-3);
+}
+
+.meter {
+  background: color-mix(in oklab, var(--color-paper) 78%, transparent);
+}
+
+.card .pos {
+  max-height: 8rem;
+  overflow: auto;
+  overscroll-behavior: contain;
+  overflow-wrap: anywhere;
+}
+
+.card .bar {
+  color: var(--color-muted);
+}
+
+.shot .skel {
+  background: linear-gradient(90deg, var(--color-paper-2), var(--color-paper-3), var(--color-paper-2));
+  background-size: 200% 100%;
+  animation: shimmer 1.2s var(--ease-in-out) infinite;
+}
+
+@keyframes rise-board {
+  from { opacity: 0; transform: translateY(4px); }
+  to { opacity: 1; transform: none; }
+}
+
+@keyframes shimmer {
+  from { background-position: 100% 0; }
+  to { background-position: -100% 0; }
+}
+
+/* 還沒出片：藍圖格線，跟儀表板的線稿感呼應；有卡片之後 :empty 不成立，格線自然消失。 */
+.stage .results:empty {
+  min-height: 12rem;
+  border: var(--rule) solid var(--color-rule);
+  border-radius: var(--radius);
+  background-color: var(--color-paper-2);
+  background-image:
+    linear-gradient(to right, var(--color-rule) 1px, transparent 1px),
+    linear-gradient(to bottom, var(--color-rule) 1px, transparent 1px);
+  background-size: 28px 28px;
+  background-position: -1px -1px;
+  opacity: 1;
+}
+.stage .results:empty::before {
+  padding: var(--space-3) var(--space-4);
+  border: var(--rule) solid var(--color-rule);
+  border-radius: calc(var(--radius) - 2px);
+  background: var(--color-paper);
+  font-family: var(--font-outlier);
+  font-size: var(--text-sm);
+  white-space: pre-line;
+}
+
+/* --- 響應式 -------------------------------------------------------------- */
+
+@media (max-width: 900px) {
+  body {
+    padding-bottom: calc(var(--dock-h, var(--dock)) + var(--space-4));
+  }
+  .mast {
+    position: static;
+    flex-wrap: wrap;
+    row-gap: var(--space-2);
+    padding-top: max(var(--space-3), env(safe-area-inset-top, 0px));
+    padding-left: max(var(--space-3), env(safe-area-inset-left, 0px));
+    padding-right: max(var(--space-3), env(safe-area-inset-right, 0px));
+    padding-bottom: var(--space-3);
+  }
+  .mast-tools {
+    flex: 1 1 auto;
+    flex-wrap: wrap;
+    justify-content: flex-start;
+    row-gap: var(--space-2);
+  }
+  .readout {
+    position: static;
+  }
+  .board {
+    grid-template-columns: 1fr;
+    grid-template-areas: "stage" "rail";
+  }
+  .stage {
+    grid-area: stage;
+    padding: var(--space-3);
+  }
+  .panels {
+    grid-area: rail;
+    grid-template-columns: repeat(auto-fill, minmax(160px, 1fr));
+    position: static;
+    max-height: none;
+    border-right: 0;
+    border-top: var(--rule) solid var(--color-rule);
+    border-bottom: 0;
+    padding: var(--space-4);
+  }
+  .jump a.jump-rules {
+    display: inline-flex;
+  }
+  .jump.is-pinned {
+    position: sticky;
+    top: env(safe-area-inset-top, 0px);
+    z-index: 8;
+    background: color-mix(in oklab, var(--color-paper) 92%, transparent);
+    backdrop-filter: var(--mist);
+    border-bottom: var(--rule) solid var(--color-rule);
+    padding: var(--space-2) max(var(--space-3), env(safe-area-inset-left, 0px));
+    margin: 0;
+  }
+  .panels {
+    scroll-margin-top: calc(var(--jump-h, 3rem) + var(--space-2));
+  }
+  .filter-bar {
+    top: calc(var(--jump-h, 0px) + env(safe-area-inset-top, 0px));
+    margin: 0 calc(-1 * var(--space-3)) var(--space-3);
+    padding-left: var(--space-3);
+    padding-right: var(--space-3);
+  }
+  .dock {
+    gap: var(--space-2);
+    flex-wrap: wrap;
+    padding-left: max(var(--space-3), env(safe-area-inset-left, 0px));
+    padding-right: max(var(--space-3), env(safe-area-inset-right, 0px));
+    padding-bottom: calc(var(--space-3) + env(safe-area-inset-bottom, 0px));
+  }
+  .dock > div:first-child {
+    flex: 1 1 100%;
+    display: flex;
+    gap: var(--space-2);
+  }
+  .dock .primary {
+    flex: 1;
+  }
+  .cat {
+    scroll-margin-top: calc(var(--jump-h, 0px) + var(--filter-h, 3rem) + var(--space-2));
+  }
+  .brand-mark {
+    width: 30px;
+    height: 30px;
+  }
+  .wordmark-copy {
+    font-size: var(--text-lg);
+  }
+  .ping span {
+    position: absolute;
+    width: 1px;
+    height: 1px;
+    overflow: hidden;
+    clip: rect(0 0 0 0);
+  }
+}
+
+@media (max-width: 640px) {
+  .keys-btn {
+    display: none;
+  }
+  .panels {
+    grid-template-columns: 1fr;
+  }
+}
+
+@media (max-width: 900px) and (max-height: 520px) {
+  .dock > div:first-child {
+    flex: 1 1 auto;
+  }
+  .dock .status {
+    flex: 0 1 auto;
+    text-align: right;
+  }
+  .jump.is-pinned {
+    padding-top: var(--space-1);
+    padding-bottom: var(--space-1);
+  }
+  .jump a {
+    min-height: 38px;
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .panel {
+    animation: none;
+  }
+  .ping[data-ok="1"] i {
+    animation: none;
+  }
+  .primary:active:where(:not(:disabled)) {
+    transform: none;
+  }
+}

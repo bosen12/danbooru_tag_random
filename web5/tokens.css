@@ -1,0 +1,80 @@
+/* Hallmark · genre: modern-minimal · macrostructure: Component Playground (app-adapted) · theme: Cobalt
+ * 中控室 · cool engineered paper · electric-cobalt signal · one warm amber "locked" light
+ * Audience: the operator, running this against their own ComfyUI · Use case: dial in constraints
+ * fast, glance-read current state, fire a queued batch · Tone: technical / instrument-panel-calm.
+ * Nav/footer: n/a — this is app chrome (persistent mast + dock), same as every sibling layout.
+ */
+:root {
+  /* 冷白紙：不是 #fff，往 anchor hue 256 帶一點點彩度，跟現有四套（全部偏暖或偏暗）反著走。 */
+  --color-paper: oklch(98.4% 0.004 254);
+  --color-paper-2: oklch(96.3% 0.007 254);
+  --color-paper-3: oklch(93.2% 0.01 254);
+  --color-rule: oklch(84% 0.013 254);
+  --color-chip: oklch(95.5% 0.007 254);
+  --color-neutral: oklch(52% 0.02 255);
+  --color-muted: oklch(42% 0.022 255);
+  --color-ink: oklch(23% 0.02 258);
+
+  /* 唯一的訊號色：電鈷藍。連結、焦點、啟用中的分段、唯一一顆實心按鈕。別的地方不許用。 */
+  --color-accent: oklch(58% 0.2 256);
+  --color-accent-2: oklch(38% 0.05 258);
+  --color-focus: oklch(62% 0.2 256);
+
+  /* 釘選＝面板上唯一容許的暖色指示燈，像儀表板上一顆琥珀色的「鎖定」燈，跟周圍的冷藍分得很開。
+     boot.css 共用規則是「白字疊在 --color-pin 上、--color-pin 當文字疊在紙上」兩種都要用到——
+     其餘四套是暗色紙，這條隨便一個中亮度琥珀色都過。這裡紙是冷白，琥珀必須夠暗兩邊才都夠對比。 */
+  --color-pin: oklch(45% 0.13 65);
+  --color-ban: oklch(46% 0.018 255);
+  --color-danger: oklch(52% 0.19 25);
+  --color-ok: oklch(48% 0.13 150);
+  --color-weight: oklch(46% 0.16 300);
+
+  --color-stage: oklch(96.3% 0.007 254);
+  --color-gel: oklch(58% 0.2 256 / 0.1);
+  --color-scrim: oklch(20% 0.02 258 / 0.55);
+  --shadow-sheet: 0 -20px 48px oklch(20% 0.02 258 / 0.12);
+  --shadow-float:
+    0 1px 2px oklch(20% 0.02 258 / 0.06),
+    0 20px 48px oklch(20% 0.02 258 / 0.1);
+
+  /* 三個角色：Space Grotesk 撐英數與面板眉標，中文標題退到 Chiron Hei HK（同一家族在
+     Chiron Sung HK 那套明體之外的黑體版本，這個系列還沒用過）；本文 Inter，中文本文
+     Noto Sans TC；數據與眉標一律 JetBrains Mono —— 儀表板讀數的字體，跟其餘四套共用的
+     IBM Plex Mono 刻意分開，讀起來更像儀器面板而不是印刷品。 */
+  --font-display: "Space Grotesk", "Chiron Hei HK", "Microsoft JhengHei", sans-serif;
+  --font-body: "Inter", "Noto Sans TC", "Segoe UI", sans-serif;
+  --font-outlier: "JetBrains Mono", ui-monospace, monospace;
+
+  --text-xs: 0.75rem;
+  --text-sm: 0.8125rem;
+  --text-base: 1rem;
+  --text-md: 1.25rem;
+  --text-lg: 1.5625rem;
+  --text-xl: 1.9531rem;
+  --text-2xl: 2.4414rem;
+
+  --space-1: 4px;
+  --space-2: 8px;
+  --space-3: 12px;
+  --space-4: 16px;
+  --space-5: 24px;
+  --space-6: 32px;
+  --space-7: 48px;
+  --space-8: 64px;
+
+  --rule: 1px;
+  --radius: 8px;
+  --radius-sm: 6px;
+  /* 比其餘四套的 22vw 寬一截：模組要在常見的 1440px+ 螢幕上真的排成兩欄，
+     不是理論上可以、實際上永遠只有一欄。 */
+  --rail: minmax(300px, 25vw);
+  --dock: 84px;
+  --mist: blur(10px);
+
+  --ease-out: cubic-bezier(0.16, 1, 0.3, 1);
+  --ease-in: cubic-bezier(0.7, 0, 0.84, 0);
+  --ease-in-out: cubic-bezier(0.65, 0, 0.35, 1);
+  --dur-micro: 120ms;
+  --dur-ui: 220ms;
+  --dur-move: 380ms;
+}
