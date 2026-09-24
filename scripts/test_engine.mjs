@@ -6267,13 +6267,15 @@ function indoorOutdoorClash(have) {
   }
   ok("env: 高 env 不打破室內外／日夜", envBad === 0, envBadWhy);
 
-  // 3) counts.env=0 仍要留下必要骨架（場地／室內外／時間），不是整段清空。
-  const zeroN = runEnv({ sceneMode: "normal", counts: { env: 0 } });
-  const hasBones = zeroN.every((d) => {
-    const groups = new Set(envTagsOf(d).map((t) => lex.byTag.get(t).group));
-    return groups.has("place") || groups.has("inout") || groups.has("time");
-  });
-  ok("env: counts.env=0 仍保留必要骨架", hasBones);
+  // 3) counts.env=0 ＝場景整段不補（2026-09-25 專案主決定，見 討論區.md）：
+  // 場地／室內外／時間這些骨架也不補。還能出現的只有別段的字 implies 帶進來的。
+  const zeroS = envSettings({ sceneMode: "normal", counts: { env: 0 } });
+  const zeroN = [];
+  for (let i = 0; i < 300; i++) zeroN.push(drawOne(lex, zeroS, new Set(), new Set(), mulberry32(77000 + i), 77000 + i, { trace: true }));
+  const engineEnv = zeroN.filter((d) =>
+    (d.trace?.kept || []).some((k) => lex.byTag.get(k.tag)?.section === "env" && k.source !== "implies" && k.source !== "bind")
+  );
+  ok("env: counts.env=0 引擎不再自己補場景（連骨架也不補）", engineEnv.length === 0, engineEnv[0] ? `seed ${engineEnv[0].seed}：${envTagsOf(engineEnv[0]).join("、")}` : "");
 
   // 4) 同一個 era 裡，era 專屬和 era:["any"] 的燈光都要抽得到（都非零）。
   const specHits = lightsOf(highN, (it) => !eraAny(it));
@@ -6928,14 +6930,15 @@ function indoorOutdoorClash(have) {
 }
 
 {
-  // coat 可能只到腰部，不能拿它替 white shirt 充當下著。固定 clothing=0 排除
-  // 一般 filler，專門驗證最後的 lower-body repair 是否真的補出 bottom。
+  // coat 可能只到腰部，不能拿它替 white shirt 充當下著。clothing=1：兩張釘選已經超過目標，
+  // 一般 filler 不會補，專門驗證最後的 lower-body repair 是否真的補出 bottom。
+  // （以前用 clothing=0 排除 filler；2026-09-25 起 0＝整段不補，連修復也不補，見 討論區.md。）
   const s = defaultSettings(data);
   s.girl = true;
   s.boy = false;
   s.eras = ["modern"];
   s.heats = ["tease"];
-  s.counts = { ...s.counts, clothing: 0 };
+  s.counts = { ...s.counts, clothing: 1 };
   const h = tagsOf(
     drawOne(lex, s, new Set(["white shirt", "coat"]), new Set(), mulberry32(63001), 63001)
   );

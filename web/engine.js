@@ -3456,7 +3456,22 @@ export function drawOne(lex, settings, pinned, userBanned, rand, seed, opts) {
   const heat = chooseHeat(settings, pinned, lex, rand, ctx);
   const era = chooseEra(settings, pinned, lex, rand, ctx);
   let allow = () => true;
-  const innerCommit = makeCommit(lex, used, mutexTaken, banned, era, (item) => allow(item));
+  const rawCommit = makeCommit(lex, used, mutexTaken, banned, era, (item) => allow(item));
+  // 「不補」＝那一段整段不補（2026-09-25 專案主決定，見 討論區.md）。
+  // 以前 counts 只管 fill() 的通用補牌；髮長、瞳色、鏡頭、表情、場地、室內外、晝夜、光源、
+  // 最低限度的衣服這些骨架格走 fillSlot／時代錨／修復，完全不看 counts —— 四段都設 0，
+  // 每張照樣有約 15 個非畫質字是引擎補的（實測 400 張平均 15.5）。
+  // 閘門下在 commit：只擋引擎自己要補的（random／era_anchor／repair）。
+  // 釘選走 forcePin 不經過這裡；釘選 implies／bind 帶上來的、必抽、人物（subject 不在
+  // QUOTA_SECTIONS）、畫質字都照舊。
+  const zeroSections = new Set(QUOTA_SECTIONS.filter((s) => settings.counts && Number(settings.counts[s]) === 0));
+  const ENGINE_FILL = new Set([SOURCES.random, SOURCES.era_anchor, SOURCES.repair]);
+  const innerCommit = zeroSections.size
+    ? (tag) => {
+        if (ENGINE_FILL.has(commitMeta.source) && zeroSections.has(lex.byTag.get(tag)?.section)) return false;
+        return rawCommit(tag);
+      }
+    : rawCommit;
   const commit = tracer.enabled
     ? (tag) => {
         const before = new Set(used);
@@ -5592,9 +5607,8 @@ export function drawOne(lex, settings, pinned, userBanned, rand, seed, opts) {
   //
   // 只在歷史時代跑：現代的「道具」是手機和遊戲手把，那本來就不缺。
   //
-  // 把環境拉到 0 的人要的是最少的環境字，畫面上也寫著「不做額外隨機補牌，
-  // 必要骨架仍保留」。場地、室內外、日夜、光源是骨架（每張圖都得有），
-  // 一件年代道具是裝飾 —— 所以它跟著 counts 走。
+  // 一件年代道具是裝飾，所以它跟著 counts 走。（2026-09-25 起 counts=0 連場地、
+  // 室內外、日夜、光源這些骨架也不補 —— 見 drawOne 開頭的 zeroSections。）
   // 不這樣做的話，我加的這一格會讓環境滑桿在 0~5 之間完全沒有效果。
   if (era && era !== "modern" && Number(counts.env) > 0) {
     const props = lex.bySection.env.filter(

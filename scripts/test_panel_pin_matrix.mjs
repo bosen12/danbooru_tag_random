@@ -28,6 +28,10 @@ function tagsOf(drawn) {
   const prompts = new Set();
   const bad = [];
   let draws = 0;
+  // 2026-09-25 起 counts 全 0＝整段不補（見 討論區.md）：沒有釘選時每張都只剩人物和畫質，
+  // 本來就會重複，所以「不重複退化」只量有在補的那兩種 profile，全 0 另外驗它真的什麼都不補。
+  let variedDraws = 0;
+  const zeroLeaks = [];
   let seed = 710000;
   for (const mode of ["normal", "diverse", "weird"]) {
     for (const era of ERAS) {
@@ -53,7 +57,13 @@ function tagsOf(drawn) {
                   if (!drawn.positive.trim() || drawn.conflicts.length || drawn.shadowViolations.length) {
                     bad.push(`${mode}/${era}/${heats.join("+")}/${cast}/job=${drawJob}/${countProfile}: conflicts=${drawn.conflicts.length}, shadow=${drawn.shadowViolations.length}, POS=${drawn.positive}`);
                   }
-                  prompts.add(drawn.positive);
+                  if (countProfile === "zero") {
+                    const leaked = ["feature", "pose", "clothing", "env"].flatMap((sec) => drawn.sections[sec] || []);
+                    if (leaked.length) zeroLeaks.push(`${mode}/${era}/${heats.join("+")}/${cast}/job=${drawJob}: ${leaked.join("、")}`);
+                  } else {
+                    variedDraws += 1;
+                    prompts.add(drawn.positive);
+                  }
                   for (const section of Object.keys(unique)) {
                     for (const tag of drawn.sections[section] || []) unique[section].add(tag);
                   }
@@ -68,7 +78,8 @@ function tagsOf(drawn) {
     }
   }
   ok(`左側面板矩陣 ${draws} 張全部可抽且無 hard conflict`, bad.length === 0, bad.slice(0, 5).join("\n  "));
-  ok("面板矩陣不重複退化", prompts.size >= Math.floor(draws * 0.99), `${prompts.size}/${draws}`);
+  ok("面板矩陣不重複退化（預設、最大兩種 profile）", prompts.size >= Math.floor(variedDraws * 0.99), `${prompts.size}/${variedDraws}`);
+  ok("counts 全 0：每一種面板組合都只剩人物和畫質", zeroLeaks.length === 0, zeroLeaks.slice(0, 3).join("\n  "));
   const floors = { subject: 9, feature: 285, pose: 335, clothing: 305, env: 305 };
   for (const [section, floor] of Object.entries(floors)) {
     ok(`${section} 多樣性底線`, unique[section].size >= floor, `${unique[section].size} < ${floor}`);

@@ -464,6 +464,61 @@ const WATER_SRC = [
   );
 }
 
+// --- 「不補」＝整段不補（2026-09-25 專案主決定，見 討論區.md） -------------------
+// 以前 counts=0 只停掉通用補牌，骨架格（髮長、瞳色、鏡頭、場地、晝夜…）照補，
+// 四段都設 0 每張仍有約 15 個引擎自己補的字。現在：設 0 的那段，引擎一個字都不自己補。
+{
+  const ZERO = { feature: 0, pose: 0, clothing: 0, env: 0 };
+  const zs = sanitizeSettings({ ...base, rating: "explicit", counts: { ...base.counts, ...ZERO } }, data);
+  const sectionOf = (t) => lex.byTag.get(t)?.section;
+  const draw = (s, pins, i) => drawOne(lex, s, new Set(pins), new Set(), mulberry32(91000 + i), 91000 + i, { trace: true });
+  const tagsOf = (d) => String(d.positive).split(",").map((t) => t.trim()).filter(Boolean);
+
+  let extra = null;
+  for (let i = 0; i < 200 && !extra; i++) {
+    const d = draw(zs, [], i);
+    const bad = tagsOf(d).filter((t) => ["feature", "pose", "clothing", "env"].includes(sectionOf(t)));
+    if (bad.length) extra = `seed ${91000 + i}：${bad.join("、")}`;
+  }
+  ok("不補：四段都 0、沒有釘選 → 只剩人物和畫質字", !extra, extra || "");
+
+  const pins = ["kimono", "cooking", "long hair"];
+  let lost = null;
+  let added = null;
+  for (let i = 0; i < 200 && !lost && !added; i++) {
+    const d = draw(zs, pins, i);
+    const tags = new Set(tagsOf(d));
+    const miss = pins.filter((t) => !tags.has(t));
+    if (miss.length) lost = `seed ${91000 + i} 少了：${miss.join("、")}`;
+    const self = (d.trace?.kept || []).filter(
+      (k) => ["feature", "pose", "clothing", "env"].includes(sectionOf(k.tag)) && !["pin", "preset", "implies", "bind", "must_draw"].includes(k.source)
+    );
+    if (self.length) added = `seed ${91000 + i}：${self.map((k) => `${k.tag}（${k.source}）`).join("、")}`;
+  }
+  ok("不補：釘選一定留著", !lost, lost || "");
+  ok("不補：除了釘選和它帶上來的，引擎不自己補（連做菜的廚房、和服的時代錨也不補）", !added, added || "");
+
+  // （和服 bind 和服類，但引擎在一般抽牌裡本來就不寫出和服類這個上位字，所以用白襯衫、圖書館。）
+  const withImply = draw(zs, ["white shirt", "library"], 0);
+  ok("不補：釘選 implies 帶上來的字照樣帶（白襯衫 → 襯衫、圖書館 → 室內）", ["shirt", "indoors"].every((t) => tagsOf(withImply).includes(t)), withImply.positive);
+
+  // 只有一段設 0：其他段照常補。
+  const envOff = sanitizeSettings({ ...base, rating: "explicit", counts: { ...base.counts, env: 0 } }, data);
+  let feat = 0;
+  let envSelf = null;
+  for (let i = 0; i < 100; i++) {
+    const d = draw(envOff, [], i);
+    feat += tagsOf(d).filter((t) => sectionOf(t) === "feature").length;
+    const self = (d.trace?.kept || []).filter((k) => sectionOf(k.tag) === "env" && k.source !== "implies" && k.source !== "bind");
+    if (self.length && !envSelf) envSelf = `seed ${91000 + i}：${self.map((k) => k.tag).join("、")}`;
+  }
+  ok("不補：只關場景時，場景引擎一個都不補", !envSelf, envSelf || "");
+  ok("不補：只關場景時，長相照常補", feat / 100 > 3, `長相平均 ${(feat / 100).toFixed(1)}`);
+
+  // 預設值每段都大於 0，閘門不會打開：一般抽牌逐字不受影響（金標另外守）。
+  ok("不補：預設 counts 沒有任何一段是 0", ["feature", "pose", "clothing", "env"].every((k) => Number(base.counts[k]) > 0), JSON.stringify(base.counts));
+}
+
 if (failed) {
   console.error(`\n${failed} failed`);
   process.exit(1);
