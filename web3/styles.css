@@ -332,12 +332,16 @@
     overflow-x: auto;
     overscroll-behavior-x: contain;
     scrollbar-width: none;
+    /* 捲軸藏起來了，一滑就停在半條巷子上（尺度那排的說明被切一半）。對齊到巷子開頭。 */
+    scroll-snap-type: x proximity;
+    scroll-padding-inline: var(--space-3);
   }
   .strip::-webkit-scrollbar {
     display: none;
   }
   .lane {
     flex: 0 0 auto;
+    scroll-snap-align: start;
   }
   .lane .row {
     flex-wrap: nowrap;
@@ -356,5 +360,23 @@
   }
   .line .card.is-wait {
     animation: none;
+  }
+}
+
+/* 手機寬度：工具區換到品牌下面一行、可以換行、靠左（跟排字匣 web/styles.css、導影台一樣的修法）。
+   以前靠右不換行，裝不下的按鈕往左溢出，通知設定齒輪實測在 x = -150，按不到。 */
+@media (max-width: 900px) {
+  .noren {
+    height: auto;
+    flex-wrap: wrap;
+    row-gap: var(--space-2);
+    padding-top: max(var(--space-3), env(safe-area-inset-top, 0px));
+    padding-bottom: var(--space-3);
+  }
+  .mast-tools {
+    flex: 1 1 auto;
+    flex-wrap: wrap;
+    justify-content: flex-start;
+    row-gap: var(--space-2);
   }
 }

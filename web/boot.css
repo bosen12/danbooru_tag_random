@@ -2090,6 +2090,12 @@ html.is-booting *::after {
     visibility 0s linear var(--dur-ui);
 }
 
+.service-settings-wrap[data-side="left"] .service-menu {
+  right: auto;
+  left: 0;
+  transform-origin: top left;
+}
+
 .service-settings-wrap[data-open="1"] .service-menu {
   opacity: 1;
   visibility: visible;

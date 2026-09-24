@@ -34,8 +34,13 @@ function setOpen(open) {
   const wrap = $("service-settings-wrap");
   const btn = $("service-settings-btn");
   if (!wrap || !btn) return;
-  if (open) wrap.dataset.open = "1";
-  else delete wrap.dataset.open;
+  if (open) {
+    // 選單寬 17rem、預設靠齒輪右緣往左長。手機上工具列換行後齒輪常在左半邊，
+    // 往左長就整個跑出螢幕外（實測 x = -211）。齒輪在左半邊就改成往右長。
+    const r = btn.getBoundingClientRect();
+    wrap.dataset.side = r.left + r.width / 2 < window.innerWidth / 2 ? "left" : "right";
+    wrap.dataset.open = "1";
+  } else delete wrap.dataset.open;
   btn.setAttribute("aria-expanded", open ? "true" : "false");
 }
 

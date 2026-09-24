@@ -294,3 +294,21 @@ html {
     top: 0;
   }
 }
+
+/* 手機寬度：工具區換到品牌下面一行、可以換行、靠左（跟排字匣 web/styles.css、導影台一樣的修法）。
+   以前靠右不換行，裝不下的按鈕往左溢出，通知設定齒輪實測在 x = -150，按不到。 */
+@media (max-width: 900px) {
+  .mast {
+    height: auto;
+    flex-wrap: wrap;
+    row-gap: var(--space-2);
+    padding-top: max(var(--space-3), env(safe-area-inset-top, 0px));
+    padding-bottom: var(--space-3);
+  }
+  .mast-tools {
+    flex: 1 1 auto;
+    flex-wrap: wrap;
+    justify-content: flex-start;
+    row-gap: var(--space-2);
+  }
+}
