@@ -1,0 +1,381 @@
+{
+ "note": "字鋪的道具、印材、客人、背景插畫 prompt。python scripts/bake_zipu_art.py --extras",
+ "items": [
+  {
+   "id": "joker-vermilion",
+   "positive": "ink stone, red ink, calligraphy brush, no humans, still life, black background, warm lighting, dramatic lighting"
+  },
+  {
+   "id": "joker-rack",
+   "positive": "wooden shelf, metal movable type, rows of letters, no humans, still life, black background, warm lighting, dramatic lighting"
+  },
+  {
+   "id": "joker-loupe",
+   "positive": "magnifying glass, brass, no humans, still life, black background, warm lighting, dramatic lighting"
+  },
+  {
+   "id": "joker-shears",
+   "positive": "scissors, fabric, sewing thread, no humans, still life, black background, warm lighting, dramatic lighting"
+  },
+  {
+   "id": "joker-footlight",
+   "positive": "stage spotlight, theater stage, curtain, no humans, still life, black background, warm lighting, dramatic lighting"
+  },
+  {
+   "id": "joker-sketchbook",
+   "positive": "sketchbook, landscape painting, watercolor, no humans, still life, black background, warm lighting, dramatic lighting"
+  },
+  {
+   "id": "joker-bigtype",
+   "positive": "large metal type block, letterpress, carved character, no humans, still life, black background, warm lighting, dramatic lighting"
+  },
+  {
+   "id": "joker-spectacles",
+   "positive": "round eyewear, old glasses, open book, no humans, still life, black background, warm lighting, dramatic lighting"
+  },
+  {
+   "id": "joker-quad",
+   "positive": "metal spacers, lead blocks, composing stick, no humans, still life, black background, warm lighting, dramatic lighting"
+  },
+  {
+   "id": "joker-abacus",
+   "positive": "abacus, wooden, no humans, still life, black background, warm lighting, dramatic lighting"
+  },
+  {
+   "id": "joker-wastebasket",
+   "positive": "wicker basket, crumpled paper, no humans, still life, black background, warm lighting, dramatic lighting"
+  },
+  {
+   "id": "joker-oillamp",
+   "positive": "oil lamp, flame, night, desk, no humans, still life, black background, warm lighting, dramatic lighting"
+  },
+  {
+   "id": "joker-redthread",
+   "positive": "red string, spool, thread, no humans, still life, black background, warm lighting, dramatic lighting"
+  },
+  {
+   "id": "joker-apprentice",
+   "positive": "ink roller, brayer, black ink, no humans, still life, black background, warm lighting, dramatic lighting"
+  },
+  {
+   "id": "joker-scrap",
+   "positive": "crucible, molten metal, glowing, no humans, still life, black background, warm lighting, dramatic lighting"
+  },
+  {
+   "id": "joker-antiquary",
+   "positive": "old books, scrolls, antique vase, stacked, no humans, still life, black background, warm lighting, dramatic lighting"
+  },
+  {
+   "id": "joker-catalog",
+   "positive": "fashion magazine, open catalog, clothes illustrations, no humans, still life, black background, warm lighting, dramatic lighting"
+  },
+  {
+   "id": "joker-almanac",
+   "positive": "weather vane, calendar, almanac, no humans, still life, black background, warm lighting, dramatic lighting"
+  },
+  {
+   "id": "joker-nightshift",
+   "positive": "paper lantern, night, window, moon, no humans, still life, black background, warm lighting, dramatic lighting"
+  },
+  {
+   "id": "joker-club",
+   "positive": "trophy, sports equipment, medal, no humans, still life, black background, warm lighting, dramatic lighting"
+  },
+  {
+   "id": "joker-collector",
+   "positive": "picture frames on wall, gallery, no humans, still life, black background, warm lighting, dramatic lighting"
+  },
+  {
+   "id": "joker-developer",
+   "positive": "photo developing tray, darkroom, red light, no humans, still life, black background, warm lighting, dramatic lighting"
+  },
+  {
+   "id": "joker-shortrun",
+   "positive": "small paper cards, business cards, stack, no humans, still life, black background, warm lighting, dramatic lighting"
+  },
+  {
+   "id": "joker-handscroll",
+   "positive": "long handscroll, unrolled scroll, chinese painting, no humans, still life, black background, warm lighting, dramatic lighting"
+  },
+  {
+   "id": "joker-luckycat",
+   "positive": "maneki-neko, lucky cat, gold coin, no humans, still life, black background, warm lighting, dramatic lighting"
+  },
+  {
+   "id": "joker-lots",
+   "positive": "fortune sticks, bamboo cylinder, omikuji, no humans, still life, black background, warm lighting, dramatic lighting"
+  },
+  {
+   "id": "joker-twocolor",
+   "positive": "two color print, red and blue ink, printed paper, no humans, still life, black background, warm lighting, dramatic lighting"
+  },
+  {
+   "id": "joker-folio",
+   "positive": "printing press, large paper sheet, letterpress machine, no humans, still life, black background, warm lighting, dramatic lighting"
+  },
+  {
+   "id": "joker-master",
+   "positive": "golden metal type, glowing, ornate, no humans, still life, black background, warm lighting, dramatic lighting"
+  },
+  {
+   "id": "joker-cinnabar",
+   "positive": "red seal paste, chinese seal, stamp, no humans, still life, black background, warm lighting, dramatic lighting"
+  },
+  {
+   "id": "joker-mirror",
+   "positive": "hand mirror, ornate, reflection, no humans, still life, black background, warm lighting, dramatic lighting"
+  },
+  {
+   "id": "joker-agency",
+   "positive": "wooden signboard, hanging sign, shop, no humans, still life, black background, warm lighting, dramatic lighting"
+  },
+  {
+   "id": "joker-kimonoshop",
+   "positive": "kimono on display, noren, japanese shop, no humans, still life, black background, warm lighting, dramatic lighting"
+  },
+  {
+   "id": "joker-tradinghouse",
+   "positive": "victorian teacup, lace, pocket watch, no humans, still life, black background, warm lighting, dramatic lighting"
+  },
+  {
+   "id": "joker-smithy",
+   "positive": "anvil, hammer, sparks, forge, no humans, still life, black background, warm lighting, dramatic lighting"
+  },
+  {
+   "id": "joker-silkhouse",
+   "positive": "bolts of silk, chinese pattern, fabric rolls, no humans, still life, black background, warm lighting, dramatic lighting"
+  },
+  {
+   "id": "joker-sculptor",
+   "positive": "greek marble statue head, old man, beard, marble, chisel, hammer, no humans, still life, black background, warm lighting, dramatic lighting"
+  },
+  {
+   "id": "joker-dyehouse",
+   "positive": "dye vats, colorful fabric hanging, no humans, still life, black background, warm lighting, dramatic lighting"
+  },
+  {
+   "id": "joker-camera",
+   "positive": "vintage camera, bellows camera, tripod, no humans, still life, black background, warm lighting, dramatic lighting"
+  },
+  {
+   "id": "joker-opera",
+   "positive": "chinese opera mask, peking opera headdress, no humans, still life, black background, warm lighting, dramatic lighting"
+  },
+  {
+   "id": "joker-teahouse",
+   "positive": "teapot, teacups, tea set, steam, no humans, still life, black background, warm lighting, dramatic lighting"
+  },
+  {
+   "id": "joker-gilding",
+   "positive": "gold leaf, gilded, brush, no humans, still life, black background, warm lighting, dramatic lighting"
+  },
+  {
+   "id": "joker-ghostwriter",
+   "positive": "quill, letters, envelope, candle, no humans, still life, black background, warm lighting, dramatic lighting"
+  },
+  {
+   "id": "mat-gold",
+   "positive": "gold leaf sheets, tweezers, no humans, still life, simple background, dark background, warm lighting"
+  },
+  {
+   "id": "mat-seal",
+   "positive": "red seal paste tin, stamp, no humans, still life, simple background, dark background, warm lighting"
+  },
+  {
+   "id": "mat-bronze",
+   "positive": "bronze mold, metal casting, no humans, still life, simple background, dark background, warm lighting"
+  },
+  {
+   "id": "mat-dup",
+   "positive": "two identical small metal type blocks side by side, letterpress, engraved characters, no humans, still life, simple background, dark background, warm lighting"
+  },
+  {
+   "id": "mat-recut",
+   "positive": "carving knife, woodblock, wood shavings, no humans, still life, simple background, dark background, warm lighting"
+  },
+  {
+   "id": "mat-melt",
+   "positive": "furnace, fire, crucible, molten metal, no humans, still life, simple background, dark background, warm lighting"
+  },
+  {
+   "id": "mat-purse",
+   "positive": "coin purse, silk pouch, gold coins, no humans, still life, simple background, dark background, warm lighting"
+  },
+  {
+   "id": "typeface",
+   "positive": "rows of small brass printing type, metal type blocks, engraved chinese characters, letterpress, macro, no humans, still life, black background, warm lighting"
+  },
+  {
+   "id": "pack-cards",
+   "positive": "stack of metal type blocks, tied with string, no humans, still life, simple background, dark background, warm lighting"
+  },
+  {
+   "id": "pack-type",
+   "positive": "wooden box of metal type, open lid, no humans, still life, simple background, dark background, warm lighting"
+  },
+  {
+   "id": "pack-mat",
+   "positive": "lacquered wooden box, open lid, ink stick, calligraphy brush, red ink pad, no animals, no humans, still life, simple background, dark background, warm lighting"
+  },
+  {
+   "id": "voucher-longstick",
+   "positive": "long metal composing stick holding a row of movable type, letterpress tool, no humans, still life, simple background, dark background, warm lighting"
+  },
+  {
+   "id": "voucher-bigcase",
+   "positive": "large wooden type case, many compartments, no humans, still life, simple background, dark background, warm lighting"
+  },
+  {
+   "id": "voucher-fasthand",
+   "positive": "hands arranging metal type, close-up, fast, no humans, still life, simple background, dark background, warm lighting"
+  },
+  {
+   "id": "voucher-recycle",
+   "positive": "wooden bucket, old metal type, recycling, no humans, still life, simple background, dark background, warm lighting"
+  },
+  {
+   "id": "who-teahouse",
+   "positive": "1girl, mature female, apron, hair bun, chinese clothes, teahouse, smile, upper body, looking at viewer, simple background, dark background, warm lighting, adult"
+  },
+  {
+   "id": "who-scholar",
+   "positive": "1boy, scholar, hanfu, holding book, thin, gentle smile, upper body, looking at viewer, simple background, dark background, warm lighting, adult"
+  },
+  {
+   "id": "who-editor",
+   "positive": "1boy, glasses, vest, rolled up sleeves, holding newspaper, office, upper body, looking at viewer, simple background, dark background, warm lighting, adult"
+  },
+  {
+   "id": "who-photographer",
+   "positive": "1boy, old man, mustache, suit, vintage camera, photo studio, upper body, looking at viewer, simple background, dark background, warm lighting, adult"
+  },
+  {
+   "id": "who-lady",
+   "positive": "1girl, victorian, dress, parasol, gloves, elegant, smile, upper body, looking at viewer, simple background, dark background, warm lighting, adult"
+  },
+  {
+   "id": "who-inspector",
+   "positive": "1boy, detective, coat, fedora, serious, city street, night, upper body, looking at viewer, simple background, dark background, warm lighting, adult"
+  },
+  {
+   "id": "who-teacher",
+   "positive": "1girl, teacher, glasses, cardigan, holding book, classroom, upper body, looking at viewer, simple background, dark background, warm lighting, adult"
+  },
+  {
+   "id": "who-apothecary",
+   "positive": "1boy, old man, chinese clothes, beard, medicine cabinet, smile, upper body, looking at viewer, simple background, dark background, warm lighting, adult"
+  },
+  {
+   "id": "who-florist",
+   "positive": "1girl, flower basket, straw hat, sundress, smile, flowers, upper body, looking at viewer, simple background, dark background, warm lighting, adult"
+  },
+  {
+   "id": "who-storyteller",
+   "positive": "1boy, old man, folding fan, chinese clothes, teahouse, open mouth, upper body, looking at viewer, simple background, dark background, warm lighting, adult"
+  },
+  {
+   "id": "who-boatman",
+   "positive": "1boy, straw hat, tan, boat, river, smile, upper body, looking at viewer, simple background, dark background, warm lighting, adult"
+  },
+  {
+   "id": "who-taoist",
+   "positive": "1boy, taoist, robe, long hair, ofuda, mountain, mist, upper body, looking at viewer, simple background, dark background, warm lighting, adult"
+  },
+  {
+   "id": "who-painter",
+   "positive": "1girl, painter, beret, paintbrush, paint on face, art studio, upper body, looking at viewer, simple background, dark background, warm lighting, adult"
+  },
+  {
+   "id": "who-waitress",
+   "positive": "1girl, waitress, apron, cafe, holding tray, smile, upper body, looking at viewer, simple background, dark background, warm lighting, adult"
+  },
+  {
+   "id": "who-critic",
+   "positive": "1boy, monocle, suit, arrogant, art gallery, upper body, looking at viewer, simple background, dark background, warm lighting, adult, dramatic lighting"
+  },
+  {
+   "id": "who-scholarly",
+   "positive": "1boy, old man, chinese clothes, long beard, scroll, frown, upper body, looking at viewer, simple background, dark background, warm lighting, adult, dramatic lighting"
+  },
+  {
+   "id": "who-deadline",
+   "positive": "1boy, glasses, messy hair, ink stains, clock, night, office, upper body, looking at viewer, simple background, dark background, warm lighting, adult, dramatic lighting"
+  },
+  {
+   "id": "who-miser",
+   "positive": "1boy, fat, abacus, chinese clothes, counting money, smug, upper body, looking at viewer, simple background, dark background, warm lighting, adult, dramatic lighting"
+  },
+  {
+   "id": "who-tailor",
+   "positive": "1girl, mature female, tape measure, glasses, sewing, tailor shop, upper body, looking at viewer, simple background, dark background, warm lighting, adult, dramatic lighting"
+  },
+  {
+   "id": "who-diva",
+   "positive": "1girl, chinese opera, peking opera, headdress, makeup, stage, upper body, looking at viewer, simple background, dark background, warm lighting, adult, dramatic lighting"
+  },
+  {
+   "id": "who-comprador",
+   "positive": "1boy, suit, bowler hat, mustache, victorian, cane, upper body, looking at viewer, simple background, dark background, warm lighting, adult, dramatic lighting"
+  },
+  {
+   "id": "who-myopic",
+   "positive": "1boy, old man, thick glasses, squinting, print shop, apron, upper body, looking at viewer, simple background, dark background, warm lighting, adult, dramatic lighting"
+  },
+  {
+   "id": "who-bride",
+   "positive": "1girl, bride, wedding dress, veil, impatient, church, upper body, looking at viewer, simple background, dark background, warm lighting, adult, dramatic lighting"
+  },
+  {
+   "id": "who-proofreader",
+   "positive": "1girl, glasses, red pen, stern, proofreading, desk, upper body, looking at viewer, simple background, dark background, warm lighting, adult, dramatic lighting"
+  },
+  {
+   "id": "who-fickle",
+   "positive": "1girl, rich, fur coat, jewelry, bored, mansion, upper body, looking at viewer, simple background, dark background, warm lighting, adult, dramatic lighting"
+  },
+  {
+   "id": "who-fortune",
+   "positive": "1boy, fortune teller, round eyewear, chinese clothes, fortune sticks, street stall, upper body, looking at viewer, simple background, dark background, warm lighting, adult, dramatic lighting"
+  },
+  {
+   "id": "who-owner",
+   "positive": "1girl, mature female, qipao, fur shawl, smoking pipe, sitting, print shop, dim lighting, confident, upper body, looking at viewer, simple background, dark background, warm lighting, adult, dramatic lighting"
+  },
+  {
+   "id": "bg-shop",
+   "size": [
+    1216,
+    832
+   ],
+   "thumb": [
+    1216,
+    832
+   ],
+   "positive": "no humans, scenery, print shop interior, letterpress, printing press, wooden type cases, shelves, paper lantern, night, warm lighting, dim lighting, depth of field"
+  },
+  {
+   "id": "bg-street",
+   "size": [
+    1216,
+    832
+   ],
+   "thumb": [
+    1216,
+    832
+   ],
+   "positive": "no humans, scenery, night, old street, shop front, paper lantern, rain, reflection, east asian architecture, warm lighting"
+  },
+  {
+   "id": "bg-table",
+   "size": [
+    1216,
+    832
+   ],
+   "thumb": [
+    1216,
+    832
+   ],
+   "positive": "no humans, dark wooden table, from above, wood grain, texture, dim lighting, empty"
+  }
+ ]
+}

@@ -1,0 +1,93 @@
+/* Hallmark · route: custom (bespoke) · structure: game table — ledger rail, tool shelf, bench, hand
+ * idea: "a lamplit type shop at night — every card is a slug of type, every win is a real print"
+ * paper: oklch(16.5% 0.016 55) · accent: oklch(60% 0.19 33) vermilion
+ * display: Noto Serif TC 900 · body: LXGW WenKai TC · mono: IBM Plex Mono
+ * axes: dark / roman-serif / warm · gates: all-pass · studied: no
+ */
+:root {
+  /* 桌面：深夜的胡桃木，燈照不到的地方 */
+  --color-paper: oklch(16.5% 0.016 55);
+  --color-paper-2: oklch(20.5% 0.019 55);
+  --color-paper-3: oklch(25% 0.021 58);
+  --color-paper-4: oklch(30% 0.022 60);
+  --color-scrim: oklch(10% 0.012 55 / 0.78);
+
+  /* 燈下的字 */
+  --color-ink: oklch(92% 0.022 82);
+  --color-ink-2: oklch(80% 0.024 78);
+  --color-muted: oklch(64% 0.022 72);
+  --color-rule: oklch(34% 0.02 60);
+  --color-rule-2: oklch(27% 0.018 58);
+
+  /* 卡紙 */
+  --color-stock: oklch(93.5% 0.024 86);
+  --color-stock-2: oklch(88.5% 0.028 84);
+  --color-stock-3: oklch(82% 0.03 80);
+  --color-stock-ink: oklch(24% 0.02 50);
+  --color-stock-muted: oklch(46% 0.022 60);
+
+  /* 訊號：朱是倍率與印章，靛是籌碼，銅是錢與手盒 */
+  --color-accent: oklch(60% 0.19 33);
+  --color-accent-2: oklch(52% 0.17 32);
+  --color-accent-3: oklch(46% 0.16 31);
+  --color-accent-ink: oklch(97% 0.012 80);
+  --color-chips: oklch(64% 0.11 248);
+  --color-chips-2: oklch(54% 0.11 250);
+  --color-chips-3: oklch(45% 0.11 252);
+  --color-brass: oklch(78% 0.11 82);
+  --color-brass-2: oklch(63% 0.1 74);
+  --color-brass-3: oklch(47% 0.09 70);
+  --color-brass-ink: oklch(22% 0.03 70);
+  --color-good: oklch(74% 0.13 150);
+  --color-good-ink: oklch(44% 0.11 150);
+  --color-focus: oklch(74% 0.19 38);
+  --color-lamp: oklch(72% 0.13 70 / 0.16);
+
+  /* 四種花色：墨色，不是糖果色 */
+  --suit-look: oklch(68% 0.11 8);
+  --suit-wear: oklch(66% 0.1 305);
+  --suit-pose: oklch(68% 0.09 165);
+  --suit-scene: oklch(72% 0.1 72);
+
+  --font-display: "Noto Serif TC", "Songti TC", "PMingLiU", serif;
+  --font-body: "LXGW WenKai TC", "Kaiti TC", "BiauKai", "DFKai-SB", "Noto Serif TC", serif;
+  --font-mono: "IBM Plex Mono", ui-monospace, "Cascadia Mono", monospace;
+
+  --space-3xs: 0.125rem;
+  --space-2xs: 0.25rem;
+  --space-xs: 0.5rem;
+  --space-sm: 0.75rem;
+  --space-md: 1rem;
+  --space-lg: 1.5rem;
+  --space-xl: 2rem;
+  --space-2xl: 3rem;
+  --space-3xl: 4rem;
+
+  --text-2xs: 0.6875rem;
+  --text-xs: 0.75rem;
+  --text-sm: 0.875rem;
+  --text-md: 1rem;
+  --text-lg: 1.25rem;
+  --text-xl: 1.5rem;
+  --text-2xl: 2rem;
+  --text-3xl: 2.75rem;
+  --text-display: clamp(3.5rem, 9vw + 1rem, 8rem);
+
+  --radius-xs: 3px;
+  --radius-sm: 6px;
+  --radius-md: 10px;
+  --radius-lg: 16px;
+  --rule-hair: 1px;
+
+  --ease-out: cubic-bezier(0.16, 1, 0.3, 1);
+  --ease-in: cubic-bezier(0.7, 0, 0.84, 0);
+  --ease-in-out: cubic-bezier(0.65, 0, 0.35, 1);
+  --dur-micro: 120ms;
+  --dur-short: 220ms;
+  --dur-long: 420ms;
+
+  --color-shine: oklch(99% 0.012 85 / 0.35);
+  --color-shade: oklch(8% 0.01 55 / 0.55);
+  --shadow-card: 0 1px 0 var(--color-shine) inset, 0 6px 14px var(--color-shade);
+  --shadow-lift: 0 1px 0 var(--color-shine) inset, 0 18px 30px var(--color-shade);
+}

@@ -1,0 +1,28 @@
+<!doctype html>
+<html lang="zh-Hant">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover" />
+    <meta name="theme-color" content="#1a1511" />
+    <title>字鋪 · 深夜的活字鋪</title>
+    <meta name="description" content="排字匣的牌組構築遊戲：揀字、排版、付印，每一單成交都印成一張真的畫。" />
+    <link rel="icon" href="favicon.svg" type="image/svg+xml" />
+    <link rel="preload" href="lexicon.json" as="fetch" crossorigin />
+    <link rel="modulepreload" href="engine.js" />
+    <link rel="preconnect" href="https://fonts.googleapis.com" />
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+    <link
+      rel="stylesheet"
+      href="https://fonts.googleapis.com/css2?family=IBM+Plex+Mono:wght@400;500&family=LXGW+WenKai+TC:wght@400;700&family=Noto+Serif+TC:wght@500;700;900&display=swap"
+    />
+    <link rel="stylesheet" href="zipu.css" />
+  </head>
+  <body>
+    <div class="app" id="app" data-screen="boot">
+      <div class="backdrop" aria-hidden="true"></div>
+      <main id="screen"></main>
+      <div class="toast" id="toast" role="status" aria-live="polite"></div>
+    </div>
+    <script type="module" src="main.js"></script>
+  </body>
+</html>
