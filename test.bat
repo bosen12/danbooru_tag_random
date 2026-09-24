@@ -123,6 +123,24 @@ if errorlevel 1 (
   pause
   exit /b 1
 )
+echo == zipu (type shop game) ==
+call node scripts\test_zipu.mjs
+if errorlevel 1 (
+  pause
+  exit /b 1
+)
+echo == card art (shared card faces) ==
+call node scripts\test_card_art.mjs
+if errorlevel 1 (
+  pause
+  exit /b 1
+)
+echo == fuse (mochi overprint table) ==
+call node scripts\test_fuse.mjs
+if errorlevel 1 (
+  pause
+  exit /b 1
+)
 echo == prompt audit ==
 call node scripts\test_shadow_generation.mjs
 if errorlevel 1 (
