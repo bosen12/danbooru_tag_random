@@ -1,0 +1,266 @@
+/* 排字匣 · 字盒的「卡牌」樣子（web/tag-cards.js）。
+ * 只在 html[data-tag-style="card"] 底下生效；切回「字條」時這整份等於不存在，
+ * 插畫那格 display:none，按鈕回到 boot.css 原本的字條。
+ * 狀態沿用字條的語彙：釘選＝金、互斥擋下＝紅圈、自己封鎖＝虛線劃掉、不是這時代＝淡掉。
+ */
+
+:root {
+  /* 六種花色，跟墨池同一組色相，但亮度壓在排字匣的暖墨底上看得清。 */
+  --tc-cast: oklch(74% 0.1 25);
+  --tc-look: oklch(80% 0.11 70);
+  --tc-wear: oklch(74% 0.09 305);
+  --tc-pose: oklch(76% 0.1 150);
+  --tc-scene: oklch(74% 0.08 230);
+  --tc-style: oklch(82% 0.1 100);
+  --tc-face: oklch(91% 0.018 85);
+  --tc-face-ink: oklch(30% 0.02 50);
+  --tc-w: 92px;
+  /* 浮空放大牌（web/card-peek.js）預設是墨池的冷墨色，這裡換成排字匣的暖墨。 */
+  --peek-panel: var(--color-paper-2);
+  --peek-line: var(--color-rule);
+  --peek-ink: var(--color-ink);
+  --peek-ink2: color-mix(in oklab, var(--color-ink) 82%, var(--color-paper));
+  --peek-muted: var(--color-muted);
+  --peek-display: var(--font-display);
+  --peek-body: var(--font-body);
+}
+
+.tc-switch {
+  display: flex;
+  flex: 0 0 auto;
+  margin-left: auto;
+}
+
+.tc-switch .seg + .seg {
+  margin-left: -1px;
+}
+
+.tc-art {
+  display: none;
+}
+
+@media (max-width: 720px) {
+  .tc-switch {
+    margin-left: 0;
+  }
+  :root {
+    --tc-w: 80px;
+  }
+}
+
+/* ---------- 卡牌 ---------- */
+
+[data-tag-style="card"] #cats .tags {
+  gap: 12px 10px;
+}
+
+[data-tag-style="card"] #cats .family {
+  align-items: flex-start;
+  padding: 6px 8px 6px 10px;
+}
+
+[data-tag-style="card"] #cats .tag[data-tc] {
+  display: flex;
+  flex-direction: column;
+  width: var(--tc-w);
+  min-height: 0;
+  padding: 0;
+  border-radius: 6px;
+  background: var(--color-chip);
+  overflow-wrap: normal;
+  transition:
+    background var(--dur-ui) var(--ease-out),
+    color var(--dur-ui) var(--ease-out),
+    border-color var(--dur-ui) var(--ease-out),
+    opacity var(--dur-ui) var(--ease-out),
+    box-shadow var(--dur-ui) var(--ease-out),
+    transform var(--dur-micro) var(--ease-out);
+}
+
+/* 篩掉的字（性別、時代、搜尋、檢視）是用 hidden 藏的。上面那條 display:flex
+   比 boot.css 的 .tag[hidden] 更 specific，不補這條的話卡牌模式會把篩掉的字全放出來。 */
+[data-tag-style="card"] #cats .tag[data-tc][hidden] {
+  display: none;
+}
+
+[data-tag-style="card"] #cats .tag[data-tc] > .tc-art {
+  position: relative;
+  display: grid;
+  place-items: center;
+  aspect-ratio: 1 / 1;
+  overflow: hidden;
+  border-radius: 5px 5px 0 0;
+  background: var(--tc-face);
+  box-shadow: inset 0 -3px 0 var(--tc-suit);
+}
+
+.tc-art img {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+  object-position: 50% 22%;
+  display: block;
+  transition:
+    filter var(--dur-ui) var(--ease-out),
+    opacity var(--dur-ui) var(--ease-out),
+    transform var(--dur-move) var(--ease-out);
+}
+
+/* 還沒有插畫的字：底色帶一點花色，跟有畫的牌分得出來，又不會像壞掉的圖。 */
+[data-tag-style="card"] #cats .tag[data-tc] > .tc-art:has(> .tc-glyph) {
+  background: color-mix(in oklab, var(--tc-suit) 24%, var(--tc-face));
+}
+
+.tc-glyph {
+  font-family: var(--font-display);
+  font-weight: 800;
+  font-size: calc(var(--tc-w) * 0.46);
+  line-height: 1;
+  color: color-mix(in oklab, var(--tc-suit) 55%, var(--tc-face-ink));
+}
+
+/* 超過目前尺度的牌蓋起來：圖 display:none（lazy 的圖因此根本不會抓），露出字形那面。
+   html[data-card-rating] 由 tag-cards.js 跟著左欄的尺度分級同步。 */
+.tc-veil {
+  display: none;
+}
+
+[data-card-rating="general"] #cats .tag[data-art-r] .tc-art img,
+[data-card-rating="sensitive"] #cats .tag[data-art-r="explicit"] .tc-art img {
+  display: none;
+}
+
+[data-card-rating="general"] #cats .tag[data-art-r] .tc-veil,
+[data-card-rating="sensitive"] #cats .tag[data-art-r="explicit"] .tc-veil {
+  display: block;
+}
+
+.tc-suit {
+  position: absolute;
+  top: 4px;
+  left: 4px;
+  display: grid;
+  place-items: center;
+  width: 19px;
+  height: 19px;
+  border-radius: 50%;
+  background: var(--tc-suit);
+  color: var(--tc-face-ink);
+  font-family: var(--font-display);
+  font-size: 11px;
+  font-weight: 800;
+  line-height: 1;
+  box-shadow: 0 1px 0 color-mix(in oklab, var(--tc-face-ink) 30%, transparent);
+}
+
+.tc-rate {
+  position: absolute;
+  left: 4px;
+  bottom: 7px;
+  padding: 2px 3px;
+  border-radius: 3px;
+  font-size: 10px;
+  font-weight: 800;
+  line-height: 1;
+  background: var(--color-pin);
+  color: var(--tc-face-ink);
+}
+
+.tc-rate[data-r="explicit"] {
+  background: var(--color-accent);
+  color: var(--color-ink);
+}
+
+[data-tag-style="card"] #cats .tag[data-tc] > .label {
+  display: block;
+  padding: 6px 6px 7px;
+  font-size: 12px;
+  line-height: 1.25;
+  text-align: center;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+/* 英文 tag 的黑條提示在卡牌模式由浮空放大牌取代，兩個一起跳出來太吵。 */
+[data-tag-style="card"] #cats .tag[data-tc]::after {
+  content: none;
+}
+
+/* 互動：浮起來一點、插畫微微放大，讓「這張可以點」一眼看得出。 */
+@media (hover: hover) and (pointer: fine) {
+  [data-tag-style="card"] #cats .tag[data-tc]:hover:not([data-state="banned"]) {
+    transform: translateY(-3px);
+    border-color: var(--color-muted);
+    box-shadow: 0 10px 18px -10px oklch(6% 0.01 40 / 0.9);
+  }
+  [data-tag-style="card"] #cats .tag[data-tc]:hover:not([data-state="banned"]) img {
+    transform: scale(1.06);
+  }
+}
+
+[data-tag-style="card"] #cats .tag[data-tc]:active:not([data-state="banned"]) {
+  transform: translateY(0) scale(0.97);
+}
+
+[data-tag-style="card"] #cats .tag[data-tc]:focus-visible {
+  outline: 2px solid var(--color-focus);
+  outline-offset: 2px;
+}
+
+/* 釘選：金框、字條那格塗金 —— 跟字條模式的金底同一個意思。 */
+[data-tag-style="card"] #cats .tag[data-tc][data-state="pinned"] {
+  background: var(--color-pin);
+  border-color: var(--color-pin);
+  color: var(--color-paper);
+}
+
+[data-tag-style="card"] #cats .tag[data-tc][data-state="pinned"]:not([data-weight]) {
+  box-shadow: 0 0 0 1px var(--color-pin);
+}
+
+[data-tag-style="card"] #cats .tag[data-tc][data-state="pinned"] > .label {
+  font-weight: 700;
+}
+
+/* 互斥擋下：紅圈，插畫退一點色。點下去會換成這張，所以不劃掉。 */
+[data-tag-style="card"] #cats .tag[data-tc][data-ban="mutex"] img {
+  filter: saturate(0.35);
+  opacity: 0.75;
+}
+
+/* 自己封鎖：虛線、字劃掉、插畫灰掉。 */
+[data-tag-style="card"] #cats .tag[data-tc][data-ban="user"] {
+  background: transparent;
+}
+
+[data-tag-style="card"] #cats .tag[data-tc][data-ban="user"] > .tc-art {
+  box-shadow: none;
+}
+
+[data-tag-style="card"] #cats .tag[data-tc][data-ban="user"] img,
+[data-tag-style="card"] #cats .tag[data-tc][data-ban="user"] .tc-glyph {
+  filter: grayscale(1);
+  opacity: 0.38;
+}
+
+[data-tag-style="card"] #cats .tag[data-tc][data-ban="user"] .tc-suit {
+  background: var(--color-ban);
+}
+
+/* 權重徽章掛在牌的右上角外面，跟字條一樣；牌比較高，往內收一點免得壓到隔壁。 */
+[data-tag-style="card"] #cats .tag[data-tc] > .w-flag {
+  top: -6px;
+  right: -5px;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  [data-tag-style="card"] #cats .tag[data-tc],
+  .tc-art img {
+    transition: none;
+  }
+  [data-tag-style="card"] #cats .tag[data-tc]:hover:not([data-state="banned"]),
+  [data-tag-style="card"] #cats .tag[data-tc]:hover:not([data-state="banned"]) img {
+    transform: none;
+  }
+}

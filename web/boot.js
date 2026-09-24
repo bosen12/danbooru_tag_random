@@ -105,6 +105,7 @@ import {
   syncMustDraw,
 } from "./mustdraw.js";
 import { drawWithSeed } from "./draw-with-seed.js";
+import { genSeed, mountSeedControl, seedUseButton } from "./seed-control.js";
 
 const SECTIONS = [
   { id: "quality", title: "畫質與風格", hint: "固定畫質每張都帶。風格預設不進，釘了才進" },
@@ -284,8 +285,8 @@ function renderCounts() {
     off.type = "button";
     off.className = "ghost mini";
     off.textContent = "不補";
-    off.title = `${label}不額外補牌，必要骨架仍保留`;
-    off.setAttribute("aria-label", `${label}不額外補牌`);
+    off.title = `${label}整段不補：只留你釘的和它帶上來的`;
+    off.setAttribute("aria-label", `${label}整段不補`);
     off.addEventListener("click", () => {
       settings.counts[key] = 0;
       input.value = "0";
@@ -2360,7 +2361,8 @@ function fillViewerInfo(card) {
     kk.textContent = k;
     const vv = document.createElement("span");
     vv.className = "gi-v";
-    vv.textContent = v;
+    if (k === "seed" && card.dataset.seed) vv.append(seedUseButton(card.dataset.seed, { prefix: "" }));
+    else vv.textContent = v;
     row.append(kk, vv);
     info.append(row);
   }
@@ -2792,7 +2794,7 @@ async function streamCardJob(card, seedNum, extra) {
 }
 
 async function regenerateCard(card) {
-  const seedNum = randomSeed();
+  const seedNum = genSeed(randomSeed());
   card.dataset.seed = String(seedNum);
   let loras = currentLorasPayload();
   try {
@@ -2880,7 +2882,9 @@ async function runSameSeedFromCard(card) {
     speak("這張沒留下場記，不能同種子重抽");
     return;
   }
-  const seedNum = Number(card.dataset.seed) >>> 0;
+  // 舊卡沒有 drawSeed：那時抽牌和生圖是同一顆。
+  const seedNum = Number(card.dataset.drawSeed || card.dataset.seed) >>> 0;
+  const imgSeed = Number(card.dataset.seed);
   if (!(await comfyUp())) {
     speak("Comfy 掛了——先開本機 8188，修好可再試");
     try { window.dispatchEvent(new CustomEvent("studio:toast", { detail: { text: "Comfy 掛了", kind: "danger" } })); } catch { /* ignore */ }
@@ -2926,13 +2930,13 @@ async function runSameSeedFromCard(card) {
     const sent = insertTriggerAfterCast(pos, trigger);
     card.dataset.positive = sent;
     card.dataset.trigger = trigger;
-    card._recipe = recipeFromDraw(drawn, sent, seedNum);
+    card._recipe = recipeFromDraw(drawn, sent, imgSeed);
     showPos(sent);
     setPosLine(card, sent);
-    setLive(card, { status: `同種子重抽 · seed ${seedNum}` });
+    setLive(card, { status: `同種子重抽 · seed ${imgSeed}` });
     paintMustWarn(card, drawn.mustReport);
     paintPinMiss(card);
-    await streamCardJob(card, seedNum, {
+    await streamCardJob(card, imgSeed, {
       positive: sent,
       era: drawn.era,
       eraClash: drawn.eraClash,
@@ -3076,7 +3080,11 @@ async function runBatch(opts = {}) {
       const card = placeCard(cardSkeleton(settings.width, settings.height));
       newest = card;
       markLive(card);
-      card.dataset.seed = String(drawn.seed);
+      // 抽牌和生圖的種子分開記：抽牌永遠隨機（同種子重抽靠 drawSeed），
+      // 生圖可以在「生圖種子」那裡固定（seed-control.js）。隨機時兩個是同一顆，跟以前一樣。
+      const imgSeed = genSeed(seedNum);
+      card.dataset.drawSeed = String(drawn.seed);
+      card.dataset.seed = String(imgSeed);
       card.dataset.intentSnap = freezeIntentSnap(settings, pinForDraw, banForDraw);
       card.dataset.era = drawn.era || "";
       card.dataset.bare = drawn.positive;
@@ -3090,7 +3098,7 @@ async function runBatch(opts = {}) {
       card.dataset.loras = JSON.stringify(currentLorasPayload());
       card.dataset.ckpt = currentCkpt() || "";
       card.dataset.workflowId = currentWorkflowId();
-      card._recipe = recipeFromDraw(drawn, sent, seedNum);
+      card._recipe = recipeFromDraw(drawn, sent, imgSeed);
       if (settings.samePerson && i > 0) {
         card.dataset.same = "1";
         const shot = card.querySelector(".shot");
@@ -3126,7 +3134,7 @@ async function runBatch(opts = {}) {
         failStreak = 0;
       } else {
         setLive(card, { status: `抽好了，生圖 ${i + 1}/${n}…` });
-        await streamCardJob(card, seedNum, {
+        await streamCardJob(card, imgSeed, {
           positive: sent,
           era: drawn.era,
           eraClash: drawn.eraClash,
@@ -3349,6 +3357,7 @@ function bindUi() {
     syncSamePerson();
     saveStore();
   });
+  mountSeedField();
   const sameBtn = $("same-person");
   if (sameBtn) {
     sameBtn.addEventListener("click", () => {
@@ -3665,6 +3674,19 @@ function bindUi() {
   window.__studioBootReady = true;
   window.dispatchEvent(new CustomEvent("studio:boot-ready"));
   $("cancel")?.addEventListener("click", () => stopNow("取消中…"));
+}
+
+/**
+ * 「生圖種子」：放在「一次幾張」那一格下面。每個版面都有 .batch-field，
+ * 所以用 JS 接在它後面，不在各版面的 HTML 裡多開一個靜態 id（中控室要跟排字匣的 id 一一對上）。
+ */
+function mountSeedField() {
+  const batch = $("n")?.closest(".batch-field");
+  if (!batch || document.querySelector(".seed-field")) return;
+  const wrap = document.createElement("div");
+  wrap.className = "field seed-field";
+  batch.after(wrap);
+  mountSeedControl(wrap);
 }
 
 function bootNote(text, cls) {

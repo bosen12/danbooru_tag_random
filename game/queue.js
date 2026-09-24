@@ -28,11 +28,14 @@ export async function* sseEvents(res) {
 }
 
 export async function generate(positive, opts = {}) {
-  const { onEvent, signal, fetchImpl = fetch } = opts;
+  const { onEvent, signal, fetchImpl = fetch, seed } = opts;
+  // 沒給種子就讓伺服器自己挑（隨機）；給了就是玩家在「生圖種子」固定的那顆。
+  const body = { positive, width: GEN_WIDTH, height: GEN_HEIGHT };
+  if (seed !== undefined && seed !== null) body.seed = seed;
   const res = await fetchImpl("/api/gen", {
     method: "POST",
     headers: { "Content-Type": "application/json", Accept: "text/event-stream" },
-    body: JSON.stringify({ positive, width: GEN_WIDTH, height: GEN_HEIGHT }),
+    body: JSON.stringify(body),
     signal,
   });
   if (!res.ok) throw new Error("gen HTTP " + res.status);
@@ -45,7 +48,7 @@ export async function generate(positive, opts = {}) {
 }
 
 export function createQueue(opts) {
-  const { makeRound, onEvent, generateImpl = generate } = opts;
+  const { makeRound, onEvent, generateImpl = generate, seed } = opts;
   let pending = null;
 
   async function build() {
@@ -54,7 +57,7 @@ export function createQueue(opts) {
       const round = makeRound();
       if (!round) continue; // 組不出題，重抽。沒花到 GPU。
       try {
-        const job = await generateImpl(round.draw.positive, { onEvent });
+        const job = await generateImpl(round.draw.positive, { onEvent, seed: typeof seed === "function" ? seed() : undefined });
         return { ...round, image: job.image, seed: job.seed };
       } catch (err) {
         lastErr = err; // 生圖失敗不是玩家的錯，換一題再來

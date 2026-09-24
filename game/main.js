@@ -9,6 +9,7 @@ import {
 } from "./engine.js";
 import { banlistFrom, makeQuestion } from "./quiz.js";
 import { createQueue } from "./queue.js";
+import { genSeed, mountSeedControl } from "./seed-control.js";
 import { HEAT_PRESETS, heatsFor, load, recordRun, save } from "./store.js";
 
 const SHEETS = 3;
@@ -360,7 +361,8 @@ async function start() {
   };
   room.classList.add("is-board");
   // 佇列只建一次。上一局結束時背景已經生好一張了，「再曝一張」直接接手。
-  if (!queue) queue = createQueue({ makeRound, onEvent: onGenEvent });
+  // 題目照樣每題隨機；「生圖種子」固定時，只有送 ComfyUI 的雜訊固定。
+  if (!queue) queue = createQueue({ makeRound, onEvent: onGenEvent, seed: () => genSeed(undefined) });
   show("play");
   renderSheets();
   renderCounters();
@@ -396,6 +398,7 @@ async function boot() {
   el("start").disabled = false;
 }
 
+mountSeedControl(el("seed-slot"), { fixedNote: "每一題都用這顆種子生圖；題目照樣每題隨機", randomNote: "每一題隨機。填一個數字就固定下來" });
 el("start").addEventListener("click", start);
 el("again").addEventListener("click", start);
 el("skip").addEventListener("click", skip);
