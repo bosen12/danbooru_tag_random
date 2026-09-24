@@ -849,12 +849,24 @@ function renderWall() {
 function shotNode(shot, deal) {
   const frame = el("div", { class: "shot-frame", style: `aspect-ratio: ${shot.width} / ${shot.height}` });
   const status = el("span", { class: "status" });
-  const cards = shotCards(shot, false);
-  cards.id = "cards-" + shot.id;
   // 沒有圖可看的（只抽牌、印壞、被停掉）直接攤開；有圖的牌收著，要看再點。
   const open = !shot.image && REPRINTABLE.has(shot.status);
+  // 收著的那疊牌第一次打開才建：一張成品底下三十張牌、兩百個節點，
+  // 牆上四十張就是七千多個看不到的節點，載入時白白排版一次（實測 50＋126ms 的長任務）。
+  let cards = open ? shotCards(shot, false) : el("div", { class: "shot-cards" });
+  let built = open;
+  cards.id = "cards-" + shot.id;
   let userToggled = false;
   cards.hidden = !open;
+  const ensureCards = () => {
+    if (built) return;
+    built = true;
+    const full = shotCards(shot, false);
+    full.id = cards.id;
+    full.hidden = cards.hidden;
+    cards.replaceWith(full);
+    cards = full;
+  };
   let dealtOnce = !deal && open;
   const total = shot.mine.length + shot.drawn.length;
   const suits = CARD_SUITS.filter((s) => shot.drawn.some((d) => lib.byTag.get(d.tag)?.suit === s) || shot.mine.some((t) => lib.byTag.get(t)?.suit === s));
@@ -866,6 +878,7 @@ function shotNode(shot, deal) {
     el("span", { class: "chev", "aria-hidden": "true" })
   );
   const setOpen = (now) => {
+    if (now) ensureCards();
     cards.hidden = !now;
     toggle.setAttribute("aria-expanded", now ? "true" : "false");
     if (now) {
