@@ -18,3 +18,11 @@ config.json
 
 # 使用者匯入的 workflow profile、畫面存的 Comfy URL
 data/
+
+# 卡牌插畫是用你自己的底模烘焙出來的（scripts/bake_card_art.py），不進版控。
+# 墨池、字鋪共用 web/cards/；zipu/art/extras.json 是 prompt 清單，要進版控。
+web/cards/
+zipu/art/*.webp
+zipu/art/manifest.json
+# 啟動檔的卡面偵測：選了「以後都不要問」
+.no-card-bake
