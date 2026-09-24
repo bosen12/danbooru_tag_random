@@ -241,7 +241,11 @@ ComfyUI 沒開就只提醒一句，牌先用字形當封面。不想被問：選
 沒裝 node 也能烤：清單在 `scripts/card_jobs.json`（改了詞庫或 `web/card-art.js` 要跑 `node scripts/card_art.mjs --write` 重寫，
 `test_card_art.mjs` 會抓沒重寫的情況）。
 
-卡面放在共用的 `web/cards/`，字鋪、墨池、排字匣的卡牌模式吃同一份。每張照自己的分級送負面詞；
+卡面放在共用的 `web/cards/`，字鋪、墨池、排字匣的卡牌模式吃同一份。
+每張卡另外有一張 200px 的縮圖（`web/cards/thumb/`），字盒、牌堆這些小格子由瀏覽器自己挑縮圖（約 9KB，原圖約 36KB）；
+manifest 裡還記了內容雜湊 `v`，網址接上 `?v=` 之後伺服器就整年快取，重烤內容變了網址才換。
+新烤的卡兩樣都會有；**縮圖出現之前就烤好的卡**跑一次 `python scripts/make_card_thumbs.py` 補上（縮圖要 ffmpeg，雜湊不用），
+沒補也能用，只是小格子拿原圖。每張照自己的分級送負面詞；
 loli、shota 永遠不畫（`web/card-art.js` 的 `HARD_BANNED`）。有人的牌都標 adult，負面詞另外擋 loli／child／aged down；兩個人以上的牌（2girls、kabedon…）底模很愛把其中一個畫成小孩，所以再補 mature female／male、負面擋 family／height difference。`node scripts/test_card_art.mjs` 守著這些規則。
 
 設計與平衡的細節在 [`zipu/DESIGN.md`](zipu/DESIGN.md)。`node scripts/test_zipu.mjs` 驗規則，
