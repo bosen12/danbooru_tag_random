@@ -9,7 +9,7 @@
  * 字盒被 buildCats() 整片換掉時，用 MutationObserver 把新按鈕補上插畫。
  * 插畫來自 web/cards（scripts/bake_card_art.py 烤的），沒有的字就用字形當封面。
  */
-import { CARD_SUIT_INFO, HARD_BANNED, cardSuit, artSources, applyArtSources } from "./card-art.js";
+import { CARD_SUIT_INFO, HARD_BANNED, cardSuit, artSources, artUrl, applyArtSources } from "./card-art.js";
 import { attachPeek } from "./card-peek.js";
 
 const KEY = "paizixia.tagStyle";
@@ -75,7 +75,7 @@ function suitColor(suit) {
 function artSrc(tag) {
   const m = manifest[tag];
   if (!m || !m.file || HARD.has(tag)) return "";
-  return "cards/" + m.file;
+  return artUrl(m);
 }
 
 function decorate(btn) {

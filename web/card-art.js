@@ -54,9 +54,23 @@ export function artFile(tag) {
  */
 export function artSources(entry, base = "cards/") {
   if (!entry || !entry.file) return null;
-  const full = base + entry.file;
+  const q = versionQuery(entry);
+  const full = base + entry.file + q;
   if (!entry.thumb) return { src: full };
-  return { src: full, srcset: `${base}thumb/${entry.file} 200w, ${full} 480w`, sizes: "auto, 120px" };
+  return { src: full, srcset: `${base}thumb/${entry.file}${q} 200w, ${full} 480w`, sizes: "auto, 120px" };
+}
+
+/** 原圖網址（放大牌、校樣、詳情）。 */
+export function artUrl(entry, base = "cards/") {
+  return entry && entry.file ? base + entry.file + versionQuery(entry) : null;
+}
+
+/**
+ * manifest 的 v 是內容雜湊：接在網址後面，伺服器就整年快取（server.py _serve_static）；
+ * 重烤之後雜湊變了網址也跟著變，不會拿到舊圖。舊的 manifest 沒有 v 就不接，照舊每次驗證。
+ */
+function versionQuery(entry) {
+  return entry.v ? "?v=" + encodeURIComponent(entry.v) : "";
 }
 
 /** 把 artSources 的結果套到一個 <img> 上（先設 sizes／srcset 再設 src，免得先抓一次原圖）。 */

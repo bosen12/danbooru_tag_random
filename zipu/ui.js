@@ -1,6 +1,6 @@
 /** 畫面零件：卡牌、道具、頭像、委託單、遮罩、提示。只產生 DOM，不管遊戲流程。 */
 import { SUIT_INFO, ERA_ZH, artFile } from "./pool.js";
-import { artSources, applyArtSources } from "./card-art.js";
+import { artSources, artUrl, applyArtSources } from "./card-art.js";
 import { ENHANCEMENTS } from "./rules.js";
 import { RARITY_ZH } from "./content.js";
 import { lockScroll, unlockScroll } from "./scroll-lock.js";
@@ -45,14 +45,14 @@ export function createAssets(cardManifest, artManifest) {
   const extras = new Set(Object.keys(artManifest || {}));
   return {
     card(tag) {
-      return cards.has(tag) ? "cards/" + artFile(tag) : null;
+      return cards.has(tag) ? artUrl({ ...cardManifest[tag], file: artFile(tag) }) : null;
     },
     /** 牌面用：有縮圖就給 srcset（web/card-art.js 的 artSources）。 */
     cardSources(tag) {
       return cards.has(tag) ? artSources({ ...cardManifest[tag], file: artFile(tag) }) : null;
     },
     extra(id) {
-      return extras.has(id) ? `art/${id}.webp` : null;
+      return extras.has(id) ? artUrl({ ...artManifest[id], file: `${id}.webp` }, "art/") : null;
     },
     count() {
       return { cards: cards.size, extras: extras.size };

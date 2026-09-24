@@ -14,6 +14,7 @@ manifest.json 裡 "thumb": true 的才有縮圖，沒有的照樣用原圖，不
 """
 
 import argparse
+import hashlib
 import json
 import os
 import shutil
@@ -44,9 +45,6 @@ def main() -> int:
     args = ap.parse_args()
 
     ffmpeg = shutil.which("ffmpeg")
-    if not ffmpeg:
-        print("ffmpeg not found; skipping thumbnails (pages fall back to the full images)")
-        return 0
     manifest_path = CARD_DIR / "manifest.json"
     if not manifest_path.exists():
         print("no card art yet")
@@ -58,6 +56,14 @@ def main() -> int:
     thumb_dir = CARD_DIR / THUMB_DIR_NAME
     thumb_dir.mkdir(exist_ok=True)
 
+    # 順手補上內容雜湊（v）：網頁把它接在網址後面，伺服器看到就整年快取。
+    versioned = 0
+    for m in manifest.values():
+        src = CARD_DIR / m["file"]
+        if src.exists() and (args.force or not m.get("v")):
+            m["v"] = hashlib.sha1(src.read_bytes()).hexdigest()[:10]
+            versioned += 1
+
     todo = []
     for tag, m in manifest.items():
         src = CARD_DIR / m["file"]
@@ -67,8 +73,13 @@ def main() -> int:
         if not args.force and m.get("thumb") and dst.exists():
             continue
         todo.append((tag, src, dst))
+    if todo and not ffmpeg:
+        todo = []
+        print("ffmpeg not found; skipping thumbnails (pages fall back to the full images)")
     if not todo:
-        print("thumbnails already up to date")
+        if versioned:
+            save_manifest(manifest_path, manifest)
+        print(f"thumbnails already up to date; versioned {versioned}")
         return 0
 
     t0 = time.time()

@@ -2,7 +2,7 @@
  * 墨池的卡牌：整本詞庫 → 卡牌資料，以及卡面 DOM。
  * 花色、分級、插畫檔名都來自 web/card-art.js（字鋪、烘焙腳本共用同一份）。
  */
-import { isCard, cardSuit, ratingTier, artFile, artSources, applyArtSources, CARD_SUIT_INFO, CARD_SUITS } from "./card-art.js";
+import { isCard, cardSuit, ratingTier, artFile, artSources, artUrl, applyArtSources, CARD_SUIT_INFO, CARD_SUITS } from "./card-art.js";
 import { el } from "./ui.js";
 
 export { CARD_SUIT_INFO, CARD_SUITS };
@@ -47,7 +47,7 @@ export function createAssets(manifest) {
   return {
     /** 原圖：放大牌、校樣、詳情用。 */
     art(tag) {
-      return have.has(tag) ? "cards/" + artFile(tag) : null;
+      return have.has(tag) ? artUrl({ ...manifest[tag], file: artFile(tag) }) : null;
     },
     /** 格子用：有縮圖就給 srcset，讓瀏覽器照畫出來的大小挑。 */
     sources(tag) {

@@ -8,6 +8,11 @@ import hashlib
 import ipaddress
 import json
 import mimetypes
+
+# Windows 的 mimetypes 讀登錄檔，常常沒有 webp（卡面插畫全是 webp），
+# 不補的話會送 application/octet-stream，靠瀏覽器自己猜才顯示得出來。
+mimetypes.add_type("image/webp", ".webp")
+mimetypes.add_type("image/svg+xml", ".svg")
 import os
 import queue
 import random
@@ -2099,10 +2104,16 @@ class Handler(BaseHTTPRequestHandler):
         if mime.split(";")[0] in _GZIP_TYPES:
             mime = f"{mime}; charset=utf-8"
         etag = f'"{rec["mtime"]:x}-{rec["size"]:x}"'
+        # 網址帶 ?v=（內容雜湊，卡面 manifest 給的）就是「這個版本永遠不會變」：
+        # 內容一換網址就換，所以可以放心整年快取，不必每次回來驗證。
+        # 字盒一捲就是幾百張縮圖，手機走 Tailscale 時每張一個 304 來回很有感。
+        # 沒帶版本的照舊 no-cache（每次回來問，內容一樣才回 304）。
+        versioned = "v=" in urllib.parse.urlsplit(self.path).query
+        cache = "public, max-age=31536000, immutable" if versioned else "no-cache"
         if self.headers.get("If-None-Match") == etag:
             self.send_response(304)
             self.send_header("ETag", etag)
-            self.send_header("Cache-Control", "no-cache")
+            self.send_header("Cache-Control", cache)
             self.end_headers()
             return
         use_gz = (
@@ -2115,7 +2126,7 @@ class Handler(BaseHTTPRequestHandler):
         self.send_header("Content-Type", mime)
         self.send_header("Content-Length", str(len(data) if body else rec["size"]))
         self.send_header("ETag", etag)
-        self.send_header("Cache-Control", "no-cache")
+        self.send_header("Cache-Control", cache)
         self.send_header("Vary", "Accept-Encoding")
         if use_gz:
             self.send_header("Content-Encoding", "gzip")

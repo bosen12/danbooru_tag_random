@@ -21,6 +21,7 @@ loli、shota 不在清單裡（web/card-art.js 的 HARD_BANNED），永遠不畫
 插畫取決於你的底模，所以產物不進版控；沒有烘焙過的卡，遊戲會用純字版卡面。
 """
 import argparse
+import hashlib
 import json
 import os
 import subprocess
@@ -244,9 +245,12 @@ def bake(jobs, out_dir, manifest_path, manifest, t_all) -> int:
         try:
             prompt_id = server.api("POST", "/prompt", {"prompt": workflow(job)}, timeout=60)["prompt_id"]
             hist = server.wait_done(prompt_id)
-            (out_dir / job["file"]).write_bytes(fetch_output(hist))
+            full = fetch_output(hist)
+            (out_dir / job["file"]).write_bytes(full)
+            # v：內容雜湊。網頁把它接在網址後面（?v=），伺服器看到就整年快取；重烤內容變了網址就跟著變。
             entry = {"file": job["file"], "seed": job["seed"], "positive": job["positive"],
-                     "negative": job.get("negative", ""), "rating": job.get("rating", "general")}
+                     "negative": job.get("negative", ""), "rating": job.get("rating", "general"),
+                     "v": hashlib.sha1(full).hexdigest()[:10]}
             if job.get("small"):
                 try:
                     (out_dir / THUMB_DIR_NAME).mkdir(exist_ok=True)
