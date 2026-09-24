@@ -354,12 +354,77 @@ function pin(tag) {
   pool = next.pinned;
   bans = next.userBanned;
   const gone = [...before].filter((t) => !pool.has(t));
-  if (gone.length) {
-    toast(`「${zh(tag)}」放進去了；${gone.map(zh).join("、")} 跟它同一格或不同時代，換下來了`);
-  }
-  const card = lib.byTag.get(tag);
-  if (card && ratingBlocked(card.item, settings.rating)) toast(`「${zh(tag)}」在${RATING_LABEL[settings.rating]}會被擋掉，要生出來得切到更高的分級`);
+  // 被擠掉的牌要看得到它離開：先記下它在池裡的位置，重畫之後在原地讓它掀起來飄走。
+  const leaving = gone.map(poolNode).filter(Boolean).map((n) => ({ node: n, rect: n.getBoundingClientRect() }));
+  // 後果寫在池子底下，不是右下角的提示：發生在哪裡就說在哪裡，旁邊給「換回」。
+  poolNote = gone.length ? replaceNote(tag, gone) : null;
   commitPins(tag);
+  leaving.forEach(liftOut);
+  if (gone.length) announce(poolNote.text);
+}
+
+/** 換下來的原因：同一格（互斥）還是時代對不上。 */
+function replaceNote(tag, gone) {
+  const item = lex.byTag.get(tag);
+  const eraOf = (it) => (it?.era || []).filter((e) => e !== "any");
+  const clash = (o) => {
+    const a = eraOf(item);
+    const b = eraOf(lex.byTag.get(o));
+    return a.length && b.length && !a.some((e) => b.includes(e));
+  };
+  const era = gone.filter(clash);
+  const slot = gone.filter((o) => !clash(o));
+  const bits = [];
+  if (slot.length) bits.push(`同一格只留一張：${slot.map((t) => `「${zh(t)}」`).join("")}換成「${zh(tag)}」`);
+  if (era.length) bits.push(`${era.map((t) => `「${zh(t)}」`).join("")}跟「${zh(tag)}」不是同一個時代，先拿下來了`);
+  return { text: bits.join("；"), back: gone[0] };
+}
+
+let poolNote = null;
+
+function renderPoolNote() {
+  let box = $("pool-note");
+  if (!box) {
+    box = el("p", { class: "pool-note", id: "pool-note" });
+    $("pool-well").after(box);
+  }
+  box.hidden = !poolNote;
+  if (!poolNote) return box.replaceChildren();
+  const back = poolNote.back;
+  box.replaceChildren(
+    el("span", {}, poolNote.text),
+    back && lib.byTag.has(back)
+      ? el("button", { class: "link-btn", type: "button", onclick: () => { poolNote = null; pin(back); } }, "換回")
+      : null
+  );
+}
+
+const poolNode = (tag) => [...$("pool-well").querySelectorAll(".card")].find((n) => n.dataset.tag === tag);
+
+/** 被擠出池子的牌：從原本的位置掀起來、往下飄走。跟疊印台的換下同一個動作。 */
+function liftOut({ node, rect }) {
+  if (matchMedia("(prefers-reduced-motion: reduce)").matches || !rect.width) return;
+  const ghost = node.cloneNode(true);
+  Object.assign(ghost.style, { position: "fixed", left: rect.left + "px", top: rect.top + "px", width: rect.width + "px", margin: "0", zIndex: "80", pointerEvents: "none" });
+  ghost.style.setProperty("--card-w", rect.width + "px");
+  document.body.append(ghost);
+  ghost.animate(
+    [
+      { transform: "none", opacity: 1 },
+      { transform: "translate(-18px, 26px) rotate(-10deg)", opacity: 0 },
+    ],
+    { duration: 380, easing: "cubic-bezier(0.7, 0, 0.84, 0)", fill: "forwards" }
+  );
+  setTimeout(() => ghost.remove(), 400);
+}
+
+/** 給螢幕閱讀器的一句話（畫面上的回饋已經在發生的地方了）。 */
+function announce(text) {
+  const t = $("toast");
+  if (!t) return;
+  t.dataset.show = "false";
+  t.textContent = "";
+  setTimeout(() => (t.textContent = text), 30);
 }
 
 function unpin(tag) {
@@ -386,7 +451,10 @@ function unban(tag) {
 function commitPins(fresh) {
   S.savePool(pool);
   S.saveBans(bans);
+  // 說明只講「剛剛那一步」：再動一次池子，舊的換下說明就收掉。
+  if (!fresh) poolNote = null;
   renderPool(fresh);
+  renderPoolNote();
   repaintLibrary();
   renderTrash();
   renderGoFloat();
@@ -1166,8 +1234,9 @@ const drag = createDrag({
       if (bans.has(p.tag)) bans.delete(p.tag);
       pin(p.tag);
     } else if (zone === "trash") {
+      // 廢字簍自己會跳一下、數字加一；畫面上不用再多一個提示。
       ban(p.tag);
-      toast(`「${zh(p.tag)}」丟進廢字簍了，之後不會抽到`);
+      announce(`「${zh(p.tag)}」丟進廢字簍了，之後不會抽到`);
     } else if (zone === "library") {
       unpin(p.tag);
     }

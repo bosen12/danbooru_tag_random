@@ -1319,22 +1319,7 @@ body.fuse {
   animation: note-in var(--dur-short) var(--ease-out);
 }
 
-.link-btn {
-  padding: 0;
-  border: 0;
-  background: none;
-  color: var(--color-ink);
-  font-size: inherit;
-  text-decoration: underline;
-  text-decoration-color: var(--color-rule);
-  text-underline-offset: 3px;
-  cursor: pointer;
-}
-
-.link-btn:hover:not(:disabled) {
-  text-decoration-color: currentColor;
-}
-
+/* .link-btn 本身在 styles.css（墨池工作臺也用）；這裡只補停用的樣子。 */
 .link-btn:disabled {
   color: var(--color-muted);
   text-decoration: none;

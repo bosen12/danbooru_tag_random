@@ -585,6 +585,53 @@ p {
   background-color: color-mix(in oklch, var(--color-pool-2) 30%, var(--color-paper));
 }
 
+/* 放進池子造成的後果（誰被換下來、為什麼），寫在池子正下方，旁邊給「換回」。 */
+.pool-note {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: baseline;
+  gap: 0.2rem var(--space-sm);
+  margin: var(--space-xs) var(--space-md) 0;
+  padding-left: var(--space-xs);
+  border-left: 2px solid var(--color-warn);
+  font-size: var(--text-xs);
+  color: var(--color-ink-2);
+  animation: pool-note-in var(--dur-short) var(--ease-out);
+}
+
+.pool-note[hidden] {
+  display: none;
+}
+
+@keyframes pool-note-in {
+  from {
+    opacity: 0;
+    transform: translateY(-3px);
+  }
+}
+
+.link-btn {
+  padding: 0;
+  border: 0;
+  background: none;
+  color: var(--color-ink);
+  font: inherit;
+  text-decoration: underline;
+  text-decoration-color: var(--color-rule);
+  text-underline-offset: 3px;
+  cursor: pointer;
+}
+
+.link-btn:hover {
+  text-decoration-color: currentColor;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .pool-note {
+    animation: none;
+  }
+}
+
 .pool-empty {
   display: grid;
   gap: var(--space-2xs);
