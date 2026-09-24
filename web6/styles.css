@@ -522,6 +522,12 @@ p {
   font-size: 10.5px;
 }
 
+/* 字盒分批畫：捲到這個點附近就接著畫下一批（app.js moreLibrary）。 */
+.lib-more {
+  grid-column: 1 / -1;
+  height: 1px;
+}
+
 .lib-empty {
   grid-column: 1 / -1;
   padding: var(--space-lg) 0;

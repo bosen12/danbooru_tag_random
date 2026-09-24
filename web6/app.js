@@ -225,7 +225,36 @@ function renderLibrary() {
     grid.replaceChildren(el("p", { class: "lib-empty" }, q ? `字盒裡沒有「${ui.query}」。可能被分級、性別或時代收起來了。` : "這一格沒有字。"));
     return;
   }
-  grid.replaceChildren(...list.map((c) => libCard(c)));
+  libList = list;
+  libShown = 0;
+  grid.replaceChildren();
+  moreLibrary(LIB_FIRST);
+}
+
+// 字盒一次畫 821 張牌（每張六七個節點＋一張圖）載入時會卡住主執行緒約 270ms，
+// 而一開始看得到的只有二三十張。先畫一個畫面的份量，捲到快見底再接下一批。
+const LIB_FIRST = 48;
+const LIB_PAGE = 96;
+let libList = [];
+let libShown = 0;
+let libObserver = null;
+
+function moreLibrary(n = LIB_PAGE) {
+  const grid = $("lib-grid");
+  grid.querySelector(".lib-more")?.remove();
+  const slice = libList.slice(libShown, libShown + n);
+  libShown += slice.length;
+  grid.append(...slice.map((c) => libCard(c)));
+  if (libShown >= libList.length) return;
+  const more = el("span", { class: "lib-more", "aria-hidden": "true" });
+  grid.append(more);
+  if (!libObserver) {
+    libObserver = new IntersectionObserver((entries) => {
+      if (entries.some((e) => e.isIntersecting)) moreLibrary();
+    }, { rootMargin: "600px 0px" });
+  }
+  libObserver.disconnect();
+  libObserver.observe(more);
 }
 
 function pickGroup(g) {

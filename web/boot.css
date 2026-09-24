@@ -730,6 +730,16 @@ input[type="number"] {
 .cat-body {
   overflow: hidden;
   min-height: 0;
+  /* 收起來的分類不排版：以前 0fr 收合時上千個字照樣全部排版一次，
+     載入時光這一步就吃掉約 50ms（全部分類預設收著）。
+     content-visibility 是離散屬性，allow-discrete 讓它在「打開」的過渡一開始就變 visible、
+     在「收起」的過渡結束才變 hidden —— 開合動畫跟以前一模一樣。 */
+  content-visibility: visible;
+  transition: content-visibility var(--dur-move) allow-discrete;
+}
+
+.cat:not(.is-open) > .cat-body {
+  content-visibility: hidden;
 }
 
 .cat header {
