@@ -317,7 +317,8 @@ input[type="search"] {
   gap: var(--space-4);
   padding: var(--space-3) var(--space-5);
   padding-bottom: calc(var(--space-3) + env(safe-area-inset-bottom));
-  background: color-mix(in oklab, var(--color-paper) 92%, transparent);
+  /* 不透明：以前留 8% 透出底下，卡牌模式淺色的牌面捲到底欄後面時，字會浮在「只抽牌」上。 */
+  background: var(--color-paper);
   border-top: var(--rule) solid var(--color-rule);
   z-index: 9;
 }

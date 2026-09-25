@@ -905,6 +905,19 @@ ok(
     server.resolve_ckpt(r"..\evil.safetensors", []) == str(server.CKPT).replace("/", "\\"),
 )
 
+# === 沒選底模時：預設的不在這台 ComfyUI 就挑一個有的 ==============================
+# 別台電腦從 GitHub 拉下來，ComfyUI 裡沒有作者的底模檔名，網頁第一次生圖沒選過底模就會被退件。
+_pool = [
+    {"ckpt_name": r"sd15\dreamshaper_8.safetensors", "file": "dreamshaper_8.safetensors"},
+    {"ckpt_name": r"SDXL\animagineXL40_v4.safetensors", "file": "animagineXL40_v4.safetensors"},
+]
+ok("預設的底模不在：沒選時挑動漫 XL 的那個", server.resolve_ckpt(None, _pool) == r"SDXL\animagineXL40_v4.safetensors", server.resolve_ckpt(None, _pool))
+ok("指定的底模已經不在：也退回挑出來的那個", server.resolve_ckpt(r"gone\old.safetensors", _pool) == r"SDXL\animagineXL40_v4.safetensors")
+_withdef = _pool + [{"ckpt_name": str(server.CKPT).replace("/", "\\"), "file": str(server.CKPT).replace("/", "\\").split("\\")[-1]}]
+ok("預設的底模在清單裡就用預設的", server.resolve_ckpt(None, _withdef) == str(server.CKPT).replace("/", "\\"))
+ok("都不像動漫底模就用第一個", server.pick_default_ckpt([r"a\x.safetensors", r"b\y.safetensors"]) == r"a\x.safetensors")
+ok("清單是空的回 None（呼叫端退回預設）", server.pick_default_ckpt([]) is None)
+
 src = (ROOT / "server.py").read_text(encoding="utf-8")
 ok(
     "gen no longer waits only on node 200",

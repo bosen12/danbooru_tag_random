@@ -766,6 +766,23 @@ body {
   .choices {
     grid-template-columns: repeat(2, minmax(0, 1fr));
   }
+
+  /* 招牌直排佔掉左邊一欄，右邊四顆難度鈕不換行、左右各留 20px，會超出螢幕 24px
+     （最後一顆「性」被切掉一半）。手機上四顆平分寬度，留白和字距收小。 */
+  .gate-body {
+    min-width: 0;
+  }
+
+  .dial {
+    gap: 0;
+  }
+
+  .dial-step {
+    flex: 1 1 0;
+    min-width: 0;
+    padding-inline: var(--space-2);
+    letter-spacing: 0.06em;
+  }
 }
 
 /* ── 減量動態 ───────────────────────────────────────── */

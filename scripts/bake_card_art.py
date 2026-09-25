@@ -116,12 +116,9 @@ def pick_ckpt(wanted: str = "") -> tuple[str | None, str]:
     default = str(server.CKPT)
     if not names:
         return default, f"checkpoint: {default} (ComfyUI did not list its checkpoints)"
-    hit = next((n for n in names if _same_ckpt(n, default)), None)
-    if hit:
-        return hit, f"checkpoint: {hit}"
-    anime = [n for n in names if re.search(r"illustrious|illu|noob|animagine|pony|anime", n, re.I)]
-    xl = [n for n in names if re.search(r"xl", n, re.I)]
-    pick = (anime or xl or names)[0]
+    pick = server.pick_default_ckpt(names)
+    if _same_ckpt(pick, default):
+        return pick, f"checkpoint: {pick}"
     return pick, (
         f"checkpoint: {pick}  (the default {default} is not in this ComfyUI; "
         f"pass --ckpt NAME to choose another)"

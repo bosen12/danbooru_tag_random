@@ -729,6 +729,11 @@ input[type="number"] {
 
 .cat-body {
   overflow: hidden;
+  /* 收合的時候要裁切，但牌角的權重小圓標（.w-flag）會往外凸 6～7px：
+     整片裁切會把最右一欄、第一排的圓標切掉一角。clip 加 8px 的邊界讓它畫得出來。
+     不支援 overflow-clip-margin 的瀏覽器退回上面那行 hidden，跟以前一樣。 */
+  overflow: clip;
+  overflow-clip-margin: 8px;
   min-height: 0;
   /* 收起來的分類不排版：以前 0fr 收合時上千個字照樣全部排版一次，
      載入時光這一步就吃掉約 50ms（全部分類預設收著）。

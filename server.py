@@ -2789,6 +2789,25 @@ def list_ckpts(root: Path | None = None, prefix: str | None = None) -> list[dict
     return items
 
 
+def pick_default_ckpt(names: list) -> str | None:
+    """沒指定底模時用哪個。清單是空的就回 None（交給呼叫端退回 CKPT）。
+
+    CKPT 是作者自己機器上的檔名。別台電腦從 GitHub 拉下來，ComfyUI 裡多半沒有它：
+    網頁第一次生圖沒選過底模，就會送這個不存在的名字，每張都被 ComfyUI 退件（HTTP 400）。
+    所以預設的在清單裡才用它；不在就挑一個看起來是 Illustrious／動漫 SDXL 的，都不像就第一個。
+    """
+    names = [str(n).replace("/", "\\") for n in names if n]
+    if not names:
+        return None
+    default = str(CKPT).replace("/", "\\")
+    for n in names:
+        if n == default or n.split("\\")[-1] == default.split("\\")[-1]:
+            return n
+    anime = [n for n in names if re.search(r"illustrious|illu|noob|animagine|pony|anime", n, re.I)]
+    xl = [n for n in names if re.search(r"xl", n, re.I)]
+    return (anime or xl or names)[0]
+
+
 def resolve_ckpt(name: str | None, items: list | None = None) -> str:
     """Allow names from the provided list (local folder or Comfy object_info).
 
@@ -2809,7 +2828,8 @@ def resolve_ckpt(name: str | None, items: list | None = None) -> str:
             allowed[key] = key
         if fn:
             allowed[fn] = key or fn
-    fallback = str(CKPT).replace("/", "\\")
+    # 沒指定（或指定的已經不在）時退回哪個：清單裡有預設的就是它，沒有就挑一個清單裡有的。
+    fallback = pick_default_ckpt([it.get("ckpt_name") or it.get("file") for it in pool]) or str(CKPT).replace("/", "\\")
     if not name:
         return allowed.get(fallback, fallback)
     raw = str(name).replace("/", "\\").strip()
