@@ -1496,12 +1496,15 @@ body.fuse {
   color: var(--color-muted);
 }
 
-/* 右欄窄的時候放不下四顆就裁掉，不撐破試印的框。 */
+/* 四顆疊在一起（像一疊牌的邊），右欄窄的時候也放得下，不會被切掉半顆。 */
 .trial-picks {
   display: flex;
-  gap: 3px;
   min-width: 0;
-  overflow: hidden;
+  padding-left: 2px;
+}
+
+.trial-pick + .trial-pick {
+  margin-left: -0.3rem;
 }
 
 .trial-pick {
@@ -1513,7 +1516,8 @@ body.fuse {
   border-radius: 50%;
   overflow: hidden;
   background: var(--color-stock-2);
-  box-shadow: 0 0 0 1.5px var(--suit);
+  /* 外圈先描一道底色，疊起來時看得出一顆一顆。 */
+  box-shadow: 0 0 0 1.5px var(--suit), 0 0 0 3px var(--color-paper-2);
   color: var(--color-stock-ink);
   font-family: var(--font-display);
   font-size: 0.65rem;

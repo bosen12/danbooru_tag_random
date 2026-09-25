@@ -56,7 +56,10 @@ const SIZES = [
   { id: "landscape", zh: "橫", w: 1216, h: 832 },
 ];
 const SECTION_ORDER = ["subject", "feature", "clothing", "pose", "env", "style", "quality"];
-const FK = { bed: "mochi.fuse.bed.v1", seeds: "mochi.fuse.seeds.v1", picked: "mochi.fuse.picked.v1", prints: "mochi.fuse.prints.v1", tab: "mochi.fuse.tab.v1" };
+// 卡池、試印的種子、挑哪一張都不存：重新整理就是空白的版和一批新種子。
+// 晾紙繩（付印過的作品）留著，點「回到這一版」可以把當時的卡池叫回來。
+const FK = { prints: "mochi.fuse.prints.v1", tab: "mochi.fuse.tab.v1" };
+const FK_OLD = ["mochi.fuse.bed.v1", "mochi.fuse.seeds.v1", "mochi.fuse.picked.v1"];
 
 // 第一次打開的起手式：三組一點就疊好的版。只收詞庫裡有、這個尺度看得到的。
 const STARTERS = [
@@ -153,10 +156,16 @@ async function boot() {
   }
   settings = sanitizeSettings(S.loadSettings() || { rating: "general" }, data);
   bans = new Set(S.loadBans().filter((t) => lib.byTag.has(t)));
-  bed = sanitizeBed(readJ(FK.bed, null), (t) => lib.byTag.has(t));
-  const s = readJ(FK.seeds, null);
-  seeds = Array.isArray(s) && s.length === TRIALS && s.every((n) => Number.isFinite(n)) ? s : freshSeeds();
-  picked = Math.min(TRIALS - 1, Math.max(0, Number(readJ(FK.picked, 0)) || 0));
+  bed = emptyBed();
+  seeds = freshSeeds();
+  picked = 0;
+  for (const k of FK_OLD) {
+    try {
+      localStorage.removeItem(k);
+    } catch {
+      /* 舊版存下的版：刪不了也不會再讀 */
+    }
+  }
   caseTab = readJ(FK.tab, "all") || "all";
   prints = loadPrints();
 
@@ -252,7 +261,6 @@ function commit(next, label, events = []) {
   history.push({ bed, label });
   if (history.length > HISTORY_MAX) history.shift();
   bed = next;
-  writeJ(FK.bed, bed);
   rowNotes = {};
   plateNotice = null;
   for (const e of events) {
@@ -327,7 +335,6 @@ function undo() {
   const h = history.pop();
   if (!h) return;
   bed = h.bed;
-  writeJ(FK.bed, bed);
   rowNotes = {};
   plateNotice = null;
   retrial();
@@ -350,7 +357,6 @@ function clearBed() {
 function pick(i, { quiet = false } = {}) {
   if (i < 0 || i >= trials.length || i === picked) return;
   picked = i;
-  writeJ(FK.picked, picked);
   renderPlate([]);
   swapGhosts();
   renderPreview();
@@ -362,7 +368,6 @@ function pick(i, { quiet = false } = {}) {
 
 function reroll() {
   seeds = freshSeeds();
-  writeJ(FK.seeds, seeds);
   retrial();
   const box = $("trials");
   if (!reduced()) {
@@ -518,9 +523,6 @@ function restorePrint(p) {
     settings = sanitizeSettings({ ...settings, width: p.width, height: p.height }, data);
     S.saveSettings(settings);
   }
-  writeJ(FK.bed, bed);
-  writeJ(FK.seeds, seeds);
-  writeJ(FK.picked, picked);
   rowNotes = {};
   plateNotice = null;
   retrial();
@@ -1554,7 +1556,7 @@ function showPos() {
 
 function sendToPool() {
   if (!bed.pins.length) return;
-  S.savePool(bed.pins);
+  S.handOffPool(bed.pins);
   const b = $("print-bar").querySelector(".pb-links button:last-child");
   if (b) b.textContent = "放好了：回墨池工作臺就看得到";
   announce("這一版的牌放進墨池的合成池了");

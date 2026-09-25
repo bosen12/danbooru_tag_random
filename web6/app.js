@@ -76,7 +76,8 @@ async function boot() {
 
   const stored = S.loadSettings();
   settings = sanitizeSettings(stored || { rating: "general" }, data);
-  pool = new Set(S.loadPool().filter((t) => lib.byTag.has(t)));
+  // 池子不存：重新整理就是空的；只收疊印台剛交過來的那一版。
+  pool = new Set(S.takePool().filter((t) => lib.byTag.has(t)));
   bans = new Set(S.loadBans().filter((t) => lib.byTag.has(t)));
   shots = S.loadShots();
 
@@ -449,7 +450,6 @@ function unban(tag) {
 }
 
 function commitPins(fresh) {
-  S.savePool(pool);
   S.saveBans(bans);
   // 說明只講「剛剛那一步」：再動一次池子，舊的換下說明就收掉。
   if (!fresh) poolNote = null;
