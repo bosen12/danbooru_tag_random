@@ -1,14 +1,14 @@
 /**
  * 墨池 · 疊印台。
  *
- * 一張牌是一層墨。放上「版」的牌依花色疊進六個套版（罩色、姿勢、服裝、長相、人物、底色），
- * 中間那張「校樣」立刻跟著變：底色牌的風景鋪底，主版那張的人用 multiply 疊上去
- * （疊印本來就是這樣：墨疊墨），風格牌變成罩在上面的濾鏡。
+ * 一張牌是一層墨。中間的「卡池」照花色分成六列套版（罩色、姿勢、服裝、長相、人物、底色），
+ * 你放的牌是實牌；同一列後面排著灰色的影子，是選中那張試印裡引擎替你補的牌 ——
+ * 整個卡池就是那一張圖的配方，每一張都能點、能拖、能收下或拿掉。
  *
- * 校樣是用牌自己的插畫拼出來的，不花 ComfyUI 一秒鐘。真正會送出去的 POS
- * 由 engine 跑四張「試印」：同一批種子，每疊一張牌就重跑一次（一次 ~25ms），所以看得到
- * 「加了這張，引擎補的字怎麼變」；也看得到你的牌有沒有真的上墨（四張裡進了幾張）。
- * 挑一張試印按付印，才送 ComfyUI；成品夾到上面的晾紙繩，點它可以回到那一版。
+ * 真正會送出去的 POS 由 engine 跑四張「試印」：同一批種子，每疊一張牌就重跑一次
+ * （一次 ~25ms），所以看得到「加了這張，引擎補的牌怎麼變」；也看得到你的牌有沒有真的上墨
+ * （牌角四個點，四張試印裡進了幾張）。挑一張試印按付印，才送 ComfyUI；成品出現在右欄上方，
+ * 也夾一張到上面的晾紙繩，點它可以回到那一版。
  *
  * 抽牌規則一條都不在這裡：同格互斥、時代衝突、附帶是 engine 的 applyPin；
  * 相剋是 engine 的 contradictions；補字是 engine 的 drawWithSeed。規則、廢字簍跟墨池工作臺共用。
@@ -38,14 +38,14 @@ import { createDrag } from "./drag.js";
 import { createGenerator, comfyOnline } from "./gen.js";
 import { attachPeek, hidePeek } from "./card-peek.js";
 import * as S from "./store.js";
-import { REGISTERS, REGISTER_ROLE, emptyBed, sanitizeBed, placeCard, removeCard, setLead, relationsOf, proofLayers, canLead } from "./fuse-bed.js";
+import { REGISTERS, REGISTER_ROLE, emptyBed, sanitizeBed, placeCard, removeCard, relationsOf } from "./fuse-bed.js";
 import { createSfx } from "./fuse-sfx.js";
 import { genSeed, isFixedSeed, mountSeedControl, onSeedChange, seedUseButton, useSeed } from "./seed-control.js";
 
 const $ = (id) => document.getElementById(id);
 const LETTERS = ["A", "B", "C", "D"];
 const TRIALS = 4;
-const GHOST_MAX = 3;
+const GHOST_MAX = 4;
 const PAGE = 90;
 const PRINT_MAX = 40;
 const HISTORY_MAX = 60;
@@ -58,26 +58,6 @@ const SIZES = [
 ];
 const SECTION_ORDER = ["subject", "feature", "clothing", "pose", "env", "style", "quality"];
 const FK = { bed: "mochi.fuse.bed.v1", seeds: "mochi.fuse.seeds.v1", picked: "mochi.fuse.picked.v1", prints: "mochi.fuse.prints.v1", tab: "mochi.fuse.tab.v1" };
-
-// 風格牌 → 罩在校樣上的濾鏡。沒列到的風格給一個很淡的預設，讓人看得出「罩了東西」。
-const FINISH = {
-  monochrome: "grayscale(1) contrast(1.08)",
-  greyscale: "grayscale(1)",
-  "limited palette": "saturate(0.45)",
-  lineart: "grayscale(1) contrast(1.8) brightness(1.08)",
-  sketch: "grayscale(1) contrast(1.5) brightness(1.1)",
-  "watercolor (medium)": "saturate(0.75) brightness(1.05) blur(0.4px)",
-  "flat color": "saturate(1.25) contrast(1.05)",
-  "anime coloring": "saturate(1.2) contrast(1.08)",
-  "cel shading": "contrast(1.2) saturate(1.1)",
-  "1990s (style)": "sepia(0.3) saturate(0.85) contrast(0.95)",
-  "2000s (style)": "saturate(1.1) hue-rotate(-6deg)",
-  "retro artstyle": "sepia(0.45) saturate(0.8)",
-  screentones: "grayscale(1) contrast(1.35)",
-  sepia: "sepia(0.8)",
-  "thick outlines": "contrast(1.3)",
-};
-const FINISH_DEFAULT = "saturate(0.9) contrast(1.05)";
 
 // 第一次打開的起手式：三組一點就疊好的版。只收詞庫裡有、這個尺度看得到的。
 const STARTERS = [
@@ -92,7 +72,6 @@ let data = null;
 let lex = null;
 let lib = null;
 let assets = null;
-let manifest = {};
 let settings = null;
 let bans = new Set();
 let bed = emptyBed();
@@ -101,7 +80,7 @@ let picked = 0;
 let trials = [];
 let prints = [];
 let history = [];
-let view = "print";
+let expanded = new Set();
 let comfyOk = null;
 let rowNotes = {};
 let plateNotice = null;
@@ -138,30 +117,9 @@ const suitOf = (tag) => cardOf(tag)?.suit || null;
 const zh = (tag) => cardOf(tag)?.zh || lex.byTag.get(tag)?.zh || tag;
 const cssEsc = (s) => (window.CSS && CSS.escape ? CSS.escape(s) : s.replace(/"/g, '\\"'));
 
-/** 插畫鏡頭多寬：主版優先挑畫得完整的。 */
-function frameOf(tag) {
-  const p = manifest[tag]?.positive || "";
-  if (/\bfull body\b/.test(p)) return 3;
-  if (/\bcowboy shot\b/.test(p)) return 2;
-  if (/\bupper body\b/.test(p)) return 1;
-  return 0;
-}
-
 /** 把一串子節點換上去，null／false 略過（replaceChildren 會把 null 印成字）。 */
 function put(node, ...kids) {
   node.replaceChildren(...kids.flat(Infinity).filter((k) => k !== null && k !== undefined && k !== false));
-}
-
-/** 這張牌的插畫畫的是什麼：有人（能當主版）、風景（能當底色）、靜物（道具）。 */
-function kindOf(tag) {
-  const m = manifest[tag];
-  if (!m || !m.positive) return null;
-  if (/\bno humans\b/.test(m.positive)) {
-    if (/\bscenery\b/.test(m.positive)) return "ground";
-    if (/\bstill life\b/.test(m.positive)) return "prop";
-    return null;
-  }
-  return "figure";
 }
 
 function rankOk(card) {
@@ -189,10 +147,9 @@ async function boot() {
     data = lexicon;
     lex = indexLexicon(data);
     lib = buildLibrary(data, { ratingBlocked });
-    manifest = man || {};
-    assets = createAssets(manifest);
+    assets = createAssets(man || {});
   } catch (err) {
-    $("proofing").replaceChildren(el("p", { class: "boot-fail" }, "讀不到詞庫。請用 start-web6.bat 開，而不是直接點 HTML。", el("br"), String(err)));
+    $("registers").replaceChildren(el("p", { class: "boot-fail" }, "讀不到詞庫。請用 start-web6.bat 開，而不是直接點 HTML。", el("br"), String(err)));
     return;
   }
   settings = sanitizeSettings(S.loadSettings() || { rating: "general" }, data);
@@ -209,7 +166,7 @@ async function boot() {
   pingLoop();
   wireChrome();
 
-  buildProofShell();
+  buildPreview();
   buildTrialShells();
   renderRating();
   renderCaseTabs();
@@ -218,14 +175,14 @@ async function boot() {
   renderCase();
   renderLine();
   attachPeek($("case-grid"), ".card[data-tag]", peekInfo);
-  // 生圖種子一換，同一張試印對應的成品就不一樣了：校樣、付印那條、試印上的「已印」都要重畫。
+  // 生圖種子一換，同一張試印對應的成品就不一樣了：成品、付印那條、試印上的小圖都要重畫。
   onSeedChange(() => {
-    renderProof([]);
+    renderPreview();
     renderTrials();
     renderPrintBar();
   });
   attachPeek($("registers"), ".card[data-tag]", peekInfo);
-  watchMiniProof();
+  watchPoolPill();
 
   if (new URLSearchParams(location.search).has("debug")) {
     window.fuse = { get bed() { return bed; }, get trials() { return trials; }, get prints() { return prints; }, place, remove, undo, pick, reroll, printNow };
@@ -325,7 +282,7 @@ function place(tag, sourceEl) {
   flyIn(tag, from);
   carried.forEach((t, i) => popIn(t, 140 + i * 90));
   leaving.forEach((snap) => liftAway(snap, "aside"));
-  bloom(suitOf(tag));
+  inkRow(suitOf(tag));
   sfx.stamp();
   if (carried.length) sfx.carry();
   if (leaving.length) setTimeout(() => sfx.lift(), 90);
@@ -353,14 +310,6 @@ function toggle(tag, sourceEl) {
   else place(tag, sourceEl);
 }
 
-function lead(tag) {
-  const next = setLead(bed, tag);
-  commit(next, next.lead ? `「${zh(tag)}」當主版` : "主版交回自動", []);
-  bloom(suitOf(tag));
-  sfx.carry();
-  announce(next.lead ? `主版換成「${zh(tag)}」` : "主版改回自動挑");
-}
-
 function startWith(starter) {
   let next = bed;
   const events = [];
@@ -371,7 +320,7 @@ function startWith(starter) {
   }
   commit(next, `起手：${starter.name}`, events);
   starter.tags.forEach((t, i) => popIn(t, i * 120));
-  starter.tags.forEach((t, i) => setTimeout(() => (bloom(suitOf(t)), sfx.stamp()), i * 120));
+  starter.tags.forEach((t, i) => setTimeout(() => (inkRow(suitOf(t)), sfx.stamp()), i * 120));
   announce(`起手：${starter.name}，疊上${starter.tags.map((t) => `「${zh(t)}」`).join("")}`);
 }
 
@@ -403,8 +352,9 @@ function pick(i, { quiet = false } = {}) {
   if (i < 0 || i >= trials.length || i === picked) return;
   picked = i;
   writeJ(FK.picked, picked);
-  renderProof([]);
   renderPlate([]);
+  swapGhosts();
+  renderPreview();
   renderTrials();
   renderPrintBar();
   if (!quiet) sfx.carry();
@@ -434,11 +384,11 @@ const generator = createGenerator({
   payload: (p) => ({ width: p.width, height: p.height, loras: p.loras, ckpt: p.ckpt, rating: p.rating, workflowId: p.workflowId }),
   update: (p) => {
     paintLineItem(p);
+    paintTrialFacesFor(p.sig);
     const t = trials[picked];
     if (t && p.sig === sigOf(t)) {
-      renderProofPrint(p);
+      renderPreview({ develop: p.status === "done" });
       renderPrintBar();
-      renderCaption();
     }
     if (p.status === "done") {
       sfx.done();
@@ -484,7 +434,7 @@ function printNow() {
     loras: currentLorasPayload(),
     ckpt: currentCkpt(),
     workflowId: currentWorkflowId(),
-    bed: { pins: [...bed.pins], lead: bed.lead, carried: { ...bed.carried } },
+    bed: { pins: [...bed.pins], carried: { ...bed.carried } },
     seeds: [...seeds],
     picked,
     letter: t.letter,
@@ -497,11 +447,11 @@ function printNow() {
   };
   prints.unshift(p);
   while (prints.length > PRINT_MAX) prints.pop();
-  view = "print";
   generator.enqueue(p);
   savePrints();
   renderLine();
-  renderProof([]);
+  renderPreview();
+  renderTrials();
   renderPrintBar();
   rollPress();
   sfx.roll();
@@ -574,7 +524,6 @@ function restorePrint(p) {
   writeJ(FK.picked, picked);
   rowNotes = {};
   plateNotice = null;
-  view = "print";
   retrial();
   renderAll([]);
   syncCaseStates();
@@ -586,275 +535,122 @@ function restorePrint(p) {
 /* ================= 畫面：全部 ================= */
 
 function renderAll(events = []) {
-  renderProof(events);
   renderPlate(events);
+  renderPreview();
   renderTrials();
   renderPrintBar();
   renderUndo();
 }
 
-/* ================= 校樣 ================= */
+/* ================= 成品：選中的那張試印印出來的樣子 ================= */
 
-let proofSheet = null;
-let miniSheet = null;
+let pv = null;
 
-function makeSheet(mini) {
-  const root = el("div", { class: mini ? "sheet sheet-mini" : "sheet" });
-  const ground = el("div", { class: "p-ground" });
-  const figure = el("div", { class: "p-figure" });
-  const props = el("div", { class: "p-props" });
-  const print = el("div", { class: "p-print" });
-  const blooms = el("div", { class: "p-blooms" });
-  root.append(ground, figure, props, print, blooms);
-  return { root, ground, figure, props, print, blooms };
-}
-
-function buildProofShell() {
-  proofSheet = makeSheet(false);
+function buildPreview() {
+  const sheet = el("button", {
+    class: "pv-sheet",
+    type: "button",
+    onclick: () => {
+      const p = printFor(sigOf(trials[picked]));
+      if (p && (p.image || p.preview)) openPrint(p);
+    },
+  });
+  const blank = el("span", { class: "pv-blank" });
+  const roller = el("span", { class: "pv-roller", "aria-hidden": "true" }, el("i"));
+  sheet.append(blank, roller);
   const frame = el(
     "div",
-    { class: "sheet-frame" },
-    el("span", { class: "crop tl" }),
-    el("span", { class: "crop tr" }),
-    el("span", { class: "crop bl" }),
-    el("span", { class: "crop br" }),
-    el("span", { class: "reg-target", "aria-hidden": "true" }),
-    proofSheet.root
+    { class: "pv-frame" },
+    ["tl", "tr", "bl", "br"].map((c) => el("span", { class: "crop " + c, "aria-hidden": "true" })),
+    sheet
   );
-  proofSheet.empty = el("div", { class: "p-empty" });
-  proofSheet.roller = el("div", { class: "p-roller" }, el("i"));
-  proofSheet.root.append(proofSheet.empty, proofSheet.roller);
-  $("proof").replaceChildren(frame);
-  miniSheet = makeSheet(true);
-  miniSheet.count = el("b", { class: "mini-count" });
-  $("mini-proof").replaceChildren(miniSheet.root, miniSheet.count);
+  const cap = el("p", { class: "pv-cap" });
+  $("preview").replaceChildren(frame, cap);
+  pv = { frame, sheet, blank, roller, cap };
 }
 
-function swapImg(host, src, cls) {
-  const cur = host.querySelector("img:not([data-leaving])");
-  if ((cur?.getAttribute("src") || "") === (src || "")) return;
-  if (cur) {
-    cur.dataset.leaving = "1";
-    cur.style.opacity = "0";
-    setTimeout(() => cur.remove(), 360);
-  }
-  if (!src) return;
-  const img = el("img", { alt: "", decoding: "async", draggable: "false", class: cls });
-  img.style.opacity = "0";
-  const show = () => setTimeout(() => (img.style.opacity = ""), 20);
-  img.addEventListener("load", show, { once: true });
-  img.addEventListener("error", () => img.remove(), { once: true });
-  img.src = src;
-  host.append(img);
-  if (img.complete) show();
+function previewState(p) {
+  if (!p) return "還沒付印";
+  if (p.status === "running") return `印製中 ${Math.round((p.progress || 0) * 100)}%`;
+  if (p.status === "queued" || p.status === "drawn") return "排隊等印…";
+  return STATUS_ZH[p.status] || "";
 }
 
-function finishFilter(finish) {
-  if (!finish.length) return "none";
-  return finish.map((f) => FINISH[f.tag] || FINISH_DEFAULT).join(" ");
-}
-
-function paintSheet(sheet, layers, era) {
-  sheet.root.style.setProperty("--ar", `${settings.width} / ${settings.height}`);
-  sheet.root.style.setProperty("--finish", finishFilter(layers.finish));
-  sheet.root.dataset.era = era || "any";
-  sheet.ground.dataset.src = layers.ground?.src || "";
-  sheet.figure.dataset.src = layers.figure?.src || "";
-  swapImg(sheet.ground, layers.ground ? assets.art(layers.ground.tag) : null);
-  swapImg(sheet.figure, layers.figure ? assets.art(layers.figure.tag) : null);
-  const propSrcs = layers.props.map((p) => assets.art(p.tag)).filter(Boolean);
-  const have = [...sheet.props.children].map((n) => n.getAttribute("src"));
-  if (have.join("|") !== propSrcs.join("|")) {
-    sheet.props.replaceChildren(...propSrcs.map((src) => el("img", { src, alt: "", decoding: "async", draggable: "false" })));
-  }
-}
-
-function layersFor(t) {
-  return proofLayers({ bed, extra: t ? t.extra : [], suitOf, kindOf, frameOf });
-}
-
-const BLANK = { figure: null, ground: null, props: [], finish: [] };
-
-function renderProof(events = []) {
+function renderPreview({ develop = false } = {}) {
   const t = trials[picked];
-  // 空白的版就給一張白紙，不要把引擎自己抽的影子跟說明字疊在一起。
-  const layers = bed.pins.length ? layersFor(t) : BLANK;
-  paintSheet(proofSheet, layers, bed.pins.length ? t?.era : "any");
-  proofSheet.root.parentElement.style.setProperty("--arn", String(settings.width / settings.height));
-  paintSheet(miniSheet, layers, t?.era);
-  miniSheet.count.textContent = String(bed.pins.length);
-  renderEmpty();
-  renderProofPrint(printFor(sigOf(t)));
-  renderCaption();
-  renderColophon(layers, t);
-  void events;
-}
-
-function renderEmpty() {
-  const box = proofSheet.empty;
-  if (bed.pins.length) {
-    box.hidden = true;
-    proofSheet.root.dataset.empty = "false";
-    return;
-  }
-  proofSheet.root.dataset.empty = "true";
-  box.hidden = false;
-  const starters = STARTERS.filter((s) => s.tags.every((t) => lib.byTag.has(t) && rankOk(cardOf(t)) && !bans.has(t))).slice(0, 3);
-  put(box,
-    el("p", { class: "p-empty-lead" }, "空白的版"),
-    el("p", { class: "p-empty-body" }, "從字盒挑一張牌放上來：點一下，或拖到這張紙上。每疊一張，這張校樣就多一層墨。"),
-    starters.length
-      ? el(
-          "div",
-          { class: "starters" },
-          el("span", { class: "starters-label" }, "或者從這裡起手"),
-          starters.map((s) =>
-            el(
-              "button",
-              { class: "starter", type: "button", onclick: () => startWith(s) },
-              el("span", { class: "starter-arts", "aria-hidden": "true" }, s.tags.slice(0, 3).map((tg) => (assets.art(tg) ? applyArtSources(el("img", { alt: "" }), assets.sources(tg)) : null))),
-              el("span", { class: "starter-name" }, s.name),
-              el("span", { class: "starter-tags" }, s.tags.map(zh).join("・"))
-            )
-          )
-        )
-      : null
-  );
-}
-
-function renderProofPrint(p) {
-  const host = proofSheet.print;
-  const roller = proofSheet.roller;
-  const showPrint = p && (p.image || p.preview) && view === "print";
-  const src = showPrint ? p.image || p.preview : null;
-  const developing = p && p.status === "running";
-  host.dataset.state = p ? p.status : "";
-  const prevSrc = host.querySelector("img")?.getAttribute("src") || "";
+  if (!pv || !t) return;
+  const p = printFor(sigOf(t));
+  const w = p ? p.width : settings.width;
+  const h = p ? p.height : settings.height;
+  pv.frame.style.setProperty("--arn", String(w / h));
+  pv.sheet.style.setProperty("--ar", `${w} / ${h}`);
+  const state = p ? p.status : "none";
+  pv.sheet.dataset.state = state;
+  const src = p ? p.image || p.preview : null;
+  let img = pv.sheet.querySelector("img");
   if (src) {
-    let img = host.querySelector("img");
     if (!img) {
-      img = el("img", { alt: "成品", decoding: "async", draggable: "false" });
-      host.append(img);
+      img = el("img", { alt: "", decoding: "async", draggable: "false" });
+      pv.sheet.prepend(img);
     }
     if (img.getAttribute("src") !== src) img.src = src;
+    img.alt = `試印 ${t.letter} 的成品`;
+  } else img?.remove();
+  // 印製中的預覽幀越印越濃，印好才是全濃度。
+  pv.sheet.style.setProperty("--print-o", state === "running" ? String(0.4 + 0.6 * (p.progress || 0)) : "1");
+  if (develop && src && !reduced()) {
     // 成品剛好在眼前印好：像紙從滾筒下出來，由上往下顯影。
-    if (p.status === "done" && prevSrc && prevSrc !== src && !reduced()) {
-      host.classList.remove("is-developing");
-      void host.offsetWidth;
-      host.classList.add("is-developing");
-      setTimeout(() => host.classList.remove("is-developing"), 1300);
-    }
-  } else host.replaceChildren();
-  host.style.setProperty("--print-o", developing ? String(0.35 + 0.6 * (p.progress || 0)) : "1");
-  roller.hidden = !(p && (p.status === "running" || p.status === "queued"));
-  roller.style.setProperty("--p", String(p && p.status === "running" ? p.progress || 0 : 0));
-  roller.dataset.state = p ? p.status : "";
-  renderViewToggle(p);
-}
-
-function renderViewToggle(p) {
-  const box = $("view-toggle");
-  const can = !!(p && p.image);
-  box.hidden = !can;
-  if (!can) return;
-  put(
-    box,
-    ...[
-      ["proof", "校樣"],
-      ["print", "成品"],
-    ].map(([v, label]) =>
-      el(
-        "button",
-        {
-          type: "button",
-          role: "radio",
-          "aria-checked": view === v ? "true" : "false",
-          onclick: () => {
-            view = v;
-            renderProofPrint(p);
-          },
-        },
-        label
-      )
-    )
-  );
-}
-
-function renderCaption() {
-  const t = trials[picked];
-  const cap = $("proof-caption");
-  if (!t) return (cap.textContent = "");
-  const p = printFor(sigOf(t));
-  const state = !p
-    ? "還沒付印"
-    : p.status === "queued"
-      ? "排隊等印"
-      : p.status === "running"
-        ? `印製中 ${Math.round((p.progress || 0) * 100)}%`
-        : p.status === "done"
-          ? "印好了"
-          : p.status === "failed"
-            ? "印壞了"
-            : "停了";
-  put(cap,
-    el("b", { class: "cap-letter" }, t.letter),
-    el("span", {}, bed.pins.length ? `校樣・你疊了 ${bed.pins.length} 層，引擎補了 ${t.extra.length} 個字` : `校樣・引擎自己抽了 ${t.extra.length} 個字`),
-    el("span", { class: "cap-state", dataset: { state: p ? p.status : "none" } }, state)
-  );
-}
-
-function renderColophon(layers, t) {
-  const bit = (label, slot) =>
-    el(
-      "span",
-      { class: "col-bit", dataset: { src: slot ? slot.src : "none" } },
-      el("i", {}, label),
-      slot ? zh(slot.tag) : "—",
-      slot && slot.src === "engine" ? el("small", {}, "引擎") : null
-    );
-  const finish = layers.finish.length ? { tag: layers.finish.map((f) => f.tag)[0], src: layers.finish[0].src } : null;
-  put($("colophon"),
-    bit("底色", layers.ground),
-    bit("主版", layers.figure),
-    bit("罩色", finish),
-    el("span", { class: "col-bit" }, el("i", {}, "時代"), t ? ERA_ZH[t.era] || ERA_LABELS[t.era] || t.era : "—"),
-    el("span", { class: "col-bit col-seed" }, el("i", {}, isFixedSeed() ? "生圖 seed（固定）" : "seed"), t ? String(printSeedOf(t)) : "—")
-  );
-}
-
-function bloom(suit) {
-  if (!suit || reduced()) return;
-  for (const sheet of [proofSheet, miniSheet]) {
-    const b = el("span", { class: "bloom", style: `--c: var(--suit-${suit})` });
-    sheet.blooms.append(b);
-    setTimeout(() => b.remove(), 950);
+    pv.sheet.classList.remove("is-developing");
+    void pv.sheet.offsetWidth;
+    pv.sheet.classList.add("is-developing");
+    setTimeout(() => pv.sheet.classList.remove("is-developing"), 1300);
   }
+  pv.sheet.disabled = !src;
+  pv.sheet.setAttribute("aria-label", src ? `試印 ${t.letter} 的成品，點開看大圖` : `試印 ${t.letter}：${previewState(p)}`);
+  pv.blank.hidden = !!src;
+  if (!src) {
+    put(
+      pv.blank,
+      el("b", { class: "pv-letter", "aria-hidden": "true" }, t.letter),
+      el("span", { class: "pv-state" }, previewState(p)),
+      !p ? el("span", { class: "pv-hint" }, "挑好就付印。印好的圖出現在這裡，也會夾一張到上面的繩子。") : null,
+      p && p.status === "failed" && p.note ? el("span", { class: "pv-hint" }, p.note) : null
+    );
+  }
+  pv.roller.hidden = !(state === "running" || state === "queued" || state === "drawn");
+  pv.roller.dataset.state = state;
+  pv.roller.style.setProperty("--p", String(state === "running" ? p.progress || 0 : 0));
+  put(
+    pv.cap,
+    el("b", { class: "pv-cap-letter" }, `試印 ${t.letter}`),
+    el("span", { class: "pv-cap-state", dataset: { state } }, previewState(p)),
+    el("span", { class: "pv-cap-seed" }, `${isFixedSeed() ? "固定 seed" : "seed"} ${p ? p.seed : printSeedOf(t)}`)
+  );
 }
 
+/** 付印：一條滾筒的陰影從成品那張紙上壓過去。 */
 function rollPress() {
-  if (reduced()) return;
-  const r = el("span", { class: "press-roll" });
-  proofSheet.blooms.append(r);
+  if (reduced() || !pv) return;
+  const r = el("span", { class: "press-roll", "aria-hidden": "true" });
+  pv.sheet.append(r);
   setTimeout(() => r.remove(), 900);
 }
 
-/* ================= 試印條 ================= */
+/* ================= 試印 ================= */
 
 let trialNodes = [];
 
 function buildTrialShells() {
   const box = $("trials");
   trialNodes = LETTERS.map((letter, i) => {
-    const sheet = makeSheet(true);
+    const face = el("span", { class: "trial-face", "aria-hidden": "true" }, el("b", { class: "trial-letter" }, letter));
     const meta = el("span", { class: "trial-meta" });
     const picks = el("span", { class: "trial-picks", "aria-hidden": "true" });
     const node = el(
       "button",
       { class: "trial", type: "button", role: "radio", dataset: { i: String(i) }, onclick: () => pick(i) },
-      el("span", { class: "trial-sheet" }, sheet.root),
-      el("span", { class: "trial-letter" }, letter),
-      meta,
-      picks
+      face,
+      el("span", { class: "trial-body" }, meta, picks)
     );
     node.addEventListener("keydown", (e) => {
       const d = e.key === "ArrowRight" || e.key === "ArrowDown" ? 1 : e.key === "ArrowLeft" || e.key === "ArrowUp" ? -1 : 0;
@@ -864,7 +660,7 @@ function buildTrialShells() {
       pick(j);
       trialNodes[j].node.focus();
     });
-    return { node, sheet, meta, picks };
+    return { node, face, meta, picks };
   });
   box.replaceChildren(...trialNodes.map((n) => n.node));
 }
@@ -872,32 +668,56 @@ function buildTrialShells() {
 function renderTrials() {
   trials.forEach((t, i) => {
     const n = trialNodes[i];
-    paintSheet(n.sheet, layersFor(t), t.era);
     n.node.setAttribute("aria-checked", i === picked ? "true" : "false");
     n.node.tabIndex = i === picked ? 0 : -1;
     const p = printFor(sigOf(t));
-    n.node.dataset.printed = p && p.status === "done" ? "true" : "false";
-    put(n.meta,
-      el("span", {}, `+${t.extra.length}`),
-      el("span", {}, ERA_ZH[t.era] || ""),
-      t.missing.length ? el("span", { class: "trial-miss", title: `沒進這張：${t.missing.map(zh).join("、")}` }, `缺 ${t.missing.length}`) : null,
-      p && p.status === "done" ? el("span", { class: "trial-done" }, "已印") : null
-    );
-    const show = trialHighlights(t);
     put(
-      n.picks,
-      show.map((tag) =>
-        el(
-          "span",
-          { class: "trial-pick", title: zh(tag), style: `--suit: var(--suit-${suitOf(tag)})` },
-          assets.art(tag) ? applyArtSources(el("img", { alt: "", decoding: "async" }), assets.sources(tag)) : el("b", {}, [...zh(tag)][0])
-        )
-      )
+      n.meta,
+      el("span", {}, `補 ${t.extra.length}`),
+      el("span", {}, ERA_ZH[t.era] || ""),
+      t.missing.length ? el("span", { class: "trial-miss", title: `沒進這張：${t.missing.map(zh).join("、")}` }, `缺 ${t.missing.length}`) : null
     );
+    // 牌沒變就不重建：換試印、印製進度都會叫到這裡，不要讓小圖一直重載。
+    const show = trialHighlights(t);
+    const key = show.join("|");
+    if (n.picks.dataset.key !== key) {
+      n.picks.dataset.key = key;
+      put(
+        n.picks,
+        show.map((tag) =>
+          el(
+            "span",
+            { class: "trial-pick", title: zh(tag), style: `--suit: var(--suit-${suitOf(tag)})` },
+            assets.art(tag) ? applyArtSources(el("img", { alt: "", decoding: "async" }), assets.sources(tag)) : el("b", {}, [...zh(tag)][0])
+          )
+        )
+      );
+    }
+    paintTrialFace(i, p);
     n.node.setAttribute(
       "aria-label",
-      `試印 ${t.letter}：引擎補 ${t.extra.length} 個字，${ERA_ZH[t.era] || ""}${t.missing.length ? `，有 ${t.missing.length} 張你的牌沒進去` : ""}`
+      `試印 ${t.letter}：引擎補 ${t.extra.length} 張，${ERA_ZH[t.era] || ""}${t.missing.length ? `，有 ${t.missing.length} 張你的牌沒進去` : ""}${p ? `，${previewState(p)}` : ""}`
     );
+  });
+}
+
+/** 試印左邊那一格：印過就放成品的小圖，沒印過就是字母。 */
+function paintTrialFace(i, p = printFor(sigOf(trials[i]))) {
+  const n = trialNodes[i];
+  if (!n) return;
+  const src = p ? p.image || p.preview : null;
+  n.node.dataset.printed = p ? p.status : "none";
+  let img = n.face.querySelector("img");
+  if (src) {
+    if (!img) n.face.prepend((img = el("img", { alt: "", decoding: "async", draggable: "false" })));
+    if (img.getAttribute("src") !== src) img.src = src;
+  } else img?.remove();
+  n.face.style.setProperty("--p", String(p && p.status === "running" ? p.progress || 0 : 0));
+}
+
+function paintTrialFacesFor(sig) {
+  trials.forEach((t, i) => {
+    if (sigOf(t) === sig) paintTrialFace(i);
   });
 }
 
@@ -914,29 +734,55 @@ function trialHighlights(t) {
   return out;
 }
 
-/* ================= 版 ================= */
+/* ================= 卡池：六個套版 ================= */
 
 const plateNode = (tag) => $("registers").querySelector(`.plate-card[data-tag="${cssEsc(tag)}"]`);
 
 function renderPlate(events = []) {
   const box = $("registers");
   const t = trials[picked];
-  const effLead = layersFor(t).figure;
-  const leadTag = effLead && effLead.src === "mine" ? effLead.tag : null;
+  const empty = !bed.pins.length;
+  relFocus = null;
   const rows = REGISTERS.map((suit) => {
     const mine = bed.pins.filter((x) => suitOf(x) === suit);
     // 空白的版不列引擎的影子：還沒有東西可以對照，只會讓人以為版上已經有牌。
-    const ghosts = bed.pins.length && t ? t.extra.filter((x) => suitOf(x) === suit) : [];
+    const ghosts = !empty && t ? t.extra.filter((x) => suitOf(x) === suit) : [];
+    const open = expanded.has(suit);
+    const shown = open ? ghosts : ghosts.slice(0, GHOST_MAX);
     const info = CARD_SUIT_INFO[suit];
-    const cards = [
-      ...mine.map((tag) => plateCard(tag, tag === leadTag)),
-      ...ghosts.slice(0, GHOST_MAX).map((tag) => ghostCard(tag, t)),
-    ];
-    if (ghosts.length > GHOST_MAX) cards.push(el("span", { class: "ghost-more", title: ghosts.slice(GHOST_MAX).map(zh).join("、") }, `+${ghosts.length - GHOST_MAX}`));
+    const cards = mine.map((tag) => plateCard(tag));
+    // 你的牌跟引擎補的中間隔一條細線：左邊是版上的，右邊是這一張試印的影子。
+    if (mine.length && shown.length) cards.push(el("span", { class: "reg-split", "aria-hidden": "true" }));
+    cards.push(...shown.map((tag) => ghostCard(tag, t)));
+    if (ghosts.length > GHOST_MAX) {
+      cards.push(
+        el(
+          "button",
+          {
+            class: "ghost-more",
+            type: "button",
+            "aria-expanded": open ? "true" : "false",
+            title: open ? undefined : ghosts.slice(GHOST_MAX).map(zh).join("、"),
+            "aria-label": open ? `收起${REGISTER_ROLE[suit]}的影子` : `再看 ${ghosts.length - GHOST_MAX} 張引擎補的${REGISTER_ROLE[suit]}`,
+            onclick: () => {
+              if (open) expanded.delete(suit);
+              else expanded.add(suit);
+              renderPlate([]);
+              box.querySelector(`.register[data-suit="${suit}"] .ghost-more`)?.focus({ preventScroll: true });
+            },
+          },
+          open ? "收起" : `+${ghosts.length - GHOST_MAX}`
+        )
+      );
+    }
     const note = rowNotes[suit];
     return el(
       "section",
-      { class: "register", dataset: { suit, filled: mine.length ? "true" : "false" }, "aria-label": `${info.zh}：${mine.length} 張` },
+      {
+        class: "register",
+        dataset: { suit, filled: mine.length ? "true" : "false" },
+        "aria-label": `${REGISTER_ROLE[suit]}（${info.zh}）：你的 ${mine.length} 張${ghosts.length ? `，引擎補 ${ghosts.length} 張` : ""}`,
+      },
       el(
         "header",
         { class: "reg-head" },
@@ -947,7 +793,7 @@ function renderPlate(events = []) {
       el(
         "div",
         { class: "reg-cards" },
-        cards.length ? cards : el("span", { class: "reg-empty" }, suit === "style" ? "不罩色" : bed.pins.length ? "空著" : "空著：引擎會補")
+        cards.length ? cards : el("span", { class: "reg-empty" }, suit === "style" ? "不罩色" : empty ? "空著：引擎會補" : "空著")
       ),
       note
         ? el(
@@ -960,11 +806,72 @@ function renderPlate(events = []) {
         : null
     );
   });
-  box.replaceChildren(...rows);
-  $("plate-sub").textContent = bed.pins.length ? `${bed.pins.length} 張牌，${REGISTERS.filter((s) => bed.pins.some((x) => suitOf(x) === s)).length} 層` : "還沒有牌";
-  $("clear").disabled = !bed.pins.length;
+  put(box, empty ? startBlock() : null, rows);
+  box.dataset.empty = empty ? "true" : "false";
+  $("plate-sub").textContent = empty
+    ? "還沒有牌"
+    : t
+      ? `試印 ${t.letter}：你的 ${bed.pins.length} 張，引擎補 ${t.extra.length} 張`
+      : `你的 ${bed.pins.length} 張`;
+  $("clear").disabled = empty;
   renderPlateNotice();
+  renderPill();
   requestRelations(events);
+}
+
+function startBlock() {
+  const starters = STARTERS.filter((s) => s.tags.every((t) => lib.byTag.has(t) && rankOk(cardOf(t)) && !bans.has(t))).slice(0, 3);
+  return el(
+    "div",
+    { class: "pool-start" },
+    el("p", { class: "pool-start-lead" }, "空白的版"),
+    el(
+      "p",
+      { class: "pool-start-body" },
+      "從字盒挑牌放進來：點一下，或拖進這一區。牌照花色落進自己那一列；右邊四張試印跟著重抽，引擎替你補的牌會以灰色的影子排在同一列。"
+    ),
+    starters.length
+      ? el(
+          "div",
+          { class: "starters" },
+          el("span", { class: "starters-label" }, "或者從這裡起手"),
+          starters.map((s) =>
+            el(
+              "button",
+              { class: "starter", type: "button", onclick: () => startWith(s) },
+              el(
+                "span",
+                { class: "starter-arts", "aria-hidden": "true" },
+                s.tags.slice(0, 3).map((tg) => (assets.art(tg) ? applyArtSources(el("img", { alt: "" }), assets.sources(tg)) : null))
+              ),
+              el("span", { class: "starter-name" }, s.name),
+              el("span", { class: "starter-tags" }, s.tags.map(zh).join("・"))
+            )
+          )
+        )
+      : null
+  );
+}
+
+/** 牌落進哪一列，那一列就暈開一下它花色的墨。 */
+function inkRow(suit) {
+  if (!suit || reduced()) return;
+  const row = $("registers").querySelector(`.register[data-suit="${suit}"]`);
+  if (!row) return;
+  row.classList.remove("is-inked");
+  void row.offsetWidth;
+  row.classList.add("is-inked");
+  setTimeout(() => row.classList.remove("is-inked"), 900);
+}
+
+/** 換一張試印：影子那幾張換成那一張補的，淡入一下讓人看得出換了。 */
+function swapGhosts() {
+  if (reduced()) return;
+  const box = $("registers");
+  box.classList.remove("ghosts-in");
+  void box.offsetWidth;
+  box.classList.add("ghosts-in");
+  setTimeout(() => box.classList.remove("ghosts-in"), 420);
 }
 
 /** 牌底下四個小點：四張試印各一個，這張牌有進那一張就上墨。 */
@@ -976,29 +883,21 @@ function inkDots(tag) {
   );
 }
 
-function plateCard(tag, isLead) {
+function plateCard(tag) {
   const card = cardOf(tag);
-  const node = cardNode(card, assets, {
-    flag: isLead ? { kind: "lead", text: "主" } : null,
-    src: bed.carried[tag] ? "附帶" : null,
-  });
+  const node = cardNode(card, assets, { src: bed.carried[tag] ? "附帶" : null });
   const take = takeOf(tag);
   node.classList.add("plate-card");
   node.dataset.ink = take === trials.length ? "full" : take === 0 ? "none" : "part";
   node.append(inkDots(tag));
   const why = take < trials.length ? `，${take}/${trials.length} 張試印有它：${missReason(tag)}` : "";
-  node.setAttribute("aria-label", `${card.zh}（${card.tag}）${isLead ? "・主版" : ""}${bed.carried[tag] ? `・跟著「${zh(bed.carried[tag])}」上來` : ""}${why}。Enter 看選項，Delete 拿掉`);
+  node.setAttribute("aria-label", `${card.zh}（${card.tag}）${bed.carried[tag] ? `・跟著「${zh(bed.carried[tag])}」上來` : ""}${why}。Enter 看選項，Delete 拿掉`);
   node.addEventListener("click", () => openPop(node, tag, "plate"));
   node.addEventListener("keydown", (e) => {
     if (e.key === "Delete" || e.key === "Backspace") {
       e.preventDefault();
       focusAfterRemoval(node);
       remove(tag);
-    } else if ((e.key === "l" || e.key === "L") && canLead(tag, { suitOf, kindOf })) {
-      e.preventDefault();
-      e.stopPropagation();
-      lead(tag);
-      plateNode(tag)?.focus();
     }
   });
   drag.attach(node, { tag, from: "plate" });
@@ -1009,7 +908,7 @@ function ghostCard(tag, t) {
   const card = cardOf(tag);
   const node = cardNode(card, assets, {});
   node.classList.add("ghost-card");
-  node.setAttribute("aria-label", `${card.zh}（${card.tag}）：引擎在試印 ${t.letter} 補的。按一下可以收下`);
+  node.setAttribute("aria-label", `${card.zh}（${card.tag}）：引擎在試印 ${t.letter} 補的。Enter 看選項，可以收下`);
   node.addEventListener("click", () => openPop(node, tag, "ghost"));
   drag.attach(node, { tag, from: "ghost" });
   return node;
@@ -1023,6 +922,30 @@ function focusAfterRemoval(node) {
     const n = nextTag && plateNode(nextTag);
     (n || $("case-q")).focus({ preventScroll: true });
   }, 30);
+}
+
+/** 卡池裡用方向鍵走：左右是同一列的下一張，上下跳到隔壁那一列。 */
+function poolKeys(e) {
+  const box = $("registers");
+  const cards = [...box.querySelectorAll(".card")];
+  const i = cards.indexOf(document.activeElement);
+  if (i < 0) return;
+  let j = -1;
+  if (e.key === "ArrowRight") j = i + 1;
+  else if (e.key === "ArrowLeft") j = i - 1;
+  else if (e.key === "ArrowDown" || e.key === "ArrowUp") {
+    const regs = [...box.querySelectorAll(".register")];
+    const d = e.key === "ArrowDown" ? 1 : -1;
+    for (let k = regs.indexOf(cards[i].closest(".register")) + d; k >= 0 && k < regs.length; k += d) {
+      const c = regs[k].querySelector(".card");
+      if (c) {
+        j = cards.indexOf(c);
+        break;
+      }
+    }
+  } else return;
+  e.preventDefault();
+  if (j >= 0 && j < cards.length) cards[j].focus();
 }
 
 function renderPlateNotice() {
@@ -1043,6 +966,7 @@ function renderUndo() {
 /* ---------- 關係：校對記號 ---------- */
 
 let relTimer = 0;
+let relFocus = null;
 
 function requestRelations(events) {
   clearTimeout(relTimer);
@@ -1054,6 +978,8 @@ const REL_ZH = { carry: "附帶", echo: "呼應", clash: "相剋" };
 function drawRelations(events = []) {
   const box = $("registers");
   box.querySelector(".rel-layer")?.remove();
+  relFocus = null;
+  box.dataset.relFocus = "false";
   const rels = relationsOf(bed, { lex, contradictions, actPlace: ACT_PLACE });
   const keys = new Set(rels.map((r) => r.kind + "|" + r.a + "|" + r.b));
   const fresh = rels.filter((r) => !lastRelKeys.has(r.kind + "|" + r.a + "|" + r.b));
@@ -1066,38 +992,50 @@ function drawRelations(events = []) {
   svg.setAttribute("height", String(box.scrollHeight));
   layer.append(svg);
   const labels = [];
-  // 跨套版的線走右邊的留白（版的右邊特意空了 3rem），像校對稿邊上的記號，不壓到牌。
-  const gutter = box.clientWidth - 24;
-  for (const r of rels) {
+  const drawIn = [];
+  // 跨列的線像校對稿上的引線：從牌的上緣出發，沿著牌上面那條空隙走到右邊的留白
+  // （卡池右邊特意空了一條），沿留白下到另一列，再從那一列的空隙回到另一張牌。一張牌都不壓。
+  const gutter = box.clientWidth - 26;
+  const R = 6;
+  rels.forEach((r, k) => {
     const na = plateNode(r.a);
     const nb = plateNode(r.b);
-    if (!na || !nb) continue;
+    if (!na || !nb) return;
     const ra = na.getBoundingClientRect();
     const rb = nb.getBoundingClientRect();
-    const A = { x: ra.right - base.left, y: ra.top - base.top + ra.height * 0.32 };
-    const B = { x: rb.right - base.left, y: rb.top - base.top + rb.height * 0.32 };
+    const ax = ra.left + ra.width / 2 - base.left;
+    const bx = rb.left + rb.width / 2 - base.left;
+    const aTop = ra.top - base.top;
+    const bTop = rb.top - base.top;
     let d;
     let mid;
-    if (Math.abs(A.y - B.y) < 12) {
-      // 同一個套版裡的兩張：在牌的上緣拱一道小弧。
-      A.x = ra.left + ra.width / 2 - base.left;
-      B.x = rb.left + rb.width / 2 - base.left;
-      A.y = B.y = ra.top - base.top + 2;
-      const C = { x: (A.x + B.x) / 2, y: A.y - 16 };
-      d = `M${A.x},${A.y} Q${C.x},${C.y} ${B.x},${B.y}`;
-      mid = { x: C.x, y: A.y - 8 };
+    if (Math.abs(aTop - bTop) < 12) {
+      // 同一列、同一排的兩張：在牌的上緣拱一道小弧。
+      const y = aTop + 2;
+      const cx = (ax + bx) / 2;
+      d = `M${ax},${y} Q${cx},${y - 16} ${bx},${y}`;
+      mid = { x: cx, y: y - 8 };
     } else {
-      const gx = Math.max(gutter, A.x + 12, B.x + 12);
-      d = `M${A.x},${A.y} C${gx},${A.y} ${gx},${B.y} ${B.x},${B.y}`;
-      mid = { x: 0.25 * A.x + 0.75 * gx - 2, y: (A.y + B.y) / 2 };
+      // 幾條線同時走時錯開一點，不要疊成一條。
+      const off = (k % 3) * 3;
+      const ay = aTop - 6 - off;
+      const by = bTop - 6 - off;
+      const gx = Math.max(gutter - (k % 4) * 5, ax + 2 * R, bx + 2 * R);
+      const dir = by > ay ? 1 : -1;
+      d =
+        `M${ax},${aTop} L${ax},${ay + R} Q${ax},${ay} ${ax + R},${ay} L${gx - R},${ay} Q${gx},${ay} ${gx},${ay + dir * R} ` +
+        `L${gx},${by - dir * R} Q${gx},${by} ${gx - R},${by} L${bx + R},${by} Q${bx},${by} ${bx},${by + R} L${bx},${bTop}`;
+      mid = { x: gx, y: (ay + by) / 2 };
     }
     const path = document.createElementNS("http://www.w3.org/2000/svg", "path");
     path.setAttribute("d", d);
     path.setAttribute("class", "rel rel-" + r.kind);
+    path.dataset.a = r.a;
+    path.dataset.b = r.b;
     const isFresh = fresh.includes(r);
-    if (isFresh && !reduced()) path.classList.add("is-fresh");
+    if (isFresh && !reduced()) drawIn.push(path);
     svg.append(path);
-    labels.push(el("span", { class: "rel-tag", dataset: { kind: r.kind }, style: `left:${mid.x}px;top:${mid.y}px` }, REL_ZH[r.kind]));
+    labels.push(el("span", { class: "rel-tag", dataset: { kind: r.kind, a: r.a, b: r.b }, style: `left:${mid.x}px;top:${mid.y}px` }, REL_ZH[r.kind]));
     if (isFresh && r.kind === "clash") {
       for (const n of [na, nb]) {
         n.classList.remove("is-clashing");
@@ -1112,9 +1050,36 @@ function drawRelations(events = []) {
       plateNotice = { kind: "echo", text: `呼應：「${zh(r.a)}」配「${zh(r.b)}」，這個地方做這件事剛好` };
       renderPlateNotice();
     }
-  }
+  });
   layer.append(...labels);
   box.append(layer);
+  // 新出現的線一筆畫出來；畫完把虛線樣式還給 CSS（附帶、相剋本來就是虛線）。
+  for (const path of drawIn) {
+    const len = Math.ceil(path.getTotalLength());
+    path.style.strokeDasharray = String(len);
+    path.style.strokeDashoffset = String(len);
+    path.animate([{ strokeDashoffset: len }, { strokeDashoffset: 0 }], { duration: 600, easing: "cubic-bezier(0.16, 1, 0.3, 1)", fill: "forwards" });
+    setTimeout(() => {
+      path.getAnimations().forEach((a) => a.cancel());
+      path.style.strokeDasharray = "";
+      path.style.strokeDashoffset = "";
+    }, 640);
+  }
+}
+
+/** 指著（或 Tab 到）一張牌：它的關係線亮起來，其他的淡下去，另一端那張也描一圈。 */
+function setRelFocus(tag) {
+  if (tag === relFocus) return;
+  relFocus = tag;
+  const box = $("registers");
+  const partners = new Set();
+  for (const n of box.querySelectorAll(".rel-layer [data-a]")) {
+    const on = !!tag && (n.dataset.a === tag || n.dataset.b === tag);
+    n.classList.toggle("is-lit", on);
+    if (on) partners.add(n.dataset.a === tag ? n.dataset.b : n.dataset.a);
+  }
+  box.dataset.relFocus = partners.size ? "true" : "false";
+  for (const c of box.querySelectorAll(".plate-card")) c.classList.toggle("is-partner", partners.has(c.dataset.tag));
 }
 
 /* ---------- 牌的小選單 ---------- */
@@ -1163,9 +1128,6 @@ function openPop(anchor, tag, from) {
   }
   const acts = [];
   if (from === "plate") {
-    if (canLead(tag, { suitOf, kindOf })) {
-      acts.push(el("button", { class: "btn btn-small", type: "button", onclick: () => (closePop(), lead(tag)) }, bed.lead === tag ? "主版交回自動" : "當主版"));
-    }
     acts.push(
       el(
         "button",
@@ -1215,8 +1177,10 @@ function openPop(anchor, tag, from) {
   const r = anchor.getBoundingClientRect();
   const w = pop.offsetWidth;
   const h = pop.offsetHeight;
-  let left = r.left - w - 10;
-  if (left < 8) left = Math.min(window.innerWidth - w - 8, r.right + 10);
+  // 卡池在中間：選單開在牌的右邊，右邊放不下才開左邊。
+  let left = r.right + 10;
+  if (left + w > window.innerWidth - 8) left = r.left - w - 10;
+  left = Math.min(window.innerWidth - w - 8, left);
   let top = Math.max(8, Math.min(window.innerHeight - h - 8, r.top + r.height / 2 - h / 2));
   pop.style.left = Math.max(8, left) + "px";
   pop.style.top = top + "px";
@@ -1236,7 +1200,10 @@ function flyIn(tag, from) {
   const to = target.getBoundingClientRect();
   const visible = to.bottom > 0 && to.top < window.innerHeight && to.width > 0;
   if (!from || reduced() || !visible) {
-    stamp(target);
+    // 手機上卡池捲出畫面了：牌飛進角落那顆「卡池」，看得到它確實放進去了。
+    const pill = $("pool-pill");
+    if (from && !visible && !pill.hidden && !reduced()) flyToPill(target, from, pill);
+    else stamp(target);
     return;
   }
   const clone = target.cloneNode(true);
@@ -1265,6 +1232,29 @@ function flyIn(tag, from) {
       stamp(n);
     }
   }, 430);
+}
+
+function flyToPill(target, from, pill) {
+  const to = pill.getBoundingClientRect();
+  const clone = target.cloneNode(true);
+  clone.classList.add("flying");
+  Object.assign(clone.style, { left: from.left + "px", top: from.top + "px", width: from.width + "px" });
+  clone.style.setProperty("--card-w", from.width + "px");
+  document.body.append(clone);
+  const dx = to.left + to.width / 2 - (from.left + from.width / 2);
+  const dy = to.top + to.height / 2 - (from.top + from.height / 2);
+  clone.animate(
+    [
+      { transform: "none", opacity: 1 },
+      { transform: `translate(${dx * 0.3}px, ${dy * 0.3 - 30}px) scale(0.8) rotate(-5deg)`, opacity: 1, offset: 0.4 },
+      { transform: `translate(${dx}px, ${dy}px) scale(0.22)`, opacity: 0.3 },
+    ],
+    { duration: 460, easing: "cubic-bezier(0.45, 0, 0.7, 1)", fill: "forwards" }
+  );
+  setTimeout(() => {
+    clone.remove();
+    stamp(pill, "is-bumped");
+  }, 470);
 }
 
 function popIn(tag, delay) {
@@ -1322,7 +1312,7 @@ function renderPrintBar() {
   } else if (p && p.status === "failed") label = "再印一次";
   const summary = [
     `你的 ${bed.pins.length} 張`,
-    `引擎補 ${t.extra.length} 字`,
+    `引擎補 ${t.extra.length} 張`,
     ERA_ZH[t.era] || "",
     RATING_ZH[settings.rating],
     (SIZES.find((s) => s.w === settings.width && s.h === settings.height) || SIZES[0]).zh,
@@ -1694,7 +1684,8 @@ function peekInfo(node) {
 const drag = createDrag({
   zones: () => [
     { id: "plate", el: $("plate"), accepts: (p) => p.from !== "plate" },
-    { id: "proof", el: $("proof"), accepts: (p) => p.from !== "plate" },
+    // 手機上卡池捲走了，角落那顆「卡池」也收牌。
+    { id: "pill", el: $("pool-pill"), accepts: (p) => p.from === "case" && !$("pool-pill").hidden },
     { id: "case", el: $("case"), accepts: (p) => p.from === "plate" },
   ],
   onDrop: (p, zone) => {
@@ -1858,7 +1849,14 @@ function wireChrome() {
     }, 120);
   });
   $("case-grid").addEventListener("keydown", caseKeys);
-  $("mini-proof").addEventListener("click", () => $("proof").scrollIntoView({ behavior: reduced() ? "auto" : "smooth", block: "center" }));
+  $("pool-pill").addEventListener("click", () => $("plate").scrollIntoView({ behavior: reduced() ? "auto" : "smooth", block: "start" }));
+  const regs = $("registers");
+  const relTarget = (e) => (e.target.closest ? e.target.closest(".plate-card")?.dataset.tag || null : null);
+  regs.addEventListener("pointerover", (e) => setRelFocus(relTarget(e)));
+  regs.addEventListener("pointerleave", () => setRelFocus(null));
+  regs.addEventListener("focusin", (e) => setRelFocus(relTarget(e)));
+  regs.addEventListener("focusout", () => setRelFocus(null));
+  regs.addEventListener("keydown", poolKeys);
   document.addEventListener("pointerdown", (e) => (lastPointer = e.pointerType || "mouse"), true);
   document.addEventListener("keydown", onKey);
   let rTimer = 0;
@@ -1908,21 +1906,39 @@ function onKey(e) {
   }
 }
 
-/* ================= 手機：校樣捲出畫面時，角落留一張小的 ================= */
+/* ================= 手機：卡池捲出畫面時，角落留一顆「卡池」 ================= */
 
-function watchMiniProof() {
-  const mini = $("mini-proof");
+function renderPill() {
+  const pill = $("pool-pill");
+  put(
+    pill,
+    el(
+      "span",
+      { class: "pill-arts", "aria-hidden": "true" },
+      bed.pins.slice(-3).map((tg) =>
+        assets.art(tg)
+          ? applyArtSources(el("img", { alt: "", decoding: "async" }), assets.sources(tg))
+          : el("b", { style: `--suit: var(--suit-${suitOf(tg)})` }, [...zh(tg)][0])
+      )
+    ),
+    el("span", { class: "pill-label" }, "卡池"),
+    el("b", { class: "pill-count" }, String(bed.pins.length))
+  );
+  pill.setAttribute("aria-label", `回到卡池（${bed.pins.length} 張）`);
+}
+
+function watchPoolPill() {
+  const pill = $("pool-pill");
   if (typeof IntersectionObserver !== "function") return;
   const narrow = matchMedia("(max-width: 68.74rem)");
-  let proofVisible = true;
+  let poolVisible = true;
   const sync = () => {
-    const show = narrow.matches && !proofVisible;
-    mini.hidden = !show;
+    pill.hidden = !(narrow.matches && !poolVisible);
   };
   new IntersectionObserver((entries) => {
-    proofVisible = entries.some((e) => e.isIntersecting);
+    poolVisible = entries.some((e) => e.isIntersecting);
     sync();
-  }, { threshold: 0.15 }).observe($("proof"));
+  }, { threshold: 0.04 }).observe($("plate"));
   narrow.addEventListener("change", sync);
 }
 

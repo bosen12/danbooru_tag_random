@@ -1,18 +1,17 @@
 #!/usr/bin/env node
 /**
- * 疊印台（web6/fuse-bed.js）的回歸測試：版上放牌、帶上、換下、拿掉、關係、校樣怎麼疊。
+ * 疊印台（web6/fuse-bed.js）的回歸測試：卡池裡放牌、帶上、換下、拿掉、關係、讀回存檔。
  * 直接用真的 engine 和詞庫跑，確認疊印台沒有自己長一套規則。秒跑完，不需要 ComfyUI。
  */
 import { readFileSync } from "fs";
 import { dirname, join } from "path";
 import { fileURLToPath } from "url";
 import { indexLexicon, applyPin, contradictions, ACT_PLACE } from "../web/engine.js";
-import { emptyBed, sanitizeBed, placeCard, removeCard, setLead, relationsOf, proofLayers, canLead, REGISTERS } from "../web6/fuse-bed.js";
+import { emptyBed, sanitizeBed, placeCard, removeCard, relationsOf, REGISTERS, REGISTER_ROLE } from "../web6/fuse-bed.js";
 
 const ROOT = join(dirname(fileURLToPath(import.meta.url)), "..");
 const data = JSON.parse(readFileSync(join(ROOT, "web/lexicon.json"), "utf8"));
 const lex = indexLexicon(data);
-const manifest = JSON.parse(readFileSync(join(ROOT, "web/cards/manifest.json"), "utf8").trim() || "{}");
 const deps = { lex, applyPin };
 const rel = (bed) => relationsOf(bed, { lex, contradictions, actPlace: ACT_PLACE });
 
@@ -79,45 +78,13 @@ const put = (bed, ...tags) => tags.reduce((b, t) => placeCard(b, t, deps).bed, b
   ok("每條關係兩端都在版上", rel(put(emptyBed(), "kimono", "library", "outdoors", "reading")).every((x) => x.a !== x.b));
 }
 
-/* ---------- 主版 ---------- */
-{
-  const bed = put(emptyBed(), "smile", "kimono");
-  const kindOf = (t) => {
-    const m = manifest[t];
-    if (!m) return null;
-    if (/\bno humans\b/.test(m.positive)) return /\bscenery\b/.test(m.positive) ? "ground" : /\bstill life\b/.test(m.positive) ? "prop" : null;
-    return "figure";
-  };
-  const frameOf = (t) => {
-    const p = manifest[t]?.positive || "";
-    return /\bfull body\b/.test(p) ? 3 : /\bcowboy shot\b/.test(p) ? 2 : /\bupper body\b/.test(p) ? 1 : 0;
-  };
-  const suitOf = (t) => ({ subject: "cast", feature: "look", clothing: "wear", pose: "pose", env: "scene" })[lex.byTag.get(t)?.section] || null;
-  if (manifest.kimono && manifest.smile) {
-    const layers = proofLayers({ bed, extra: [], suitOf, kindOf, frameOf });
-    ok("主版挑畫得完整的那張（全身的和服，不是臉部特寫的微笑）", layers.figure?.tag === "kimono", JSON.stringify(layers.figure));
-    const carriedWins = proofLayers({ bed: put(emptyBed(), "kimono"), extra: [], suitOf, kindOf, frameOf });
-    ok("被帶上來的牌不搶主版", carriedWins.figure?.tag === "kimono", JSON.stringify(carriedWins.figure));
-    const libBed = put(emptyBed(), "library");
-    if (libBed.carried.indoors && kindOf("indoors") === "ground" && kindOf("library") === "ground") {
-      ok("底色用你放的（圖書館），不是它帶上來的（室內）", proofLayers({ bed: libBed, extra: [], suitOf, kindOf, frameOf }).ground?.tag === "library");
-    }
-    const led = setLead(bed, "smile");
-    ok("指定主版就用指定的", proofLayers({ bed: led, extra: [], suitOf, kindOf, frameOf }).figure.tag === "smile");
-    ok("再指定一次就交回自動", setLead(led, "smile").lead === null);
-    ok("主版被拿掉就回到自動", removeCard(led, "smile").bed.lead === null);
-    const engineOnly = proofLayers({ bed: emptyBed(), extra: ["kimono", "cherry blossoms"], suitOf, kindOf, frameOf });
-    ok("你沒放的那一層用引擎的，並標成引擎", engineOnly.figure?.src === "engine" && engineOnly.ground?.src === "engine", JSON.stringify(engineOnly));
-    ok("底色只能是風景牌、不是人", kindOf("cherry blossoms") === "ground" && canLead("kimono", { suitOf, kindOf }) && !canLead("cherry blossoms", { suitOf, kindOf }));
-  } else console.log("skip 主版（web/cards 還沒烤）");
-}
-
 /* ---------- 存檔讀回來 ---------- */
 {
-  const clean = sanitizeBed({ pins: ["kimono", "nope-not-a-tag", "kimono"], lead: "ghost", carried: { x: "kimono", "japanese clothes": "gone" } }, (t) => lex.byTag.has(t));
-  ok("讀回來的版：不認識的字、重複的字、懸空的附帶、不在版上的主版都丟掉", clean.pins.join() === "kimono" && clean.lead === null && Object.keys(clean.carried).length === 0, JSON.stringify(clean));
+  const clean = sanitizeBed({ pins: ["kimono", "nope-not-a-tag", "kimono"], lead: "kimono", carried: { x: "kimono", "japanese clothes": "gone" } }, (t) => lex.byTag.has(t));
+  ok("讀回來的版：不認識的字、重複的字、懸空的附帶都丟掉", clean.pins.join() === "kimono" && Object.keys(clean.carried).length === 0, JSON.stringify(clean));
+  ok("舊存檔的主版（lead）直接丟掉，不留在版上", !("lead" in clean) && !("lead" in emptyBed()) && !("lead" in put(emptyBed(), "kimono")), JSON.stringify(clean));
   ok("壞掉的存檔變成空白的版", sanitizeBed(null, () => true).pins.length === 0 && sanitizeBed({ pins: "x" }, () => true).pins.length === 0);
-  ok("六個套版，罩色在上、底色在下", REGISTERS[0] === "style" && REGISTERS.at(-1) === "scene" && REGISTERS.length === 6);
+  ok("卡池六列，罩色在上、底色在下，每列都有名字", REGISTERS[0] === "style" && REGISTERS.at(-1) === "scene" && REGISTERS.length === 6 && REGISTERS.every((r) => REGISTER_ROLE[r]));
 }
 
 if (failed) {
