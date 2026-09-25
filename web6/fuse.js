@@ -45,7 +45,6 @@ import { genSeed, isFixedSeed, mountSeedControl, onSeedChange, seedUseButton, us
 const $ = (id) => document.getElementById(id);
 const LETTERS = ["A", "B", "C", "D"];
 const TRIALS = 4;
-const GHOST_MAX = 4;
 const PAGE = 90;
 const PRINT_MAX = 40;
 const HISTORY_MAX = 60;
@@ -738,23 +737,182 @@ function trialHighlights(t) {
 
 const plateNode = (tag) => $("registers").querySelector(`.plate-card[data-tag="${cssEsc(tag)}"]`);
 
+/* ---------- 卡池跟著視窗大小：牌多大、每列放幾張影子 ----------
+ * 寬螢幕上卡池有固定的高度：挑一個最大的牌寬，讓六列剛好一次放進去不用捲（放不下才捲）。
+ * 每一列的影子排到那一排放滿就停，放不完的收成「+N」—— 視窗越寬，看得到的影子越多。
+ * 窄螢幕整頁往下捲，牌寬只看寬度：一排大約四張。
+ * 先用算的（牌的比例、間距都是 CSS 裡的固定值），畫上去之後再量一次，真的溢出就再縮一點。 */
+
+const CARD_AR = 702 / 480;
+const GHOST_SCALE = 0.76;
+const GAP_X = 10;
+const GAP_Y = 12;
+const FIT_MIN = 56;
+const FIT_MAX = 176;
+const wideLayout = typeof matchMedia === "function" ? matchMedia("(min-width: 68.75rem)") : { matches: true };
+let poolFit = { w: 0, planW: 0, caps: {}, cardsW: 0, headH: 0 };
+
+function planPool(t, empty) {
+  const box = $("registers");
+  const cs = getComputedStyle(box);
+  const rem = parseFloat(getComputedStyle(document.documentElement).fontSize) || 16;
+  const wide = wideLayout.matches;
+  const cardsW =
+    box.querySelector(".reg-cards")?.clientWidth ||
+    Math.max(160, box.clientWidth - parseFloat(cs.paddingLeft) - parseFloat(cs.paddingRight) - (wide ? 5 : 3.2) * rem);
+  if (empty) return { w: 0, caps: {}, cardsW };
+  const rows = REGISTERS.map((suit) => ({
+    suit,
+    mine: bed.pins.filter((x) => suitOf(x) === suit).length,
+    ghosts: t ? t.extra.filter((x) => suitOf(x) === suit).length : 0,
+    note: !!rowNotes[suit],
+  }));
+  const headH = poolFit.headH || 2.2 * rem;
+  const padY = 1.35 * rem;
+  const noteH = 1.7 * rem;
+  const moreW = 3 * rem;
+  const splitW = 9;
+  const tail = parseFloat(cs.paddingBottom) + (REGISTERS.length - 1);
+  const sim = (w, withExpanded) => {
+    const gw = w * GHOST_SCALE;
+    const h = w * CARD_AR;
+    const gh = gw * CARD_AR;
+    const caps = {};
+    let total = tail;
+    for (const r of rows) {
+      let x = 0;
+      let lines = 0;
+      let lineH = 0;
+      let height = 0;
+      const push = (iw, ih) => {
+        if (!lines) {
+          lines = 1;
+          x = iw;
+          lineH = ih;
+        } else if (x + GAP_X + iw > cardsW + 0.5) {
+          height += lineH + GAP_Y;
+          lines++;
+          x = iw;
+          lineH = ih;
+        } else {
+          x += GAP_X + iw;
+          lineH = Math.max(lineH, ih);
+        }
+      };
+      const room = (iw) => !lines || x + GAP_X + iw <= cardsW + 0.5;
+      for (let i = 0; i < r.mine; i++) push(w, h);
+      if (r.ghosts) {
+        if (r.mine) push(splitW, 0);
+        // 至少給兩張影子；之後排到這一排放滿為止，還要留位置給「+N」。
+        const floor = Math.min(r.ghosts, 2);
+        let cap = 0;
+        while (cap < r.ghosts) {
+          const more = r.ghosts - cap > 1;
+          if (cap >= floor && !room(gw + (more ? GAP_X + moreW : 0))) break;
+          push(gw, gh);
+          cap++;
+        }
+        caps[r.suit] = cap;
+        if (cap < r.ghosts) {
+          if (withExpanded && expanded.has(r.suit)) for (let i = cap; i < r.ghosts; i++) push(gw, gh);
+          push(moreW, 32);
+        }
+      }
+      const content = lines ? height + lineH : 1.3 * rem;
+      total += padY + Math.max(headH, content, w * 0.5) + (r.note ? noteH : 0);
+    }
+    return { caps, total };
+  };
+  let w;
+  if (wide) {
+    // 展開的那一列不算進去：點開「+N」不該讓整池的牌一起縮小，那一列多出來的就捲。
+    const H = $("plate-scroll").clientHeight;
+    w = FIT_MIN;
+    for (let c = FIT_MAX; c >= FIT_MIN; c -= 2) {
+      if (sim(c, false).total <= H) {
+        w = c;
+        break;
+      }
+    }
+  } else {
+    w = Math.round(Math.max(60, Math.min(96, (cardsW - 3 * GAP_X) / 4)));
+  }
+  return { w, caps: sim(w, false).caps, cardsW };
+}
+
+function applyFit(plan) {
+  const box = $("registers");
+  box.querySelector(".rel-layer")?.remove();
+  poolFit.caps = plan.caps;
+  poolFit.planW = plan.w;
+  poolFit.cardsW = plan.cardsW;
+  let w = plan.w;
+  if (!w) {
+    box.style.removeProperty("--pool-card");
+    poolFit.w = 0;
+    return;
+  }
+  box.style.setProperty("--pool-card", w + "px");
+  const head = box.querySelector(".reg-head");
+  if (head && head.offsetHeight) poolFit.headH = head.offsetHeight;
+  // 算的跟畫出來的對不上（第一次畫、欄寬剛變）：等一下照實際的寬再排一次。
+  const real = box.querySelector(".reg-cards")?.clientWidth;
+  if (real && Math.abs(real - plan.cardsW) > 2) scheduleFit();
+  if (wideLayout.matches && !expanded.size) {
+    const sc = $("plate-scroll");
+    let guard = 0;
+    while (sc.scrollHeight > sc.clientHeight + 1 && w > FIT_MIN && guard++ < 16) {
+      w -= 2;
+      box.style.setProperty("--pool-card", w + "px");
+    }
+  }
+  poolFit.w = w;
+}
+
+const sameCaps = (a, b) => REGISTERS.every((s) => (a[s] ?? -1) === (b[s] ?? -1));
+
+let fitTimer = 0;
+
+function scheduleFit() {
+  clearTimeout(fitTimer);
+  fitTimer = setTimeout(refitPool, 60);
+}
+
+/** 視窗（或卡池那一欄）大小變了：影子張數變了就重排，只是牌寬變了就只改寬度、重畫記號。 */
+function refitPool() {
+  if (!lib || !trials.length) return;
+  const plan = planPool(trials[picked], !bed.pins.length);
+  if (!sameCaps(plan.caps, poolFit.caps)) {
+    closePop();
+    renderPlate([]);
+    return;
+  }
+  if (plan.w === poolFit.planW && Math.abs(plan.cardsW - poolFit.cardsW) <= 2) return;
+  closePop();
+  applyFit(plan);
+  requestRelations([]);
+}
+
 function renderPlate(events = []) {
   const box = $("registers");
   const t = trials[picked];
   const empty = !bed.pins.length;
   relFocus = null;
+  renderPlateNotice();
+  const plan = planPool(t, empty);
   const rows = REGISTERS.map((suit) => {
     const mine = bed.pins.filter((x) => suitOf(x) === suit);
     // 空白的版不列引擎的影子：還沒有東西可以對照，只會讓人以為版上已經有牌。
     const ghosts = !empty && t ? t.extra.filter((x) => suitOf(x) === suit) : [];
+    const cap = plan.caps[suit] ?? ghosts.length;
     const open = expanded.has(suit);
-    const shown = open ? ghosts : ghosts.slice(0, GHOST_MAX);
+    const shown = open ? ghosts : ghosts.slice(0, cap);
     const info = CARD_SUIT_INFO[suit];
     const cards = mine.map((tag) => plateCard(tag));
     // 你的牌跟引擎補的中間隔一條細線：左邊是版上的，右邊是這一張試印的影子。
     if (mine.length && shown.length) cards.push(el("span", { class: "reg-split", "aria-hidden": "true" }));
     cards.push(...shown.map((tag) => ghostCard(tag, t)));
-    if (ghosts.length > GHOST_MAX) {
+    if (ghosts.length > cap) {
       cards.push(
         el(
           "button",
@@ -762,8 +920,8 @@ function renderPlate(events = []) {
             class: "ghost-more",
             type: "button",
             "aria-expanded": open ? "true" : "false",
-            title: open ? undefined : ghosts.slice(GHOST_MAX).map(zh).join("、"),
-            "aria-label": open ? `收起${REGISTER_ROLE[suit]}的影子` : `再看 ${ghosts.length - GHOST_MAX} 張引擎補的${REGISTER_ROLE[suit]}`,
+            title: open ? undefined : ghosts.slice(cap).map(zh).join("、"),
+            "aria-label": open ? `收起${REGISTER_ROLE[suit]}的影子` : `再看 ${ghosts.length - cap} 張引擎補的${REGISTER_ROLE[suit]}`,
             onclick: () => {
               if (open) expanded.delete(suit);
               else expanded.add(suit);
@@ -771,7 +929,7 @@ function renderPlate(events = []) {
               box.querySelector(`.register[data-suit="${suit}"] .ghost-more`)?.focus({ preventScroll: true });
             },
           },
-          open ? "收起" : `+${ghosts.length - GHOST_MAX}`
+          open ? "收起" : `+${ghosts.length - cap}`
         )
       );
     }
@@ -814,7 +972,7 @@ function renderPlate(events = []) {
       ? `試印 ${t.letter}：你的 ${bed.pins.length} 張，引擎補 ${t.extra.length} 張`
       : `你的 ${bed.pins.length} 張`;
   $("clear").disabled = empty;
-  renderPlateNotice();
+  applyFit(plan);
   renderPill();
   requestRelations(events);
 }
@@ -1857,6 +2015,9 @@ function wireChrome() {
   regs.addEventListener("focusin", (e) => setRelFocus(relTarget(e)));
   regs.addEventListener("focusout", () => setRelFocus(null));
   regs.addEventListener("keydown", poolKeys);
+  // 卡池那一欄大小一變（拉視窗、上面多一行提示、晾紙繩多了第一張），牌就重新配一次大小。
+  if (typeof ResizeObserver === "function") new ResizeObserver(scheduleFit).observe($("plate-scroll"));
+  wideLayout.addEventListener?.("change", scheduleFit);
   document.addEventListener("pointerdown", (e) => (lastPointer = e.pointerType || "mouse"), true);
   document.addEventListener("keydown", onKey);
   let rTimer = 0;
