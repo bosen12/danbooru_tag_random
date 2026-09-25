@@ -24,6 +24,7 @@ import argparse
 import hashlib
 import json
 import os
+import re
 import subprocess
 import sys
 import time
@@ -82,8 +83,55 @@ def extra_jobs() -> list[dict]:
     return jobs
 
 
+# 用哪個底模烤。main() 開烤前問過 ComfyUI 之後設好（見 pick_ckpt）。
+CKPT_USE: str | None = None
+
+
+def _same_ckpt(a: str, b: str) -> bool:
+    a = a.replace("/", "\\")
+    b = b.replace("/", "\\")
+    return a == b or a.split("\\")[-1] == b.split("\\")[-1]
+
+
+def pick_ckpt(wanted: str = "") -> tuple[str | None, str]:
+    """挑烤卡面用的底模，回 (名稱, 要印出來的說明)。
+
+    預設是 server.py 的 CKPT —— 那是作者自己機器上的檔名。別台電腦從 GitHub 拉下來，
+    ComfyUI 裡多半沒有這個檔，每一張都會被退件（HTTP 400），一千多張全部失敗、
+    下次啟動又問一次、永遠烤不出來。所以先問 ComfyUI 有哪些底模：
+      - 指定了 --ckpt（或 COMFY_CKPT）就用那個，ComfyUI 沒有就報錯不烤；
+      - 預設的有就用預設的；
+      - 沒有就挑一個看起來是 Illustrious／SDXL 動漫底模的，都不像就第一個，並且說出來。
+    插畫的畫風跟著底模走（卡面本來就不進版控），換一個底模烤出來的也能用。
+    """
+    try:
+        names = [str(n).replace("/", "\\") for n in server.models_from_comfy("checkpoints")]
+    except Exception:  # noqa: BLE001 —— 問不到就照舊用預設的，讓 ComfyUI 自己報錯
+        names = []
+    if wanted:
+        hit = next((n for n in names if _same_ckpt(n, wanted)), None)
+        if hit or not names:
+            return hit or wanted, f"checkpoint: {hit or wanted}"
+        return None, f"checkpoint {wanted} is not in ComfyUI ({len(names)} available). Nothing baked."
+    default = str(server.CKPT)
+    if not names:
+        return default, f"checkpoint: {default} (ComfyUI did not list its checkpoints)"
+    hit = next((n for n in names if _same_ckpt(n, default)), None)
+    if hit:
+        return hit, f"checkpoint: {hit}"
+    anime = [n for n in names if re.search(r"illustrious|illu|noob|animagine|pony|anime", n, re.I)]
+    xl = [n for n in names if re.search(r"xl", n, re.I)]
+    pick = (anime or xl or names)[0]
+    return pick, (
+        f"checkpoint: {pick}  (the default {default} is not in this ComfyUI; "
+        f"pass --ckpt NAME to choose another)"
+    )
+
+
 def workflow(job: dict) -> dict:
-    wf = server.build_workflow(job["positive"], job["width"], job["height"], job["seed"], rating=job.get("rating", "general"))
+    wf = server.build_workflow(
+        job["positive"], job["width"], job["height"], job["seed"], ckpt=CKPT_USE, rating=job.get("rating", "general")
+    )
     # 這張牌自己的負面詞（web/card-art.js 的 artNegative：擋未成年、擋全家福構圖），
     # 接在 server 的分級負面詞後面。
     if job.get("negative"):
@@ -198,6 +246,7 @@ def main() -> int:
     ap.add_argument("--force", action="store_true")
     ap.add_argument("--limit", type=int, default=0)
     ap.add_argument("--rating", choices=["general", "sensitive", "explicit"], default="")
+    ap.add_argument("--ckpt", default="", help="用哪個底模烤（ComfyUI 裡的名稱）；不給就用預設的，沒有就挑一個有的")
     args = ap.parse_args()
 
     out_dir = ART_DIR if args.extras else CARD_DIR
@@ -226,6 +275,11 @@ def main() -> int:
 
     if not comfy_up():
         print("ComfyUI is not reachable at " + server.comfy_base())
+        return 1
+    global CKPT_USE
+    CKPT_USE, note = pick_ckpt(args.ckpt or os.environ.get("COMFY_CKPT_BAKE", ""))
+    print(note, flush=True)
+    if CKPT_USE is None:
         return 1
     heartbeat(out_dir)
 
