@@ -11,6 +11,7 @@ import base64
 import hashlib
 import json
 import os
+import re
 import socket
 import tempfile
 import struct
@@ -691,6 +692,35 @@ def _legacy_cut(port, comfy):
 
 
 with_server("hang", _legacy_cut, {"GEN_REATTACH_SEC": "60"})
+
+# === 7. HTML 裡的程式檔帶版本、帶版本的才整年快取 =================================
+comfy = FakeComfy("happy")
+comfy.start()
+proc, port = start_server(comfy.port)
+try:
+    req = urllib.request.Request(f"http://127.0.0.1:{port}/")
+    with urllib.request.urlopen(req, timeout=20) as resp:
+        page = resp.read().decode("utf-8")
+    ok("首頁送出去時帶著 import map", page.count('type="importmap"') == 1, page[:400])
+    m = re.search(r'"/engine\.js":"/engine\.js\?v=([0-9a-f]{10})"', page)
+    ok("import map 裡 engine.js 帶內容版本", bool(m), page[:600])
+    if m:
+        def cache_of(path):
+            with urllib.request.urlopen(urllib.request.Request(f"http://127.0.0.1:{port}{path}"), timeout=20) as r:
+                return r.headers.get("Cache-Control", "")
+        ok("版本對得上：整年快取", "immutable" in cache_of(f"/engine.js?v={m.group(1)}"))
+        ok("版本對不上（改檔的那一瞬間拿舊版本號來要）：不准快取", cache_of("/engine.js?v=0000000000") == "no-cache")
+        ok("沒帶版本：照舊每次回來問", cache_of("/engine.js") == "no-cache")
+finally:
+    proc.terminate()
+    try:
+        proc.wait(10)
+    except subprocess.TimeoutExpired:
+        proc.kill()
+    log = proc.stdout.read() or ""
+    comfy.close()
+ok("帶版本的首頁：主控台沒有 traceback", "Traceback" not in log, log[-800:])
+
 
 if failed:
     print(f"\n{failed} failed")

@@ -244,6 +244,9 @@ ComfyUI 沒開就只提醒一句，牌先用字形當封面。不想被問：選
 卡面放在共用的 `web/cards/`，字鋪、墨池、排字匣的卡牌模式吃同一份。
 每張卡另外有一張 200px 的縮圖（`web/cards/thumb/`），字盒、牌堆這些小格子由瀏覽器自己挑縮圖（約 9KB，原圖約 36KB）；
 manifest 裡還記了內容雜湊 `v`，網址接上 `?v=` 之後伺服器就整年快取，重烤內容變了網址才換。
+網頁本身也一樣：伺服器送出 HTML 時，把每個房間自己的 `.js`／`.css` 換成帶內容雜湊的網址，模組之間的 `import` 用 import map
+對到同一個網址（`server.py` 的 `versioned_html`）。重新整理時瀏覽器直接用快取、不必一支一支回來問，走 Tailscale 時差最多；
+檔案一改雜湊就換，HTML 本身每次都會回來問，不會拿到舊程式。第三方的 `vendor/`（three.js）不動。
 新烤的卡兩樣都會有；**縮圖出現之前就烤好的卡**跑一次 `python scripts/make_card_thumbs.py` 補上（縮圖要 ffmpeg，雜湊不用），
 沒補也能用，只是小格子拿原圖。每張照自己的分級送負面詞；
 loli、shota 永遠不畫（`web/card-art.js` 的 `HARD_BANNED`）。有人的牌都標 adult，負面詞另外擋 loli／child／aged down；兩個人以上的牌（2girls、kabedon…）底模很愛把其中一個畫成小孩，所以再補 mature female／male、負面擋 family／height difference。`node scripts/test_card_art.mjs` 守著這些規則。

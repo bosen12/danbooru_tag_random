@@ -543,18 +543,34 @@ function restorePrint(p) {
   // 當時是用固定種子印的：把那顆也帶回來，否則同一版會對不上那張成品。
   if (p.fixedSeed) useSeed(p.seed);
   picked = Number.isInteger(p.picked) ? p.picked : 0;
-  if (p.width && p.height && (p.width !== settings.width || p.height !== settings.height)) {
-    settings = sanitizeSettings({ ...settings, width: p.width, height: p.height }, data);
+  // 尺寸、尺度一起回到印的那時候：色情尺度印的那一版，在全年齡底下根本抽不到當時的牌。
+  const ratingBack = p.rating && p.rating !== settings.rating && RATING_RANK[p.rating] !== undefined;
+  const sizeBack = p.width && p.height && (p.width !== settings.width || p.height !== settings.height);
+  if (ratingBack || sizeBack) {
+    settings = sanitizeSettings(
+      { ...settings, ...(sizeBack ? { width: p.width, height: p.height } : {}), ...(ratingBack ? { rating: p.rating } : {}) },
+      data
+    );
     S.saveSettings(settings);
   }
   rowNotes = {};
-  plateNotice = null;
   retrial();
+  const t = trials[picked];
+  const same = t && sigOf(t) === p.sig;
+  const bits = [ratingBack ? `尺度切回「${RATING_LABEL[p.rating]}」` : "", sizeBack ? "尺寸也換回當時的" : ""].filter(Boolean);
+  // 看得見的說明：尺度換了、或是規則改過對不上當時那張，都寫在卡池上面。
+  plateNotice =
+    bits.length || !same
+      ? { kind: same ? "info" : "err", text: `回到這一版${bits.length ? "：" + bits.join("，") : ""}${same ? "" : "。規則（時代、情境、人物…）改過，試印跟當時不一樣"}` }
+      : null;
+  if (ratingBack) {
+    renderRating();
+    renderCase();
+  }
   renderAll([]);
   syncCaseStates();
   sfx.stamp();
-  const t = trials[picked];
-  announce(t && sigOf(t) === p.sig ? "回到這一版了" : "回到這一版了。規則改過，試印可能跟當時不一樣");
+  announce(plateNotice ? plateNotice.text : "回到這一版了");
 }
 
 /* ================= 畫面：全部 ================= */

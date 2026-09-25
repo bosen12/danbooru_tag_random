@@ -16,6 +16,7 @@ mimetypes.add_type("image/svg+xml", ".svg")
 import os
 import queue
 import random
+import re
 import socket
 import ssl
 import struct
@@ -283,6 +284,112 @@ _GZIP_TYPES = {
     "application/json",
     "image/svg+xml",
 }
+
+
+# === 網頁裡自己的程式檔、樣式表帶上內容指紋 ===================================
+# 走 Tailscale 的時候，每次重新整理都要把二十幾個 .js 逐一回來問「改了沒」（no-cache）；
+# HTTP/1.1 一次只開 6 條連線，排成五批，光這段就要半秒。送出 HTML 時把自己的 .js／.css
+# 換成帶內容雜湊的網址（?v=，這種網址整年快取），模組之間的 `import "./engine.js"`
+# 交給 import map 對到同一個帶版本的網址 —— 重新整理時瀏覽器連問都不必問。
+# 檔案一改雜湊就換；HTML 本身是 no-cache，下一次重新整理就拿到新的對照表，不會跑到舊程式。
+_ASSET_SKIP_DIRS = {"vendor", "node_modules", "cards", "art", "data", "__pycache__"}
+_ASSET_SCAN: dict = {"t": 0.0, "files": []}
+_HTML_OUT: dict[str, dict] = {}
+_IMPORTMAP_RE = re.compile(r'<script\s+type="importmap"\s*>(.*?)</script>\s*', re.S | re.I)
+_TAG_RE = re.compile(r"<(?:script|link)\b[^>]*>", re.I)
+_URL_ATTR_RE = re.compile(r'\b(src|href)="([^"]+)"', re.I)
+
+
+def static_path(rel: str) -> Path | None:
+    """網站上的相對路徑 → 磁碟上的檔：先找這個房間（WEB），找不到再退回共用的 web/。"""
+    dest = (WEB / rel).resolve()
+    if dest.is_relative_to(WEB) and dest.is_file():
+        return dest
+    shared = (SHARED / rel).resolve()
+    if shared.is_relative_to(SHARED) and shared.is_file():
+        return shared
+    return None
+
+
+def own_js_files() -> list[str]:
+    """WEB、SHARED 底下自己寫的 .js（相對路徑，/ 分隔）。第三方（vendor）不收。兩秒內不重掃。"""
+    now = time.time()
+    if _ASSET_SCAN["files"] and now - _ASSET_SCAN["t"] < 2:
+        return _ASSET_SCAN["files"]
+    seen: set[str] = set()
+    for base in {WEB, SHARED}:
+        for root, dirs, files in os.walk(base):
+            dirs[:] = [d for d in dirs if d not in _ASSET_SKIP_DIRS and not d.startswith(".")]
+            for name in files:
+                if name.endswith(".js"):
+                    seen.add(Path(root, name).relative_to(base).as_posix())
+    _ASSET_SCAN.update(t=now, files=sorted(seen))
+    return _ASSET_SCAN["files"]
+
+
+def _local_rel(url: str) -> str | None:
+    """頁面上寫的相對網址 → 網站根目錄底下的相對路徑。外部網址、已經帶參數的都不動。"""
+    if not url or "?" in url or "#" in url or ":" in url or url.startswith("//"):
+        return None
+    rel = url[2:] if url.startswith("./") else url.lstrip("/")
+    if not rel or ".." in rel.split("/"):
+        return None
+    return rel
+
+
+def versioned_html(html: str, version_of, module_files) -> str:
+    """HTML 裡自己的程式檔、樣式表換成帶版本的網址，並在所有 <link>／<script> 前面放 import map。
+
+    version_of(rel) → 短雜湊（找不到就 None，那個檔照舊）。
+    module_files：放進 import map 的 .js（模組彼此 import 的時候用）。
+    頁面原本就有 import map（排字匣的 three.js）就合併，並整張移到最前面 —— 放在 modulepreload
+    後面的話，預載的模組會在對照表生效以前用舊網址載進來，同一支模組變成兩份。
+    """
+    imports: dict[str, str] = {}
+    for rel in module_files:
+        v = version_of(rel)
+        if v:
+            imports["/" + rel] = f"/{rel}?v={v}"
+    old = _IMPORTMAP_RE.search(html)
+    extra: dict = {}
+    if old:
+        try:
+            extra = json.loads(old.group(1))
+        except ValueError:
+            return html  # 看不懂原本的 import map：整頁照舊，不冒險
+        if not isinstance(extra, dict):
+            return html
+        html = html[: old.start()] + html[old.end():]
+    merged = dict(extra)
+    merged["imports"] = {**imports, **(extra.get("imports") or {})}
+
+    def swap(m: re.Match) -> str:
+        tag = m.group(0)
+        low = tag.lower()
+        if low.startswith("<script"):
+            if 'type="module"' not in low:
+                return tag
+        elif 'rel="modulepreload"' not in low and 'rel="stylesheet"' not in low:
+            return tag
+
+        def one(a: re.Match) -> str:
+            rel = _local_rel(a.group(2))
+            v = version_of(rel) if rel else None
+            return f'{a.group(1)}="{a.group(2)}?v={v}"' if v else a.group(0)
+
+        return _URL_ATTR_RE.sub(one, tag)
+
+    html = _TAG_RE.sub(swap, html)
+    low = html.lower()
+    spots = [i for i in (low.find("<link"), low.find("<script")) if i >= 0]
+    if not spots:
+        head = low.find("</head>")
+        if head < 0:
+            return html
+        spots = [head]
+    at = min(spots)
+    block = '<script type="importmap">' + json.dumps(merged, ensure_ascii=False, separators=(",", ":")) + "</script>\n    "
+    return html[:at] + block + html[at:]
 
 
 def ping() -> dict:
@@ -2339,14 +2446,7 @@ class Handler(BaseHTTPRequestHandler):
         path = urllib.parse.urlparse(self.path).path
         if path in ("/", ""):
             path = "/index.html"
-        rel = urllib.parse.unquote(path).lstrip("/")
-        dest = (WEB / rel).resolve()
-        if dest.is_relative_to(WEB) and dest.is_file():
-            return dest
-        shared = (SHARED / rel).resolve()
-        if shared.is_relative_to(SHARED) and shared.is_file():
-            return shared
-        return None
+        return static_path(urllib.parse.unquote(path).lstrip("/"))
 
     def _cached_file(self, dest: Path) -> dict:
         st = dest.stat()
@@ -2372,21 +2472,65 @@ class Handler(BaseHTTPRequestHandler):
         _STATIC[key] = rec
         return rec
 
+    def _asset_version(self, rel: str) -> str | None:
+        """網站上某個檔（相對路徑）的內容指紋：sha1 前 10 字。找不到就 None。"""
+        dest = static_path(rel)
+        if dest is None:
+            return None
+        rec = self._cached_file(dest)
+        if "v" not in rec:
+            rec["v"] = hashlib.sha1(rec["raw"]).hexdigest()[:10]
+        return rec["v"]
+
+    def _html_record(self, dest: Path, rec: dict) -> dict:
+        """HTML 送出去之前換上帶版本的網址和 import map（見 versioned_html）。結果照內容快取。"""
+        try:
+            text = rec["raw"].decode("utf-8")
+        except UnicodeDecodeError:
+            return rec
+        out = versioned_html(text, self._asset_version, own_js_files()).encode("utf-8")
+        digest = hashlib.sha1(out).hexdigest()[:16]
+        hit = _HTML_OUT.get(str(dest))
+        if hit and hit["digest"] == digest:
+            return hit
+        gz = gzip.compress(out, 5) if len(out) > 1024 else None
+        new = {
+            "raw": out,
+            "gz": gz if gz is not None and len(gz) < len(out) else None,
+            "mime": rec["mime"],
+            "size": len(out),
+            "etag": f'"h{digest}"',
+            "digest": digest,
+        }
+        _HTML_OUT[str(dest)] = new
+        return new
+
     def _serve_static(self, body: bool) -> None:
         dest = self._static_dest()
         if dest is None:
             self._json(404, {"ok": False, "error": "not found"})
             return
         rec = self._cached_file(dest)
+        if dest.suffix.lower() == ".html":
+            rec = self._html_record(dest, rec)
         mime = rec["mime"]
         if mime.split(";")[0] in _GZIP_TYPES:
             mime = f"{mime}; charset=utf-8"
-        etag = f'"{rec["mtime"]:x}-{rec["size"]:x}"'
+        etag = rec.get("etag") or f'"{rec["mtime"]:x}-{rec["size"]:x}"'
         # 網址帶 ?v=（內容雜湊，卡面 manifest 給的）就是「這個版本永遠不會變」：
         # 內容一換網址就換，所以可以放心整年快取，不必每次回來驗證。
         # 字盒一捲就是幾百張縮圖，手機走 Tailscale 時每張一個 304 來回很有感。
         # 沒帶版本的照舊 no-cache（每次回來問，內容一樣才回 304）。
-        versioned = "v=" in urllib.parse.urlsplit(self.path).query
+        # 自己的 .js／.css 的版本是這裡算的，要對得上現在的內容才給整年快取：改檔的那一瞬間
+        # 拿著舊版本號來要的，拿到的是新內容 —— 不能讓新內容被記成舊版本號（之後改回去就會拿錯）。
+        # 卡面縮圖的 v 是原圖的雜湊（不是縮圖自己的），所以只驗 .js／.css。
+        vq = (urllib.parse.parse_qs(urllib.parse.urlsplit(self.path).query).get("v") or [""])[0]
+        if vq and dest.suffix.lower() in (".js", ".css"):
+            if "v" not in rec:
+                rec["v"] = hashlib.sha1(rec["raw"]).hexdigest()[:10]
+            versioned = vq == rec["v"]
+        else:
+            versioned = bool(vq)
         cache = "public, max-age=31536000, immutable" if versioned else "no-cache"
         if self.headers.get("If-None-Match") == etag:
             self.send_response(304)

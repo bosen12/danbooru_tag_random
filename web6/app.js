@@ -54,6 +54,8 @@ let bans = new Set();
 let shots = [];
 let infinite = false;
 let stopAsked = false;
+// 無限抽印完一輪、還沒排下一輪的那一小段空檔：照樣算「在忙」，「停」不能在這時候閃掉。
+let looping = false;
 const ui = { suit: "all", group: "", query: "", eraOnly: true, collapsed: false, ...S.loadUi() };
 const $ = (id) => document.getElementById(id);
 
@@ -668,8 +670,14 @@ const generator = createGenerator({
     renderGoBar();
   },
   idle: () => {
+    looping = infinite && !stopAsked;
     renderGoBar();
-    if (infinite && !stopAsked) setTimeout(() => drawBatch(true), 60);
+    if (!looping) return;
+    setTimeout(() => {
+      looping = false;
+      if (infinite && !stopAsked) drawBatch(true);
+      else renderGoBar();
+    }, 60);
   },
   stopped: (why) => {
     infinite = false;
@@ -683,7 +691,7 @@ let seedNode = null;
 
 function renderGoBar() {
   const bar = $("go-bar");
-  const busy = generator.busy;
+  const busy = generator.busy || looping;
   const n = settings.n;
   bar.replaceChildren(
     ...[
@@ -693,7 +701,11 @@ function renderGoBar() {
       if (!v) stopAsked = true;
     }),
     switchBox("同一個人", settings.samePerson, (v) => setSettings({ samePerson: v })),
-    el("span", { class: "go-status", "aria-live": "polite" }, busy ? `印製中，還有 ${generator.pending} 張${infinite ? "・無限抽開著" : ""}` : ""),
+    el(
+      "span",
+      { class: "go-status", "aria-live": "polite" },
+      busy ? `${generator.pending ? `印製中，還有 ${generator.pending} 張` : "下一輪…"}${infinite ? "・無限抽開著" : ""}` : ""
+    ),
     el("span", { class: "spacer" }),
     busy ? el("button", { class: "btn", type: "button", onclick: stopAll }, "停") : null,
     el("button", { class: "btn btn-pool", type: "button", onclick: () => drawBatch(false), title: "只抽牌，不送 Comfy（P）" }, "只抽牌"),
@@ -712,13 +724,13 @@ function renderGoFloat() {
   const float = $("go-float");
   // IntersectionObserver 第一次回報可能比 boot() 讀完設定還早。
   if (!float || !settings) return;
-  const busy = generator.busy;
+  const busy = generator.busy || looping;
   const show = !goBarVisible && (shots.length > 0 || pool.size > 0);
   float.dataset.show = show ? "true" : "false";
   float.inert = !show;
   float.replaceChildren(
     ...[
-      el("span", { class: "go-float-state" }, busy ? `印製中・還有 ${generator.pending} 張` : pool.size ? `池裡 ${pool.size} 張` : "池子是空的，全靠抽"),
+      el("span", { class: "go-float-state" }, busy ? (generator.pending ? `印製中・還有 ${generator.pending} 張` : "無限抽・下一輪…") : pool.size ? `池裡 ${pool.size} 張` : "池子是空的，全靠抽"),
       busy ? el("button", { class: "btn btn-small", type: "button", onclick: stopAll }, "停") : null,
       el("button", { class: "btn btn-small btn-pool", type: "button", onclick: () => drawBatch(false), title: "只抽牌（P）" }, "只抽牌"),
       el("button", { class: "btn btn-small btn-primary", type: "button", onclick: () => drawBatch(true), title: "抽並生圖（G）" }, "抽並生圖", el("span", { class: "count" }, `×${settings.n}`)),
@@ -741,6 +753,7 @@ function watchGoBar() {
 function stopAll() {
   infinite = false;
   stopAsked = true;
+  looping = false;
   generator.stop();
   renderGoBar();
 }
@@ -858,6 +871,10 @@ function renderWall() {
  */
 function shotNode(shot, deal) {
   const frame = el("div", { class: "shot-frame", style: `aspect-ratio: ${shot.width} / ${shot.height}` });
+  // 點圖就放大（跟疊印台點成品一樣）。只點圖本身才算：只抽牌的那張沒有圖，點到牌扇不會誤開。
+  frame.addEventListener("click", (e) => {
+    if (e.target.closest && e.target.closest("img")) showShot(shot);
+  });
   const status = el("span", { class: "status" });
   // 沒有圖可看的（只抽牌、印壞、被停掉）直接攤開；有圖的牌收著，要看再點。
   const open = !shot.image && REPRINTABLE.has(shot.status);

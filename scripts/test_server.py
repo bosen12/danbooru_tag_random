@@ -550,6 +550,37 @@ finally:
     server.WEBP_DIR = _real_webp_dir
 
 
+# === HTML 裡自己的程式檔帶版本（versioned_html）==================================
+# 走 Tailscale 時每次重新整理要把二十幾個 .js 逐一回來問；換成帶內容雜湊的網址就整年快取。
+_V = {"boot.js": "aaaaaaaaaa", "engine.js": "bbbbbbbbbb", "app.js": "cccccccccc", "styles.css": "dddddddddd"}
+_html = (
+    '<!doctype html><html><head><meta charset="utf-8" />'
+    '<link rel="icon" href="logo.svg" />'
+    '<link rel="modulepreload" href="boot.js" />'
+    '<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=X" />'
+    '<link rel="stylesheet" href="styles.css" />'
+    '<link rel="stylesheet" href="missing.css" />'
+    '<script type="importmap">{"imports": {"three": "./vendor/three.js"}}</script>'
+    '</head><body><script type="module" src="app.js"></script></body></html>'
+)
+_out = server.versioned_html(_html, lambda rel: _V.get(rel), ["boot.js", "engine.js", "app.js"])
+_maps = re.findall(r'<script type="importmap">(.*?)</script>', _out)
+ok("import map 只有一份（原本的合併進來）", len(_maps) == 1, _out)
+_m = json.loads(_maps[0]) if _maps else {}
+ok("模組彼此 import 的網址對到帶版本的", _m.get("imports", {}).get("/engine.js") == "/engine.js?v=bbbbbbbbbb", str(_m))
+ok("原本的 three.js 對照保留", _m.get("imports", {}).get("three") == "./vendor/three.js", str(_m))
+ok(
+    "import map 在所有 <link>／<script> 前面（預載的模組才不會先用舊網址載一份）",
+    _out.find('type="importmap"') < _out.find("<link") and _out.find('type="importmap"') < _out.find('rel="modulepreload"'),
+    _out,
+)
+ok("modulepreload、入口模組、樣式表都換成帶版本的網址",
+   'href="boot.js?v=aaaaaaaaaa"' in _out and 'src="app.js?v=cccccccccc"' in _out and 'href="styles.css?v=dddddddddd"' in _out, _out)
+ok("外部網址、找不到的檔、icon 都不動",
+   'href="https://fonts.googleapis.com/css2?family=X"' in _out and 'href="missing.css"' in _out and 'href="logo.svg"' in _out, _out)
+ok("看不懂原本的 import map 就整頁照舊", server.versioned_html('<head><script type="importmap">{bad</script></head>', lambda r: "x", ["a.js"]) == '<head><script type="importmap">{bad</script></head>')
+ok("第三方的 vendor 不收進 import map", not any(f.startswith("vendor/") or "/vendor/" in f for f in server.own_js_files()), str([f for f in server.own_js_files() if "vendor" in f][:3]))
+
 # --- Discord embed ---------------------------------------------------------
 
 NL = chr(10)

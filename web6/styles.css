@@ -1002,6 +1002,7 @@ p {
 .shot-frame img {
   width: 100%;
   height: 100%;
+  cursor: zoom-in;
   object-fit: contain;
   background: var(--color-paper);
 }
@@ -1509,7 +1510,13 @@ body[data-dragging="true"] .library[data-over="true"] {
 }
 
 .lightbox img {
-  width: 100%;
+  display: block;
+  justify-self: center;
+  width: auto;
+  height: auto;
+  max-width: 100%;
+  /* 直式的成品（832×1216）在筆電上也要一眼看完整張，不必在彈窗裡往下捲。 */
+  max-height: min(66dvh, 46rem);
   border-radius: var(--radius-sm);
 }
 

@@ -550,6 +550,10 @@ body.fuse {
   border-left-color: var(--rel-clash);
 }
 
+.plate-notice[data-kind="info"] {
+  border-left-color: var(--color-ink-2);
+}
+
 .plate-notice[data-kind="echo"] {
   border-left-color: var(--rel-echo);
 }
