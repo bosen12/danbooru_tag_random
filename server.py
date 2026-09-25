@@ -962,6 +962,9 @@ def gen_via_ws(width: int, height: int, seed: int, positive: str, wf: dict):
                 )
             elif typ == "execution_error":
                 raise RuntimeError(str(d.get("exception_message") or d or "Comfy error"))
+            elif typ == "execution_interrupted" and d.get("prompt_id") == prompt_id:
+                # 這則是廣播給所有連線的：只認自己那張的 prompt_id，別張被中斷不關我的事。
+                raise RuntimeError("ComfyUI 中斷了這張")
             elif typ in ("execution_success", "executed"):
                 nid = str(d.get("node") or "")
                 if typ == "executed" and save_ids and nid not in save_ids:
@@ -975,6 +978,121 @@ def gen_via_ws(width: int, height: int, seed: int, positive: str, wf: dict):
         raise TimeoutError(f"Comfy 超過 {GEN_TIMEOUT} 秒沒有產出（prompt {prompt_id}）")
     finally:
         ws.close()
+
+
+# === 可以接回去的出圖工作 =====================================================
+# 從別台裝置付印（Mac 走 Tailscale、手機）時，網路只要斷一下，舊流程就把 Comfy 正在畫的
+# 那張中斷掉。網頁在請求上帶 `X-Gen-Resume: 1`（「我會接回來」）時改成：
+#   - 出圖在自己的執行緒跑，事件記在 GenJob 裡（預覽只留最新一張）；
+#   - 連線斷了先不砍：GEN_REATTACH_SEC 秒內用 GET /api/gen/attach?job= 接回來，從頭重播、接著收；
+#   - 沒人接回來才照舊送 /interrupt（只砍自己那張）；
+#   - POST /api/gen/cancel {job} 是明確的「停」：排隊中的從 Comfy 佇列刪掉，畫到一半的中斷。
+# 沒帶這個 header 的房間，/api/gen 的行為一點都沒變（斷線就中斷）。
+GEN_REATTACH_SEC = float(cfg("comfy.reattachSec", "GEN_REATTACH_SEC", 30))
+GEN_KEEP_DONE_SEC = 300.0
+_JOBS: dict[str, "GenJob"] = {}
+_JOBS_LOCK = threading.Lock()
+
+
+class GenJob:
+    def __init__(self, events):
+        self.id = uuid.uuid4().hex[:16]
+        self.cond = threading.Condition()
+        self.log: list[tuple[str, dict]] = []  # 預覽以外的每一則；接回來的人從頭重播
+        self.preview: tuple[int, dict] | None = None  # 預覽一張幾十 KB，只留最新的
+        self.pv_seq = 0
+        self.finished = False
+        self.finished_at = 0.0
+        self.prompt_id: str | None = None
+        self.watchers = 0
+        self.left_at = time.time()
+        self.cancelled = False
+        self._events = events
+
+    def start(self) -> "GenJob":
+        with _JOBS_LOCK:
+            now = time.time()
+            for jid, job in list(_JOBS.items()):
+                if job.finished and now - job.finished_at > GEN_KEEP_DONE_SEC:
+                    del _JOBS[jid]
+            _JOBS[self.id] = self
+        threading.Thread(target=self._run, name=f"gen-{self.id}", daemon=True).start()
+        return self
+
+    def push(self, event: str, data: dict) -> None:
+        with self.cond:
+            if self.finished:
+                return
+            if isinstance(data, dict) and data.get("prompt_id"):
+                self.prompt_id = data["prompt_id"]
+            if event == "preview":
+                self.pv_seq += 1
+                self.preview = (self.pv_seq, data)
+            else:
+                self.log.append((event, data))
+            if event in ("done", "error"):
+                self.finished = True
+                self.finished_at = time.time()
+            self.cond.notify_all()
+
+    def abandoned(self) -> bool:
+        with self.cond:
+            return self.cancelled or (self.watchers == 0 and time.time() - self.left_at > GEN_REATTACH_SEC)
+
+    def _run(self) -> None:
+        gave_up = False
+        try:
+            # gen_via_ws 在等的時候每 5 秒有一則心跳，所以「沒人接回來」最慢 5 秒內會被發現。
+            for event, data in self._events:
+                self.push(event, data)
+                if event in ("done", "error"):
+                    return
+                if self.abandoned():
+                    gave_up = True
+                    return
+        except Exception as exc:
+            self.push("error", {"error": str(exc)})
+        finally:
+            try:
+                self._events.close()
+            except Exception:
+                pass
+            if gave_up and self.prompt_id:
+                # 按停的時候 prompt_id 可能還沒回來（cancel() 那時什麼都做不了）：在這裡補做。
+                if self.cancelled:
+                    try:
+                        api("POST", "/queue", {"delete": [self.prompt_id]}, timeout=8)
+                    except Exception:
+                        pass
+                try:
+                    comfy_interrupt(self.prompt_id)
+                except Exception:
+                    pass
+            if gave_up:
+                self.push("error", {"error": "已取消" if self.cancelled else "連線斷了太久沒接回來，這張已經停掉"})
+            self.push("error", {"error": "出圖流程中途結束"})  # 已經結束的不會再記
+
+    def cancel(self) -> None:
+        with self.cond:
+            self.cancelled = True
+            pid = self.prompt_id
+            done = self.finished
+        if done or not pid:
+            return
+        # 還在排隊的：從 Comfy 的佇列拿掉（/interrupt 只砍正在畫的那張）。畫到一半的：中斷。
+        try:
+            api("POST", "/queue", {"delete": [pid]}, timeout=8)
+        except Exception:
+            pass
+        try:
+            comfy_interrupt(pid)
+        except Exception:
+            pass
+
+
+def find_job(jid: str) -> "GenJob | None":
+    with _JOBS_LOCK:
+        return _JOBS.get(str(jid or ""))
 
 
 def gen_events(payload: dict):
@@ -2067,6 +2185,52 @@ class Handler(BaseHTTPRequestHandler):
         self._json(code, {"ok": False, "error": message, "code": "forbidden" if code == 403 else "content_type"})
         return False
 
+    def _sse_job(self, job: GenJob) -> None:
+        self.send_response(200)
+        self.send_header("Content-Type", "text/event-stream; charset=utf-8")
+        self.send_header("Cache-Control", "no-cache")
+        self.send_header("Connection", "close")
+        self.send_header("X-Accel-Buffering", "no")
+        self.send_header("X-Gen-Job", job.id)
+        self.end_headers()
+        with job.cond:
+            job.watchers += 1
+        sent = 0
+        seen_pv = 0
+        try:
+            while True:
+                with job.cond:
+                    while (
+                        sent >= len(job.log)
+                        and not (job.preview and job.preview[0] > seen_pv)
+                        and not job.finished
+                    ):
+                        if not job.cond.wait(timeout=10):
+                            break
+                    batch = job.log[sent:]
+                    sent = len(job.log)
+                    pv = job.preview if job.preview and job.preview[0] > seen_pv else None
+                    fin = job.finished
+                out = b""
+                if pv and not fin:
+                    seen_pv = pv[0]
+                    out += sse("preview", pv[1])
+                for event, data in batch:
+                    out += sse(event, data)
+                # 十秒沒有新東西也寫一行註解：斷掉的連線才會在這裡被發現，不會一直占著。
+                self.wfile.write(out or b": keepalive\n\n")
+                self.wfile.flush()
+                if fin:
+                    break
+        except OSError:
+            pass  # 斷線：工作留著，等網頁接回來（或 GEN_REATTACH_SEC 後自己停）
+        finally:
+            with job.cond:
+                job.watchers -= 1
+                if job.watchers <= 0:
+                    job.watchers = 0
+                    job.left_at = time.time()
+
     def _sse(self, events) -> None:
         self.send_response(200)
         self.send_header("Content-Type", "text/event-stream; charset=utf-8")
@@ -2263,6 +2427,14 @@ class Handler(BaseHTTPRequestHandler):
         if path == "/api/ping":
             self._json(200, ping())
             return
+        if path == "/api/gen/attach":
+            qs = urllib.parse.parse_qs(urllib.parse.urlparse(self.path).query)
+            job = find_job((qs.get("job") or [""])[0])
+            if job is None:
+                self._json(404, {"ok": False, "error": "找不到這張（伺服器重開過，或已經結束太久）"})
+                return
+            self._sse_job(job)
+            return
         if path == "/api/image":
             self._serve_comfy_image()
             return
@@ -2333,12 +2505,23 @@ class Handler(BaseHTTPRequestHandler):
                 return
             accept = self.headers.get("Accept") or ""
             if "text/event-stream" in accept:
-                self._sse(gen_events(payload))
+                if self.headers.get("X-Gen-Resume") == "1":
+                    self._sse_job(GenJob(gen_events(payload)).start())
+                else:
+                    self._sse(gen_events(payload))
                 return
             try:
                 self._json(200, gen(payload))
             except Exception as exc:
                 self._json(500, {"ok": False, "error": str(exc)})
+            return
+        if path == "/api/gen/cancel":
+            job = find_job((payload or {}).get("job"))
+            if job is None:
+                self._json(404, {"ok": False, "error": "找不到這張（伺服器重開過，或已經結束太久）"})
+                return
+            job.cancel()
+            self._json(200, {"ok": True})
             return
         if path == "/api/interrupt":
             try:

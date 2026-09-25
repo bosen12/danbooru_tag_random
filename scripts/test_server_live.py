@@ -76,6 +76,7 @@ class FakeComfy(threading.Thread):
         self.stopping = threading.Event()
         self.have_image = threading.Event()
         self.last_prompt = None
+        self.queue_deleted = None
 
     def run(self) -> None:
         while not self.stopping.is_set():
@@ -115,6 +116,13 @@ class FakeComfy(threading.Thread):
             if path.startswith("/interrupt"):
                 self.interrupted.set()
                 self._json(conn, {"ok": True})
+                return
+            if path.startswith("/queue") and method == "POST":
+                try:
+                    self.queue_deleted = json.loads(raw.decode("utf-8") or "{}").get("delete")
+                except Exception:
+                    self.queue_deleted = "?"
+                self._json(conn, {})
                 return
             if method == "POST":
                 try:
@@ -232,6 +240,24 @@ class FakeComfy(threading.Thread):
     def _plan_hang(self, conn: socket.socket) -> None:
         time.sleep(30)
 
+    def _plan_slow(self, conn: socket.socket) -> None:
+        # 畫得慢：先回報一格進度，四秒後才出圖 —— 中間讓客戶端斷線、再接回來。
+        conn.sendall(text_frame({"type": "progress", "data": {"value": 5, "max": 25}}))
+        conn.sendall(frame(PREVIEW))
+        time.sleep(4)
+        conn.sendall(text_frame({"type": "progress", "data": {"value": 24, "max": 25}}))
+        self.have_image.set()
+        conn.sendall(text_frame({"type": "executed", "data": {"node": self.save_node}}))
+        time.sleep(6)
+
+    def _plan_interrupted(self, conn: socket.socket) -> None:
+        # 別張被中斷的廣播不能誤判；自己這張被中斷要馬上收工，不能等到 10 分鐘逾時。
+        conn.sendall(text_frame({"type": "execution_interrupted", "data": {"prompt_id": "someone-else"}}))
+        conn.sendall(text_frame({"type": "progress", "data": {"value": 3, "max": 25}}))
+        time.sleep(0.5)
+        conn.sendall(text_frame({"type": "execution_interrupted", "data": {"prompt_id": "p1"}}))
+        time.sleep(20)
+
     def close(self) -> None:
         self.stopping.set()
         try:
@@ -240,7 +266,7 @@ class FakeComfy(threading.Thread):
             pass
 
 
-def start_server(comfy_port: int):
+def start_server(comfy_port: int, extra_env=None):
     s = socket.socket()
     s.bind(("127.0.0.1", 0))
     port = s.getsockname()[1]
@@ -252,6 +278,8 @@ def start_server(comfy_port: int):
         COMFY_API=f"http://127.0.0.1:{comfy_port}",
         WORKFLOW_DATA_DIR=tempfile.mkdtemp(),
         APP_SETTINGS=str(Path(tempfile.mkdtemp()) / "settings.json"),
+        WEBP_CACHE_DIR=tempfile.mkdtemp(),
+        **(extra_env or {}),
     )
     proc = subprocess.Popen(
         [sys.executable, str(ROOT / "server.py")],
@@ -316,6 +344,49 @@ def sse_events(port: int, timeout: float = 45, cut_after=None, payload=None):
     finally:
         resp.close()
     return out
+
+
+def sse_stream(port: int, path: str = "/api/gen", payload=None, resume=True, cut_after=None, timeout: float = 45):
+    """跟 sse_events 一樣，但可以帶 X-Gen-Resume、打 /api/gen/attach；回 (事件, job id, 狀態碼)。"""
+    headers = {"Accept": "text/event-stream"}
+    data = None
+    if path == "/api/gen":
+        data = json.dumps(payload or {"positive": "1girl", "seed": 7, "width": 512, "height": 512}).encode()
+        headers["Content-Type"] = "application/json"
+    if resume:
+        headers["X-Gen-Resume"] = "1"
+    req = urllib.request.Request(f"http://127.0.0.1:{port}{path}", data=data, headers=headers)
+    out = []
+    try:
+        resp = urllib.request.urlopen(req, timeout=timeout)
+    except urllib.error.HTTPError as exc:
+        return [], None, exc.code
+    job = resp.headers.get("X-Gen-Job")
+    try:
+        buf = b""
+        while True:
+            chunk = resp.read(1)
+            if not chunk:
+                break
+            buf += chunk
+            while b"\n\n" in buf:
+                raw_ev, buf = buf.split(b"\n\n", 1)
+                ev, data_s = "message", None
+                for line in raw_ev.decode("utf-8").split("\n"):
+                    if line.startswith("event:"):
+                        ev = line[6:].strip()
+                    elif line.startswith("data:"):
+                        data_s = line[5:].strip()
+                if data_s is None:
+                    continue  # 註解（keepalive）
+                out.append((ev, json.loads(data_s)))
+                if cut_after is not None and len(out) >= cut_after:
+                    return out, job, 200
+                if ev in ("done", "error"):
+                    return out, job, 200
+    finally:
+        resp.close()
+    return out, job, 200
 
 
 def http_json(port: int, method: str, path: str, body=None, headers=None):
@@ -517,6 +588,107 @@ finally:
     log = proc.stdout.read() or ""
     comfy.close()
 ok("profile gen 主控台沒有 traceback", "Traceback" not in log, log[-800:])
+
+# === 6. 可以接回去的出圖（X-Gen-Resume）=======================================
+# 從 Mac 走 Tailscale 付印時網路斷一下，不該把 Comfy 正在畫的那張砍掉。
+
+
+def with_server(plan: str, body, extra_env=None):
+    comfy = FakeComfy(plan)
+    comfy.start()
+    proc, port = start_server(comfy.port, dict({"GEN_REATTACH_SEC": "3"}, **(extra_env or {})))
+    try:
+        body(port, comfy)
+    finally:
+        time.sleep(0.5)
+        proc.terminate()
+        try:
+            proc.wait(10)
+        except subprocess.TimeoutExpired:
+            proc.kill()
+        log = proc.stdout.read() or ""
+        comfy.close()
+    ok(f"{plan}：主控台沒有 traceback", "Traceback" not in log, log[-800:])
+
+
+def _resume_happy(port, comfy):
+    events, job, code = sse_stream(port, payload={"positive": "1girl", "seed": 7, "width": 512, "height": 512})
+    kinds = [e for e, _ in events]
+    ok("可接回的出圖：回應帶著 X-Gen-Job", bool(job) and len(job) >= 8, str(job))
+    ok("可接回的出圖：照樣走到 done", bool(kinds) and kinds[-1] == "done", str(kinds))
+    ok("可接回的出圖：預覽照樣送", "preview" in kinds, str(kinds))
+
+
+with_server("happy", _resume_happy)
+
+
+def _resume_reattach(port, comfy):
+    first, job, _ = sse_stream(port, cut_after=1)
+    ok("斷線前拿到 job id", bool(job), str(first))
+    time.sleep(1.0)
+    ok("斷線後、寬限時間內，Comfy 沒被中斷", not comfy.interrupted.is_set())
+    events, job2, code = sse_stream(port, path=f"/api/gen/attach?job={job}", resume=False)
+    kinds = [e for e, _ in events]
+    ok("接回來是同一張", code == 200 and job2 == job, str((code, job2, job)))
+    ok("接回來從頭重播（queued 還在）", "queued" in kinds, str(kinds))
+    ok("接回來收得到 done", bool(kinds) and kinds[-1] == "done", str(kinds))
+    ok("接回來那張圖沒被中斷", not comfy.interrupted.is_set())
+    again, _, code = sse_stream(port, path=f"/api/gen/attach?job={job}", resume=False)
+    ok("結束之後再接一次也拿得到結果", bool(again) and again[-1][0] == "done", str([e for e, _ in again]))
+
+
+with_server("slow", _resume_reattach)
+
+
+def _resume_abandon(port, comfy):
+    sse_stream(port, cut_after=1)
+    t0 = time.time()
+    got = comfy.interrupted.wait(15)
+    ok("斷線後一直沒人接回來：寬限過後照舊叫 Comfy 停手", got, "沒收到 /interrupt")
+    ok("不是一斷線就砍（有等寬限時間）", got and time.time() - t0 >= 2.0, f"{time.time() - t0:.1f}s")
+
+
+with_server("hang", _resume_abandon)
+
+
+def _resume_cancel(port, comfy):
+    first, job, _ = sse_stream(port, cut_after=2)
+    code, body = http_json(port, "POST", "/api/gen/cancel", {"job": job})
+    ok("按停：/api/gen/cancel 回 200", code == 200, str((code, body)))
+    ok("按停：Comfy 收到中斷", comfy.interrupted.wait(8))
+    for _ in range(80):
+        if comfy.queue_deleted:
+            break
+        time.sleep(0.1)
+    ok("按停：排隊中的也從 Comfy 佇列刪掉", comfy.queue_deleted == ["p1"], str(comfy.queue_deleted))
+    code, body = http_json(port, "POST", "/api/gen/cancel", {"job": "nope"})
+    ok("停一張不存在的：404", code == 404, str((code, body)))
+    events, _, code = sse_stream(port, path="/api/gen/attach?job=0123456789abcdef", resume=False)
+    ok("接一張不存在的：404", code == 404, str(code))
+
+
+with_server("hang", _resume_cancel)
+
+
+def _interrupted(port, comfy):
+    t0 = time.time()
+    events, job, _ = sse_stream(port, resume=False, timeout=25)
+    kinds = [e for e, _ in events]
+    ok("Comfy 那頭中斷了這張：馬上收工，不等 10 分鐘逾時", bool(kinds) and kinds[-1] == "error" and time.time() - t0 < 10, f"{kinds} {time.time() - t0:.1f}s")
+    errs = [d.get("error", "") for e, d in events if e == "error"]
+    ok("錯誤訊息說是中斷", any("中斷" in e for e in errs), str(errs))
+    ok("別張被中斷的廣播不算（前面照樣收到進度）", "progress" in kinds, str(kinds))
+
+
+with_server("interrupted", _interrupted)
+
+# 沒帶 X-Gen-Resume 的舊房間：斷線照舊馬上中斷（上面第 4 段），這裡再確認一次不受寬限影響。
+def _legacy_cut(port, comfy):
+    sse_stream(port, resume=False, cut_after=1, timeout=25)
+    ok("沒說要接回來的舊房間：一斷線就中斷，不等寬限", comfy.interrupted.wait(8))
+
+
+with_server("hang", _legacy_cut, {"GEN_REATTACH_SEC": "60"})
 
 if failed:
     print(f"\n{failed} failed")

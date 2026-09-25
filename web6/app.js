@@ -80,6 +80,9 @@ async function boot() {
   pool = new Set(S.takePool().filter((t) => lib.byTag.has(t)));
   bans = new Set(S.loadBans().filter((t) => lib.byTag.has(t)));
   shots = S.loadShots();
+  // 上次畫到一半就重新整理（或關掉分頁）的那張：伺服器還留著一陣子，接回去。
+  const resumable = shots.filter((s) => s.live && s.job);
+  for (const s of resumable) s.status = "queued";
 
   initLoraPicker();
   initWorkflow();
@@ -93,6 +96,7 @@ async function boot() {
   renderGoBar();
   renderWall();
   renderTrash();
+  for (const s of resumable) generator.resume(s);
   for (const root of [$("lib-grid"), $("pool-well"), $("wall")]) attachPeek(root, ".card[data-tag]", peekInfo);
   document.addEventListener("keydown", onKey);
   window.addEventListener("resize", () => {
@@ -654,7 +658,10 @@ const generator = createGenerator({
   }),
   update: (shot) => {
     updateShot(shot);
-    if (shot.status === "done" || shot.status === "failed" || shot.status === "cancelled") S.saveShots(shots);
+    // 拿到伺服器的工作編號就先存一次：畫到一半重新整理也接得回來。
+    const newJob = shot.job && shot._savedJob !== shot.job;
+    if (newJob) shot._savedJob = shot.job;
+    if (newJob || shot.status === "done" || shot.status === "failed" || shot.status === "cancelled") S.saveShots(shots);
     renderGoBar();
   },
   idle: () => {

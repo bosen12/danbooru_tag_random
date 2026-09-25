@@ -182,6 +182,7 @@ async function boot() {
   renderAll();
   renderCase();
   renderLine();
+  for (const p of prints) if (p.status === "queued" && p.live && p.job) generator.resume(p);
   attachPeek($("case-grid"), ".card[data-tag]", peekInfo);
   // 生圖種子一換，同一張試印對應的成品就不一樣了：成品、付印那條、試印上的小圖都要重畫。
   onSeedChange(() => {
@@ -388,6 +389,11 @@ const generator = createGenerator({
   payload: (p) => ({ width: p.width, height: p.height, loras: p.loras, ckpt: p.ckpt, rating: p.rating, workflowId: p.workflowId }),
   update: (p) => {
     paintLineItem(p);
+    // 拿到伺服器的工作編號就先存一次：畫到一半重新整理也接得回來。
+    if (p.job && p._savedJob !== p.job) {
+      p._savedJob = p.job;
+      savePrints();
+    }
     paintTrialFacesFor(p.sig);
     const t = trials[picked];
     if (t && p.sig === sigOf(t)) {
@@ -480,7 +486,13 @@ function loadPrints() {
   if (!Array.isArray(list)) return [];
   return list
     .filter((p) => p && p.id && p.positive)
-    .map((p) => ({ ...p, status: p.status === "done" ? "done" : p.status === "failed" ? "failed" : "stopped", preview: null, progress: p.status === "done" ? 1 : 0 }));
+    .map((p) => ({
+      ...p,
+      // 畫到一半就重新整理的那張：標成排隊，開機時用 generator.resume() 接回去。
+      status: p.status === "done" ? "done" : p.status === "failed" ? "failed" : p.live && p.job ? "queued" : "stopped",
+      preview: null,
+      progress: p.status === "done" ? 1 : 0,
+    }));
 }
 
 function savePrints() {
@@ -506,6 +518,8 @@ function savePrints() {
       era: p.era,
       status: p.status === "done" ? "done" : p.status === "failed" ? "failed" : "stopped",
       image: p.image || null,
+      job: p.job || null,
+      live: !!p.job && (p.status === "running" || p.status === "queued"),
       note: p.status === "done" ? "" : p.note || "",
       at: p.at,
     }))
