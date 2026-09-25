@@ -378,6 +378,17 @@ body.fuse {
   gap: 3px;
 }
 
+/* 小分類那一排：跟墨池工作臺同一種晶片（styles.css 的 .group-chip），這裡只調邊距、讓它能換行。 */
+.case-groups {
+  flex-wrap: wrap;
+  padding: 0;
+  overflow: visible;
+}
+
+.case-groups[hidden] {
+  display: none;
+}
+
 .case-tab {
   display: inline-flex;
   align-items: center;

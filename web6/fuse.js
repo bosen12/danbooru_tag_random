@@ -89,6 +89,7 @@ let rowNotes = {};
 let plateNotice = null;
 let lastRelKeys = new Set();
 let caseTab = "all";
+let caseGroup = "";
 let caseQuery = "";
 let caseList = [];
 let caseShown = 0;
@@ -1789,6 +1790,7 @@ function renderCaseTabs() {
           "aria-pressed": caseTab === id ? "true" : "false",
           onclick: () => {
             caseTab = id;
+            caseGroup = "";
             writeJ(FK.tab, id);
             renderCaseTabs();
             renderCase();
@@ -1830,6 +1832,32 @@ function affinities() {
   return out;
 }
 
+/** 選了某一種花色時，下面多一排小分類（鏡頭、表情、視線…），前面是牌面上那個一字章。 */
+function renderCaseGroups(inSuit) {
+  const box = $("case-groups");
+  const suitTab = CARD_SUITS.includes(caseTab);
+  const groups = suitTab ? [...new Map(inSuit.map((c) => [c.group, [c.groupZh, c.seal]])).entries()] : [];
+  if (caseGroup && !groups.some(([g]) => g === caseGroup)) caseGroup = "";
+  box.hidden = groups.length < 2;
+  if (box.hidden) return box.replaceChildren();
+  const chip = (g, label, seal) =>
+    el(
+      "button",
+      {
+        class: "group-chip",
+        type: "button",
+        "aria-pressed": caseGroup === g ? "true" : "false",
+        onclick: () => {
+          caseGroup = g;
+          renderCase();
+        },
+      },
+      seal ? el("b", { class: "chip-seal", "aria-hidden": "true" }, seal) : null,
+      label
+    );
+  box.replaceChildren(chip("", "全部", null), ...groups.map(([g, [zh, seal]]) => chip(g, zh, seal)));
+}
+
 function renderCase() {
   const q = caseQuery.trim().toLowerCase();
   let list;
@@ -1841,6 +1869,8 @@ function renderCase() {
     list = lib.cards.filter((c) => caseTab === "all" || c.suit === caseTab);
   }
   list = list.filter(visibleCard);
+  renderCaseGroups(list);
+  if (caseGroup) list = list.filter((c) => c.group === caseGroup);
   if (q) list = list.filter((c) => c.zh.toLowerCase().includes(q) || c.tag.includes(q) || (c.groupZh || "").includes(q));
   caseList = list;
   caseShown = 0;
@@ -1933,6 +1963,8 @@ function peekInfo(node) {
     zh: card.zh,
     tag: card.tag,
     glyph: CARD_SUIT_INFO[card.suit].glyph,
+    seal: card.seal,
+    sealTitle: card.groupZh,
     suitColor: getComputedStyle(document.documentElement).getPropertyValue(`--suit-${card.suit}`).trim(),
     art: assets.art(card.tag),
     rating: card.rating,

@@ -496,6 +496,26 @@ p {
   white-space: nowrap;
 }
 
+/* 晶片前面的一字章：跟牌面書脊底下的章同一個字，看牌就知道要點哪一顆。 */
+.chip-seal {
+  display: inline-grid;
+  place-items: center;
+  width: 1.25em;
+  height: 1.25em;
+  margin-right: 0.3em;
+  border: 1px solid currentColor;
+  border-radius: 2px;
+  font-family: var(--font-display);
+  font-weight: 700;
+  font-size: 0.9em;
+  line-height: 1;
+}
+
+.group-chip {
+  display: inline-flex;
+  align-items: center;
+}
+
 .group-chip[aria-pressed="true"] {
   color: var(--color-ink);
   border-color: var(--color-ink-2);

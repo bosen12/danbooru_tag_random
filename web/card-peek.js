@@ -5,7 +5,8 @@
  * 墨池、字鋪、排字匣（卡牌模式）共用。用事件委派掛在容器上，所以容器裡的牌
  * 被重畫、被換掉都不用重新綁。只在有滑鼠的裝置上出現；鍵盤聚焦也會出現。
  *
- *   attachPeek(root, ".card", (el) => ({ zh, tag, glyph, suit, art, rating, facts: [[k, v]…] }))
+ *   attachPeek(root, ".card", (el) => ({ zh, tag, glyph, suit, art, rating, seal, sealTitle, facts: [[k, v]…] }))
+ *   seal：小分類的一字章（鏡、表、上…），蓋在書脊最底下，跟牌面上的一樣。
  */
 
 const STYLE_ID = "card-peek-style";
@@ -24,6 +25,9 @@ font-weight:800;font-size:16px;line-height:1;font-family:var(--peek-display,"Chi
 .card-peek-name{writing-mode:vertical-rl;text-orientation:upright;font-weight:800;font-size:22px;line-height:1;letter-spacing:.04em;
 font-family:var(--peek-display,"Chiron Hei HK","Noto Serif TC",sans-serif);overflow:hidden;white-space:nowrap;min-height:0;flex:1}
 .card-peek-name[data-len="5"],.card-peek-name[data-len="6"]{font-size:17px}.card-peek-name[data-len="7"],.card-peek-name[data-len="8"]{font-size:14px}
+.card-peek-seal{margin-top:auto;display:grid;place-items:center;width:26px;height:26px;border:1.5px solid var(--peek-suit,oklch(72% .07 250));
+border-radius:3px;background:color-mix(in oklch,var(--peek-suit,oklch(72% .07 250)) 22%,oklch(93.5% .024 86));font-weight:800;font-size:15px;line-height:1;
+font-family:var(--peek-display,"Chiron Hei HK","Noto Serif TC",sans-serif)}
 .card-peek-rate{font-size:11px;font-weight:800;padding:2px 4px;border-radius:3px;line-height:1}
 .card-peek-rate[data-r="sensitive"]{background:oklch(80% .13 80)}.card-peek-rate[data-r="explicit"]{background:oklch(46% .16 31);color:oklch(97% .012 80)}
 .card-peek-art{position:relative;overflow:hidden;background:oklch(88.5% .028 84)}
@@ -78,6 +82,12 @@ function render(info) {
     const r = h("span", "card-peek-rate", info.rating === "explicit" ? "色" : "敏");
     r.dataset.r = info.rating;
     spine.append(r);
+  }
+  if (info.seal) {
+    const seal = h("span", "card-peek-seal", info.seal);
+    if (info.suitColor) seal.style.setProperty("--peek-suit", info.suitColor);
+    if (info.sealTitle) seal.title = info.sealTitle;
+    spine.append(seal);
   }
   const art = h("div", "card-peek-art");
   if (info.art) {

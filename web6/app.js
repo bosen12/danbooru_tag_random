@@ -218,11 +218,18 @@ function renderLibrary() {
   if (ui.suit === "all") {
     chips.hidden = true;
   } else {
-    const groups = [...new Map(inSuit.map((c) => [c.group, c.groupZh])).entries()];
+    const groups = [...new Map(inSuit.map((c) => [c.group, [c.groupZh, c.seal]])).entries()];
     chips.hidden = groups.length < 2;
     chips.replaceChildren(
       el("button", { class: "group-chip", type: "button", "aria-pressed": ui.group === "" ? "true" : "false", onclick: () => pickGroup("") }, "全部"),
-      ...groups.map(([g, zh]) => el("button", { class: "group-chip", type: "button", "aria-pressed": ui.group === g ? "true" : "false", onclick: () => pickGroup(g) }, zh))
+      ...groups.map(([g, [zh, seal]]) =>
+        el(
+          "button",
+          { class: "group-chip", type: "button", "aria-pressed": ui.group === g ? "true" : "false", onclick: () => pickGroup(g) },
+          seal ? el("b", { class: "chip-seal", "aria-hidden": "true" }, seal) : null,
+          zh
+        )
+      )
     );
   }
   const list = inSuit.filter((c) => (!ui.group || c.group === ui.group) && (!q || c.zh.toLowerCase().includes(q) || c.tag.includes(q)));
@@ -327,6 +334,8 @@ function peekInfo(node) {
     zh: card.zh,
     tag: card.tag,
     glyph: CARD_SUIT_INFO[card.suit].glyph,
+    seal: card.seal,
+    sealTitle: card.groupZh,
     suitColor: `var(--suit-${card.suit})`,
     art: assets.art(card.tag),
     rating: card.rating,
