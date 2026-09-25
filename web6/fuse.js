@@ -35,7 +35,7 @@ import { HARD_BANNED, applyArtSources } from "./card-art.js";
 import { buildLibrary, createAssets, cardNode, cardFacts, CARD_SUIT_INFO, CARD_SUITS, RATING_ZH, ERA_ZH } from "./cards.js";
 import { el, openSheet, anyOverlay } from "./ui.js";
 import { createDrag } from "./drag.js";
-import { createGenerator, comfyOnline, viewSrc } from "./gen.js";
+import { createGenerator, comfyOnline, viewSrc, tabTitle } from "./gen.js";
 import { attachPeek, hidePeek } from "./card-peek.js";
 import * as S from "./store.js";
 import { REGISTERS, REGISTER_ROLE, emptyBed, sanitizeBed, placeCard, removeCard, relationsOf } from "./fuse-bed.js";
@@ -45,7 +45,8 @@ import { genSeed, isFixedSeed, mountSeedControl, onSeedChange, seedUseButton, us
 const $ = (id) => document.getElementById(id);
 const LETTERS = ["A", "B", "C", "D"];
 const TRIALS = 4;
-const PAGE = 90;
+// 字盒一次長出幾張：第一眼只看得到十幾張，捲到接近底部（IntersectionObserver，提早 400px）再補下一批。
+const PAGE = 40;
 const PRINT_MAX = 40;
 const HISTORY_MAX = 60;
 const RATING_RANK = { general: 0, sensitive: 1, explicit: 2 };
@@ -385,9 +386,12 @@ function reroll() {
 
 /* ================= 付印 ================= */
 
+const tabNote = tabTitle();
+
 const generator = createGenerator({
   payload: (p) => ({ width: p.width, height: p.height, loras: p.loras, ckpt: p.ckpt, rating: p.rating, workflowId: p.workflowId }),
   update: (p) => {
+    tabNote.shot(p, generator.pending);
     paintLineItem(p);
     // 拿到伺服器的工作編號就先存一次：畫到一半重新整理也接得回來。
     if (p.job && p._savedJob !== p.job) {
@@ -399,7 +403,11 @@ const generator = createGenerator({
     if (t && p.sig === sigOf(t)) {
       renderPreview({ develop: p.status === "done" });
       renderPrintBar();
+    } else if (p._shownStatus !== p.status) {
+      // 別張開始印、印完了：成品區那行「晾紙繩上還有一張在印」要跟著出現或拿掉（進度每一格不必重畫）。
+      renderPreview();
     }
+    p._shownStatus = p.status;
     if (p.status === "done") {
       sfx.done();
       haptic(14);
@@ -460,6 +468,8 @@ function printNow() {
   generator.enqueue(p);
   savePrints();
   renderLine();
+  // 新的一張夾在最左邊：繩子已經往右捲的話捲回去，才看得到它開始印。
+  $("line-list").scrollTo({ left: 0, behavior: reduced() ? "auto" : "smooth" });
   renderPreview();
   renderTrials();
   renderPrintBar();
@@ -584,6 +594,11 @@ function buildPreview() {
   pv = { frame, sheet, blank, roller, cap };
 }
 
+/** 別張（不是選中這張試印的）還在印或排隊：改了卡池之後，成品區換成新的試印，但舊的那張還在跑。 */
+function otherPrinting() {
+  return prints.some((x) => x.status === "running" || x.status === "queued" || x.status === "drawn");
+}
+
 function previewState(p) {
   if (!p) return "還沒付印";
   if (p.status === "running") return `印製中 ${Math.round((p.progress || 0) * 100)}%`;
@@ -628,7 +643,7 @@ function renderPreview({ develop = false } = {}) {
       pv.blank,
       el("b", { class: "pv-letter", "aria-hidden": "true" }, t.letter),
       el("span", { class: "pv-state" }, previewState(p)),
-      !p ? el("span", { class: "pv-hint" }, "挑好就付印。印好的圖出現在這裡，也會夾一張到上面的繩子。") : null,
+      !p ? el("span", { class: "pv-hint" }, otherPrinting() ? "晾紙繩上還有一張在印；這一版挑好也可以先付印，會排在它後面。" : "挑好就付印。印好的圖出現在這裡，也會夾一張到上面的繩子。") : null,
       p && p.status === "failed" && p.note ? el("span", { class: "pv-hint" }, p.note) : null
     );
   }
@@ -769,6 +784,9 @@ const wideLayout = typeof matchMedia === "function" ? matchMedia("(min-width: 68
 let poolFit = { w: 0, planW: 0, caps: {}, cardsW: 0, headH: 0 };
 
 function planPool(t, empty) {
+  // 空白的版不用算（牌寬交回 CSS 的預設）。也別去量寬度：開機時卡池一定是空的，
+  // 這時候一量就逼整頁提早排版一次（字盒幾十張牌還在往裡塞），白白多花一百多毫秒。
+  if (empty) return { w: 0, caps: {}, cardsW: 0 };
   const box = $("registers");
   const cs = getComputedStyle(box);
   const rem = parseFloat(getComputedStyle(document.documentElement).fontSize) || 16;
@@ -776,7 +794,6 @@ function planPool(t, empty) {
   const cardsW =
     box.querySelector(".reg-cards")?.clientWidth ||
     Math.max(160, box.clientWidth - parseFloat(cs.paddingLeft) - parseFloat(cs.paddingRight) - (wide ? 5 : 3.2) * rem);
-  if (empty) return { w: 0, caps: {}, cardsW };
   const rows = REGISTERS.map((suit) => ({
     suit,
     mine: bed.pins.filter((x) => suitOf(x) === suit).length,
@@ -819,12 +836,12 @@ function planPool(t, empty) {
       for (let i = 0; i < r.mine; i++) push(w, h);
       if (r.ghosts) {
         if (r.mine) push(splitW, 0);
-        // 至少給兩張影子；之後排到這一排放滿為止，還要留位置給「+N」。
-        const floor = Math.min(r.ghosts, 2);
+        // 至少給一張影子；之後排到這一排放滿為止，還要留位置給「+N」——
+        // 硬塞第二張的話，手機上「+N」會自己掉到下一排，白白多佔一整排的高度。
         let cap = 0;
         while (cap < r.ghosts) {
           const more = r.ghosts - cap > 1;
-          if (cap >= floor && !room(gw + (more ? GAP_X + moreW : 0))) break;
+          if (cap >= 1 && !room(gw + (more ? GAP_X + moreW : 0))) break;
           push(gw, gh);
           cap++;
         }
@@ -1514,6 +1531,7 @@ function renderPrintBar() {
           class: "btn btn-primary pb-go",
           type: "button",
           disabled: disabled || undefined,
+          dataset: { wide: [...label].length <= 2 ? "true" : "false" },
           onclick: () => (p && p.status === "failed" ? reprint(p) : printNow()),
           title: "付印（P）",
         },
@@ -1582,8 +1600,12 @@ function renderLine() {
   const list = $("line-list");
   list.replaceChildren(...prints.map((p) => el("li", {}, lineItem(p))));
   $("line-empty").hidden = prints.length > 0;
-  syncLineFade();
+  // 等這一輪的畫面都放好再量（量捲動寬度會逼瀏覽器當場排版；開機時字盒還在長）。
+  clearTimeout(lineFadeTimer);
+  lineFadeTimer = setTimeout(syncLineFade, 0);
 }
+
+let lineFadeTimer = 0;
 
 /** 捲軸平常是隱形的：哪一邊還捲得過去，繩子那一頭就淡出，看得出後面還有作品。 */
 function syncLineFade() {

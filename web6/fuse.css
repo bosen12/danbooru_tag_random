@@ -132,26 +132,25 @@ body.fuse {
   --fade-r: 2.5rem;
 }
 
-.line:has(.line-list:empty) {
-  min-height: 0;
-  align-items: center;
-}
-
-.line:has(.line-list:empty)::before {
-  display: none;
-}
-
 .line-list:empty {
   display: none;
 }
 
+/* 還沒有作品：繩子照樣拉著，說明佔一排作品的高度 —— 第一張夾上去的時候整頁不會往下跳，
+   卡池的高度也不會變（牌不必跟著縮一次）。 */
 .line-empty {
-  position: relative;
-  margin: 0.2rem 0 0;
+  display: flex;
+  align-items: center;
+  /* 跟 .line-list 夾著作品時一樣高：上下留白 0.55rem＋0.2rem、作品 3.6rem */
+  min-height: 4.35rem;
+  margin: 0;
+  padding-top: 0.35rem;
   font-size: var(--text-xs);
   color: var(--color-muted);
-  background: var(--color-paper);
-  padding-right: var(--space-xs);
+}
+
+.line-empty[hidden] {
+  display: none;
 }
 
 .print {
@@ -1711,6 +1710,11 @@ body.fuse {
   flex: 1;
   min-height: 48px;
   font-size: var(--text-md);
+  letter-spacing: 0.04em;
+}
+
+/* 「付印」兩個字像印章一樣拉開；「印製中 40%」這種長的照正常字距，數字才不會散掉。 */
+.pb-go[data-wide="true"] {
   letter-spacing: 0.3em;
 }
 

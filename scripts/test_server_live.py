@@ -635,6 +635,8 @@ def _resume_reattach(port, comfy):
     ok("接回來那張圖沒被中斷", not comfy.interrupted.is_set())
     again, _, code = sse_stream(port, path=f"/api/gen/attach?job={job}", resume=False)
     ok("結束之後再接一次也拿得到結果", bool(again) and again[-1][0] == "done", str([e for e, _ in again]))
+    tail, _, code = sse_stream(port, path=f"/api/gen/attach?job={job}&since={len(again) - 1}", resume=False)
+    ok("帶 since 接回來只補沒收到的（不再從 queued 重播）", code == 200 and [e for e, _ in tail] == ["done"], str([e for e, _ in tail]))
 
 
 with_server("slow", _resume_reattach)

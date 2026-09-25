@@ -30,7 +30,7 @@ import { HARD_BANNED, applyArtSources } from "./card-art.js";
 import { buildLibrary, createAssets, cardNode, setCardFlag, cardFacts, CARD_SUIT_INFO, CARD_SUITS, RATING_ZH } from "./cards.js";
 import { el, openSheet, anyOverlay, toast, ICONS } from "./ui.js";
 import { createDrag } from "./drag.js";
-import { createGenerator, comfyOnline, viewSrc } from "./gen.js";
+import { createGenerator, comfyOnline, viewSrc, tabTitle } from "./gen.js";
 import { genSeed, mountSeedControl, seedUseButton } from "./seed-control.js";
 import { attachPeek } from "./card-peek.js";
 import * as S from "./store.js";
@@ -647,6 +647,8 @@ function switchBox(label, on, onChange) {
 
 /* ================= 抽牌與生圖 ================= */
 
+const tabNote = tabTitle();
+
 const generator = createGenerator({
   payload: (shot) => ({
     width: shot.width,
@@ -657,6 +659,7 @@ const generator = createGenerator({
     workflowId: shot.workflowId,
   }),
   update: (shot) => {
+    tabNote.shot(shot, generator.pending);
     updateShot(shot);
     // 拿到伺服器的工作編號就先存一次：畫到一半重新整理也接得回來。
     const newJob = shot.job && shot._savedJob !== shot.job;

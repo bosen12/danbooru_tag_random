@@ -89,9 +89,12 @@ export function createGenerator(hooks) {
         const t = setTimeout(resolve, ms);
         ctrl.signal.addEventListener("abort", () => (clearTimeout(t), resolve()), { once: true });
       });
+    // 收過幾則（預覽不算，伺服器那邊也不記）：接回去時只補後面的，進度條不會先跳回 0 再衝回來。
+    // 重新整理之後接回來的從 0 開始，整段重播才拿得回進度和說明。
+    let seen = 0;
     const open = () =>
       current.job
-        ? fetch(`/api/gen/attach?job=${encodeURIComponent(current.job)}`, { headers: { Accept: "text/event-stream" }, signal: ctrl.signal })
+        ? fetch(`/api/gen/attach?job=${encodeURIComponent(current.job)}&since=${seen}`, { headers: { Accept: "text/event-stream" }, signal: ctrl.signal })
         : fetch("/api/gen", {
             method: "POST",
             headers: { "Content-Type": "application/json", Accept: "text/event-stream", "X-Gen-Resume": "1" },
@@ -104,7 +107,6 @@ export function createGenerator(hooks) {
         try {
           const res = await open();
           if (!res.ok) {
-            if (res.status === 404 && current.job) throw new GenError("連線斷了太久，伺服器那邊已經停掉這張");
             throw await errorOf(res);
           }
           const job = res.headers.get("X-Gen-Job");
@@ -115,6 +117,7 @@ export function createGenerator(hooks) {
           }
           for await (const { event, data } of sseEvents(res)) {
             kick();
+            if (event !== "preview") seen++;
             if (data && data.prompt_id) current.promptId = data.prompt_id;
             if (event === "queued") {
               shot.note = "排隊中";
@@ -156,7 +159,11 @@ export function createGenerator(hooks) {
         return false;
       }
       shot.status = "failed";
-      shot.note = stalled ? `Comfy 靜默超過 ${IDLE_MS / 1000} 秒，這張放棄` : String(err && err.message ? err.message : err);
+      shot.note = stalled
+        ? `Comfy 靜默超過 ${IDLE_MS / 1000} 秒，這張放棄`
+        : !(err instanceof GenError) && current.job
+          ? "連線斷了，重試幾次都接不回去"
+          : String(err && err.message ? err.message : err);
       hooks.update(shot);
       if (stalled) cancelJob(current.job, current.promptId);
       return false;
@@ -258,6 +265,33 @@ export function createGenerator(hooks) {
 export function viewSrc(src) {
   if (!src || !src.startsWith("/api/image?") || /[?&]fmt=/.test(src)) return src;
   return src + "&fmt=webp";
+}
+
+/**
+ * 分頁不在前面的時候，標題列顯示出圖進度（「40% · 疊印台」），印好或印壞也在標題上說一聲；
+ * 切回這個分頁就恢復原本的標題。生圖一張十幾秒，人通常會先去別的分頁。
+ */
+export function tabTitle(base = document.title) {
+  let note = "";
+  const paint = () => {
+    document.title = note && document.hidden ? `${note} · ${base}` : base;
+  };
+  document.addEventListener("visibilitychange", () => {
+    // 看到了就不必再提醒「印好了」；還在印的照樣顯示進度。
+    if (!document.hidden && !/%/.test(note)) note = "";
+    paint();
+  });
+  return {
+    shot(shot, pending = 0) {
+      if (shot.status === "running") {
+        const more = pending > 1 ? `（還有 ${pending - 1} 張）` : "";
+        note = `${Math.round((shot.progress || 0) * 100)}%${more}`;
+      } else if (shot.status === "done") note = pending > 1 ? note : "印好了";
+      else if (shot.status === "failed") note = "印壞了";
+      else if (shot.status === "cancelled") note = "";
+      paint();
+    },
+  };
 }
 
 export async function comfyOnline() {

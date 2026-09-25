@@ -2185,7 +2185,7 @@ class Handler(BaseHTTPRequestHandler):
         self._json(code, {"ok": False, "error": message, "code": "forbidden" if code == 403 else "content_type"})
         return False
 
-    def _sse_job(self, job: GenJob) -> None:
+    def _sse_job(self, job: GenJob, since: int = 0) -> None:
         self.send_response(200)
         self.send_header("Content-Type", "text/event-stream; charset=utf-8")
         self.send_header("Cache-Control", "no-cache")
@@ -2195,7 +2195,8 @@ class Handler(BaseHTTPRequestHandler):
         self.end_headers()
         with job.cond:
             job.watchers += 1
-        sent = 0
+            # 接回來的網頁說它已經收過幾則：只補後面的（重新整理後接回來的給 0，整段重播）。
+            sent = max(0, min(int(since), len(job.log)))
         seen_pv = 0
         try:
             while True:
@@ -2433,7 +2434,11 @@ class Handler(BaseHTTPRequestHandler):
             if job is None:
                 self._json(404, {"ok": False, "error": "找不到這張（伺服器重開過，或已經結束太久）"})
                 return
-            self._sse_job(job)
+            try:
+                since = int((qs.get("since") or ["0"])[0])
+            except ValueError:
+                since = 0
+            self._sse_job(job, since)
             return
         if path == "/api/image":
             self._serve_comfy_image()
