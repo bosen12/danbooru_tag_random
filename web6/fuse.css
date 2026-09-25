@@ -244,6 +244,11 @@ body.fuse {
 }
 
 @media (min-width: 68.75rem) {
+  /* 寬螢幕上整頁不捲（三欄各自捲）：不用替整頁的捲軸留一條空白。 */
+  html:has(body.fuse) {
+    scrollbar-gutter: auto;
+    overflow: hidden;
+  }
   body.fuse {
     height: 100dvh;
     display: grid;
@@ -396,8 +401,8 @@ body.fuse {
     /* 字盒變寬就多一欄，牌不會被撐得比卡池裡的還大。 */
     grid-template-columns: repeat(auto-fill, minmax(4.6rem, 1fr));
     overflow-y: auto;
+    scrollbar-gutter: stable;
     overscroll-behavior: contain;
-    scrollbar-width: thin;
     flex: 1;
     min-height: 0;
   }
@@ -507,9 +512,12 @@ body.fuse {
 
 @media (min-width: 68.75rem) {
   .plate-scroll {
+    overflow-x: hidden;
     overflow-y: auto;
+    /* 一定要留好捲軸的位置：牌寬是照卡池寬度算的，捲軸一出一收會讓卡池寬度跟著變，
+       牌縮了捲軸消失、牌放大捲軸又出來，整池就一直跳。 */
+    scrollbar-gutter: stable;
     overscroll-behavior: contain;
-    scrollbar-width: thin;
   }
 }
 
@@ -1082,8 +1090,8 @@ body.fuse {
 @media (min-width: 68.75rem) {
   .side {
     overflow-y: auto;
+    scrollbar-gutter: stable;
     overscroll-behavior: contain;
-    scrollbar-width: thin;
   }
 }
 

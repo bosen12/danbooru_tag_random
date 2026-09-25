@@ -16,6 +16,19 @@ html {
   scrollbar-gutter: stable;
 }
 
+/* 捲軸平常隱形，滑鼠移到那一塊才浮出來（Mac 接滑鼠、Windows 的捲軸都是實心佔位的那種）。
+   會捲的區塊另外用 scrollbar-gutter 把位置留好：捲軸出現或消失時，裡面的東西不會被擠得左右跳。 */
+html,
+body * {
+  scrollbar-width: thin;
+  scrollbar-color: transparent transparent;
+}
+
+html:hover,
+body *:hover {
+  scrollbar-color: var(--color-rule) transparent;
+}
+
 html,
 body {
   margin: 0;
@@ -505,6 +518,7 @@ p {
   align-content: start;
   padding: var(--space-xs) var(--space-md) var(--space-md);
   overflow-y: auto;
+  scrollbar-gutter: stable;
   overscroll-behavior: contain;
   min-height: 0;
   max-height: 60dvh;
