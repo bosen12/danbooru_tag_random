@@ -153,6 +153,25 @@
   box-shadow: 0 1px 0 color-mix(in oklab, var(--tc-face-ink) 30%, transparent);
 }
 
+/* 小分類的一字章：右上角，花色描框（左上是花色圓章、左下是分級）。 */
+.tc-seal {
+  position: absolute;
+  top: 4px;
+  right: 4px;
+  display: grid;
+  place-items: center;
+  width: 17px;
+  height: 17px;
+  border: 1.5px solid var(--tc-suit);
+  border-radius: 3px;
+  background: color-mix(in oklab, var(--tc-suit) 22%, var(--tc-face));
+  color: var(--tc-face-ink);
+  font-family: var(--font-display);
+  font-size: 10px;
+  font-weight: 800;
+  line-height: 1;
+}
+
 .tc-rate {
   position: absolute;
   left: 4px;

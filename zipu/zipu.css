@@ -677,6 +677,22 @@ p {
   font-size: 0.68em;
 }
 
+/* 小分類的一字章（鏡、表、上…）：跟墨池、疊印台、排字匣的牌同一個字，在籌碼上面。 */
+.card-seal {
+  flex: none;
+  display: grid;
+  place-items: center;
+  width: 1.4em;
+  height: 1.4em;
+  border: 1px solid var(--suit);
+  border-radius: 2px;
+  background: color-mix(in oklch, var(--suit) 22%, var(--color-stock));
+  font-family: var(--font-display);
+  font-weight: 800;
+  font-size: 0.85em;
+  line-height: 1;
+}
+
 .card-chips {
   font-family: var(--font-mono);
   font-weight: 500;

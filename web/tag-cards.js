@@ -9,7 +9,7 @@
  * 字盒被 buildCats() 整片換掉時，用 MutationObserver 把新按鈕補上插畫。
  * 插畫來自 web/cards（scripts/bake_card_art.py 烤的），沒有的字就用字形當封面。
  */
-import { CARD_SUIT_INFO, HARD_BANNED, cardSuit, artSources, artUrl, applyArtSources } from "./card-art.js";
+import { CARD_SUIT_INFO, HARD_BANNED, cardSuit, groupSeal, artSources, artUrl, applyArtSources } from "./card-art.js";
 import { attachPeek } from "./card-peek.js";
 
 const KEY = "paizixia.tagStyle";
@@ -122,6 +122,14 @@ function decorate(btn) {
     s.textContent = CARD_SUIT_INFO[suit].glyph;
     art.append(s);
   }
+  const seal = groupSeal(item);
+  if (seal) {
+    // 小分類的一字章（鏡、表、上…）：跟墨池、疊印台的牌同一個字。
+    const g = document.createElement("span");
+    g.className = "tc-seal";
+    g.textContent = seal;
+    art.append(g);
+  }
   if (rating && rating !== "general") {
     const r = document.createElement("span");
     r.className = "tc-rate";
@@ -202,6 +210,8 @@ function peekInfo(btn) {
     suitColor: suit ? getComputedStyle(root).getPropertyValue(`--tc-${suit}`).trim() : "",
     art: veiled(tag) ? "" : artSrc(tag),
     rating,
+    seal: groupSeal(item),
+    sealTitle: item && item.group ? groupZh[item.group] : "",
     facts,
   };
 }

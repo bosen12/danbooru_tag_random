@@ -1,6 +1,6 @@
 /** 畫面零件：卡牌、道具、頭像、委託單、遮罩、提示。只產生 DOM，不管遊戲流程。 */
 import { SUIT_INFO, ERA_ZH, artFile } from "./pool.js";
-import { artSources, artUrl, applyArtSources } from "./card-art.js";
+import { artSources, artUrl, applyArtSources, groupSeal } from "./card-art.js";
 import { ENHANCEMENTS } from "./rules.js";
 import { RARITY_ZH } from "./content.js";
 import { lockScroll, unlockScroll } from "./scroll-lock.js";
@@ -80,6 +80,7 @@ export function cardNode(card, inst, assets, opts = {}) {
   const len = [...card.zh].length;
   const src = card.art ? assets.card(card.tag) : null;
   const suit = SUIT_INFO[card.suit];
+  const seal = groupSeal(card);
   const label = `${card.zh}（${card.tag}），${suit.zh}，佔 ${card.slots} 格，${card.chips} 籌碼${inst?.enh ? "，" + ENHANCEMENTS[inst.enh].zh : ""}`;
   const node = el(
     opts.static ? "div" : "button",
@@ -95,6 +96,7 @@ export function cardNode(card, inst, assets, opts = {}) {
       { class: "card-spine" },
       el("span", { class: "card-suit", "aria-hidden": "true" }, suit.glyph),
       el("span", { class: "card-name", dataset: { len: String(Math.min(len, 7)) }, "aria-hidden": "true" }, card.zh),
+      seal ? el("span", { class: "card-seal", "aria-hidden": "true" }, seal) : null,
       el("span", { class: "card-chips", "aria-hidden": "true" }, card.chips)
     ),
     el(

@@ -132,6 +132,7 @@ export function buildWorld(data, deps) {
       tag: item.tag,
       zh: item.zh || item.tag,
       suit,
+      section: item.section,
       group: item.group,
       mutex: item.mutex || null,
       eras,

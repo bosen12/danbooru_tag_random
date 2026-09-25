@@ -10,6 +10,59 @@
 export const HARD_BANNED = Object.freeze(["loli", "shota"]);
 const HARD = new Set(HARD_BANNED);
 
+/**
+ * 小分類的一字章：蓋在書脊最下面，疊成一排也分得出「這張是鏡頭、那張是表情」。
+ * 鑰匙是 section|group（同一個 group 名在不同花色可能是不同意思，例如 sex）。
+ * 「其他」、只有一種的（風格、人數以外的主體）不蓋，免得每張都有一個沒意義的字。
+ * 墨池、疊印台、排字匣的卡牌模式、字鋪都讀這一份，同一張牌在哪裡都蓋同一個字。
+ */
+export const GROUP_SEAL = {
+  "pose|activity": "動",
+  "pose|body": "身",
+  "pose|camera": "鏡",
+  "pose|face": "表",
+  "pose|gaze": "視",
+  "pose|tease": "誘",
+  "pose|flash": "走",
+  "pose|sex": "性",
+  "clothing|top": "上",
+  "clothing|bottom": "下",
+  "clothing|outer": "外",
+  "clothing|onepiece": "連",
+  "clothing|underwear": "內",
+  "clothing|legs": "襪",
+  "clothing|feet": "鞋",
+  "clothing|acc": "飾",
+  "clothing|fabric": "材",
+  "clothing|era": "時",
+  "clothing|nude": "裸",
+  "feature|hair_color": "色",
+  "feature|hair_len": "長",
+  "feature|hair_style": "型",
+  "feature|eyes": "眼",
+  "feature|skin": "膚",
+  "feature|makeup": "妝",
+  "feature|body_f": "體",
+  "feature|body_m": "體",
+  "feature|job": "職",
+  "feature|race": "族",
+  "feature|sex": "性",
+  "env|place": "地",
+  "env|light": "光",
+  "env|time": "晝",
+  "env|sky": "天",
+  "env|weather": "氣",
+  "env|inout": "室",
+  "env|furniture": "坐",
+  "subject|count_f": "女",
+  "subject|count_m": "男",
+};
+
+/** 這張牌的小分類章（詞庫的 item，或至少帶 section、group 的物件）。沒有就 null。 */
+export function groupSeal(item) {
+  return (item && GROUP_SEAL[`${item.section}|${item.group}`]) || null;
+}
+
 export const CARD_SUITS = ["cast", "look", "wear", "pose", "scene", "style"];
 export const CARD_SUIT_INFO = {
   cast: { zh: "人數", glyph: "人" },
