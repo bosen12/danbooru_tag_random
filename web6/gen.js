@@ -189,6 +189,15 @@ export function createGenerator(hooks) {
   };
 }
 
+/**
+ * 成品在畫面上顯示用的網址：跟伺服器要 webp 小檔（約原圖的 1/12，走 Tailscale 時差很多）。
+ * 「開原圖」照舊用原本的網址拿 PNG；印製中的預覽幀（data: URL）不動。
+ */
+export function viewSrc(src) {
+  if (!src || !src.startsWith("/api/image?") || /[?&]fmt=/.test(src)) return src;
+  return src + "&fmt=webp";
+}
+
 export async function comfyOnline() {
   try {
     const r = await fetch("/api/ping", { cache: "no-store" });

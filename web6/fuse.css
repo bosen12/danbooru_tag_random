@@ -115,9 +115,21 @@ body.fuse {
   list-style: none;
   overflow-x: auto;
   overscroll-behavior-x: contain;
-  scrollbar-width: thin;
   min-width: 0;
   flex: 1;
+  /* 還捲得過去的那一頭淡出（fuse.js 依捲動位置寫 data-more）。 */
+  --fade-l: 0px;
+  --fade-r: 0px;
+  -webkit-mask-image: linear-gradient(to right, transparent, black var(--fade-l), black calc(100% - var(--fade-r)), transparent);
+  mask-image: linear-gradient(to right, transparent, black var(--fade-l), black calc(100% - var(--fade-r)), transparent);
+}
+
+.line-list[data-more~="left"] {
+  --fade-l: 2.5rem;
+}
+
+.line-list[data-more~="right"] {
+  --fade-r: 2.5rem;
 }
 
 .line:has(.line-list:empty) {
@@ -234,6 +246,50 @@ body.fuse {
 
 .print:active {
   translate: 0 3px;
+}
+
+/* 滑鼠停在晾紙繩的作品上：底下浮出一張大的 */
+.print-peek {
+  position: fixed;
+  z-index: 70;
+  width: 13rem;
+  padding: 6px;
+  border: 1px solid var(--color-rule);
+  border-radius: var(--radius-md);
+  background: var(--color-paper-3);
+  box-shadow: 0 20px 40px var(--color-shade);
+  pointer-events: none;
+  transform-origin: 50% 0;
+}
+
+.print-peek[hidden] {
+  display: none;
+}
+
+.print-peek img {
+  display: block;
+  width: 100%;
+  max-height: 60vh;
+  object-fit: cover;
+  border-radius: 3px;
+  background: var(--proof-paper);
+}
+
+.print-peek-cap {
+  margin: 6px 2px 0;
+  font-size: var(--text-2xs);
+  color: var(--color-muted);
+}
+
+.print-peek.is-in {
+  animation: print-peek-in 150ms var(--ease-out);
+}
+
+@keyframes print-peek-in {
+  from {
+    opacity: 0;
+    transform: translateY(-4px) scale(0.97);
+  }
 }
 
 /* ---------- 三欄：字盒｜卡池｜試印與付印 ---------- */
@@ -2053,7 +2109,8 @@ body.fuse {
   .print-bar.is-nudged,
   .register.is-inked::before,
   .registers.ghosts-in .ghost-card,
-  .pool-pill.is-bumped {
+  .pool-pill.is-bumped,
+  .print-peek.is-in {
     animation: none;
   }
   .pv-roller[data-state="queued"] i,

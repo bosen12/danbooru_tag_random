@@ -35,7 +35,7 @@ import { HARD_BANNED, applyArtSources } from "./card-art.js";
 import { buildLibrary, createAssets, cardNode, cardFacts, CARD_SUIT_INFO, CARD_SUITS, RATING_ZH, ERA_ZH } from "./cards.js";
 import { el, openSheet, anyOverlay } from "./ui.js";
 import { createDrag } from "./drag.js";
-import { createGenerator, comfyOnline } from "./gen.js";
+import { createGenerator, comfyOnline, viewSrc } from "./gen.js";
 import { attachPeek, hidePeek } from "./card-peek.js";
 import * as S from "./store.js";
 import { REGISTERS, REGISTER_ROLE, emptyBed, sanitizeBed, placeCard, removeCard, relationsOf } from "./fuse-bed.js";
@@ -587,7 +587,7 @@ function renderPreview({ develop = false } = {}) {
   pv.sheet.style.setProperty("--ar", `${w} / ${h}`);
   const state = p ? p.status : "none";
   pv.sheet.dataset.state = state;
-  const src = p ? p.image || p.preview : null;
+  const src = p ? viewSrc(p.image) || p.preview : null;
   let img = pv.sheet.querySelector("img");
   if (src) {
     if (!img) {
@@ -706,7 +706,7 @@ function renderTrials() {
 function paintTrialFace(i, p = printFor(sigOf(trials[i]))) {
   const n = trialNodes[i];
   if (!n) return;
-  const src = p ? p.image || p.preview : null;
+  const src = p ? viewSrc(p.image) || p.preview : null;
   n.node.dataset.printed = p ? p.status : "none";
   let img = n.face.querySelector("img");
   if (src) {
@@ -1568,6 +1568,17 @@ function renderLine() {
   const list = $("line-list");
   list.replaceChildren(...prints.map((p) => el("li", {}, lineItem(p))));
   $("line-empty").hidden = prints.length > 0;
+  syncLineFade();
+}
+
+/** 捲軸平常是隱形的：哪一邊還捲得過去，繩子那一頭就淡出，看得出後面還有作品。 */
+function syncLineFade() {
+  const list = $("line-list");
+  const max = list.scrollWidth - list.clientWidth;
+  const more = [];
+  if (list.scrollLeft > 2) more.push("left");
+  if (list.scrollLeft < max - 2) more.push("right");
+  list.dataset.more = more.join(" ");
 }
 
 function lineItem(p) {
@@ -1588,10 +1599,12 @@ const STATUS_ZH = { drawn: "排隊", queued: "排隊", running: "印製中", don
 function paintLineNode(node, p) {
   node.dataset.status = p.status;
   const face = node.querySelector(".print-face");
-  const src = p.image || p.preview;
+  const src = viewSrc(p.image) || p.preview;
   const img = face.querySelector("img");
   if (src) {
-    if (!img) face.replaceChildren(el("img", { src, alt: "", decoding: "async", draggable: "false" }));
+    // loading 要排在 src 前面：先設 src 的話圖已經開始下載，lazy 就沒用了。
+    // 繩子捲不到的作品等捲過去才下載。
+    if (!img) face.replaceChildren(el("img", { loading: "lazy", src, alt: "", decoding: "async", draggable: "false" }));
     else if (img.getAttribute("src") !== src) img.src = src;
   } else face.replaceChildren(el("span", { class: "print-state" }, STATUS_ZH[p.status] || ""));
   node.style.setProperty("--p", String(p.status === "running" ? p.progress || 0 : p.status === "done" ? 1 : 0));
@@ -1604,8 +1617,44 @@ function paintLineItem(p) {
   else renderLine();
 }
 
+/* 晾紙繩上的作品只有指甲大：滑鼠停在上面，底下浮出一張大一點的（點下去照舊打開大圖）。 */
+let linePeek = null;
+let linePeekTimer = 0;
+
+function showLinePeek(node) {
+  const p = prints.find((x) => x.id === node.dataset.id);
+  const src = p && (viewSrc(p.image) || p.preview);
+  if (!src || !node.isConnected) return hideLinePeek();
+  if (!linePeek) {
+    linePeek = el("div", { class: "print-peek", "aria-hidden": "true", hidden: true }, el("img", { alt: "", decoding: "async" }), el("p", { class: "print-peek-cap" }));
+    document.body.append(linePeek);
+  }
+  const img = linePeek.querySelector("img");
+  if (img.getAttribute("src") !== src) img.src = src;
+  img.style.aspectRatio = `${p.width} / ${p.height}`;
+  linePeek.querySelector(".print-peek-cap").textContent = [`試印 ${p.letter || ""}`, STATUS_ZH[p.status] || "", `seed ${p.seed}`].filter(Boolean).join("・");
+  const wasHidden = linePeek.hidden;
+  linePeek.hidden = false;
+  const r = node.getBoundingClientRect();
+  const w = linePeek.offsetWidth;
+  const h = linePeek.offsetHeight;
+  linePeek.style.left = Math.max(8, Math.min(window.innerWidth - w - 8, r.left + r.width / 2 - w / 2)) + "px";
+  linePeek.style.top = Math.max(8, Math.min(window.innerHeight - h - 8, r.bottom + 10)) + "px";
+  if (wasHidden && !reduced()) {
+    linePeek.classList.remove("is-in");
+    void linePeek.offsetWidth;
+    linePeek.classList.add("is-in");
+  }
+}
+
+function hideLinePeek() {
+  clearTimeout(linePeekTimer);
+  if (linePeek) linePeek.hidden = true;
+}
+
 function openPrint(p) {
-  const src = p.image || p.preview;
+  hideLinePeek();
+  const src = viewSrc(p.image) || p.preview;
   const mine = (p.mine && p.mine.length ? p.mine : p.bed?.pins || []).filter((t) => lib.byTag.has(t));
   let sheet = null;
   const foot = [
@@ -2009,6 +2058,40 @@ function wireChrome() {
     }, 120);
   });
   $("case-grid").addEventListener("keydown", caseKeys);
+  // 晾紙繩只會橫著捲：滑鼠滾輪上下滾也讓它左右走（滑鼠大多只有直向滾輪）。捲到頭就把滾輪還給頁面。
+  const line = $("line-list");
+  line.addEventListener(
+    "wheel",
+    (e) => {
+      if (e.ctrlKey || Math.abs(e.deltaY) <= Math.abs(e.deltaX)) return;
+      const max = line.scrollWidth - line.clientWidth;
+      if (max <= 0) return;
+      const dy = e.deltaMode === 1 ? e.deltaY * 16 : e.deltaY;
+      const next = Math.max(0, Math.min(max, line.scrollLeft + dy));
+      if (next === line.scrollLeft) return;
+      e.preventDefault();
+      line.scrollLeft = next;
+    },
+    { passive: false }
+  );
+  line.addEventListener("pointerover", (e) => {
+    if (e.pointerType !== "mouse") return;
+    const n = e.target.closest ? e.target.closest(".print") : null;
+    if (!n) return;
+    clearTimeout(linePeekTimer);
+    // 第一張等一下再出來（滑鼠只是路過就不跳）；已經開著時換到隔壁那張就直接換。
+    linePeekTimer = setTimeout(() => showLinePeek(n), linePeek && !linePeek.hidden ? 0 : 160);
+  });
+  line.addEventListener("pointerleave", hideLinePeek);
+  line.addEventListener("pointerdown", hideLinePeek);
+  line.addEventListener(
+    "scroll",
+    () => {
+      hideLinePeek();
+      syncLineFade();
+    },
+    { passive: true }
+  );
   $("pool-pill").addEventListener("click", () => $("plate").scrollIntoView({ behavior: reduced() ? "auto" : "smooth", block: "start" }));
   const regs = $("registers");
   const relTarget = (e) => (e.target.closest ? e.target.closest(".plate-card")?.dataset.tag || null : null);
@@ -2028,6 +2111,7 @@ function wireChrome() {
     rTimer = setTimeout(() => {
       closePop();
       drawRelations([]);
+      syncLineFade();
     }, 120);
   });
   $("plate-scroll").addEventListener("scroll", () => closePop(), { passive: true });

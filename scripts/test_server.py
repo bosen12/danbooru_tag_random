@@ -481,20 +481,73 @@ ok(
 # ComfyUI 的 SaveImage 依輸出資料夾現有檔案編號，資料夾清空後編號從頭開始，
 # 檔名就會重複。舊版送的是一天份的 max-age，於是瀏覽器連問都不問，直接拿同檔名
 # 的舊圖顯示 —— 使用者看到的是「之前生成過的圖」。
-# 只看送出去的那幾行 header，不看註解（不然註解提到舊行為就會誤判）。
+# 現在的規則：ETag 一律是內容雜湊；整年快取只給網址上帶著內容指紋（h=）而且對得上的
+# —— 內容一換網址就換，不會再拿到舊圖；指紋對不上（檔名被別張圖用掉）回 404，不拿別張頂替。
 _img_src = inspect.getsource(server.Handler._serve_comfy_image)
 _img_headers = [
     ln for ln in _img_src.splitlines()
     if "send_header" in ln and not ln.lstrip().startswith("#")
 ]
 _img_joined = chr(10).join(_img_headers)
-ok("圖片不用 max-age 快取（檔名會重複）", "max-age" not in _img_joined, _img_joined)
-ok("圖片每次都回來驗證", "no-cache" in _img_joined)
+ok("handler 裡不另寫 max-age：快取規則只走 image_cache_policy()", "max-age" not in _img_joined, _img_joined)
 ok("有回 ETag", "ETag" in _img_joined)
 ok("有處理 If-None-Match", "If-None-Match" in _img_src)
-ok("ETag 算在內容上而不是檔名上", "hashlib.sha1(bytes(raw))" in _img_src)
+ok("ETag 算在內容上而不是檔名上", "image_digest(raw)" in _img_src and "image_cache_policy(want, digest)" in _img_src)
 
+_d = server.image_digest(b"same bytes")
+ok("沒帶指紋的舊網址：每次回來驗證", server.image_cache_policy("", _d) == (200, "private, no-cache"))
+_st, _cc = server.image_cache_policy(_d[: server.IMAGE_HASH_LEN], _d)
+ok("帶著對得上的指紋：整年快取", _st == 200 and "immutable" in _cc and "max-age=31536000" in _cc, _cc)
+ok(
+    "指紋對不上（輸出資料夾清過、檔名換成別張）：404，不拿別張頂替",
+    server.image_cache_policy(server.image_digest(b"other")[: server.IMAGE_HASH_LEN], _d)[0] == 404,
+)
+ok(
+    "指紋只收 8～40 個十六進位字",
+    server.valid_image_hash(_d[:16]) and not server.valid_image_hash("zz" * 8) and not server.valid_image_hash("abc123"),
+)
 
+_real_api = server.api
+_real_webp_dir = server.WEBP_DIR
+import tempfile as _tempfile  # noqa: E402
+
+server.WEBP_DIR = Path(_tempfile.mkdtemp(prefix="webp-cache-test-"))
+try:
+    server.api = lambda method, path, data=None, timeout=60: b"PNG BYTES" if path.startswith("/view?") else None
+    _src = "/api/image?filename=x.png&subfolder=&type=output"
+    _got = server.with_content_hash(_src)
+    ok("出圖完成的網址帶上內容指紋", _got == _src + "&h=" + server.image_digest(b"PNG BYTES")[:16], _got)
+    ok("已經帶指紋的不再加一次", server.with_content_hash(_got) == _got)
+    ok("_job 送出去的網址就是帶指紋的", server._job(1, 64, 64, "p", _src)["image"] == _got)
+
+    def _down(*a, **k):
+        raise OSError("comfy down")
+
+    server.api = _down
+    ok("拿不到圖就照舊回原本的網址，不擋住出圖", server.with_content_hash(_src) == _src)
+    ok("webp 轉不出來就回 None（改送原圖）", server.comfy_webp("filename=x.png&subfolder=&type=output", "f" * 40) is None)
+
+    _calls = []
+
+    def _webp(method, path, data=None, timeout=60):
+        _calls.append(path)
+        return b"RIFF....WEBPVP8 "
+
+    server.api = _webp
+    _q = "filename=y.png&subfolder=&type=output"
+    _a = server.comfy_webp(_q, "a" * 40)
+    _b = server.comfy_webp(_q, "a" * 40)
+    ok("webp 用 ComfyUI 的 preview 轉", _a == b"RIFF....WEBPVP8 " and "preview=webp%3B85" in _calls[0], str(_calls))
+    ok("同一張圖只轉一次（快取鑰匙是內容雜湊）", _a == _b and len(_calls) == 1, str(_calls))
+    ok("轉好的存到硬碟", (server.WEBP_DIR / ("a" * 40 + ".webp")).read_bytes() == _a)
+    server._WEBP_CACHE.clear()  # 當作伺服器重開：記憶體裡的沒了
+    _c = server.comfy_webp(_q, "a" * 40)
+    ok("伺服器重開後從硬碟拿，不再請 ComfyUI 轉", _c == _a and len(_calls) == 1, str(_calls))
+finally:
+    server.api = _real_api
+    server._WEBP_CACHE.clear()
+    shutil.rmtree(server.WEBP_DIR, ignore_errors=True)
+    server.WEBP_DIR = _real_webp_dir
 
 
 # --- Discord embed ---------------------------------------------------------

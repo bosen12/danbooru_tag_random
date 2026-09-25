@@ -30,7 +30,7 @@ import { HARD_BANNED, applyArtSources } from "./card-art.js";
 import { buildLibrary, createAssets, cardNode, setCardFlag, cardFacts, CARD_SUIT_INFO, CARD_SUITS, RATING_ZH } from "./cards.js";
 import { el, openSheet, anyOverlay, toast, ICONS } from "./ui.js";
 import { createDrag } from "./drag.js";
-import { createGenerator, comfyOnline } from "./gen.js";
+import { createGenerator, comfyOnline, viewSrc } from "./gen.js";
 import { genSeed, mountSeedControl, seedUseButton } from "./seed-control.js";
 import { attachPeek } from "./card-peek.js";
 import * as S from "./store.js";
@@ -989,7 +989,7 @@ function layoutFans(shotEl) {
 function paintShot(node, shot) {
   node.dataset.status = shot.status;
   const frame = node.querySelector(".shot-frame");
-  const src = shot.image || shot.preview;
+  const src = viewSrc(shot.image) || shot.preview;
   let img = frame.querySelector("img");
   if (src) {
     if (!img) {
@@ -1134,7 +1134,7 @@ function removeShot(shot) {
 }
 
 function showShot(shot) {
-  const src = shot.image || shot.preview;
+  const src = viewSrc(shot.image) || shot.preview;
   openSheet(
     `seed ${shot.seed}`,
     el(

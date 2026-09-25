@@ -596,6 +596,111 @@ def image_error_code(exc: BaseException) -> int:
     return 404 if getattr(exc, "code", None) == 404 else 502
 
 
+# 成品網址上的內容指紋（h=）：原圖 sha1 的前 16 個字。
+# 網址帶著它，就等於「這個網址永遠是這一張圖」—— 瀏覽器可以整年快取、重新整理時連問都不必問。
+# ComfyUI 輸出資料夾清過、檔名重複時，指紋對不上，伺服器回 404，絕不拿別張圖頂替。
+IMAGE_HASH_LEN = 16
+
+
+def image_digest(raw: bytes) -> str:
+    return hashlib.sha1(bytes(raw)).hexdigest()
+
+
+def valid_image_hash(h: str) -> bool:
+    return 8 <= len(h) <= 40 and all(c in "0123456789abcdef" for c in h)
+
+
+def image_cache_policy(want: str, digest: str) -> tuple[int, str]:
+    """回 (狀態碼, Cache-Control)。
+
+    沒帶指紋（舊的網址）：no-cache，每次回來問，ETag 是內容雜湊，內容一樣才回 304。
+    帶了指紋而且對得上：整年快取 —— 內容一換，網址上的指紋就不一樣，不會拿到舊圖。
+    帶了指紋但對不上：那個檔名現在是另一張圖了，回 404。
+    """
+    if not want:
+        return 200, "private, no-cache"
+    if not digest.startswith(want):
+        return 404, "no-store"
+    return 200, "private, max-age=31536000, immutable"
+
+
+def with_content_hash(src: str) -> str:
+    """成品網址加上內容指紋。拿不到圖（Comfy 忙、斷線）就照舊回原本的網址，不擋住出圖。"""
+    if not src or not src.startswith("/api/image?") or "&h=" in src:
+        return src
+    try:
+        raw = api("GET", "/view?" + src.split("?", 1)[1], timeout=30)
+    except Exception:
+        return src
+    if not isinstance(raw, (bytes, bytearray)):
+        return src
+    return src + "&h=" + image_digest(raw)[:IMAGE_HASH_LEN]
+
+
+# 成品轉成 webp 的快取。鑰匙是原圖的 sha1：同一張圖不管幾台裝置、幾個分頁來要都只轉一次。
+# ComfyUI 轉一張 832×1216 約 0.1 秒，而且是在它自己的事件迴圈裡轉 —— 晾紙繩一次幾十張
+# 全靠它現轉的話，正在跑的那張圖的進度回報會跟著卡。一張約 100 KB，留 200 張約 20 MB。
+_WEBP_CACHE: dict[str, bytes] = {}
+_WEBP_MAX = 200
+_WEBP_LOCK = threading.Lock()
+# 轉好的也存一份到硬碟（data/ 不進版控）：伺服器重開之後晾紙繩不必再請 ComfyUI 全部重轉一次。
+# 檔名就是原圖的 sha1，內容不會變；超過上限就從最舊的刪（約 100 KB 一張，1500 張約 150 MB）。
+WEBP_DIR = Path(os.environ.get("WEBP_CACHE_DIR") or ROOT / "data" / "webp-cache")
+_WEBP_DISK_MAX = 1500
+_WEBP_WRITES = {"n": 0}
+
+
+def _webp_remember(digest: str, blob: bytes) -> None:
+    with _WEBP_LOCK:
+        _WEBP_CACHE[digest] = blob
+        while len(_WEBP_CACHE) > _WEBP_MAX:
+            _WEBP_CACHE.pop(next(iter(_WEBP_CACHE)))
+
+
+def _webp_disk_put(digest: str, blob: bytes) -> None:
+    try:
+        WEBP_DIR.mkdir(parents=True, exist_ok=True)
+        tmp = WEBP_DIR / f"{digest}.{os.getpid()}.{threading.get_ident()}.tmp"
+        tmp.write_bytes(blob)
+        os.replace(tmp, WEBP_DIR / f"{digest}.webp")
+    except OSError:
+        return
+    _WEBP_WRITES["n"] += 1
+    if _WEBP_WRITES["n"] % 50:
+        return
+    try:
+        files = sorted(WEBP_DIR.glob("*.webp"), key=lambda f: f.stat().st_mtime)
+        for f in files[: max(0, len(files) - _WEBP_DISK_MAX)]:
+            f.unlink(missing_ok=True)
+    except OSError:
+        pass
+
+
+def comfy_webp(q: str, digest: str) -> bytes | None:
+    with _WEBP_LOCK:
+        hit = _WEBP_CACHE.pop(digest, None)
+        if hit is not None:
+            _WEBP_CACHE[digest] = hit  # 放回最後面：最近用過的最晚被擠掉
+            return hit
+    try:
+        blob = (WEBP_DIR / f"{digest}.webp").read_bytes()
+    except OSError:
+        blob = None
+    if blob and blob[:4] == b"RIFF":
+        _webp_remember(digest, blob)
+        return blob
+    try:
+        blob = api("GET", f"/view?{q}&preview=" + urllib.parse.quote("webp;85"), timeout=60)
+    except Exception:
+        return None
+    if not isinstance(blob, (bytes, bytearray)) or blob[:4] != b"RIFF":
+        return None
+    blob = bytes(blob)
+    _webp_remember(digest, blob)
+    _webp_disk_put(digest, blob)
+    return blob
+
+
 def first_image_src(history: dict, preferred_nodes=None) -> str | None:
     outputs = history.get("outputs") or {}
     node_ids = list(outputs)
@@ -766,7 +871,7 @@ def ws_connect(http_base: str, client_id: str, timeout: float = 30) -> Ws:
 def _job(seed: int, width: int, height: int, positive: str, image: str, ckpt: str | None = None) -> dict:
     return {
         "ok": True,
-        "image": image,
+        "image": with_content_hash(image),
         "seed": seed,
         "ckpt": ckpt or CKPT,
         "width": width,
@@ -2011,7 +2116,8 @@ class Handler(BaseHTTPRequestHandler):
             return vals[0] if vals else default
 
         q = comfy_view_query(one("filename"), one("subfolder"), one("type") or "output")
-        if not q:
+        want = one("h").lower()
+        if not q or (want and not valid_image_hash(want)):
             self._json(400, {"ok": False, "error": "bad image query"})
             return
         try:
@@ -2022,38 +2128,45 @@ class Handler(BaseHTTPRequestHandler):
         if not isinstance(raw, (bytes, bytearray)):
             self._json(502, {"ok": False, "error": "not an image"})
             return
-        mime = "image/png"
-        if raw[:3] == b"\xff\xd8\xff":
-            mime = "image/jpeg"
-        elif raw[:4] == b"RIFF":
-            mime = "image/webp"
-        safe = one("filename").replace('"', "")
         # 快取要用內容當鑰匙，不能用檔名。
         #
         # 以前這裡是 `max-age=86400`，而網址只有 filename/subfolder/type。ComfyUI 的
         # SaveImage 是看輸出資料夾現有的檔案來編號（prefix_00001_.png），所以只要那個
         # 資料夾被清空、或換了一台機器重裝，編號就從頭開始、檔名跟著重複 —— 瀏覽器
         # 於是拿 24 小時前的舊圖來顯示，畫面上看到的是「之前生成過的圖」。
-        # 輸出資料夾一直長大的人不會遇到，清過的人每次都遇到。
         #
-        # 改成 no-cache（每次回來問）＋ 內容雜湊的 ETag：內容一樣才回 304，
-        # 檔名重複但內容不同時一定拿到新的那張。
-        etag = '"' + hashlib.sha1(bytes(raw)).hexdigest() + '"'
+        # 所以 ETag 一律是內容雜湊；整年快取只給網址上帶著內容指紋（h=）、而且對得上的，
+        # 規則在 image_cache_policy()。
+        digest = image_digest(raw)
+        status, cache = image_cache_policy(want, digest)
+        if status != 200:
+            self._json(status, {"ok": False, "error": "這張圖在 ComfyUI 的輸出資料夾裡已經不在了（檔名被別張圖用掉）"})
+            return
+        # fmt=webp：晾紙繩、試印、成品預覽用的小檔（約原圖的 1/12）。「開原圖」不帶，拿原本的 PNG。
+        webp = comfy_webp(q, digest) if one("fmt") == "webp" else None
+        etag = '"' + digest + ("-webp" if webp else "") + '"'
         if self.headers.get("If-None-Match") == etag:
             self.send_response(304)
             self.send_header("ETag", etag)
-            self.send_header("Cache-Control", "private, no-cache")
+            self.send_header("Cache-Control", cache)
             self.end_headers()
             return
+        body = webp or raw
+        mime = "image/png"
+        if body[:3] == b"\xff\xd8\xff":
+            mime = "image/jpeg"
+        elif body[:4] == b"RIFF":
+            mime = "image/webp"
+        safe = one("filename").replace('"', "")
         self.send_response(200)
         self.send_header("Content-Type", mime)
-        self.send_header("Content-Length", str(len(raw)))
-        self.send_header("Cache-Control", "private, no-cache")
+        self.send_header("Content-Length", str(len(body)))
+        self.send_header("Cache-Control", cache)
         self.send_header("ETag", etag)
         self.send_header("Content-Disposition", f'inline; filename="{safe}"')
         self.end_headers()
         try:
-            self.wfile.write(raw)
+            self.wfile.write(body)
         except OSError:
             self.close_connection = True
 
