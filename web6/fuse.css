@@ -247,6 +247,9 @@ body.fuse {
   body.fuse {
     height: 100dvh;
     display: grid;
+    /* 欄寬鎖在視窗寬度：不寫的話這一欄會被最寬的內容撐開 ——
+       晾紙繩掛了幾十張作品時整頁變得比視窗寬，右欄就被切掉了。繩子太長就在繩子裡橫捲。 */
+    grid-template-columns: minmax(0, 1fr);
     grid-template-rows: auto auto minmax(0, 1fr);
     overflow: hidden;
   }
