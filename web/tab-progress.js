@@ -14,8 +14,21 @@
  *   tab.clear();
  */
 export function tabProgress({ base = document.title } = {}) {
-  const link = document.querySelector('link[rel~="icon"]');
+  let link = document.querySelector('link[rel~="icon"]');
   const baseHref = link ? link.getAttribute("href") : null;
+  const baseType = link ? link.getAttribute("type") : null;
+
+  // 換圖示時換一個新的 <link>，不要改原本那個的 href：Chrome 在 href 改回原值時不會重抓，
+  // 而是退回去要 /favicon.ico（404，主控台一條紅字）。換新元素它就乖乖照著新的載。
+  function setIcon(href, type) {
+    if (!link || link.getAttribute("href") === href) return;
+    const next = link.cloneNode(false);
+    next.setAttribute("href", href);
+    if (type) next.setAttribute("type", type);
+    else next.removeAttribute("type");
+    link.replaceWith(next);
+    link = next;
+  }
   const logo = new Image();
   let logoReady = false;
   if (baseHref) {
@@ -56,7 +69,7 @@ export function tabProgress({ base = document.title } = {}) {
     if (key === lastKey) return;
     lastKey = key;
     if (state === "idle") {
-      if (link.getAttribute("href") !== baseHref) link.setAttribute("href", baseHref);
+      setIcon(baseHref, baseType);
       return;
     }
     try {
@@ -98,7 +111,7 @@ export function tabProgress({ base = document.title } = {}) {
           g.stroke();
         }
       }
-      link.setAttribute("href", c.toDataURL("image/png"));
+      setIcon(c.toDataURL("image/png"), "image/png");
     } catch {
       /* canvas 用不了就只改標題 */
     }

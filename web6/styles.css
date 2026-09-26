@@ -637,6 +637,69 @@ p {
   display: none;
 }
 
+/* 池子裡放不到一起的兩張：虛線框起來，底下一行說是哪兩張。 */
+.pool-clash {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: baseline;
+  gap: 0.2rem var(--space-sm);
+  margin: var(--space-xs) var(--space-md) 0;
+  padding-left: var(--space-xs);
+  border-left: 2px solid var(--color-accent);
+  font-size: var(--text-xs);
+  color: var(--color-ink-2);
+  animation: pool-note-in var(--dur-short) var(--ease-out);
+}
+
+.pool-clash b {
+  color: var(--color-accent);
+  font-weight: 700;
+}
+
+.pool-clash[hidden] {
+  display: none;
+}
+
+.pool-slot .card.is-clash {
+  outline: 2px dashed var(--color-accent);
+  outline-offset: 3px;
+}
+
+.pool-slot .card.is-clashing {
+  animation: pool-clash-shake 0.42s var(--ease-out);
+}
+
+@keyframes pool-clash-shake {
+  20% {
+    transform: translateX(-3px) rotate(-2deg);
+  }
+  45% {
+    transform: translateX(3px) rotate(2deg);
+  }
+  70% {
+    transform: translateX(-2px);
+  }
+}
+
+/* 指到一張牌，跟它有關係的一起浮起來、描一圈。 */
+.pool-slot .card {
+  transition: translate var(--dur-short) var(--ease-out), box-shadow var(--dur-short) var(--ease-out);
+}
+
+.pool-slot .card.is-related {
+  translate: 0 -4px;
+  box-shadow: 0 0 0 2px var(--color-accent), 0 10px 18px -8px var(--color-shade);
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .pool-slot .card.is-clashing {
+    animation: none;
+  }
+  .pool-slot .card.is-related {
+    translate: none;
+  }
+}
+
 @keyframes pool-note-in {
   from {
     opacity: 0;

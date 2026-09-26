@@ -80,6 +80,9 @@ let bans = new Set();
 let bed = emptyBed();
 let seeds = [];
 let picked = 0;
+// 滑鼠停在另一張試印上：卡池的影子先換成那一張補的（只是看看，沒有換過去）。
+let peekTrial = null;
+let peekTimer = 0;
 let trials = [];
 let prints = [];
 let history = [];
@@ -397,6 +400,9 @@ function clearBed() {
 
 function pick(i, { quiet = false } = {}) {
   if (i < 0 || i >= trials.length || i === picked) return;
+  clearTimeout(peekTimer);
+  peekTrial = null;
+  trialNodes.forEach((n) => n.node.classList.remove("is-peek"));
   picked = i;
   renderPlate([]);
   swapGhosts();
@@ -780,6 +786,17 @@ function buildTrialShells() {
       face,
       el("span", { class: "trial-body" }, meta, picks)
     );
+    // 滑鼠停一下（160ms，掃過去不算）就先預覽這張試印補的牌；移開就回到選中的那張。只看滑鼠 ——
+    // 觸控沒有「停在上面」這回事，點下去就直接換過去了。
+    node.addEventListener("pointerenter", (e) => {
+      if (e.pointerType !== "mouse") return;
+      clearTimeout(peekTimer);
+      peekTimer = setTimeout(() => peekAt(i), 160);
+    });
+    node.addEventListener("pointerleave", () => {
+      clearTimeout(peekTimer);
+      peekAt(null);
+    });
     node.addEventListener("keydown", (e) => {
       const d = e.key === "ArrowRight" || e.key === "ArrowDown" ? 1 : e.key === "ArrowLeft" || e.key === "ArrowUp" ? -1 : 0;
       if (!d) return;
@@ -791,6 +808,16 @@ function buildTrialShells() {
     return { node, face, meta, picks };
   });
   box.replaceChildren(...trialNodes.map((n) => n.node));
+}
+
+function peekAt(i) {
+  const next = i === null || i === picked || !trials[i] || !bed.pins.length ? null : i;
+  if (next === peekTrial) return;
+  peekTrial = next;
+  trialNodes.forEach((n, j) => n.node.classList.toggle("is-peek", j === peekTrial));
+  closePop();
+  renderPlate([]);
+  swapGhosts();
 }
 
 function renderTrials() {
@@ -1012,7 +1039,7 @@ function scheduleFit() {
 /** 視窗（或卡池那一欄）大小變了：影子張數變了就重排，只是牌寬變了就只改寬度、重畫記號。 */
 function refitPool() {
   if (!lib || !trials.length) return;
-  const plan = planPool(trials[picked], !bed.pins.length);
+  const plan = planPool(trials[peekTrial ?? picked], !bed.pins.length);
   if (!sameCaps(plan.caps, poolFit.caps)) {
     closePop();
     renderPlate([]);
@@ -1026,7 +1053,9 @@ function refitPool() {
 
 function renderPlate(events = []) {
   const box = $("registers");
-  const t = trials[picked];
+  // 預覽中（滑鼠停在別張試印上）影子畫那一張的；其他地方（付印、預覽圖）照舊跟著選中的那張。
+  const peeking = peekTrial !== null && trials[peekTrial];
+  const t = peeking ? trials[peekTrial] : trials[picked];
   const empty = !bed.pins.length;
   relFocus = null;
   renderPlateNotice();
@@ -1097,11 +1126,17 @@ function renderPlate(events = []) {
   });
   put(box, empty ? startBlock() : null, rows);
   box.dataset.empty = empty ? "true" : "false";
-  $("plate-sub").textContent = empty
+  if (peeking) box.dataset.peek = t.letter;
+  else delete box.dataset.peek;
+  const sub = $("plate-sub");
+  sub.classList.toggle("is-peek", !!peeking && !empty);
+  sub.textContent = empty
     ? "還沒有牌"
-    : t
-      ? `試印 ${t.letter}：你的 ${bed.pins.length} 張，引擎補 ${t.extra.length} 張`
-      : `你的 ${bed.pins.length} 張`;
+    : peeking
+      ? `預覽試印 ${t.letter}：引擎補 ${t.extra.length} 張・點一下換過去`
+      : t
+        ? `試印 ${t.letter}：你的 ${bed.pins.length} 張，引擎補 ${t.extra.length} 張`
+        : `你的 ${bed.pins.length} 張`;
   $("clear").disabled = empty;
   applyFit(plan);
   renderPill();

@@ -943,6 +943,21 @@ body.fuse {
   }
 }
 
+/* 預覽別張試印：卡池標題換成「預覽試印 B」，影子描一圈虛線，那張試印按鈕也描起來 —— 看得出這只是看看。 */
+.plate-sub.is-peek {
+  color: var(--color-accent);
+}
+
+.registers[data-peek] .ghost-card {
+  outline: 1px dashed color-mix(in oklch, var(--color-accent) 70%, transparent);
+  outline-offset: 2px;
+}
+
+.trial.is-peek {
+  outline: 1px dashed var(--color-accent);
+  outline-offset: 2px;
+}
+
 .card.is-clashing {
   animation: clash 0.42s var(--ease-out);
 }

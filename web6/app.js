@@ -19,7 +19,10 @@ import {
   randomSeed,
   ERAS,
   ERA_LABELS,
+  contradictions,
+  ACT_PLACE,
 } from "./engine.js";
+import { relationsOf } from "./fuse-bed.js";
 import { drawWithSeed } from "./draw-with-seed.js";
 import { ratingBlocked, RATING_LABEL } from "./rules/rating.js";
 import { HEATS, toggleHeat } from "./heats.js";
@@ -378,7 +381,24 @@ function pin(tag) {
   poolNote = gone.length ? replaceNote(tag, gone) : null;
   commitPins(tag);
   leaving.forEach(liftOut);
+  // 跟著進來的牌（implies）不是憑空出現：放的那張落定之後，一張接一張從底下彈上來。
+  const carried = [...pool].filter((t) => t !== tag && !before.has(t));
+  carried.forEach((t, i) => popCarried(t, 200 + i * 90));
   if (gone.length) announce(poolNote.text);
+}
+
+function popCarried(tag, delay) {
+  if (matchMedia("(prefers-reduced-motion: reduce)").matches) return;
+  const node = poolNode(tag);
+  if (!node) return;
+  node.animate(
+    [
+      { transform: "translateY(14px) scale(0.7)", opacity: 0 },
+      { transform: "translateY(-3px) scale(1.04)", opacity: 1, offset: 0.7 },
+      { transform: "none", opacity: 1 },
+    ],
+    { duration: 360, delay, easing: "cubic-bezier(0.16, 1, 0.3, 1)", fill: "backwards" }
+  );
 }
 
 /** 換下來的原因：同一格（互斥）還是時代對不上。 */
@@ -399,6 +419,8 @@ function replaceNote(tag, gone) {
 }
 
 let poolNote = null;
+// 上一次畫池子時相剋的牌：只有「剛變成相剋」的那幾張要抖。
+let lastClash = new Set();
 
 function renderPoolNote() {
   let box = $("pool-note");
@@ -489,6 +511,8 @@ function renderPool(fresh) {
   $("pool-count").textContent = tags.length ? `${tags.length} 張會一定進圖` : "";
   $("pool-clear").hidden = !tags.length;
   if (!tags.length) {
+    lastClash = new Set();
+    renderPoolClash([]);
     well.replaceChildren(
       el(
         "div",
@@ -500,12 +524,55 @@ function renderPool(fresh) {
     );
     return;
   }
+  // 牌跟牌的關係（跟疊印台同一套 relationsOf）：誰帶誰進來、哪兩張放不到一起、活動配場地。
+  // 以前池子是一排互不相干的牌：白背景帶進來的素色背景看不出是跟著來的；白背景配星空這種
+  // 成立不了的組合也不吭聲，引擎悄悄摘掉一張，人只會覺得「我明明放了」。
+  const inPool = new Set(tags);
+  const carriedBy = {};
+  for (const t of tags) {
+    const it = lex.byTag.get(t);
+    for (const d of [...(it?.implies || []), ...(it?.bind || [])]) {
+      if (d !== t && inPool.has(d) && !carriedBy[d]) carriedBy[d] = t;
+    }
+  }
+  const rels = relationsOf({ pins: tags, carried: carriedBy }, { lex, contradictions, actPlace: ACT_PLACE });
+  const related = new Map();
+  const clashing = new Set();
+  const clashPairs = [];
+  for (const r of rels) {
+    for (const [x, y] of [[r.a, r.b], [r.b, r.a]]) {
+      if (!related.has(x)) related.set(x, new Set());
+      related.get(x).add(y);
+    }
+    if (r.kind === "clash") {
+      clashing.add(r.a);
+      clashing.add(r.b);
+      clashPairs.push([r.a, r.b]);
+    }
+  }
+  const newlyClashing = [...clashing].filter((t) => !lastClash.has(t));
+  lastClash = clashing;
   well.replaceChildren(
     ...tags.map((t) => {
       const card = lib.byTag.get(t);
       const blocked = ratingBlocked(card.item, settings.rating);
-      const node = cardNode(card, assets, { flag: blocked ? { kind: "ban", text: "分級擋掉" } : null });
+      const node = cardNode(card, assets, { flag: blocked ? { kind: "ban", text: "分級擋掉" } : null, src: carriedBy[t] ? "附帶" : null });
       if (t === fresh) node.classList.add("dropped");
+      if (carriedBy[t]) node.title = `跟著「${zh(carriedBy[t])}」進來的`;
+      if (clashing.has(t)) {
+        node.classList.add("is-clash");
+        // 剛變成相剋的那一刻抖一下；之後重畫池子（加別的牌）不再抖。
+        if (newlyClashing.includes(t) && !matchMedia("(prefers-reduced-motion: reduce)").matches) {
+          node.classList.add("is-clashing");
+          setTimeout(() => node.classList.remove("is-clashing"), 460);
+        }
+      }
+      // 指到一張牌：跟它有關係的牌（帶它進來的、它帶進來的、跟它相剋的、活動配的場地）一起亮。
+      const mates = related.get(t);
+      if (mates) {
+        node.addEventListener("pointerenter", () => mates.forEach((m) => poolNode(m)?.classList.add("is-related")));
+        node.addEventListener("pointerleave", () => mates.forEach((m) => poolNode(m)?.classList.remove("is-related")));
+      }
       node.addEventListener("click", () => showCard(t, "pool"));
       drag.attach(node, { tag: t, from: "pool" });
       return el(
@@ -516,6 +583,21 @@ function renderPool(fresh) {
       );
     })
   );
+  renderPoolClash(clashPairs);
+}
+
+/** 池子底下一行：哪兩張放不到一起（跟疊印台卡池上面那句同一個講法）。 */
+function renderPoolClash(pairs) {
+  let box = $("pool-clash");
+  if (!box) {
+    box = el("p", { class: "pool-clash", id: "pool-clash", role: "status" });
+    $("pool-well").after(box);
+  }
+  box.hidden = !pairs.length;
+  if (!pairs.length) return box.replaceChildren();
+  const [a, b] = pairs[0];
+  const more = pairs.length > 1 ? `（還有 ${pairs.length - 1} 組）` : "";
+  box.replaceChildren(el("b", {}, "相剋"), `「${zh(a)}」跟「${zh(b)}」同時成立不了，引擎會摘掉其中一個${more}`);
 }
 
 /* ================= 規則 ================= */
