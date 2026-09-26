@@ -1039,13 +1039,38 @@ function paintShot(node, shot) {
     if (img.getAttribute("src") !== src) {
       // 剛印好（上一幀還是預覽或空的）：像相紙泡進顯影液，由上往下浮出來。
       const developing = shot.status === "done" && node.dataset.shown !== "done" && node.dataset.shown !== undefined;
-      img.src = src;
-      if (developing && !matchMedia("(prefers-reduced-motion: reduce)").matches) {
-        frame.classList.remove("is-developing");
-        void frame.offsetWidth;
-        frame.classList.add("is-developing");
-        setTimeout(() => frame.classList.remove("is-developing"), 1300);
+      const motion = !matchMedia("(prefers-reduced-motion: reduce)").matches;
+      const prevSrc = img.getAttribute("src");
+      // 上一幀墊在底下（.shot-under，排在主圖後面，querySelector("img") 拿到的還是主圖）。
+      // 以前直接換 src：預覽之間新的一幀解碼時那格是空的；成品則是動畫先播、圖後到 ——
+      // 遠端時成品還在路上，顯影播完了才硬跳出來。現在都等新的圖載好才開始。
+      let under = frame.querySelector(".shot-under");
+      if (prevSrc && motion) {
+        if (!under) {
+          under = el("img", { class: "shot-under", alt: "", "aria-hidden": "true" });
+          frame.append(under);
+        }
+        under.src = prevSrc;
       }
+      img.src = src;
+      const start = () => {
+        if (img.getAttribute("src") !== src) return; // 已經又換了下一幀
+        if (developing && motion) {
+          frame.classList.remove("is-developing");
+          void frame.offsetWidth;
+          frame.classList.add("is-developing");
+          setTimeout(() => {
+            frame.classList.remove("is-developing");
+            if (img.getAttribute("src") === src) frame.querySelector(".shot-under")?.remove();
+          }, 1300);
+        } else if (motion && prevSrc) {
+          img.classList.remove("is-pv-in");
+          void img.offsetWidth;
+          img.classList.add("is-pv-in");
+        }
+      };
+      if (img.complete && img.naturalWidth) start();
+      else img.addEventListener("load", start, { once: true });
     }
   } else if (img) img.remove();
   node.dataset.shown = shot.status;

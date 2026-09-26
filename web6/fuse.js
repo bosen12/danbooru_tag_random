@@ -687,17 +687,51 @@ function renderPreview({ develop = false } = {}) {
       img = el("img", { alt: "", decoding: "async", draggable: "false" });
       pv.sheet.prepend(img);
     }
-    if (img.getAttribute("src") !== src) img.src = src;
+    if (img.getAttribute("src") !== src) {
+      // 上一幀墊在底下（.pv-under），新的一幀載好了才淡進來／顯影 —— 解碼的那一下不會空掉。
+      const prevSrc = img.getAttribute("src");
+      if (prevSrc && !reduced()) {
+        let under = pv.sheet.querySelector(".pv-under");
+        if (!under) {
+          under = el("img", { class: "pv-under", alt: "", "aria-hidden": "true", draggable: "false" });
+          pv.sheet.append(under);
+        }
+        under.src = prevSrc;
+        if (!develop) {
+          const fade = () => {
+            if (img.getAttribute("src") !== src) return;
+            img.classList.remove("is-pv-in");
+            void img.offsetWidth;
+            img.classList.add("is-pv-in");
+          };
+          img.addEventListener("load", fade, { once: true });
+        }
+      }
+      img.src = src;
+    }
     img.alt = `試印 ${t.letter} 的成品`;
-  } else img?.remove();
+  } else {
+    img?.remove();
+    pv.sheet.querySelector(".pv-under")?.remove();
+  }
   // 印製中的預覽幀越印越濃，印好才是全濃度。
   pv.sheet.style.setProperty("--print-o", state === "running" ? String(0.4 + 0.6 * (p.progress || 0)) : "1");
   if (develop && src && !reduced()) {
-    // 成品剛好在眼前印好：像紙從滾筒下出來，由上往下顯影。
-    pv.sheet.classList.remove("is-developing");
-    void pv.sheet.offsetWidth;
-    pv.sheet.classList.add("is-developing");
-    setTimeout(() => pv.sheet.classList.remove("is-developing"), 1300);
+    // 成品剛好在眼前印好：像紙從滾筒下出來，由上往下顯影。等成品真的載好才開始 ——
+    // 遠端時圖還在路上，先播的話動畫跑完了圖才到，最後還是硬跳出來。
+    const sheet = pv.sheet;
+    const go = () => {
+      if (img.getAttribute("src") !== src) return;
+      sheet.classList.remove("is-developing");
+      void sheet.offsetWidth;
+      sheet.classList.add("is-developing");
+      setTimeout(() => {
+        sheet.classList.remove("is-developing");
+        if (img.getAttribute("src") === src) sheet.querySelector(".pv-under")?.remove();
+      }, 1300);
+    };
+    if (img.complete && img.naturalWidth) go();
+    else img.addEventListener("load", go, { once: true });
   }
   pv.sheet.disabled = !src;
   pv.sheet.setAttribute("aria-label", src ? `試印 ${t.letter} 的成品，點開看大圖` : `試印 ${t.letter}：${previewState(p)}`);

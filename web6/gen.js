@@ -9,6 +9,7 @@
  * 會留著等一陣子（server.py 的 GEN_REATTACH_SEC）。這裡斷線就用 /api/gen/attach 重接，從頭重播；
  * 頁面重新整理之後，畫到一半的那張也用 resume() 接回來。明確按停走 /api/gen/cancel。
  */
+import { tabProgress } from "./tab-progress.js";
 import { escapeForComfy } from "./engine.js";
 
 const IDLE_MS = 90000;
@@ -280,24 +281,15 @@ export function viewSrc(src) {
  * 切回這個分頁就恢復原本的標題。生圖一張十幾秒，人通常會先去別的分頁。
  */
 export function tabTitle(base = document.title) {
-  let note = "";
-  const paint = () => {
-    document.title = note && document.hidden ? `${note} · ${base}` : base;
-  };
-  document.addEventListener("visibilitychange", () => {
-    // 看到了就不必再提醒「印好了」；還在印的照樣顯示進度。
-    if (!document.hidden && !/%/.test(note)) note = "";
-    paint();
-  });
+  // 標題＋小圖示的進度環都交給 web/tab-progress.js（排字匣同一份）。
+  const tab = tabProgress({ base });
   return {
     shot(shot, pending = 0) {
-      if (shot.status === "running") {
-        const more = pending > 1 ? `（還有 ${pending - 1} 張）` : "";
-        note = `${Math.round((shot.progress || 0) * 100)}%${more}`;
-      } else if (shot.status === "done") note = pending > 1 ? note : "印好了";
-      else if (shot.status === "failed") note = "印壞了";
-      else if (shot.status === "cancelled") note = "";
-      paint();
+      if (shot.status === "running") tab.run(shot.progress || 0, pending > 1 ? `（還有 ${pending - 1} 張）` : "");
+      else if (shot.status === "done") {
+        if (pending <= 1) tab.done("印好了");
+      } else if (shot.status === "failed") tab.fail("印壞了");
+      else if (shot.status === "cancelled") tab.clear();
     },
   };
 }

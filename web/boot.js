@@ -90,6 +90,7 @@ import {
   wallHasCards,
 } from "./infinite.js";
 import { loadLexicon } from "./lexicon-load.js";
+import { tabProgress } from "./tab-progress.js";
 import { initTelegram, tgHandleKeys, tgSendCard, tgUiOpen } from "./telegram.js";
 import { initDiscord, dcHandleKeys, dcSendCard, dcUiOpen } from "./discord.js";
 import { initServiceSettings } from "./service-settings.js";
@@ -145,6 +146,9 @@ let failStreak = 0;
 // 最近一張是不是因為網路斷掉而失敗（重接也接不回）。這種不算進連續失敗：
 // 從 Mac 無限抽時網路斷一下，不該把整晚的無限抽停掉 —— 等網路回來接著抽。
 let lastFailNet = false;
+// 分頁標題＋小圖示上的出圖進度（切去別的分頁也看得到）。第一次用到才建，那時標題已經定了。
+let tabProg = null;
+const tab = () => tabProg || (tabProg = tabProgress());
 // 伺服器在等 Comfy 的時候每 5 秒送一則心跳，所以這條 SSE 靜默這麼久就是死了。
 // 留寬一點是因為換底模那下可以整整安靜一分鐘。
 // 由 config.json 的 client.streamIdleMs 覆寫（透過 /api/ping 帶下來）。
@@ -1685,7 +1689,7 @@ function tagButtons(tag) {
 // 在這之前只有釘選會確認，封禁點下去沒有任何回應。
 function flashTag(tag, kind) {
   if (reduceMotion()) return;
-  const cls = kind === "ban" ? "is-ban-flash" : "is-pin-flash";
+  const cls = { ban: "is-ban-flash", carry: "is-carry-flash", drop: "is-drop-flash" }[kind] || "is-pin-flash";
   for (const el of tagButtons(tag)) {
     el.classList.remove(cls);
     // 先拿掉再加回去才會重播，中間要讓瀏覽器真的重算一次樣式。
@@ -1966,6 +1970,11 @@ function onTagClick(tag) {
   afterPin();
   if (becamePin) {
     flashTag(tag, "pin");
+    // 連帶的反應也要看得到：跟著進來的（implies）一個接一個亮一下，被擠掉的往內收一下。
+    // 以前只有點的那一顆有漣漪，其他的只是悄悄變色 —— 看不出是「因為點了它」。
+    const carried = [...next.pinned].filter((t) => t !== tag && !before.has(t));
+    carried.forEach((t, i) => window.setTimeout(() => flashTag(t, "carry"), 110 + i * 80));
+    dropped.forEach((t, i) => window.setTimeout(() => flashTag(t, "drop"), 60 + i * 60));
     if (dropped.length) {
       const a = labelOf(lex, dropped[0]);
       const b = labelOf(lex, tag);
@@ -2105,13 +2114,34 @@ function setLive(el, ev) {
     meter.hidden = false;
     const p = Math.max(0, Math.min(1, Number(ev.value || 0) / Number(ev.max)));
     fill.style.transform = `scaleX(${p})`;
-    label.textContent = `${ev.value} / ${ev.max}`;
+    label.textContent = `${ev.value} / ${ev.max}${ev.eta ? " · " + ev.eta : ""}`;
   }
   if (ev.image && img) {
+    // 預覽一幀接一幀（0.6 秒一張）。以前是直接換 src：新的一幀還在解碼時那格是空的，
+    // 看起來在閃。現在上一幀先墊在底下，新的一幀在上面淡進來 —— 圖是一路「長」出來的。
+    if (img.classList.contains("is-on") && img.getAttribute("src") && !reduceMotion()) {
+      underlay(el, img).src = img.getAttribute("src");
+      img.classList.remove("is-pv-in");
+      void img.offsetWidth;
+      img.classList.add("is-pv-in");
+    }
     img.src = ev.image;
     img.classList.add("is-on");
     if (skel) skel.classList.add("is-behind");
   }
+}
+
+/** 墊在圖片底下的那一張（上一幀預覽）。沒有就建一個。 */
+function underlay(el, img) {
+  let under = el.querySelector(".shot-under");
+  if (!under) {
+    under = document.createElement("img");
+    under.className = "shot-under";
+    under.alt = "";
+    under.setAttribute("aria-hidden", "true");
+    img.before(under);
+  }
+  return under;
 }
 
 function endGenCard(el) {
@@ -2199,6 +2229,15 @@ function fillCard(el, job, err) {
       { once: true }
     );
     el.dataset.full = job.image;
+    // 預覽畫面上已經有東西了：把最後一幀墊在底下，成品下載、解碼好之後才浮上來 ——
+    // 以前直接換 src，遠端（成品還在路上）那段時間是空盒子；本機則是一刀切，
+    // 預覽那種灰灰糊糊的顏色一瞬間跳成成品，看起來像壞掉。
+    const fromPreview = img.classList.contains("is-on") && String(img.getAttribute("src") || "").startsWith("data:");
+    const under = fromPreview ? underlay(el, img) : null;
+    if (under) {
+      under.src = img.getAttribute("src");
+      img.classList.remove("is-on", "is-pv-in");
+    }
     img.src = viewSrc(job.image);
     // 等真的有像素了才開始淡入。原本 is-on 是跟 src 同一行加上去的，
     // 於是 320ms 的淡入在還沒有圖的空盒子上就跑完了，圖真的到的時候是硬跳出來的；
@@ -2210,6 +2249,19 @@ function fillCard(el, job, err) {
       if (revealed) return;
       revealed = true;
       img.classList.add("is-on");
+      if (under) {
+        // 顯影：成品帶著一點過曝從預覽上浮出來，一道光掃過去，再沉回正常的顏色。
+        const shotEl = el.querySelector(".shot");
+        if (!reduceMotion() && shotEl) {
+          img.classList.add("is-developed");
+          shotEl.classList.add("is-developing");
+          window.setTimeout(() => {
+            img.classList.remove("is-developed");
+            shotEl.classList.remove("is-developing");
+            under.remove();
+          }, 950);
+        } else under.remove();
+      }
       if (skel) {
         skel.classList.add("is-gone");
         window.setTimeout(() => skel.remove(), 420);
@@ -2690,6 +2742,8 @@ function cancelRedoQueue() {
 }
 
 function resetCardForRedo(el) {
+  el.querySelector(".shot-under")?.remove();
+  delete el.dataset.phase;
   el.classList.remove("is-done", "is-fail", "is-skip", "is-img-fail", "is-gen");
   el.classList.add("is-wait");
   const shot = el.querySelector(".shot");
@@ -2795,6 +2849,7 @@ function finishBatch() {
 // 立刻斷：無限抽的「停」和左欄的「取消」共用這一條。
 function stopNow(reason) {
   aborting = true;
+  tab().clear();
   wallStale = true;
   stopInfinite(reason || "已停");
   cancelRedoQueue();
@@ -2839,6 +2894,16 @@ async function streamCardJob(card, seedNum, extra) {
   let stalled = false;
   let watchdog = 0;
   let jobPromptId = null;
+  // 畫到第幾步、花了多久：算「約幾秒」。第一個進度事件之前的時間（排隊、載模型）不算。
+  const pace = { t: 0, v: 0 };
+  // 排隊太久還沒開始畫，多半是 ComfyUI 在載模型（第一張、換底模）：卡片上說清楚在等什麼。
+  let warmTimer = 0;
+  const setPhase = (ph) => {
+    window.clearTimeout(warmTimer);
+    if (ph) card.dataset.phase = ph;
+    else delete card.dataset.phase;
+    if (ph === "queued") warmTimer = window.setTimeout(() => setPhase("warming"), 7000);
+  };
   // 斷線重接用：job 由 streamGen 填，重接時畫面說一聲、看門狗重新計時。
   const link = {
     job: null,
@@ -2889,18 +2954,37 @@ async function streamCardJob(card, seedNum, extra) {
         if (data && data.prompt_id) jobPromptId = livePromptId = data.prompt_id;
         if (link.job) liveJob = link.job;
         if (event === "queued") {
+          setPhase("queued");
           setLive(card, { status: `排隊中 · seed ${data.seed || seedNum}` });
         } else if (event === "progress") {
           const max = data.max || 25;
           const value = data.value || 0;
+          if (card.dataset.phase !== "drawing") setPhase("drawing");
+          const now = performance.now();
+          if (!pace.t || value < pace.v) {
+            pace.t = now;
+            pace.v = value;
+          }
+          // 走了兩步以上才估，前一兩步常常比較慢（還在搬模型進顯卡），估出來會嚇人。
+          let eta = "";
+          if (value - pace.v >= 2 && value < max) {
+            const s = Math.ceil(((max - value) * (now - pace.t)) / (value - pace.v) / 1000);
+            eta = s <= 1 ? "快好了" : `約 ${s} 秒`;
+          }
           setLive(card, {
-            status: `繪製 ${value}/${max}`,
+            status: `繪製 ${value}/${max}${eta ? " · " + eta : ""}`,
             value,
             max,
+            eta,
           });
+          tab().run(value / max);
         } else if (event === "preview") {
-          setLive(card, { image: data.image, status: "預覽…" });
+          // 狀態列留著「繪製 12/25 · 約 3 秒」：以前每一幀都改寫成「預覽…」，
+          // 字在兩種之間一直跳，也把剩餘時間蓋掉了。
+          setLive(card, { image: data.image });
         } else if (event === "done") {
+          setPhase(null);
+          tab().done("好了");
           finished = true;
           if (skipping) skipCard(card);
           else {
@@ -2908,6 +2992,8 @@ async function streamCardJob(card, seedNum, extra) {
             fillCard(card, shot);
           }
         } else if (event === "error") {
+          setPhase(null);
+          tab().fail("失敗");
           finished = true;
           hadError = true;
           lastJobError = String(data.error || "Comfy 報錯");
@@ -2940,6 +3026,7 @@ async function streamCardJob(card, seedNum, extra) {
     }
   } finally {
     window.clearTimeout(watchdog);
+    setPhase(null);
     if (livePromptId === jobPromptId) livePromptId = null;
     if (liveJob === link.job) liveJob = null;
     genAbort.signal.removeEventListener("abort", stopJob);

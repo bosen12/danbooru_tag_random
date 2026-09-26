@@ -1299,8 +1299,22 @@ body.fuse {
 }
 
 /* 印好的那一刻：像紙從滾筒下面出來，由上往下顯影。 */
-.pv-sheet.is-developing img {
+.pv-sheet.is-developing img:not(.pv-under) {
   animation: develop 1.2s var(--ease-out) both;
+}
+
+/* 上一幀墊在底下，主圖疊在上面（主圖是 prepend 的，DOM 順序在前，要靠 z-index 排上來）。 */
+.pv-sheet .pv-under {
+  z-index: 0;
+  pointer-events: none;
+}
+
+.pv-sheet img:not(.pv-under) {
+  z-index: 1;
+}
+
+.pv-sheet img.is-pv-in {
+  animation: pv-in 260ms var(--ease-out);
 }
 
 @keyframes develop {
@@ -2191,6 +2205,7 @@ body.fuse {
   .card.is-clashing,
   .trials.is-shuffling .trial,
   .pv-sheet.is-developing img,
+  .pv-sheet img.is-pv-in,
   .plate-notice,
   .reg-note,
   .pop,

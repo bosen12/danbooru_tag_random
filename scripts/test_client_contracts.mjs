@@ -1652,6 +1652,17 @@ const ALBUM_FIXTURE = [
   ok("排字匣網路斷掉的那張不算連續失敗，等網路回來接著抽", boot.includes("lastFailNet = true;") && boot.includes("} else if (!aborting && lastFailNet) {") && boot.includes("async function waitForLink("));
   ok("無限抽開跑時剛好斷線：等，不直接停", boot.includes('isInfinite() && downReason === "net" && (await waitForLink(waitNet))'));
   ok("墨池／疊印台佇列：網路斷掉的不算失敗，等網路回來、畫面說一聲", gen6.includes("if (!ok && shot.netFail) {") && gen6.includes("await waitOnline(") && readFileSync(join(ROOT, "web6/fuse.js"), "utf8").includes("NET_WAIT_TEXT") && readFileSync(join(ROOT, "web6/app.js"), "utf8").includes("waiting: (on) =>"));
+  const bootCss = readFileSync(join(ROOT, "web/boot.css"), "utf8");
+  ok("排字匣預覽幀交疊（上一幀墊底，新的一幀淡進來）", boot.includes("function underlay(el, img)") && bootCss.includes(".shot-img.is-pv-in"));
+  ok("排字匣成品從預覽上顯影、等解碼好才開始", boot.includes('img.classList.add("is-developed")') && bootCss.includes("@keyframes shot-develop"));
+  ok("排字匣卡片說出在等什麼（排隊中／載入模型中）", boot.includes('setPhase("warming")') && bootCss.includes('.card[data-phase="warming"] .shot::before'));
+  ok("排字匣進度列有剩餘時間，預覽幀不再把狀態改成「預覽…」", boot.includes("約 ${s} 秒") && !boot.includes('status: "預覽…"'));
+  ok("釘一個字：帶進來的、被擠掉的都有回饋", boot.includes('flashTag(t, "carry")') && boot.includes('flashTag(t, "drop")') && bootCss.includes(".tag.is-drop-flash"));
+  const tabp = readFileSync(join(ROOT, "web/tab-progress.js"), "utf8");
+  ok("分頁標題＋小圖示畫出圖進度（排字匣、墨池／疊印台共用）", tabp.includes("export function tabProgress") && boot.includes("tab().run(") && gen6.includes("tabProgress({ base })"));
+  const app6 = readFileSync(join(ROOT, "web6/app.js"), "utf8");
+  const fuse6 = readFileSync(join(ROOT, "web6/fuse.js"), "utf8");
+  ok("墨池／疊印台：預覽交疊、成品載好才顯影", app6.includes('class: "shot-under"') && fuse6.includes('class: "pv-under"') && fuse6.includes('img.addEventListener("load", go, { once: true })'));
   ok("排字匣不送全域中斷（空的 {}）", !boot.includes('body: "{}"') && !boot.includes("prompt_id: jobPromptId } : {}"));
 }
 

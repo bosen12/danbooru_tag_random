@@ -1012,8 +1012,31 @@ p {
 }
 
 /* 剛印好：由上往下顯影，亮一下再沉回正常。 */
-.shot-frame.is-developing img {
+.shot-frame.is-developing img:not(.shot-under) {
   animation: shot-develop 1.2s var(--ease-out) both;
+}
+
+/* 上一幀墊在底下；主圖疊在上面淡進來（預覽之間）或由上往下顯影（成品）。 */
+.shot-frame .shot-under {
+  position: absolute;
+  inset: 0;
+  z-index: 0;
+  pointer-events: none;
+}
+
+.shot-frame img:not(.shot-under) {
+  position: relative;
+  z-index: 1;
+}
+
+.shot-frame img.is-pv-in {
+  animation: pv-in 260ms var(--ease-out);
+}
+
+@keyframes pv-in {
+  from {
+    opacity: 0;
+  }
 }
 
 @keyframes shot-develop {
@@ -1031,7 +1054,8 @@ p {
 }
 
 @media (prefers-reduced-motion: reduce) {
-  .shot-frame.is-developing img {
+  .shot-frame.is-developing img,
+  .shot-frame img.is-pv-in {
     animation: none;
   }
 }
