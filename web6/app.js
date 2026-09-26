@@ -308,9 +308,11 @@ function buildHand() {
   hand = createHand({
     key: "mochi.hand.v1",
     makeNode: (t) => cardNode(lib.byTag.get(t), assets),
+    // 托盤的牌跟字盒的一樣大：量字盒上的一張。
+    sample: () => $("lib-grid")?.querySelector(".card"),
     inPool: (t) => pool.has(t),
     known: (t) => lib.byTag.has(t) && !bans.has(t),
-    // 出牌：從扇形上那張的位置飛進合成池。
+    // 出牌：從托盤上那張的位置飛進合成池。
     onPlay: (t, r) => {
       pin(t);
       if (r) flyInto(t, r);
@@ -329,7 +331,7 @@ function libCard(card) {
   paintState(node, card.tag);
   if (hand?.has(card.tag)) node.dataset.inHand = "true";
   node.addEventListener("click", () => {
-    if (hand?.editing) return void hand.add(card.tag, node.getBoundingClientRect());
+    if (hand?.editing) return void hand.toggle(card.tag, node.getBoundingClientRect());
     if (pool.has(card.tag)) unpin(card.tag);
     else if (bans.has(card.tag)) showCard(card.tag, "library");
     else {
@@ -913,7 +915,7 @@ function renderGoBar() {
   // 狀態沒變就不重畫。生圖時每個進度事件都會叫到這裡，以前整排按鈕一秒換好幾次新的：
   // 滑鼠停在「停」上看起來在閃，按下去的那一瞬間按鈕剛好被換掉，按下跟放開落在兩個不同的
   // 元素上，瀏覽器不算一次點擊 —— 要按好幾次才停得下來。
-  const key = [busy, generator.pending, infinite, n, settings.samePerson, hand ? hand.count : 0, hand?.editing].join("|");
+  const key = [busy, generator.pending, infinite, n, settings.samePerson, hand ? hand.count : 0, hand?.open].join("|");
   if (bar.dataset.key === key && bar.childElementCount) return renderGoFloat();
   bar.dataset.key = key;
   bar.replaceChildren(
@@ -937,9 +939,9 @@ function renderGoBar() {
         class: "btn btn-ghost hand-btn",
         id: "hand-btn",
         type: "button",
-        "aria-pressed": hand?.editing ? "true" : "false",
+        "aria-pressed": hand?.open ? "true" : "false",
         title: "偏好卡牌：挑最多十張常用的牌，攤在視窗底部，點一下就放進合成池",
-        onclick: () => hand?.toggleEdit(),
+        onclick: () => hand?.fromButton(),
         html: `<svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linejoin="round" aria-hidden="true"><rect x="3" y="7" width="8" height="12" rx="1.5" transform="rotate(-14 7 13)"/><rect x="8" y="5" width="8" height="12" rx="1.5"/><rect x="13" y="7" width="8" height="12" rx="1.5" transform="rotate(14 17 13)"/></svg><span>偏好卡牌</span><b>${hand ? hand.count : 0}/${hand ? hand.max : 10}</b>`,
       }
     ),
@@ -1524,6 +1526,21 @@ function showCard(tag, from) {
     ),
     {
       foot: [
+        hand && !banned
+          ? el(
+              "button",
+              {
+                class: "btn btn-ghost",
+                type: "button",
+                onclick: () => {
+                  sheet.close();
+                  if (hand.has(tag)) hand.remove(tag);
+                  else if (hand.add(tag)) toast(`「${card.zh}」加進偏好卡牌`);
+                },
+              },
+              hand.has(tag) ? "從偏好卡牌拿掉" : "加入偏好卡牌"
+            )
+          : null,
         banned
           ? el("button", { class: "btn", type: "button", onclick: () => { unban(tag); sheet.close(); } }, "從廢字簍撿回來")
           : el("button", { class: "btn", type: "button", onclick: () => { const a = artNow(); sheet.close(); ban(tag, { from: a }); } }, "丟進廢字簍（不再抽到）"),
@@ -1651,16 +1668,18 @@ const libCardNode = (tag) => [...$("lib-grid").querySelectorAll(".card")].find((
 
 const drag = createDrag({
   zones: () => [
+    // 偏好卡牌：字盒、合成池的牌都可以拖進來（托盤浮在卡池上面，所以排第一個先認；池裡的等於收回手牌）。
+    // 托盤上的牌拖一拖又放回托盤：當作沒拖（不能穿過托盤掉到底下的卡池）。
+    { id: "hand", el: hand?.el, accepts: () => !!hand },
     { id: "pool", el: $("pool-well"), accepts: (p) => p.from !== "pool" },
     // 丟進廢字簍：影子縮小、轉著被吸進去（drag.js 的 sink）。
     { id: "trash", el: $("trash"), accepts: () => true, sink: true },
     { id: "library", el: $("library"), accepts: (p) => p.from === "pool" || p.from === "hand" },
-    // 偏好卡牌：字盒、合成池的牌都可以拖進來（池裡的等於收回手牌）。
-    { id: "hand", el: hand?.fan, accepts: (p) => p.from !== "hand" && !!hand },
   ],
   // 回傳落點：影子飛到那張牌的位置落下（drag.js）。
   onDrop: (p, zone) => {
     if (zone === "hand") {
+      if (p.from === "hand") return hand.nodeOf(p.tag);
       hand.add(p.tag);
       if (p.from === "pool") {
         hand.arriveAt(p.tag, 0);

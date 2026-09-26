@@ -389,134 +389,242 @@ button.card:active {
   }
 }
 
-/* ================= 偏好卡牌（手牌，見 hand.js）：視窗底部的一把扇形 ================= */
+/* ================= 偏好卡牌（手牌，見 hand.js）：視窗底部的托盤 ================= */
 
+/* 托盤：霧面紙，一道淺弧排開整張牌；寬度照張數長（--fav-want），夾在視窗裡。 */
 .fav-hand {
+  --fav-ease: cubic-bezier(0.16, 1, 0.3, 1);
   position: fixed;
   left: 50%;
-  bottom: 0;
+  bottom: 10px;
   z-index: 26;
-  width: min(680px, calc(100vw - 24px));
+  box-sizing: border-box;
+  width: min(calc(100vw - 20px), max(var(--fav-want, 360px), 360px));
   translate: -50% 0;
-  pointer-events: none;
+  padding: 6px 10px 12px;
+  border: 1px solid var(--color-rule-2);
+  border-radius: 16px;
+  background: color-mix(in oklch, var(--color-paper) 90%, transparent);
+  -webkit-backdrop-filter: blur(14px) saturate(1.1);
+  backdrop-filter: blur(14px) saturate(1.1);
+  box-shadow: 0 18px 40px -12px var(--color-shade), 0 2px 6px -2px var(--color-shade);
+  transition:
+    width 320ms var(--fav-ease),
+    border-color 160ms ease,
+    box-shadow 160ms ease,
+    bottom 240ms var(--fav-ease);
 }
 
-.fav-hand[data-empty="true"]:not([data-editing="true"]) {
+.fav-hand[data-hidden="true"] {
   display: none;
 }
 
-/* 牌平常只露出上半截；滑鼠靠近（或挑牌時）整把升起來。 */
+/* 收起來：只剩一顆標籤。 */
+.fav-hand[data-open="false"] {
+  width: max-content;
+  padding: 3px 4px;
+  border-radius: 999px;
+}
+
+.fav-hand[data-open="false"] :is(.fav-body, .fav-hint, .fav-pick) {
+  display: none;
+}
+
+/* 墨池底下的浮動按鈕列出現時，托盤讓到它上面。 */
+body:has(.go-float[data-show="true"]) .fav-hand {
+  bottom: 72px;
+}
+
+/* 拖牌經過：托盤描一圈（可以放），壓在上面亮起來。 */
+.fav-hand[data-droppable="true"] {
+  border-color: color-mix(in oklch, var(--color-accent) 55%, transparent);
+}
+
+.fav-hand[data-over="true"] {
+  border-color: var(--color-accent);
+  box-shadow: 0 0 0 3px color-mix(in oklch, var(--color-accent) 22%, transparent), 0 18px 40px -12px var(--color-shade);
+}
+
+.fav-head {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  min-height: 30px;
+}
+
+.fav-tab {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  padding: 4px 8px;
+  border: 0;
+  border-radius: 999px;
+  background: transparent;
+  color: var(--color-ink);
+  font: inherit;
+  font-size: 13px;
+  font-weight: 700;
+  white-space: nowrap;
+  cursor: pointer;
+  transition: background-color 140ms ease;
+}
+
+.fav-tab:hover {
+  background: var(--color-paper-3);
+}
+
+.fav-count {
+  font-weight: 600;
+  font-variant-numeric: tabular-nums;
+  color: var(--color-muted);
+}
+
+.fav-chev {
+  color: var(--color-muted);
+  transition: rotate 240ms var(--fav-ease);
+}
+
+.fav-hand[data-open="true"] .fav-chev {
+  rotate: 180deg;
+}
+
+.fav-hint {
+  flex: 1;
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  font-size: 12px;
+  color: var(--color-muted);
+}
+
+.fav-pick {
+  flex: none;
+  padding: 3px 12px;
+  border: 1px solid var(--color-rule);
+  border-radius: 999px;
+  background: var(--color-paper-3);
+  color: var(--color-ink);
+  font: inherit;
+  font-size: 12px;
+  font-weight: 600;
+  white-space: nowrap;
+  cursor: pointer;
+  transition:
+    background-color 140ms ease,
+    border-color 140ms ease,
+    color 140ms ease;
+}
+
+.fav-pick:hover {
+  border-color: var(--color-ink-2);
+}
+
+.fav-pick[aria-pressed="true"] {
+  border-color: var(--color-accent);
+  background: var(--color-accent);
+  color: var(--color-accent-ink, #fff);
+}
+
+/* 牌的上面留一點空：指到的那張浮起來不會被切掉。 */
+.fav-body {
+  padding-top: 14px;
+}
+
 .fav-fan {
   position: relative;
-  height: calc(var(--card-w, 84px) * 1.46 + 34px);
-  translate: 0 calc(var(--card-w, 84px) * 0.62);
-  transition: translate 320ms cubic-bezier(0.16, 1, 0.3, 1);
-  pointer-events: auto;
-}
-
-.fav-hand.is-up .fav-fan,
-.fav-hand[data-editing="true"] .fav-fan {
-  translate: 0 -6px;
-}
-
-/* 墨池底下的浮動按鈕列出現時，扇形讓到它上面。 */
-body:has(.go-float[data-show="true"]) .fav-hand {
-  bottom: 68px;
+  height: calc(var(--fav-card-w, 84px) * 1.4625 + 22px);
 }
 
 .fav-slot {
   position: absolute;
   left: 50%;
-  bottom: 0;
-  transform-origin: 50% 130%;
-  transition: transform 320ms cubic-bezier(0.16, 1, 0.3, 1), opacity 200ms ease;
+  top: 0;
+  transform-origin: 50% 100%;
+  transition:
+    transform 300ms var(--fav-ease),
+    opacity 180ms ease;
 }
 
+/* 跟字盒同一張牌：同寬、同字級，陰影也一樣；只有指到的那張多一層影子。 */
 .fav-card {
-  display: block;
-  box-shadow: 0 10px 22px var(--color-shade), var(--shadow-card);
+  --card-w: var(--fav-card-w, 84px);
+  width: var(--fav-card-w, 84px);
+  font-size: var(--fav-card-fs, 10px);
+  cursor: pointer;
+}
+
+.fav-slot.is-hot .fav-card {
+  box-shadow: 0 14px 22px -8px var(--color-shade), var(--shadow-card);
 }
 
 .fav-slot.is-arriving {
   opacity: 0;
 }
 
-/* 挑牌時：在卡池裡的淡一點（出牌時它們不會在扇形上）；空位畫虛線框。 */
-.fav-slot.is-in-pool .fav-card {
-  opacity: 0.45;
-  filter: grayscale(0.5);
-}
-
-.fav-empty {
-  width: var(--card-w, 84px);
-  aspect-ratio: 480 / 702;
-  border: 2px dashed color-mix(in oklch, var(--color-accent) 45%, transparent);
-  border-radius: calc(var(--card-w, 84px) * 0.07);
-  background: color-mix(in oklch, var(--color-paper-2) 60%, transparent);
-}
-
+/* ×：指到牌才出現；觸控螢幕沒有「指到」，一直都在。 */
 .fav-x {
   position: absolute;
-  top: -8px;
-  right: -8px;
-  z-index: 2;
-  display: none;
-  width: 22px;
-  height: 22px;
-  border-radius: 50%;
-  border: 1px solid var(--color-rule);
-  background: var(--color-paper-3);
-  color: var(--color-ink);
-  line-height: 1;
-  cursor: pointer;
-}
-
-.fav-hand[data-editing="true"] .fav-x {
+  top: -7px;
+  right: -7px;
+  /* 牌指到時自己會升到 z-index 3（字盒的樣式），× 要再高一層。 */
+  z-index: 5;
   display: grid;
   place-items: center;
+  width: 22px;
+  height: 22px;
+  padding: 0;
+  border: 1.5px solid var(--color-paper);
+  border-radius: 50%;
+  background: var(--color-ink);
+  color: var(--color-paper);
+  cursor: pointer;
+  opacity: 0;
+  scale: 0.6;
+  transition:
+    opacity 140ms ease,
+    scale 200ms var(--fav-ease),
+    background-color 140ms ease;
 }
 
-/* 挑牌時上面那條：幾張、怎麼加、完成。 */
-.fav-bar {
-  display: none;
-  align-items: center;
-  justify-content: center;
-  gap: var(--space-sm, 8px);
-  margin: 0 auto 6px;
-  width: max-content;
-  max-width: 100%;
-  padding: 6px 10px 6px 14px;
-  border: 1px solid var(--color-accent);
-  border-radius: 999px;
-  background: var(--color-paper-3);
-  box-shadow: 0 10px 24px var(--color-shade);
-  font-size: 13px;
-  pointer-events: auto;
+.fav-slot:is(.is-hot, :focus-within) .fav-x,
+.fav-hand[data-editing="true"] .fav-x {
+  opacity: 1;
+  scale: 1;
 }
 
-.fav-hand[data-editing="true"] .fav-bar {
-  display: flex;
-  animation: fav-bar-in 260ms cubic-bezier(0.16, 1, 0.3, 1);
+.fav-x:hover {
+  background: var(--color-accent);
 }
 
-@keyframes fav-bar-in {
-  from {
-    opacity: 0;
-    transform: translateY(8px);
+@media (hover: none) {
+  .fav-x {
+    opacity: 0.9;
+    scale: 1;
   }
 }
 
-.fav-done {
-  padding: 3px 12px;
-  border: 0;
-  border-radius: 999px;
-  background: var(--color-accent);
-  color: var(--color-accent-ink, #fff);
-  font-weight: 700;
-  cursor: pointer;
+.fav-emptytext {
+  display: grid;
+  place-items: center;
+  box-sizing: border-box;
+  height: 100%;
+  margin: 0;
+  padding: 0 16px;
+  border: 1.5px dashed var(--color-rule);
+  border-radius: 10px;
+  font-size: 13px;
+  color: var(--color-muted);
+  text-align: center;
 }
 
-/* 挑牌模式：字盒整欄描一圈，裡面的牌指上去有「＋」；已經在手牌裡的蓋一個「手」。 */
+/* 托盤佔的高度，整頁捲動時底下墊一樣多，最後一排牌不會被蓋住
+   （疊印台寬螢幕整頁不捲、三欄各自捲，墊在 fuse.css 的三欄裡）。 */
+body {
+  padding-bottom: var(--fav-h, 0px);
+}
+
+/* 挑牌模式：字盒整欄描一圈；已經在手牌裡的蓋一個「手」。 */
 body[data-hand-edit="true"] :is(#case-grid, #lib-grid) {
   outline: 2px dashed color-mix(in oklch, var(--color-accent) 60%, transparent);
   outline-offset: 4px;
@@ -527,21 +635,26 @@ body[data-hand-edit="true"] :is(#case-grid, #lib-grid) .card {
   cursor: copy;
 }
 
+body[data-hand-edit="true"] :is(#case-grid, #lib-grid) .card[data-in-hand="true"] {
+  cursor: pointer;
+}
+
 .card[data-in-hand="true"]::before {
   content: "手";
   position: absolute;
-  left: 4px;
+  right: 4px;
   top: 4px;
   z-index: 3;
   display: grid;
   place-items: center;
-  width: 1.5em;
-  height: 1.5em;
+  width: 1.6em;
+  height: 1.6em;
   border-radius: 50%;
   background: var(--color-accent);
   color: var(--color-accent-ink, #fff);
   font-weight: 800;
-  font-size: 0.85em;
+  font-size: 9px;
+  line-height: 1;
   pointer-events: none;
 }
 
@@ -549,17 +662,33 @@ body[data-hand-edit="true"] :is(#case-grid, #lib-grid) .card {
   content: none;
 }
 
-@media (prefers-reduced-motion: reduce) {
-  .fav-fan,
-  .fav-slot {
-    transition: none;
+@media (max-width: 640px) {
+  .fav-hand {
+    bottom: 8px;
+    width: calc(100vw - 16px);
+    padding: 4px 8px 10px;
   }
-  .fav-hand[data-editing="true"] .fav-bar {
-    animation: none;
+  .fav-hand[data-open="false"] {
+    width: max-content;
+  }
+  .fav-hand[data-editing="false"] .fav-hint {
+    display: none;
+  }
+  .fav-head {
+    justify-content: space-between;
   }
 }
 
-/* 「偏好卡牌」鈕：圖示＋字＋張數；挑牌時亮起來。 */
+@media (prefers-reduced-motion: reduce) {
+  .fav-hand,
+  .fav-slot,
+  .fav-chev,
+  .fav-x {
+    transition: none;
+  }
+}
+
+/* 「偏好卡牌」鈕：圖示＋字＋張數；托盤開著的時候亮起來。 */
 .hand-btn {
   display: inline-flex;
   align-items: center;

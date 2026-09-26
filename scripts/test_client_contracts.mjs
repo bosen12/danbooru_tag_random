@@ -1697,16 +1697,27 @@ const ALBUM_FIXTURE = [
   {
     const hand6 = readFileSync(join(ROOT, "web6/hand.js"), "utf8");
     const fuseHtml6 = readFileSync(join(ROOT, "web6/fuse.html"), "utf8");
+    const css6 = readFileSync(join(ROOT, "web6/card.css"), "utf8").replace(/\r\n/g, "\n");
     ok("偏好卡牌：共用 hand.js，最多十張，兩個房間各存一份", hand6.includes("export function createHand(") && hand6.includes("max = 10") && app6.includes('key: "mochi.hand.v1"') && fuse6.includes('key: "mochi.fuse.hand.v1"'));
     ok("偏好卡牌鈕：墨池在只抽牌左邊、疊印台在撤回左邊", fuseHtml6.indexOf('id="hand-btn"') >= 0 && fuseHtml6.indexOf('id="hand-btn"') < fuseHtml6.indexOf('id="undo"') && app6.indexOf("hand-btn") < app6.indexOf('"只抽牌"'));
-    ok("已經在卡池的不攤在扇形上；從卡池拿下來飛回扇形、不回字盒", hand6.includes("tags.filter((t) => !inPool(t))") && fuse6.includes("(hand?.has(tag) && hand.nodeOf(tag)) || caseCard(tag)") && app6.includes("(hand?.has(node.dataset.tag) && hand.nodeOf(node.dataset.tag)) || libCardNode"));
-    ok("挑牌模式：字盒點一下加進手牌；扇形可以拖進拖出", fuse6.includes("if (hand?.editing) hand.add(card.tag") && app6.includes("if (hand?.editing) return void hand.add(card.tag") && fuse6.includes('{ id: "hand", el: hand?.fan') && app6.includes('{ id: "hand", el: hand?.fan'));
+    ok("已經在卡池的不擺在托盤上；從卡池拿下來飛回托盤、不回字盒", hand6.includes("tags.filter((t) => !inPool(t))") && fuse6.includes("(hand?.has(tag) && hand.nodeOf(tag)) || caseCard(tag)") && app6.includes("(hand?.has(node.dataset.tag) && hand.nodeOf(node.dataset.tag)) || libCardNode"));
+    ok("挑牌模式：字盒點一下加、再點一下拿掉；托盤可以拖進拖出", fuse6.includes("if (hand?.editing) hand.toggle(card.tag") && app6.includes("if (hand?.editing) return void hand.toggle(card.tag") && fuse6.includes('{ id: "hand", el: hand?.el') && app6.includes('{ id: "hand", el: hand?.el'));
+    ok("托盤的牌跟字盒同一張：量字盒那張的寬度和字級，圖立刻載", hand6.includes("n?.offsetWidth") && hand6.includes('img.loading = "eager"') && fuse6.includes('sample: () => $("case-grid")?.querySelector(".card")') && app6.includes('sample: () => $("lib-grid")?.querySelector(".card")') && !/\n\.fav-card \{[^}]*box-shadow/.test(css6));
+    {
+      // 托盤的落點排第一個：它浮在卡池上面，放在托盤上不能穿過去掉進卡池。
+      const zf = fuse6.slice(fuse6.indexOf("zones: () => ["));
+      const za = app6.slice(app6.indexOf("zones: () => ["));
+      ok("托盤的落點比卡池先認", zf.indexOf('id: "hand"') < zf.indexOf('id: "plate"') && za.indexOf('id: "hand"') < za.indexOf('id: "pool"'));
+    }
+    ok("托盤開著的時候底下墊出它的高度，不蓋住字盒和卡池", hand6.includes('setProperty("--fav-h"') && css6.includes("padding-bottom: var(--fav-h, 0px)") && readFileSync(join(ROOT, "web6/fuse.css"), "utf8").includes("height: var(--fav-h, 0px)"));
+    ok("× 隨時都有（指到才亮，觸控一直在），疊在指到的牌上面", /\.fav-x \{[^}]*z-index: 5/.test(css6) && css6.includes("@media (hover: none)"));
+    ok("工具列鈕：沒牌直接進挑牌，有牌打開／收起托盤；選單和詳情也能加", hand6.includes("function fromButton()") && fuse6.includes("hand?.fromButton()") && app6.includes("hand?.fromButton()") && fuse6.includes('"加入偏好卡牌"') && app6.includes('"加入偏好卡牌"'));
   }
   ok("疊印台的規則鈕也是圖示", fuseHtml.includes('id="rules-btn" type="button" aria-label="規則"') && !fuseHtml.includes(">規則</button>"));
   ok("池中／封鎖／在池的章：新蓋上去的像橡皮章壓下來，沒變的不重蓋", readFileSync(join(ROOT, "web6/cards.js"), "utf8").includes("old.dataset.kind === flag.kind && old.textContent === flag.text") && fuse6.includes('node.classList.add("is-flag-stamp")'));
   ok("疊印台的規則自己一份（跟墨池分開），規則裡可以設每段補幾張", fuse6.includes('settings: "mochi.fuse.settings.v1"') && !fuse6.includes("S.saveSettings(") && fuse6.includes("每段補幾張"));
   {
-    const ui = ["web6/app.js", "web6/fuse.js", "web6/motion.js", "web6/ui.js", "web/tab-progress.js", "web6/fuse.html", "web6/index.html"].map((f) => readFileSync(join(ROOT, f), "utf8")).join("\n");
+    const ui = ["web6/app.js", "web6/fuse.js", "web6/hand.js", "web6/motion.js", "web6/ui.js", "web/tab-progress.js", "web6/fuse.html", "web6/index.html"].map((f) => readFileSync(join(ROOT, f), "utf8")).join("\n");
     ok("墨池／疊印台畫面上不用表情符號或 ✓ ✕ 當標記", !/[\u{1F300}-\u{1FAFF}\u{2600}-\u{27BF}]/u.test(ui));
   }
   ok("排字匣不送全域中斷（空的 {}）", !boot.includes('body: "{}"') && !boot.includes("prompt_id: jobPromptId } : {}"));

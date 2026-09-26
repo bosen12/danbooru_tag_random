@@ -366,6 +366,19 @@ body.fuse {
   .side {
     min-height: 0;
   }
+  /* 整頁不捲：偏好卡牌托盤的高度改墊在三欄各自的捲動區最底下。 */
+  body.fuse {
+    padding-bottom: 0;
+  }
+  .case-grid::after,
+  .plate-scroll::after,
+  .side::after {
+    content: "";
+    display: block;
+    flex: none;
+    grid-column: 1 / -1;
+    height: var(--fav-h, 0px);
+  }
 }
 
 /* ---------- 字盒 ---------- */

@@ -1606,7 +1606,7 @@ function openPop(anchor, tag, from) {
     { class: "pop", role: "dialog", "aria-label": card.zh },
     el("p", { class: "pop-title" }, el("b", {}, card.zh), el("code", {}, card.tag)),
     el("dl", { class: "pop-lines" }, lines.map(([k, v]) => [el("dt", {}, k), el("dd", {}, v)])),
-    el("div", { class: "pop-acts" }, acts)
+    el("div", { class: "pop-acts" }, [handAct(tag, anchor), ...acts])
   );
   pop._anchorTag = tag;
   pop._from = from;
@@ -2262,7 +2262,7 @@ function moreCase() {
     if (has.has(card.tag)) node.dataset.state = "pinned";
     node.setAttribute("aria-pressed", has.has(card.tag) ? "true" : "false");
     node.addEventListener("click", () => {
-      if (hand?.editing) hand.add(card.tag, node.getBoundingClientRect());
+      if (hand?.editing) hand.toggle(card.tag, node.getBoundingClientRect());
       else toggle(card.tag, node);
     });
     if (hand?.has(card.tag)) node.dataset.inHand = "true";
@@ -2344,12 +2344,13 @@ let dropRow = null;
 
 const drag = createDrag({
   zones: () => [
+    // 偏好卡牌：字盒、版上的牌都可以拖進來（托盤浮在卡池上面，所以排第一個先認；版上的等於收回手牌）。
+    // 托盤上的牌拖一拖又放回托盤：當作沒拖（不能穿過托盤掉到底下的卡池）。
+    { id: "hand", el: hand?.el, accepts: () => !!hand },
     { id: "plate", el: $("plate"), accepts: (p) => p.from !== "plate" },
     // 手機上卡池捲走了，角落那顆「卡池」也收牌：影子縮小被吸進去。
     { id: "pill", el: $("pool-pill"), accepts: (p) => p.from === "case" && !$("pool-pill").hidden, sink: true },
     { id: "case", el: $("case"), accepts: (p) => p.from === "plate" || p.from === "hand" },
-    // 偏好卡牌：字盒、版上的牌都可以拖進來（版上的等於收回手牌）。
-    { id: "hand", el: hand?.fan, accepts: (p) => p.from !== "hand" && !!hand },
   ],
   // 拖著經過卡池：它會落到的那一列先亮起來。
   onOver: (zone, p) => {
@@ -2361,6 +2362,7 @@ const drag = createDrag({
   },
   onDrop: (p, zone) => {
     if (zone === "hand") {
+      if (p.from === "hand") return hand.nodeOf(p.tag);
       if (p.from === "plate") {
         hand.add(p.tag);
         hand.arriveAt(p.tag, 0);
@@ -2560,14 +2562,35 @@ function openRules() {
 
 let hand = null;
 
+/** 牌的選單上「加入偏好卡牌／從偏好卡牌拿掉」。 */
+function handAct(tag, anchor) {
+  if (!hand) return null;
+  const has = hand.has(tag);
+  return el(
+    "button",
+    {
+      class: "btn btn-small btn-ghost",
+      type: "button",
+      onclick: () => {
+        closePop();
+        if (has) hand.remove(tag);
+        else if (hand.add(tag, anchor?.getBoundingClientRect())) announce(`「${zh(tag)}」加進偏好卡牌`);
+      },
+    },
+    has ? "從偏好卡牌拿掉" : "加入偏好卡牌"
+  );
+}
+
 /** 偏好卡牌（hand.js）：疊印台自己一份，跟墨池分開。 */
 function buildHand() {
   hand = createHand({
     key: "mochi.fuse.hand.v1",
     makeNode: (t) => cardNode(cardOf(t), assets),
+    // 托盤的牌跟字盒的一樣大：量字盒上的一張。
+    sample: () => $("case-grid")?.querySelector(".card"),
     inPool: (t) => bed.pins.includes(t),
     known: (t) => lib.byTag.has(t) && !bans.has(t),
-    // 出牌：從扇形上那張的位置飛上版。
+    // 出牌：從托盤上那張的位置飛上版。
     onPlay: (t) => place(t, hand.nodeOf(t)),
     onChange: syncHand,
     onFull: () => announce(`偏好卡牌最多 ${hand.max} 張，先拿掉一張再加`),
@@ -2579,14 +2602,14 @@ function buildHand() {
 function syncHand() {
   if (!hand) return;
   const btn = $("hand-btn");
-  btn.setAttribute("aria-pressed", hand.editing ? "true" : "false");
+  btn.setAttribute("aria-pressed", hand.open ? "true" : "false");
   $("hand-count").textContent = `${hand.count}/${hand.max}`;
   hand.mark($("case-grid"));
 }
 
 function wireChrome() {
   $("rules-btn").addEventListener("click", openRules);
-  $("hand-btn").addEventListener("click", () => hand?.toggleEdit());
+  $("hand-btn").addEventListener("click", () => hand?.fromButton());
   const snd = $("sound-btn");
   const syncSound = () => {
     snd.setAttribute("aria-pressed", sfx.on ? "true" : "false");
