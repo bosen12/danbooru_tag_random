@@ -29,7 +29,7 @@ import { initWorkflow, currentWorkflowId, wfHandleKeys } from "./workflow.js";
 import { HARD_BANNED, applyArtSources } from "./card-art.js";
 import { buildLibrary, createAssets, cardNode, setCardFlag, cardFacts, CARD_SUIT_INFO, CARD_SUITS, RATING_ZH } from "./cards.js";
 import { el, openSheet, anyOverlay, toast, ICONS } from "./ui.js";
-import { createDrag } from "./drag.js";
+import { createDrag, inkRing } from "./drag.js";
 import { createGenerator, comfyOnline, viewSrc, tabTitle } from "./gen.js";
 import { genSeed, mountSeedControl, seedUseButton } from "./seed-control.js";
 import { attachPeek } from "./card-peek.js";
@@ -321,6 +321,8 @@ function flyInto(tag, from) {
     ],
     { duration: 420, easing: "cubic-bezier(0.16, 1, 0.3, 1)" }
   );
+  // 落定的那一刻散一圈墨（跟拖曳放下同一個效果）。
+  setTimeout(() => inkRing(target), 330);
 }
 
 /** 浮空放大卡要的資料。 */
@@ -1272,23 +1274,33 @@ function showBans() {
 
 /* ================= 拖曳 ================= */
 
+const libCardNode = (tag) => [...$("lib-grid").querySelectorAll(".card")].find((n) => n.dataset.tag === tag) || null;
+
 const drag = createDrag({
   zones: () => [
     { id: "pool", el: $("pool-well"), accepts: (p) => p.from !== "pool" },
-    { id: "trash", el: $("trash"), accepts: () => true },
+    // 丟進廢字簍：影子縮小、轉著被吸進去（drag.js 的 sink）。
+    { id: "trash", el: $("trash"), accepts: () => true, sink: true },
     { id: "library", el: $("library"), accepts: (p) => p.from === "pool" },
   ],
+  // 回傳落點：影子飛到那張牌的位置落下（drag.js）。
   onDrop: (p, zone) => {
     if (zone === "pool") {
       if (bans.has(p.tag)) bans.delete(p.tag);
       pin(p.tag);
-    } else if (zone === "trash") {
+      return poolNode(p.tag);
+    }
+    if (zone === "trash") {
       // 廢字簍自己會跳一下、數字加一；畫面上不用再多一個提示。
       ban(p.tag);
       announce(`「${zh(p.tag)}」丟進廢字簍了，之後不會抽到`);
-    } else if (zone === "library") {
-      unpin(p.tag);
+      return null;
     }
+    if (zone === "library") {
+      unpin(p.tag);
+      return libCardNode(p.tag);
+    }
+    return null;
   },
 });
 

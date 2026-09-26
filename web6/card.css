@@ -233,7 +233,7 @@ button.card:active {
   }
 }
 
-/* 拖著走的那張 */
+/* 拖著走的那張（見 drag.js）：外層跟著手指平移，裡面那張牌負責浮起、傾斜、放大。 */
 
 .drag-ghost {
   position: fixed;
@@ -241,11 +241,126 @@ button.card:active {
   top: 0;
   z-index: 90;
   pointer-events: none;
-  rotate: -4deg;
-  box-shadow: 0 24px 40px var(--color-shade);
-  opacity: 0.95;
+  transform-origin: 0 0;
+  will-change: transform;
 }
 
+.drag-ghost > .card {
+  --g-tilt: -2deg;
+  --g-scale: 1;
+  margin: 0;
+  rotate: var(--g-tilt);
+  scale: var(--g-scale);
+  box-shadow: 0 10px 18px var(--color-shade);
+  transition:
+    rotate 140ms var(--ease-out),
+    scale 220ms cubic-bezier(0.2, 1.5, 0.4, 1),
+    box-shadow 220ms var(--ease-out),
+    filter 160ms var(--ease-out),
+    opacity 160ms var(--ease-out);
+}
+
+/* 拿起來：放大一點、陰影拉深，像離開桌面。 */
+.drag-ghost.is-lifted > .card {
+  --g-scale: 1.07;
+  box-shadow: 0 26px 40px var(--color-shade);
+}
+
+/* 移到收得下的地方：再大一點、描一圈亮邊。 */
+.drag-ghost.is-lifted[data-over="valid"] > .card {
+  --g-scale: 1.12;
+  box-shadow: 0 0 0 2px var(--color-accent), 0 30px 46px var(--color-shade);
+}
+
+/* 移到廢字簍上：縮小、褪色，看得出放手就沒了。 */
+.drag-ghost.is-lifted[data-over="sink"] > .card {
+  --g-scale: 0.9;
+  filter: grayscale(0.75) brightness(0.8);
+  opacity: 0.85;
+}
+
+/* 原位留一個空位：淡、灰、虛線框。 */
 .card[data-dragging="true"] {
-  opacity: 0.3;
+  opacity: 0.28;
+  filter: grayscale(0.6);
+  outline: 1.5px dashed var(--color-rule);
+  outline-offset: 2px;
+}
+
+/* 手機長按的那 280ms：牌慢慢往下壓，壓到底就拿起來了。 */
+.card.is-pressing {
+  scale: 0.95;
+  transition: scale 280ms linear;
+}
+
+/* 落地：先大、再壓扁、彈回。 */
+.card.is-landed {
+  animation: card-land 380ms cubic-bezier(0.2, 0.9, 0.3, 1);
+}
+
+@keyframes card-land {
+  0% {
+    scale: 1.06;
+  }
+  35% {
+    scale: 1.05 0.93;
+  }
+  70% {
+    scale: 0.99 1.02;
+  }
+  100% {
+    scale: 1;
+  }
+}
+
+/* 放錯地方彈回原位：到家時輕輕一跳。 */
+.card.is-home {
+  animation: card-home 300ms var(--ease-out);
+}
+
+@keyframes card-home {
+  0% {
+    scale: 0.96;
+  }
+  60% {
+    scale: 1.03;
+  }
+  100% {
+    scale: 1;
+  }
+}
+
+/* 落點散開的一圈墨，顏色是那張牌的花色。 */
+.land-ring {
+  position: fixed;
+  z-index: 89;
+  pointer-events: none;
+  border-radius: 50%;
+  border: 2px solid var(--ring, var(--color-accent));
+  background: radial-gradient(closest-side, color-mix(in oklch, var(--ring, var(--color-accent)) 22%, transparent), transparent);
+  opacity: 0;
+  animation: land-ring 520ms cubic-bezier(0.2, 0.8, 0.3, 1);
+}
+
+@keyframes land-ring {
+  0% {
+    transform: scale(0.35);
+    opacity: 0.9;
+  }
+  100% {
+    transform: scale(1.15);
+    opacity: 0;
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .drag-ghost > .card,
+  .card.is-pressing {
+    transition: none;
+  }
+  .card.is-landed,
+  .card.is-home,
+  .land-ring {
+    animation: none;
+  }
 }

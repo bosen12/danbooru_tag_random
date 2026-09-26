@@ -34,7 +34,7 @@ import { initWorkflow, currentWorkflowId, wfHandleKeys } from "./workflow.js";
 import { HARD_BANNED, applyArtSources } from "./card-art.js";
 import { buildLibrary, createAssets, cardNode, cardFacts, CARD_SUIT_INFO, CARD_SUITS, RATING_ZH, ERA_ZH } from "./cards.js";
 import { el, openSheet, anyOverlay } from "./ui.js";
-import { createDrag } from "./drag.js";
+import { createDrag, inkRing } from "./drag.js";
 import { createGenerator, comfyOnline, viewSrc, tabTitle } from "./gen.js";
 import { attachPeek, hidePeek } from "./card-peek.js";
 import * as S from "./store.js";
@@ -280,7 +280,11 @@ function commit(next, label, events = []) {
   if (caseTab === "match") renderCase();
 }
 
-function place(tag, sourceEl) {
+/**
+ * 放一張牌上版。viaDrag：是拖進來的 —— 飛過去、落地由 drag.js 演，這裡不另外飛；
+ * 蓋章聲、那一列的墨、被帶上來的牌跳出來，都等影子落地才做（回傳 { landed }）。
+ */
+function place(tag, sourceEl, { viaDrag = false } = {}) {
   if (!lib.byTag.has(tag)) return;
   if (bed.pins.includes(tag)) return;
   const from = sourceEl && sourceEl.isConnected ? sourceEl.getBoundingClientRect() : null;
@@ -289,24 +293,48 @@ function place(tag, sourceEl) {
   const leaving = events.filter((e) => e.kind === "replace").map((e) => plateNode(e.out)).filter(Boolean).map(snapshot);
   commit(next, `放上「${zh(tag)}」`, events);
   const carried = events.filter((e) => e.kind === "carry").map((e) => e.tag);
-  flyIn(tag, from);
-  carried.forEach((t, i) => popIn(t, 140 + i * 90));
+  const settle = (lag) => {
+    carried.forEach((t, i) => popIn(t, lag + i * 90));
+    inkRow(suitOf(tag));
+    sfx.stamp();
+    if (carried.length) sfx.carry();
+    haptic(8);
+  };
+  // 被擠掉的牌現在就離開（新的那張正飛過來）。
   leaving.forEach((snap) => liftAway(snap, "aside"));
-  inkRow(suitOf(tag));
-  sfx.stamp();
-  if (carried.length) sfx.carry();
   if (leaving.length) setTimeout(() => sfx.lift(), 90);
-  haptic(8);
+  let result;
+  if (viaDrag) {
+    // 目的地先藏著等影子落下；被帶上來的牌也先別跳出來。
+    carried.forEach((t) => {
+      const n = plateNode(t);
+      if (n) n.style.visibility = "hidden";
+    });
+    result = {
+      landed: () => {
+        carried.forEach((t) => {
+          const n = plateNode(t);
+          if (n) n.style.visibility = "";
+        });
+        settle(60);
+      },
+    };
+  } else {
+    flyIn(tag, from);
+    settle(140);
+  }
   const bits = [`放上「${zh(tag)}」`];
   if (carried.length) bits.push(`帶上${carried.map((t) => `「${zh(t)}」`).join("")}`);
   for (const e of events) if (e.kind === "replace") bits.push(`「${zh(e.out)}」${e.why === "era" ? "時代不合拿下" : "被換下"}`);
   announce(bits.join("，"));
+  return result;
 }
 
-function remove(tag) {
+/** 拿下一張。viaDrag：拖回字盒的那張由 drag.js 飛回去，這裡只讓它帶上來的牌掀起來。 */
+function remove(tag, { viaDrag = false } = {}) {
   if (!bed.pins.includes(tag)) return;
   const { bed: next, events } = removeCard(bed, tag);
-  const snaps = (events[0]?.tags || [tag]).map((t) => plateNode(t)).filter(Boolean).map(snapshot);
+  const snaps = (events[0]?.tags || [tag]).filter((t) => !(viaDrag && t === tag)).map((t) => plateNode(t)).filter(Boolean).map(snapshot);
   commit(next, `拿下「${zh(tag)}」`, events);
   snaps.forEach((s) => liftAway(s, "up"));
   sfx.lift();
@@ -1438,6 +1466,7 @@ function flyIn(tag, from) {
     if (n) {
       n.style.visibility = "";
       stamp(n);
+      inkRing(n);
     }
   }, 430);
 }
@@ -1974,16 +2003,39 @@ function peekInfo(node) {
 
 /* ================= 拖曳 ================= */
 
+const caseCard = (tag) => $("case-grid").querySelector(`.card[data-tag="${cssEsc(tag)}"]`);
+let dropRow = null;
+
 const drag = createDrag({
   zones: () => [
     { id: "plate", el: $("plate"), accepts: (p) => p.from !== "plate" },
-    // 手機上卡池捲走了，角落那顆「卡池」也收牌。
-    { id: "pill", el: $("pool-pill"), accepts: (p) => p.from === "case" && !$("pool-pill").hidden },
+    // 手機上卡池捲走了，角落那顆「卡池」也收牌：影子縮小被吸進去。
+    { id: "pill", el: $("pool-pill"), accepts: (p) => p.from === "case" && !$("pool-pill").hidden, sink: true },
     { id: "case", el: $("case"), accepts: (p) => p.from === "plate" },
   ],
+  // 拖著經過卡池：它會落到的那一列先亮起來。
+  onOver: (zone, p) => {
+    dropRow?.classList.remove("is-drop-target");
+    dropRow = null;
+    if (zone !== "plate") return;
+    dropRow = $("registers").querySelector(`.register[data-suit="${suitOf(p.tag)}"]`);
+    dropRow?.classList.add("is-drop-target");
+  },
   onDrop: (p, zone) => {
-    if (zone === "case") remove(p.tag);
-    else place(p.tag, null);
+    if (zone === "case") {
+      remove(p.tag, { viaDrag: true });
+      return caseCard(p.tag);
+    }
+    const r = place(p.tag, null, { viaDrag: true });
+    if (zone === "pill") {
+      return {
+        landed: () => {
+          r?.landed();
+          stamp($("pool-pill"), "is-bumped");
+        },
+      };
+    }
+    return { el: plateNode(p.tag), landed: r?.landed };
   },
 });
 

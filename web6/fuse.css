@@ -630,6 +630,19 @@ body.fuse {
   pointer-events: none;
 }
 
+/* 拖著一張牌經過卡池：它會落到的那一列先亮起來。 */
+.register::before {
+  transition: opacity 160ms var(--ease-out);
+}
+
+.register.is-drop-target::before {
+  opacity: 1;
+}
+
+.register.is-drop-target .reg-glyph {
+  color: var(--suit);
+}
+
 .register.is-inked::before {
   animation: ink-wash 0.9s var(--ease-out);
 }
