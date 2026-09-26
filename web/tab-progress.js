@@ -56,8 +56,8 @@ export function tabProgress({ base = document.title } = {}) {
     let t = base;
     if (document.hidden) {
       if (state === "run") t = `${Math.round(p * 100)}%${note ? " " + note : ""} · ${base}`;
-      else if (state === "done") t = `✓ ${note || "好了"} · ${base}`;
-      else if (state === "fail") t = `✕ ${note || "失敗"} · ${base}`;
+      else if (state === "done") t = `${note || "好了"} · ${base}`;
+      else if (state === "fail") t = `${note || "失敗"} · ${base}`;
     }
     if (document.title !== t) document.title = t;
   }

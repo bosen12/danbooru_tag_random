@@ -1684,6 +1684,14 @@ const ALBUM_FIXTURE = [
   ok("整塊重畫也讓位（flipBy 用牌名認人）：墨池合成池、疊印台卡池；影子收下從影子的位置滑進去", motion6.includes("export function flipBy(") && app6.includes('flipBy($("pool-well"), ".pool-slot"') && fuse6.includes('flipBy(box, ".plate-card, .ghost-card", cardKey') && fuse6.includes('alias: (k) => (k.startsWith("p:") ? "g:" + k.slice(2) : null)'));
   ok("拖曳落點先讓讓位動畫到位再量", drag6.includes("for (const a of target.getAnimations()) a.finish();"));
   ok("墨池：× 拿出飛回字盒、按鈕封鎖飛進廢字簍、清空一張張收回可以復原（拖曳的不重演）", app6.includes("function unpin(tag, { viaDrag = false } = {})") && app6.includes("function flyToTrash(") && app6.includes("清空了合成池") && app6.includes("ban(p.tag, { viaDrag: true })") && app6.includes("unpin(p.tag, { viaDrag: true })"));
+  const wf = readFileSync(join(ROOT, "web/workflow.js"), "utf8");
+  const fuseHtml = readFileSync(join(ROOT, "web6/fuse.html"), "utf8");
+  ok("墨池／疊印台右上角：工作流、聲音是圖示（名字在 aria-label），排字匣的工作流照舊是字", wf.includes('class="wf-ico"') && fuseHtml.includes('id="sound-btn"') && !fuseHtml.includes(">聲音</button>") && fuse6.includes("snd.innerHTML = sfx.on") && readFileSync(join(ROOT, "web/boot.css"), "utf8").includes("#wf-pick-btn .wf-ico {"));
+  ok("疊印台的規則自己一份（跟墨池分開），規則裡可以設每段補幾張", fuse6.includes('settings: "mochi.fuse.settings.v1"') && !fuse6.includes("S.saveSettings(") && fuse6.includes("每段補幾張"));
+  {
+    const ui = ["web6/app.js", "web6/fuse.js", "web6/motion.js", "web6/ui.js", "web/tab-progress.js", "web6/fuse.html", "web6/index.html"].map((f) => readFileSync(join(ROOT, f), "utf8")).join("\n");
+    ok("墨池／疊印台畫面上不用表情符號或 ✓ ✕ 當標記", !/[\u{1F300}-\u{1FAFF}\u{2600}-\u{27BF}]/u.test(ui));
+  }
   ok("排字匣不送全域中斷（空的 {}）", !boot.includes('body: "{}"') && !boot.includes("prompt_id: jobPromptId } : {}"));
 }
 

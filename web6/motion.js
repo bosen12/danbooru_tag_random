@@ -204,7 +204,7 @@ export function enter(node, { delay = 0 } = {}) {
 }
 
 /** 按鈕自己說「好了」：字換成 done 一下子再換回來（複製、存檔這種看不到結果的動作）。 */
-export function confirmButton(btn, done = "已複製 ✓", ms = 1400) {
+export function confirmButton(btn, done = "已複製", ms = 1400) {
   if (!btn) return;
   if (!btn.dataset.label) btn.dataset.label = btn.textContent;
   btn.textContent = done;

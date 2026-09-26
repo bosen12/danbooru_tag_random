@@ -90,7 +90,8 @@ function ensureDom() {
     btn.id = "wf-pick-btn";
     btn.title = "工作流";
     btn.setAttribute("aria-haspopup", "dialog");
-    btn.innerHTML = `<span class="gen-pick-label">工作流</span>`;
+    btn.setAttribute("aria-label", "工作流：內建");
+    btn.innerHTML = `<svg class="wf-ico" viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><rect x="3" y="3" width="6" height="6" rx="1.2"/><rect x="15" y="15" width="6" height="6" rx="1.2"/><rect x="15" y="3" width="6" height="6" rx="1.2"/><path d="M9 6h6M18 9v6M9 6c3 0 3 12 6 12"/></svg><span class="gen-pick-label">工作流</span>`;
     const ckpt = $("ckpt-pick-btn");
     if (ckpt) ckpt.after(btn);
     else {
@@ -140,6 +141,9 @@ function renderPickBtn() {
   if (lab) lab.textContent = p ? p.name : "工作流";
   btn.classList.toggle("has", !!WORKFLOW_ID);
   btn.title = p ? `工作流：${p.name}` : "工作流：內建";
+  btn.setAttribute("aria-label", btn.title);
+  // 用了自己的工作流：圖示模式下看不到名字，右上角點一顆小點提醒。
+  btn.classList.toggle("is-custom", !!p);
   btn.setAttribute("aria-expanded", workflowUiOpen() ? "true" : "false");
 }
 

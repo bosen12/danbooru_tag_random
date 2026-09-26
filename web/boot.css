@@ -2979,3 +2979,8 @@ select:hover:not(:focus):not(:disabled) {
     scale: none;
   }
 }
+
+/* 工作流鈕的圖示只給墨池／疊印台用（web6/styles.css）；這裡照舊顯示文字。 */
+#wf-pick-btn .wf-ico {
+  display: none;
+}

@@ -60,7 +60,7 @@ const SIZES = [
 const SECTION_ORDER = ["subject", "feature", "clothing", "pose", "env", "style", "quality"];
 // 卡池、試印的種子、挑哪一張都不存：重新整理就是空白的版和一批新種子。
 // 晾紙繩（付印過的作品）留著，點「回到這一版」可以把當時的卡池叫回來。
-const FK = { prints: "mochi.fuse.prints.v1", tab: "mochi.fuse.tab.v1" };
+const FK = { prints: "mochi.fuse.prints.v1", tab: "mochi.fuse.tab.v1", settings: "mochi.fuse.settings.v1" };
 const FK_OLD = ["mochi.fuse.bed.v1", "mochi.fuse.seeds.v1", "mochi.fuse.picked.v1"];
 
 // 第一次打開的起手式：三組一點就疊好的版。只收詞庫裡有、這個尺度看得到的。
@@ -193,7 +193,8 @@ async function boot() {
     $("registers").replaceChildren(el("p", { class: "boot-fail" }, "讀不到詞庫。請用 start-web6.bat 開，而不是直接點 HTML。", el("br"), String(err)));
     return;
   }
-  settings = sanitizeSettings(S.loadSettings() || { rating: "general" }, data);
+  // 疊印台的規則自己一份，跟墨池分開。第一次打開（還沒有自己的）先沿用墨池那一份當起點。
+  settings = sanitizeSettings(readJ(FK.settings, null) || S.loadSettings() || { rating: "general" }, data);
   bans = new Set(S.loadBans().filter((t) => lib.byTag.has(t)));
   bed = emptyBed();
   seeds = freshSeeds();
@@ -243,7 +244,7 @@ function freshSeeds() {
 
 function setSettings(patch) {
   settings = sanitizeSettings({ ...settings, ...patch }, data);
-  S.saveSettings(settings);
+  writeJ(FK.settings, settings);
   retrial();
   renderAll();
   renderCase();
@@ -662,7 +663,7 @@ function restorePrint(p) {
       { ...settings, ...(sizeBack ? { width: p.width, height: p.height } : {}), ...(ratingBack ? { rating: p.rating } : {}) },
       data
     );
-    S.saveSettings(settings);
+    writeJ(FK.settings, settings);
   }
   rowNotes = {};
   retrial();
@@ -2365,6 +2366,31 @@ function segmented(label, options, current, onPick) {
   );
 }
 
+/** 數字加減（跟墨池規則裡那個同一個樣子，motion.js 讓數字滾動）。 */
+function stepper(label, value, min, max, onChange) {
+  let v = value;
+  const out = el("output", {}, v);
+  const minus = el("button", { type: "button", "aria-label": `${label}少一張` }, "−");
+  const plus = el("button", { type: "button", "aria-label": `${label}多一張` }, "＋");
+  const sync = () => {
+    out.textContent = v;
+    minus.disabled = v <= min;
+    plus.disabled = v >= max;
+  };
+  minus.onclick = () => {
+    v = Math.max(min, v - 1);
+    sync();
+    onChange(v);
+  };
+  plus.onclick = () => {
+    v = Math.min(max, v + 1);
+    sync();
+    onChange(v);
+  };
+  sync();
+  return el("span", { class: "stepper" }, el("span", { class: "stepper-label" }, label), minus, out, plus);
+}
+
 function openRules() {
   const size = (SIZES.find((s) => s.w === settings.width && s.h === settings.height) || SIZES[0]).id;
   const who = settings.girl && settings.boy ? "any" : settings.boy ? "boy" : "girl";
@@ -2405,7 +2431,7 @@ function openRules() {
     el(
       "div",
       { class: "rules-sheet" },
-      el("p", { class: "rules-note" }, "跟墨池工作臺共用同一組規則。改了之後四張試印會立刻重印。"),
+      el("p", { class: "rules-note" }, "疊印台自己的規則，跟墨池分開。改了之後四張試印會立刻重抽。"),
       row(
         "尺寸",
         segmented(
@@ -2432,7 +2458,20 @@ function openRules() {
         )
       ),
       row("時代", eraSel),
-      row("情境", heats)
+      row("情境", heats),
+      row(
+        "每段補幾張",
+        el(
+          "div",
+          { class: "rule-steppers", role: "group", "aria-label": "引擎每段補幾張" },
+          [
+            ["feature", "長相"],
+            ["clothing", "服裝"],
+            ["pose", "姿勢"],
+            ["env", "場景"],
+          ].map(([k, label]) => stepper(label, settings.counts[k], 0, 10, (v) => setSettings({ counts: { ...settings.counts, [k]: v } })))
+        )
+      )
     ),
     { foot: [el("button", { class: "btn btn-primary", type: "button", onclick: () => sheet && sheet.close() }, "好了")] }
   );
@@ -2443,7 +2482,10 @@ function wireChrome() {
   const snd = $("sound-btn");
   const syncSound = () => {
     snd.setAttribute("aria-pressed", sfx.on ? "true" : "false");
-    snd.textContent = sfx.on ? "聲音 開" : "聲音 關";
+    const label = sfx.on ? "聲音：開（點一下關掉）" : "聲音：關（點一下打開）";
+    snd.setAttribute("aria-label", label);
+    snd.title = label;
+    snd.innerHTML = sfx.on ? `<svg viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M4 9h4l5-4v14l-5-4H4z"/><path d="M16.5 8.5a5 5 0 0 1 0 7M19 6a8.5 8.5 0 0 1 0 12"/></svg>` : `<svg viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M4 9h4l5-4v14l-5-4H4z"/><path d="M17 9.5l5 5M22 9.5l-5 5"/></svg>`;
   };
   syncSound();
   snd.addEventListener("click", () => {

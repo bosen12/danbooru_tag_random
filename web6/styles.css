@@ -259,6 +259,52 @@ p {
   position: relative;
 }
 
+/* 右上角的圖示鈕（工作流、聲音）：只有圖示，名字在 title／aria-label。 */
+#wf-pick-btn .gen-pick-label {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  overflow: hidden;
+  clip: rect(0 0 0 0);
+  white-space: nowrap;
+}
+
+#wf-pick-btn,
+.icon-btn {
+  position: relative;
+  display: inline-grid;
+  place-items: center;
+  min-width: 36px;
+  padding-inline: 8px;
+}
+
+#wf-pick-btn .wf-ico,
+.icon-btn svg {
+  display: block;
+}
+
+/* 用了自己的工作流：右上角一顆小點。 */
+#wf-pick-btn.is-custom::after {
+  content: "";
+  position: absolute;
+  top: 5px;
+  right: 5px;
+  width: 7px;
+  height: 7px;
+  border-radius: 50%;
+  background: var(--color-accent);
+}
+
+.icon-btn[aria-pressed="false"] {
+  color: var(--color-ink-3, var(--color-ink-2));
+}
+
+.rule-steppers {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--space-xs) var(--space-sm);
+}
+
 /* 選到的那一格底下一塊會滑的底（見 motion.js）：換選項時滑過去，不是這格亮、那格暗。 */
 .seg-thumb {
   position: absolute;
