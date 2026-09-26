@@ -1711,6 +1711,15 @@ const ALBUM_FIXTURE = [
     }
     ok("托盤開著的時候底下墊出它的高度，不蓋住字盒和卡池", hand6.includes('setProperty("--fav-h"') && css6.includes("padding-bottom: var(--fav-h, 0px)") && readFileSync(join(ROOT, "web6/fuse.css"), "utf8").includes("height: var(--fav-h, 0px)"));
     ok("× 隨時都有（指到才亮，觸控一直在），疊在指到的牌上面", /\.fav-x \{[^}]*z-index: 5/.test(css6) && css6.includes("@media (hover: none)"));
+    {
+      const drag6 = readFileSync(join(ROOT, "web6/drag.js"), "utf8");
+      const peek = readFileSync(join(ROOT, "web/card-peek.js"), "utf8");
+      ok("拖曳：onDrop 拿得到放開的位置，回傳 false 影子彈回原位；onMove 每動一下都報", drag6.includes("onDrop(state.payload, zone.id, { x: state.px, y: state.py })") && drag6.includes("if (result === false) goHome(state);") && drag6.includes("if (onMove) onMove(state.over ? state.over.id : null, state.payload, x, y);"));
+      ok("托盤：拖著經過先空出插入的那一格，放在哪就插在哪（托盤上的牌＝換位置），滿了收不下", hand6.includes("function hover(x, tag)") && hand6.includes("function drop(tag, x)") && hand6.includes("function insertAt(tag, at)") && fuse6.includes("if (!hand.drop(p.tag, at?.x)) return false;") && app6.includes("if (!hand.drop(p.tag, at?.x)) return false;") && fuse6.includes('onMove: (zone, p, x) => hand?.hover(zone === "hand" ? x : null, p.tag)') && app6.includes('onMove: (zone, p, x) => hand?.hover(zone === "hand" ? x : null, p.tag)'));
+      ok("托盤收著或沒有牌：拖牌時變成「放這裡加入」的標籤", css6.includes('body[data-dragging="true"] .fav-hand[data-hidden="true"][data-droppable="true"]') && css6.includes('content: "放這裡加入"'));
+      ok("托盤鍵盤：只有一張在 Tab 順序裡，方向鍵移動、Shift＋方向鍵排順序，出牌／拿掉後焦點留在托盤", hand6.includes("function focusCard(card)") && hand6.includes("e.shiftKey && (e.key === \"ArrowLeft\" || e.key === \"ArrowRight\")") && hand6.includes("if (i >= 0) refocus(i);") && hand6.includes("x.tabIndex = -1;"));
+      ok("托盤的牌也有放大卡，開在牌的正上方", hand6.includes('fan.dataset.peek = "above"') && peek.includes(`anchor.closest("[data-peek='above']")`) && fuse6.includes("attachPeek(hand.fan") && app6.includes("hand?.fan]) attachPeek("));
+    }
     ok("工具列鈕：沒牌直接進挑牌，有牌打開／收起托盤；選單和詳情也能加", hand6.includes("function fromButton()") && fuse6.includes("hand?.fromButton()") && app6.includes("hand?.fromButton()") && fuse6.includes('"加入偏好卡牌"') && app6.includes('"加入偏好卡牌"'));
   }
   ok("疊印台的規則鈕也是圖示", fuseHtml.includes('id="rules-btn" type="button" aria-label="規則"') && !fuseHtml.includes(">規則</button>"));

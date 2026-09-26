@@ -47,6 +47,8 @@ export function createHand({
   let open = read(key + ".open", tags.length > 0) === true;
   let editing = false;
   let hot = -1;
+  // 拖牌經過托盤：在要插進去的地方空出一格（at：第幾格；skip：拖的就是托盤上的這張，它先讓出位置）。
+  let gap = null;
   let size = { w: 84, fs: 10 };
   const slots = new Map();
   const pendingArrive = new Set();
@@ -70,6 +72,8 @@ export function createHand({
   body.className = "fav-body";
   const fan = document.createElement("div");
   fan.className = "fav-fan";
+  // 指到托盤的牌：放大卡開在上面（card-peek.js）。
+  fan.dataset.peek = "above";
   const empty = document.createElement("p");
   empty.className = "fav-emptytext";
   body.append(fan);
@@ -166,7 +170,7 @@ export function createHand({
     return { x: off * step, y: off * off * 0.9, r: off * tilt, step };
   }
 
-  function position(slot, i, n, w, room, animate) {
+  function position(slot, i, n, w, room, animate, hot) {
     let { x, y, r, step } = geometry(n, i, w, room);
     let lift = 0;
     if (hot >= 0 && hot < n) {
@@ -179,7 +183,9 @@ export function createHand({
         x += Math.sign(d) * Math.max(0, (w - step) * 0.55 - (Math.abs(d) - 1) * 5);
       }
     }
-    slot.style.transition = animate && !reduced() ? "" : "none";
+    // 剛做好的牌第一次擺：直接到位，不要從中間滑出來。
+    slot.style.transition = animate && slot._placed && !reduced() ? "" : "none";
+    slot._placed = true;
     slot.style.transform = `translate(calc(-50% + ${x.toFixed(1)}px), ${(y + lift).toFixed(1)}px) rotate(${r.toFixed(2)}deg)`;
     slot.style.zIndex = String(i === hot ? 50 : 10 + i);
     slot.classList.toggle("is-hot", i === hot);
@@ -199,6 +205,7 @@ export function createHand({
     s.dataset.tag = tag;
     const node = makeNode(tag);
     node.classList.add("fav-card");
+    node.tabIndex = -1;
     // 托盤一打開就要看得到圖：不等捲動才載。
     for (const img of node.querySelectorAll("img")) img.loading = "eager";
     node.title = "點一下放進卡池";
@@ -207,11 +214,32 @@ export function createHand({
       e.preventDefault();
       play(tag);
     });
+    node.setAttribute("aria-keyshortcuts", "Delete ArrowLeft ArrowRight Shift+ArrowLeft Shift+ArrowRight");
     node.addEventListener("keydown", (e) => {
       if (e.key === "Delete" || e.key === "Backspace") {
         e.preventDefault();
+        const i = cardsNow().indexOf(node);
         remove(tag);
+        refocus(i);
+        return;
       }
+      const cards = cardsNow();
+      const i = cards.indexOf(node);
+      const to = { ArrowLeft: i - 1, ArrowRight: i + 1, Home: 0, End: cards.length - 1 }[e.key];
+      if (to === undefined) return;
+      e.preventDefault();
+      const j = Math.max(0, Math.min(cards.length - 1, to));
+      // Shift＋方向鍵：這張往左／往右挪一格（排順序）。
+      if (e.shiftKey && (e.key === "ArrowLeft" || e.key === "ArrowRight")) {
+        if (j === i) return;
+        insertAt(tag, j);
+        write(key, tags);
+        layout(true);
+        onChange();
+        focusCard(node);
+        return;
+      }
+      focusCard(cards[j]);
     });
     const idx = () => [...fan.querySelectorAll(".fav-slot")].indexOf(s);
     node.addEventListener("pointerenter", (e) => {
@@ -223,6 +251,8 @@ export function createHand({
     x.className = "fav-x";
     x.setAttribute("aria-label", "從偏好卡牌拿掉");
     x.title = "從偏好卡牌拿掉";
+    // 鍵盤用 Delete 拿掉，Tab 不用一張一張停在 × 上。
+    x.tabIndex = -1;
     x.innerHTML =
       '<svg viewBox="0 0 24 24" width="11" height="11" fill="none" stroke="currentColor" stroke-width="2.6" stroke-linecap="round" aria-hidden="true"><path d="M6 6l12 12M18 6L6 18"/></svg>';
     x.addEventListener("click", (e) => {
@@ -251,10 +281,107 @@ export function createHand({
   /** 只重排位置（指到別張、視窗變寬窄），不動節點。 */
   function placeAll(animate) {
     const kids = [...fan.querySelectorAll(".fav-slot")];
-    const n = kids.length;
     const w = size.shown || size.w;
-    const room = Math.max(w, fan.clientWidth - 8);
-    kids.forEach((k, i) => position(k, i, n, w, room, animate));
+    const list = gap ? kids.filter((k) => k.dataset.tag !== gap.skip) : kids;
+    const m = gap ? list.length + 1 : list.length;
+    const room = roomFor(m);
+    setWant(m);
+    for (const k of kids) k.classList.toggle("is-out", !!gap && k.dataset.tag === gap.skip);
+    list.forEach((k, j) => position(k, gap && j >= gap.at ? j + 1 : j, m, w, room, animate, gap ? -1 : hot));
+  }
+
+  /** 托盤要多寬（照張數長，夾在視窗裡）；跟 CSS 的算法一樣，才不用等寬度轉場跑完才知道擺不擺得下。 */
+  function trayWidth(m) {
+    const w = size.shown || size.w;
+    const edge = innerWidth < 640 ? 16 : 20;
+    return Math.min(innerWidth - edge, Math.max(Math.max(m, 1) * (w + GAP) - GAP + 40, 360));
+  }
+  function roomFor(m) {
+    const pad = innerWidth < 640 ? 16 : 20;
+    return Math.max(size.shown || size.w, trayWidth(m) - pad - 2 - 8);
+  }
+  function setWant(m) {
+    const w = size.shown || size.w;
+    el.style.setProperty("--fav-want", Math.max(m, 1) * (w + GAP) - GAP + 40 + "px");
+  }
+
+  /** 指標在 x：插進去會是第幾格（skip：托盤上被拖著的那張不算）。 */
+  function gapIndex(x, skip) {
+    const list = shownTags().filter((t) => t !== skip);
+    const m = list.length + 1;
+    if (m < 2) return 0;
+    const w = size.shown || size.w;
+    const room = roomFor(m);
+    const step = Math.min(w + GAP, (room - w) / (m - 1));
+    const r = fan.getBoundingClientRect();
+    const cx = r.left + r.width / 2;
+    return Math.max(0, Math.min(m - 1, Math.round((x - cx) / step + (m - 1) / 2)));
+  }
+
+  /** 把 tag 放進 tags，讓它在托盤上排第 at 格（at 算的是擺出來的牌；卡池裡的不佔格）。 */
+  function insertAt(tag, at) {
+    const list = shownTags().filter((t) => t !== tag);
+    const rest = tags.filter((t) => t !== tag);
+    let i = rest.length;
+    if (at != null && at < list.length) i = rest.indexOf(list[at]);
+    else if (at != null && list.length) i = rest.indexOf(list[list.length - 1]) + 1;
+    rest.splice(i, 0, tag);
+    tags = rest;
+  }
+
+  /**
+   * 拖著經過托盤（x：指標位置；null＝離開了）。插進去的那一格先空出來，兩旁的牌滑開。
+   * 滿十張又不是托盤上的牌：不空格，標頭說滿了。
+   */
+  function hover(x, tag) {
+    const full = !tags.includes(tag) && tags.length >= max;
+    if (x == null || !open || full) {
+      const was = gap || el.dataset.full === "true";
+      gap = null;
+      if (full && x != null) {
+        el.dataset.full = "true";
+        hint.textContent = `滿 ${max} 張了，先拿掉一張`;
+        return;
+      }
+      delete el.dataset.full;
+      if (was) {
+        paintHead();
+        placeAll(true);
+      }
+      return;
+    }
+    const skip = shownTags().includes(tag) ? tag : null;
+    const at = gapIndex(x, skip);
+    if (gap && gap.at === at && gap.skip === skip) return;
+    gap = { at, skip };
+    hot = -1;
+    placeAll(true);
+  }
+
+  /**
+   * 牌放在托盤上（拖曳）。已經在手牌裡：換到放下的位置；不在：插在放下的位置。
+   * 回傳 false＝收不下（滿了），房間讓影子彈回原位。
+   */
+  function drop(tag, x) {
+    const skip = shownTags().includes(tag) ? tag : null;
+    const at = open && x != null ? gapIndex(x, skip) : null;
+    gap = null;
+    delete el.dataset.full;
+    if (tags.includes(tag)) {
+      if (at != null) insertAt(tag, at);
+      write(key, tags);
+      layout(true);
+      snap(tag);
+      onChange();
+      return true;
+    }
+    return add(tag, null, { at, quiet: true });
+  }
+
+  /** 這張直接到位（不走轉場）：拖曳的影子要量它最後的位置落下去。 */
+  function snap(tag) {
+    const s = slots.get(tag);
+    if (s) s.style.transition = "none";
   }
 
   /** 重擺托盤。animate：位置變化用轉場滑過去（加牌、出牌）。 */
@@ -269,9 +396,6 @@ export function createHand({
     const n = show.length;
     el.style.setProperty("--fav-card-w", w + "px");
     el.style.setProperty("--fav-card-fs", fs + "px");
-    // 托盤寬度照張數長；最窄也要放得下標頭，最寬到視窗邊（CSS 夾）。
-    const want = Math.max(n, 1) * (w + GAP) - GAP + 40;
-    el.style.setProperty("--fav-want", want + "px");
     const kids = show.map(slotFor);
     const keep = new Set(kids);
     for (const c of [...fan.children]) if (!keep.has(c)) c.remove();
@@ -287,6 +411,10 @@ export function createHand({
       if (!empty.isConnected) fan.append(empty);
     } else empty.remove();
     if (hot >= n) hot = -1;
+    // 只留一張在 Tab 順序裡：剛剛那張還在就是它，不然第一張。
+    const cards = kids.map((k) => k.querySelector(".fav-card"));
+    const keep0 = cards.find((c) => c.tabIndex === 0) || cards[0];
+    for (const c of cards) c.tabIndex = c === keep0 ? 0 : -1;
     for (const t of show) slots.get(t).classList.toggle("is-arriving", pendingArrive.has(t));
     el.dataset.open = open ? "true" : "false";
     el.dataset.editing = editing ? "true" : "false";
@@ -320,13 +448,33 @@ export function createHand({
   }
 
   function play(tag) {
-    const r = slots.get(tag)?.querySelector(".fav-card")?.getBoundingClientRect();
+    const node = slots.get(tag)?.querySelector(".fav-card");
+    const r = node?.getBoundingClientRect();
+    const i = node && node === document.activeElement ? cardsNow().indexOf(node) : -1;
     hot = -1;
     onPlay(tag, r || null);
+    // 用鍵盤出牌：焦點留在托盤，落到旁邊那張（不要掉回頁面最上面）。
+    if (i >= 0) refocus(i);
+  }
+
+  const cardsNow = () => [...fan.querySelectorAll(".fav-slot:not(.is-out) .fav-card")];
+
+  /** 托盤只有一張牌在 Tab 順序裡（跟字盒一樣），方向鍵在牌之間移動。 */
+  function focusCard(card) {
+    if (!card) return;
+    for (const c of fan.querySelectorAll(".fav-card")) c.tabIndex = c === card ? 0 : -1;
+    card.focus({ preventScroll: true });
+  }
+  function refocus(i) {
+    setTimeout(() => {
+      const cards = cardsNow().filter((c) => c.isConnected && !c.closest(".fav-slot").style.pointerEvents);
+      if (cards.length) focusCard(cards[Math.min(i, cards.length - 1)]);
+      else tab.focus({ preventScroll: true });
+    }, 0);
   }
 
   /** 加一張。from：來源的位置（字盒上那張），牌從那裡飛進托盤。 */
-  function add(tag, from = null) {
+  function add(tag, from = null, { at = null, quiet = false } = {}) {
     if (!open) setOpen(true);
     if (tags.includes(tag)) {
       const c = slots.get(tag)?.querySelector(".fav-card");
@@ -338,12 +486,13 @@ export function createHand({
       onFull();
       return false;
     }
-    tags.push(tag);
+    insertAt(tag, at);
     write(key, tags);
     layout(true);
+    if (quiet) snap(tag);
     onChange();
     const s = slots.get(tag);
-    if (s?.isConnected && !reduced()) {
+    if (s?.isConnected && !reduced() && !quiet) {
       if (from) flyInto(s, from);
       else s.querySelector(".fav-card").animate([{ translate: "0 18px", opacity: 0 }, { translate: "0 0", opacity: 1 }], { duration: 300, easing: EASE });
     }
@@ -495,6 +644,8 @@ export function createHand({
     tags: () => [...tags],
     add,
     toggle,
+    hover,
+    drop,
     remove,
     toggleEdit,
     setOpen,

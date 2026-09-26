@@ -40,11 +40,13 @@ const buzz = (ms) => {
 
 /**
  * zones: () => [{ id, el, accepts(payload), sink? }]   sink：丟進去就「吞掉」（廢字簍），影子縮小轉進去
- * onDrop(payload, zoneId) → 落點：
+ * onDrop(payload, zoneId, { x, y }) → 落點（x, y：放開那一刻的指標位置）：
  *   Element                 影子飛到這張牌的位置落下（頁面已經把它畫好了）
  *   { el, landed() }        同上，落地那一刻再呼叫 landed()（放聲音、震動）
+ *   false                   這個區域這次收不下（例如手牌滿了）：影子彈回原位，跟放錯地方一樣
  *   null／undefined          沒有落點：影子原地淡出（sink 的區域照樣轉進去）
  * onOver(zoneId|null, payload)  拖著經過的區域換了（離開所有區域時給 null）
+ * onMove(zoneId|null, payload, x, y)  拖著每動一下（托盤拿來即時空出插入的位置）
  */
 /** 牌落定的地方散開一圈墨（顏色是那張牌的花色）。點一下放牌、拖曳放下都用這個。 */
 export function inkRing(target) {
@@ -62,7 +64,7 @@ export function inkRing(target) {
   setTimeout(() => ring.remove(), 560);
 }
 
-export function createDrag({ zones, onDrop, onOver }) {
+export function createDrag({ zones, onDrop, onOver, onMove }) {
   let active = null;
 
   // 長按開始拖之後，手指一動瀏覽器就會想捲動頁面（然後送 pointercancel 把拖曳砍掉）。
@@ -136,6 +138,8 @@ export function createDrag({ zones, onDrop, onOver }) {
   }
 
   function move(state, x, y) {
+    state.px = x;
+    state.py = y;
     state.ghost.style.transform = `translate3d(${x - state.dx}px, ${y - state.dy}px, 0)`;
     if (!reduced()) {
       // 左右甩的速度 → 傾斜。平滑一下，停下來 90ms 就回正。
@@ -157,6 +161,7 @@ export function createDrag({ zones, onDrop, onOver }) {
       if (onOver) onOver(over ? over.id : null, state.payload);
     }
     markZones(state.payload, state.over);
+    if (onMove) onMove(state.over ? state.over.id : null, state.payload, x, y);
   }
 
   /** 影子現在畫在哪（含放大、傾斜之前的那張牌的位置）。 */
@@ -310,6 +315,7 @@ export function createDrag({ zones, onDrop, onOver }) {
       document.body.dataset.dragging = "false";
       clearZones();
       if (onOver && state.over) onOver(null, state.payload);
+      if (onMove) onMove(null, state.payload, state.px, state.py);
       // 吃掉緊接著的 click
       const eat = (e) => {
         e.stopPropagation();
@@ -322,12 +328,13 @@ export function createDrag({ zones, onDrop, onOver }) {
         delete state.node.dataset.dragging;
         let result = null;
         try {
-          result = onDrop(state.payload, zone.id);
+          result = onDrop(state.payload, zone.id, { x: state.px, y: state.py });
         } catch (err) {
           state.ghost.remove();
           throw err;
         }
-        land(state, zone, result);
+        if (result === false) goHome(state);
+        else land(state, zone, result);
       } else {
         goHome(state);
       }

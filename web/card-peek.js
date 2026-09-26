@@ -19,7 +19,8 @@ font-family:var(--peek-body,"Noto Sans TC","Microsoft JhengHei",sans-serif)}
 .card-peek[data-show="true"]{opacity:1;transform:none}
 .card-peek[data-side="right"]{transform-origin:left center;transform:translateX(-10px) scale(.92)}
 .card-peek[data-side="left"]{transform-origin:right center;transform:translateX(10px) scale(.92)}
-.card-peek[data-side="right"][data-show="true"],.card-peek[data-side="left"][data-show="true"]{transform:none}
+.card-peek[data-side="above"]{transform-origin:center bottom;transform:translateY(10px) scale(.92)}
+.card-peek[data-side="right"][data-show="true"],.card-peek[data-side="left"][data-show="true"],.card-peek[data-side="above"][data-show="true"]{transform:none}
 .card-peek.is-gliding{transition:opacity 180ms cubic-bezier(.16,1,.3,1),transform 220ms cubic-bezier(.16,1,.3,1),left 170ms cubic-bezier(.16,1,.3,1),top 170ms cubic-bezier(.16,1,.3,1)}
 @media (prefers-reduced-motion:reduce){.card-peek,.card-peek.is-gliding{transition:none}}
 .card-peek-face{position:relative;display:grid;grid-template-columns:22% minmax(0,1fr);aspect-ratio:480/702;border-radius:10px;overflow:hidden;
@@ -124,6 +125,13 @@ function place(anchor) {
   const r = anchor.getBoundingClientRect();
   const w = p.offsetWidth || 248;
   const hgt = p.offsetHeight || 420;
+  // 視窗底部一整排的牌（偏好卡牌托盤）：放大卡開在牌的正上方，不要蓋住隔壁幾張。
+  if (anchor.closest("[data-peek='above']") && r.top - hgt - 14 >= 8) {
+    p.dataset.side = "above";
+    p.style.left = Math.round(Math.max(8, Math.min(window.innerWidth - w - 8, r.left + r.width / 2 - w / 2))) + "px";
+    p.style.top = Math.round(r.top - hgt - 14) + "px";
+    return;
+  }
   let left = r.right + 12;
   let side = "right";
   if (left + w > window.innerWidth - 8) {

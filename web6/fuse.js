@@ -233,6 +233,7 @@ async function boot() {
     renderPrintBar();
   });
   attachPeek($("registers"), ".card[data-tag]", peekInfo);
+  if (hand) attachPeek(hand.fan, ".card[data-tag]", peekInfo);
   watchPoolPill();
 
   if (new URLSearchParams(location.search).has("debug")) {
@@ -2353,6 +2354,8 @@ const drag = createDrag({
     { id: "case", el: $("case"), accepts: (p) => p.from === "plate" || p.from === "hand" },
   ],
   // 拖著經過卡池：它會落到的那一列先亮起來。
+  // 拖著經過托盤：要插進去的那一格先空出來。
+  onMove: (zone, p, x) => hand?.hover(zone === "hand" ? x : null, p.tag),
   onOver: (zone, p) => {
     dropRow?.classList.remove("is-drop-target");
     dropRow = null;
@@ -2360,14 +2363,14 @@ const drag = createDrag({
     dropRow = $("registers").querySelector(`.register[data-suit="${suitOf(p.tag)}"]`);
     dropRow?.classList.add("is-drop-target");
   },
-  onDrop: (p, zone) => {
+  onDrop: (p, zone, at) => {
     if (zone === "hand") {
-      if (p.from === "hand") return hand.nodeOf(p.tag);
+      // 放在哪就插在哪（托盤上的牌＝換位置）；滿了收不下，影子彈回原位。
+      if (!hand.drop(p.tag, at?.x)) return false;
       if (p.from === "plate") {
-        hand.add(p.tag);
         hand.arriveAt(p.tag, 0);
         remove(p.tag, { viaDrag: true });
-      } else hand.add(p.tag);
+      }
       return hand.nodeOf(p.tag);
     }
     if (zone === "case") {

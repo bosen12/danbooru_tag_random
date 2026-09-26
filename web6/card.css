@@ -412,6 +412,7 @@ button.card:active {
     width 320ms var(--fav-ease),
     border-color 160ms ease,
     box-shadow 160ms ease,
+    scale 200ms var(--fav-ease),
     bottom 240ms var(--fav-ease);
 }
 
@@ -443,6 +444,47 @@ body:has(.go-float[data-show="true"]) .fav-hand {
 .fav-hand[data-over="true"] {
   border-color: var(--color-accent);
   box-shadow: 0 0 0 3px color-mix(in oklch, var(--color-accent) 22%, transparent), 0 18px 40px -12px var(--color-shade);
+}
+
+/* 滿十張：拖過來不亮成可以放，標頭改說滿了（放下去影子彈回原位）。 */
+.fav-hand[data-over="true"][data-full="true"] {
+  border-color: var(--color-rule);
+  box-shadow: 0 18px 40px -12px var(--color-shade);
+}
+
+.fav-hand[data-full="true"] .fav-hint {
+  color: var(--color-accent);
+}
+
+/* 托盤收著或還沒有牌：拖牌的時候變成一顆「放這裡」的標籤，拖過去就加進來。 */
+body[data-dragging="true"] .fav-hand[data-hidden="true"][data-droppable="true"] {
+  display: block;
+  animation: fav-pill-in 220ms var(--fav-ease);
+}
+
+body[data-dragging="true"] .fav-hand[data-open="false"][data-droppable="true"] .fav-head::after {
+  content: "放這裡加入";
+  padding-right: 10px;
+  font-size: 12px;
+  font-weight: 600;
+  color: var(--color-accent);
+}
+
+body[data-dragging="true"] .fav-hand[data-open="false"][data-over="true"] {
+  scale: 1.08;
+}
+
+@keyframes fav-pill-in {
+  from {
+    opacity: 0;
+    translate: -50% 12px;
+  }
+}
+
+/* 拖著托盤上的牌經過托盤：它先讓出位置（空格跟著指標走）。 */
+.fav-slot.is-out {
+  opacity: 0;
+  pointer-events: none;
 }
 
 .fav-head {

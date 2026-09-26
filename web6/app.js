@@ -110,7 +110,7 @@ async function boot() {
   renderWall();
   renderTrash();
   for (const s of resumable) generator.resume(s);
-  for (const root of [$("lib-grid"), $("pool-well"), $("wall")]) attachPeek(root, ".card[data-tag]", peekInfo);
+  for (const root of [$("lib-grid"), $("pool-well"), $("wall"), hand?.fan]) attachPeek(root, ".card[data-tag]", peekInfo);
   document.addEventListener("keydown", onKey);
   window.addEventListener("resize", () => {
     for (const node of document.querySelectorAll(".shot")) layoutFans(node);
@@ -1676,11 +1676,13 @@ const drag = createDrag({
     { id: "trash", el: $("trash"), accepts: () => true, sink: true },
     { id: "library", el: $("library"), accepts: (p) => p.from === "pool" || p.from === "hand" },
   ],
+  // 拖著經過托盤：要插進去的那一格先空出來。
+  onMove: (zone, p, x) => hand?.hover(zone === "hand" ? x : null, p.tag),
   // 回傳落點：影子飛到那張牌的位置落下（drag.js）。
-  onDrop: (p, zone) => {
+  onDrop: (p, zone, at) => {
     if (zone === "hand") {
-      if (p.from === "hand") return hand.nodeOf(p.tag);
-      hand.add(p.tag);
+      // 放在哪就插在哪（托盤上的牌＝換位置）；滿了收不下，影子彈回原位。
+      if (!hand.drop(p.tag, at?.x)) return false;
       if (p.from === "pool") {
         hand.arriveAt(p.tag, 0);
         unpin(p.tag, { viaDrag: true });
