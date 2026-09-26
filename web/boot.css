@@ -1017,6 +1017,15 @@ input[type="number"] {
   }
 }
 
+/* 放大檢視的飛行圖：從卡片飛到大圖（見 boot.js flyToViewer），在檢視器（z-index 150）之上。 */
+.view-flyer {
+  position: fixed;
+  z-index: 160;
+  object-fit: contain;
+  pointer-events: none;
+  box-shadow: 0 30px 60px -20px rgba(0, 0, 0, 0.6);
+}
+
 /* 預覽一幀接一幀：上一幀墊在底下（.shot-under），新的一幀在上面淡進來。 */
 .shot-under {
   position: absolute;

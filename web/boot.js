@@ -2530,14 +2530,105 @@ function openViewer(card) {
   fillViewer(card);
   overlayOpen($("shot-viewer"));
   $("shot-viewer-close").focus();
+  flyToViewer(card);
 }
 
 function closeViewer() {
+  const card = doneCards()[VIEW_INDEX];
+  flyFromViewer(card);
   overlayClose($("shot-viewer"), () => {
     const el = VIEW_RETURN;
     VIEW_RETURN = null;
     if (el && el.focus) el.focus();
   });
+}
+
+// —— 放大檢視的「飛行」：圖從卡片的位置放大到檢視器，關的時候飛回去 ——
+//
+// 以前是背景淡入、面板微微浮上來，卡片跟大圖之間沒有關係，眼睛要自己找「是哪一張」。
+// 檢視器的圖框是 overflow:hidden，圖不能直接從框外動畫進來，所以用一張固定定位的
+// 飛行圖（在最上層）從卡片的矩形飛到大圖的矩形，落地後才換成檢視器裡真正的那張。
+
+const FLY_MS = 380;
+const FLY_EASE = "cubic-bezier(0.16, 1, 0.3, 1)";
+// 每趟飛行一個號碼：開的那趟的保底計時器晚到時，不能去動關的那趟（會讓大圖在飛回去的途中冒出來）。
+let flyToken = 0;
+
+function landFn(f, vImg) {
+  const my = ++flyToken;
+  return () => {
+    f.remove();
+    if (my === flyToken) vImg.style.opacity = "";
+  };
+}
+
+function flyer(src, rect) {
+  const f = document.createElement("img");
+  f.className = "view-flyer";
+  f.alt = "";
+  f.setAttribute("aria-hidden", "true");
+  f.src = src;
+  Object.assign(f.style, { left: rect.left + "px", top: rect.top + "px", width: rect.width + "px", height: rect.height + "px" });
+  document.body.append(f);
+  return f;
+}
+
+/** 目標矩形要量「面板進場動畫結束後」的位置：暫時拿掉 transform 量一次（同一幀，不會畫出來）。 */
+function settledRect(el, inner) {
+  const prev = inner.style.transform;
+  inner.style.transform = "none";
+  const r = el.getBoundingClientRect();
+  inner.style.transform = prev;
+  return r;
+}
+
+function flyToViewer(card) {
+  if (REDUCE_MOTION) return;
+  const from = card.querySelector(".shot-img");
+  const vImg = $("shot-viewer-img");
+  const inner = $("shot-viewer-inner");
+  if (!from || !vImg || !inner) return;
+  const a = from.getBoundingClientRect();
+  const b = settledRect(vImg, inner);
+  if (!a.width || !b.width) return;
+  const f = flyer(from.currentSrc || from.src, a);
+  vImg.style.opacity = "0";
+  const anim = f.animate(
+    [
+      { left: a.left + "px", top: a.top + "px", width: a.width + "px", height: a.height + "px", borderRadius: "2px" },
+      { left: b.left + "px", top: b.top + "px", width: b.width + "px", height: b.height + "px", borderRadius: "12px" },
+    ],
+    { duration: FLY_MS, easing: FLY_EASE, fill: "forwards" }
+  );
+  const land = landFn(f, vImg);
+  anim.onfinish = land;
+  anim.oncancel = land;
+  // 保底：動畫被瀏覽器節流（背景分頁）也不能讓大圖一直是透明的。
+  window.setTimeout(land, FLY_MS + 400);
+}
+
+function flyFromViewer(card) {
+  if (REDUCE_MOTION || !card) return;
+  const vImg = $("shot-viewer-img");
+  const to = card.querySelector(".shot-img");
+  if (!vImg || !to) return;
+  const a = vImg.getBoundingClientRect();
+  const b = to.getBoundingClientRect();
+  // 卡片捲到畫面外了就不飛（飛向看不見的地方反而奇怪），照舊淡出。
+  if (!a.width || !b.width || b.bottom < 0 || b.top > innerHeight) return;
+  const f = flyer(vImg.currentSrc || vImg.src, a);
+  vImg.style.opacity = "0";
+  const anim = f.animate(
+    [
+      { left: a.left + "px", top: a.top + "px", width: a.width + "px", height: a.height + "px", borderRadius: "12px" },
+      { left: b.left + "px", top: b.top + "px", width: b.width + "px", height: b.height + "px", borderRadius: "2px" },
+    ],
+    { duration: 300, easing: FLY_EASE, fill: "forwards" }
+  );
+  const land = landFn(f, vImg);
+  anim.onfinish = land;
+  anim.oncancel = land;
+  window.setTimeout(land, 700);
 }
 
 function navViewer(dir) {

@@ -1663,6 +1663,7 @@ const ALBUM_FIXTURE = [
   const app6 = readFileSync(join(ROOT, "web6/app.js"), "utf8");
   const fuse6 = readFileSync(join(ROOT, "web6/fuse.js"), "utf8");
   ok("墨池／疊印台：預覽交疊、成品載好才顯影", app6.includes('class: "shot-under"') && fuse6.includes('class: "pv-under"') && fuse6.includes('img.addEventListener("load", go, { once: true })'));
+  ok("放大檢視：圖從卡片飛出去、關的時候飛回來，保底計時器不會搶到下一趟", boot.includes("flyToViewer(card);") && boot.includes("flyFromViewer(card);") && boot.includes("if (my === flyToken)") && bootCss.includes(".view-flyer"));
   ok("排字匣不送全域中斷（空的 {}）", !boot.includes('body: "{}"') && !boot.includes("prompt_id: jobPromptId } : {}"));
 }
 
