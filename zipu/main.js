@@ -28,7 +28,7 @@ import {
   el, iconButton, createAssets, cardNode, setFlag, toolNode, portraitNode, slipNode, openSheet, anyOverlay, toast,
   attachTip, hideTip, cardFacts, cardTip, ICONS,
 } from "./ui.js";
-import { createPrinter, PRINT_STATUS_ZH, comfyOnline } from "./print.js";
+import { createPrinter, PRINT_STATUS_ZH, comfyOnline, viewSrc } from "./print.js";
 import { mountSeedControl } from "./seed-control.js";
 import { playScoring } from "./stage.js";
 
@@ -219,7 +219,7 @@ function recentPrints() {
       el(
         "button",
         { class: "title-sheet", type: "button", style: `--r:${(i % 2 ? 1 : -1) * (1 + (i % 3))}deg`, onclick: () => showPrint(p), "aria-label": `${p.who}的作品` },
-        el("img", { src: p.image, alt: "", loading: "lazy" })
+        el("img", { src: viewSrc(p.image), alt: "", loading: "lazy" })
       )
     )
   );
@@ -564,7 +564,7 @@ function renderRack() {
   T.rack.hidden = !recent.length;
   T.rack.replaceChildren(
     ...recent.map((p, i) => {
-      const src = p.status === "done" ? p.image : printer.preview(p.id);
+      const src = p.status === "done" ? viewSrc(p.image) : printer.preview(p.id);
       return el("span", { class: "rack-sheet", dataset: { status: p.status, id: p.id }, style: `--r:${(i % 2 ? 2 : -2) + i}deg` }, src ? el("img", { src, alt: "" }) : null);
     })
   );
@@ -954,7 +954,7 @@ function clearBigStamp() {
 /* ================= 結帳 ================= */
 
 function printFrame(p) {
-  const src = p ? (p.status === "done" ? p.image : printer.preview(p.id)) : null;
+  const src = p ? (p.status === "done" ? viewSrc(p.image) : printer.preview(p.id)) : null;
   const status = p ? p.status : "none";
   const frame = el(
     "figure",
@@ -1551,7 +1551,7 @@ function showPrint(p) {
     el(
       "div",
       { class: "lightbox" },
-      src ? el("img", { src, alt: `${p.who}的作品` }) : printFrame(p),
+      src ? el("img", { src: viewSrc(src), alt: `${p.who}的作品` }) : printFrame(p),
       el(
         "div",
         {},

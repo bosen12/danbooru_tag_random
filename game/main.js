@@ -8,7 +8,7 @@ import {
   randomSeed,
 } from "./engine.js";
 import { banlistFrom, makeQuestion } from "./quiz.js";
-import { createQueue } from "./queue.js";
+import { createQueue, viewSrc } from "./queue.js";
 import { genSeed, mountSeedControl } from "./seed-control.js";
 import { HEAT_PRESETS, heatsFor, load, recordRun, save } from "./store.js";
 
@@ -279,7 +279,7 @@ async function nextRound() {
   run.round = round;
   run.found = 0;
   run.clean = true;
-  await develop(round.image, !run.live);
+  await develop(viewSrc(round.image), !run.live);
   run.waiting = false;
   setNote("");
   renderSheets();

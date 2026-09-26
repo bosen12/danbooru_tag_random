@@ -5256,7 +5256,9 @@ function indoorOutdoorClash(have) {
     // 第十五次：移除不是 Danbooru tag 的 soft breasts / natural breasts。
     // 候選池縮小會讓同一串 RNG 映射到不同候選；新結果仍有完整人物、動作、場景與光線，
     // 且固定快照依然逐字驗證，避免後續變更悄悄改掉 seed 42。
-    "1girl, solo, very short hair, aqua eyes, blue hair, straight hair, huge breasts, mature female, hair between eyes, blush, bathrobe, masturbation, standing, cowboy shot, looking around, sad, rolling eyes, onsen, indoors, steam, sunrise, backlighting, stained glass, nsfw, explicit, masterpiece, best quality, amazing quality");
+    // 第十六次（2026-09-26）：詞庫加進背景／用色／打光／特效／構圖 47 個字，場地前面多了一格
+    // 「背景」。這張從浴場換成白背景的立繪。
+    "1girl, solo, very short hair, aqua eyes, blue hair, straight hair, huge breasts, mature female, hair between eyes, blush, sweater, black skirt, skirt, kneehighs, white bra, bra, open cardigan, cardigan, masturbation, standing, upper body, looking ahead, happy, smile, white background, simple background, light rays, confetti, smoke, nsfw, explicit, masterpiece, best quality, amazing quality");
   ok("drawOne exposes shadow diagnostics", Array.isArray(shadowIntegrationDraw.shadowViolations));
 
   const eatProneShadow = validateSupportShadow({

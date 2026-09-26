@@ -170,11 +170,13 @@
     "env": [
       "inout",
       "place",
+      "background",
       "furniture",
       "time",
       "weather",
       "sky",
       "light",
+      "effect",
       "other"
     ]
   },
@@ -221,6 +223,8 @@
     "weather": "天氣",
     "sky": "天空",
     "light": "光線",
+    "background": "背景",
+    "effect": "畫面特效",
     "other": "其他"
   },
   "eraAnchors": {
@@ -28255,6 +28259,1019 @@
       ],
       "group": "boost",
       "zh": "最新風"
+    },
+    {
+      "tag": "simple background",
+      "section": "env",
+      "gate": "any",
+      "heat": [
+        "tease",
+        "flash",
+        "sex"
+      ],
+      "mutex": "background",
+      "bind": [],
+      "implies": [],
+      "layer": "normal",
+      "era": [
+        "any"
+      ],
+      "group": "background",
+      "mutexExtra": [
+        "place",
+        "in_out",
+        "day_night",
+        "bg_blur"
+      ],
+      "zh": "素色背景"
+    },
+    {
+      "tag": "white background",
+      "section": "env",
+      "gate": "any",
+      "heat": [
+        "tease",
+        "flash",
+        "sex"
+      ],
+      "mutex": "background",
+      "bind": [],
+      "implies": [
+        "simple background"
+      ],
+      "layer": "normal",
+      "era": [
+        "any"
+      ],
+      "group": "background",
+      "mutexExtra": [
+        "place",
+        "in_out",
+        "day_night",
+        "bg_blur"
+      ],
+      "zh": "白背景"
+    },
+    {
+      "tag": "black background",
+      "section": "env",
+      "gate": "any",
+      "heat": [
+        "tease",
+        "flash",
+        "sex"
+      ],
+      "mutex": "background",
+      "bind": [],
+      "implies": [
+        "simple background"
+      ],
+      "layer": "normal",
+      "era": [
+        "any"
+      ],
+      "group": "background",
+      "mutexExtra": [
+        "place",
+        "in_out",
+        "day_night",
+        "bg_blur"
+      ],
+      "zh": "黑背景"
+    },
+    {
+      "tag": "grey background",
+      "section": "env",
+      "gate": "any",
+      "heat": [
+        "tease",
+        "flash",
+        "sex"
+      ],
+      "mutex": "background",
+      "bind": [],
+      "implies": [
+        "simple background"
+      ],
+      "layer": "normal",
+      "era": [
+        "any"
+      ],
+      "group": "background",
+      "mutexExtra": [
+        "place",
+        "in_out",
+        "day_night",
+        "bg_blur"
+      ],
+      "zh": "灰背景"
+    },
+    {
+      "tag": "blue background",
+      "section": "env",
+      "gate": "any",
+      "heat": [
+        "tease",
+        "flash",
+        "sex"
+      ],
+      "mutex": "background",
+      "bind": [],
+      "implies": [
+        "simple background"
+      ],
+      "layer": "normal",
+      "era": [
+        "any"
+      ],
+      "group": "background",
+      "mutexExtra": [
+        "place",
+        "in_out",
+        "day_night",
+        "bg_blur"
+      ],
+      "zh": "藍背景"
+    },
+    {
+      "tag": "pink background",
+      "section": "env",
+      "gate": "any",
+      "heat": [
+        "tease",
+        "flash",
+        "sex"
+      ],
+      "mutex": "background",
+      "bind": [],
+      "implies": [
+        "simple background"
+      ],
+      "layer": "normal",
+      "era": [
+        "any"
+      ],
+      "group": "background",
+      "mutexExtra": [
+        "place",
+        "in_out",
+        "day_night",
+        "bg_blur"
+      ],
+      "zh": "粉紅背景"
+    },
+    {
+      "tag": "yellow background",
+      "section": "env",
+      "gate": "any",
+      "heat": [
+        "tease",
+        "flash",
+        "sex"
+      ],
+      "mutex": "background",
+      "bind": [],
+      "implies": [
+        "simple background"
+      ],
+      "layer": "normal",
+      "era": [
+        "any"
+      ],
+      "group": "background",
+      "mutexExtra": [
+        "place",
+        "in_out",
+        "day_night",
+        "bg_blur"
+      ],
+      "zh": "黃背景"
+    },
+    {
+      "tag": "red background",
+      "section": "env",
+      "gate": "any",
+      "heat": [
+        "tease",
+        "flash",
+        "sex"
+      ],
+      "mutex": "background",
+      "bind": [],
+      "implies": [
+        "simple background"
+      ],
+      "layer": "normal",
+      "era": [
+        "any"
+      ],
+      "group": "background",
+      "mutexExtra": [
+        "place",
+        "in_out",
+        "day_night",
+        "bg_blur"
+      ],
+      "zh": "紅背景"
+    },
+    {
+      "tag": "gradient background",
+      "section": "env",
+      "gate": "any",
+      "heat": [
+        "tease",
+        "flash",
+        "sex"
+      ],
+      "mutex": "background",
+      "bind": [],
+      "implies": [
+        "simple background"
+      ],
+      "layer": "normal",
+      "era": [
+        "any"
+      ],
+      "group": "background",
+      "mutexExtra": [
+        "place",
+        "in_out",
+        "day_night",
+        "bg_blur"
+      ],
+      "zh": "漸層背景"
+    },
+    {
+      "tag": "two-tone background",
+      "section": "env",
+      "gate": "any",
+      "heat": [
+        "tease",
+        "flash",
+        "sex"
+      ],
+      "mutex": "background",
+      "bind": [],
+      "implies": [
+        "simple background"
+      ],
+      "layer": "normal",
+      "era": [
+        "any"
+      ],
+      "group": "background",
+      "mutexExtra": [
+        "place",
+        "in_out",
+        "day_night",
+        "bg_blur"
+      ],
+      "zh": "雙色背景"
+    },
+    {
+      "tag": "polka dot background",
+      "section": "env",
+      "gate": "any",
+      "heat": [
+        "tease",
+        "flash",
+        "sex"
+      ],
+      "mutex": "background",
+      "bind": [],
+      "implies": [],
+      "layer": "normal",
+      "era": [
+        "any"
+      ],
+      "group": "background",
+      "mutexExtra": [
+        "place",
+        "in_out",
+        "day_night",
+        "bg_blur"
+      ],
+      "zh": "圓點背景"
+    },
+    {
+      "tag": "striped background",
+      "section": "env",
+      "gate": "any",
+      "heat": [
+        "tease",
+        "flash",
+        "sex"
+      ],
+      "mutex": "background",
+      "bind": [],
+      "implies": [],
+      "layer": "normal",
+      "era": [
+        "any"
+      ],
+      "group": "background",
+      "mutexExtra": [
+        "place",
+        "in_out",
+        "day_night",
+        "bg_blur"
+      ],
+      "zh": "條紋背景"
+    },
+    {
+      "tag": "floral background",
+      "section": "env",
+      "gate": "any",
+      "heat": [
+        "tease",
+        "flash",
+        "sex"
+      ],
+      "mutex": "background",
+      "bind": [],
+      "implies": [],
+      "layer": "normal",
+      "era": [
+        "any"
+      ],
+      "group": "background",
+      "mutexExtra": [
+        "place",
+        "in_out",
+        "day_night",
+        "bg_blur"
+      ],
+      "zh": "花紋背景"
+    },
+    {
+      "tag": "halftone background",
+      "section": "env",
+      "gate": "any",
+      "heat": [
+        "tease",
+        "flash",
+        "sex"
+      ],
+      "mutex": "background",
+      "bind": [],
+      "implies": [],
+      "layer": "normal",
+      "era": [
+        "any"
+      ],
+      "group": "background",
+      "mutexExtra": [
+        "place",
+        "in_out",
+        "day_night",
+        "bg_blur"
+      ],
+      "zh": "網點背景"
+    },
+    {
+      "tag": "sparkle background",
+      "section": "env",
+      "gate": "any",
+      "heat": [
+        "tease",
+        "flash",
+        "sex"
+      ],
+      "mutex": "background",
+      "bind": [],
+      "implies": [],
+      "layer": "normal",
+      "era": [
+        "any"
+      ],
+      "group": "background",
+      "mutexExtra": [
+        "place",
+        "in_out",
+        "day_night",
+        "bg_blur"
+      ],
+      "zh": "閃光背景"
+    },
+    {
+      "tag": "abstract background",
+      "section": "env",
+      "gate": "any",
+      "heat": [
+        "tease",
+        "flash",
+        "sex"
+      ],
+      "mutex": "background",
+      "bind": [],
+      "implies": [],
+      "layer": "normal",
+      "era": [
+        "any"
+      ],
+      "group": "background",
+      "mutexExtra": [
+        "place",
+        "in_out",
+        "day_night",
+        "bg_blur"
+      ],
+      "zh": "抽象背景"
+    },
+    {
+      "tag": "blurry background",
+      "section": "env",
+      "gate": "any",
+      "heat": [
+        "tease",
+        "flash",
+        "sex"
+      ],
+      "mutex": "bg_blur",
+      "bind": [],
+      "implies": [],
+      "layer": "normal",
+      "era": [
+        "any"
+      ],
+      "group": "background",
+      "zh": "背景模糊"
+    },
+    {
+      "tag": "pixel art",
+      "section": "quality",
+      "gate": "any",
+      "heat": [
+        "tease",
+        "flash",
+        "sex"
+      ],
+      "mutex": "medium",
+      "bind": [],
+      "implies": [],
+      "layer": "normal",
+      "era": [
+        "any"
+      ],
+      "group": "style",
+      "zh": "像素畫"
+    },
+    {
+      "tag": "ukiyo-e",
+      "section": "quality",
+      "gate": "any",
+      "heat": [
+        "tease",
+        "flash",
+        "sex"
+      ],
+      "mutex": "medium",
+      "bind": [],
+      "implies": [],
+      "layer": "normal",
+      "era": [
+        "any"
+      ],
+      "group": "style",
+      "zh": "浮世繪"
+    },
+    {
+      "tag": "chibi",
+      "section": "quality",
+      "gate": "any",
+      "heat": [
+        "tease",
+        "flash",
+        "sex"
+      ],
+      "mutex": null,
+      "bind": [],
+      "implies": [],
+      "layer": "normal",
+      "era": [
+        "any"
+      ],
+      "group": "style",
+      "zh": "Q 版"
+    },
+    {
+      "tag": "greyscale",
+      "section": "quality",
+      "gate": "any",
+      "heat": [
+        "tease",
+        "flash",
+        "sex"
+      ],
+      "mutex": "coloring",
+      "bind": [],
+      "implies": [
+        "monochrome"
+      ],
+      "layer": "normal",
+      "era": [
+        "any"
+      ],
+      "group": "style",
+      "zh": "灰階"
+    },
+    {
+      "tag": "spot color",
+      "section": "quality",
+      "gate": "any",
+      "heat": [
+        "tease",
+        "flash",
+        "sex"
+      ],
+      "mutex": "palette",
+      "bind": [],
+      "implies": [
+        "monochrome"
+      ],
+      "layer": "normal",
+      "era": [
+        "any"
+      ],
+      "group": "style",
+      "zh": "局部上色"
+    },
+    {
+      "tag": "partially colored",
+      "section": "quality",
+      "gate": "any",
+      "heat": [
+        "tease",
+        "flash",
+        "sex"
+      ],
+      "mutex": "palette",
+      "bind": [],
+      "implies": [],
+      "layer": "normal",
+      "era": [
+        "any"
+      ],
+      "group": "style",
+      "zh": "部分上色"
+    },
+    {
+      "tag": "pastel colors",
+      "section": "quality",
+      "gate": "any",
+      "heat": [
+        "tease",
+        "flash",
+        "sex"
+      ],
+      "mutex": "palette",
+      "bind": [],
+      "implies": [],
+      "layer": "normal",
+      "era": [
+        "any"
+      ],
+      "group": "style",
+      "zh": "粉彩色"
+    },
+    {
+      "tag": "muted colors",
+      "section": "quality",
+      "gate": "any",
+      "heat": [
+        "tease",
+        "flash",
+        "sex"
+      ],
+      "mutex": "palette",
+      "bind": [],
+      "implies": [],
+      "layer": "normal",
+      "era": [
+        "any"
+      ],
+      "group": "style",
+      "zh": "低彩度"
+    },
+    {
+      "tag": "limited palette",
+      "section": "quality",
+      "gate": "any",
+      "heat": [
+        "tease",
+        "flash",
+        "sex"
+      ],
+      "mutex": "palette",
+      "bind": [],
+      "implies": [],
+      "layer": "normal",
+      "era": [
+        "any"
+      ],
+      "group": "style",
+      "zh": "限色"
+    },
+    {
+      "tag": "colorful",
+      "section": "quality",
+      "gate": "any",
+      "heat": [
+        "tease",
+        "flash",
+        "sex"
+      ],
+      "mutex": "palette",
+      "bind": [],
+      "implies": [],
+      "layer": "normal",
+      "era": [
+        "any"
+      ],
+      "group": "style",
+      "zh": "繽紛"
+    },
+    {
+      "tag": "high contrast",
+      "section": "quality",
+      "gate": "any",
+      "heat": [
+        "tease",
+        "flash",
+        "sex"
+      ],
+      "mutex": "palette",
+      "bind": [],
+      "implies": [],
+      "layer": "normal",
+      "era": [
+        "any"
+      ],
+      "group": "style",
+      "zh": "高對比"
+    },
+    {
+      "tag": "sepia",
+      "section": "quality",
+      "gate": "any",
+      "heat": [
+        "tease",
+        "flash",
+        "sex"
+      ],
+      "mutex": "palette",
+      "bind": [],
+      "implies": [],
+      "layer": "normal",
+      "era": [
+        "any"
+      ],
+      "group": "style",
+      "zh": "復古棕"
+    },
+    {
+      "tag": "light rays",
+      "section": "env",
+      "gate": "any",
+      "heat": [
+        "tease",
+        "flash",
+        "sex"
+      ],
+      "mutex": "lighting",
+      "bind": [],
+      "implies": [],
+      "layer": "normal",
+      "era": [
+        "any"
+      ],
+      "group": "light",
+      "zh": "光束"
+    },
+    {
+      "tag": "sunbeam",
+      "section": "env",
+      "gate": "any",
+      "heat": [
+        "tease",
+        "flash",
+        "sex"
+      ],
+      "mutex": "lighting",
+      "bind": [],
+      "implies": [],
+      "layer": "normal",
+      "era": [
+        "any"
+      ],
+      "group": "light",
+      "zh": "陽光光柱"
+    },
+    {
+      "tag": "dappled sunlight",
+      "section": "env",
+      "gate": "any",
+      "heat": [
+        "tease",
+        "flash",
+        "sex"
+      ],
+      "mutex": "lighting",
+      "bind": [],
+      "implies": [],
+      "layer": "normal",
+      "era": [
+        "any"
+      ],
+      "group": "light",
+      "zh": "樹影斑駁"
+    },
+    {
+      "tag": "silhouette",
+      "section": "env",
+      "gate": "any",
+      "heat": [
+        "tease",
+        "flash",
+        "sex"
+      ],
+      "mutex": "silhouette",
+      "bind": [],
+      "implies": [],
+      "layer": "normal",
+      "era": [
+        "any"
+      ],
+      "group": "light",
+      "zh": "剪影"
+    },
+    {
+      "tag": "light particles",
+      "section": "env",
+      "gate": "any",
+      "heat": [
+        "tease",
+        "flash",
+        "sex"
+      ],
+      "mutex": "effect",
+      "bind": [],
+      "implies": [],
+      "layer": "normal",
+      "era": [
+        "any"
+      ],
+      "group": "effect",
+      "zh": "光粒子"
+    },
+    {
+      "tag": "sparkle",
+      "section": "env",
+      "gate": "any",
+      "heat": [
+        "tease",
+        "flash",
+        "sex"
+      ],
+      "mutex": "effect",
+      "bind": [],
+      "implies": [],
+      "layer": "normal",
+      "era": [
+        "any"
+      ],
+      "group": "effect",
+      "zh": "閃光"
+    },
+    {
+      "tag": "petals",
+      "section": "env",
+      "gate": "any",
+      "heat": [
+        "tease",
+        "flash",
+        "sex"
+      ],
+      "mutex": "effect",
+      "bind": [],
+      "implies": [],
+      "layer": "normal",
+      "era": [
+        "any"
+      ],
+      "group": "effect",
+      "zh": "花瓣"
+    },
+    {
+      "tag": "falling petals",
+      "section": "env",
+      "gate": "any",
+      "heat": [
+        "tease",
+        "flash",
+        "sex"
+      ],
+      "mutex": "effect",
+      "bind": [],
+      "implies": [
+        "petals"
+      ],
+      "layer": "normal",
+      "era": [
+        "any"
+      ],
+      "group": "effect",
+      "zh": "飄落花瓣"
+    },
+    {
+      "tag": "falling leaves",
+      "section": "env",
+      "gate": "any",
+      "heat": [
+        "tease",
+        "flash",
+        "sex"
+      ],
+      "mutex": "effect",
+      "bind": [],
+      "implies": [],
+      "layer": "normal",
+      "era": [
+        "any"
+      ],
+      "group": "effect",
+      "zh": "落葉"
+    },
+    {
+      "tag": "bubble",
+      "section": "env",
+      "gate": "any",
+      "heat": [
+        "tease",
+        "flash",
+        "sex"
+      ],
+      "mutex": "effect",
+      "bind": [],
+      "implies": [],
+      "layer": "normal",
+      "era": [
+        "any"
+      ],
+      "group": "effect",
+      "zh": "泡泡"
+    },
+    {
+      "tag": "confetti",
+      "section": "env",
+      "gate": "any",
+      "heat": [
+        "tease",
+        "flash",
+        "sex"
+      ],
+      "mutex": "effect",
+      "bind": [],
+      "implies": [],
+      "layer": "normal",
+      "era": [
+        "any"
+      ],
+      "group": "effect",
+      "zh": "彩紙"
+    },
+    {
+      "tag": "lens flare",
+      "section": "env",
+      "gate": "any",
+      "heat": [
+        "tease",
+        "flash",
+        "sex"
+      ],
+      "mutex": "effect",
+      "bind": [],
+      "implies": [],
+      "layer": "normal",
+      "era": [
+        "any"
+      ],
+      "group": "effect",
+      "zh": "鏡頭光暈"
+    },
+    {
+      "tag": "bloom",
+      "section": "env",
+      "gate": "any",
+      "heat": [
+        "tease",
+        "flash",
+        "sex"
+      ],
+      "mutex": "effect",
+      "bind": [],
+      "implies": [],
+      "layer": "normal",
+      "era": [
+        "any"
+      ],
+      "group": "effect",
+      "zh": "柔光溢出"
+    },
+    {
+      "tag": "motion blur",
+      "section": "env",
+      "gate": "any",
+      "heat": [
+        "tease",
+        "flash",
+        "sex"
+      ],
+      "mutex": "effect",
+      "bind": [],
+      "implies": [],
+      "layer": "normal",
+      "era": [
+        "any"
+      ],
+      "group": "effect",
+      "zh": "動態模糊"
+    },
+    {
+      "tag": "speed lines",
+      "section": "env",
+      "gate": "any",
+      "heat": [
+        "tease",
+        "flash",
+        "sex"
+      ],
+      "mutex": "effect",
+      "bind": [],
+      "implies": [],
+      "layer": "normal",
+      "era": [
+        "any"
+      ],
+      "group": "effect",
+      "zh": "速度線"
+    },
+    {
+      "tag": "emphasis lines",
+      "section": "env",
+      "gate": "any",
+      "heat": [
+        "tease",
+        "flash",
+        "sex"
+      ],
+      "mutex": "effect",
+      "bind": [],
+      "implies": [],
+      "layer": "normal",
+      "era": [
+        "any"
+      ],
+      "group": "effect",
+      "zh": "集中線"
+    },
+    {
+      "tag": "very wide shot",
+      "section": "pose",
+      "gate": "any",
+      "heat": [
+        "tease",
+        "flash",
+        "sex"
+      ],
+      "mutex": "camera",
+      "bind": [],
+      "implies": [],
+      "layer": "normal",
+      "era": [
+        "any"
+      ],
+      "group": "camera",
+      "zh": "大遠景"
+    },
+    {
+      "tag": "foreshortening",
+      "section": "pose",
+      "gate": "any",
+      "heat": [
+        "tease",
+        "flash",
+        "sex"
+      ],
+      "mutex": "perspective",
+      "bind": [],
+      "implies": [],
+      "layer": "normal",
+      "era": [
+        "any"
+      ],
+      "group": "camera",
+      "zh": "透視前縮"
     }
   ]
 }

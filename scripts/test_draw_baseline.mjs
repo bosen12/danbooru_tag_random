@@ -20,28 +20,31 @@ function ok(name, cond, detail) {
 }
 
 const GOLD = {
+  // 2026-09-26：詞庫加進背景、用色、打光、畫面特效、構圖共 47 個字，場地前面多了一格
+  // 「背景」（現代、沒有活動時 12% 改用素色／圖樣背景），env 的候選池也跟著變大 ——
+  // 五張全部換過一次。見 merge_lexicon.extra_look_tags 與 engine 的 BACKGROUND_CHANCE。
   1: {
-    rng: 260,
-    pos: "1girl, solo, pixie cut, purple eyes, green hair, wavy hair, small breasts, tusks, hair between eyes, skinny, completely nude, female masturbation, seiza, over shoulder, looking up, nervous smile, cum overflow, bathhouse, bath, indoors, steam, dusk, window light, nsfw, explicit, masterpiece, best quality, amazing quality",
+    rng: 309,
+    pos: "1girl, solo, pixie cut, purple eyes, green hair, wavy hair, small breasts, tusks, hair between eyes, skinny, school swimsuit, one-piece swimsuit, swimsuit, boots, green jacket, jacket, female masturbation, seiza, from behind, looking at mirror, serious, nipple tweak, grey background, simple background, spotlight, fantasy, sparkle, chromatic aberration, nsfw, explicit, masterpiece, best quality, amazing quality",
   },
   42: {
-    rng: 315,
-    pos: "1girl, solo, very short hair, aqua eyes, blue hair, straight hair, huge breasts, mature female, hair between eyes, blush, bathrobe, masturbation, standing, cowboy shot, looking around, sad, rolling eyes, onsen, indoors, steam, sunrise, backlighting, stained glass, nsfw, explicit, masterpiece, best quality, amazing quality",
+    rng: 311,
+    pos: "1girl, solo, very short hair, aqua eyes, blue hair, straight hair, huge breasts, mature female, hair between eyes, blush, sweater, black skirt, skirt, kneehighs, white bra, bra, open cardigan, cardigan, masturbation, standing, upper body, looking ahead, happy, smile, white background, simple background, light rays, confetti, smoke, nsfw, explicit, masterpiece, best quality, amazing quality",
   },
   100: {
-    rng: 365,
-    pos: "1girl, solo, medium hair, purple eyes, red hair, ahoge, flat chest, two-tone hair, toned, armpits, qipao, sleeves rolled up, coat, fishnet thighhighs, thighhighs, sneakers, eating, indian style, profile, sideways glance, surprised, against window, izakaya, indoors, sunrise, spotlight, film grain, nsfw, explicit, masterpiece, best quality, amazing quality",
+    rng: 380,
+    pos: "1girl, solo, medium hair, purple eyes, red hair, ahoge, flat chest, two-tone hair, toned, armpits, qipao, sleeves rolled up, coat, fishnet thighhighs, thighhighs, sneakers, eating, indian style, profile, looking at breasts, angry, bouncing, living room, indoors, sunset, chinese new year, nsfw, explicit, masterpiece, best quality, amazing quality",
   },
   999: {
-    rng: 284,
-    pos: "1girl, solo, long hair, grey eyes, orange hair, parted bangs, medium breasts, breast bondage, body freckles, curvy, bathrobe, female masturbation, reclining, pov crotch, looking at viewer, scared, nipple tweak, bathhouse, bath, indoors, steam, day, shadow, nsfw, explicit, masterpiece, best quality, amazing quality",
+    rng: 366,
+    pos: "1girl, solo, long hair, grey eyes, orange hair, parted bangs, medium breasts, breast bondage, body freckles, curvy, playboy bunny, open coat, coat, black panties, panties, white socks, socks, bra, female masturbation, reclining, from below, looking around, happy, smile, love hotel, indoors, on bed, day, reflection, nsfw, explicit, masterpiece, best quality, amazing quality",
   },
   // 2026-09-23：走光補抽改成「所有成立的走光動作同一池、衣服吻合的權重 10」之後，
   // 這張的走光動作從 exhibitionism 換成 cameltoe（她穿 thong，吻合），場景跟著換。
   // 見 test_clothing_reachability.mjs 的走光段落與討論區同日那輪。
   2026: {
-    rng: 360,
-    pos: "1girl, solo, bob cut, grey eyes, black hair, straight hair, medium breasts, hair flower, hair scrunchie, hair over one eye, nightgown, coat, thong, kneehighs, white bra, bra, drinking, reclining, wide shot, averting eyes, naughty face, cameltoe, living room, indoors, sunrise, shadow, full-length mirror, mirror, gaming chair, nsfw, explicit, masterpiece, best quality, amazing quality",
+    rng: 373,
+    pos: "1girl, solo, bob cut, grey eyes, black hair, straight hair, medium breasts, hair flower, hair scrunchie, hair over one eye, nightgown, coat, thong, kneehighs, white bra, bra, drinking, reclining, facing away, looking at mirror, naughty face, cameltoe, living room, indoors, sunrise, ceiling light, silhouette, confetti, nsfw, explicit, masterpiece, best quality, amazing quality",
   },
 };
 
@@ -123,7 +126,13 @@ const MATRIX_SEEDS = 200;
 // 古代 0 張不同。對照組 —— 同一份新引擎只把 MODERN_PLAIN_SLOTS 清空 —— 2405 張逐字相同，
 // 所以差異 100% 來自這一條。其中 184 張新舊都沒有鞋子／布料的字：衣服補抽時整個候選池的
 // 總權重變了，同一個亂數落在別件衣服上，後面整張岔開。
-const MATRIX_GOLD = "2d85ba0f";
+// 2026-09-26：詞庫加進背景／用色／打光／畫面特效／構圖 47 個字，場地前面多一格「背景」，
+// 純色背景擋掉天空、天氣、景物與場景光。env 的候選池變大、RNG 呼叫次數跟著變。
+// 背景格不走有專屬場地的職業、運動、泡澡游泳（test_engine「sex+pin firefighter always has a
+// place」抓到的），那些情境不再擲背景那一顆骰子，所以矩陣裡的職業／運動情境跟著岔開，換成 4e0df84a。
+// 新規則另外用 2000 張隨機＋各種釘選掃過：背景配場地／室內外／時段／天空／場景光 0、
+// 室內落葉 0、夜晚陽光 0、同時兩個畫面特效 0。
+const MATRIX_GOLD = "4e0df84a";
 
 function matrixSettings(over) {
   const s = defaultSettings(data);

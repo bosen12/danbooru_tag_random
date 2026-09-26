@@ -86,3 +86,12 @@ export function createQueue(opts) {
     },
   };
 }
+
+/**
+ * 畫面上顯示用的圖：伺服器轉好的 webp（約原圖的 1/10，見 server.py 的 comfy_webp）。
+ * 原圖一張 1.3 MB 上下，走 Tailscale 或行動網路時很慢；「開原圖」連結照樣給 PNG。
+ */
+export function viewSrc(src) {
+  if (!src || !String(src).startsWith("/api/image?") || /[?&]fmt=/.test(src)) return src;
+  return src + "&fmt=webp";
+}

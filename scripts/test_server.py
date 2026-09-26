@@ -918,6 +918,15 @@ ok("預設的底模在清單裡就用預設的", server.resolve_ckpt(None, _with
 ok("都不像動漫底模就用第一個", server.pick_default_ckpt([r"a\x.safetensors", r"b\y.safetensors"]) == r"a\x.safetensors")
 ok("清單是空的回 None（呼叫端退回預設）", server.pick_default_ckpt([]) is None)
 
+# === 預覽幀節流：遠端連線不被 2.5 MB 的預覽塞住 =====================================
+ok("第一幀一定送", server.preview_due(0.0, 100.0, 0.6))
+ok("間隔不到就不送", not server.preview_due(100.0, 100.3, 0.6))
+ok("間隔到了就送", server.preview_due(100.0, 100.6, 0.6))
+ok("gap=0 每一步都送", server.preview_due(100.0, 100.01, 0))
+_ws_src = (ROOT / "server.py").read_text(encoding="utf-8")
+ok("gen_via_ws 的預覽走 preview_due", "if not preview_due(last_pv, now):" in _ws_src)
+ok("斷線時排隊中的那張從佇列拿掉", _ws_src.count('api("POST", "/queue", {"delete": [prompt_id]}') >= 1)
+
 src = (ROOT / "server.py").read_text(encoding="utf-8")
 ok(
     "gen no longer waits only on node 200",

@@ -153,6 +153,19 @@ let wallStale = false;
 let lastJobError = "";
 let genAbort = null;
 let jobAbort = null;
+// 這一頁正在等的那張（Comfy 的 prompt_id、伺服器的 job）。按停只砍它 ——
+// 全域中斷會把別台裝置正在畫的也砍掉。
+let livePromptId = null;
+let liveJob = null;
+
+/**
+ * 卡片上顯示的圖：伺服器轉好的 webp（約原圖的 1/10）。原圖一張 1.3 MB 上下，
+ * 走 Tailscale 或行動網路時八格牆會一格一格慢慢刷出來；放大檢視才換回原圖。
+ */
+function viewSrc(src) {
+  if (!src || !String(src).startsWith("/api/image?") || /[?&]fmt=/.test(src)) return src;
+  return src + "&fmt=webp";
+}
 let redoQueue = [];
 let viewMode = "all";
 let eraOnly = true;
@@ -2130,7 +2143,8 @@ function fillCard(el, job, err) {
       },
       { once: true }
     );
-    img.src = job.image;
+    el.dataset.full = job.image;
+    img.src = viewSrc(job.image);
     // 等真的有像素了才開始淡入。原本 is-on 是跟 src 同一行加上去的，
     // 於是 320ms 的淡入在還沒有圖的空盒子上就跑完了，圖真的到的時候是硬跳出來的；
     // 而骨架又在下面幾行被直接 remove()，中間那段就是一個空盒子。
@@ -2320,6 +2334,17 @@ function fillViewer(card, dir = 0) {
     vImg.src = nextSrc;
     vImg.alt = img.alt || "生成圖";
     fillViewerInfo(card);
+    // 先放卡片上那張（已經解碼好，立刻出現），原圖在背景下載好再換上去 —— 同一張圖，
+    // 換的時候看不出跳動，只是變清楚。還沒下載完就換到別張的話，gen 會把它擋掉。
+    const full = card.dataset.full;
+    if (full && full !== nextSrc && !String(full).startsWith("data:")) {
+      // 用 onload 不用 decode()：decode() 在背景分頁不保證會 settle（見上面 3000ms 保底那段）。
+      const hi = new Image();
+      hi.onload = () => {
+        if (gen === VIEW_NAV_GEN && isViewerOpen()) vImg.src = full;
+      };
+      hi.src = full;
+    }
     // 先清乾淨再決定要不要放：關掉再開（dir=0）也要把上一次的方向清掉，
     // 不然那兩個 class 會一直留在 img 上。
     const box = $("shot-viewer-info");
@@ -2445,24 +2470,94 @@ function handleViewerKeys(e) {
   return true;
 }
 
-async function streamGen(body, onEvent, signal) {
+// 串流斷掉之後隔多久重接（加起來約 23 秒，伺服器留 GEN_REATTACH_SEC＝30 秒等人接回來）。
+const REATTACH_WAITS = [800, 1500, 2500, 4000, 6000, 8000];
+
+/** 伺服器說這張壞了（不是連線斷了）：不重接。 */
+class GenServerError extends Error {}
+
+/**
+ * 送一張出去，事件交給 onEvent。可以接回去：帶 X-Gen-Resume，伺服器把這張記成一個 job
+ * （回應 header 的 X-Gen-Job，寫進 link.job）。從 Mac 走 Tailscale、手機切網路時連線斷一下，
+ * 以前那張就被中斷；現在用 /api/gen/attach?job=&since= 接回去，從斷掉的地方接著收。
+ *
+ * 代價：斷線不再自動中斷，所以「停」「跳過」「靜默太久」都要明講 —— 見 cancelGenJob()。
+ * link: { job, onRetry(attempt) }，呼叫端用它拿 job、在重接時更新畫面、餵看門狗。
+ */
+async function streamGen(body, onEvent, signal, link = {}) {
   // 唯一送出提示詞的出口，括號跳脫放這裡就不會有哪條路徑漏掉。
   body = { ...body, positive: escapeForComfy(body.positive) };
-  const res = await fetch("/api/gen", {
+  // 收過幾則（預覽不算，伺服器也不記）：接回去時只補後面的。
+  let seen = 0;
+  const open = () =>
+    link.job
+      ? fetch(`/api/gen/attach?job=${encodeURIComponent(link.job)}&since=${seen}`, {
+          headers: { Accept: "text/event-stream" },
+          signal,
+        })
+      : fetch("/api/gen", {
+          method: "POST",
+          headers: {
+            "Content-Type": "application/json",
+            Accept: "text/event-stream",
+            "X-Gen-Resume": "1",
+          },
+          body: JSON.stringify(body),
+          signal,
+        });
+  const wait = (ms) =>
+    new Promise((resolve) => {
+      const t = window.setTimeout(resolve, ms);
+      signal?.addEventListener("abort", () => (window.clearTimeout(t), resolve()), { once: true });
+    });
+  for (let attempt = 0; ; attempt++) {
+    try {
+      const over = await streamOnce(await open(), (event, data) => {
+        if (event !== "preview") seen++;
+        if (event === "error") throw new GenServerError(String((data && data.error) || "Comfy 報錯"));
+        onEvent(event, data);
+      }, link);
+      if (over) return;
+      throw new Error("連線中途斷了");
+    } catch (err) {
+      if (err instanceof GenServerError) {
+        onEvent("error", { error: err.message });
+        return;
+      }
+      // 按停、跳過、看門狗都是 abort：不重接。沒拿到 job（伺服器沒開接回功能）也不重接。
+      if (signal?.aborted || !link.job || attempt >= REATTACH_WAITS.length) throw err;
+      link.onRetry?.(attempt);
+      await wait(REATTACH_WAITS[attempt]);
+      if (signal?.aborted) throw err;
+    }
+  }
+}
+
+/** 明講「這張不要了」：排隊中的從 Comfy 佇列拿掉，畫到一半的中斷。只動這一張。 */
+function cancelGenJob(job) {
+  if (!job) return Promise.resolve();
+  return fetch("/api/gen/cancel", {
     method: "POST",
-    headers: {
-      "Content-Type": "application/json",
-      Accept: "text/event-stream",
-    },
-    body: JSON.stringify(body),
-    signal,
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify({ job }),
+  }).catch(() => {
+    /* ignore */
   });
+}
+
+/** 讀一條回應直到 done／error（回 true）或串流結束（回 false，呼叫端決定要不要重接）。 */
+async function streamOnce(res, onEvent, link) {
+  if (!res.ok && !(res.headers.get("content-type") || "").includes("json")) {
+    throw new GenServerError(`伺服器回 ${res.status}`);
+  }
+  const job = res.headers.get("X-Gen-Job");
+  if (job) link.job = job;
   const ctype = res.headers.get("content-type") || "";
   if (!ctype.includes("event-stream")) {
     const j = await res.json();
-    if (!j.ok) throw new Error(j.error || "gen failed");
+    if (!j.ok) throw new GenServerError(j.error || "gen failed");
     onEvent("done", j);
-    return;
+    return true;
   }
   if (!res.body) throw new Error("no stream");
   const reader = res.body.getReader();
@@ -2493,9 +2588,10 @@ async function streamGen(body, onEvent, signal) {
           continue;
         }
         onEvent(event, data);
-        if (event === "done" || event === "error") return;
+        if (event === "done" || event === "error") return true;
       }
     }
+    return false;
   } finally {
     // 提早 return（收到 done）也要把 body 收掉，連線才還得回瀏覽器的連線池。
     try {
@@ -2653,10 +2749,19 @@ function stopNow(reason) {
   } catch {
     /* ignore */
   }
-  // 這條是使用者自己按「停」／「取消」，全域中斷是對的：他要的就是現在停掉。
-  fetch("/api/interrupt", { method: "POST", headers: { "Content-Type": "application/json" }, body: "{}" }).catch(() => {
-    /* ignore */
-  });
+  // 只砍這一頁正在等的那張。以前送的是全域中斷（{}）—— 從 Mac 和這台同時在抽的時候，
+  // 一邊按停，另一邊正在畫的那張也跟著斷掉。還沒拿到 prompt_id（剛送出、還在連線）
+  // 就不送：上面 abort 斷線之後，伺服器會把它從佇列拿掉或中斷（server.py 的 _sse）。
+  if (liveJob) cancelGenJob(liveJob);
+  else if (livePromptId) {
+    fetch("/api/interrupt", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ prompt_id: livePromptId }),
+    }).catch(() => {
+      /* ignore */
+    });
+  }
 }
 
 async function streamCardJob(card, seedNum, extra) {
@@ -2678,6 +2783,14 @@ async function streamCardJob(card, seedNum, extra) {
   let stalled = false;
   let watchdog = 0;
   let jobPromptId = null;
+  // 斷線重接用：job 由 streamGen 填，重接時畫面說一聲、看門狗重新計時。
+  const link = {
+    job: null,
+    onRetry: () => {
+      kick();
+      setLive(card, { status: "連線斷了，重新接上…" });
+    },
+  };
   const kick = () => {
     window.clearTimeout(watchdog);
     watchdog = window.setTimeout(() => {
@@ -2717,7 +2830,8 @@ async function streamCardJob(card, seedNum, extra) {
         kick();
         // Comfy 的 /interrupt 不帶 prompt_id 就是全域中斷，會砍掉它當下正在跑
         // 的任何東西。記下這張是哪一個，中斷時才砍得準。
-        if (data && data.prompt_id) jobPromptId = data.prompt_id;
+        if (data && data.prompt_id) jobPromptId = livePromptId = data.prompt_id;
+        if (link.job) liveJob = link.job;
         if (event === "queued") {
           setLive(card, { status: `排隊中 · seed ${data.seed || seedNum}` });
         } else if (event === "progress") {
@@ -2745,7 +2859,8 @@ async function streamCardJob(card, seedNum, extra) {
           else failCard(card, lastJobError);
         }
       },
-      jobAbort.signal
+      jobAbort.signal,
+      link
     );
     const kind = settleGenCard({ aborting, skipping, finished, hadError });
     if (kind === "skip") skipCard(card);
@@ -2766,17 +2881,25 @@ async function streamCardJob(card, seedNum, extra) {
     }
   } finally {
     window.clearTimeout(watchdog);
+    if (livePromptId === jobPromptId) livePromptId = null;
+    if (liveJob === link.job) liveJob = null;
     genAbort.signal.removeEventListener("abort", stopJob);
     endGenCard(card);
     const skipNow = skipping;
     skipping = false;
     jobAbort = null;
-    if (skipNow || stalled) {
+    // 可以接回去的工作斷線不會自動中斷（伺服器等 30 秒讓人接回來），所以跳過、看門狗、
+    // 按停都要明講取消：排隊中的從佇列拿掉，畫到一半的中斷，只動這一張。
+    // 沒有 job（舊伺服器）才退回砍 prompt_id；兩個都沒有就不送 —— 空的 {} 是全域中斷，
+    // 會砍到別台裝置正在畫的那張，而這時 abort 已經斷線，伺服器那頭會自己收（server.py 的 _sse）。
+    if ((skipNow || stalled || aborting) && link.job && !shot) {
+      await cancelGenJob(link.job);
+    } else if ((skipNow || stalled) && jobPromptId) {
       try {
         await fetch("/api/interrupt", {
           method: "POST",
           headers: { "Content-Type": "application/json" },
-          body: JSON.stringify(jobPromptId ? { prompt_id: jobPromptId } : {}),
+          body: JSON.stringify({ prompt_id: jobPromptId }),
         });
       } catch {
         /* ignore */

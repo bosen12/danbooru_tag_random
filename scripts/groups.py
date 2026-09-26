@@ -30,7 +30,7 @@ GROUP_ORDER = {
         "fabric",
         "acc",
     ],
-    "env": ["inout", "place", "furniture", "time", "weather", "sky", "light", "other"],
+    "env": ["inout", "place", "background", "furniture", "time", "weather", "sky", "light", "effect", "other"],
 }
 
 GROUP_ZH = {
@@ -76,6 +76,8 @@ GROUP_ZH = {
     "weather": "天氣",
     "sky": "天空",
     "light": "光線",
+    "background": "背景",
+    "effect": "畫面特效",
     "other": "其他",
 }
 
@@ -459,7 +461,7 @@ def assign_group(item: dict) -> str:
     if sec == "pose":
         if mx == "body_pose":
             return "body"
-        if mx == "camera":
+        if mx in ("camera", "perspective"):
             return "camera"
         if mx == "gaze":
             return "gaze"
@@ -524,6 +526,10 @@ def assign_group(item: dict) -> str:
         return "acc"
 
     if sec == "env":
+        if mx in ("background", "bg_blur"):
+            return "background"
+        if mx == "effect":
+            return "effect"
         if mx == "in_out":
             return "inout"
         if mx == "place":
@@ -536,7 +542,7 @@ def assign_group(item: dict) -> str:
             return "weather"
         if tag in SKY:
             return "sky"
-        if mx == "lighting" or "light" in tag:
+        if mx in ("lighting", "silhouette") or "light" in tag:
             return "light"
         return "other"
 

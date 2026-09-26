@@ -384,7 +384,7 @@ const CHEST_NEED_TAGS = new Set([
 ]);
 const BED_PLACE = new Set(["bedroom", "bed", "hotel room", "love hotel", "futon"]);
 const SKY_EXTRA = new Set(["sky", "blue sky", "orange sky"]);
-const DAY_MARK = new Set(["day", "sunrise", "sunlight", "sunbathing", "blue sky", "orange sky"]);
+const DAY_MARK = new Set(["day", "sunrise", "sunlight", "sunbeam", "dappled sunlight", "sunbathing", "blue sky", "orange sky"]);
 const NIGHT_MARK = new Set(["night", "starry sky", "moonlight", "market stall"]);
 // 這些光源本身就交代了「天是暗的」：篝火、火把、燭光、油燈、街燈。
 // 它們不在 NIGHT_MARK 裡，因為 NIGHT_MARK 的成員彼此互斥（一張圖只能有一個
@@ -1099,6 +1099,34 @@ for (const [act, places] of Object.entries(SPORT_ACT_PLACE)) {
 // 時代招牌場地（castle / east asian architecture）出現在多少比例的圖上。
 // 舊行為是無條件蓋章，等於 100%，而且會把唯一的場地格佔滿。
 const PLACE_ANCHOR_CHANCE = 0.35;
+
+// 背景格：沒有活動要配場地的時候，這個比例的圖改用素色／圖樣背景代替場地。
+// Danbooru 上 simple background 有 290 萬張、white background 236 萬張，是全站最常見的
+// 構圖之一（立繪、頭像、角色設定圖）；只靠釘選的話它永遠是 0。
+// 只在現代：歷史時代的時代感一大半靠場地撐（見 fillSlot("env","place") 那段），不能拿掉。
+const BACKGROUND_CHANCE = 0.12;
+// 背景格裡常見的那幾個多給一點權重，圓點、網點這種當配角。
+const COMMON_BG = new Set(["simple background", "white background", "grey background", "gradient background"]);
+// 純色背景上還說得通的光：打在人身上的，不是來自場景的。
+const BG_OK_LIGHT = new Set(["backlighting", "sidelighting", "spotlight", "shadow", "light rays", "dim lighting", "silhouette"]);
+
+// 純色背景上放不下的景物：建築、地面、植物、水、天體、人群。桌椅、道具、鏡頭效果不在這裡 ——
+// 「坐在椅子上的立繪」在素色背景上本來就很常見，拿著茶杯也是。
+const BG_SCENERY = new Set([
+  "veranda", "wooden floor", "stone lantern", "koi", "noren", "fusuma", "rock garden", "arch",
+  "stone wall", "greco-roman architecture", "tower", "windmill", "bamboo", "pillar", "stone floor",
+  "shouji", "tatami", "lotus", "willow", "pine tree", "water", "curtains", "tree", "carpet", "bush",
+  "locker", "campfire", "stained glass", "iron bars", "railing", "tiles", "rubble", "crowd", "grass",
+  "sand", "moss", "full moon", "falling leaves",
+]);
+
+/** 跟純色／圖樣背景放不到一起的東西：天空、天氣、傢俱格、景物、來自場景的光源。 */
+function bgClash(item) {
+  if (!item) return false;
+  if (item.group === "sky" || item.mutex === "weather" || item.group === "furniture") return true;
+  if (BG_SCENERY.has(item.tag)) return true;
+  return item.group === "light" && !BG_OK_LIGHT.has(item.tag);
+}
 
 // 活動定下來之後蓋一個道具上去。每一項是**候選集合**，不是優先序 ——
 // stampActProps() 會先用 eraOk／heatOk 篩掉不合的，再從剩下的隨機挑一個。
@@ -3355,6 +3383,15 @@ export function contradictions(lex, tags) {
     if (impl.includes("indoors") && names.has("outdoors")) found.push(["in_out", t, "outdoors"]);
     if (impl.includes("outdoors") && names.has("indoors")) found.push(["in_out", t, "indoors"]);
   }
+  // 純色背景配天空、天氣、景物、場景光（跟 allow() 同一條 bgClash），落葉配室內。
+  // 疊印台的校樣靠這裡畫「相剋」線：釘了白背景又釘星空，要看得出來哪裡打架。
+  for (const t of tags) {
+    if (lex.byTag.get(t)?.mutex !== "background") continue;
+    // white background 帶進來的 simple background 不另外畫一條，線只畫在釘的那張上。
+    if (tags.some((o) => o !== t && (lex.byTag.get(o)?.implies || []).includes(t))) continue;
+    for (const u of tags) if (u !== t && bgClash(lex.byTag.get(u))) found.push(["background", t, u]);
+  }
+  if (names.has("falling leaves") && names.has("indoors")) found.push(["in_out", "falling leaves", "indoors"]);
   return found;
 }
 
@@ -3783,6 +3820,9 @@ export function drawOne(lex, settings, pinned, userBanned, rand, seed, opts) {
     // 互斥，該擋的那一半互斥系統已經擋掉了。
     if (NIGHT_MARK.has(item.tag) && hasUsed((t) => DAY_MARK.has(t))) return false;
     if (DAY_MARK.has(item.tag) && hasUsed((t) => NIGHT_MARK.has(t))) return false;
+    // 純色背景：沒有天空、天氣、傢俱，也沒有窗光、城市燈光這種場景光。兩個方向都擋。
+    if (item.mutex === "background" && hasUsed((t) => bgClash(lex.byTag.get(t)))) return false;
+    if (bgClash(item) && hasUsed((t) => lex.byTag.get(t)?.mutex === "background")) return false;
     // 正午的篝火、白天的街燈。天生對稱：光源先進場或白天先進場都擋得住。
     if (DARK_LIGHT.has(item.tag) && hasUsed((t) => DAY_MARK.has(t))) return false;
     if (DAY_MARK.has(item.tag) && hasUsed((t) => DARK_LIGHT.has(t))) return false;
@@ -4595,6 +4635,11 @@ export function drawOne(lex, settings, pinned, userBanned, rand, seed, opts) {
       return false;
     }
     if (item.tag === "rain" && used.has("starry sky")) return false;
+    // 落葉要有樹：室內不會飄葉子。兩個方向都擋 —— 室內場地是靠 implies 帶 indoors 進來的，
+    // commit() 會拿這條去驗那個 indoors，所以落葉先在場時，臥室、教室整個抽不進來。
+    // （詞庫那邊不讓非場地的環境字帶 indoors／outdoors，見 merge_lexicon.apply_relations。）
+    if (item.tag === "falling leaves" && used.has("indoors")) return false;
+    if (item.tag === "indoors" && used.has("falling leaves")) return false;
     if (item.tag === "starry sky" && used.has("rain")) return false;
     if (item.tag === "lower body" && hasUsed((t) => CHEST_NEED_TAGS.has(t))) return false;
     if (CHEST_NEED_TAGS.has(item.tag) && used.has("lower body")) return false;
@@ -5492,6 +5537,26 @@ export function drawOne(lex, settings, pinned, userBanned, rand, seed, opts) {
   // 再往上加幾乎沒有用：二十五比一也只到 24.1%，因為剩下的中性場地多半是
   // 情境規則塞進來的（做愛要私密場地、泡澡要浴場），不是這一格抽出來的。
   // 要再往下就得去查「為什麼時代專屬場地在那些情境被擋掉」，那是另一件事。
+  // 背景格（BACKGROUND_CHANCE）：排在場地前面，抽到就佔住 place／in_out／day_night，
+  // 場地那一格看到 place 被佔就直接跳過。要配場地的圖不走這條：活動、有專屬場地的職業
+  // （消防員在街上、偵探在辦公室 —— 釘職業的性愛圖「一定有場地」那幾條測試守著）、
+  // 運動、泡澡游泳。
+  if (
+    (!era || era === "modern") &&
+    !mutexTaken.has("place") &&
+    !usedPlaces(used, lex).size &&
+    !usedActs(used, lex).size &&
+    ![...used].some((t) => JOB_PLACE[t]) &&
+    !sportIdsOf(used)?.size &&
+    !isSwimScene(used) &&
+    !isBathScene(used) &&
+    rand() < BACKGROUND_CHANCE
+  ) {
+    fillSlot("env", "background", {
+      softTiers: [(item) => COMMON_BG.has(item.tag)],
+      weights: [4, 1],
+    });
+  }
   fillSlot("env", "place", {
     softTiers: [(item) => eraSpecific(item, era)],
     weights: [14, 1],

@@ -990,6 +990,18 @@ def _job(seed: int, width: int, height: int, positive: str, image: str, ckpt: st
 # 單張圖的上限。超過就報錯收工，免得 Comfy 卡住的時候無限抽整晚空轉。
 GEN_TIMEOUT = float(cfg("comfy.genTimeoutSec", "COMFY_GEN_TIMEOUT", 600))
 
+# 預覽幀最短間隔（秒）。ComfyUI 每一步都送一張全尺寸預覽（1024² 的 JPEG 約 77 KB，
+# 包成 base64 約 100 KB），25 步就是 2.5 MB —— 比成品原圖還大。本機無所謂，
+# 從 Mac 走 Tailscale、手機走行動網路時，這 2.5 MB 會把進度和成品一起塞住。
+# 0.6 秒一張：一張圖大約剩 8 幀（約 0.8 MB），看起來仍然是一路長出來的。0 = 每一步都送。
+PREVIEW_MIN_GAP = float(cfg("comfy.previewGapSec", "COMFY_PREVIEW_GAP", 0.6))
+
+
+def preview_due(last: float, now: float, gap: float = None) -> bool:
+    """這一幀要不要送出去。第一幀一定送（last=0），之後至少隔 gap 秒。"""
+    gap = PREVIEW_MIN_GAP if gap is None else gap
+    return last <= 0 or gap <= 0 or now - last >= gap - 1e-6
+
 
 class WsUnavailable(Exception):
     pass
@@ -1014,6 +1026,7 @@ def gen_via_ws(width: int, height: int, seed: int, positive: str, wf: dict):
         yield ("ping", {"stage": "queued", "prompt_id": prompt_id})
         t0 = time.time()
         beat = t0
+        last_pv = 0.0
         while time.time() - t0 < GEN_TIMEOUT:
             try:
                 ws.sock.settimeout(2.0)
@@ -1044,6 +1057,10 @@ def gen_via_ws(width: int, height: int, seed: int, positive: str, wf: dict):
                 ws.send(data, 10)
                 continue
             if op == 2:
+                now = time.time()
+                if not preview_due(last_pv, now):
+                    continue
+                last_pv = now
                 parsed = parse_comfy_binary(data)
                 if parsed:
                     mime, blob = parsed
@@ -2375,6 +2392,13 @@ class Handler(BaseHTTPRequestHandler):
             except Exception:
                 pass
         if gone:
+            # 還在排隊的從佇列拿掉 —— /interrupt 只砍正在畫的那張，排隊中的會被 Comfy
+            # 照樣畫完，沒人要的圖把後面每一張往後推（多台裝置一起抽的時候特別明顯）。
+            if prompt_id:
+                try:
+                    api("POST", "/queue", {"delete": [prompt_id]}, timeout=8)
+                except Exception:
+                    pass
             try:
                 comfy_interrupt(prompt_id)
             except Exception:

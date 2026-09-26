@@ -1631,6 +1631,16 @@ const ALBUM_FIXTURE = [
   ok("讀出條會補上重建過的控制項（不是只看屬性變化）", /childList:\s*true/.test(readFileSync(join(ROOT, "web5", "panel-fx.js"), "utf8")));
 }
 
+
+{
+  const boot = readFileSync(join(ROOT, "web/boot.js"), "utf8");
+  ok("排字匣卡片顯示 webp（viewSrc），原圖記在 dataset.full", boot.includes("img.src = viewSrc(job.image)") && boot.includes("el.dataset.full = job.image"));
+  ok("放大檢視在背景換回原圖", boot.includes("const full = card.dataset.full;"));
+  ok("排字匣出圖可以接回去（X-Gen-Resume＋/api/gen/attach）", boot.includes('"X-Gen-Resume": "1"') && boot.includes("/api/gen/attach?job="));
+  ok("排字匣跳過／看門狗／按停會明講取消（接回模式斷線不會自己中斷）", boot.includes("await cancelGenJob(link.job)") && boot.includes("if (liveJob) cancelGenJob(liveJob)"));
+  ok("排字匣不送全域中斷（空的 {}）", !boot.includes('body: "{}"') && !boot.includes("prompt_id: jobPromptId } : {}"));
+}
+
 if (failed) {
   console.error(NL + failed + " failed");
   process.exit(1);

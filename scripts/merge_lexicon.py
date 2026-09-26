@@ -1096,7 +1096,7 @@ def norm(item: dict) -> dict | None:
     if tag in YURI_ONLY and "yuri" not in seen_needs:
         needs.append("yuri")
         seen_needs.add("yuri")
-    mutex_extra: list[str] = []
+    mutex_extra: list[str] = [str(g) for g in (item.get("mutexExtra") or []) if g]
     if tag in SEX_ACT:
         if mutex and mutex != "sex_act":
             mutex_extra.append("sex_act")
@@ -1202,6 +1202,105 @@ def extra_style_tags() -> list[dict]:
         }
         for tag, zh, mutex in rows
     ]
+
+
+def extra_look_tags() -> list[dict]:
+    """背景、用色／媒材、打光、畫面特效、構圖（2026-09-26）。
+
+    每個字都先用 verify_danbooru_tags.mjs 查過：category 0、post_count > 0、沒有 deprecated。
+    查掉的：multicolored background、starry background（deprecated）；oil painting (medium)、
+    traditional media、anime screencap、official art、game cg（category 5，不是一般 tag）；
+    muted color、vibrant colors、cinematic lighting、dramatic lighting、dynamic angle（0 張）；
+    rim lighting（不存在）。sketch 與 multiple views 在共同負面裡，不收。
+
+    背景：純色／圖樣背景就是「沒有場景」，所以它除了自己的 background 格，還佔住
+    place、in_out、day_night —— 有白背景就不會再抽出臥室、室內或夜晚，反過來也一樣。
+    顏色背景 implies simple background（Danbooru 上兩者幾乎總是一起標），父子不互相驅逐。
+    blurry background 是景深，跟任何場地都合得來，只佔自己的 bg_blur。
+    """
+    all_h = list(HEATS)
+    any_era = ["any"]
+    # bg_blur：純色背景上沒有東西可以模糊，跟 blurry background 二選一。
+    solid = ["place", "in_out", "day_night", "bg_blur"]
+
+    def row(tag, section, mutex, zh, implies=None, extra=None):
+        out = {
+            "tag": tag,
+            "section": section,
+            "gate": "any",
+            "heat": all_h,
+            "mutex": mutex,
+            "bind": [],
+            "implies": implies or [],
+            "layer": "normal",
+            "era": any_era,
+            "needs": [],
+            "zh": zh,
+        }
+        if extra:
+            out["mutexExtra"] = list(extra)
+        return out
+
+    simple = ["simple background"]
+    bg = [
+        row("simple background", "env", "background", "素色背景", extra=solid),
+        row("white background", "env", "background", "白背景", simple, solid),
+        row("black background", "env", "background", "黑背景", simple, solid),
+        row("grey background", "env", "background", "灰背景", simple, solid),
+        row("blue background", "env", "background", "藍背景", simple, solid),
+        row("pink background", "env", "background", "粉紅背景", simple, solid),
+        row("yellow background", "env", "background", "黃背景", simple, solid),
+        row("red background", "env", "background", "紅背景", simple, solid),
+        row("gradient background", "env", "background", "漸層背景", simple, solid),
+        row("two-tone background", "env", "background", "雙色背景", simple, solid),
+        row("polka dot background", "env", "background", "圓點背景", extra=solid),
+        row("striped background", "env", "background", "條紋背景", extra=solid),
+        row("floral background", "env", "background", "花紋背景", extra=solid),
+        row("halftone background", "env", "background", "網點背景", extra=solid),
+        row("sparkle background", "env", "background", "閃光背景", extra=solid),
+        row("abstract background", "env", "background", "抽象背景", extra=solid),
+        row("blurry background", "env", "bg_blur", "背景模糊"),
+    ]
+    style = [
+        row("pixel art", "quality", "medium", "像素畫"),
+        row("ukiyo-e", "quality", "medium", "浮世繪"),
+        row("chibi", "quality", None, "Q 版"),
+        row("greyscale", "quality", "coloring", "灰階", ["monochrome"]),
+        row("spot color", "quality", "palette", "局部上色", ["monochrome"]),
+        row("partially colored", "quality", "palette", "部分上色"),
+        row("pastel colors", "quality", "palette", "粉彩色"),
+        row("muted colors", "quality", "palette", "低彩度"),
+        row("limited palette", "quality", "palette", "限色"),
+        row("colorful", "quality", "palette", "繽紛"),
+        row("high contrast", "quality", "palette", "高對比"),
+        row("sepia", "quality", "palette", "復古棕"),
+    ]
+    light = [
+        row("light rays", "env", "lighting", "光束"),
+        row("sunbeam", "env", "lighting", "陽光光柱"),
+        row("dappled sunlight", "env", "lighting", "樹影斑駁"),
+        row("silhouette", "env", "silhouette", "剪影"),
+    ]
+    effect = [
+        row("light particles", "env", "effect", "光粒子"),
+        row("sparkle", "env", "effect", "閃光"),
+        row("petals", "env", "effect", "花瓣"),
+        row("falling petals", "env", "effect", "飄落花瓣", ["petals"]),
+        # 落葉要有樹：帶 outdoors，室內場地和純色背景自然就排掉了。
+        row("falling leaves", "env", "effect", "落葉", ["outdoors"]),
+        row("bubble", "env", "effect", "泡泡"),
+        row("confetti", "env", "effect", "彩紙"),
+        row("lens flare", "env", "effect", "鏡頭光暈"),
+        row("bloom", "env", "effect", "柔光溢出"),
+        row("motion blur", "env", "effect", "動態模糊"),
+        row("speed lines", "env", "effect", "速度線"),
+        row("emphasis lines", "env", "effect", "集中線"),
+    ]
+    camera = [
+        row("very wide shot", "pose", "camera", "大遠景"),
+        row("foreshortening", "pose", "perspective", "透視前縮"),
+    ]
+    return bg + style + light + effect + camera
 
 
 def extra_quality_boost_tags() -> list[dict]:
@@ -2317,6 +2416,7 @@ def main() -> None:
     rows.extend(extra_shota_tags())
     rows.extend(extra_style_tags())
     rows.extend(extra_quality_boost_tags())
+    rows.extend(extra_look_tags())
 
     old_zh: dict[str, str] = {}
     if OUT.exists():

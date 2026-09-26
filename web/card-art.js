@@ -49,6 +49,8 @@ export const GROUP_SEAL = {
   "feature|sex": "性",
   "env|place": "地",
   "env|light": "光",
+  "env|background": "背",
+  "env|effect": "效",
   "env|time": "晝",
   "env|sky": "天",
   "env|weather": "氣",
@@ -210,7 +212,10 @@ const ART_EXTRA = {
 // 學校味重的衣著：畫的一定是成年人。
 const SCHOOL_CODED = new Set(["school uniform", "serafuku", "sailor dress", "school swimsuit", "gym uniform", "buruma"]);
 
-const SCENE_WITH_PERSON = new Set(["furniture"]);
+// 場景節裡要有人才畫得出來的：傢俱（坐在上面）、背景（白背景沒有人就是一張白紙）、
+// 畫面特效（速度線、集中線、花瓣都是圍著人物的）。剪影也是 —— 沒有人就沒有剪影。
+const SCENE_WITH_PERSON = new Set(["furniture", "background", "effect"]);
+const ENV_WITH_PERSON = new Set(["silhouette"]);
 
 // 場景節裡的物件：用風景去畫會小到看不見，改畫靜物。
 export const STILL_LIFE = new Set([
@@ -303,7 +308,7 @@ export function artPrompt(item, ctx = {}) {
   let parts;
   if (STILL_LIFE.has(item.tag)) {
     parts = ["no humans", "still life", item.tag, ...extra, "simple background"];
-  } else if (item.section === "env" && !SCENE_WITH_PERSON.has(item.group)) {
+  } else if (item.section === "env" && !SCENE_WITH_PERSON.has(item.group) && !ENV_WITH_PERSON.has(item.tag)) {
     parts = ["no humans", "scenery", item.tag, ...extra];
   } else if (item.group === "activity") {
     const places = ctx.actPlace && ctx.actPlace[item.tag];
