@@ -460,7 +460,14 @@ const generator = createGenerator({
     plateNotice = { kind: "err", text: msg };
     renderPlateNotice();
   },
+  // 網路斷了：佇列停在原地等，回來就接著印。提示只收自己放的那一則，別人的不動。
+  waiting: (on) => {
+    if (on) plateNotice = { kind: "err", text: NET_WAIT_TEXT };
+    else if (plateNotice && plateNotice.text === NET_WAIT_TEXT) plateNotice = null;
+    renderPlateNotice();
+  },
 });
+const NET_WAIT_TEXT = "連不到主機（網路斷了？），網路回來就接著印";
 
 function printNow() {
   const t = trials[picked];

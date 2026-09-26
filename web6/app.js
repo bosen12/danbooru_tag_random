@@ -695,6 +695,8 @@ const generator = createGenerator({
     toast(why);
     renderGoBar();
   },
+  // 網路斷了：佇列停在原地等，回來就接著印（見 gen.js waitOnline）。
+  waiting: (on) => toast(on ? "連不到主機，網路回來就接著印…" : "網路回來了，接著印"),
 });
 
 // 生圖種子那一組只建一次，每次重畫合成池底下那排時把同一個節點搬回去（輸入到一半不會被洗掉）。

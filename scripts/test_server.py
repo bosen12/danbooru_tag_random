@@ -931,6 +931,7 @@ ok("斷線時排隊中的那張從佇列拿掉", _ws_src.count('api("POST", "/qu
 _ws_src2 = (ROOT / "server.py").read_text(encoding="utf-8")
 ok("lora-push 有長輪詢（wait=N，最多 25 秒）", "_LORA_PUSH_COND.wait_for(" in _ws_src2 and "LORA_PUSH_MAX_WAIT = 25.0" in _ws_src2)
 ok("推送一進來就叫醒等著的人", "_LORA_PUSH_COND.notify_all()" in _ws_src2)
+ok("沒人接回的工作也從佇列拿掉（不只按停的）", "沒人接回來的也一樣要從佇列拿掉" in _ws_src2 and "                if self.cancelled:\n                    try:\n                        api(\"POST\", \"/queue\"" not in _ws_src2)
 
 src = (ROOT / "server.py").read_text(encoding="utf-8")
 ok(

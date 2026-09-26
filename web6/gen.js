@@ -158,6 +158,8 @@ export function createGenerator(hooks) {
         hooks.update(shot);
         return false;
       }
+      // 不是伺服器報錯、不是看門狗：是連線本身斷了，重接也接不回。
+      shot.netFail = !(err instanceof GenError) && !stalled;
       shot.status = "failed";
       shot.note = stalled
         ? `Comfy 靜默超過 ${IDLE_MS / 1000} 秒，這張放棄`
@@ -181,6 +183,12 @@ export function createGenerator(hooks) {
       const shot = queue.shift();
       if (shot.status === "cancelled") continue;
       const ok = await runOne(shot);
+      if (!ok && shot.netFail) {
+        // 網路斷了：這張不算連續失敗，等網路回來再送下一張（從 Mac 走 Tailscale 斷一下，
+        // 不該把一整串排好的付印都判失敗）。
+        await waitOnline(() => queue.length > 0, hooks.waiting);
+        continue;
+      }
       fails = ok ? 0 : shot.status === "failed" ? fails + 1 : fails;
       if (fails >= 3) {
         for (const s of queue.splice(0)) {
@@ -315,6 +323,27 @@ export async function linkState() {
 }
 
 export const LINK_LABEL = { ok: "Comfy 已連", comfy: "Comfy 未連", net: "連不到主機" };
+
+/** 連不到主機時等網路回來（每 4 秒或 online 事件再探）；still() 回 false 就不等了。 */
+async function waitOnline(still, onWait) {
+  let said = false;
+  while (still()) {
+    const st = await linkState();
+    if (st !== "net") break;
+    if (!said && onWait) onWait(true);
+    said = true;
+    await new Promise((resolve) => {
+      const t = setTimeout(done, 4000);
+      function done() {
+        clearTimeout(t);
+        window.removeEventListener("online", done);
+        resolve();
+      }
+      window.addEventListener("online", done);
+    });
+  }
+  if (said && onWait) onWait(false);
+}
 
 export async function comfyOnline() {
   return (await linkState()) === "ok";

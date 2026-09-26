@@ -1649,6 +1649,9 @@ const ALBUM_FIXTURE = [
   for (const f of ["web6/index.html", "web6/fuse.html", "web/index.html"]) {
     ok(`${f} 預載卡面清單`, readFileSync(join(ROOT, f), "utf8").includes('<link rel="preload" href="cards/manifest.json" as="fetch" crossorigin />'));
   }
+  ok("排字匣網路斷掉的那張不算連續失敗，等網路回來接著抽", boot.includes("lastFailNet = true;") && boot.includes("} else if (!aborting && lastFailNet) {") && boot.includes("async function waitForLink("));
+  ok("無限抽開跑時剛好斷線：等，不直接停", boot.includes('isInfinite() && downReason === "net" && (await waitForLink(waitNet))'));
+  ok("墨池／疊印台佇列：網路斷掉的不算失敗，等網路回來、畫面說一聲", gen6.includes("if (!ok && shot.netFail) {") && gen6.includes("await waitOnline(") && readFileSync(join(ROOT, "web6/fuse.js"), "utf8").includes("NET_WAIT_TEXT") && readFileSync(join(ROOT, "web6/app.js"), "utf8").includes("waiting: (on) =>"));
   ok("排字匣不送全域中斷（空的 {}）", !boot.includes('body: "{}"') && !boot.includes("prompt_id: jobPromptId } : {}"));
 }
 

@@ -142,6 +142,9 @@ let running = false;
 // 連續失敗幾張就把無限抽收掉。成功一張歸零。
 const FAIL_LIMIT = 3;
 let failStreak = 0;
+// 最近一張是不是因為網路斷掉而失敗（重接也接不回）。這種不算進連續失敗：
+// 從 Mac 無限抽時網路斷一下，不該把整晚的無限抽停掉 —— 等網路回來接著抽。
+let lastFailNet = false;
 // 伺服器在等 Comfy 的時候每 5 秒送一則心跳，所以這條 SSE 靜默這麼久就是死了。
 // 留寬一點是因為換底模那下可以整整安靜一分鐘。
 // 由 config.json 的 client.streamIdleMs 覆寫（透過 /api/ping 帶下來）。
@@ -238,6 +241,30 @@ let downReason = "comfy";
 function downText(short = false) {
   if (downReason === "net") return short ? "連不到主機" : "連不到這台電腦（網路斷了？），接上之後再試";
   return short ? "Comfy 未連上" : "ComfyUI 連不上，先開本機 8188";
+}
+
+/**
+ * 連不到主機時等網路回來：每 4 秒（或瀏覽器說 online 的那一刻）再探一次。
+ * 回 true＝可以出圖了；false＝按了停，或斷的是 ComfyUI 而不是網路（那種等也沒用）。
+ */
+async function waitForLink(onWait) {
+  while (!aborting) {
+    if (await comfyUp()) return true;
+    if (downReason !== "net") return false;
+    onWait?.();
+    await new Promise((resolve) => {
+      const t = window.setTimeout(done, 4000);
+      function done() {
+        window.clearTimeout(t);
+        window.removeEventListener("online", done);
+        genAbort?.signal.removeEventListener("abort", done);
+        resolve();
+      }
+      window.addEventListener("online", done);
+      genAbort?.signal.addEventListener("abort", done);
+    });
+  }
+  return false;
 }
 
 async function comfyUp() {
@@ -2795,6 +2822,7 @@ function stopNow(reason) {
 async function streamCardJob(card, seedNum, extra) {
   let shot = null;
   skipping = false;
+  lastFailNet = false;
   jobAbort = new AbortController();
   card.classList.add("is-gen");
   card.classList.remove("is-wait");
@@ -2903,8 +2931,11 @@ async function streamCardJob(card, seedNum, extra) {
       if (kind === "skip") skipCard(card);
       else if (kind === "cancel") failCard(card, "已取消");
       else {
+        // 走到這裡的不是伺服器報的錯（那種在 streamGen 裡轉成 error 事件了），而是連線本身：
+        // 重接也接不回。記下來，批次那邊就知道要等網路，而不是算一張失敗。
+        lastFailNet = true;
         lastJobError = String(err.message || err);
-        failCard(card, lastJobError);
+        failCard(card, `連線斷了，這張沒接回來（${lastJobError}）`);
       }
     }
   } finally {
@@ -3155,7 +3186,8 @@ async function runBatch(opts = {}) {
     $("n").value = String(n);
     saveStore();
 
-    if (!posOnly && !(await comfyUp())) {
+    const waitNet = () => speak("連不到主機，網路回來就接著抽…（按停可以取消）");
+    if (!posOnly && !(await comfyUp()) && !(isInfinite() && downReason === "net" && (await waitForLink(waitNet)))) {
       speak(downReason === "net" ? downText() : "Comfy 掛了——先開本機 8188，修好可再開拍；或改按「只抽牌」");
       try { window.dispatchEvent(new CustomEvent("studio:toast", { detail: { text: downText(true), kind: "danger" } })); } catch { /* ignore */ }
       stopInfinite(downText(true));
@@ -3301,6 +3333,10 @@ async function runBatch(opts = {}) {
           paintMustWarn(card, drawn.mustReport);
         } else if (card.classList.contains("is-skip")) {
           skipped += 1;
+        } else if (!aborting && lastFailNet) {
+          // 網路斷掉的那張：不算連續失敗，等網路回來再抽下一張。
+          failed += 1;
+          if (i < n - 1 || isInfinite()) await waitForLink(waitNet);
         } else if (!aborting) {
           failed += 1;
           failStreak += 1;

@@ -1186,11 +1186,12 @@ class GenJob:
                 pass
             if gave_up and self.prompt_id:
                 # 按停的時候 prompt_id 可能還沒回來（cancel() 那時什麼都做不了）：在這裡補做。
-                if self.cancelled:
-                    try:
-                        api("POST", "/queue", {"delete": [self.prompt_id]}, timeout=8)
-                    except Exception:
-                        pass
+                # 沒人接回來的也一樣要從佇列拿掉 —— /interrupt 只砍正在畫的，還在排隊的會被
+                # Comfy 照樣畫完（沒人要的圖），後面每一張都被往後推。刪一個已經在畫的是無害的。
+                try:
+                    api("POST", "/queue", {"delete": [self.prompt_id]}, timeout=8)
+                except Exception:
+                    pass
                 try:
                     comfy_interrupt(self.prompt_id)
                 except Exception:
