@@ -1034,8 +1034,19 @@ function paintShot(node, shot) {
       img = el("img", { alt: "成品", decoding: "async" });
       frame.prepend(img);
     }
-    if (img.getAttribute("src") !== src) img.src = src;
+    if (img.getAttribute("src") !== src) {
+      // 剛印好（上一幀還是預覽或空的）：像相紙泡進顯影液，由上往下浮出來。
+      const developing = shot.status === "done" && node.dataset.shown !== "done" && node.dataset.shown !== undefined;
+      img.src = src;
+      if (developing && !matchMedia("(prefers-reduced-motion: reduce)").matches) {
+        frame.classList.remove("is-developing");
+        void frame.offsetWidth;
+        frame.classList.add("is-developing");
+        setTimeout(() => frame.classList.remove("is-developing"), 1300);
+      }
+    }
   } else if (img) img.remove();
+  node.dataset.shown = shot.status;
   let empty = frame.querySelector(".shot-empty");
   const words = {
     drawn: "只抽了牌，還沒送去印",

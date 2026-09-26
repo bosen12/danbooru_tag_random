@@ -365,6 +365,11 @@ function startWith(starter) {
 function undo() {
   const h = history.pop();
   if (!h) return;
+  // 撤掉的牌先記下位置（重畫之後原地掀起飄走），回來的牌重畫之後一張一張落回去。
+  const back = new Set(h.bed.pins);
+  const was = new Set(bed.pins);
+  const leaving = bed.pins.filter((t) => !back.has(t)).map(plateNode).filter(Boolean).map(snapshot);
+  const returning = h.bed.pins.filter((t) => !was.has(t));
   bed = h.bed;
   rowNotes = {};
   plateNotice = null;
@@ -372,7 +377,10 @@ function undo() {
   renderAll([]);
   syncCaseStates();
   if (caseTab === "match") renderCase();
+  leaving.forEach((s) => liftAway(s, "up"));
+  returning.forEach((t, i) => popIn(t, 40 + i * 70));
   sfx.lift();
+  if (returning.length) setTimeout(() => sfx.stamp(), 60);
   announce(`撤回：${h.label}`);
 }
 
@@ -494,9 +502,11 @@ function printNow() {
   };
   prints.unshift(p);
   while (prints.length > PRINT_MAX) prints.pop();
+  // 先夾上繩子再交給佇列：enqueue 會馬上回報狀態，那時繩上要已經有這張，
+  // 不然它會自己重畫一次繩子，這裡再畫一次就把「剛夾上去晃一晃」蓋掉了。
+  renderLine();
   generator.enqueue(p);
   savePrints();
-  renderLine();
   // 新的一張夾在最左邊：繩子已經往右捲的話捲回去，才看得到它開始印。
   $("line-list").scrollTo({ left: 0, behavior: reduced() ? "auto" : "smooth" });
   renderPreview();
@@ -1577,7 +1587,8 @@ function renderPrintBar() {
           class: "btn btn-primary pb-go",
           type: "button",
           disabled: disabled || undefined,
-          dataset: { wide: [...label].length <= 2 ? "true" : "false" },
+          dataset: { wide: [...label].length <= 2 ? "true" : "false", busy: busy ? "true" : "false" },
+          style: busy ? `--p: ${p.status === "running" ? p.progress || 0 : 0}` : undefined,
           onclick: () => (p && p.status === "failed" ? reprint(p) : printNow()),
           title: "付印（P）",
         },
@@ -1642,9 +1653,19 @@ function sendToPool() {
 
 /* ================= 晾紙繩 ================= */
 
+let lineSeen = null;
+
 function renderLine() {
   const list = $("line-list");
-  list.replaceChildren(...prints.map((p) => el("li", {}, lineItem(p))));
+  const items = prints.map((p) => el("li", {}, lineItem(p)));
+  list.replaceChildren(...items);
+  // 新夾上去的那張：往下一落、左右晃幾下才停，像紙剛夾上繩子。開機那一次不晃。
+  if (lineSeen && !reduced()) {
+    items.forEach((li, i) => {
+      if (!lineSeen.has(prints[i].id)) li.firstChild.classList.add("is-hung");
+    });
+  }
+  lineSeen = new Set(prints.map((p) => p.id));
   $("line-empty").hidden = prints.length > 0;
   // 等這一輪的畫面都放好再量（量捲動寬度會逼瀏覽器當場排版；開機時字盒還在長）。
   clearTimeout(lineFadeTimer);
@@ -1679,6 +1700,12 @@ function lineItem(p) {
 const STATUS_ZH = { drawn: "排隊", queued: "排隊", running: "印製中", done: "印好了", failed: "印壞了", cancelled: "取消了", stopped: "停了" };
 
 function paintLineNode(node, p) {
+  // 剛印好：紙抖一下（每張只抖一次）。
+  if (p.status === "done" && node.dataset.status && node.dataset.status !== "done" && !reduced()) {
+    node.classList.remove("is-hung", "is-dried");
+    void node.offsetWidth;
+    node.classList.add("is-dried");
+  }
   node.dataset.status = p.status;
   const face = node.querySelector(".print-face");
   const src = viewSrc(p.image) || p.preview;

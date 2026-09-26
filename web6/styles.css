@@ -1011,6 +1011,31 @@ p {
   min-width: 0;
 }
 
+/* 剛印好：由上往下顯影，亮一下再沉回正常。 */
+.shot-frame.is-developing img {
+  animation: shot-develop 1.2s var(--ease-out) both;
+}
+
+@keyframes shot-develop {
+  from {
+    clip-path: inset(0 0 100% 0);
+    filter: brightness(1.5) contrast(0.8);
+  }
+  60% {
+    filter: brightness(1.1);
+  }
+  to {
+    clip-path: inset(0 0 0 0);
+    filter: none;
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .shot-frame.is-developing img {
+    animation: none;
+  }
+}
+
 .shot-frame {
   position: relative;
   container-type: inline-size;

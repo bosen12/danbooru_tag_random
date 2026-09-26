@@ -205,6 +205,50 @@ body.fuse {
   white-space: nowrap;
 }
 
+/* 新夾上繩子：往下一落、左右晃幾下才停（夾子在上緣，transform-origin 就是夾子）。 */
+.print.is-hung {
+  animation: print-hang 900ms cubic-bezier(0.3, 0.7, 0.3, 1) both;
+}
+
+@keyframes print-hang {
+  0% {
+    translate: 0 -22px;
+    rotate: 14deg;
+    opacity: 0;
+  }
+  25% {
+    translate: 0 2px;
+    rotate: -8deg;
+    opacity: 1;
+  }
+  50% {
+    rotate: 5deg;
+  }
+  72% {
+    rotate: -2.5deg;
+  }
+  100% {
+    translate: 0 0;
+  }
+}
+
+/* 剛印好：紙被風吹一下。 */
+.print.is-dried {
+  animation: print-flutter 700ms var(--ease-out);
+}
+
+@keyframes print-flutter {
+  20% {
+    rotate: 4deg;
+  }
+  45% {
+    rotate: -3deg;
+  }
+  70% {
+    rotate: 1.5deg;
+  }
+}
+
 .print[data-status="failed"] .print-face {
   clip-path: polygon(0 0, 100% 0, 100% 78%, 86% 100%, 0 100%);
 }
@@ -1741,6 +1785,18 @@ body.fuse {
   letter-spacing: 0.04em;
 }
 
+/* 印製中：按鈕本身就是進度條，從左往右填滿。 */
+.pb-go[data-busy="true"] {
+  opacity: 1;
+  cursor: progress;
+  color: var(--color-ink);
+  background:
+    linear-gradient(90deg, color-mix(in oklch, var(--color-accent) 70%, transparent) calc(var(--p, 0) * 100%), transparent 0),
+    color-mix(in oklch, var(--color-accent) 16%, var(--color-paper-2));
+  border-color: color-mix(in oklch, var(--color-accent) 60%, transparent);
+  transition: background-size var(--dur-short) linear;
+}
+
 /* 「付印」兩個字像印章一樣拉開；「印製中 40%」這種長的照正常字距，數字才不會散掉。 */
 .pb-go[data-wide="true"] {
   letter-spacing: 0.3em;
@@ -2142,6 +2198,8 @@ body.fuse {
   .register.is-inked::before,
   .registers.ghosts-in .ghost-card,
   .pool-pill.is-bumped,
+  .print.is-hung,
+  .print.is-dried,
   .print-peek.is-in {
     animation: none;
   }
