@@ -1494,6 +1494,7 @@ p {
   box-shadow: 0 10px 24px var(--color-shade);
   transition:
     transform var(--dur-short) var(--ease-out),
+    translate 280ms var(--ease-out),
     border-color var(--dur-short) var(--ease-out),
     background-color var(--dur-short) var(--ease-out);
 }

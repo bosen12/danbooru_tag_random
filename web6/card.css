@@ -660,6 +660,25 @@ body[data-dragging="true"] .fav-hand[data-open="false"][data-over="true"] {
   text-align: center;
 }
 
+/* 窄螢幕托盤佔滿整條底邊：角落的廢字簍（墨池）、「卡池」標籤（疊印台）往上讓到托盤上面，
+   不然一個被托盤蓋住（拖不進廢字簍），一個蓋在托盤上。寬螢幕托盤兩旁留了位置，不用讓。 */
+/* 底下的提示（toast）也浮在托盤上面，不蓋住牌。 */
+body .toast {
+  bottom: calc(var(--fav-h, 0px) + var(--space-lg) + env(safe-area-inset-bottom));
+}
+
+@media (max-width: 68.74rem) {
+  :is(.trash, .pool-pill) {
+    translate: 0 calc(-1 * var(--fav-h, 0px));
+  }
+}
+
+@media (min-width: 68.75rem) {
+  .fav-hand {
+    width: min(calc(100vw - 200px), max(var(--fav-want, 360px), 360px));
+  }
+}
+
 /* 托盤佔的高度，整頁捲動時底下墊一樣多，最後一排牌不會被蓋住
    （疊印台寬螢幕整頁不捲、三欄各自捲，墊在 fuse.css 的三欄裡）。 */
 body {
@@ -702,6 +721,11 @@ body[data-hand-edit="true"] :is(#case-grid, #lib-grid) .card[data-in-hand="true"
 
 .fav-card[data-in-hand]::before {
   content: none;
+}
+
+/* 疊印台的字盒：在池的牌右上角已經有「在池」，「手」排到它下面，不疊在一起。 */
+.case-grid .card[data-state="pinned"][data-in-hand="true"]::before {
+  top: 22px;
 }
 
 @media (max-width: 640px) {

@@ -322,6 +322,7 @@ function buildHand() {
       hand.mark($("lib-grid"));
     },
     onFull: () => toast(`偏好卡牌最多 ${hand.max} 張，先拿掉一張再加`),
+    onRemoved: (t, undo) => toast(`「${lib.byTag.get(t)?.zh || t}」拿出偏好卡牌`, { action: { label: "復原", run: undo } }),
     decorate: (node, t) => drag.attach(node, { tag: t, from: "hand" }),
   });
 }
@@ -361,6 +362,9 @@ function flyInto(tag, from) {
   if (!target) return;
   target.classList.remove("dropped");
   const to = target.getBoundingClientRect();
+  // 合成池捲出畫面了（手機上從字盒底下、托盤出牌）：飛過去看起來像牌飛出螢幕。
+  // 改成原地往合成池那個方向收進去，再說一聲、給一顆「看合成池」。
+  if (to.bottom < 0 || to.top > window.innerHeight || !to.width) return tuckAway(tag, from, to.top < 0 ? -1 : 1);
   const dx = from.left - to.left;
   const dy = from.top - to.top;
   const s = from.width / Math.max(1, to.width);
@@ -374,6 +378,30 @@ function flyInto(tag, from) {
   );
   // 落定的那一刻散一圈墨（跟拖曳放下同一個效果）。
   setTimeout(() => inkRing(target), 330);
+}
+
+/** 牌往合成池的方向（dir：-1 上、1 下）收進去：浮起一點、縮小、淡掉。 */
+function tuckAway(tag, from, dir) {
+  const card = lib.byTag.get(tag);
+  if (!card || !from || !from.width) return;
+  const f = cardNode(card, assets, { tagName: "div" });
+  f.classList.add("flying");
+  f.setAttribute("aria-hidden", "true");
+  Object.assign(f.style, { position: "fixed", left: from.left + "px", top: from.top + "px", width: from.width + "px", margin: "0", zIndex: "90", pointerEvents: "none" });
+  f.style.setProperty("--card-w", from.width + "px");
+  document.body.append(f);
+  f.animate(
+    [
+      { transform: "none", opacity: 1 },
+      { transform: `translateY(${dir * -10}px) scale(1.05)`, opacity: 1, offset: 0.25 },
+      { transform: `translateY(${dir * 90}px) scale(0.5)`, opacity: 0 },
+    ],
+    { duration: 420, easing: "cubic-bezier(0.5, 0, 0.75, 0)", fill: "forwards" }
+  );
+  setTimeout(() => f.remove(), 460);
+  toast(`「${card.zh}」放進合成池`, {
+    action: { label: "看合成池", run: () => $("pool-well").scrollIntoView({ behavior: "smooth", block: "center" }) },
+  });
 }
 
 /** 浮空放大卡要的資料。 */

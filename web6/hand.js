@@ -20,6 +20,7 @@
  *   onPlay(t, r)   出牌（r：托盤上那張的位置，讓房間從這裡飛進卡池）
  *   onChange()     手牌變了（房間重畫字盒上的「手」記號、按鈕上的數字）
  *   known(t)       這張牌還在不在字盒（詞庫改了、被封鎖了就不要）
+ *   onRemoved(t, undo)  用手拿掉了一張（×、Delete、選單）：房間跳一個帶「復原」的提示，undo() 放回原位
  *   decorate(n,t)  托盤上的牌做好之後給房間掛東西（拖曳）
  */
 const EASE = "cubic-bezier(0.16, 1, 0.3, 1)";
@@ -40,6 +41,7 @@ export function createHand({
   onChange = () => {},
   known = () => true,
   onFull = () => {},
+  onRemoved = () => {},
   decorate = () => {},
 }) {
   let tags = read(key, []).filter(known).slice(0, max);
@@ -96,8 +98,13 @@ export function createHand({
   // 托盤佔多高，房間的捲動區底下就墊多高（CSS 讀 --fav-h）。
   const ro = typeof ResizeObserver === "function" ? new ResizeObserver(syncSpace) : null;
   ro?.observe(el);
+  // 量的是托盤頂端到視窗底邊（墨池的浮動按鈕列出來時托盤會墊高）：角落的按鈕要讓到這麼高。
+  el.addEventListener("transitionend", (e) => {
+    if (e.target === el && e.propertyName === "bottom") syncSpace();
+  });
   function syncSpace() {
-    const h = el.dataset.hidden === "true" ? 0 : Math.ceil(el.getBoundingClientRect().height) + 12;
+    const r = el.getBoundingClientRect();
+    const h = el.dataset.hidden === "true" || !r.height ? 0 : Math.ceil(innerHeight - r.top) + 12;
     document.documentElement.style.setProperty("--fav-h", h + "px");
   }
 
@@ -293,7 +300,8 @@ export function createHand({
   /** 托盤要多寬（照張數長，夾在視窗裡）；跟 CSS 的算法一樣，才不用等寬度轉場跑完才知道擺不擺得下。 */
   function trayWidth(m) {
     const w = size.shown || size.w;
-    const edge = innerWidth < 640 ? 16 : 20;
+    // 跟 CSS 一樣：手機兩邊各 8、寬螢幕兩邊各留 100 給角落的廢字簍。
+    const edge = innerWidth < 640 ? 16 : innerWidth >= 1100 ? 200 : 20;
     return Math.min(innerWidth - edge, Math.max(Math.max(m, 1) * (w + GAP) - GAP + 40, 360));
   }
   function roomFor(m) {
@@ -555,6 +563,9 @@ export function createHand({
   function remove(tag, { quiet = false } = {}) {
     if (!tags.includes(tag)) return;
     const s = slots.get(tag);
+    const was = tags.indexOf(tag);
+    // × 很小、就在要點的牌旁邊，手滑很常見：給一次反悔的機會（挑牌模式是故意點掉的，不問）。
+    if (!quiet && !editing) onRemoved(tag, () => restore(tag, was));
     tags = tags.filter((t) => t !== tag);
     write(key, tags);
     slots.delete(tag);
@@ -580,6 +591,18 @@ export function createHand({
       a.onfinish = finish;
       setTimeout(finish, 320);
     } else finish();
+  }
+
+  /** 復原：放回原本的位置，從底下浮上來。 */
+  function restore(tag, at) {
+    if (tags.includes(tag) || tags.length >= max || !known(tag)) return;
+    if (!open) setOpen(true);
+    tags.splice(Math.min(at, tags.length), 0, tag);
+    write(key, tags);
+    layout(true);
+    onChange();
+    const c = slots.get(tag)?.querySelector(".fav-card");
+    if (c?.isConnected && !reduced()) c.animate([{ translate: "0 22px", opacity: 0 }, { translate: "0 0", opacity: 1 }], { duration: 320, easing: EASE });
   }
 
   function toggleEdit(force) {
