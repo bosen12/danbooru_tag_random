@@ -1638,6 +1638,17 @@ const ALBUM_FIXTURE = [
   ok("放大檢視在背景換回原圖", boot.includes("const full = card.dataset.full;"));
   ok("排字匣出圖可以接回去（X-Gen-Resume＋/api/gen/attach）", boot.includes('"X-Gen-Resume": "1"') && boot.includes("/api/gen/attach?job="));
   ok("排字匣跳過／看門狗／按停會明講取消（接回模式斷線不會自己中斷）", boot.includes("await cancelGenJob(link.job)") && boot.includes("if (liveJob) cancelGenJob(liveJob)"));
+  const loraSrc = readFileSync(join(ROOT, "web/lora.js"), "utf8");
+  ok("lora-push 前景走長輪詢，舊伺服器退回 2.5 秒", loraSrc.includes("&wait=25") && loraSrc.includes("LORA_LONG_POLL = false"));
+  ok("第一次連上從現在開始聽，不重播開頁前的推送", loraSrc.includes("LORA_PUSH_VER = Number(st.ver) || 0;"));
+  const tagCards = readFileSync(join(ROOT, "web/tag-cards.js"), "utf8");
+  ok("排字匣詞庫只抓一次（boot 和卡牌模式共用 loadLexicon）", boot.includes("await loadLexicon()") && tagCards.includes("loadLexicon()") && !tagCards.includes('loadJson("lexicon.json")'));
+  ok("排字匣分得出連不到主機和 ComfyUI 沒開", boot.includes('downReason = "net"') && boot.includes("連不到主機"));
+  const gen6 = readFileSync(join(ROOT, "web6/gen.js"), "utf8");
+  ok("墨池／疊印台的狀態燈分三態、網路回來馬上重探", gen6.includes("export async function linkState()") && gen6.includes('window.addEventListener("online", run)'));
+  for (const f of ["web6/index.html", "web6/fuse.html", "web/index.html"]) {
+    ok(`${f} 預載卡面清單`, readFileSync(join(ROOT, f), "utf8").includes('<link rel="preload" href="cards/manifest.json" as="fetch" crossorigin />'));
+  }
   ok("排字匣不送全域中斷（空的 {}）", !boot.includes('body: "{}"') && !boot.includes("prompt_id: jobPromptId } : {}"));
 }
 

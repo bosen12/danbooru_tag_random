@@ -294,13 +294,51 @@ export function tabTitle(base = document.title) {
   };
 }
 
-export async function comfyOnline() {
+/**
+ * 連線狀態："ok" 可以出圖；"comfy" 伺服器在但 ComfyUI 沒開；"net" 連這台伺服器都到不了
+ * （Mac 走 Tailscale 斷線、手機換網路）。後兩種要做的事完全不同，畫面上要分開講。
+ */
+export async function linkState() {
+  let r;
   try {
-    const r = await fetch("/api/ping", { cache: "no-store" });
-    if (!r.ok) return false;
-    const j = await r.json();
-    return !!j.ok;
+    r = await fetch("/api/ping", { cache: "no-store", signal: AbortSignal.timeout(10000) });
   } catch {
-    return false;
+    return "net";
   }
+  try {
+    if (!r.ok) return "comfy";
+    const j = await r.json();
+    return j.ok ? "ok" : "comfy";
+  } catch {
+    return "comfy";
+  }
+}
+
+export const LINK_LABEL = { ok: "Comfy 已連", comfy: "Comfy 未連", net: "連不到主機" };
+
+export async function comfyOnline() {
+  return (await linkState()) === "ok";
+}
+
+/**
+ * 狀態燈的輪詢：正常 15 秒一次、斷著 6 秒一次；網路回來、分頁回到前面時馬上再探。
+ * onState(state) 每次探完都會叫。
+ */
+export function watchLink(onState) {
+  let timer = 0;
+  let busy = false;
+  const run = async () => {
+    if (busy) return;
+    busy = true;
+    clearTimeout(timer);
+    const st = await linkState();
+    busy = false;
+    onState(st);
+    timer = setTimeout(run, st === "ok" ? 15000 : 6000);
+  };
+  window.addEventListener("online", run);
+  document.addEventListener("visibilitychange", () => {
+    if (!document.hidden) run();
+  });
+  run();
 }

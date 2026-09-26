@@ -927,6 +927,11 @@ _ws_src = (ROOT / "server.py").read_text(encoding="utf-8")
 ok("gen_via_ws 的預覽走 preview_due", "if not preview_due(last_pv, now):" in _ws_src)
 ok("斷線時排隊中的那張從佇列拿掉", _ws_src.count('api("POST", "/queue", {"delete": [prompt_id]}') >= 1)
 
+# === lora-push 長輪詢 ===============================================================
+_ws_src2 = (ROOT / "server.py").read_text(encoding="utf-8")
+ok("lora-push 有長輪詢（wait=N，最多 25 秒）", "_LORA_PUSH_COND.wait_for(" in _ws_src2 and "LORA_PUSH_MAX_WAIT = 25.0" in _ws_src2)
+ok("推送一進來就叫醒等著的人", "_LORA_PUSH_COND.notify_all()" in _ws_src2)
+
 src = (ROOT / "server.py").read_text(encoding="utf-8")
 ok(
     "gen no longer waits only on node 200",

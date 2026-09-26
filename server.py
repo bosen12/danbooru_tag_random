@@ -237,6 +237,9 @@ SEED_MAX = 0xFFFFFFFFFFFFFFFF
 # 在伺服器重啟後把新推送當成已看過。跟 flux2klein/darkroom/preview_ui.py 同一套。
 _LORA_PUSH = {"ver": 0, "data": None}
 _LORA_PUSH_LOCK = threading.Lock()
+# 長輪詢：GET 帶 wait=N 就在這裡等，POST 一進來就叫醒大家。
+_LORA_PUSH_COND = threading.Condition(_LORA_PUSH_LOCK)
+LORA_PUSH_MAX_WAIT = 25.0
 _LORA_PUSH_EPOCH = uuid.uuid4().hex
 _LORA_CORS = {
     "Access-Control-Allow-Origin": "*",
@@ -2265,7 +2268,15 @@ class Handler(BaseHTTPRequestHandler):
             since = int((qs.get("since") or ["0"])[0] or 0)
         except ValueError:
             since = 0
-        with _LORA_PUSH_LOCK:
+        # wait=N：沒有新的推送就在這裡最多等 N 秒（上限 25）。網頁原本每 2.5 秒問一次，
+        # 走 Tailscale 時每一次都是一趟來回；改成長輪詢之後約 25 秒一次，推送反而更快到。
+        try:
+            wait = max(0.0, min(LORA_PUSH_MAX_WAIT, float((qs.get("wait") or ["0"])[0] or 0)))
+        except ValueError:
+            wait = 0.0
+        with _LORA_PUSH_COND:
+            if wait > 0:
+                _LORA_PUSH_COND.wait_for(lambda: _LORA_PUSH["ver"] > since, timeout=wait)
             ver, data = _LORA_PUSH["ver"], _LORA_PUSH["data"]
         out = {"ver": ver, "epoch": _LORA_PUSH_EPOCH}
         if ver > since:
@@ -2278,10 +2289,11 @@ class Handler(BaseHTTPRequestHandler):
         if not name:
             self._json(400, {"error": "缺少 name"}, _LORA_CORS)
             return
-        with _LORA_PUSH_LOCK:
+        with _LORA_PUSH_COND:
             _LORA_PUSH["ver"] += 1
             _LORA_PUSH["data"] = {"folder": folder, "name": name}
             ver = _LORA_PUSH["ver"]
+            _LORA_PUSH_COND.notify_all()
         print(f"[lora-push] {folder}/{name} (ver={ver})", flush=True)
         self._json(200, {"ok": True, "ver": ver}, _LORA_CORS)
 

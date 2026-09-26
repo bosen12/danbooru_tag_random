@@ -35,7 +35,7 @@ import { HARD_BANNED, applyArtSources } from "./card-art.js";
 import { buildLibrary, createAssets, cardNode, cardFacts, CARD_SUIT_INFO, CARD_SUITS, RATING_ZH, ERA_ZH } from "./cards.js";
 import { el, openSheet, anyOverlay } from "./ui.js";
 import { createDrag, inkRing } from "./drag.js";
-import { createGenerator, comfyOnline, viewSrc, tabTitle } from "./gen.js";
+import { createGenerator, comfyOnline, viewSrc, tabTitle, watchLink, LINK_LABEL } from "./gen.js";
 import { attachPeek, hidePeek } from "./card-peek.js";
 import * as S from "./store.js";
 import { REGISTERS, REGISTER_ROLE, emptyBed, sanitizeBed, placeCard, removeCard, relationsOf } from "./fuse-bed.js";
@@ -85,6 +85,8 @@ let prints = [];
 let history = [];
 let expanded = new Set();
 let comfyOk = null;
+// 最近一次探到的連線狀態（見 gen.js linkState）：斷的是網路還是 ComfyUI，提示要分開講。
+let linkNow = "ok";
 let rowNotes = {};
 let plateNotice = null;
 let lastRelKeys = new Set();
@@ -146,7 +148,7 @@ async function boot() {
   try {
     const [lexicon, man] = await Promise.all([
       fetch("lexicon.json").then((r) => r.json()),
-      fetch("cards/manifest.json", { cache: "no-cache" }).then((r) => (r.ok ? r.json() : {})).catch(() => ({})),
+      fetch("cards/manifest.json").then((r) => (r.ok ? r.json() : {})).catch(() => ({})),
     ]);
     data = lexicon;
     lex = indexLexicon(data);
@@ -474,7 +476,7 @@ function printNow() {
     bar.classList.remove("is-nudged");
     void bar.offsetWidth;
     bar.classList.add("is-nudged");
-    announce("印刷機（ComfyUI）沒開，先不送");
+    announce(linkNow === "net" ? "連不到主機（網路斷了？），接上再送" : "印刷機（ComfyUI）沒開，先不送");
     return;
   }
   const p = {
@@ -1597,7 +1599,9 @@ function renderPrintBar() {
       busy ? el("button", { class: "btn", type: "button", onclick: stopPrinting }, "停") : null
     ),
     seedNode || (seedNode = mountSeedControl(null, { compact: true })),
-    offline ? el("p", { class: "pb-hint" }, "印刷機（ComfyUI）沒開。可以繼續疊版、挑試印，開了再付印。") : null,
+    offline
+      ? el("p", { class: "pb-hint" }, linkNow === "net" ? "連不到主機（網路斷了？）。可以繼續疊版、挑試印，接上了再付印。" : "印刷機（ComfyUI）沒開。可以繼續疊版、挑試印，開了再付印。")
+      : null,
     p && p.status === "failed" ? el("p", { class: "pb-hint", dataset: { kind: "err" } }, p.note || "印壞了") : null,
     el(
       "p",
@@ -2089,15 +2093,17 @@ function renderRating() {
   );
 }
 
-async function pingLoop() {
-  const p = $("ping");
-  const ok = await comfyOnline();
-  const changed = ok !== comfyOk;
-  comfyOk = ok;
-  p.dataset.ok = ok ? "1" : "0";
-  p.querySelector("span").textContent = ok ? "Comfy 已連" : "Comfy 未連";
-  if (changed && trials.length) renderPrintBar();
-  setTimeout(pingLoop, ok ? 15000 : 6000);
+function pingLoop() {
+  watchLink((st) => {
+    const ok = st === "ok";
+    const changed = ok !== comfyOk;
+    comfyOk = ok;
+    linkNow = st;
+    const p = $("ping");
+    p.dataset.ok = ok ? "1" : "0";
+    p.querySelector("span").textContent = LINK_LABEL[st];
+    if (changed && trials.length) renderPrintBar();
+  });
 }
 
 function segmented(label, options, current, onPick) {

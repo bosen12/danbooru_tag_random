@@ -10,6 +10,7 @@
  * 插畫來自 web/cards（scripts/bake_card_art.py 烤的），沒有的字就用字形當封面。
  */
 import { CARD_SUIT_INFO, HARD_BANNED, cardSuit, groupSeal, artSources, artUrl, applyArtSources } from "./card-art.js";
+import { loadLexicon } from "./lexicon-load.js";
 import { attachPeek } from "./card-peek.js";
 
 const KEY = "paizixia.tagStyle";
@@ -278,7 +279,7 @@ async function init() {
   if (ratingEl) {
     new MutationObserver(syncRating).observe(ratingEl, { subtree: true, childList: true, attributes: true, attributeFilter: ["aria-current"] });
   }
-  const [lexData, man] = await Promise.all([loadJson("lexicon.json"), loadJson("cards/manifest.json")]);
+  const [lexData, man] = await Promise.all([loadLexicon().catch(() => null), loadJson("cards/manifest.json")]);
   if (lexData && Array.isArray(lexData.tags)) {
     byTag = new Map(lexData.tags.map((t) => [t.tag, t]));
     groupZh = lexData.groupZh || {};

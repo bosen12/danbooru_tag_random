@@ -30,7 +30,7 @@ import { HARD_BANNED, applyArtSources } from "./card-art.js";
 import { buildLibrary, createAssets, cardNode, setCardFlag, cardFacts, CARD_SUIT_INFO, CARD_SUITS, RATING_ZH } from "./cards.js";
 import { el, openSheet, anyOverlay, toast, ICONS } from "./ui.js";
 import { createDrag, inkRing } from "./drag.js";
-import { createGenerator, comfyOnline, viewSrc, tabTitle } from "./gen.js";
+import { createGenerator, comfyOnline, viewSrc, tabTitle, watchLink, LINK_LABEL } from "./gen.js";
 import { genSeed, mountSeedControl, seedUseButton } from "./seed-control.js";
 import { attachPeek } from "./card-peek.js";
 import * as S from "./store.js";
@@ -65,7 +65,7 @@ async function boot() {
   try {
     const [lexicon, manifest] = await Promise.all([
       fetch("lexicon.json").then((r) => r.json()),
-      fetch("cards/manifest.json", { cache: "no-cache" }).then((r) => (r.ok ? r.json() : {})).catch(() => ({})),
+      fetch("cards/manifest.json").then((r) => (r.ok ? r.json() : {})).catch(() => ({})),
     ]);
     data = lexicon;
     lex = indexLexicon(data);
@@ -146,12 +146,12 @@ function renderRating() {
   );
 }
 
-async function pingLoop() {
-  const p = $("ping");
-  const ok = await comfyOnline();
-  p.dataset.ok = ok ? "1" : "0";
-  p.querySelector("span").textContent = ok ? "Comfy 已連" : "Comfy 未連";
-  setTimeout(pingLoop, ok ? 15000 : 6000);
+function pingLoop() {
+  watchLink((st) => {
+    const p = $("ping");
+    p.dataset.ok = st === "ok" ? "1" : "0";
+    p.querySelector("span").textContent = LINK_LABEL[st];
+  });
 }
 
 /* ================= 字盒 ================= */

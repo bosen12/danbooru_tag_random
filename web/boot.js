@@ -89,6 +89,7 @@ import {
   resetWall,
   wallHasCards,
 } from "./infinite.js";
+import { loadLexicon } from "./lexicon-load.js";
 import { initTelegram, tgHandleKeys, tgSendCard, tgUiOpen } from "./telegram.js";
 import { initDiscord, dcHandleKeys, dcSendCard, dcUiOpen } from "./discord.js";
 import { initServiceSettings } from "./service-settings.js";
@@ -230,21 +231,48 @@ function watchForCrashes() {
 
 // 有逾時的 Comfy 探活。原本用的是沒有上限的 fetch —— 伺服器一卡住，抽圖就停在
 // 第一行 await，按鈕轉圈、連一張卡片都還沒建出來。
+// 最近一次探活失敗的原因。"net"：連這台伺服器都連不到（Mac 走 Tailscale 斷線、手機換網路）；
+// "comfy"：伺服器在，ComfyUI 沒開。兩種要叫人做的事完全不同，不能都說「Comfy 掛了」。
+let downReason = "comfy";
+
+function downText(short = false) {
+  if (downReason === "net") return short ? "連不到主機" : "連不到這台電腦（網路斷了？），接上之後再試";
+  return short ? "Comfy 未連上" : "ComfyUI 連不上，先開本機 8188";
+}
+
 async function comfyUp() {
+  let r;
   try {
-    const r = await fetch("/api/ping", { signal: AbortSignal.timeout(PING_TIMEOUT_MS) });
+    r = await fetch("/api/ping", { signal: AbortSignal.timeout(PING_TIMEOUT_MS) });
+  } catch {
+    downReason = "net";
+    return false;
+  }
+  try {
     const j = await r.json();
+    downReason = "comfy";
     return !!j.ok;
   } catch {
+    downReason = "comfy";
     return false;
   }
 }
 
 async function ping() {
   const el = $("ping");
+  let r;
   try {
-    const r = await fetch("/api/ping", { signal: AbortSignal.timeout(PING_TIMEOUT_MS) });
+    r = await fetch("/api/ping", { signal: AbortSignal.timeout(PING_TIMEOUT_MS) });
+  } catch {
+    // 連伺服器都到不了：是網路，不是 ComfyUI。
+    downReason = "net";
+    el.dataset.ok = "0";
+    el.querySelector("span").textContent = "連不到主機";
+    return;
+  }
+  try {
     const j = await r.json();
+    downReason = "comfy";
     if (Number(j.streamIdleMs) > 0) STREAM_IDLE_MS = Number(j.streamIdleMs);
     if (j.sampler) genSampler.sampler = j.sampler;
     if (j.scheduler) genSampler.scheduler = j.scheduler;
@@ -1778,7 +1806,7 @@ async function generateFromRecipe(recipe) {
     return;
   }
   if (!(await comfyUp())) {
-    speak("ComfyUI 連不上，先開本機 8188");
+    speak(downText());
     return;
   }
   const payload = {
@@ -2945,8 +2973,8 @@ async function runRedoSolo(card) {
     return;
   }
   if (!(await comfyUp())) {
-    speak("ComfyUI 連不上，先開本機 8188");
-    failCard(card, "ComfyUI 連不上");
+    speak(downText());
+    failCard(card, downText(true));
     return;
   }
   running = true;
@@ -3009,8 +3037,8 @@ async function runSameSeedFromCard(card) {
   const seedNum = Number(card.dataset.drawSeed || card.dataset.seed) >>> 0;
   const imgSeed = Number(card.dataset.seed);
   if (!(await comfyUp())) {
-    speak("Comfy 掛了——先開本機 8188，修好可再試");
-    try { window.dispatchEvent(new CustomEvent("studio:toast", { detail: { text: "Comfy 掛了", kind: "danger" } })); } catch { /* ignore */ }
+    speak(downText());
+    try { window.dispatchEvent(new CustomEvent("studio:toast", { detail: { text: downText(true), kind: "danger" } })); } catch { /* ignore */ }
     return;
   }
   running = true;
@@ -3128,9 +3156,9 @@ async function runBatch(opts = {}) {
     saveStore();
 
     if (!posOnly && !(await comfyUp())) {
-      speak("Comfy 掛了——先開本機 8188，修好可再開拍；或改按「只抽牌」");
-      try { window.dispatchEvent(new CustomEvent("studio:toast", { detail: { text: "Comfy 掛了", kind: "danger" } })); } catch { /* ignore */ }
-      stopInfinite("Comfy 連不上");
+      speak(downReason === "net" ? downText() : "Comfy 掛了——先開本機 8188，修好可再開拍；或改按「只抽牌」");
+      try { window.dispatchEvent(new CustomEvent("studio:toast", { detail: { text: downText(true), kind: "danger" } })); } catch { /* ignore */ }
+      stopInfinite(downText(true));
       return;
     }
 
@@ -3900,9 +3928,7 @@ async function main() {
   const loading = bootNote("詞庫載入中…", "boot-load");
   let data;
   try {
-    const r = await fetch("lexicon.json");
-    if (!r.ok) throw new Error("lexicon.json HTTP " + r.status);
-    data = await r.json();
+    data = await loadLexicon();
     if (!data || !Array.isArray(data.tags)) throw new Error("lexicon.json 格式不對");
   } catch (err) {
     loading.remove();
@@ -4029,6 +4055,11 @@ async function main() {
   bootingDone();
   ping();
   setInterval(ping, 15000);
+  // 網路回來、分頁回到前面時馬上再探一次，不要等下一個 15 秒才把「連不到主機」拿掉。
+  window.addEventListener("online", () => ping());
+  document.addEventListener("visibilitychange", () => {
+    if (!document.hidden) ping();
+  });
   // 3D 工作室是額外的顯示模式，不是取代。用動態 import() 是重點：three.js 那
   // 670KB 只有在真的要進 3D 時才會下載，2D 的首次可操作時間完全不受影響。
   // 失敗了也只是沒有 3D，平面工作台照常運作。

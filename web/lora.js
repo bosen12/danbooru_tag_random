@@ -914,14 +914,25 @@ export function loraPollDelay(hidden, prev) {
   if (!hidden) return 2500;
   return Math.min(30000, Math.round((prev || 2500) * 1.6));
 }
+// 前景用長輪詢：伺服器等到有新推送（最多 25 秒）才回。回得太快又沒東西，代表是還不會
+// 長輪詢的舊伺服器 —— 退回原本每 2.5 秒問一次，不要變成連續狂打。
+let LORA_LONG_POLL = true;
 async function pollLoraPush() {
+  const long = LORA_LONG_POLL && !document.hidden;
+  const t0 = performance.now();
+  let changed = false;
+  let failed = false;
   try {
-    const st = await fetch("/api/lora-push?since=" + LORA_PUSH_VER).then((r) => r.json());
+    const url = "/api/lora-push?since=" + LORA_PUSH_VER + (long ? "&wait=25" : "");
+    const st = await fetch(url, { signal: AbortSignal.timeout(long ? 35000 : 10000) }).then((r) => r.json());
+    changed = !!(st.epoch && st.epoch !== LORA_PUSH_EPOCH) || st.ver > LORA_PUSH_VER;
     if (st.epoch && st.epoch !== LORA_PUSH_EPOCH) {
+      // 第一次連上（或伺服器重開過）：從「現在」開始聽。以前設成 0，下一輪就把分頁打開之前
+      // 別人送過的推送當成新的套上來 —— 開頁就自己跳出 LoRA 選單、選進一個舊的 LoRA。
       LORA_PUSH_EPOCH = st.epoch;
-      LORA_PUSH_VER = 0;
+      LORA_PUSH_VER = Number(st.ver) || 0;
       localStorage.setItem("yz-lora-push-epoch", LORA_PUSH_EPOCH);
-      localStorage.setItem("yz-lora-push-ver", "0");
+      localStorage.setItem("yz-lora-push-ver", String(LORA_PUSH_VER));
     } else if (st.ver > LORA_PUSH_VER) {
       LORA_PUSH_VER = st.ver;
       localStorage.setItem("yz-lora-push-ver", String(LORA_PUSH_VER));
@@ -929,10 +940,14 @@ async function pollLoraPush() {
     }
   } catch {
     /* 下一輪再試 */
+    failed = true;
   }
+  if (long && !failed && !changed && performance.now() - t0 < 1000) LORA_LONG_POLL = false;
   LORA_POLL_MS = loraPollDelay(document.hidden, LORA_POLL_MS);
+  // 長輪詢本身就在伺服器那邊等過了，回來就接著問；斷線時照舊隔一段再試。
+  const next = long && LORA_LONG_POLL && !failed ? 0 : LORA_POLL_MS;
   clearTimeout(LORA_POLL_TIMER);
-  LORA_POLL_TIMER = setTimeout(pollLoraPush, LORA_POLL_MS);
+  LORA_POLL_TIMER = setTimeout(pollLoraPush, next);
 }
 document.addEventListener("visibilitychange", () => {
   if (!document.hidden) {
