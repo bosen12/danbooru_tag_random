@@ -131,6 +131,8 @@ let caseQuery = "";
 let caseList = [];
 let caseShown = 0;
 let caseSearchTimer = 0;
+// 下一次畫字盒要不要把牌依序發進來（換花色、換小分類才要）。
+let dealCase = false;
 let lastPointer = "mouse";
 const sfx = createSfx();
 const reduced = () => typeof matchMedia === "function" && matchMedia("(prefers-reduced-motion: reduce)").matches;
@@ -1608,7 +1610,8 @@ function openPop(anchor, tag, from) {
     { class: "pop", role: "dialog", "aria-label": card.zh },
     el("p", { class: "pop-title" }, el("b", {}, card.zh), el("code", {}, card.tag)),
     el("dl", { class: "pop-lines" }, lines.map(([k, v]) => [el("dt", {}, k), el("dd", {}, v)])),
-    el("div", { class: "pop-acts" }, [handAct(tag, anchor), ...acts])
+    // 主要的動作（拿下來／收下這張）排第一、拿到焦點：Enter 按下去是它，不是加進偏好卡牌。
+    el("div", { class: "pop-acts" }, [...acts, handAct(tag, anchor)])
   );
   pop._anchorTag = tag;
   pop._from = from;
@@ -1623,15 +1626,26 @@ function openPop(anchor, tag, from) {
   const w = pop.offsetWidth;
   const h = pop.offsetHeight;
   // 卡池在中間：選單開在牌的右邊，右邊放不下才開左邊。
-  let left = r.right + 10;
-  if (left + w > window.innerWidth - 8) left = r.left - w - 10;
-  left = Math.min(window.innerWidth - w - 8, left);
-  let top = Math.max(8, Math.min(window.innerHeight - h - 8, r.top + r.height / 2 - h / 2));
-  pop.style.left = Math.max(8, left) + "px";
-  pop.style.top = top + "px";
-  // 選單從它那張牌的方向長出來，邊上一個小尖角指著那張牌；開著的時候那張牌也亮著。
-  pop.dataset.side = Math.max(8, left) >= r.right ? "right" : "left";
-  pop.style.setProperty("--tail-y", Math.max(16, Math.min(h - 16, r.top + r.height / 2 - top)) + "px");
+  // 兩邊都放不下（手機）：開在牌的下面（下面也放不下就上面），不要蓋住那張牌本身。
+  const fitsRight = r.right + 10 + w <= window.innerWidth - 8;
+  const fitsLeft = r.left - w - 10 >= 8;
+  if (fitsRight || fitsLeft) {
+    const left = fitsRight ? r.right + 10 : r.left - w - 10;
+    const top = Math.max(8, Math.min(window.innerHeight - h - 8, r.top + r.height / 2 - h / 2));
+    pop.style.left = left + "px";
+    pop.style.top = top + "px";
+    // 選單從它那張牌的方向長出來，邊上一個小尖角指著那張牌；開著的時候那張牌也亮著。
+    pop.dataset.side = fitsRight ? "right" : "left";
+    pop.style.setProperty("--tail-y", Math.max(16, Math.min(h - 16, r.top + r.height / 2 - top)) + "px");
+  } else {
+    const below = r.bottom + 10 + h <= window.innerHeight - 8 || r.top - h - 10 < 8;
+    const left = Math.max(8, Math.min(window.innerWidth - w - 8, r.left + r.width / 2 - w / 2));
+    const top = below ? Math.min(window.innerHeight - h - 8, r.bottom + 10) : r.top - h - 10;
+    pop.style.left = left + "px";
+    pop.style.top = Math.max(8, top) + "px";
+    pop.dataset.side = below ? "below" : "above";
+    pop.style.setProperty("--tail-x", Math.max(16, Math.min(w - 16, r.left + r.width / 2 - left)) + "px");
+  }
   anchor.classList.add("is-popped");
   pop._anchorNode = anchor;
   setTimeout(() => document.addEventListener("pointerdown", onPopOutside, true), 0);
@@ -2151,6 +2165,7 @@ function renderCaseTabs() {
             caseGroup = "";
             writeJ(FK.tab, id);
             renderCaseTabs();
+            dealCase = true;
             renderCase();
           },
         },
@@ -2207,6 +2222,7 @@ function renderCaseGroups(inSuit) {
         "aria-pressed": caseGroup === g ? "true" : "false",
         onclick: () => {
           caseGroup = g;
+          dealCase = true;
           renderCase();
         },
       },
@@ -2217,6 +2233,8 @@ function renderCaseGroups(inSuit) {
 }
 
 function renderCase() {
+  const deal = dealCase;
+  dealCase = false;
   const q = caseQuery.trim().toLowerCase();
   let list;
   let reasons = null;
@@ -2249,6 +2267,17 @@ function renderCase() {
   }
   moreCase();
   markEnterTarget();
+  // 換花色、換小分類：捲回最上面，前二十張依序發進來（跟墨池的字盒一樣）。放牌、打字重畫不發。
+  if (deal) {
+    grid.scrollTop = 0;
+    if (!reduced()) {
+      [...grid.querySelectorAll(".card")].slice(0, 20).forEach((c, i) => {
+        c.style.setProperty("--i", String(i));
+        c.classList.add("dealt");
+        setTimeout(() => c.classList.remove("dealt"), 900);
+      });
+    }
+  }
 }
 
 /** 找牌框裡打了字：Enter 會放上的那一張（第一張）描一圈，按之前就知道是哪張。 */

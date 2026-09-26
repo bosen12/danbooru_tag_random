@@ -627,6 +627,18 @@ body.fuse {
   gap: 6px;
 }
 
+/* 手機：「卡池」和三顆按鈕一排，說明（試印 A：你的 N 張…）自己一行，不要被擠成五行。 */
+@media (max-width: 40rem) {
+  .plate-sub {
+    grid-row: 2;
+    grid-column: 1 / -1;
+  }
+  .plate-acts {
+    grid-row: 1;
+    grid-column: 3;
+  }
+}
+
 .plate-notice {
   grid-column: 1 / -1;
   margin: var(--space-xs) 0 0;
@@ -1997,6 +2009,43 @@ body.fuse {
   from {
     opacity: 0;
     transform: translateX(8px) scale(0.9);
+  }
+}
+
+/* 手機上兩邊都放不下：開在牌的下面（或上面），尖角從上緣（下緣）指著牌。 */
+.pop:is([data-side="below"], [data-side="above"])::before {
+  top: -7px;
+  left: calc(var(--tail-x, 50%) - 6px);
+  rotate: 135deg;
+}
+
+.pop[data-side="above"]::before {
+  top: auto;
+  bottom: -7px;
+  rotate: -45deg;
+}
+
+.pop[data-side="below"] {
+  transform-origin: var(--tail-x, 50%) 0;
+  animation-name: pop-in-below;
+}
+
+.pop[data-side="above"] {
+  transform-origin: var(--tail-x, 50%) 100%;
+  animation-name: pop-in-above;
+}
+
+@keyframes pop-in-below {
+  from {
+    opacity: 0;
+    transform: translateY(-8px) scale(0.9);
+  }
+}
+
+@keyframes pop-in-above {
+  from {
+    opacity: 0;
+    transform: translateY(8px) scale(0.9);
   }
 }
 

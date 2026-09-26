@@ -1691,7 +1691,7 @@ const ALBUM_FIXTURE = [
   const peekSrc = readFileSync(join(ROOT, "web/card-peek.js"), "utf8");
   ok("放大卡：停一下才出現、從牌那一側長出來、換到隔壁那張滑過去（離開延遲一下才收）", peekSrc.includes("const INTENT_MS = 120;") && peekSrc.includes("const LEAVE_MS = 80;") && peekSrc.includes('peek.classList.toggle("is-gliding", wasShown);') && peekSrc.includes('p.dataset.side = side;'));
   ok("墨池廢字簍：撿回來的浮起來、旁邊補位、標題數字跟著變；全部撿回來一張張起來", app6.includes("const rescue = (node, delay = 0) =>") && app6.includes("廢字簍・${left} 個字") && app6.includes("都撿回來了。"));
-  ok("疊印台的小選單：從那張牌長出來、尖角指著它、那張牌亮著，關的時候收回去", fuse6.includes('pop.dataset.side = Math.max(8, left) >= r.right ? "right" : "left";') && fuse6.includes('anchor.classList.add("is-popped")') && fuse6.includes('gone.classList.add("is-closing")') && readFileSync(join(ROOT, "web6/fuse.css"), "utf8").includes(".pop::before"));
+  ok("疊印台的小選單：從那張牌長出來、尖角指著它、那張牌亮著，關的時候收回去", fuse6.includes('pop.dataset.side = fitsRight ? "right" : "left";') && fuse6.includes('anchor.classList.add("is-popped")') && fuse6.includes('gone.classList.add("is-closing")') && readFileSync(join(ROOT, "web6/fuse.css"), "utf8").includes(".pop::before"));
   ok("墨池的詳情：圖從點的那張牌飛進去；放進合成池／丟進廢字簍從那張大圖飛出去", app6.includes("function flyToDetail(src, sheetEl)") && app6.includes("pin(tag); if (a) flyInto(tag, a.rect);") && app6.includes("ban(tag, { from: a })"));
   ok("印製中的進度不整排重畫按鈕（「停」不閃、一按就停）", app6.includes('if (bar.dataset.key === key && bar.childElementCount) return renderGoFloat();') && app6.includes('if (float.dataset.key === key && float.childElementCount) return;') && fuse6.includes('if (bar.dataset.key === key && go) {'));
   {
@@ -1729,6 +1729,13 @@ const ALBUM_FIXTURE = [
       ok("找牌框：Enter 放上第一張（注音選字的 Enter 不算，已經在的不拿下來），字全選著接著打；↓ 走進字盒", fuse6.includes("function caseSearchKeys(e)") && app6.includes("function libSearchKeys(e)") && fuse6.includes("e.isComposing || e.keyCode === 229") && app6.includes("e.isComposing || e.keyCode === 229") && fuse6.includes("q.select();") && app6.includes("q.select();"));
       ok("找牌框打了字：第一張標出「按 Enter 就是它」（兩個房間共用 setEnterTarget）", cards6.includes("export function setEnterTarget(grid, on)") && fuse6.includes('setEnterTarget($("case-grid")') && app6.includes('setEnterTarget($("lib-grid")') && css6.includes(".enter-chip {"));
       ok("墨池字盒：只有一張在 Tab 順序裡，方向鍵走，第一排往上回到搜尋框（疊印台也是）", app6.includes("function libKeys(e)") && app6.includes('$("lib-grid").onkeydown = libKeys;') && app6.includes('if (e.key === "ArrowUp" && i < cols) return void $("lib-q").focus();') && fuse6.includes('if (e.key === "ArrowUp" && i < cols) return void $("case-q").focus();'));
+    }
+    {
+      const fuseCss6 = readFileSync(join(ROOT, "web6/fuse.css"), "utf8").replace(/\r\n/g, "\n");
+      ok("疊印台牌的選單：主要動作排第一、拿到焦點，加入偏好卡牌排後面", fuse6.includes('el("div", { class: "pop-acts" }, [...acts, handAct(tag, anchor)])'));
+      ok("疊印台牌的選單：兩邊都放不下（手機）就開在牌的下面／上面，不蓋住那張牌", fuse6.includes('pop.dataset.side = below ? "below" : "above";') && fuseCss6.includes("@keyframes pop-in-below") && fuseCss6.includes('.pop:is([data-side="below"], [data-side="above"])::before'));
+      ok("疊印台字盒換花色、換小分類：捲回最上面、前二十張依序發進來；放牌、打字重畫不發", fuse6.includes("let dealCase = false;") && fuse6.includes("const deal = dealCase;") && (fuse6.match(/dealCase = true;/g) || []).length === 2);
+      ok("手機上卡池的說明自己一行，不被按鈕擠成好幾行", /@media \(max-width: 40rem\) \{\n  \.plate-sub \{\n    grid-row: 2;/.test(fuseCss6));
     }
     ok("工具列鈕：沒牌直接進挑牌，有牌打開／收起托盤；選單和詳情也能加", hand6.includes("function fromButton()") && fuse6.includes("hand?.fromButton()") && app6.includes("hand?.fromButton()") && fuse6.includes('"加入偏好卡牌"') && app6.includes('"加入偏好卡牌"'));
   }
