@@ -32,7 +32,7 @@ import { heatBlockedByRating } from "./scene-policy.js";
 import { initLoraPicker, currentLorasPayload, currentTriggerText, currentCkpt, handleLoraKeys } from "./lora.js";
 import { initWorkflow, currentWorkflowId, wfHandleKeys } from "./workflow.js";
 import { HARD_BANNED, applyArtSources } from "./card-art.js";
-import { buildLibrary, createAssets, cardNode, cardFacts, CARD_SUIT_INFO, CARD_SUITS, RATING_ZH, ERA_ZH } from "./cards.js";
+import { buildLibrary, createAssets, cardNode, cardFacts, setEnterTarget, CARD_SUIT_INFO, CARD_SUITS, RATING_ZH, ERA_ZH } from "./cards.js";
 import { el, openSheet, anyOverlay, toast } from "./ui.js";
 import { initMotion, flip, flipBy, leave, gatherHome } from "./motion.js";
 import { createHand } from "./hand.js";
@@ -130,6 +130,7 @@ let caseGroup = "";
 let caseQuery = "";
 let caseList = [];
 let caseShown = 0;
+let caseSearchTimer = 0;
 let lastPointer = "mouse";
 const sfx = createSfx();
 const reduced = () => typeof matchMedia === "function" && matchMedia("(prefers-reduced-motion: reduce)").matches;
@@ -2243,9 +2244,17 @@ function renderCase() {
         caseTab === "match" && !bed.pins.length ? "放一張牌上版，這裡會列出跟它呼應的牌，和引擎常常補進來的牌。" : "沒有符合的牌。"
       )
     );
+    markEnterTarget();
     return;
   }
   moreCase();
+  markEnterTarget();
+}
+
+/** 找牌框裡打了字：Enter 會放上的那一張（第一張）描一圈，按之前就知道是哪張。 */
+function markEnterTarget() {
+  const q = $("case-q");
+  setEnterTarget($("case-grid"), document.activeElement === q && !!q.value.trim());
 }
 
 let caseObserver = null;
@@ -2310,11 +2319,45 @@ function caseKeys(e) {
   const step = { ArrowRight: 1, ArrowLeft: -1, ArrowDown: cols, ArrowUp: -cols, Home: -i, End: cards.length - 1 - i }[e.key];
   if (step === undefined) return;
   e.preventDefault();
+  // 第一排再往上：回到找牌框（跟找牌框按 ↓ 走進字盒是一對）。
+  if (e.key === "ArrowUp" && i < cols) return void $("case-q").focus();
   const j = Math.max(0, Math.min(cards.length - 1, i + step));
   cards[i].tabIndex = -1;
   cards[j].tabIndex = 0;
   cards[j].focus();
   if (j >= cards.length - 3 && caseShown < caseList.length) moreCase();
+}
+
+/**
+ * 找牌框：Enter 放上第一張（找到就放，不用再伸手去點），字全選著、接著打下一張；
+ * ↓ 走進字盒。已經在版上的那張不拿下來，跳一下說它在了。
+ */
+function caseSearchKeys(e) {
+  const q = e.currentTarget;
+  if (e.key !== "Enter" && e.key !== "ArrowDown") return;
+  if (e.isComposing || e.keyCode === 229) return; // 注音、倉頡選字的 Enter 不算
+  e.preventDefault();
+  if (caseQuery !== q.value) {
+    clearTimeout(caseSearchTimer);
+    caseQuery = q.value;
+    renderCase();
+  }
+  const grid = $("case-grid");
+  const first = grid.querySelector(".card[data-tag]");
+  if (!first) return;
+  if (e.key === "ArrowDown") {
+    for (const c of grid.querySelectorAll(".card")) c.tabIndex = -1;
+    first.tabIndex = 0;
+    first.focus();
+    return;
+  }
+  if (!q.value.trim()) return;
+  const tag = first.dataset.tag;
+  if (bed.pins.includes(tag)) {
+    stamp(plateNode(tag) || first);
+    announce(`「${zh(tag)}」已經在版上`);
+  } else place(tag, first);
+  q.select();
 }
 
 function peekInfo(node) {
@@ -2632,14 +2675,17 @@ function wireChrome() {
   $("clear").addEventListener("click", clearBed);
   $("reroll").addEventListener("click", reroll);
   const q = $("case-q");
-  let qTimer = 0;
   q.addEventListener("input", () => {
-    clearTimeout(qTimer);
-    qTimer = setTimeout(() => {
+    clearTimeout(caseSearchTimer);
+    caseSearchTimer = setTimeout(() => {
       caseQuery = q.value;
       renderCase();
     }, 120);
   });
+  q.addEventListener("keydown", caseSearchKeys);
+  q.addEventListener("focus", markEnterTarget);
+  q.addEventListener("blur", markEnterTarget);
+  q.title = "Enter 放上第一張，↓ 走進字盒";
   $("case-grid").addEventListener("keydown", caseKeys);
   // 晾紙繩只會橫著捲：滑鼠滾輪上下滾也讓它左右走（滑鼠大多只有直向滾輪）。捲到頭就把滾輪還給頁面。
   const line = $("line-list");

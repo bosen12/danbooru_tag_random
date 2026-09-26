@@ -389,6 +389,43 @@ button.card:active {
   }
 }
 
+/* 找牌框裡打了字：按 Enter 會放上去的那一張（第一張）浮起一點、描一圈，右下角一顆 Enter 鍵
+   （cards.js setEnterTarget）。圈畫成貼邊的 2px：字盒是捲動區，畫得更外面會被切掉。 */
+.card.is-enter-target {
+  --lift: -3px;
+  box-shadow: 0 0 0 2px var(--color-accent), var(--shadow-lift, var(--shadow-card));
+}
+
+.enter-chip {
+  position: absolute;
+  right: 5px;
+  bottom: 5px;
+  z-index: 4;
+  padding: 1px 5px 2px;
+  border-radius: 4px;
+  border: 1px solid color-mix(in oklch, var(--color-paper) 40%, transparent);
+  border-bottom-width: 2px;
+  background: var(--color-ink);
+  color: var(--color-paper);
+  font: 700 9px/1.2 var(--font-mono, ui-monospace, monospace);
+  letter-spacing: 0.02em;
+  pointer-events: none;
+  animation: enter-chip-in 200ms cubic-bezier(0.16, 1, 0.3, 1);
+}
+
+@keyframes enter-chip-in {
+  from {
+    opacity: 0;
+    translate: 0 4px;
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .enter-chip {
+    animation: none;
+  }
+}
+
 /* ================= 偏好卡牌（手牌，見 hand.js）：視窗底部的托盤 ================= */
 
 /* 托盤：霧面紙，一道淺弧排開整張牌；寬度照張數長（--fav-want），夾在視窗裡。 */

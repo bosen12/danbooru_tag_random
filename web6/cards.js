@@ -99,6 +99,27 @@ function artImg(sources) {
   return i;
 }
 
+/**
+ * 找牌框裡打了字：grid 裡第一張牌標成「按 Enter 就是它」—— 浮起一點、描一圈、右下角一顆 Enter 鍵。
+ * on=false 把標記拿掉。兩個房間的字盒共用。
+ */
+export function setEnterTarget(grid, on) {
+  if (!grid) return;
+  for (const n of grid.querySelectorAll(".card.is-enter-target")) {
+    n.classList.remove("is-enter-target");
+    n.querySelector(".enter-chip")?.remove();
+  }
+  if (!on) return;
+  const first = grid.querySelector(".card[data-tag]");
+  if (!first) return;
+  first.classList.add("is-enter-target");
+  const chip = document.createElement("span");
+  chip.className = "enter-chip";
+  chip.setAttribute("aria-hidden", "true");
+  chip.textContent = "Enter";
+  first.append(chip);
+}
+
 export function setCardFlag(node, flag) {
   const old = node.querySelector(".card-flag:not([data-kind='src'])");
   // 沒變就不動：字盒每動一次整排重新上標，不這樣的話每個章都會重蓋一次。

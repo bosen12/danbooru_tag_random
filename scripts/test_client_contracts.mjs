@@ -1724,6 +1724,12 @@ const ALBUM_FIXTURE = [
     ok("疊印台字盒：在池又在手牌的牌，「手」排在「在池」下面", css6.includes('.case-grid .card[data-state="pinned"][data-in-hand="true"]::before {\n  top: 22px;'));
     ok("從托盤拿掉一張：提示帶「復原」，放回原位（挑牌模式不問）；滿了兩房間都有看得到的提示", hand6.includes("if (!quiet && !editing) onRemoved(tag, () => restore(tag, was));") && hand6.includes("function restore(tag, at)") && fuse6.includes('onRemoved: (t, undo) => toast(') && app6.includes('onRemoved: (t, undo) => toast(') && fuse6.includes("onFull: () => toast("));
     ok("墨池：合成池捲出畫面時，牌往合成池的方向收進去＋「看合成池」，不飛出螢幕", app6.includes("function tuckAway(tag, from, dir)") && app6.includes("return tuckAway(tag, from, to.top < 0 ? -1 : 1);") && app6.includes('label: "看合成池"'));
+    {
+      const cards6 = readFileSync(join(ROOT, "web6/cards.js"), "utf8");
+      ok("找牌框：Enter 放上第一張（注音選字的 Enter 不算，已經在的不拿下來），字全選著接著打；↓ 走進字盒", fuse6.includes("function caseSearchKeys(e)") && app6.includes("function libSearchKeys(e)") && fuse6.includes("e.isComposing || e.keyCode === 229") && app6.includes("e.isComposing || e.keyCode === 229") && fuse6.includes("q.select();") && app6.includes("q.select();"));
+      ok("找牌框打了字：第一張標出「按 Enter 就是它」（兩個房間共用 setEnterTarget）", cards6.includes("export function setEnterTarget(grid, on)") && fuse6.includes('setEnterTarget($("case-grid")') && app6.includes('setEnterTarget($("lib-grid")') && css6.includes(".enter-chip {"));
+      ok("墨池字盒：只有一張在 Tab 順序裡，方向鍵走，第一排往上回到搜尋框（疊印台也是）", app6.includes("function libKeys(e)") && app6.includes('$("lib-grid").onkeydown = libKeys;') && app6.includes('if (e.key === "ArrowUp" && i < cols) return void $("lib-q").focus();') && fuse6.includes('if (e.key === "ArrowUp" && i < cols) return void $("case-q").focus();'));
+    }
     ok("工具列鈕：沒牌直接進挑牌，有牌打開／收起托盤；選單和詳情也能加", hand6.includes("function fromButton()") && fuse6.includes("hand?.fromButton()") && app6.includes("hand?.fromButton()") && fuse6.includes('"加入偏好卡牌"') && app6.includes('"加入偏好卡牌"'));
   }
   ok("疊印台的規則鈕也是圖示", fuseHtml.includes('id="rules-btn" type="button" aria-label="規則"') && !fuseHtml.includes(">規則</button>"));

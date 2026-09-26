@@ -30,7 +30,7 @@ import { SCENE_MODES, SCENE_MODE_LABELS, heatBlockedByRating } from "./scene-pol
 import { initLoraPicker, currentLorasPayload, currentTriggerText, currentCkpt, handleLoraKeys } from "./lora.js";
 import { initWorkflow, currentWorkflowId, wfHandleKeys } from "./workflow.js";
 import { HARD_BANNED, applyArtSources } from "./card-art.js";
-import { buildLibrary, createAssets, cardNode, setCardFlag, cardFacts, CARD_SUIT_INFO, CARD_SUITS, RATING_ZH } from "./cards.js";
+import { buildLibrary, createAssets, cardNode, setCardFlag, setEnterTarget, cardFacts, CARD_SUIT_INFO, CARD_SUITS, RATING_ZH } from "./cards.js";
 import { el, openSheet, anyOverlay, toast, ICONS } from "./ui.js";
 import { createDrag, inkRing } from "./drag.js";
 import { initMotion, flip, flipBy, leave, enter, confirmButton, gatherHome } from "./motion.js";
@@ -186,6 +186,11 @@ function renderLibraryChrome() {
     ui.query = q.value.trim();
     renderLibrary();
   };
+  q.onkeydown = libSearchKeys;
+  q.onfocus = markEnterTarget;
+  q.onblur = markEnterTarget;
+  q.title = "Enter 放進第一張，↓ 走進字盒";
+  $("lib-grid").onkeydown = libKeys;
   $("lib-toggle").onclick = () => {
     ui.collapsed = !ui.collapsed;
     saveUi();
@@ -252,6 +257,7 @@ function renderLibrary() {
   const grid = $("lib-grid");
   if (!list.length) {
     grid.replaceChildren(el("p", { class: "lib-empty" }, q ? `字盒裡沒有「${ui.query}」。可能被分級、性別或時代收起來了。` : "這一格沒有字。"));
+    markEnterTarget();
     return;
   }
   libList = list;
@@ -266,6 +272,66 @@ function renderLibrary() {
     });
   }
   dealLibrary = false;
+  markEnterTarget();
+}
+
+/** 搜尋框裡打了字：Enter 會放進合成池的那一張（第一張）描一圈。 */
+function markEnterTarget() {
+  const q = $("lib-q");
+  setEnterTarget($("lib-grid"), document.activeElement === q && !!q.value.trim());
+}
+
+/**
+ * 搜尋框：Enter 把第一張放進合成池（字全選著、接著打下一張）；↓ 走進字盒。
+ * 已經在池裡的不拿出來，跳一下說它在了。
+ */
+function libSearchKeys(e) {
+  if (e.key !== "Enter" && e.key !== "ArrowDown") return;
+  if (e.isComposing || e.keyCode === 229) return; // 注音、倉頡選字的 Enter 不算
+  e.preventDefault();
+  const q = e.currentTarget;
+  const grid = $("lib-grid");
+  const first = grid.querySelector(".card[data-tag]");
+  if (!first) return;
+  if (e.key === "ArrowDown") return void focusLibCard(first);
+  if (!q.value.trim()) return;
+  const tag = first.dataset.tag;
+  if (pool.has(tag)) {
+    const n = poolNode(tag) || first;
+    n.animate([{ translate: "0 0" }, { translate: "0 -6px" }, { translate: "0 0" }], { duration: 280, easing: "cubic-bezier(0.16, 1, 0.3, 1)" });
+    toast(`「${lib.byTag.get(tag).zh}」已經在合成池裡`);
+  } else if (bans.has(tag)) showCard(tag, "library");
+  else {
+    const from = first.getBoundingClientRect();
+    pin(tag);
+    flyInto(tag, from);
+  }
+  q.select();
+}
+
+/** 字盒只有一張牌在 Tab 順序裡（跟疊印台一樣），方向鍵在牌之間走。 */
+function focusLibCard(card) {
+  for (const c of $("lib-grid").querySelectorAll(".card[tabindex='0']")) c.tabIndex = -1;
+  card.tabIndex = 0;
+  card.focus();
+}
+
+function libKeys(e) {
+  const grid = $("lib-grid");
+  const cards = [...grid.querySelectorAll(".card")];
+  const i = cards.indexOf(document.activeElement);
+  if (i < 0) return;
+  let cols = 1;
+  const top = cards[0].offsetTop;
+  while (cols < cards.length && cards[cols].offsetTop === top) cols++;
+  const step = { ArrowRight: 1, ArrowLeft: -1, ArrowDown: cols, ArrowUp: -cols, Home: -i, End: cards.length - 1 - i }[e.key];
+  if (step === undefined) return;
+  e.preventDefault();
+  // 第一排再往上：回到搜尋框（跟搜尋框按 ↓ 走進字盒是一對）。
+  if (e.key === "ArrowUp" && i < cols) return void $("lib-q").focus();
+  const j = Math.max(0, Math.min(cards.length - 1, i + step));
+  focusLibCard(cards[j]);
+  if (j >= cards.length - 3 && libShown < libList.length) moreLibrary();
 }
 
 // 字盒一次畫 821 張牌（每張六七個節點＋一張圖）載入時會卡住主執行緒約 270ms，
@@ -281,7 +347,13 @@ function moreLibrary(n = LIB_PAGE) {
   grid.querySelector(".lib-more")?.remove();
   const slice = libList.slice(libShown, libShown + n);
   libShown += slice.length;
-  grid.append(...slice.map((c) => libCard(c)));
+  const nodes = slice.map((c) => libCard(c));
+  for (const n of nodes) n.tabIndex = -1;
+  grid.append(...nodes);
+  if (!grid.querySelector(".card[tabindex='0']")) {
+    const f = grid.querySelector(".card");
+    if (f) f.tabIndex = 0;
+  }
   if (libShown >= libList.length) return;
   const more = el("span", { class: "lib-more", "aria-hidden": "true" });
   grid.append(more);
