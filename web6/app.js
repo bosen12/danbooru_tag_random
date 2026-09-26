@@ -532,12 +532,13 @@ function unpin(tag, { viaDrag = false } = {}) {
 }
 
 /** 丟進廢字簍。viaDrag：拖進去的那張 drag.js 已經演過被吸進去，這裡不重演。 */
-function ban(tag, { viaDrag = false } = {}) {
+function ban(tag, { viaDrag = false, from = null } = {}) {
   if (!lib.byTag.has(tag)) return;
-  // 用按鈕或 Delete 封鎖的：牌從它現在的位置（池裡或字盒裡）轉著縮進廢字簍。
+  // 用按鈕或 Delete 封鎖的：牌從它現在的位置（池裡或字盒裡；從詳情按的就從那張大圖）轉著縮進廢字簍。
   if (!viaDrag) {
     const src = poolNode(tag) || libCardNode(tag);
-    if (src) flyToTrash({ node: src, rect: src.getBoundingClientRect() });
+    if (from) flyToTrash(from);
+    else if (src) flyToTrash({ node: src, rect: src.getBoundingClientRect() });
   }
   const next = applyBan(lex, pool, bans, tag);
   pool = next.pinned;
@@ -1447,6 +1448,12 @@ function showShot(shot) {
 function showCard(tag, from) {
   const card = lib.byTag.get(tag);
   if (!card) return;
+  const srcNode = from === "pool" ? poolNode(tag) : from === "library" ? libCardNode(tag) : null;
+  // 詳情裡那張大圖目前的位置（按鈕要讓牌從這裡飛去合成池／廢字簍）。
+  const artNow = () => {
+    const n = sheet.sheet.querySelector(".detail-art, .detail > .card");
+    return n ? { node: n, rect: n.getBoundingClientRect() } : null;
+  };
   const art = assets.art(tag);
   const facts = cardFacts(card, lex, data);
   const inPool = pool.has(tag);
@@ -1463,14 +1470,44 @@ function showCard(tag, from) {
       foot: [
         banned
           ? el("button", { class: "btn", type: "button", onclick: () => { unban(tag); sheet.close(); } }, "從廢字簍撿回來")
-          : el("button", { class: "btn", type: "button", onclick: () => { ban(tag); sheet.close(); } }, "丟進廢字簍（不再抽到）"),
+          : el("button", { class: "btn", type: "button", onclick: () => { const a = artNow(); sheet.close(); ban(tag, { from: a }); } }, "丟進廢字簍（不再抽到）"),
         inPool
           ? el("button", { class: "btn btn-pool", type: "button", onclick: () => { unpin(tag); sheet.close(); } }, "拿出合成池")
-          : el("button", { class: "btn btn-primary", type: "button", onclick: () => { pin(tag); sheet.close(); } }, "放進合成池"),
+          : el("button", { class: "btn btn-primary", type: "button", onclick: () => { const a = artNow(); sheet.close(); pin(tag); if (a) flyInto(tag, a.rect); } }, "放進合成池"),
       ],
     }
   );
-  void from;
+  flyToDetail(srcNode, sheet.sheet);
+}
+
+/** 打開詳情：圖從點的那張牌飛進彈窗裡的大圖（落點量的是彈窗進場動畫結束後的位置）。 */
+function flyToDetail(src, sheetEl) {
+  if (!src || matchMedia("(prefers-reduced-motion: reduce)").matches) return;
+  const dst = sheetEl.querySelector(".detail-art, .detail > .card");
+  const from = (src.querySelector(".card-art") || src).getBoundingClientRect();
+  if (!dst || !from.width || from.bottom < 0 || from.top > innerHeight) return;
+  const anims = sheetEl.getAnimations();
+  for (const a of anims) a.currentTime = a.effect.getComputedTiming().endTime;
+  const to = dst.getBoundingClientRect();
+  for (const a of anims) a.currentTime = 0;
+  if (!to.width) return;
+  const f = (src.querySelector(".card-art") || src).cloneNode(true);
+  Object.assign(f.style, { position: "fixed", left: from.left + "px", top: from.top + "px", width: from.width + "px", height: from.height + "px", margin: "0", zIndex: "200", pointerEvents: "none", overflow: "hidden", borderRadius: "6px" });
+  document.body.append(f);
+  dst.style.visibility = "hidden";
+  const anim = f.animate(
+    [
+      { left: from.left + "px", top: from.top + "px", width: from.width + "px", height: from.height + "px" },
+      { left: to.left + "px", top: to.top + "px", width: to.width + "px", height: to.height + "px" },
+    ],
+    { duration: 380, easing: "cubic-bezier(0.16, 1, 0.3, 1)", fill: "forwards" }
+  );
+  const land = () => {
+    f.remove();
+    dst.style.visibility = "";
+  };
+  anim.onfinish = land;
+  setTimeout(land, 700);
 }
 
 /* ================= 廢字簍 ================= */

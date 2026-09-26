@@ -1941,14 +1941,68 @@ body.fuse {
   border-radius: var(--radius-md);
   background: var(--color-paper-3);
   box-shadow: 0 20px 40px var(--color-shade);
-  animation: pop-in 180ms var(--ease-out);
+  transform-origin: 0 var(--tail-y, 50%);
+  animation: pop-in 200ms var(--ease-out);
+}
+
+.pop[data-side="left"] {
+  transform-origin: 100% var(--tail-y, 50%);
+}
+
+/* 指著那張牌的小尖角。 */
+.pop::before {
+  content: "";
+  position: absolute;
+  top: calc(var(--tail-y, 50%) - 7px);
+  left: -7px;
+  width: 12px;
+  height: 12px;
+  background: inherit;
+  border-left: 1px solid var(--color-rule);
+  border-bottom: 1px solid var(--color-rule);
+  rotate: 45deg;
+}
+
+.pop[data-side="left"]::before {
+  left: auto;
+  right: -7px;
+  rotate: -135deg;
 }
 
 @keyframes pop-in {
   from {
     opacity: 0;
-    transform: translateY(4px) scale(0.98);
+    transform: translateX(-8px) scale(0.9);
   }
+}
+
+.pop[data-side="left"] {
+  animation-name: pop-in-left;
+}
+
+@keyframes pop-in-left {
+  from {
+    opacity: 0;
+    transform: translateX(8px) scale(0.9);
+  }
+}
+
+.pop.is-closing {
+  animation: pop-out 120ms var(--ease-in, ease-in) forwards;
+}
+
+@keyframes pop-out {
+  to {
+    opacity: 0;
+    transform: scale(0.94);
+  }
+}
+
+/* 開著選單的那張牌：描一圈、浮起來一點，看得出選單在說哪一張。 */
+.card.is-popped {
+  outline: 2px solid var(--color-accent);
+  outline-offset: 3px;
+  translate: 0 -3px;
 }
 
 .pop-title {
@@ -2288,6 +2342,7 @@ body.fuse {
   .plate-notice,
   .reg-note,
   .pop,
+  .pop.is-closing,
   .print-bar.is-nudged,
   .register.is-inked::before,
   .registers.ghosts-in .ghost-card,

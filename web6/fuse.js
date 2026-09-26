@@ -1513,8 +1513,16 @@ function closePop({ focus = false } = {}) {
   if (!pop) return;
   const back = pop._anchorTag;
   const from = pop._from;
-  pop.remove();
+  const gone = pop;
   pop = null;
+  gone._anchorNode?.classList.remove("is-popped");
+  // 收回去：往那張牌的方向縮一下、淡掉（以前是一下子消失）。
+  if (reduced()) gone.remove();
+  else {
+    gone.style.pointerEvents = "none";
+    gone.classList.add("is-closing");
+    setTimeout(() => gone.remove(), 130);
+  }
   document.removeEventListener("pointerdown", onPopOutside, true);
   if (focus && back) (from === "plate" ? plateNode(back) : null)?.focus({ preventScroll: true });
 }
@@ -1607,6 +1615,11 @@ function openPop(anchor, tag, from) {
   let top = Math.max(8, Math.min(window.innerHeight - h - 8, r.top + r.height / 2 - h / 2));
   pop.style.left = Math.max(8, left) + "px";
   pop.style.top = top + "px";
+  // 選單從它那張牌的方向長出來，邊上一個小尖角指著那張牌；開著的時候那張牌也亮著。
+  pop.dataset.side = Math.max(8, left) >= r.right ? "right" : "left";
+  pop.style.setProperty("--tail-y", Math.max(16, Math.min(h - 16, r.top + r.height / 2 - top)) + "px");
+  anchor.classList.add("is-popped");
+  pop._anchorNode = anchor;
   setTimeout(() => document.addEventListener("pointerdown", onPopOutside, true), 0);
   pop.querySelector(".pop-acts button")?.focus({ preventScroll: true });
 }
