@@ -91,13 +91,30 @@ export function anyOverlay() {
 /* ---------- 提示 ---------- */
 
 let toastTimer = null;
-export function toast(text) {
+/**
+ * 畫面下方的提示。action：{ label, run } 帶一顆按鈕（例如「復原」），這時提示多留一會兒、
+ * 可以點；按了就收起來。沒帶 action 的跟以前一樣 2.6 秒自己消失。
+ */
+export function toast(text, { action = null, ms = action ? 5200 : 2600 } = {}) {
   const t = document.getElementById("toast");
   if (!t) return;
-  t.textContent = text;
+  t.replaceChildren(document.createTextNode(text));
+  if (action) {
+    const b = document.createElement("button");
+    b.type = "button";
+    b.className = "toast-action";
+    b.textContent = action.label;
+    b.addEventListener("click", () => {
+      clearTimeout(toastTimer);
+      t.dataset.show = "false";
+      action.run();
+    });
+    t.append(b);
+  }
+  t.dataset.action = action ? "true" : "false";
   t.dataset.show = "true";
   clearTimeout(toastTimer);
-  toastTimer = setTimeout(() => (t.dataset.show = "false"), 2600);
+  toastTimer = setTimeout(() => (t.dataset.show = "false"), ms);
 }
 
 /* ---------- 滑鼠停留說明：滑鼠停 800ms，鍵盤聚焦立刻 ---------- */

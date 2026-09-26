@@ -33,6 +33,7 @@ import { HARD_BANNED, applyArtSources } from "./card-art.js";
 import { buildLibrary, createAssets, cardNode, setCardFlag, cardFacts, CARD_SUIT_INFO, CARD_SUITS, RATING_ZH } from "./cards.js";
 import { el, openSheet, anyOverlay, toast, ICONS } from "./ui.js";
 import { createDrag, inkRing } from "./drag.js";
+import { initMotion, flip, leave, enter, confirmButton } from "./motion.js";
 import { createGenerator, comfyOnline, viewSrc, tabTitle, watchLink, LINK_LABEL } from "./gen.js";
 import { genSeed, mountSeedControl, seedUseButton } from "./seed-control.js";
 import { attachPeek } from "./card-peek.js";
@@ -65,6 +66,7 @@ const $ = (id) => document.getElementById(id);
 /* ================= 開機 ================= */
 
 async function boot() {
+  initMotion();
   try {
     const [lexicon, manifest] = await Promise.all([
       fetch("lexicon.json").then((r) => r.json()),
@@ -197,8 +199,12 @@ function pickSuit(s) {
   ui.group = "";
   saveUi();
   renderLibraryChrome();
+  dealLibrary = true;
   renderLibrary();
 }
+
+// 下一次畫字盒時，第一批牌要不要依序發進來（換花色、換小分類才要）。
+let dealLibrary = false;
 
 /** 字盒裡看不看得到：分級擋掉的、性別不合的、（只看這時代時）時代不合的收起來。釘選的字永遠看得到。 */
 function visible(card) {
@@ -246,6 +252,14 @@ function renderLibrary() {
   libShown = 0;
   grid.replaceChildren();
   moreLibrary(LIB_FIRST);
+  if (dealLibrary && !matchMedia("(prefers-reduced-motion: reduce)").matches) {
+    [...grid.querySelectorAll(".card")].slice(0, 20).forEach((c, i) => {
+      c.style.setProperty("--i", String(i));
+      c.classList.add("dealt");
+      setTimeout(() => c.classList.remove("dealt"), 900);
+    });
+  }
+  dealLibrary = false;
 }
 
 // 字盒一次畫 821 張牌（每張六七個節點＋一張圖）載入時會卡住主執行緒約 270ms，
@@ -277,6 +291,7 @@ function moreLibrary(n = LIB_PAGE) {
 function pickGroup(g) {
   ui.group = g;
   saveUi();
+  dealLibrary = true;
   renderLibrary();
 }
 
@@ -1001,6 +1016,21 @@ function shotNode(shot, deal) {
   );
   const setOpen = (now) => {
     if (now) ensureCards();
+    if (!now && !cards.hidden && !matchMedia("(prefers-reduced-motion: reduce)").matches) {
+      // 收起：牌往上收、淡掉，收完才藏 —— 以前是一瞬間消失，跟攤開時一張張發下來不對稱。
+      toggle.setAttribute("aria-expanded", "false");
+      const box = cards;
+      box.animate(
+        [
+          { opacity: 1, transform: "none" },
+          { opacity: 0, transform: "translateY(-8px)" },
+        ],
+        { duration: 180, easing: "cubic-bezier(0.55, 0, 1, 0.45)" }
+      ).onfinish = () => {
+        if (toggle.getAttribute("aria-expanded") === "false") box.hidden = true;
+      };
+      return;
+    }
     cards.hidden = !now;
     toggle.setAttribute("aria-expanded", now ? "true" : "false");
     if (now) {
@@ -1037,7 +1067,7 @@ function shotNode(shot, deal) {
       { class: "shot-actions" },
       toggle,
       el("button", { class: "btn btn-small btn-ghost", type: "button", onclick: () => showShot(shot) }, "放大"),
-      el("button", { class: "btn btn-small btn-ghost", type: "button", onclick: () => copyPos(shot) }, "複製 POS"),
+      el("button", { class: "btn btn-small btn-ghost", type: "button", onclick: (e) => copyPos(shot, e.currentTarget) }, "複製 POS"),
       el("button", { class: "btn btn-small btn-ghost", type: "button", onclick: () => reprint(shot), title: "同樣的 POS、同一顆種子再送一次" }, "同種子重印"),
       el("button", { class: "btn btn-small btn-ghost", type: "button", onclick: () => removeShot(shot) }, "撤下")
     )
@@ -1260,10 +1290,12 @@ function updateShot(shot) {
   if (node && shot.status === "done" && shot.image) node._imageArrived && node._imageArrived();
 }
 
-async function copyPos(shot) {
+async function copyPos(shot, btn) {
   try {
     await navigator.clipboard.writeText(shot.positive);
-    toast("POS 複製好了");
+    // 按鈕自己說「已複製」—— 眼睛本來就在按鈕上，右下角的提示常常沒被看到。
+    if (btn) confirmButton(btn);
+    else toast("POS 複製好了");
   } catch {
     toast("複製不了，請到「放大」裡手動選取");
   }
@@ -1273,8 +1305,11 @@ function reprint(shot) {
   const copy = { ...shot, id: "s" + shotSeq++, status: "drawn", image: null, preview: null, note: "", at: new Date().toISOString() };
   shots.unshift(copy);
   const node = shotNode(copy, true);
-  $("wall").prepend(node);
+  flip($("wall"), () => $("wall").prepend(node));
   layoutFans(node);
+  enter(node);
+  const r = node.getBoundingClientRect();
+  if (r.top < 0 || r.top > innerHeight - 80) node.scrollIntoView({ behavior: matchMedia("(prefers-reduced-motion: reduce)").matches ? "auto" : "smooth", block: "nearest" });
   generator.enqueue(copy);
   renderGoBar();
 }
@@ -1284,9 +1319,28 @@ function removeShot(shot) {
     toast("這張還在印，先按「停」");
     return;
   }
+  const at = shots.findIndex((s) => s.id === shot.id);
   shots = shots.filter((s) => s.id !== shot.id);
-  document.querySelector(`.shot[data-id="${shot.id}"]`)?.remove();
+  const node = document.querySelector(`.shot[data-id="${shot.id}"]`);
+  // 縮掉、旁邊的滑過來補位（以前是整排一格一格跳過去），而且可以反悔：五秒內按「復原」放回原位。
+  leave(node, () => flip($("wall"), () => node?.remove()));
   $("wall-empty").hidden = shots.length > 0;
+  S.saveShots(shots);
+  renderGoFloat();
+  toast("撤下了一張", { action: { label: "復原", run: () => restoreShot(shot, at) } });
+}
+
+function restoreShot(shot, at) {
+  if (shots.some((s) => s.id === shot.id)) return;
+  const i = Math.max(0, Math.min(at, shots.length));
+  shots.splice(i, 0, shot);
+  const node = shotNode(shot, false);
+  const wall = $("wall");
+  const next = shots[i + 1] && wall.querySelector(`.shot[data-id="${shots[i + 1].id}"]`);
+  flip(wall, () => (next ? next.before(node) : wall.append(node)));
+  layoutFans(node);
+  enter(node);
+  $("wall-empty").hidden = true;
   S.saveShots(shots);
   renderGoFloat();
 }
@@ -1309,7 +1363,7 @@ function showShot(shot) {
     {
       wide: true,
       foot: [
-        el("button", { class: "btn btn-small", type: "button", onclick: () => copyPos(shot) }, "複製 POS"),
+        el("button", { class: "btn btn-small", type: "button", onclick: (e) => copyPos(shot, e.currentTarget) }, "複製 POS"),
         shot.image ? el("a", { class: "btn btn-small", href: shot.image, target: "_blank", rel: "noopener" }, "開原圖") : null,
       ],
     }

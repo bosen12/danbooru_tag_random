@@ -255,6 +255,38 @@ p {
   border: 1px solid var(--color-rule-2);
 }
 
+.segmented {
+  position: relative;
+}
+
+/* 選到的那一格底下一塊會滑的底（見 motion.js）：換選項時滑過去，不是這格亮、那格暗。 */
+.seg-thumb {
+  position: absolute;
+  top: 0;
+  left: 0;
+  z-index: 0;
+  border-radius: var(--radius-xs);
+  background: var(--color-paper-4);
+  pointer-events: none;
+  transition:
+    transform 260ms cubic-bezier(0.16, 1, 0.3, 1),
+    width 260ms cubic-bezier(0.16, 1, 0.3, 1),
+    background-color 260ms ease;
+}
+
+.segmented[data-kind="rating"] .seg-thumb[data-v="explicit"] {
+  background: var(--color-accent-3);
+}
+
+.segmented.has-thumb > button {
+  position: relative;
+  z-index: 1;
+}
+
+.segmented.has-thumb > button[aria-checked="true"] {
+  background: transparent;
+}
+
 .segmented button {
   min-height: 32px;
   padding: 0 var(--space-sm);
@@ -1682,6 +1714,41 @@ body[data-dragging="true"] .library[data-over="true"] {
 .toast[data-show="true"] {
   opacity: 1;
   transform: none;
+}
+
+/* 帶「復原」鈕的提示要點得到。 */
+.toast[data-show="true"][data-action="true"] {
+  pointer-events: auto;
+}
+
+.toast-action {
+  margin-left: var(--space-sm);
+  padding: 2px 10px;
+  border: 1px solid var(--color-accent);
+  border-radius: var(--radius-xs);
+  background: transparent;
+  color: var(--color-accent);
+  font-weight: 700;
+  cursor: pointer;
+}
+
+@media (hover: hover) and (pointer: fine) {
+  .toast-action:hover {
+    background: var(--color-accent);
+    color: var(--color-accent-ink);
+  }
+}
+
+/* 按鈕自己說「已複製」。 */
+.btn.is-confirmed {
+  color: var(--color-ok, var(--color-accent));
+  border-color: currentColor;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .seg-thumb {
+    transition: none;
+  }
 }
 
 .hover-tip {

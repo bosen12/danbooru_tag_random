@@ -33,7 +33,8 @@ import { initLoraPicker, currentLorasPayload, currentTriggerText, currentCkpt, h
 import { initWorkflow, currentWorkflowId, wfHandleKeys } from "./workflow.js";
 import { HARD_BANNED, applyArtSources } from "./card-art.js";
 import { buildLibrary, createAssets, cardNode, cardFacts, CARD_SUIT_INFO, CARD_SUITS, RATING_ZH, ERA_ZH } from "./cards.js";
-import { el, openSheet, anyOverlay } from "./ui.js";
+import { el, openSheet, anyOverlay, toast } from "./ui.js";
+import { initMotion, flip, leave } from "./motion.js";
 import { createDrag, inkRing } from "./drag.js";
 import { createGenerator, comfyOnline, viewSrc, tabTitle, watchLink, LINK_LABEL } from "./gen.js";
 import { attachPeek, hidePeek } from "./card-peek.js";
@@ -148,6 +149,7 @@ function haptic(ms) {
 /* ================= 開機 ================= */
 
 async function boot() {
+  initMotion();
   try {
     const [lexicon, man] = await Promise.all([
       fetch("lexicon.json").then((r) => r.json()),
@@ -1870,12 +1872,36 @@ function openPrint(p) {
         type: "button",
         onclick: () => {
           if (p.status === "queued" || p.status === "running") return;
+          const at = prints.indexOf(p);
           prints = prints.filter((x) => x !== p);
           savePrints();
-          renderLine();
-          renderAll([]);
           sheet.close();
+          // 從繩上掉下來、旁邊的滑過來補位，再給五秒反悔（以前按了就沒了，印好的圖也跟著沒了）。
+          const node = $("line-list").querySelector(`.print[data-id="${p.id}"]`);
+          const li = node?.closest("li");
+          leave(node, () => {
+            // 只拿掉那一張，不整條重畫 —— 重畫會把正在滑的那幾張換成新的節點，讓位就看不到了。
+            flip($("line-list"), () => li?.remove());
+            $("line-empty").hidden = prints.length > 0;
+            setTimeout(syncLineFade, 0);
+            renderAll([]);
+          });
           announce("撤下了這一張");
+          toast("從繩上撤下了一張", {
+            action: {
+              label: "復原",
+              run: () => {
+                if (prints.includes(p)) return;
+                prints.splice(Math.max(0, Math.min(at, prints.length)), 0, p);
+                savePrints();
+                // 放回去的那張當成新夾上去的：往下一落、晃幾下（renderLine 看 lineSeen 決定誰要晃）。
+                lineSeen?.delete(p.id);
+                renderLine();
+                renderAll([]);
+                announce("放回繩上了");
+              },
+            },
+          });
         },
       },
       "從繩上撤下"

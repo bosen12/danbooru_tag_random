@@ -1667,6 +1667,11 @@ const ALBUM_FIXTURE = [
   ok("墨池合成池看得出關係：附帶、相剋（虛線＋一行說明）、指到一張牌相關的一起亮", app6.includes("relationsOf({ pins: tags, carried: carriedBy }") && app6.includes('src: carriedBy[t] ? "附帶" : null') && app6.includes("function renderPoolClash(pairs)") && app6.includes('classList.add("is-related")'));
   ok("墨池：跟著進來的牌一張接一張彈上來，不是憑空出現", app6.includes("carried.forEach((t, i) => popCarried(t, 200 + i * 90));"));
   ok("疊印台：滑鼠停在別張試印上先預覽它補的牌（只看不換，觸控不觸發）", fuse6.includes("function peekAt(i)") && fuse6.includes('if (e.pointerType !== "mouse") return;') && fuse6.includes("預覽試印 ${t.letter}"));
+  const motion6 = readFileSync(join(ROOT, "web6/motion.js"), "utf8");
+  const ui6 = readFileSync(join(ROOT, "web6/ui.js"), "utf8");
+  ok("墨池／疊印台：分段選項有滑塊、數字增減會滾（motion.js 自動套用）", motion6.includes("function syncThumbs(") && motion6.includes("function syncSteppers(") && app6.includes("initMotion();") && fuse6.includes("initMotion();"));
+  ok("撤下成品／從繩上撤下：縮掉、旁邊讓位，五秒內可以復原", ui6.includes("action = null") && app6.includes('toast("撤下了一張", { action: { label: "復原"') && fuse6.includes('toast("從繩上撤下了一張"') && fuse6.includes("lineSeen?.delete(p.id);"));
+  ok("墨池：複製 POS 按鈕自己說已複製；同種子重印讓位＋進場；收起的牌先收再藏；換花色發牌", app6.includes("confirmButton(btn)") && app6.includes("flip($(\"wall\"), () => $(\"wall\").prepend(node));") && app6.includes("if (toggle.getAttribute(\"aria-expanded\") === \"false\") box.hidden = true;") && app6.includes("dealLibrary = true;"));
   ok("排字匣不送全域中斷（空的 {}）", !boot.includes('body: "{}"') && !boot.includes("prompt_id: jobPromptId } : {}"));
 }
 
