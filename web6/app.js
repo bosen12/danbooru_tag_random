@@ -876,6 +876,12 @@ function renderGoBar() {
   const bar = $("go-bar");
   const busy = generator.busy || looping;
   const n = settings.n;
+  // 狀態沒變就不重畫。生圖時每個進度事件都會叫到這裡，以前整排按鈕一秒換好幾次新的：
+  // 滑鼠停在「停」上看起來在閃，按下去的那一瞬間按鈕剛好被換掉，按下跟放開落在兩個不同的
+  // 元素上，瀏覽器不算一次點擊 —— 要按好幾次才停得下來。
+  const key = [busy, generator.pending, infinite, n, settings.samePerson].join("|");
+  if (bar.dataset.key === key && bar.childElementCount) return renderGoFloat();
+  bar.dataset.key = key;
   bar.replaceChildren(
     ...[
     stepper("一次", n, 1, 50, (v) => setSettings({ n: v })),
@@ -911,6 +917,10 @@ function renderGoFloat() {
   const show = !goBarVisible && (shots.length > 0 || pool.size > 0);
   float.dataset.show = show ? "true" : "false";
   float.inert = !show;
+  // 同上：狀態沒變就不換掉底下那排按鈕（不然「停」會閃、按不到）。
+  const key = [busy, generator.pending, pool.size, settings.n].join("|");
+  if (float.dataset.key === key && float.childElementCount) return;
+  float.dataset.key = key;
   float.replaceChildren(
     ...[
       el("span", { class: "go-float-state" }, busy ? (generator.pending ? `印製中・還有 ${generator.pending} 張` : "無限抽・下一輪…") : pool.size ? `池裡 ${pool.size} 張` : "池子是空的，全靠抽"),

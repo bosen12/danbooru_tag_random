@@ -1792,7 +1792,10 @@ let seedNode = null;
 function renderPrintBar() {
   const bar = $("print-bar");
   const t = trials[picked];
-  if (!t) return bar.replaceChildren();
+  if (!t) {
+    delete bar.dataset.key;
+    return bar.replaceChildren();
+  }
   const p = printFor(sigOf(t));
   const busy = p && (p.status === "queued" || p.status === "running");
   const offline = comfyOk === false;
@@ -1812,6 +1815,16 @@ function renderPrintBar() {
     RATING_ZH[settings.rating],
     (SIZES.find((s) => s.w === settings.width && s.h === settings.height) || SIZES[0]).zh,
   ].filter(Boolean);
+  // 印製中每一格進度都會叫到這裡。只有進度變了的話，只改付印鈕的字跟進度條，
+  // 不整排重畫 —— 以前「停」一秒換好幾次新的，滑鼠停在上面會閃、按下去常常按不到。
+  const key = [t.letter, sigOf(t), p ? p.status : "", summary.join("・"), t.missing.join(","), offline, linkNow, p && p.status === "failed" ? p.note : "", !!bed.pins.length].join("|");
+  const go = bar.querySelector(".pb-go");
+  if (bar.dataset.key === key && go) {
+    if (go.textContent !== label) go.textContent = label;
+    if (busy) go.style.setProperty("--p", String(p.status === "running" ? p.progress || 0 : 0));
+    return;
+  }
+  bar.dataset.key = key;
   put(
     bar,
     el(

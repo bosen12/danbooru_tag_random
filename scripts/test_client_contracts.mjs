@@ -1693,6 +1693,7 @@ const ALBUM_FIXTURE = [
   ok("墨池廢字簍：撿回來的浮起來、旁邊補位、標題數字跟著變；全部撿回來一張張起來", app6.includes("const rescue = (node, delay = 0) =>") && app6.includes("廢字簍・${left} 個字") && app6.includes("都撿回來了。"));
   ok("疊印台的小選單：從那張牌長出來、尖角指著它、那張牌亮著，關的時候收回去", fuse6.includes('pop.dataset.side = Math.max(8, left) >= r.right ? "right" : "left";') && fuse6.includes('anchor.classList.add("is-popped")') && fuse6.includes('gone.classList.add("is-closing")') && readFileSync(join(ROOT, "web6/fuse.css"), "utf8").includes(".pop::before"));
   ok("墨池的詳情：圖從點的那張牌飛進去；放進合成池／丟進廢字簍從那張大圖飛出去", app6.includes("function flyToDetail(src, sheetEl)") && app6.includes("pin(tag); if (a) flyInto(tag, a.rect);") && app6.includes("ban(tag, { from: a })"));
+  ok("印製中的進度不整排重畫按鈕（「停」不閃、一按就停）", app6.includes('if (bar.dataset.key === key && bar.childElementCount) return renderGoFloat();') && app6.includes('if (float.dataset.key === key && float.childElementCount) return;') && fuse6.includes('if (bar.dataset.key === key && go) {'));
   ok("疊印台的規則鈕也是圖示", fuseHtml.includes('id="rules-btn" type="button" aria-label="規則"') && !fuseHtml.includes(">規則</button>"));
   ok("池中／封鎖／在池的章：新蓋上去的像橡皮章壓下來，沒變的不重蓋", readFileSync(join(ROOT, "web6/cards.js"), "utf8").includes("old.dataset.kind === flag.kind && old.textContent === flag.text") && fuse6.includes('node.classList.add("is-flag-stamp")'));
   ok("疊印台的規則自己一份（跟墨池分開），規則裡可以設每段補幾張", fuse6.includes('settings: "mochi.fuse.settings.v1"') && !fuse6.includes("S.saveSettings(") && fuse6.includes("每段補幾張"));
