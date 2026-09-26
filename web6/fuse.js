@@ -35,6 +35,7 @@ import { HARD_BANNED, applyArtSources } from "./card-art.js";
 import { buildLibrary, createAssets, cardNode, cardFacts, CARD_SUIT_INFO, CARD_SUITS, RATING_ZH, ERA_ZH } from "./cards.js";
 import { el, openSheet, anyOverlay, toast } from "./ui.js";
 import { initMotion, flip, flipBy, leave, gatherHome } from "./motion.js";
+import { createHand } from "./hand.js";
 import { createDrag, inkRing } from "./drag.js";
 import { createGenerator, comfyOnline, viewSrc, tabTitle, watchLink, LINK_LABEL } from "./gen.js";
 import { attachPeek, hidePeek } from "./card-peek.js";
@@ -214,6 +215,7 @@ async function boot() {
   pingLoop();
   wireChrome();
 
+  buildHand();
   buildPreview();
   buildTrialShells();
   renderRating();
@@ -379,6 +381,7 @@ function place(tag, sourceEl, { viaDrag = false } = {}) {
 function remove(tag, { viaDrag = false } = {}) {
   if (!bed.pins.includes(tag)) return;
   const { bed: next, events } = removeCard(bed, tag);
+  for (const t of events[0]?.tags || [tag]) if (hand?.has(t)) hand.arriveAt(t, viaDrag && t === tag ? 0 : 520);
   const snaps = (events[0]?.tags || [tag]).filter((t) => !(viaDrag && t === tag)).map((t) => plateNode(t)).filter(Boolean).map(snapshot);
   commit(next, `拿下「${zh(tag)}」`, events);
   snaps.forEach((s, i) => flyHome(s, i * 60));
@@ -442,6 +445,7 @@ function clearBed() {
   if (!bed.pins.length) return;
   const snaps = bed.pins.map((t) => plateNode(t)).filter(Boolean).map(snapshot);
   const tags = snaps.map((s) => s.node.dataset.tag);
+  for (const t of tags) if (hand?.has(t)) hand.arriveAt(t, 700);
   commit(emptyBed(), "清版", []);
   // 清版：先把版上的牌掃成一疊（卡池中間），整疊一起收回字盒；字盒裡看得到的那幾張依序輕輕收下。
   sweepHome(snaps, tags);
@@ -698,6 +702,7 @@ function restorePrint(p) {
 /* ================= 畫面：全部 ================= */
 
 function renderAll(events = []) {
+  hand?.update();
   renderPlate(events);
   renderPreview();
   renderTrials();
@@ -1724,7 +1729,8 @@ function stamp(node, cls = "is-stamped") {
 function flyHome(snap, delay = 0) {
   if (reduced() || !snap.rect.width) return;
   const tag = snap.node.dataset.tag;
-  const home = tag && caseCard(tag);
+  // 偏好卡牌裡的牌從版上拿下來：回到底下的扇形，不回字盒。
+  const home = tag && ((hand?.has(tag) && hand.nodeOf(tag)) || caseCard(tag));
   const inView = (r) => r && r.width > 0 && r.bottom > 0 && r.top < innerHeight && r.right > 0 && r.left < innerWidth;
   let to = home && home.getBoundingClientRect();
   if (!inView(to)) {
@@ -2255,7 +2261,11 @@ function moreCase() {
     node.tabIndex = grid.querySelector(".card") ? -1 : 0;
     if (has.has(card.tag)) node.dataset.state = "pinned";
     node.setAttribute("aria-pressed", has.has(card.tag) ? "true" : "false");
-    node.addEventListener("click", () => toggle(card.tag, node));
+    node.addEventListener("click", () => {
+      if (hand?.editing) hand.add(card.tag, node.getBoundingClientRect());
+      else toggle(card.tag, node);
+    });
+    if (hand?.has(card.tag)) node.dataset.inHand = "true";
     drag.attach(node, { tag: card.tag, from: "case" });
     grid.append(node);
   }
@@ -2337,7 +2347,9 @@ const drag = createDrag({
     { id: "plate", el: $("plate"), accepts: (p) => p.from !== "plate" },
     // 手機上卡池捲走了，角落那顆「卡池」也收牌：影子縮小被吸進去。
     { id: "pill", el: $("pool-pill"), accepts: (p) => p.from === "case" && !$("pool-pill").hidden, sink: true },
-    { id: "case", el: $("case"), accepts: (p) => p.from === "plate" },
+    { id: "case", el: $("case"), accepts: (p) => p.from === "plate" || p.from === "hand" },
+    // 偏好卡牌：字盒、版上的牌都可以拖進來（版上的等於收回手牌）。
+    { id: "hand", el: hand?.fan, accepts: (p) => p.from !== "hand" && !!hand },
   ],
   // 拖著經過卡池：它會落到的那一列先亮起來。
   onOver: (zone, p) => {
@@ -2348,7 +2360,19 @@ const drag = createDrag({
     dropRow?.classList.add("is-drop-target");
   },
   onDrop: (p, zone) => {
+    if (zone === "hand") {
+      if (p.from === "plate") {
+        hand.add(p.tag);
+        hand.arriveAt(p.tag, 0);
+        remove(p.tag, { viaDrag: true });
+      } else hand.add(p.tag);
+      return hand.nodeOf(p.tag);
+    }
     if (zone === "case") {
+      if (p.from === "hand") {
+        hand.remove(p.tag, { quiet: true });
+        return caseCard(p.tag);
+      }
       remove(p.tag, { viaDrag: true });
       return caseCard(p.tag);
     }
@@ -2534,8 +2558,35 @@ function openRules() {
   );
 }
 
+let hand = null;
+
+/** 偏好卡牌（hand.js）：疊印台自己一份，跟墨池分開。 */
+function buildHand() {
+  hand = createHand({
+    key: "mochi.fuse.hand.v1",
+    makeNode: (t) => cardNode(cardOf(t), assets),
+    inPool: (t) => bed.pins.includes(t),
+    known: (t) => lib.byTag.has(t) && !bans.has(t),
+    // 出牌：從扇形上那張的位置飛上版。
+    onPlay: (t) => place(t, hand.nodeOf(t)),
+    onChange: syncHand,
+    onFull: () => announce(`偏好卡牌最多 ${hand.max} 張，先拿掉一張再加`),
+    decorate: (node, t) => drag.attach(node, { tag: t, from: "hand" }),
+  });
+  syncHand();
+}
+
+function syncHand() {
+  if (!hand) return;
+  const btn = $("hand-btn");
+  btn.setAttribute("aria-pressed", hand.editing ? "true" : "false");
+  $("hand-count").textContent = `${hand.count}/${hand.max}`;
+  hand.mark($("case-grid"));
+}
+
 function wireChrome() {
   $("rules-btn").addEventListener("click", openRules);
+  $("hand-btn").addEventListener("click", () => hand?.toggleEdit());
   const snd = $("sound-btn");
   const syncSound = () => {
     snd.setAttribute("aria-pressed", sfx.on ? "true" : "false");

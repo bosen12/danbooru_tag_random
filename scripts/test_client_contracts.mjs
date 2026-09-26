@@ -1673,7 +1673,7 @@ const ALBUM_FIXTURE = [
   ok("撤下成品／從繩上撤下：縮掉、旁邊讓位，五秒內可以復原", ui6.includes("action = null") && app6.includes('toast("撤下了一張", { action: { label: "復原"') && fuse6.includes('toast("從繩上撤下了一張"') && fuse6.includes("lineSeen?.delete(p.id);"));
   ok("墨池：複製 POS 按鈕自己說已複製；同種子重印讓位＋進場；收起的牌先收再藏；換花色發牌", app6.includes("confirmButton(btn)") && app6.includes("flip($(\"wall\"), () => $(\"wall\").prepend(node));") && app6.includes("if (toggle.getAttribute(\"aria-expanded\") === \"false\") box.hidden = true;") && app6.includes("dealLibrary = true;"));
   ok("疊印台拿下／撤回／清版：牌飛回字盒（不再原地往上飄走），撤回的牌從字盒飛回來", fuse6.includes("function flyHome(snap, delay = 0)") && fuse6.includes("snaps.forEach((s, i) => flyHome(s, i * 60));") && fuse6.includes("setTimeout(() => flyIn(t, r), 40 + i * 70)"));
-  ok("墨池被擠掉的牌也飛回字盒", app6.includes("const home = libCardNode(node.dataset.tag);"));
+  ok("墨池被擠掉的牌也飛回字盒", app6.includes("|| libCardNode(node.dataset.tag);"));
   {
     const m = fuse6.replace(/\r\n/g, "\n").match(/const STARTERS = (\[[\s\S]*?\n\]);/);
     const starters = m ? eval(m[1]) : [];
@@ -1694,6 +1694,14 @@ const ALBUM_FIXTURE = [
   ok("疊印台的小選單：從那張牌長出來、尖角指著它、那張牌亮著，關的時候收回去", fuse6.includes('pop.dataset.side = Math.max(8, left) >= r.right ? "right" : "left";') && fuse6.includes('anchor.classList.add("is-popped")') && fuse6.includes('gone.classList.add("is-closing")') && readFileSync(join(ROOT, "web6/fuse.css"), "utf8").includes(".pop::before"));
   ok("墨池的詳情：圖從點的那張牌飛進去；放進合成池／丟進廢字簍從那張大圖飛出去", app6.includes("function flyToDetail(src, sheetEl)") && app6.includes("pin(tag); if (a) flyInto(tag, a.rect);") && app6.includes("ban(tag, { from: a })"));
   ok("印製中的進度不整排重畫按鈕（「停」不閃、一按就停）", app6.includes('if (bar.dataset.key === key && bar.childElementCount) return renderGoFloat();') && app6.includes('if (float.dataset.key === key && float.childElementCount) return;') && fuse6.includes('if (bar.dataset.key === key && go) {'));
+  {
+    const hand6 = readFileSync(join(ROOT, "web6/hand.js"), "utf8");
+    const fuseHtml6 = readFileSync(join(ROOT, "web6/fuse.html"), "utf8");
+    ok("偏好卡牌：共用 hand.js，最多十張，兩個房間各存一份", hand6.includes("export function createHand(") && hand6.includes("max = 10") && app6.includes('key: "mochi.hand.v1"') && fuse6.includes('key: "mochi.fuse.hand.v1"'));
+    ok("偏好卡牌鈕：墨池在只抽牌左邊、疊印台在撤回左邊", fuseHtml6.indexOf('id="hand-btn"') >= 0 && fuseHtml6.indexOf('id="hand-btn"') < fuseHtml6.indexOf('id="undo"') && app6.indexOf("hand-btn") < app6.indexOf('"只抽牌"'));
+    ok("已經在卡池的不攤在扇形上；從卡池拿下來飛回扇形、不回字盒", hand6.includes("tags.filter((t) => !inPool(t))") && fuse6.includes("(hand?.has(tag) && hand.nodeOf(tag)) || caseCard(tag)") && app6.includes("(hand?.has(node.dataset.tag) && hand.nodeOf(node.dataset.tag)) || libCardNode"));
+    ok("挑牌模式：字盒點一下加進手牌；扇形可以拖進拖出", fuse6.includes("if (hand?.editing) hand.add(card.tag") && app6.includes("if (hand?.editing) return void hand.add(card.tag") && fuse6.includes('{ id: "hand", el: hand?.fan') && app6.includes('{ id: "hand", el: hand?.fan'));
+  }
   ok("疊印台的規則鈕也是圖示", fuseHtml.includes('id="rules-btn" type="button" aria-label="規則"') && !fuseHtml.includes(">規則</button>"));
   ok("池中／封鎖／在池的章：新蓋上去的像橡皮章壓下來，沒變的不重蓋", readFileSync(join(ROOT, "web6/cards.js"), "utf8").includes("old.dataset.kind === flag.kind && old.textContent === flag.text") && fuse6.includes('node.classList.add("is-flag-stamp")'));
   ok("疊印台的規則自己一份（跟墨池分開），規則裡可以設每段補幾張", fuse6.includes('settings: "mochi.fuse.settings.v1"') && !fuse6.includes("S.saveSettings(") && fuse6.includes("每段補幾張"));

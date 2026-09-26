@@ -34,6 +34,7 @@ import { buildLibrary, createAssets, cardNode, setCardFlag, cardFacts, CARD_SUIT
 import { el, openSheet, anyOverlay, toast, ICONS } from "./ui.js";
 import { createDrag, inkRing } from "./drag.js";
 import { initMotion, flip, flipBy, leave, enter, confirmButton, gatherHome } from "./motion.js";
+import { createHand } from "./hand.js";
 import { createGenerator, comfyOnline, viewSrc, tabTitle, watchLink, LINK_LABEL } from "./gen.js";
 import { genSeed, mountSeedControl, seedUseButton } from "./seed-control.js";
 import { attachPeek } from "./card-peek.js";
@@ -95,6 +96,7 @@ async function boot() {
   const resumable = shots.filter((s) => s.live && s.job);
   for (const s of resumable) s.status = "queued";
 
+  buildHand();
   initLoraPicker();
   initWorkflow();
   pingLoop();
@@ -299,10 +301,35 @@ function pickGroup(g) {
   renderLibrary();
 }
 
+let hand = null;
+
+/** 偏好卡牌（hand.js）：墨池自己一份，跟疊印台分開。 */
+function buildHand() {
+  hand = createHand({
+    key: "mochi.hand.v1",
+    makeNode: (t) => cardNode(lib.byTag.get(t), assets),
+    inPool: (t) => pool.has(t),
+    known: (t) => lib.byTag.has(t) && !bans.has(t),
+    // 出牌：從扇形上那張的位置飛進合成池。
+    onPlay: (t, r) => {
+      pin(t);
+      if (r) flyInto(t, r);
+    },
+    onChange: () => {
+      renderGoBar();
+      hand.mark($("lib-grid"));
+    },
+    onFull: () => toast(`偏好卡牌最多 ${hand.max} 張，先拿掉一張再加`),
+    decorate: (node, t) => drag.attach(node, { tag: t, from: "hand" }),
+  });
+}
+
 function libCard(card) {
   const node = cardNode(card, assets);
   paintState(node, card.tag);
+  if (hand?.has(card.tag)) node.dataset.inHand = "true";
   node.addEventListener("click", () => {
+    if (hand?.editing) return void hand.add(card.tag, node.getBoundingClientRect());
     if (pool.has(card.tag)) unpin(card.tag);
     else if (bans.has(card.tag)) showCard(card.tag, "library");
     else {
@@ -382,6 +409,7 @@ function paintState(node, tag) {
 
 function repaintLibrary() {
   for (const node of $("lib-grid").querySelectorAll(".card")) paintState(node, node.dataset.tag);
+  hand?.mark($("lib-grid"));
 }
 
 
@@ -470,7 +498,7 @@ const poolNode = (tag) => [...$("pool-well").querySelectorAll(".card")].find((n)
 function liftOut({ node, rect }) {
   if (matchMedia("(prefers-reduced-motion: reduce)").matches || !rect.width) return;
   const inView = (r) => r && r.width > 0 && r.bottom > 0 && r.top < innerHeight;
-  const home = libCardNode(node.dataset.tag);
+  const home = (hand?.has(node.dataset.tag) && hand.nodeOf(node.dataset.tag)) || libCardNode(node.dataset.tag);
   let to = home && home.getBoundingClientRect();
   if (!inView(to)) {
     const g = $("lib-grid").getBoundingClientRect();
@@ -528,6 +556,7 @@ function unpin(tag, { viaDrag = false } = {}) {
   pool.delete(tag);
   for (const b of lex.byTag.get(tag)?.bind || []) pool.delete(b);
   const gone = [...before].filter((t) => !pool.has(t) && !(viaDrag && t === tag));
+  for (const t of [...before].filter((x) => !pool.has(x))) if (hand?.has(t)) hand.arriveAt(t, viaDrag && t === tag ? 0 : 520);
   // 以前按 × 牌就不見了：現在先記下位置，重畫之後從原地飛回字盒。
   const leaving = gone.map(poolNode).filter(Boolean).map((n) => ({ node: n, rect: n.getBoundingClientRect() }));
   commitPins();
@@ -543,6 +572,7 @@ function ban(tag, { viaDrag = false, from = null } = {}) {
     if (from) flyToTrash(from);
     else if (src) flyToTrash({ node: src, rect: src.getBoundingClientRect() });
   }
+  if (hand?.has(tag)) hand.remove(tag, { quiet: true });
   const next = applyBan(lex, pool, bans, tag);
   pool = next.pinned;
   bans = next.userBanned;
@@ -580,6 +610,7 @@ function unban(tag) {
 
 function commitPins(fresh) {
   S.saveBans(bans);
+  hand?.update();
   // 說明只講「剛剛那一步」：再動一次池子，舊的換下說明就收掉。
   if (!fresh) poolNote = null;
   // 池子整塊重畫：同一張牌從舊位置滑到新位置，不是一格一格跳（拿出一張、擠掉一張時最明顯）。
@@ -882,7 +913,7 @@ function renderGoBar() {
   // 狀態沒變就不重畫。生圖時每個進度事件都會叫到這裡，以前整排按鈕一秒換好幾次新的：
   // 滑鼠停在「停」上看起來在閃，按下去的那一瞬間按鈕剛好被換掉，按下跟放開落在兩個不同的
   // 元素上，瀏覽器不算一次點擊 —— 要按好幾次才停得下來。
-  const key = [busy, generator.pending, infinite, n, settings.samePerson].join("|");
+  const key = [busy, generator.pending, infinite, n, settings.samePerson, hand ? hand.count : 0, hand?.editing].join("|");
   if (bar.dataset.key === key && bar.childElementCount) return renderGoFloat();
   bar.dataset.key = key;
   bar.replaceChildren(
@@ -900,6 +931,18 @@ function renderGoBar() {
     ),
     el("span", { class: "spacer" }),
     busy ? el("button", { class: "btn", type: "button", onclick: stopAll }, "停") : null,
+    el(
+      "button",
+      {
+        class: "btn btn-ghost hand-btn",
+        id: "hand-btn",
+        type: "button",
+        "aria-pressed": hand?.editing ? "true" : "false",
+        title: "偏好卡牌：挑最多十張常用的牌，攤在視窗底部，點一下就放進合成池",
+        onclick: () => hand?.toggleEdit(),
+        html: `<svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linejoin="round" aria-hidden="true"><rect x="3" y="7" width="8" height="12" rx="1.5" transform="rotate(-14 7 13)"/><rect x="8" y="5" width="8" height="12" rx="1.5"/><rect x="13" y="7" width="8" height="12" rx="1.5" transform="rotate(14 17 13)"/></svg><span>偏好卡牌</span><b>${hand ? hand.count : 0}/${hand ? hand.max : 10}</b>`,
+      }
+    ),
     el("button", { class: "btn btn-pool", type: "button", onclick: () => drawBatch(false), title: "只抽牌，不送 Comfy（P）" }, "只抽牌"),
     el("button", { class: "btn btn-primary", type: "button", onclick: () => drawBatch(true), title: "抽並生圖（G）" }, "抽並生圖", el("span", { class: "count" }, `×${n}`)),
     // 自己一行，放在按鈕底下：不要把「抽並生圖」擠到下一行去。
@@ -1611,10 +1654,24 @@ const drag = createDrag({
     { id: "pool", el: $("pool-well"), accepts: (p) => p.from !== "pool" },
     // 丟進廢字簍：影子縮小、轉著被吸進去（drag.js 的 sink）。
     { id: "trash", el: $("trash"), accepts: () => true, sink: true },
-    { id: "library", el: $("library"), accepts: (p) => p.from === "pool" },
+    { id: "library", el: $("library"), accepts: (p) => p.from === "pool" || p.from === "hand" },
+    // 偏好卡牌：字盒、合成池的牌都可以拖進來（池裡的等於收回手牌）。
+    { id: "hand", el: hand?.fan, accepts: (p) => p.from !== "hand" && !!hand },
   ],
   // 回傳落點：影子飛到那張牌的位置落下（drag.js）。
   onDrop: (p, zone) => {
+    if (zone === "hand") {
+      hand.add(p.tag);
+      if (p.from === "pool") {
+        hand.arriveAt(p.tag, 0);
+        unpin(p.tag, { viaDrag: true });
+      }
+      return hand.nodeOf(p.tag);
+    }
+    if (zone === "library" && p.from === "hand") {
+      hand.remove(p.tag, { quiet: true });
+      return libCardNode(p.tag);
+    }
     if (zone === "pool") {
       if (bans.has(p.tag)) bans.delete(p.tag);
       pin(p.tag);
@@ -1663,6 +1720,7 @@ $("pool-clear").addEventListener("click", () => {
   if (!before.length) return;
   // 一張接一張收回字盒（從最後放的那張開始），五秒內可以反悔。
   const leaving = before.map(poolNode).filter(Boolean).map((n) => ({ node: n, rect: n.getBoundingClientRect() })).reverse();
+  for (const t of before) if (hand?.has(t)) hand.arriveAt(t, 700);
   pool = new Set();
   commitPins();
   // 先在合成池中間掃成一疊，整疊一起收回字盒（一張張各飛各的會交叉亂飛）。
