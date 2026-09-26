@@ -33,7 +33,7 @@ import { HARD_BANNED, applyArtSources } from "./card-art.js";
 import { buildLibrary, createAssets, cardNode, setCardFlag, cardFacts, CARD_SUIT_INFO, CARD_SUITS, RATING_ZH } from "./cards.js";
 import { el, openSheet, anyOverlay, toast, ICONS } from "./ui.js";
 import { createDrag, inkRing } from "./drag.js";
-import { initMotion, flip, leave, enter, confirmButton } from "./motion.js";
+import { initMotion, flip, flipBy, leave, enter, confirmButton } from "./motion.js";
 import { createGenerator, comfyOnline, viewSrc, tabTitle, watchLink, LINK_LABEL } from "./gen.js";
 import { genSeed, mountSeedControl, seedUseButton } from "./seed-control.js";
 import { attachPeek } from "./card-peek.js";
@@ -519,19 +519,53 @@ function announce(text) {
   setTimeout(() => (t.textContent = text), 30);
 }
 
-function unpin(tag) {
+/** 拿出合成池。viaDrag：拖回字盒的那張由 drag.js 飛回去，這裡只讓它連帶的牌飛。 */
+function unpin(tag, { viaDrag = false } = {}) {
+  const before = new Set(pool);
   pool.delete(tag);
   for (const b of lex.byTag.get(tag)?.bind || []) pool.delete(b);
+  const gone = [...before].filter((t) => !pool.has(t) && !(viaDrag && t === tag));
+  // 以前按 × 牌就不見了：現在先記下位置，重畫之後從原地飛回字盒。
+  const leaving = gone.map(poolNode).filter(Boolean).map((n) => ({ node: n, rect: n.getBoundingClientRect() }));
   commitPins();
+  leaving.forEach((l, i) => setTimeout(() => liftOut(l), i * 60));
 }
 
-function ban(tag) {
+/** 丟進廢字簍。viaDrag：拖進去的那張 drag.js 已經演過被吸進去，這裡不重演。 */
+function ban(tag, { viaDrag = false } = {}) {
   if (!lib.byTag.has(tag)) return;
+  // 用按鈕或 Delete 封鎖的：牌從它現在的位置（池裡或字盒裡）轉著縮進廢字簍。
+  if (!viaDrag) {
+    const src = poolNode(tag) || libCardNode(tag);
+    if (src) flyToTrash({ node: src, rect: src.getBoundingClientRect() });
+  }
   const next = applyBan(lex, pool, bans, tag);
   pool = next.pinned;
   bans = next.userBanned;
   commitPins();
   renderTrash(true);
+}
+
+/** 牌轉著縮進右下角的廢字簍（跟拖進去的吸入同一個樣子）。 */
+function flyToTrash({ node, rect }) {
+  if (matchMedia("(prefers-reduced-motion: reduce)").matches || !rect.width) return;
+  const bin = $("trash")?.getBoundingClientRect();
+  if (!bin || !bin.width) return;
+  const ghost = node.cloneNode(true);
+  Object.assign(ghost.style, { position: "fixed", left: rect.left + "px", top: rect.top + "px", width: rect.width + "px", margin: "0", zIndex: "80", pointerEvents: "none" });
+  ghost.style.setProperty("--card-w", rect.width + "px");
+  document.body.append(ghost);
+  const dx = bin.left + bin.width / 2 - (rect.left + rect.width / 2);
+  const dy = bin.top + bin.height / 2 - (rect.top + rect.height / 2);
+  ghost.animate(
+    [
+      { transform: "none", opacity: 1 },
+      { transform: `translate(${dx * 0.5}px, ${dy * 0.5 - 40}px) scale(0.7) rotate(-14deg)`, opacity: 1, offset: 0.55 },
+      { transform: `translate(${dx}px, ${dy}px) scale(0.08) rotate(-200deg)`, opacity: 0.2 },
+    ],
+    { duration: 520, easing: "cubic-bezier(0.5, 0, 0.3, 1)", fill: "forwards" }
+  );
+  setTimeout(() => ghost.remove(), 540);
 }
 
 function unban(tag) {
@@ -544,7 +578,8 @@ function commitPins(fresh) {
   S.saveBans(bans);
   // 說明只講「剛剛那一步」：再動一次池子，舊的換下說明就收掉。
   if (!fresh) poolNote = null;
-  renderPool(fresh);
+  // 池子整塊重畫：同一張牌從舊位置滑到新位置，不是一格一格跳（拿出一張、擠掉一張時最明顯）。
+  flipBy($("pool-well"), ".pool-slot", (n) => n.querySelector(".card")?.dataset.tag, () => renderPool(fresh));
   renderPoolNote();
   repaintLibrary();
   renderTrash();
@@ -1503,12 +1538,12 @@ const drag = createDrag({
     }
     if (zone === "trash") {
       // 廢字簍自己會跳一下、數字加一；畫面上不用再多一個提示。
-      ban(p.tag);
+      ban(p.tag, { viaDrag: true });
       announce(`「${zh(p.tag)}」丟進廢字簍了，之後不會抽到`);
       return null;
     }
     if (zone === "library") {
-      unpin(p.tag);
+      unpin(p.tag, { viaDrag: true });
       return libCardNode(p.tag);
     }
     return null;
@@ -1540,8 +1575,23 @@ watchGoBar();
 $("trash").addEventListener("click", showBans);
 $("trash").innerHTML = ICONS.trash + "<b>0</b><span>廢字簍</span>";
 $("pool-clear").addEventListener("click", () => {
+  const before = [...pool];
+  if (!before.length) return;
+  // 一張接一張收回字盒（從最後放的那張開始），五秒內可以反悔。
+  const leaving = before.map(poolNode).filter(Boolean).map((n) => ({ node: n, rect: n.getBoundingClientRect() })).reverse();
   pool = new Set();
   commitPins();
+  leaving.forEach((l, i) => setTimeout(() => liftOut(l), i * 45));
+  toast(`清空了合成池（${before.length} 張）`, {
+    action: {
+      label: "復原",
+      run: () => {
+        pool = new Set(before.filter((t) => lib.byTag.has(t) && !bans.has(t)));
+        commitPins();
+        [...pool].forEach((t, i) => popCarried(t, i * 60));
+      },
+    },
+  });
 });
 
 // ?debug：給測試腳本用的把手

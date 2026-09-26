@@ -137,6 +137,36 @@ export function flip(container, mutate, { duration = 320 } = {}) {
   }
 }
 
+/**
+ * flipBy：整塊重畫（replaceChildren）也能讓位 —— 節點換了新的，就用 key（牌名）認人。
+ * 重畫前記下每張的位置，重畫後同一張從舊位置滑到新位置。
+ * alias(key) 回傳「沒有舊位置時可以借用的 key」：疊印台的影子被收下變成正式的牌，
+ * 就從影子的位置滑進去。
+ */
+export function flipBy(container, selector, key, mutate, { duration = 320, alias = null } = {}) {
+  if (!container || reducedMotion()) {
+    mutate();
+    return;
+  }
+  const before = new Map();
+  for (const n of container.querySelectorAll(selector)) {
+    const k = key(n);
+    if (k && !before.has(k)) before.set(k, n.getBoundingClientRect());
+  }
+  mutate();
+  if (!before.size) return;
+  for (const n of container.querySelectorAll(selector)) {
+    const k = key(n);
+    const a = before.get(k) || (alias && before.get(alias(k)));
+    if (!a) continue;
+    const b = n.getBoundingClientRect();
+    const dx = a.left - b.left;
+    const dy = a.top - b.top;
+    if (Math.abs(dx) < 1 && Math.abs(dy) < 1) continue;
+    n.animate([{ transform: `translate(${dx}px, ${dy}px)` }, { transform: "none" }], { duration, easing: EASE });
+  }
+}
+
 /** 一個東西離場：縮一點、淡掉，結束後才真的拿掉（done 裡做 DOM 移除，通常配 flip）。 */
 export function leave(node, done, { duration = 200 } = {}) {
   if (!node || reducedMotion()) {

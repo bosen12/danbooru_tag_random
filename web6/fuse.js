@@ -34,7 +34,7 @@ import { initWorkflow, currentWorkflowId, wfHandleKeys } from "./workflow.js";
 import { HARD_BANNED, applyArtSources } from "./card-art.js";
 import { buildLibrary, createAssets, cardNode, cardFacts, CARD_SUIT_INFO, CARD_SUITS, RATING_ZH, ERA_ZH } from "./cards.js";
 import { el, openSheet, anyOverlay, toast } from "./ui.js";
-import { initMotion, flip, leave } from "./motion.js";
+import { initMotion, flip, flipBy, leave } from "./motion.js";
 import { createDrag, inkRing } from "./drag.js";
 import { createGenerator, comfyOnline, viewSrc, tabTitle, watchLink, LINK_LABEL } from "./gen.js";
 import { attachPeek, hidePeek } from "./card-peek.js";
@@ -1182,7 +1182,12 @@ function renderPlate(events = []) {
     );
   });
   if (!empty) starterPick = null;
-  put(box, empty ? startBlock() : null, rows);
+  // 整塊重畫時同一張牌從舊位置滑到新位置（拿下一張、放上一張時，同一列的其他牌讓位）；
+  // 影子被收下變成正式的牌，從影子的位置滑進去。
+  const cardKey = (n) => (n.classList.contains("ghost-card") ? "g:" : "p:") + n.dataset.tag;
+  flipBy(box, ".plate-card, .ghost-card", cardKey, () => put(box, empty ? startBlock() : null, rows), {
+    alias: (k) => (k.startsWith("p:") ? "g:" + k.slice(2) : null),
+  });
   box.dataset.empty = empty ? "true" : "false";
   if (peeking) box.dataset.peek = t.letter;
   else delete box.dataset.peek;

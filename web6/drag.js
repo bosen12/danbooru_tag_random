@@ -223,6 +223,9 @@ export function createDrag({ zones, onDrop, onOver }) {
       landed && landed();
       return;
     }
+    // 目的地可能正在讓位滑動（卡池整塊重畫的 FLIP）：先讓它到位再量，不然影子會落在它滑動的起點。
+    // 它接著就會被藏起來等影子落下，跳到終點看不出來。
+    for (const a of target.getAnimations()) a.finish();
     const to = target.getBoundingClientRect();
     if (quick || !to.width) {
       state.ghost.remove();

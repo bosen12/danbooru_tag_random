@@ -1680,6 +1680,10 @@ const ALBUM_FIXTURE = [
     ok("疊印台起手組合 20 組以上，每次隨機三組、可以換一組", starters.length >= 20 && fuse6.includes("function pickStarters(") && fuse6.includes("換一組"), `目前 ${starters.length} 組`);
   }
   ok("重新整理清掉沒印出來的（墨池、疊印台）；疊印台取消的不掛上繩子", app6.includes('s.status === "done" || s.status === "drawn" || (s.live && s.job)') && fuse6.includes('.filter((p) => p.status === "done" || (p.live && p.job))') && fuse6.includes('else if (p.status === "cancelled") dropCancelled(p);'));
+  const drag6 = readFileSync(join(ROOT, "web6/drag.js"), "utf8");
+  ok("整塊重畫也讓位（flipBy 用牌名認人）：墨池合成池、疊印台卡池；影子收下從影子的位置滑進去", motion6.includes("export function flipBy(") && app6.includes('flipBy($("pool-well"), ".pool-slot"') && fuse6.includes('flipBy(box, ".plate-card, .ghost-card", cardKey') && fuse6.includes('alias: (k) => (k.startsWith("p:") ? "g:" + k.slice(2) : null)'));
+  ok("拖曳落點先讓讓位動畫到位再量", drag6.includes("for (const a of target.getAnimations()) a.finish();"));
+  ok("墨池：× 拿出飛回字盒、按鈕封鎖飛進廢字簍、清空一張張收回可以復原（拖曳的不重演）", app6.includes("function unpin(tag, { viaDrag = false } = {})") && app6.includes("function flyToTrash(") && app6.includes("清空了合成池") && app6.includes("ban(p.tag, { viaDrag: true })") && app6.includes("unpin(p.tag, { viaDrag: true })"));
   ok("排字匣不送全域中斷（空的 {}）", !boot.includes('body: "{}"') && !boot.includes("prompt_id: jobPromptId } : {}"));
 }
 
