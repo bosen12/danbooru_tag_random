@@ -1494,12 +1494,32 @@ function showBans() {
           const node = cardNode(lib.byTag.get(t), assets);
           node.addEventListener("click", () => {
             unban(t);
-            node.remove();
+            rescue(node);
           });
           return node;
         })
       )
     : el("p", { class: "pool-empty" }, "廢字簍是空的。把不想再看到的字拖進來，以後就不會抽到。");
+  // 撿回來的那張往上浮起來淡掉（從簍子裡拿出來），旁邊的滑過來補位；標題的數字跟著少一個。
+  const rescue = (node, delay = 0) => {
+    const box = node.parentNode;
+    const done = () => {
+      flip(box, () => node.remove());
+      const left = box ? box.querySelectorAll(".card").length : 0;
+      const h = sheet.sheet.querySelector("h2");
+      if (h) h.textContent = `廢字簍・${left} 個字`;
+      if (!left && box) box.replaceWith(el("p", { class: "pool-empty" }, "都撿回來了。"));
+    };
+    if (matchMedia("(prefers-reduced-motion: reduce)").matches) return done();
+    node.animate(
+      [
+        { transform: "none", opacity: 1, filter: "grayscale(1)" },
+        { transform: "translateY(-6px) scale(1.05)", opacity: 1, filter: "none", offset: 0.35 },
+        { transform: "translateY(-26px) scale(0.9)", opacity: 0, filter: "none" },
+      ],
+      { duration: 360, delay, easing: "cubic-bezier(0.45, 0, 0.25, 1)", fill: "forwards" }
+    ).onfinish = done;
+  };
   const sheet = openSheet(`廢字簍・${list.length} 個字`, el("div", {}, list.length ? el("p", { class: "tag-en", style: "margin-bottom:0.75rem" }, "點一張就撿回來（之後又可能抽到）。") : null, grid), {
     wide: true,
     foot: list.length
@@ -1510,7 +1530,21 @@ function showBans() {
             onclick: () => {
               bans = new Set();
               commitPins();
-              sheet.close();
+              renderTrash();
+              // 一張接一張浮起來，都起來了才關（最多等半秒多，牌再多也不拖）。
+              const cards = [...sheet.sheet.querySelectorAll(".ban-grid .card")];
+              if (matchMedia("(prefers-reduced-motion: reduce)").matches || !cards.length) return sheet.close();
+              const step = Math.min(40, 360 / cards.length);
+              cards.forEach((c, i) =>
+                c.animate(
+                  [
+                    { transform: "none", opacity: 1 },
+                    { transform: "translateY(-26px) scale(0.9)", opacity: 0 },
+                  ],
+                  { duration: 320, delay: i * step, easing: "cubic-bezier(0.45, 0, 0.25, 1)", fill: "forwards" }
+                )
+              );
+              setTimeout(() => sheet.close(), 320 + cards.length * step);
             },
           }, "全部撿回來"),
         ]

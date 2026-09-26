@@ -17,6 +17,11 @@ border-radius:14px;background:var(--peek-panel,oklch(21% .016 250));border:1px s
 box-shadow:0 22px 50px oklch(6% .01 250/.6);padding:10px;color:var(--peek-ink,oklch(94% .012 90));
 font-family:var(--peek-body,"Noto Sans TC","Microsoft JhengHei",sans-serif)}
 .card-peek[data-show="true"]{opacity:1;transform:none}
+.card-peek[data-side="right"]{transform-origin:left center;transform:translateX(-10px) scale(.92)}
+.card-peek[data-side="left"]{transform-origin:right center;transform:translateX(10px) scale(.92)}
+.card-peek[data-side="right"][data-show="true"],.card-peek[data-side="left"][data-show="true"]{transform:none}
+.card-peek.is-gliding{transition:opacity 180ms cubic-bezier(.16,1,.3,1),transform 220ms cubic-bezier(.16,1,.3,1),left 170ms cubic-bezier(.16,1,.3,1),top 170ms cubic-bezier(.16,1,.3,1)}
+@media (prefers-reduced-motion:reduce){.card-peek,.card-peek.is-gliding{transition:none}}
 .card-peek-face{position:relative;display:grid;grid-template-columns:22% minmax(0,1fr);aspect-ratio:480/702;border-radius:10px;overflow:hidden;
 background:oklch(93.5% .024 86);color:oklch(24% .02 50);box-shadow:0 1px 0 oklch(99% .012 85/.35) inset}
 .card-peek-spine{display:flex;flex-direction:column;align-items:center;gap:8px;padding:10px 0;border-right:1px solid oklch(82% .03 80)}
@@ -120,8 +125,18 @@ function place(anchor) {
   const w = p.offsetWidth || 248;
   const hgt = p.offsetHeight || 420;
   let left = r.right + 12;
-  if (left + w > window.innerWidth - 8) left = r.left - w - 12;
-  if (left < 8) left = Math.max(8, Math.min(window.innerWidth - w - 8, r.left + r.width / 2 - w / 2));
+  let side = "right";
+  if (left + w > window.innerWidth - 8) {
+    left = r.left - w - 12;
+    side = "left";
+  }
+  if (left < 8) {
+    left = Math.max(8, Math.min(window.innerWidth - w - 8, r.left + r.width / 2 - w / 2));
+    side = "";
+  }
+  // 放大卡從它指著的那張牌那一側長出來（在牌右邊就從左緣長出來），不是一律從下面浮上來。
+  if (side) p.dataset.side = side;
+  else delete p.dataset.side;
   let top = r.top + r.height / 2 - hgt / 2;
   top = Math.max(8, Math.min(window.innerHeight - hgt - 8, top));
   p.style.left = Math.round(left) + "px";
@@ -130,14 +145,28 @@ function place(anchor) {
 
 export function showPeek(anchor, info) {
   if (!anchor || !info || document.body.dataset.dragging === "true") return;
+  clearTimeout(intentTimer);
+  clearTimeout(hideTimer);
+  const wasShown = !!peek && peek.dataset.show === "true";
   current = anchor;
   render(info);
+  // 已經開著、換到隔壁那張：放大卡滑過去，不是瞬間跳到新位置。
+  peek.classList.toggle("is-gliding", wasShown);
   place(anchor);
   peek.dataset.show = "true";
 }
 
+// 滑鼠停一下（120ms）才浮出放大卡：只是掃過字盒不要一路閃。已經開著的換牌不等。
+let intentTimer = 0;
+const INTENT_MS = 120;
+// 離開一張牌不馬上收：牌跟牌之間有縫，滑到隔壁那張的路上會先「離開」—— 等 80ms，
+// 到了隔壁就接著滑過去，真的離開了才收。
+let hideTimer = 0;
+const LEAVE_MS = 80;
+
 export function hidePeek(anchor) {
   if (anchor && current && anchor !== current) return;
+  clearTimeout(intentTimer);
   current = null;
   if (peek) peek.dataset.show = "false";
 }
@@ -149,14 +178,27 @@ export function attachPeek(root, selector, getInfo) {
     root.addEventListener("pointerover", (e) => {
       if (e.pointerType && e.pointerType !== "mouse") return;
       const el = e.target.closest(selector);
-      if (!el || !root.contains(el) || el === current) return;
-      showPeek(el, getInfo(el));
+      if (!el || !root.contains(el)) return;
+      if (el === current) {
+        clearTimeout(hideTimer);
+        return;
+      }
+      if (peek && peek.dataset.show === "true") {
+        showPeek(el, getInfo(el));
+        return;
+      }
+      clearTimeout(intentTimer);
+      intentTimer = setTimeout(() => {
+        if (el.matches(":hover")) showPeek(el, getInfo(el));
+      }, INTENT_MS);
     });
     root.addEventListener("pointerout", (e) => {
       const el = e.target.closest(selector);
       if (!el) return;
       if (e.relatedTarget && el.contains(e.relatedTarget)) return;
-      hidePeek(el);
+      clearTimeout(intentTimer);
+      clearTimeout(hideTimer);
+      hideTimer = setTimeout(() => hidePeek(el), LEAVE_MS);
     });
     root.addEventListener("pointerdown", () => hidePeek());
   }
