@@ -34,7 +34,7 @@ import { initWorkflow, currentWorkflowId, wfHandleKeys } from "./workflow.js";
 import { HARD_BANNED, applyArtSources } from "./card-art.js";
 import { buildLibrary, createAssets, cardNode, cardFacts, CARD_SUIT_INFO, CARD_SUITS, RATING_ZH, ERA_ZH } from "./cards.js";
 import { el, openSheet, anyOverlay, toast } from "./ui.js";
-import { initMotion, flip, flipBy, leave } from "./motion.js";
+import { initMotion, flip, flipBy, leave, gatherHome } from "./motion.js";
 import { createDrag, inkRing } from "./drag.js";
 import { createGenerator, comfyOnline, viewSrc, tabTitle, watchLink, LINK_LABEL } from "./gen.js";
 import { attachPeek, hidePeek } from "./card-peek.js";
@@ -415,8 +415,10 @@ function undo() {
   renderAll([]);
   syncCaseStates();
   if (caseTab === "match") renderCase();
-  // 撤回：上一步放上來的飛回字盒；上一步拿走的從字盒飛回原位（字盒裡看不到它就原地落下）。
-  leaving.forEach((s, i) => flyHome(s, i * 50));
+  // 撤回：上一步放上來的回字盒（四張以上先疊成一疊再一起走，不然路線交叉看起來在亂飛）；
+  // 上一步拿走的從字盒飛回原位（字盒裡看不到它就原地落下）。
+  if (leaving.length >= 4) sweepHome(leaving, leaving.map((s) => s.node.dataset.tag));
+  else leaving.forEach((s, i) => flyHome(s, i * 50));
   returning.forEach((t, i) => {
     const home = caseCard(t);
     const r = home && home.getBoundingClientRect();
@@ -432,9 +434,10 @@ function undo() {
 function clearBed() {
   if (!bed.pins.length) return;
   const snaps = bed.pins.map((t) => plateNode(t)).filter(Boolean).map(snapshot);
+  const tags = snaps.map((s) => s.node.dataset.tag);
   commit(emptyBed(), "清版", []);
-  // 清版：牌一張接一張收回字盒（從最後放的那張開始，像把疊好的牌收起來）。
-  snaps.reverse().forEach((s, i) => flyHome(s, i * 45));
+  // 清版：先把版上的牌掃成一疊（卡池中間），整疊一起收回字盒；字盒裡看得到的那幾張依序輕輕收下。
+  sweepHome(snaps, tags);
   sfx.lift();
   announce("清版了。按撤回可以拿回來");
 }
@@ -1733,6 +1736,22 @@ function flyHome(snap, delay = 0) {
     clone.remove();
     if (home && home.isConnected) stamp(home, "is-returned");
   }, delay + 490);
+}
+
+/** 一疊牌收回字盒：疊在卡池中間，整疊飛到字盒那一欄（看不到字盒就原地淡掉）。 */
+function sweepHome(snaps, tags) {
+  if (reduced() || !snaps.length) return;
+  const reg = $("registers").getBoundingClientRect();
+  const pile = { x: reg.left + reg.width / 2, y: Math.max(reg.top + 80, Math.min(reg.top + reg.height / 2, innerHeight / 2)) };
+  const grid = $("case-grid").getBoundingClientRect();
+  const home = grid.width && grid.bottom > 0 && grid.top < innerHeight ? { x: grid.left + grid.width / 2, y: Math.max(grid.top, 0) + 60 } : null;
+  const ms = gatherHome(snaps, pile, home, { cls: "flying" });
+  if (!home) return;
+  const seen = tags.map((t) => caseCard(t)).filter((n) => {
+    const r = n && n.getBoundingClientRect();
+    return r && r.width && r.bottom > 0 && r.top < innerHeight;
+  });
+  seen.forEach((n, i) => setTimeout(() => stamp(n, "is-returned"), ms - 60 + i * 40));
 }
 
 function liftAway(snap, dir) {

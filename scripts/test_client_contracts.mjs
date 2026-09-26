@@ -1687,6 +1687,7 @@ const ALBUM_FIXTURE = [
   const wf = readFileSync(join(ROOT, "web/workflow.js"), "utf8");
   const fuseHtml = readFileSync(join(ROOT, "web6/fuse.html"), "utf8");
   ok("墨池／疊印台右上角：工作流、聲音是圖示（名字在 aria-label），排字匣的工作流照舊是字", wf.includes('class="wf-ico"') && fuseHtml.includes('id="sound-btn"') && !fuseHtml.includes(">聲音</button>") && fuse6.includes("snd.innerHTML = sfx.on") && readFileSync(join(ROOT, "web/boot.css"), "utf8").includes("#wf-pick-btn .wf-ico {"));
+  ok("清版／清空／一次撤回四張以上：先掃成一疊再整疊收回字盒（不各飛各的）", motion6.includes("export function gatherHome(") && fuse6.includes("sweepHome(snaps, tags);") && fuse6.includes("if (leaving.length >= 4) sweepHome(") && app6.includes("gatherHome(leaving,"));
   ok("疊印台的規則鈕也是圖示", fuseHtml.includes('id="rules-btn" type="button" aria-label="規則"') && !fuseHtml.includes(">規則</button>"));
   ok("池中／封鎖／在池的章：新蓋上去的像橡皮章壓下來，沒變的不重蓋", readFileSync(join(ROOT, "web6/cards.js"), "utf8").includes("old.dataset.kind === flag.kind && old.textContent === flag.text") && fuse6.includes('node.classList.add("is-flag-stamp")'));
   ok("疊印台的規則自己一份（跟墨池分開），規則裡可以設每段補幾張", fuse6.includes('settings: "mochi.fuse.settings.v1"') && !fuse6.includes("S.saveSettings(") && fuse6.includes("每段補幾張"));

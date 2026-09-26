@@ -33,7 +33,7 @@ import { HARD_BANNED, applyArtSources } from "./card-art.js";
 import { buildLibrary, createAssets, cardNode, setCardFlag, cardFacts, CARD_SUIT_INFO, CARD_SUITS, RATING_ZH } from "./cards.js";
 import { el, openSheet, anyOverlay, toast, ICONS } from "./ui.js";
 import { createDrag, inkRing } from "./drag.js";
-import { initMotion, flip, flipBy, leave, enter, confirmButton } from "./motion.js";
+import { initMotion, flip, flipBy, leave, enter, confirmButton, gatherHome } from "./motion.js";
 import { createGenerator, comfyOnline, viewSrc, tabTitle, watchLink, LINK_LABEL } from "./gen.js";
 import { genSeed, mountSeedControl, seedUseButton } from "./seed-control.js";
 import { attachPeek } from "./card-peek.js";
@@ -1581,7 +1581,11 @@ $("pool-clear").addEventListener("click", () => {
   const leaving = before.map(poolNode).filter(Boolean).map((n) => ({ node: n, rect: n.getBoundingClientRect() })).reverse();
   pool = new Set();
   commitPins();
-  leaving.forEach((l, i) => setTimeout(() => liftOut(l), i * 45));
+  // 先在合成池中間掃成一疊，整疊一起收回字盒（一張張各飛各的會交叉亂飛）。
+  const well = $("pool-well").getBoundingClientRect();
+  const grid = $("lib-grid").getBoundingClientRect();
+  const home = grid.width && grid.bottom > 0 && grid.top < innerHeight ? { x: grid.left + grid.width / 2, y: Math.max(grid.top, 0) + 60 } : null;
+  gatherHome(leaving, { x: well.left + well.width / 2, y: well.top + well.height / 2 }, home);
   toast(`清空了合成池（${before.length} 張）`, {
     action: {
       label: "復原",
