@@ -65,12 +65,42 @@ const FK_OLD = ["mochi.fuse.bed.v1", "mochi.fuse.seeds.v1", "mochi.fuse.picked.v
 
 // 第一次打開的起手式：三組一點就疊好的版。只收詞庫裡有、這個尺度看得到的。
 const STARTERS = [
-  { name: "春日和服", tags: ["kimono", "cherry blossoms", "smile"] },
+  // 現代
   { name: "雨夜街角", tags: ["umbrella", "rain", "night", "street"] },
   { name: "書房午後", tags: ["reading", "library", "glasses"] },
   { name: "海邊黃昏", tags: ["sundress", "beach", "sunset"] },
   { name: "咖啡店", tags: ["apron", "cafe", "smile"] },
+  { name: "放學教室", tags: ["school uniform", "classroom", "sunset"] },
+  { name: "屋頂星空", tags: ["rooftop", "starry sky", "night"] },
+  { name: "白底立繪", tags: ["white background", "standing", "smile"] },
+  { name: "閃亮舞台", tags: ["idol", "spotlight", "microphone", "sparkle"] },
+  { name: "霓虹街頭", tags: ["jacket", "city lights", "neon lights", "night"] },
+  { name: "櫻花校園", tags: ["school uniform", "falling petals", "cherry blossoms"] },
+  { name: "雨後公園", tags: ["umbrella", "park", "rain"] },
+  { name: "夏日泳池", tags: ["one-piece swimsuit", "pool", "splashing", "blue sky"] },
+  { name: "單車兜風", tags: ["riding bicycle", "blue sky", "smile"] },
+  { name: "早晨廚房", tags: ["apron", "kitchen", "cooking", "window light"] },
+  { name: "賴床", tags: ["pajamas", "bedroom", "sleeping"] },
+  { name: "樹影散步", tags: ["dress", "forest", "dappled sunlight"] },
+  { name: "秋日落葉", tags: ["sweater", "park", "falling leaves"] },
+  { name: "街頭帽T", tags: ["hoodie", "street", "day"] },
+  { name: "溫泉", tags: ["onsen", "steam", "towel"] },
+  { name: "電車窗邊", tags: ["train interior", "sitting", "window light"] },
+  { name: "像素小品", tags: ["pixel art", "simple background", "smile"] },
+  { name: "九〇年代", tags: ["1990s (style)", "anime coloring", "looking at viewer"] },
+  { name: "魔法光點", tags: ["magic", "light particles", "fantasy"] },
+  // 其他時代
+  { name: "春日和服", tags: ["kimono", "cherry blossoms", "smile"] },
+  { name: "夏祭浴衣", tags: ["yukata", "paper lantern", "festival", "night"] },
+  { name: "道場", tags: ["hakama", "dojo"] },
+  { name: "古風庭園", tags: ["hanfu", "east asian architecture", "bamboo forest"] },
+  { name: "城堡騎士", tags: ["armor", "castle", "cape"] },
+  { name: "維多利亞茶會", tags: ["victorian", "dress", "teacup"] },
+  { name: "希臘神殿", tags: ["ancient greek clothes", "greco-roman architecture", "sunlight"] },
 ];
+// 空白的版每次放三組上來：版變空的那一刻抽一次，之後重畫（滑鼠經過、換試印）不重抽，
+// 按「換一組」才換。
+let starterPick = null;
 
 let data = null;
 let lex = null;
@@ -308,7 +338,7 @@ function place(tag, sourceEl, { viaDrag = false } = {}) {
     haptic(8);
   };
   // 被擠掉的牌現在就離開（新的那張正飛過來）。
-  leaving.forEach((snap) => liftAway(snap, "aside"));
+  leaving.forEach((snap) => flyHome(snap));
   if (leaving.length) setTimeout(() => sfx.lift(), 90);
   let result;
   if (viaDrag) {
@@ -343,7 +373,7 @@ function remove(tag, { viaDrag = false } = {}) {
   const { bed: next, events } = removeCard(bed, tag);
   const snaps = (events[0]?.tags || [tag]).filter((t) => !(viaDrag && t === tag)).map((t) => plateNode(t)).filter(Boolean).map(snapshot);
   commit(next, `拿下「${zh(tag)}」`, events);
-  snaps.forEach((s) => liftAway(s, "up"));
+  snaps.forEach((s, i) => flyHome(s, i * 60));
   sfx.lift();
   haptic(6);
   const also = (events[0]?.tags || []).filter((t) => t !== tag);
@@ -384,8 +414,15 @@ function undo() {
   renderAll([]);
   syncCaseStates();
   if (caseTab === "match") renderCase();
-  leaving.forEach((s) => liftAway(s, "up"));
-  returning.forEach((t, i) => popIn(t, 40 + i * 70));
+  // 撤回：上一步放上來的飛回字盒；上一步拿走的從字盒飛回原位（字盒裡看不到它就原地落下）。
+  leaving.forEach((s, i) => flyHome(s, i * 50));
+  returning.forEach((t, i) => {
+    const home = caseCard(t);
+    const r = home && home.getBoundingClientRect();
+    const seen = r && r.width && r.bottom > 0 && r.top < innerHeight;
+    if (seen) setTimeout(() => flyIn(t, r), 40 + i * 70);
+    else popIn(t, 40 + i * 70);
+  });
   sfx.lift();
   if (returning.length) setTimeout(() => sfx.stamp(), 60);
   announce(`撤回：${h.label}`);
@@ -395,7 +432,8 @@ function clearBed() {
   if (!bed.pins.length) return;
   const snaps = bed.pins.map((t) => plateNode(t)).filter(Boolean).map(snapshot);
   commit(emptyBed(), "清版", []);
-  snaps.forEach((s, i) => setTimeout(() => liftAway(s, "up"), i * 25));
+  // 清版：牌一張接一張收回字盒（從最後放的那張開始，像把疊好的牌收起來）。
+  snaps.reverse().forEach((s, i) => flyHome(s, i * 45));
   sfx.lift();
   announce("清版了。按撤回可以拿回來");
 }
@@ -462,7 +500,7 @@ const generator = createGenerator({
     } else if (p.status === "failed") {
       sfx.fail();
       savePrints();
-    } else if (p.status === "cancelled") savePrints();
+    } else if (p.status === "cancelled") dropCancelled(p);
   },
   stopped: (msg) => {
     plateNotice = { kind: "err", text: msg };
@@ -547,11 +585,28 @@ function stopPrinting() {
   generator.stop();
 }
 
+/** 取消的那張不掛在繩上：從繩上縮掉、旁邊的滑過來，版和試印跟著更新。 */
+function dropCancelled(p) {
+  if (!prints.includes(p)) return;
+  prints = prints.filter((x) => x !== p);
+  savePrints();
+  const node = $("line-list").querySelector(`.print[data-id="${cssEsc(p.id)}"]`);
+  const li = node?.closest("li");
+  leave(node, () => {
+    flip($("line-list"), () => li?.remove());
+    $("line-empty").hidden = prints.length > 0;
+    setTimeout(syncLineFade, 0);
+    renderAll([]);
+  });
+}
+
 function loadPrints() {
   const list = readJ(FK.prints, []);
   if (!Array.isArray(list)) return [];
+  // 重新整理就把沒印出來的（失敗、取消、停掉的）拿下繩子；只留印好的和畫到一半還接得回去的。
   return list
     .filter((p) => p && p.id && p.positive)
+    .filter((p) => p.status === "done" || (p.live && p.job))
     .map((p) => ({
       ...p,
       // 畫到一半就重新整理的那張：標成排隊，開機時用 generator.resume() 接回去。
@@ -1126,6 +1181,7 @@ function renderPlate(events = []) {
         : null
     );
   });
+  if (!empty) starterPick = null;
   put(box, empty ? startBlock() : null, rows);
   box.dataset.empty = empty ? "true" : "false";
   if (peeking) box.dataset.peek = t.letter;
@@ -1145,8 +1201,35 @@ function renderPlate(events = []) {
   requestRelations(events);
 }
 
+function pickStarters(avoid = []) {
+  const ok = STARTERS.filter((s) => s.tags.every((t) => lib.byTag.has(t) && rankOk(cardOf(t)) && !bans.has(t)));
+  // 換一組時盡量不要又出現剛剛那三組。
+  const fresh = ok.filter((s) => !avoid.includes(s.name));
+  const pool = fresh.length >= 3 ? fresh : ok;
+  const out = [];
+  const bag = [...pool];
+  while (out.length < 3 && bag.length) out.push(bag.splice(Math.floor(Math.random() * bag.length), 1)[0]);
+  return out;
+}
+
+function reshuffleStarters() {
+  starterPick = pickStarters((starterPick || []).map((s) => s.name));
+  const box = $("registers").querySelector(".starters");
+  renderPlate([]);
+  const again = $("registers").querySelector(".starters");
+  if (again && !reduced()) {
+    again.classList.remove("is-shuffled");
+    void again.offsetWidth;
+    again.classList.add("is-shuffled");
+  }
+  again?.querySelector(".starters-more")?.focus({ preventScroll: true });
+  void box;
+  sfx.shuffle();
+}
+
 function startBlock() {
-  const starters = STARTERS.filter((s) => s.tags.every((t) => lib.byTag.has(t) && rankOk(cardOf(t)) && !bans.has(t))).slice(0, 3);
+  if (!starterPick) starterPick = pickStarters();
+  const starters = starterPick.filter((s) => s.tags.every((t) => lib.byTag.has(t) && rankOk(cardOf(t)) && !bans.has(t)));
   return el(
     "div",
     { class: "pool-start" },
@@ -1160,7 +1243,12 @@ function startBlock() {
       ? el(
           "div",
           { class: "starters" },
-          el("span", { class: "starters-label" }, "或者從這裡起手"),
+          el(
+            "span",
+            { class: "starters-label" },
+            "或者從這裡起手",
+            el("button", { class: "starters-more link-btn", type: "button", onclick: reshuffleStarters }, "換一組")
+          ),
           starters.map((s) =>
             el(
               "button",
@@ -1597,6 +1685,48 @@ function stamp(node, cls = "is-stamped") {
   void node.offsetWidth;
   node.classList.add(cls);
   setTimeout(() => node.classList.remove(cls), 560);
+}
+
+/**
+ * 牌從版上回到字盒：飛到字盒裡那張牌的位置、縮進去，字盒裡那張輕輕一跳收下。
+ * 字盒裡看不到它（被篩掉、捲走了）就飛向字盒那一欄；字盒整個不在畫面上（手機）才原地掀開。
+ * 以前一律原地往上飄走 —— 上面幾排的牌看起來像飛出畫面，也看不出牌去了哪裡。
+ */
+function flyHome(snap, delay = 0) {
+  if (reduced() || !snap.rect.width) return;
+  const tag = snap.node.dataset.tag;
+  const home = tag && caseCard(tag);
+  const inView = (r) => r && r.width > 0 && r.bottom > 0 && r.top < innerHeight && r.right > 0 && r.left < innerWidth;
+  let to = home && home.getBoundingClientRect();
+  if (!inView(to)) {
+    const grid = $("case-grid").getBoundingClientRect();
+    to = inView(grid) ? { left: grid.left + grid.width / 2 - 20, top: Math.max(grid.top, 0) + 20, width: 40, height: 56 } : null;
+  }
+  if (!to) return liftAway(snap, "aside");
+  const from = snap.rect;
+  const clone = snap.node.cloneNode(true);
+  clone.classList.add("flying");
+  clone.classList.remove("is-related", "is-stamped");
+  Object.assign(clone.style, { left: from.left + "px", top: from.top + "px", width: from.width + "px" });
+  clone.style.setProperty("--card-w", from.width + "px");
+  document.body.append(clone);
+  const dx = to.left - from.left;
+  const dy = to.top - from.top;
+  const s = to.width / from.width;
+  // 先微微拎起來，再弧線落回去（往上拱一點，不是直線滑過去）。
+  clone.animate(
+    [
+      { transform: "none", opacity: 1 },
+      { transform: "translate(0, -6px) scale(1.04) rotate(-2deg)", opacity: 1, offset: 0.14 },
+      { transform: `translate(${dx * 0.55}px, ${dy * 0.55 - 30}px) scale(${(1 + s) / 2}) rotate(-6deg)`, opacity: 1, offset: 0.6 },
+      { transform: `translate(${dx}px, ${dy}px) scale(${s})`, opacity: home ? 0.9 : 0 },
+    ],
+    { duration: 480, delay, easing: "cubic-bezier(0.45, 0, 0.25, 1)", fill: "both" }
+  );
+  setTimeout(() => {
+    clone.remove();
+    if (home && home.isConnected) stamp(home, "is-returned");
+  }, delay + 490);
 }
 
 function liftAway(snap, dir) {

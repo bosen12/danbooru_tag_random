@@ -958,6 +958,44 @@ body.fuse {
   outline-offset: 2px;
 }
 
+/* 回到字盒的那張：字盒裡的牌輕輕一沉一彈，收下了。 */
+.card.is-returned {
+  animation: card-returned 420ms var(--ease-out);
+}
+
+@keyframes card-returned {
+  30% {
+    transform: translateY(3px) scale(0.95);
+  }
+  70% {
+    transform: translateY(-2px) scale(1.02);
+  }
+}
+
+/* 起手：換一組時三張往上翻過來。 */
+.starters.is-shuffled .starter {
+  animation: starter-in 360ms var(--ease-out) backwards;
+}
+
+.starters.is-shuffled .starter:nth-of-type(2) {
+  animation-delay: 60ms;
+}
+
+.starters.is-shuffled .starter:nth-of-type(3) {
+  animation-delay: 120ms;
+}
+
+@keyframes starter-in {
+  from {
+    opacity: 0;
+    transform: translateY(10px) rotateX(35deg);
+  }
+}
+
+.starters-more {
+  margin-left: var(--space-sm);
+}
+
 .card.is-clashing {
   animation: clash 0.42s var(--ease-out);
 }
@@ -2221,6 +2259,8 @@ body.fuse {
   .trials.is-shuffling .trial,
   .pv-sheet.is-developing img,
   .pv-sheet img.is-pv-in,
+  .card.is-returned,
+  .starters.is-shuffled .starter,
   .plate-notice,
   .reg-note,
   .pop,

@@ -86,7 +86,11 @@ async function boot() {
   // 池子不存：重新整理就是空的；只收疊印台剛交過來的那一版。
   pool = new Set(S.takePool().filter((t) => lib.byTag.has(t)));
   bans = new Set(S.loadBans().filter((t) => lib.byTag.has(t)));
-  shots = S.loadShots();
+  // 重新整理就把沒印出來的清掉（失敗、取消、停掉的）：以前它們一直留在牆上掛著「再試一次」。
+  // 留下的：印好的、只抽牌的（本來就沒要印）、畫到一半還接得回去的。
+  const saved = S.loadShots();
+  shots = saved.filter((s) => s.status === "done" || s.status === "drawn" || (s.live && s.job));
+  if (shots.length !== saved.length) S.saveShots(shots);
   // 上次畫到一半就重新整理（或關掉分頁）的那張：伺服器還留著一陣子，接回去。
   const resumable = shots.filter((s) => s.live && s.job);
   for (const s of resumable) s.status = "queued";
@@ -456,9 +460,42 @@ function renderPoolNote() {
 
 const poolNode = (tag) => [...$("pool-well").querySelectorAll(".card")].find((n) => n.dataset.tag === tag);
 
-/** 被擠出池子的牌：從原本的位置掀起來、往下飄走。跟疊印台的換下同一個動作。 */
+/**
+ * 被擠出池子的牌：回到字盒裡它的位置（跟疊印台一樣）。字盒裡看不到它就飛向字盒那一欄；
+ * 字盒整個不在畫面上才原地掀開飄走。以前一律往下飄走，看不出牌去了哪裡。
+ */
 function liftOut({ node, rect }) {
   if (matchMedia("(prefers-reduced-motion: reduce)").matches || !rect.width) return;
+  const inView = (r) => r && r.width > 0 && r.bottom > 0 && r.top < innerHeight;
+  const home = libCardNode(node.dataset.tag);
+  let to = home && home.getBoundingClientRect();
+  if (!inView(to)) {
+    const g = $("lib-grid").getBoundingClientRect();
+    to = inView(g) ? { left: g.left + g.width / 2 - 20, top: Math.max(g.top, 0) + 20, width: 40 } : null;
+  }
+  if (to) {
+    const ghost = node.cloneNode(true);
+    Object.assign(ghost.style, { position: "fixed", left: rect.left + "px", top: rect.top + "px", width: rect.width + "px", margin: "0", zIndex: "80", pointerEvents: "none" });
+    ghost.style.setProperty("--card-w", rect.width + "px");
+    document.body.append(ghost);
+    const dx = to.left - rect.left;
+    const dy = to.top - rect.top;
+    const s = to.width / rect.width;
+    ghost.animate(
+      [
+        { transform: "none", opacity: 1 },
+        { transform: "translate(0, -6px) scale(1.04) rotate(-2deg)", opacity: 1, offset: 0.14 },
+        { transform: `translate(${dx * 0.55}px, ${dy * 0.55 - 30}px) scale(${(1 + s) / 2}) rotate(-6deg)`, opacity: 1, offset: 0.6 },
+        { transform: `translate(${dx}px, ${dy}px) scale(${s})`, opacity: home ? 0.9 : 0 },
+      ],
+      { duration: 480, easing: "cubic-bezier(0.45, 0, 0.25, 1)", fill: "forwards" }
+    );
+    setTimeout(() => {
+      ghost.remove();
+      if (home?.isConnected) home.animate([{ transform: "none" }, { transform: "translateY(3px) scale(0.95)" }, { transform: "translateY(-2px) scale(1.02)" }, { transform: "none" }], { duration: 420, easing: "cubic-bezier(0.16, 1, 0.3, 1)" });
+    }, 490);
+    return;
+  }
   const ghost = node.cloneNode(true);
   Object.assign(ghost.style, { position: "fixed", left: rect.left + "px", top: rect.top + "px", width: rect.width + "px", margin: "0", zIndex: "80", pointerEvents: "none" });
   ghost.style.setProperty("--card-w", rect.width + "px");

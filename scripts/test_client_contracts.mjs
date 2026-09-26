@@ -1672,6 +1672,14 @@ const ALBUM_FIXTURE = [
   ok("墨池／疊印台：分段選項有滑塊、數字增減會滾（motion.js 自動套用）", motion6.includes("function syncThumbs(") && motion6.includes("function syncSteppers(") && app6.includes("initMotion();") && fuse6.includes("initMotion();"));
   ok("撤下成品／從繩上撤下：縮掉、旁邊讓位，五秒內可以復原", ui6.includes("action = null") && app6.includes('toast("撤下了一張", { action: { label: "復原"') && fuse6.includes('toast("從繩上撤下了一張"') && fuse6.includes("lineSeen?.delete(p.id);"));
   ok("墨池：複製 POS 按鈕自己說已複製；同種子重印讓位＋進場；收起的牌先收再藏；換花色發牌", app6.includes("confirmButton(btn)") && app6.includes("flip($(\"wall\"), () => $(\"wall\").prepend(node));") && app6.includes("if (toggle.getAttribute(\"aria-expanded\") === \"false\") box.hidden = true;") && app6.includes("dealLibrary = true;"));
+  ok("疊印台拿下／撤回／清版：牌飛回字盒（不再原地往上飄走），撤回的牌從字盒飛回來", fuse6.includes("function flyHome(snap, delay = 0)") && fuse6.includes("snaps.forEach((s, i) => flyHome(s, i * 60));") && fuse6.includes("snaps.reverse().forEach((s, i) => flyHome(s, i * 45));") && fuse6.includes("setTimeout(() => flyIn(t, r), 40 + i * 70)"));
+  ok("墨池被擠掉的牌也飛回字盒", app6.includes("const home = libCardNode(node.dataset.tag);"));
+  {
+    const m = fuse6.replace(/\r\n/g, "\n").match(/const STARTERS = (\[[\s\S]*?\n\]);/);
+    const starters = m ? eval(m[1]) : [];
+    ok("疊印台起手組合 20 組以上，每次隨機三組、可以換一組", starters.length >= 20 && fuse6.includes("function pickStarters(") && fuse6.includes("換一組"), `目前 ${starters.length} 組`);
+  }
+  ok("重新整理清掉沒印出來的（墨池、疊印台）；疊印台取消的不掛上繩子", app6.includes('s.status === "done" || s.status === "drawn" || (s.live && s.job)') && fuse6.includes('.filter((p) => p.status === "done" || (p.live && p.job))') && fuse6.includes('else if (p.status === "cancelled") dropCancelled(p);'));
   ok("排字匣不送全域中斷（空的 {}）", !boot.includes('body: "{}"') && !boot.includes("prompt_id: jobPromptId } : {}"));
 }
 
