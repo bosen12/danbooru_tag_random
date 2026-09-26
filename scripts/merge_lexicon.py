@@ -1300,7 +1300,17 @@ def extra_look_tags() -> list[dict]:
         row("very wide shot", "pose", "camera", "大遠景"),
         row("foreshortening", "pose", "perspective", "透視前縮"),
     ]
-    return bg + style + light + effect + camera
+    # 沒有人物（2026-09-26）：no humans 237k、scenery 75k、solo focus 507k。三個都只能釘，
+    # 引擎不會隨機抽（engine allow() 擋著）。no humans 釘上之後那一張只畫場景（engine drawNoHumans）。
+    # solo focus 不給人釘也行：畫面有人群（crowd）又只有一個主角時，引擎把 solo 換成它。
+    people = [
+        row("no humans", "subject", None, "沒有人物"),
+        row("scenery", "env", None, "風景"),
+        row("solo focus", "subject", None, "單人焦點"),
+        # people 9.7k：跟 crowd 一樣是主角以外的人，歸背景，只能釘。
+        row("people", "env", None, "路人"),
+    ]
+    return bg + style + light + effect + camera + people
 
 
 def extra_quality_boost_tags() -> list[dict]:

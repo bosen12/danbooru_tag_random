@@ -306,7 +306,11 @@ export function artPrompt(item, ctx = {}) {
   const byTag = ctx.byTag || new Map();
   const extra = [ART_EXTRA[item.tag], ...(item.implies || []), ...(item.bind || [])].filter((t) => t && (ART_EXTRA[item.tag] === t || byTag.has(t)));
   let parts;
-  if (STILL_LIFE.has(item.tag)) {
+  if (item.tag === "no humans") {
+    parts = ["no humans", "scenery", "landscape", "sky", "cloud"];
+  } else if (item.tag === "solo focus") {
+    parts = ["1girl", "solo focus", "adult", "crowd", "street", "upper body"];
+  } else if (STILL_LIFE.has(item.tag)) {
     parts = ["no humans", "still life", item.tag, ...extra, "simple background"];
   } else if (item.section === "env" && !SCENE_WITH_PERSON.has(item.group) && !ENV_WITH_PERSON.has(item.tag)) {
     parts = ["no humans", "scenery", item.tag, ...extra];

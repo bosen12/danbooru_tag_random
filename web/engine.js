@@ -1100,6 +1100,39 @@ for (const [act, places] of Object.entries(SPORT_ACT_PLACE)) {
 // 舊行為是無條件蓋章，等於 100%，而且會把唯一的場地格佔滿。
 const PLACE_ANCHOR_CHANCE = 0.35;
 
+// —— 沒有人物（no humans）——
+// 這個引擎整個是繞著人物寫的：先挑卡司，再補長相、衣服、姿勢、活動、性愛，很多規則都看「誰在畫面上」。
+// no humans 直接丟進隨機池會抽出「no humans, red hair, standing」這種東西，所以它是一個模式：
+// 釘了它，那一張走 drawNoHumans（只抽場景），釘選時把人物相關的牌拿掉，兩者同時出現算相剋。
+export const NO_HUMANS = "no humans";
+const NO_HUMANS_INNER = Symbol("noHumansInner");
+// 沒有人也說得通的鏡頭：拍景的遠近、角度。其餘（半身、全身、pov、背影…）都在說一個人。
+const SCENERY_CAMERA = new Set(["wide shot", "very wide shot", "from above", "from below", "dutch angle", "fisheye"]);
+// 場景段裡其實在說人的：一群人、人的剪影、單人焦點。
+const PERSON_ENV = new Set(["crowd", "people", "silhouette"]);
+// 背景裡的一群人。
+const CROWD_TAGS = new Set(["crowd", "people"]);
+// 不會有一群人的地方（自己家裡、關起門來的）。溫泉、澡堂是公共的，不在這裡。
+const CROWD_BAD_PLACE = new Set([
+  "bedroom", "hotel room", "love hotel", "bathroom", "bathtub", "bath", "shower (place)", "ofuro",
+  "toilet stall", "changing room", "living room", "kitchen", "bubble bath", "car interior", "futon",
+]);
+
+/** 這個字需要畫面上有人嗎（no humans 模式下要拿掉的那些）。 */
+export function isPersonTag(lex, tag) {
+  if (tag === NO_HUMANS || tag === "scenery") return false;
+  const it = lex.byTag.get(tag);
+  if (!it) return false;
+  if (it.section === "subject" || it.section === "feature" || it.section === "clothing") return true;
+  if (it.section === "pose") return !SCENERY_CAMERA.has(tag);
+  if (it.section === "env") {
+    if (PERSON_ENV.has(tag) || it.group === "furniture") return true;
+    if (it.gate && it.gate !== "any") return true;
+    return (it.needs || []).length > 0;
+  }
+  return false;
+}
+
 // 背景格：沒有活動要配場地的時候，這個比例的圖改用素色／圖樣背景代替場地。
 // Danbooru 上 simple background 有 290 萬張、white background 236 萬張，是全站最常見的
 // 構圖之一（立繪、頭像、角色設定圖）；只靠釘選的話它永遠是 0。
@@ -1116,7 +1149,7 @@ const BG_SCENERY = new Set([
   "veranda", "wooden floor", "stone lantern", "koi", "noren", "fusuma", "rock garden", "arch",
   "stone wall", "greco-roman architecture", "tower", "windmill", "bamboo", "pillar", "stone floor",
   "shouji", "tatami", "lotus", "willow", "pine tree", "water", "curtains", "tree", "carpet", "bush",
-  "locker", "campfire", "stained glass", "iron bars", "railing", "tiles", "rubble", "crowd", "grass",
+  "locker", "campfire", "stained glass", "iron bars", "railing", "tiles", "rubble", "crowd", "people", "grass",
   "sand", "moss", "full moon", "falling leaves",
 ]);
 
@@ -2247,6 +2280,13 @@ export function applyPin(lex, pinned, userBanned, tag) {
   const nextPin = new Set(pinned);
   const nextBan = new Set(userBanned);
   nextBan.delete(tag);
+  // 沒有人物跟人物的牌互斥：釘了 no humans，卡司、長相、衣服、姿勢、人群…都拿下來；
+  // 反過來，已經釘了 no humans 又釘一張在說人的牌，no humans 讓出來。
+  if (tag === NO_HUMANS) {
+    for (const t of [...nextPin]) if (isPersonTag(lex, t)) nextPin.delete(t);
+  } else if (nextPin.has(NO_HUMANS) && isPersonTag(lex, tag)) {
+    nextPin.delete(NO_HUMANS);
+  }
   for (const sib of mutexSiblings(lex, tag)) nextPin.delete(sib);
   for (const other of [...nextPin]) {
     if (other !== tag && !eraCompatible(lex, tag, other)) nextPin.delete(other);
@@ -3392,6 +3432,16 @@ export function contradictions(lex, tags) {
     for (const u of tags) if (u !== t && bgClash(lex.byTag.get(u))) found.push(["background", t, u]);
   }
   if (names.has("falling leaves") && names.has("indoors")) found.push(["in_out", "falling leaves", "indoors"]);
+  // 沒有人物，又有在說人的牌（卡司、長相、衣服、姿勢、人群…）。
+  if (names.has(NO_HUMANS)) {
+    for (const t of tags) if (isPersonTag(lex, t)) found.push(["no_humans", NO_HUMANS, t]);
+  }
+  // solo 是「畫面上只有一個人」；有人群就不是了（該用 solo focus）。
+  for (const c of CROWD_TAGS) {
+    if (!names.has(c)) continue;
+    if (names.has("solo")) found.push(["solo_crowd", "solo", c]);
+    for (const t of tags) if (CROWD_BAD_PLACE.has(t)) found.push(["crowd_place", c, t]);
+  }
   return found;
 }
 
@@ -3444,7 +3494,65 @@ function cancelledDrawResult({ heat, era, female, male, people, seed }) {
   };
 }
 
+/**
+ * 釘了 no humans 的那一張：只抽場景。
+ *
+ * 借用 drawOne 的場景那一整套（場地、時代、室內外、日夜、光源、天氣、特效、背景格…），
+ * 人物那幾段（長相、衣服、姿勢）張數設 0、情境只開「活動」—— 走光、性愛的強制規則都不會啟動；
+ * 抽完再把所有在說人的字拿掉（卡司、傢俱、人群、只限男女的場景字…），前面放 no humans。
+ * 背景不是素色的話再帶 scenery（素色背景上沒有人，比較像靜物，不是風景）。
+ * 尾巴照舊跟滑桿走（「滑桿說了算」那條）。
+ */
+function drawNoHumans(lex, settings, pinned, userBanned, rand, seed, opts) {
+  const keepPins = new Set([...pinned].filter((t) => t !== NO_HUMANS && t !== "scenery" && !isPersonTag(lex, t)));
+  const mustDraw = {};
+  for (const [k, v] of Object.entries((settings && settings.mustDraw) || {})) {
+    if (k.startsWith("env:") || k.startsWith("quality:")) mustDraw[k] = v;
+  }
+  const inner = sanitizeSettings(
+    { ...settings, heats: ["activity"], weights: null, counts: { ...(settings.counts || {}), feature: 0, clothing: 0, pose: 0 } },
+    lex.data
+  );
+  inner.mustDraw = mustDraw;
+  const d = drawOne(lex, inner, keepPins, userBanned, rand, seed, { ...(opts || {}), [NO_HUMANS_INNER]: true });
+  if (d.cancelled) return d;
+  const sec = d.sections || {};
+  const env = (sec.env || []).filter((t) => !isPersonTag(lex, t));
+  const camera = (sec.pose || []).filter((t) => SCENERY_CAMERA.has(t));
+  const solid = env.some((t) => lex.byTag.get(t)?.mutex === "background");
+  const subject = solid ? [NO_HUMANS] : [NO_HUMANS, "scenery"];
+  const nsfw = sec.nsfw || [];
+  const style = sec.style || [];
+  const quality = sec.quality || [];
+  const positive = [...new Set([...subject, ...camera, ...env, ...nsfw, ...style, ...quality])];
+  let trace = d.trace;
+  if (trace) {
+    const final = new Set(positive);
+    const kept = (trace.kept || []).filter((e) => final.has(e.tag));
+    kept.unshift({ tag: NO_HUMANS, status: "kept", source: "pin", stage: "pin" });
+    if (subject.includes("scenery")) kept.splice(1, 0, { tag: "scenery", status: "kept", source: "implies", stage: "pin", parent: NO_HUMANS });
+    trace = { ...trace, kept };
+  }
+  return {
+    ...d,
+    heat: "activity",
+    female: false,
+    male: false,
+    people: 0,
+    mustReport: (d.mustReport || []).filter((m) => m.section === "env" || m.section === "quality"),
+    sections: { quality, style, subject, feature: [], pose: camera, clothing: [], env, nsfw },
+    positive: positive.join(", "),
+    shadowViolations: [],
+    conflicts: contradictions(lex, positive),
+    heatClash: [],
+    trace,
+  };
+}
+
 export function drawOne(lex, settings, pinned, userBanned, rand, seed, opts) {
+  if (!(opts && opts[NO_HUMANS_INNER]) && pinned && typeof pinned.has === "function" && pinned.has(NO_HUMANS) && !(userBanned && userBanned.has && userBanned.has(NO_HUMANS))) {
+    return drawNoHumans(lex, settings, pinned, userBanned, rand, seed, opts);
+  }
   const drawOpts = opts && typeof opts === "object" ? opts : {};
   const tracer = createTracer({ enabled: !!drawOpts.trace, debug: !!drawOpts.debugTrace });
   const presetOwned = ownedTagSet(drawOpts.presetOwned);
@@ -4639,6 +4747,12 @@ export function drawOne(lex, settings, pinned, userBanned, rand, seed, opts) {
     // commit() 會拿這條去驗那個 indoors，所以落葉先在場時，臥室、教室整個抽不進來。
     // （詞庫那邊不讓非場地的環境字帶 indoors／outdoors，見 merge_lexicon.apply_relations。）
     if (item.tag === "falling leaves" && used.has("indoors")) return false;
+    if (item.tag === NO_HUMANS || item.tag === "scenery" || item.tag === "solo focus" || item.tag === "people") return false;
+    // 人群不在自己家裡：已經在臥室、浴室、客廳…就不抽人群。
+    // 反方向只擋「釘的」人群：隨機抽到的人群不能把情境要的場地擋掉（做菜一定在廚房、性愛要私密場地）——
+    // 那種時候讓人群讓出來，最後整理時拿掉（見下面組 POS 那段）。
+    if (CROWD_TAGS.has(item.tag) && hasUsed((t) => CROWD_BAD_PLACE.has(t))) return false;
+    if (CROWD_BAD_PLACE.has(item.tag) && [...CROWD_TAGS].some((c) => used.has(c) && pinned.has(c))) return false;
     if (item.tag === "indoors" && used.has("falling leaves")) return false;
     if (item.tag === "starry sky" && used.has("rain")) return false;
     if (item.tag === "lower body" && hasUsed((t) => CHEST_NEED_TAGS.has(t))) return false;
@@ -6277,6 +6391,17 @@ export function drawOne(lex, settings, pinned, userBanned, rand, seed, opts) {
     } else if (bucket[item.section] && !bucket[item.section].includes(tag)) {
       bucket[item.section].push(tag);
     }
+  }
+  // 在自己家裡的場景不會有人群：隨機抽到、後來又進了私人場地的人群拿掉（釘的人群那種場地本來就進不來）。
+  if (env.some((t) => CROWD_BAD_PLACE.has(t))) {
+    for (let i = env.length - 1; i >= 0; i--) if (CROWD_TAGS.has(env[i]) && !pinned.has(env[i])) env.splice(i, 1);
+  }
+  // 有人群（crowd／people）：畫面上不只一個人，只是焦點在一個主角身上 ——
+  // Danbooru 用 solo focus，不是 solo（solo 是「畫面上只有一個人」）。要等上面各段都填好才看得到人群。
+  if (env.some((t) => CROWD_TAGS.has(t))) {
+    const i = subject.indexOf("solo");
+    if (i >= 0) subject.splice(i, 1);
+    if (people === 1 && !subject.includes("solo focus")) subject.push("solo focus");
   }
   // 尾巴就是滑桿選的那一級。選色情就寫 nsfw, explicit。
   //

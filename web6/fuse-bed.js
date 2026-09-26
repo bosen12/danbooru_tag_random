@@ -58,7 +58,8 @@ export function placeCard(bed, tag, { lex, applyPin }) {
   const removed = bed.pins.filter((t) => !pinned.has(t));
   const added = [...pinned].filter((t) => !prev.has(t) && t !== tag);
   const events = [{ kind: "place", tag }];
-  for (const t of removed) events.push({ kind: "replace", out: t, by: tag, why: eraClash(item, lex.byTag.get(t)) ? "era" : "slot" });
+  // why：people＝沒有人物跟人物的牌互斥（不是同一格），era＝時代對不上，slot＝同一格只留一張。
+  for (const t of removed) events.push({ kind: "replace", out: t, by: tag, why: tag === "no humans" || t === "no humans" ? "people" : eraClash(item, lex.byTag.get(t)) ? "era" : "slot" });
   for (const t of added) events.push({ kind: "carry", tag: t, from: tag });
   const carried = {};
   for (const [t, from] of Object.entries(bed.carried)) if (pinned.has(t) && pinned.has(from)) carried[t] = from;

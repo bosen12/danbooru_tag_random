@@ -32,19 +32,19 @@ const GOLD = {
     pos: "1girl, solo, very short hair, aqua eyes, blue hair, straight hair, huge breasts, mature female, hair between eyes, blush, sweater, black skirt, skirt, kneehighs, white bra, bra, open cardigan, cardigan, masturbation, standing, upper body, looking ahead, happy, smile, white background, simple background, light rays, confetti, smoke, nsfw, explicit, masterpiece, best quality, amazing quality",
   },
   100: {
-    rng: 380,
-    pos: "1girl, solo, medium hair, purple eyes, red hair, ahoge, flat chest, two-tone hair, toned, armpits, qipao, sleeves rolled up, coat, fishnet thighhighs, thighhighs, sneakers, eating, indian style, profile, looking at breasts, angry, bouncing, living room, indoors, sunset, chinese new year, nsfw, explicit, masterpiece, best quality, amazing quality",
+    rng: 379,
+    pos: "1girl, solo, medium hair, purple eyes, red hair, ahoge, flat chest, two-tone hair, toned, armpits, qipao, sleeves rolled up, coat, fishnet thighhighs, thighhighs, sneakers, eating, indian style, profile, looking at breasts, angry, after bathing, living room, indoors, sunset, mecha, tiles, nsfw, explicit, masterpiece, best quality, amazing quality",
   },
   999: {
-    rng: 366,
-    pos: "1girl, solo, long hair, grey eyes, orange hair, parted bangs, medium breasts, breast bondage, body freckles, curvy, playboy bunny, open coat, coat, black panties, panties, white socks, socks, bra, female masturbation, reclining, from below, looking around, happy, smile, love hotel, indoors, on bed, day, reflection, nsfw, explicit, masterpiece, best quality, amazing quality",
+    rng: 365,
+    pos: "1girl, solo, long hair, grey eyes, orange hair, parted bangs, medium breasts, breast bondage, body freckles, curvy, playboy bunny, open coat, coat, black panties, panties, white socks, socks, bra, female masturbation, reclining, from below, looking around, happy, smile, love hotel, indoors, on bed, day, tribal, nsfw, explicit, masterpiece, best quality, amazing quality",
   },
   // 2026-09-23：走光補抽改成「所有成立的走光動作同一池、衣服吻合的權重 10」之後，
   // 這張的走光動作從 exhibitionism 換成 cameltoe（她穿 thong，吻合），場景跟著換。
   // 見 test_clothing_reachability.mjs 的走光段落與討論區同日那輪。
   2026: {
-    rng: 373,
-    pos: "1girl, solo, bob cut, grey eyes, black hair, straight hair, medium breasts, hair flower, hair scrunchie, hair over one eye, nightgown, coat, thong, kneehighs, white bra, bra, drinking, reclining, facing away, looking at mirror, naughty face, cameltoe, living room, indoors, sunrise, ceiling light, silhouette, confetti, nsfw, explicit, masterpiece, best quality, amazing quality",
+    rng: 372,
+    pos: "1girl, solo, bob cut, grey eyes, black hair, straight hair, medium breasts, hair flower, hair scrunchie, hair over one eye, nightgown, coat, thong, kneehighs, white bra, bra, drinking, reclining, facing away, looking at mirror, naughty face, cameltoe, living room, indoors, sunrise, ceiling light, locker, depth of field, nsfw, explicit, masterpiece, best quality, amazing quality",
   },
 };
 
@@ -132,7 +132,9 @@ const MATRIX_SEEDS = 200;
 // place」抓到的），那些情境不再擲背景那一顆骰子，所以矩陣裡的職業／運動情境跟著岔開，換成 4e0df84a。
 // 新規則另外用 2000 張隨機＋各種釘選掃過：背景配場地／室內外／時段／天空／場景光 0、
 // 室內落葉 0、夜晚陽光 0、同時兩個畫面特效 0。
-const MATRIX_GOLD = "4e0df84a";
+// 2026-09-26 第二次：no humans／scenery／solo focus／people 進詞庫（只能釘），人群不進私人場地；
+// 候選池多了被擋掉的字，同一顆亂數落點岔開，換成 b71e9966。
+const MATRIX_GOLD = "b71e9966";
 
 function matrixSettings(over) {
   const s = defaultSettings(data);

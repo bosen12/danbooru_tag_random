@@ -26399,7 +26399,7 @@
       "era": [
         "any"
       ],
-      "group": "other",
+      "group": "background",
       "zh": "人群"
     },
     {
@@ -29272,6 +29272,82 @@
       ],
       "group": "camera",
       "zh": "透視前縮"
+    },
+    {
+      "tag": "no humans",
+      "section": "subject",
+      "gate": "any",
+      "heat": [
+        "tease",
+        "flash",
+        "sex"
+      ],
+      "mutex": null,
+      "bind": [],
+      "implies": [],
+      "layer": "normal",
+      "era": [
+        "any"
+      ],
+      "group": "extra",
+      "zh": "沒有人物"
+    },
+    {
+      "tag": "scenery",
+      "section": "env",
+      "gate": "any",
+      "heat": [
+        "tease",
+        "flash",
+        "sex"
+      ],
+      "mutex": null,
+      "bind": [],
+      "implies": [],
+      "layer": "normal",
+      "era": [
+        "any"
+      ],
+      "group": "other",
+      "zh": "風景"
+    },
+    {
+      "tag": "solo focus",
+      "section": "subject",
+      "gate": "any",
+      "heat": [
+        "tease",
+        "flash",
+        "sex"
+      ],
+      "mutex": null,
+      "bind": [],
+      "implies": [],
+      "layer": "normal",
+      "era": [
+        "any"
+      ],
+      "group": "extra",
+      "zh": "單人焦點"
+    },
+    {
+      "tag": "people",
+      "section": "env",
+      "gate": "any",
+      "heat": [
+        "tease",
+        "flash",
+        "sex"
+      ],
+      "mutex": null,
+      "bind": [],
+      "implies": [],
+      "layer": "normal",
+      "era": [
+        "any"
+      ],
+      "group": "background",
+      "zh": "路人"
     }
   ]
 }

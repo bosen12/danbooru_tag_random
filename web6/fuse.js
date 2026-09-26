@@ -308,7 +308,14 @@ function commit(next, label, events = []) {
     if (e.kind !== "replace") continue;
     const suit = suitOf(e.out);
     rowNotes[suit] = {
-      text: e.why === "era" ? `「${zh(e.out)}」跟「${zh(e.by)}」不是同一個時代，先拿下來了` : `同一格只留一張：「${zh(e.out)}」換成「${zh(e.by)}」`,
+      text:
+        e.why === "people"
+          ? e.by === "no humans"
+            ? `畫面沒有人物：「${zh(e.out)}」拿下來了`
+            : `放了人物的牌：「沒有人物」拿下來了`
+          : e.why === "era"
+            ? `「${zh(e.out)}」跟「${zh(e.by)}」不是同一個時代，先拿下來了`
+            : `同一格只留一張：「${zh(e.out)}」換成「${zh(e.by)}」`,
       back: e.out,
     };
   }
@@ -363,7 +370,7 @@ function place(tag, sourceEl, { viaDrag = false } = {}) {
   }
   const bits = [`放上「${zh(tag)}」`];
   if (carried.length) bits.push(`帶上${carried.map((t) => `「${zh(t)}」`).join("")}`);
-  for (const e of events) if (e.kind === "replace") bits.push(`「${zh(e.out)}」${e.why === "era" ? "時代不合拿下" : "被換下"}`);
+  for (const e of events) if (e.kind === "replace") bits.push(`「${zh(e.out)}」${e.why === "era" ? "時代不合拿下" : e.why === "people" ? "拿下（沒有人物）" : "被換下"}`);
   announce(bits.join("，"));
   return result;
 }

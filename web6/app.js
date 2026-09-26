@@ -429,9 +429,12 @@ function replaceNote(tag, gone) {
     const b = eraOf(lex.byTag.get(o));
     return a.length && b.length && !a.some((e) => b.includes(e));
   };
-  const era = gone.filter(clash);
-  const slot = gone.filter((o) => !clash(o));
+  // 沒有人物跟人物的牌互斥，不是「同一格」：分開講。
+  const people = gone.filter((o) => tag === "no humans" || o === "no humans");
+  const era = gone.filter((o) => !people.includes(o) && clash(o));
+  const slot = gone.filter((o) => !people.includes(o) && !clash(o));
   const bits = [];
+  if (people.length) bits.push(tag === "no humans" ? `畫面沒有人物：${people.map((t) => `「${zh(t)}」`).join("")}拿下來了` : "放了人物的牌：「沒有人物」拿下來了");
   if (slot.length) bits.push(`同一格只留一張：${slot.map((t) => `「${zh(t)}」`).join("")}換成「${zh(tag)}」`);
   if (era.length) bits.push(`${era.map((t) => `「${zh(t)}」`).join("")}跟「${zh(tag)}」不是同一個時代，先拿下來了`);
   return { text: bits.join("；"), back: gone[0] };

@@ -1281,7 +1281,7 @@
   {"tag":"railing","file":"railing.webp","positive":"no humans, scenery, railing, sfw, general, masterpiece, best quality, amazing quality","negative":"","rating":"general"},
   {"tag":"tiles","file":"tiles.webp","positive":"no humans, scenery, tiles, sfw, general, masterpiece, best quality, amazing quality","negative":"","rating":"general"},
   {"tag":"rubble","file":"rubble.webp","positive":"no humans, scenery, rubble, sfw, general, masterpiece, best quality, amazing quality","negative":"","rating":"general"},
-  {"tag":"crowd","file":"crowd.webp","positive":"no humans, scenery, crowd, sfw, general, masterpiece, best quality, amazing quality","negative":"","rating":"general"},
+  {"tag":"crowd","file":"crowd.webp","positive":"1girl, solo, adult, crowd, full body, sfw, general, masterpiece, best quality, amazing quality","negative":"loli, shota, child, aged down, teenage, kid, toddler","rating":"general"},
   {"tag":"mecha","file":"mecha.webp","positive":"no humans, scenery, mecha, sfw, general, masterpiece, best quality, amazing quality","negative":"","rating":"general"},
   {"tag":"wind","file":"wind.webp","positive":"no humans, scenery, wind, sfw, general, masterpiece, best quality, amazing quality","negative":"","rating":"general"},
   {"tag":"grass","file":"grass.webp","positive":"no humans, scenery, grass, sfw, general, masterpiece, best quality, amazing quality","negative":"","rating":"general"},
@@ -1417,5 +1417,9 @@
   {"tag":"speed lines","file":"speed_lines.webp","positive":"1girl, solo, adult, speed lines, full body, sfw, general, masterpiece, best quality, amazing quality","negative":"loli, shota, child, aged down, teenage, kid, toddler","rating":"general"},
   {"tag":"emphasis lines","file":"emphasis_lines.webp","positive":"1girl, solo, adult, emphasis lines, full body, sfw, general, masterpiece, best quality, amazing quality","negative":"loli, shota, child, aged down, teenage, kid, toddler","rating":"general"},
   {"tag":"very wide shot","file":"very_wide_shot.webp","positive":"1girl, solo, adult, very wide shot, simple background, sfw, general, masterpiece, best quality, amazing quality","negative":"loli, shota, child, aged down, teenage, kid, toddler","rating":"general"},
-  {"tag":"foreshortening","file":"foreshortening.webp","positive":"1girl, solo, adult, foreshortening, simple background, sfw, general, masterpiece, best quality, amazing quality","negative":"loli, shota, child, aged down, teenage, kid, toddler","rating":"general"}
+  {"tag":"foreshortening","file":"foreshortening.webp","positive":"1girl, solo, adult, foreshortening, simple background, sfw, general, masterpiece, best quality, amazing quality","negative":"loli, shota, child, aged down, teenage, kid, toddler","rating":"general"},
+  {"tag":"no humans","file":"no_humans.webp","positive":"no humans, scenery, landscape, sky, cloud, sfw, general, masterpiece, best quality, amazing quality","negative":"","rating":"general"},
+  {"tag":"scenery","file":"scenery.webp","positive":"no humans, scenery, sfw, general, masterpiece, best quality, amazing quality","negative":"","rating":"general"},
+  {"tag":"solo focus","file":"solo_focus.webp","positive":"1girl, solo focus, adult, crowd, street, upper body, sfw, general, masterpiece, best quality, amazing quality","negative":"loli, shota, child, aged down, teenage, kid, toddler","rating":"general"},
+  {"tag":"people","file":"people.webp","positive":"1girl, solo, adult, people, full body, sfw, general, masterpiece, best quality, amazing quality","negative":"loli, shota, child, aged down, teenage, kid, toddler","rating":"general"}
 ]

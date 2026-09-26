@@ -526,7 +526,8 @@ def assign_group(item: dict) -> str:
         return "acc"
 
     if sec == "env":
-        if mx in ("background", "bg_blur"):
+        # crowd：背景裡一群不具名的人，不算角色（人數算的是主角），所以歸背景。
+        if mx in ("background", "bg_blur") or tag in ("crowd", "people"):
             return "background"
         if mx == "effect":
             return "effect"
