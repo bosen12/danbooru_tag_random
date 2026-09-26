@@ -2224,6 +2224,11 @@ function syncCaseStates() {
   const has = new Set(bed.pins);
   for (const node of $("case-grid").querySelectorAll(".card[data-tag]")) {
     const on = has.has(node.dataset.tag);
+    // 剛放上版的那張：「在池」章像橡皮章一樣壓下來（本來就在的不重蓋）。
+    if (on && node.dataset.state !== "pinned" && !reduced()) {
+      node.classList.add("is-flag-stamp");
+      setTimeout(() => node.classList.remove("is-flag-stamp"), 420);
+    }
     if (on) node.dataset.state = "pinned";
     else delete node.dataset.state;
     node.setAttribute("aria-pressed", on ? "true" : "false");

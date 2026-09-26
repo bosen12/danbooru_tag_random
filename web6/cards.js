@@ -100,9 +100,19 @@ function artImg(sources) {
 }
 
 export function setCardFlag(node, flag) {
-  node.querySelector(".card-flag:not([data-kind='src'])")?.remove();
+  const old = node.querySelector(".card-flag:not([data-kind='src'])");
+  // 沒變就不動：字盒每動一次整排重新上標，不這樣的話每個章都會重蓋一次。
+  if (old && flag && old.dataset.kind === flag.kind && old.textContent === flag.text) return;
+  old?.remove();
   if (!flag) return;
-  node.querySelector(".card-art").append(el("span", { class: "card-flag", dataset: { kind: flag.kind } }, flag.text));
+  const stampNow = !!node.isConnected;
+  const f = el("span", { class: "card-flag", dataset: { kind: flag.kind } }, flag.text);
+  node.querySelector(".card-art").append(f);
+  // 新蓋上去的章（放進池子、丟進廢字簍）：像橡皮章一樣從上面壓下來。第一次畫出來的不蓋。
+  if (stampNow && !matchMedia("(prefers-reduced-motion: reduce)").matches) {
+    f.classList.add("is-stamping");
+    setTimeout(() => f.classList.remove("is-stamping"), 420);
+  }
 }
 
 /** 卡牌的說明（提示框、詳情共用）。 */

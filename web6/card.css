@@ -189,6 +189,30 @@
   color: var(--color-accent-3);
 }
 
+.card-flag.is-stamping {
+  animation: flag-stamp 380ms cubic-bezier(0.2, 0.9, 0.3, 1.2);
+}
+
+@keyframes flag-stamp {
+  0% {
+    opacity: 0;
+    scale: 1.8;
+  }
+  55% {
+    opacity: 1;
+    scale: 0.92;
+  }
+  100% {
+    scale: 1;
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .card-flag.is-stamping {
+    animation: none;
+  }
+}
+
 .card-flag[data-kind="pool"] {
   color: var(--color-pool-2);
 }
