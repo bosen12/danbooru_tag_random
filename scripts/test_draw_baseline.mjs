@@ -33,28 +33,31 @@ const GOLD = {
   // 2026-09-28 第二次：現代、三檔都進的新衣服進了單人女性的衣服池（過膝靴、太陽眼鏡、髮帶這類）。
   // 女巫帽是中世紀／維多利亞，廚師職業預設不抽，這兩條不進預設池。五張仍是單人女性、沒有男生。
   // seed 1 抽到過膝靴。seed 100 變成 solo focus，是因為這張有 crowd，人只有一個時本來就會加。
+  // 2026-09-28 第三次：舉手、走路、跑步、跳躍、四種髮型，以及瑪麗珍鞋、及膝靴、格裙進了單人女性的池。
+  // 立乳不進誘惑。內射受孕和抓手腕要一男一女，不進這五張。五張仍是 1girl solo。
+  // seed 100 抽到格裙。seed 2026 抽到內彎鬢髮。seed 100 這次沒有 crowd，所以是 solo 不是 solo focus。
   1: {
-    rng: 315,
-    pos: "1girl, solo, pixie cut, purple eyes, green hair, wavy hair, small breasts, pale skin, wide hips, tweaking own nipple, black dress, dress, jacket, thigh boots, black bra, bra, female masturbation, reclining, profile, sideways glance, expressionless, hand in pocket, white background, simple background, spotlight, ofuda, bed sheet, wedding, nsfw, explicit, masterpiece, best quality, amazing quality",
+    rng: 350,
+    pos: "1girl, solo, pixie cut, purple eyes, green hair, swept bangs, small breasts, mole under eye, wide hips, sideboob, shorts, blue sweater, sweater, garter belt, panties, female masturbation, on side, full body, looking back, drunk, after vaginal, ryokan, indoors, night, full-length mirror, mirror, stained glass, nsfw, explicit, masterpiece, best quality, amazing quality",
   },
   42: {
-    rng: 262,
-    pos: "1girl, solo, very short hair, aqua eyes, blue hair, straight hair, huge breasts, dark-skinned female, dark skin, inverted nipples, long eyelashes, naked towel, masturbation, on back, pov crotch, looking at viewer, come hither, caught, onsen, indoors, steam, sunrise, backlighting, nsfw, explicit, masterpiece, best quality, amazing quality",
+    rng: 343,
+    pos: "1girl, solo, very short hair, aqua eyes, blue hair, blunt bangs, large breasts, breasts on glass, body blush, hair flower, cardigan, pink sports bra, sports bra, panties aside, torn thighhighs, thighhighs, fingering, squatting, portrait, looking around, flustered, after vaginal, hotel room, indoors, sunrise, desk lamp, tribal, full-length mirror, mirror, nsfw, explicit, masterpiece, best quality, amazing quality",
   },
   100: {
-    rng: 389,
-    pos: "1girl, solo focus, medium hair, purple eyes, red hair, ahoge, flat chest, muscular, bruise, long legs, short shorts, shorts, see-through shirt, shirt, cardigan, short sleeves, eating, indian style, from outside, looking around, shy, breast focus, park, outdoors, dusk, lamppost, tissue box, crowd, nsfw, explicit, masterpiece, best quality, amazing quality",
+    rng: 396,
+    pos: "1girl, solo, medium hair, purple eyes, red hair, side ponytail, ponytail, gigantic breasts, wavy hair, sweat, wet shirt, shirt, fishnet thighhighs, thighhighs, thigh boots, bracelet, plaid skirt, skirt, drawing (action), kneeling, portrait, looking up, nervous, clenched teeth, pencil, living room, indoors, evening, lamp, tea set, nsfw, explicit, masterpiece, best quality, amazing quality",
   },
   999: {
-    rng: 361,
-    pos: "1girl, solo, long hair, grey eyes, orange hair, parted bangs, medium breasts, mature female, clitoris, saliva, bodypaint, fingering, on stomach, cowboy shot, looking down, frown, ojou-sama pose, ofuro, bath, indoors, night, carpet, nsfw, explicit, masterpiece, best quality, amazing quality",
+    rng: 366,
+    pos: "1girl, solo, long hair, grey eyes, orange hair, double bun, hair bun, gigantic breasts, muscular, covered nipples, turtleneck sweater, sweater, microskirt, skirt, open coat, coat, puffy sleeves, fingering, all fours, over shoulder, looking to the side, dazed, bdsm, bamboo forest, outdoors, sunrise, sidelighting, emphasis lines, tissue box, nsfw, explicit, masterpiece, best quality, amazing quality",
   },
   // 2026-09-23：走光補抽改成「所有成立的走光動作同一池、衣服吻合的權重 10」之後，
   // 這張的走光動作從 exhibitionism 換成 cameltoe（她穿 thong，吻合），場景跟著換。
   // 見 test_clothing_reachability.mjs 的走光段落與討論區同日那輪。
   2026: {
-    rng: 363,
-    pos: "1girl, solo, bob cut, grey eyes, black hair, straight hair, medium breasts, tan, closed eyes, hair over one eye, bodysuit, open cardigan, cardigan, black sports bra, sports bra, white socks, socks, white panties, panties, drinking, reclining, dutch angle, happy, smile, sports bra lift, ryokan, indoors, night, lamp, sparkle, sand, nsfw, explicit, masterpiece, best quality, amazing quality",
+    rng: 385,
+    pos: "1girl, solo, bob cut, grey eyes, black hair, hair intakes, large breasts, covered nipples, red nails, lipstick, high-waist pants, pants, open coat, coat, open shirt, shirt, lace bra, bra, reading, seiza, worm's eye view, from below, looking ahead, drunk, downblouse, newspaper, train interior, indoors, evening, ceiling light, pillow, nsfw, explicit, masterpiece, best quality, amazing quality",
   },
 };
 
@@ -156,7 +159,11 @@ const MATRIX_SEEDS = 200;
 // 2026-09-28 第二次：現代、三檔都進的新衣服進了單人女性的衣服池。
 // 女巫帽不在現代，廚師職業預設關閉，這兩條自己不動預設矩陣。
 // 開職業的那一格會抽到廚師。指紋 9438e336 → a578a1ef。
-const MATRIX_GOLD = "a578a1ef";
+// 2026-09-28 第三次：舉手、走路、跑步、跳躍和四種髮型，以及瑪麗珍鞋、及膝靴、格裙進了單人女性的池。
+// 立乳不進誘惑。未釘選的走路／跑步／跳躍在性愛熱度直接略過。
+// 內射受孕、抓手腕要一男一女，女生單人的性愛抽不到；穴口滴精只要求女生，進得了。
+// 指紋 a578a1ef → 9252d4cb。
+const MATRIX_GOLD = "9252d4cb";
 
 function matrixSettings(over) {
   const s = defaultSettings(data);

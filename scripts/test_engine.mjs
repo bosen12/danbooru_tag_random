@@ -5555,7 +5555,10 @@ function indoorOutdoorClash(have) {
     // 不是那個洞補上了。這張仍是 1girl solo，沒有男生、陰莖或粗暴。
     // 第二十次（2026-09-28）：現代、三檔都進的新衣服進了衣服池，牌序再位移一次。
     // 女巫帽不在現代，廚師預設不抽。這張仍是 1girl solo，溫泉、裸巾、沒有男生。
-    "1girl, solo, very short hair, aqua eyes, blue hair, straight hair, huge breasts, dark-skinned female, dark skin, inverted nipples, long eyelashes, naked towel, masturbation, on back, pov crotch, looking at viewer, come hither, caught, onsen, indoors, steam, sunrise, backlighting, nsfw, explicit, masterpiece, best quality, amazing quality");
+    // 第二十一次（2026-09-28）：舉手、走路、跑步、跳躍、四種髮型，以及瑪麗珍鞋、及膝靴、格裙進池。
+    // 立乳不進誘惑。內射受孕和抓手腕要一男一女，不進單人女性。這張仍是 1girl solo 的性愛，
+    // 旅館、沒有男生。
+    "1girl, solo, very short hair, aqua eyes, blue hair, blunt bangs, large breasts, breasts on glass, body blush, hair flower, cardigan, pink sports bra, sports bra, panties aside, torn thighhighs, thighhighs, fingering, squatting, portrait, looking around, flustered, after vaginal, hotel room, indoors, sunrise, desk lamp, tribal, full-length mirror, mirror, nsfw, explicit, masterpiece, best quality, amazing quality");
   ok("drawOne exposes shadow diagnostics", Array.isArray(shadowIntegrationDraw.shadowViolations));
 
   const eatProneShadow = validateSupportShadow({
@@ -8434,6 +8437,129 @@ function indoorOutdoorClash(have) {
   }
   ok("pinned chef was drawn", seen > 0);
   eq("pinned chef stays in a kitchen or a restaurant", badPlace, 0);
+}
+
+// --- 走路、髮型、受孕 -------------------------------------------------------
+// 半扎不佔髮型格，可以跟馬尾同時在。跑步不進浴室。立乳不進誘惑。
+{
+  const half = lex.byTag.get("half updo");
+  const braid = lex.byTag.get("single braid");
+  const band = lex.byTag.get("low twintails");
+  const intakes = lex.byTag.get("hair intakes");
+  ok("half updo does not take the hairstyle slot", !!(half && !half.mutex));
+  ok("a half updo can sit with a ponytail", contradictions(lex, ["half updo", "ponytail"]).length === 0);
+  ok("hair intakes can sit with a ponytail", contradictions(lex, ["hair intakes", "ponytail"]).length === 0);
+  ok("single braid implies braid", !!(braid && (braid.implies || []).includes("braid")));
+  ok("single braid clashes with twintails", contradictions(lex, ["single braid", "twintails"]).length > 0);
+  ok("single braid can sit with braid", contradictions(lex, ["single braid", "braid"]).length === 0);
+  ok("low twintails imply twintails", !!(band && (band.implies || []).includes("twintails")));
+  ok("walking shares the standing slot", lex.byTag.get("walking").mutex === "body_pose");
+  ok("running clashes with sitting", contradictions(lex, ["running", "sitting"]).length > 0);
+  ok("jumping clashes with lying", contradictions(lex, ["jumping", "lying"]).length > 0);
+  const needsCouple = (item) => {
+    const needs = item && item.needs ? item.needs : [];
+    return needs.includes("pair") && needs.includes("male") && needs.includes("female");
+  };
+  const preg = lex.byTag.get("impregnation");
+  ok("impregnation does not imply pregnant", !(preg && (preg.implies || []).includes("pregnant")));
+  ok("impregnation needs a man and a woman", needsCouple(preg));
+  const drip = lex.byTag.get("cumdrip from pussy");
+  ok("cumdrip from pussy implies pussy and not the male-gated drip", !!(drip && (drip.implies || []).includes("pussy") && !(drip.implies || []).includes("cumdrip")));
+  ok(
+    "cumdrip from pussy stays a woman's tag",
+    !!(drip && (drip.needs || []).includes("female") && !(drip.needs || []).includes("male"))
+  );
+  const nipples = lex.byTag.get("erect nipples");
+  ok("erect nipples stay in flash and sex", JSON.stringify(nipples && nipples.heat) === JSON.stringify(["flash", "sex"]));
+  const wrist = lex.byTag.get("wrist grab");
+  ok("wrist grab is not one of the neck grips", needsCouple(wrist));
+  ok("wrist grab can sit with strangling", contradictions(lex, ["wrist grab", "strangling"]).length === 0);
+  ok("panties around one leg take the panty slot", lex.byTag.get("panties around one leg").mutex === "underwear_bottom");
+  ok("knee boots do not imply boots", !(lex.byTag.get("knee boots").implies || []).includes("boots"));
+  ok("plaid skirt implies skirt", (lex.byTag.get("plaid skirt").implies || []).includes("skirt"));
+
+  const teaseOnly = defaultSettings(data);
+  teaseOnly.heats = ["tease"];
+  let nippleLeak = 0;
+  for (let i = 0; i < 80; i++) {
+    if (tagsOf(drawOne(lex, teaseOnly, new Set(), new Set(), mulberry32(155000 + i), 155000 + i)).has("erect nipples")) nippleLeak += 1;
+  }
+  eq("tease never draws erect nipples", nippleLeak, 0);
+
+  const girl = defaultSettings(data);
+  girl.girl = true;
+  girl.boy = false;
+  girl.heats = ["sex"];
+  let pairLeak = 0;
+  for (let i = 0; i < 60; i++) {
+    const got = tagsOf(drawOne(lex, girl, new Set(), new Set(), mulberry32(155200 + i), 155200 + i));
+    if (got.has("impregnation") || got.has("wrist grab")) pairLeak += 1;
+  }
+  eq("girl-only sex never draws impregnation or a wrist grab", pairLeak, 0);
+
+  const hasBoy = (got) => got.has("1boy") || got.has("2boys") || got.has("3boys");
+  const hasGirl = (got) => got.has("1girl") || got.has("2girls") || got.has("3girls") || got.has("4girls") || got.has("5girls");
+  const pinWrist = applyPin(lex, new Set(), new Set(), "wrist grab").pinned;
+  const pinPreg = applyPin(lex, new Set(), new Set(), "impregnation").pinned;
+  let wristSeen = 0;
+  let wristNoBoy = 0;
+  let pregSeen = 0;
+  let pregNoBoy = 0;
+  for (let i = 0; i < 20; i++) {
+    const gotW = tagsOf(drawOne(lex, girl, pinWrist, new Set(), mulberry32(155500 + i), 155500 + i));
+    if (gotW.has("wrist grab")) {
+      wristSeen += 1;
+      if (!hasBoy(gotW) || !hasGirl(gotW)) wristNoBoy += 1;
+    }
+    const gotP = tagsOf(drawOne(lex, girl, pinPreg, new Set(), mulberry32(155600 + i), 155600 + i));
+    if (gotP.has("impregnation")) {
+      pregSeen += 1;
+      if (!hasBoy(gotP) || !hasGirl(gotP)) pregNoBoy += 1;
+    }
+  }
+  ok("pinned wrist grab was drawn with the boy switch off", wristSeen > 0);
+  eq("pinned wrist grab brings a man and a woman", wristNoBoy, 0);
+  ok("pinned impregnation was drawn with the boy switch off", pregSeen > 0);
+  eq("pinned impregnation brings a man and a woman", pregNoBoy, 0);
+
+  const pinDrip = applyPin(lex, new Set(), new Set(), "cumdrip from pussy").pinned;
+  let dripSeen = 0;
+  let dripBoy = 0;
+  for (let i = 0; i < 20; i++) {
+    const gotD = tagsOf(drawOne(lex, girl, pinDrip, new Set(), mulberry32(155800 + i), 155800 + i));
+    if (!gotD.has("cumdrip from pussy")) continue;
+    dripSeen += 1;
+    if (hasBoy(gotD)) dripBoy += 1;
+  }
+  ok("pinned cumdrip from pussy stays on a girl-only draw", dripSeen > 0);
+  eq("pinned cumdrip from pussy does not pull a man", dripBoy, 0);
+
+  const bothOn = defaultSettings(data);
+  bothOn.girl = true;
+  bothOn.boy = true;
+  bothOn.heats = ["sex"];
+  let dripWithMan = 0;
+  let dripParent = 0;
+  for (let i = 0; i < 20; i++) {
+    const gotD = tagsOf(drawOne(lex, bothOn, pinDrip, new Set(), mulberry32(155900 + i), 155900 + i));
+    if (!gotD.has("cumdrip from pussy") || !hasBoy(gotD)) continue;
+    dripWithMan += 1;
+    if (gotD.has("cumdrip") && hasGirl(gotD)) dripParent += 1;
+  }
+  ok("cumdrip from pussy with a man was drawn", dripWithMan > 0);
+  eq("a man in the picture adds the cumdrip parent", dripParent, dripWithMan);
+
+  const bath = applyPin(lex, new Set(), new Set(), "bathroom").pinned;
+  let sprint = 0;
+  for (let i = 0; i < 80; i++) {
+    const got = tagsOf(drawOne(lex, teaseOnly, bath, new Set(), mulberry32(155400 + i), 155400 + i));
+    if (got.has("running") || got.has("jumping")) sprint += 1;
+  }
+  eq("running and jumping stay out of a bathroom", sprint, 0);
+
+  const both = applyPin(lex, bath, new Set(), "running").pinned;
+  const kept = tagsOf(drawOne(lex, teaseOnly, both, new Set(), mulberry32(155480), 155480));
+  ok("pinned running stays in a pinned bathroom", kept.has("running") && kept.has("bathroom"));
 }
 
 if (failed) {

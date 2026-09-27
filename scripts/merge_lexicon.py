@@ -22,6 +22,7 @@ CLOTHING_STATE = {
     "topless male",
     "bottomless",
     "panties aside",
+    "panties around one leg",
     "no bra",
     "no panties",
     "underwear only",
@@ -931,6 +932,9 @@ NEEDS_MALE = {
     "rear naked choke",
     "asphyxiation",
     "slap mark",
+    # 內射受孕、抓手腕是一男一女。pair 只代表兩人，不擋兩個女生。
+    "impregnation",
+    "wrist grab",
 }
 
 NEEDS_FEMALE = {
@@ -1034,6 +1038,9 @@ NEEDS_FEMALE = {
     "rear naked choke",
     "asphyxiation",
     "slap mark",
+    # 內射受孕要有被內射的女生。抓手腕是男生抓住女生的手腕。
+    "impregnation",
+    "wrist grab",
 }
 
 NEEDS_PAIR = {
@@ -1111,6 +1118,8 @@ NEEDS_PAIR = {
     "rear naked choke",
     "asphyxiation",
     "slap mark",
+    "impregnation",
+    "wrist grab",
 }
 
 NEEDS_GROUP = {
@@ -2522,7 +2531,7 @@ def extra_expand_tags() -> list[dict]:
             "zh": zh,
         }
 
-    def feat(tag, mutex=None, needs=None, heat=None, gate="any", zh=""):
+    def feat(tag, mutex=None, needs=None, heat=None, gate="any", zh="", implies=None):
         return {
             "tag": tag,
             "section": "feature",
@@ -2530,7 +2539,7 @@ def extra_expand_tags() -> list[dict]:
             "heat": list(heat or all_h),
             "mutex": mutex,
             "bind": [],
-            "implies": [],
+            "implies": implies or [],
             "layer": "normal",
             "era": ["any"],
             "needs": needs or [],
@@ -2713,6 +2722,26 @@ def extra_expand_tags() -> list[dict]:
         cloth("tiara", mutex="headwear", gate="female", zh="頭冠", era=["any"]),
         cloth("chef hat", mutex="headwear", zh="廚師帽"),
         job("chef", zh="廚師"),
+        # 半扎、內彎鬢髮不佔髮型格：半扎的上半通常就是馬尾或雙馬尾，硬互斥會拆掉最常見的畫法。
+        # 單辮、低雙馬尾跟馬尾一樣佔髮型格，並帶出父標。
+        pose("arms up", zh="舉手"),
+        pose("walking", mutex="body_pose", zh="走路"),
+        pose("running", mutex="body_pose", zh="跑步"),
+        pose("jumping", mutex="body_pose", zh="跳躍"),
+        pose("impregnation", needs=["pair"], heat=sex, zh="內射受孕"),
+        # 不 implies cumdrip：那個父標要求有男性，女生單人的事後狀態會整張抽不到。
+        # 有男生時引擎再補上 cumdrip。pussy 沒有這道門。
+        pose("cumdrip from pussy", implies=["pussy"], needs=["female"], heat=sex, zh="穴口滴精"),
+        pose("wrist grab", needs=["pair"], heat=sex, zh="抓手腕"),
+        feat("single braid", mutex="hair_style", implies=["braid"], zh="單辮"),
+        feat("low twintails", mutex="hair_style", implies=["twintails"], zh="低雙馬尾"),
+        feat("half updo", zh="半扎"),
+        feat("hair intakes", zh="內彎鬢髮"),
+        feat("erect nipples", implies=["nipples"], needs=["female"], gate="female", heat=["flash", "sex"], zh="立乳"),
+        cloth("panties around one leg", mutex="underwear_bottom", layer="garment", gate="female", heat=sex, zh="內褲掛一腿"),
+        cloth("mary janes", mutex="feet", layer="garment", gate="female", zh="瑪麗珍鞋"),
+        cloth("knee boots", mutex="feet", layer="garment", zh="及膝靴", era=["any"]),
+        cloth("plaid skirt", mutex="bottom", layer="garment", implies=["skirt"], gate="female", zh="格裙"),
         feat("bride", needs=["female"], gate="female", zh="新娘"),
         feat("gyaru", needs=["female"], gate="female", zh="辣妹"),
         feat("small penis", needs=["male"], gate="male", heat=sex, zh="小陰莖"),

@@ -274,6 +274,22 @@ const ART_EXTRA = {
   "rear naked choke": "from behind, nude, upper body",
   asphyxiation: "neck, close-up",
   "slap mark": "face, cheek, close-up",
+  "arms up": "upper body",
+  walking: "full body, outdoors",
+  running: "full body, outdoors",
+  jumping: "full body",
+  "single braid": "hair, upper body",
+  "low twintails": "hair, upper body",
+  "half updo": "hair, upper body",
+  "hair intakes": "hair, upper body",
+  impregnation: "vaginal, cum, lying, on bed",
+  "cumdrip from pussy": "pussy, cumdrip, cum, thighs, lying",
+  "erect nipples": "breasts, nipples, upper body",
+  "panties around one leg": "panties, thighs, full body",
+  "wrist grab": "wrist, hand, upper body",
+  "mary janes": "feet, full body, standing",
+  "knee boots": "full body, standing, thighs",
+  "plaid skirt": "skirt, full body, standing",
 };
 
 // 精液落在對方身上，或這個動作的對象是女生。
@@ -324,6 +340,9 @@ const HETERO_PICTURE = new Set([
   "rear naked choke",
   "asphyxiation",
   "slap mark",
+  "impregnation",
+  "cumdrip from pussy",
+  "wrist grab",
 ]);
 
 // 牌面不要帶的 implies。抽牌邏輯仍保留；只影響插畫。
@@ -344,11 +363,13 @@ const ART_NEG = {
   "rear naked choke": "guro, blood, injury",
   asphyxiation: "guro, blood, injury",
   "slap mark": "guro, blood, injury",
+  // 內射受孕是性行為，不是懷孕的肚子。
+  impregnation: "pregnant, pregnant belly, maternity",
 };
 
 // 學校味重的衣著：畫的一定是成年人。
 // 魔法少女在 Danbooru 上偏年幼的畫法，樂福鞋底模會自己配上學生制服：兩張都要明講成年。
-const SCHOOL_CODED = new Set(["school uniform", "serafuku", "sailor dress", "school swimsuit", "gym uniform", "buruma", "magical girl", "loafers"]);
+const SCHOOL_CODED = new Set(["school uniform", "serafuku", "sailor dress", "school swimsuit", "gym uniform", "buruma", "magical girl", "loafers", "mary janes", "plaid skirt"]);
 
 // 場景節裡要有人才畫得出來的：傢俱（坐在上面）、背景（白背景沒有人就是一張白紙）、
 // 畫面特效（速度線、集中線、花瓣都是圍著人物的）。剪影也是 —— 沒有人就沒有剪影。

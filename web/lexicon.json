@@ -26354,6 +26354,327 @@
       "zh": "廚師"
     },
     {
+      "tag": "arms up",
+      "section": "pose",
+      "gate": "any",
+      "heat": [
+        "tease",
+        "flash",
+        "sex"
+      ],
+      "mutex": null,
+      "bind": [],
+      "implies": [],
+      "layer": "normal",
+      "era": [
+        "any"
+      ],
+      "group": "tease",
+      "zh": "舉手"
+    },
+    {
+      "tag": "walking",
+      "section": "pose",
+      "gate": "any",
+      "heat": [
+        "tease",
+        "flash",
+        "sex"
+      ],
+      "mutex": "body_pose",
+      "bind": [],
+      "implies": [],
+      "layer": "normal",
+      "era": [
+        "any"
+      ],
+      "group": "body",
+      "zh": "走路"
+    },
+    {
+      "tag": "running",
+      "section": "pose",
+      "gate": "any",
+      "heat": [
+        "tease",
+        "flash",
+        "sex"
+      ],
+      "mutex": "body_pose",
+      "bind": [],
+      "implies": [],
+      "layer": "normal",
+      "era": [
+        "any"
+      ],
+      "group": "body",
+      "zh": "跑步"
+    },
+    {
+      "tag": "jumping",
+      "section": "pose",
+      "gate": "any",
+      "heat": [
+        "tease",
+        "flash",
+        "sex"
+      ],
+      "mutex": "body_pose",
+      "bind": [],
+      "implies": [],
+      "layer": "normal",
+      "era": [
+        "any"
+      ],
+      "group": "body",
+      "zh": "跳躍"
+    },
+    {
+      "tag": "impregnation",
+      "section": "pose",
+      "gate": "any",
+      "heat": [
+        "sex"
+      ],
+      "mutex": null,
+      "bind": [],
+      "implies": [],
+      "layer": "normal",
+      "era": [
+        "any"
+      ],
+      "group": "sex",
+      "needs": [
+        "pair",
+        "male",
+        "female"
+      ],
+      "zh": "內射受孕"
+    },
+    {
+      "tag": "cumdrip from pussy",
+      "section": "pose",
+      "gate": "any",
+      "heat": [
+        "sex"
+      ],
+      "mutex": null,
+      "bind": [],
+      "implies": [
+        "pussy"
+      ],
+      "layer": "normal",
+      "era": [
+        "any"
+      ],
+      "group": "sex",
+      "needs": [
+        "female"
+      ],
+      "zh": "穴口滴精"
+    },
+    {
+      "tag": "wrist grab",
+      "section": "pose",
+      "gate": "any",
+      "heat": [
+        "sex"
+      ],
+      "mutex": null,
+      "bind": [],
+      "implies": [],
+      "layer": "normal",
+      "era": [
+        "any"
+      ],
+      "group": "sex",
+      "needs": [
+        "pair",
+        "male",
+        "female"
+      ],
+      "zh": "抓手腕"
+    },
+    {
+      "tag": "single braid",
+      "section": "feature",
+      "gate": "any",
+      "heat": [
+        "tease",
+        "flash",
+        "sex"
+      ],
+      "mutex": "hair_style",
+      "bind": [],
+      "implies": [
+        "braid"
+      ],
+      "layer": "normal",
+      "era": [
+        "any"
+      ],
+      "group": "hair_style",
+      "zh": "單辮"
+    },
+    {
+      "tag": "low twintails",
+      "section": "feature",
+      "gate": "any",
+      "heat": [
+        "tease",
+        "flash",
+        "sex"
+      ],
+      "mutex": "hair_style",
+      "bind": [],
+      "implies": [
+        "twintails"
+      ],
+      "layer": "normal",
+      "era": [
+        "any"
+      ],
+      "group": "hair_style",
+      "zh": "低雙馬尾"
+    },
+    {
+      "tag": "half updo",
+      "section": "feature",
+      "gate": "any",
+      "heat": [
+        "tease",
+        "flash",
+        "sex"
+      ],
+      "mutex": null,
+      "bind": [],
+      "implies": [],
+      "layer": "normal",
+      "era": [
+        "any"
+      ],
+      "group": "hair_style",
+      "zh": "半扎"
+    },
+    {
+      "tag": "hair intakes",
+      "section": "feature",
+      "gate": "any",
+      "heat": [
+        "tease",
+        "flash",
+        "sex"
+      ],
+      "mutex": null,
+      "bind": [],
+      "implies": [],
+      "layer": "normal",
+      "era": [
+        "any"
+      ],
+      "group": "hair_style",
+      "zh": "內彎鬢髮"
+    },
+    {
+      "tag": "erect nipples",
+      "section": "feature",
+      "gate": "female",
+      "heat": [
+        "flash",
+        "sex"
+      ],
+      "mutex": null,
+      "bind": [],
+      "implies": [
+        "nipples"
+      ],
+      "layer": "normal",
+      "era": [
+        "any"
+      ],
+      "group": "body_f",
+      "needs": [
+        "female"
+      ],
+      "zh": "立乳"
+    },
+    {
+      "tag": "panties around one leg",
+      "section": "clothing",
+      "gate": "female",
+      "heat": [
+        "sex"
+      ],
+      "mutex": "underwear_bottom",
+      "bind": [],
+      "implies": [],
+      "layer": "garment",
+      "era": [
+        "modern"
+      ],
+      "group": "underwear",
+      "zh": "內褲掛一腿"
+    },
+    {
+      "tag": "mary janes",
+      "section": "clothing",
+      "gate": "female",
+      "heat": [
+        "tease",
+        "flash",
+        "sex"
+      ],
+      "mutex": "feet",
+      "bind": [],
+      "implies": [],
+      "layer": "garment",
+      "era": [
+        "modern"
+      ],
+      "group": "feet",
+      "zh": "瑪麗珍鞋"
+    },
+    {
+      "tag": "knee boots",
+      "section": "clothing",
+      "gate": "any",
+      "heat": [
+        "tease",
+        "flash",
+        "sex"
+      ],
+      "mutex": "feet",
+      "bind": [],
+      "implies": [],
+      "layer": "garment",
+      "era": [
+        "any"
+      ],
+      "group": "feet",
+      "zh": "及膝靴"
+    },
+    {
+      "tag": "plaid skirt",
+      "section": "clothing",
+      "gate": "female",
+      "heat": [
+        "tease",
+        "flash",
+        "sex"
+      ],
+      "mutex": "bottom",
+      "bind": [],
+      "implies": [
+        "skirt"
+      ],
+      "layer": "garment",
+      "era": [
+        "modern"
+      ],
+      "group": "bottom",
+      "zh": "格裙"
+    },
+    {
       "tag": "bride",
       "section": "feature",
       "gate": "female",

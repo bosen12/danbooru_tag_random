@@ -143,6 +143,17 @@ const GROUND_BODY = new Set(["all fours", "crawling", "top-down bottom-up"]);
 // body_pose，被改成 env/furniture 之後就脫離了姿勢相容那一整套檢查，於是
 // 「standing + on couch」這種組合一直畫得出來（基準線 4/24，六分之一）。
 const UPRIGHT_BODY = new Set(["standing", "walking", "running", "jumping", "standing split"]);
+// 跑步、跳躍進不了的小室內。沒有衣櫃這個字，試衣間和更衣室是現成的小隔間。
+const NO_SPRINT_PLACE = new Set([
+  "bathroom",
+  "shower (place)",
+  "bathtub",
+  "toilet stall",
+  "fitting room",
+  "changing room",
+  "ofuro",
+  "bubble bath",
+]);
 
 // 「只穿一件」的字。naked coat 的意思就是**除了大衣什麼都沒穿**，所以它跟任何
 // 主衣、內衣都是矛盾的。這件事以前完全沒有被擋：實測 1500 張裡出現這六個字的
@@ -294,6 +305,7 @@ const SEX_PHASE_AFTER = new Set([
   "cum drip",
   "cumdrip",
   "cumdrip from penis",
+  "cumdrip from pussy",
   "used condom",
   "after rape",
 ]);
@@ -539,6 +551,22 @@ function usedMutexTags(used, lex, mutex) {
 
 function activityFitsBody(act, body) {
   if (body.has("sleeping") && AWAKE_ACT.has(act)) return false;
+  // 跑步、跳躍是移動本身，不跟讀書、吃飯這類靜態活動疊。走路可以逛街、慢跑。
+  if ((body.has("running") || body.has("jumping")) && !MOVE_ACT.has(act)) return false;
+  if (
+    body.has("walking") &&
+    (BATH_ACT.has(act) ||
+      act === "reading" ||
+      act === "studying" ||
+      act === "eating" ||
+      act === "drinking" ||
+      act === "cooking" ||
+      act === "sunbathing" ||
+      act === "yoga" ||
+      act === "stretching")
+  ) {
+    return false;
+  }
   if (
     body.has("dancing") &&
     act !== "dancing" &&
@@ -2129,6 +2157,7 @@ function erasIntersect(a, b) {
 
 const LEAN_POSE = new Set(["leaning forward", "leaning back"]);
 const ARM_POSE = new Set([
+  "arms up",
   "arms behind back",
   "arms behind head",
   "crossed arms",
@@ -2198,9 +2227,11 @@ const NEEDS_FREE_HAND = new Set([
   "neck grab",
   "headlock",
   "rear naked choke",
+  "wrist grab",
 ]);
 const HANDS_BUSY_BODY = new Set(["crawling", "all fours", "top-down bottom-up", "bondage", "restrained", "handcuffs", "bound wrists"]);
 const BOTH_ARMS = new Set([
+  "arms up",
   "arms behind back",
   "arms behind head",
   "crossed arms",
@@ -5090,6 +5121,17 @@ export function drawOne(lex, settings, pinned, userBanned, rand, seed, opts) {
       ) {
         return false;
       }
+      // 詞庫沒有「衣櫃」。試衣間、更衣室是現有的小室內。床上已經由上面的直立規則擋住。
+      // 性愛那一檔不抽這三個移動姿勢：體位跟「正在跑」搶身體格，會把性行為擠掉。
+      if ((item.tag === "walking" || item.tag === "running" || item.tag === "jumping") && heat === "sex" && !pinned.has(item.tag)) {
+        return false;
+      }
+      if ((item.tag === "running" || item.tag === "jumping") && !pinned.has(item.tag) && hasUsed((t) => NO_SPRINT_PLACE.has(t))) {
+        return false;
+      }
+      if (NO_SPRINT_PLACE.has(item.tag) && !pinned.has(item.tag) && hasUsed((t) => t === "running" || t === "jumping")) {
+        return false;
+      }
       if (HANDS_BUSY_BODY.has(item.tag) && hasUsed((t) => ARM_POSE.has(t))) return false;
       if (HANDS_BUSY_ACT.has(item.tag) && hasUsed((t) => HANDS_BUSY_BODY.has(t))) return false;
       if (HANDS_BUSY_ACT.has(item.tag) && hasUsed((t) => HANDS_BUSY_ACT.has(t))) return false;
@@ -5880,6 +5922,23 @@ export function drawOne(lex, settings, pinned, userBanned, rand, seed, opts) {
     softTiers: [(item) => eraSpecific(item, era)],
     weights: [14, 1],
   });
+  // 女僕裝不是職業，但場地會照女僕的屋子收。購物的場地跟那份清單沒有交集，
+  // 釘了購物又抽到女僕裝，場地就空了。裝沒被釘、也不是必抽時，把裝拿掉，
+  // 下面的修補才能把試衣間補回來。已有場地的圖不走這裡。
+  if (
+    real &&
+    !usedPlaces(used, lex).size &&
+    used.has("maid") &&
+    !mustPins().has("maid")
+  ) {
+    const acts = [...usedActs(used, lex)].filter((a) => ACT_PLACE[a]);
+    const maidOk = placesInEra(JOB_PLACE.maid, lex, era);
+    const fitsMaid = acts.some((a) => [...ACT_PLACE[a]].some((p) => maidOk.has(p)));
+    if (acts.length && !fitsMaid) {
+      used.delete("maid");
+      if (mutexTaken.get("onepiece") === "maid") mutexTaken.delete("onepiece");
+    }
+  }
   if (real && !usedPlaces(used, lex).size) {
     for (const a of usedActs(used, lex)) {
       for (const p of ACT_PLACE[a] || []) {
@@ -6395,6 +6454,13 @@ export function drawOne(lex, settings, pinned, userBanned, rand, seed, opts) {
       return it && (it.mutex === "sex_act" || it.group === "sex");
     });
     if (doingIt) commit("hetero");
+  }
+
+  // 穴口滴精不在詞庫裡帶出 cumdrip。那個父標要求有男性，帶了的話女生單人就抽不到。
+  // 畫面上已經有男生時再補，跟 Danbooru 的父子一致；沒有男生就只留這個字和 pussy。
+  if (used.has("cumdrip from pussy") && male && !used.has("cumdrip")) {
+    const drip = lex.byTag.get("cumdrip");
+    if (drip && allow(drip)) commit("cumdrip");
   }
 
   // 四人、五人在性愛時直接補上人數標籤。五人幾乎不會從姿勢池自己抽到
