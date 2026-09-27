@@ -532,6 +532,54 @@ body :is(.lora-modal, .lora-preview-tip, .tw-tip, .lora-toast, .lora-tarot, .sho
   display: none;
 }
 
+/* 手機：桅杆不黏在頂上（141px，佔掉快五分之一的螢幕，往下做事時一直壓著），跟疊印台一樣捲走。
+ * 再窄一點：字標的副標、連線燈的字收起來，燈還在（字給螢幕閱讀器），省下一整排。 */
+@media (max-width: 44rem) {
+  .mast {
+    position: static;
+  }
+}
+
+@media (max-width: 34rem) {
+  .mast {
+    gap: var(--space-xs) var(--space-2xs);
+    padding-inline: var(--space-sm);
+  }
+  .wordmark small {
+    display: none;
+  }
+  .mode-link {
+    min-height: 32px;
+    padding: 0 calc(var(--space-xs) * 0.75);
+    font-size: var(--text-xs);
+  }
+  .mast-tools {
+    gap: var(--space-2xs);
+    /* 工具自成一排時靠左，跟上面那排對齊，不要吊在右邊。 */
+    margin-left: 0;
+  }
+  .mast .segmented button {
+    min-height: 30px;
+    padding: 0 var(--space-xs);
+    font-size: var(--text-xs);
+  }
+  .mast-tools .ghost {
+    min-height: 34px;
+    padding-inline: var(--space-sm);
+  }
+  .mast-tools .ghost .gen-pick-label {
+    max-width: 6.5em;
+  }
+  .ping span {
+    position: absolute;
+    width: 1px;
+    height: 1px;
+    overflow: hidden;
+    clip-path: inset(50%);
+    white-space: nowrap;
+  }
+}
+
 /* ---------- 版面 ---------- */
 
 .layout {
