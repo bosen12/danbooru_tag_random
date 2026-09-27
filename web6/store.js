@@ -12,7 +12,8 @@ const KEY = {
   shots: "mochi.shots.v1",
   ui: "mochi.ui.v1",
 };
-const SHOT_MAX = 60;
+// 成品牆畫面上留幾張、存幾張是同一個數字（以前牆留 80、只存 60，重新整理後尾端無聲消失）。
+export const SHOT_MAX = 80;
 
 function read(key, fallback) {
   try {

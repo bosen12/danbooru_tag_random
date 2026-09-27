@@ -307,9 +307,9 @@ function missReason(tag) {
 
 // 試印的 seed 是抽牌用的；送 ComfyUI 的那顆看「生圖種子」（固定就換成固定的那顆）。
 const printSeedOf = (t) => genSeed(t.seed);
-// 模型、LoRA、workflow 也算進去：換了其中一個再按付印是另一張圖，不是「這一張已經在印了」。
+// 分級（伺服器照它換負面詞）、模型、LoRA、workflow 也算進去：換了其中一個再按付印是另一張圖，不是「這一張已經在印了」。
 const sigOf = (t) =>
-  t ? `${printSeedOf(t)}|${settings.width}x${settings.height}|${t.positive}|${currentCkpt() || ""}|${JSON.stringify(currentLorasPayload() || [])}|${currentWorkflowId() || ""}` : "";
+  t ? `${printSeedOf(t)}|${settings.width}x${settings.height}|${settings.rating}|${t.positive}|${currentCkpt() || ""}|${JSON.stringify(currentLorasPayload() || [])}|${currentWorkflowId() || ""}` : "";
 
 function printFor(sig) {
   return sig ? prints.find((p) => p.sig === sig) : null;
@@ -530,6 +530,8 @@ function pick(i, { quiet = false } = {}) {
   clearTimeout(peekTimer);
   peekTrial = null;
   trialNodes.forEach((n) => n.node.classList.remove("is-peek"));
+  // 開著的選單描述的是上一張試印的影子，「收下這張」也還綁著舊的那張：換試印就收起來。
+  closePop();
   picked = i;
   renderPlate([]);
   swapGhosts();
@@ -646,7 +648,11 @@ function printNow() {
     at: new Date().toISOString(),
   };
   prints.unshift(p);
-  while (prints.length > PRINT_MAX) prints.pop();
+  // 超過上限從最舊的收掉，但還在排隊、還在畫的不收：收掉了 ComfyUI 照樣畫，畫好卻沒地方看。
+  // 它們畫完之後，下一次付印就會照常被收掉。
+  for (let i = prints.length - 1; i >= 0 && prints.length > PRINT_MAX; i--) {
+    if (prints[i].status !== "queued" && prints[i].status !== "running") prints.splice(i, 1);
+  }
   // 先夾上繩子再交給佇列：enqueue 會馬上回報狀態，那時繩上要已經有這張，
   // 不然它會自己重畫一次繩子，這裡再畫一次就把「剛夾上去晃一晃」蓋掉了。
   renderLine();
@@ -1709,6 +1715,7 @@ function openPop(anchor, tag, from) {
     el("div", { class: "pop-acts" }, [...acts, handAct(tag, anchor)])
   );
   pop._anchorTag = tag;
+  pop._scrollY = window.scrollY;
   pop._from = from;
   pop.addEventListener("keydown", (e) => {
     if (e.key === "Escape") {
@@ -2923,6 +2930,10 @@ function wireChrome() {
     }, 120);
   });
   $("plate-scroll").addEventListener("scroll", () => closePop(), { passive: true });
+  // 窄螢幕是整頁捲動：選單是 fixed，頁面一捲它就停在舊位置、牌已經走了。捲超過一點點就收起來。
+  window.addEventListener("scroll", () => {
+    if (pop && Math.abs(window.scrollY - (pop._scrollY ?? window.scrollY)) > 8) closePop();
+  }, { passive: true });
 }
 
 function onKey(e) {

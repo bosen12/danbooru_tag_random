@@ -1295,8 +1295,8 @@ function makeShot(drawn, seed, poolAtDraw) {
 }
 
 function trimWall() {
-  if (shots.length <= 80) return;
-  const drop = shots.splice(80);
+  if (shots.length <= S.SHOT_MAX) return;
+  const drop = shots.splice(S.SHOT_MAX);
   for (const s of drop) document.querySelector(`.shot[data-id="${s.id}"]`)?.remove();
   generator.drop(new Set(drop.map((s) => s.id)));
 }

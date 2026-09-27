@@ -206,10 +206,13 @@ export function createGenerator(hooks) {
   }
 
   function interrupt(promptId) {
+    // 沒有 prompt_id 就不送：空的 {} 在伺服器那邊是 ComfyUI 的全域中斷，會把別的分頁、別人正在畫的圖一起砍掉。
+    // 還沒拿到編號就按停的那張，本地 abort 就夠了：斷線後伺服器那邊的工作過了寬限自己會收。
+    if (!promptId) return;
     fetch("/api/interrupt", {
       method: "POST",
       headers: { "Content-Type": "application/json" },
-      body: JSON.stringify(promptId ? { prompt_id: promptId } : {}),
+      body: JSON.stringify({ prompt_id: promptId }),
     }).catch(() => {});
   }
 
