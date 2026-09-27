@@ -2716,8 +2716,7 @@ function buildHand() {
     key: "mochi.fuse.hand.v1",
     makeNode: (t) => cardNode(cardOf(t), assets),
     blocked: (t) => (cardOf(t) && !rankOk(cardOf(t)) ? "分級擋掉" : null),
-    // 托盤的牌跟字盒的一樣大：量字盒上的一張。
-    sample: () => $("case-grid")?.querySelector(".card"),
+    // 托盤的牌大小照墨池（hand.js 存的 mochi.fav.size），這裡不量自己的字盒：兩個房間切換時托盤不會跳。
     inPool: (t) => bed.pins.includes(t),
     known: (t) => lib.byTag.has(t) && !bans.has(t),
     // 出牌：從托盤上那張的位置飛上版。

@@ -32,12 +32,13 @@ const ICON =
 const CHEVRON =
   '<svg class="fav-chev" viewBox="0 0 24 24" width="14" height="14" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M6 15l6-6 6 6"/></svg>';
 const GAP = 10;
+const noSample = () => null;
 
 export function createHand({
   key,
   max = 10,
   makeNode,
-  sample = () => null,
+  sample = noSample,
   inPool,
   onPlay,
   onChange = () => {},
@@ -54,7 +55,13 @@ export function createHand({
   let hot = -1;
   // 拖牌經過托盤：在要插進去的地方空出一格（at：第幾格；skip：拖的就是托盤上的這張，它先讓出位置）。
   let gap = null;
-  let size = { w: 84, fs: 10 };
+  // 托盤的牌多大：兩個房間都照墨池字盒那張（墨池量、存起來；疊印台只讀）。一開頁就用存著的，
+  // 不先用預設大小畫一次、等字盒畫好量完再縮 —— 那樣一載入、一換房間托盤就跳一下。
+  const SIZE_KEY = "mochi.fav.size";
+  let size = (() => {
+    const v = read(SIZE_KEY, null);
+    return v && v.w > 30 && v.w < 200 && v.fs > 4 ? { w: v.w, fs: v.fs } : { w: 83, fs: 10.5 };
+  })();
   const slots = new Map();
   const pendingArrive = new Set();
 
@@ -154,6 +161,7 @@ export function createHand({
   function measure(force = false) {
     if (measured && watched && !force) return size;
     const n = sample();
+    if (!n && !measured && sample === noSample) return size; // 這個房間不量（疊印台）：用墨池存的
     const grid = n?.parentElement;
     if (gridRo && grid && grid !== watched) {
       if (watched) gridRo.unobserve(watched);
@@ -164,6 +172,7 @@ export function createHand({
     if (w > 30) {
       size = { ...size, w, fs: parseFloat(getComputedStyle(n).fontSize) || size.fs };
       measured = true;
+      write(SIZE_KEY, { w: size.w, fs: size.fs });
     } else if (!measured && !retry && tries < 40) {
       tries += 1;
       retry = setTimeout(() => {

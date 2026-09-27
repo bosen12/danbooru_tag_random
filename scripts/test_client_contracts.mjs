@@ -1702,7 +1702,7 @@ const ALBUM_FIXTURE = [
     ok("偏好卡牌鈕：墨池在只抽牌左邊、疊印台在撤回左邊", fuseHtml6.indexOf('id="hand-btn"') >= 0 && fuseHtml6.indexOf('id="hand-btn"') < fuseHtml6.indexOf('id="undo"') && app6.indexOf("hand-btn") < app6.indexOf('"只抽牌"'));
     ok("已經在卡池的不擺在托盤上；從卡池拿下來飛回托盤、不回字盒", hand6.includes("tags.filter((t) => !inPool(t))") && fuse6.includes("(hand?.has(tag) && hand.nodeOf(tag)) || caseCard(tag)") && app6.includes("const homeNow = () => (hand?.has(tag) && hand.nodeOf(tag)) || libCardNode(tag);"));
     ok("挑牌模式：字盒點一下加、再點一下拿掉；托盤可以拖進拖出", fuse6.includes("if (hand?.editing) hand.toggle(card.tag") && app6.includes("if (hand?.editing) return void hand.toggle(card.tag") && fuse6.includes('{ id: "hand", el: hand?.el') && app6.includes('{ id: "hand", el: hand?.el'));
-    ok("托盤的牌跟字盒同一張：量字盒那張的寬度和字級，圖立刻載", hand6.includes("n?.offsetWidth") && hand6.includes('img.loading = "eager"') && fuse6.includes('sample: () => $("case-grid")?.querySelector(".card")') && app6.includes('sample: () => $("lib-grid")?.querySelector(".card")') && !/\n\.fav-card \{[^}]*box-shadow/.test(css6));
+    ok("托盤的牌跟墨池字盒同一張：墨池量、存起來，兩個房間都用同一個大小（開頁就用存著的，不跳），圖立刻載", hand6.includes("n?.offsetWidth") && hand6.includes('img.loading = "eager"') && !fuse6.includes('sample: () => $("case-grid")') && app6.includes('sample: () => $("lib-grid")?.querySelector(".card")') && hand6.includes('const SIZE_KEY = "mochi.fav.size";') && hand6.includes("write(SIZE_KEY, { w: size.w, fs: size.fs });") && !/\n\.fav-card \{[^}]*box-shadow/.test(css6));
     {
       // 托盤的落點排第一個：它浮在卡池上面，放在托盤上不能穿過去掉進卡池。
       const zf = fuse6.slice(fuse6.indexOf("zones: () => ["));
