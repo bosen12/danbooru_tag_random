@@ -2311,6 +2311,11 @@ body:has(.go-float[data-show="true"]) .toast {
   animation: ink-empty-in var(--dur-medium) var(--ease-out) both;
 }
 
+/* 合成池拿掉最後一張時，那張正飛回字盒：提示等它走遠一點才浮上來，不要讓牌從字上面飛過去。 */
+.pool-empty {
+  animation-delay: var(--dur-medium);
+}
+
 @keyframes ink-empty-in {
   from { opacity: 0; transform: translateY(5px); }
   to { opacity: 1; transform: none; }

@@ -1309,6 +1309,8 @@ function renderPlate(events = []) {
     const g = box.cloneNode(true);
     g.removeAttribute("id");
     g.querySelector(".rel-layer")?.remove();
+    // 你的牌不跟著這張紙走：清版、撤回、拿下來各有自己的路線（掃回字盒、飛回托盤）。留著的話會同時看到兩份。
+    for (const c of g.querySelectorAll(".plate-card")) c.style.visibility = "hidden";
     sheet = { node: g, rect: r };
   }
   flipBy(box, ".plate-card, .ghost-card", cardKey, () => {
