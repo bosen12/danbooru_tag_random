@@ -7,6 +7,15 @@
     <title>排字匣 · 墨池</title>
     <meta name="description" content="排字匣的卡牌版：把字拖進合成池，引擎抽牌補齊，每張圖底下攤開用了哪些牌。" />
     <link rel="icon" href="favicon.svg" type="image/svg+xml" />
+    <!-- 墨池 ↔ 疊印台 的跨頁轉場：同意書放在最前面、直接寫在頁面裡。放在 styles.css 的話，
+         冷啟動時它排在 Google Fonts 後面才讀到，瀏覽器已經判定這頁沒同意，轉場就被跳過。 -->
+    <style>
+      @media (prefers-reduced-motion: no-preference) {
+        @view-transition {
+          navigation: auto;
+        }
+      }
+    </style>
     <link rel="preload" href="lexicon.json" as="fetch" crossorigin />
     <link rel="preload" href="cards/manifest.json" as="fetch" crossorigin />
     <link rel="modulepreload" href="engine.js" />
@@ -25,7 +34,7 @@
       <div class="mast-primary">
         <h1 class="wordmark">墨池</h1>
         <nav class="page-switch" aria-label="墨池頁面">
-          <a href="./" aria-current="page">墨池</a>
+          <a href="./" aria-current="page"><span class="page-switch-ink" aria-hidden="true"></span>墨池</a>
           <a href="fuse.html" title="一張牌一層墨：照花色疊進卡池，看引擎補了什麼再付印">疊印台</a>
         </nav>
         <a class="mast-extra" href="intro.html" title="兩分鐘的介紹影片（畫面、配樂即時產生）· Intro film">介紹影片</a>
@@ -83,6 +92,20 @@
     <div class="go-float" id="go-float" role="group" aria-label="抽牌（浮動）" data-show="false" inert></div>
     <button class="trash" id="trash" type="button"></button>
     <div class="toast" id="toast" role="status" aria-live="polite"></div>
+    <div class="tray-bridge" id="tray-bridge" aria-hidden="true" hidden><span>偏好卡牌</span></div>
+    <script>
+      try {
+        const cards = JSON.parse(localStorage.getItem("mochi.hand.v1") || "[]");
+        if (Array.isArray(cards) && cards.length) {
+          const bridge = document.getElementById("tray-bridge");
+          bridge.hidden = false;
+          bridge.dataset.open = localStorage.getItem("mochi.hand.v1.open") !== "false" ? "true" : "false";
+          bridge.style.setProperty("--tray-count", Math.min(cards.length, 10));
+          bridge.style.setProperty("--tray-w", `${Math.max(360, 40 + Math.min(cards.length, 10) * 93)}px`);
+          bridge.firstElementChild.textContent = `偏好卡牌 ${cards.length}/10`;
+        }
+      } catch { /* 儲存空間不可用時，照常載入頁面。 */ }
+    </script>
     <script type="module" src="app.js"></script>
   </body>
 </html>

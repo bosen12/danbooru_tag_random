@@ -7,6 +7,15 @@
     <title>墨池 · 疊印台</title>
     <meta name="description" content="墨池的疊印台：牌照花色疊進六列卡池，引擎補的牌以影子排在旁邊；挑好一張試印再付印。" />
     <link rel="icon" href="favicon.svg" type="image/svg+xml" />
+    <!-- 墨池 ↔ 疊印台 的跨頁轉場：同意書放在最前面、直接寫在頁面裡。放在 styles.css 的話，
+         冷啟動時它排在 Google Fonts 後面才讀到，瀏覽器已經判定這頁沒同意，轉場就被跳過。 -->
+    <style>
+      @media (prefers-reduced-motion: no-preference) {
+        @view-transition {
+          navigation: auto;
+        }
+      }
+    </style>
     <link rel="preload" href="lexicon.json" as="fetch" crossorigin />
     <link rel="preload" href="cards/manifest.json" as="fetch" crossorigin />
     <link rel="modulepreload" href="engine.js" />
@@ -28,7 +37,7 @@
         <h1 class="wordmark">墨池</h1>
         <nav class="page-switch" aria-label="墨池頁面">
           <a href="./">墨池</a>
-          <a href="fuse.html" aria-current="page">疊印台</a>
+          <a href="fuse.html" aria-current="page"><span class="page-switch-ink" aria-hidden="true"></span>疊印台</a>
         </nav>
         <a class="mast-extra" href="intro.html" title="兩分鐘的介紹影片（畫面、配樂即時產生）· Intro film">介紹影片</a>
       </div>
@@ -98,6 +107,20 @@
     <button class="pool-pill pressable" id="pool-pill" type="button" aria-label="回到卡池" hidden></button>
     <div class="sr-only" id="live" aria-live="polite"></div>
     <div class="toast" id="toast" role="status" aria-live="polite"></div>
+    <div class="tray-bridge" id="tray-bridge" aria-hidden="true" hidden><span>偏好卡牌</span></div>
+    <script>
+      try {
+        const cards = JSON.parse(localStorage.getItem("mochi.fuse.hand.v1") || "[]");
+        if (Array.isArray(cards) && cards.length) {
+          const bridge = document.getElementById("tray-bridge");
+          bridge.hidden = false;
+          bridge.dataset.open = localStorage.getItem("mochi.fuse.hand.v1.open") !== "false" ? "true" : "false";
+          bridge.style.setProperty("--tray-count", Math.min(cards.length, 10));
+          bridge.style.setProperty("--tray-w", `${Math.max(360, 40 + Math.min(cards.length, 10) * 93)}px`);
+          bridge.firstElementChild.textContent = `偏好卡牌 ${cards.length}/10`;
+        }
+      } catch { /* 儲存空間不可用時，照常載入頁面。 */ }
+    </script>
     <script type="module" src="fuse.js"></script>
   </body>
 </html>

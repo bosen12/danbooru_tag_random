@@ -356,6 +356,8 @@ body :is(.lora-modal, .lora-preview-tip, .tw-tip, .lora-toast, .lora-tarot, .sho
 }
 
 .page-switch a {
+  position: relative;
+  isolation: isolate;
   display: inline-flex;
   align-items: center;
   min-height: 30px;
@@ -370,6 +372,13 @@ body :is(.lora-modal, .lora-preview-tip, .tw-tip, .lora-toast, .lora-tarot, .sho
 
 .page-switch a[aria-current="page"] {
   color: var(--color-ink);
+}
+
+.page-switch-ink {
+  position: absolute;
+  z-index: -1;
+  inset: 0;
+  border-radius: inherit;
   background: var(--color-paper-4);
 }
 
@@ -2395,4 +2404,133 @@ body .lora-modal .lm-none {
     animation: none !important;
     transition: none !important;
   }
+}
+
+/* 墨池 ↔ 疊印台：只在兩份文件都同意且使用者允許動態時啟用。 */
+.tray-bridge {
+  position: fixed;
+  left: 50%;
+  bottom: 10px;
+  z-index: 26;
+  translate: -50% 0;
+  width: min(calc(100vw - 20px), var(--tray-w, 360px));
+  height: 7rem;
+  padding: var(--space-xs) var(--space-sm);
+  border: 1px solid var(--color-rule-2);
+  border-radius: var(--radius-lg);
+  background: var(--color-paper);
+  box-shadow: 0 18px 40px -12px var(--color-shade);
+  color: var(--color-ink-2);
+  font-size: var(--text-xs);
+}
+.tray-bridge[hidden],
+body:has(.fav-hand) .tray-bridge { display: none; }
+.tray-bridge[data-open="false"] {
+  width: max-content;
+  height: auto;
+  border-radius: 999px;
+}
+
+@media (prefers-reduced-motion: no-preference) {
+  @view-transition {
+    navigation: auto;
+  }
+
+  .mast { view-transition-name: mast; }
+  .page-switch-ink { view-transition-name: page-switch-ink; }
+  .library, .case { view-transition-name: type-case; }
+  .work, .plate { view-transition-name: work-stage; }
+  .side { view-transition-name: proof-side; }
+  .line { view-transition-name: drying-line; }
+  .fav-hand { view-transition-name: favorite-tray; }
+  .tray-bridge:not([hidden]) { view-transition-name: favorite-tray; }
+
+  ::view-transition { pointer-events: none; }
+
+  ::view-transition-old(root),
+  ::view-transition-new(root),
+  ::view-transition-group(mast),
+  ::view-transition-old(mast),
+  ::view-transition-new(mast) {
+    animation: none;
+  }
+  ::view-transition-old(mast) { opacity: 0; }
+
+  ::view-transition-group(page-switch-ink) {
+    animation-duration: var(--dur-long);
+    animation-timing-function: var(--ease-travel);
+  }
+
+  ::view-transition-group(type-case) {
+    animation-duration: var(--dur-xl);
+    animation-timing-function: var(--ease-travel);
+  }
+
+  /* 字盒：外框變形；裡面的牌先讓舊的很快淡掉，新的晚一拍才浮上來。兩層同時半透明、又被拉成不同比例，
+   * 逐格看是一團糊掉的牌。快照照原比例裁，不拉伸。 */
+  ::view-transition-old(type-case),
+  ::view-transition-new(type-case) {
+    height: 100%;
+    object-fit: cover;
+    object-position: top left;
+  }
+  ::view-transition-old(type-case) {
+    animation: type-case-out var(--dur-micro) var(--ease-out) both;
+  }
+
+  ::view-transition-new(type-case) {
+    animation: type-case-in var(--dur-short) var(--ease-out) calc(var(--dur-micro) / 2) both;
+  }
+
+  ::view-transition-old(favorite-tray),
+  ::view-transition-new(favorite-tray) {
+    animation-duration: var(--dur-long);
+    animation-timing-function: var(--ease-travel);
+  }
+
+  /* 分頁由左到右是墨池、疊印台；紙張沿同一方向換版。舊的那張先很快抽走（一開始就走得快的 out），
+   * 新的晚半拍（micro 的一半）從另一側鋪上來：只重疊一點點，不會疊成一團，也不會中間整頁空掉一下。整段約 480ms。 */
+  html:has(body.fuse)::view-transition-old(work-stage),
+  html:has(body.fuse)::view-transition-old(drying-line),
+  html:has(body.fuse)::view-transition-old(proof-side) {
+    animation: paper-exit-left var(--dur-short) var(--ease-out) both;
+  }
+  html:has(body.fuse)::view-transition-new(work-stage),
+  html:has(body.fuse)::view-transition-new(drying-line),
+  html:has(body.fuse)::view-transition-new(proof-side) {
+    animation: paper-enter-right var(--dur-long) var(--ease-out) calc(var(--dur-micro) / 2) both;
+  }
+  html:not(:has(body.fuse))::view-transition-old(work-stage),
+  html:not(:has(body.fuse))::view-transition-old(drying-line),
+  html:not(:has(body.fuse))::view-transition-old(proof-side) {
+    animation: paper-exit-right var(--dur-short) var(--ease-out) both;
+  }
+  html:not(:has(body.fuse))::view-transition-new(work-stage),
+  html:not(:has(body.fuse))::view-transition-new(drying-line),
+  html:not(:has(body.fuse))::view-transition-new(proof-side) {
+    animation: paper-enter-left var(--dur-long) var(--ease-out) calc(var(--dur-micro) / 2) both;
+  }
+}
+
+@keyframes type-case-out {
+  to { opacity: 0; }
+}
+@keyframes type-case-in {
+  from { opacity: 0; }
+}
+@keyframes paper-exit-left {
+  from { opacity: 1; transform: translateX(0); clip-path: inset(0 0 0 0); }
+  to { opacity: 0; transform: translateX(-3vw); clip-path: inset(0 100% 0 0); }
+}
+@keyframes paper-enter-right {
+  from { opacity: 0; transform: translateX(3vw); clip-path: inset(0 0 0 100%); }
+  to { opacity: 1; transform: translateX(0); clip-path: inset(0 0 0 0); }
+}
+@keyframes paper-exit-right {
+  from { opacity: 1; transform: translateX(0); clip-path: inset(0 0 0 0); }
+  to { opacity: 0; transform: translateX(3vw); clip-path: inset(0 0 0 100%); }
+}
+@keyframes paper-enter-left {
+  from { opacity: 0; transform: translateX(-3vw); clip-path: inset(0 100% 0 0); }
+  to { opacity: 1; transform: translateX(0); clip-path: inset(0 0 0 0); }
 }
