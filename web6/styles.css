@@ -332,32 +332,58 @@ body :is(.lora-modal, .lora-preview-tip, .tw-tip, .lora-toast, .lora-tarot, .sho
   letter-spacing: 0.06em;
 }
 
-/* 通往疊印台（fuse.html）：同一間墨池的另一張桌子。 */
-.mode-link {
+.mast-primary,
+.mast-controls {
+  display: flex;
+  align-items: center;
+  min-width: 0;
+  gap: var(--space-sm);
+}
+
+.mast-controls {
+  margin-left: auto;
+}
+
+.page-switch {
   display: inline-flex;
   align-items: center;
-  gap: 0.35rem;
-  min-height: 34px;
+  gap: var(--space-2xs);
+  padding: var(--space-3xs);
+  border: 1px solid var(--color-rule-2);
+  border-radius: var(--radius-sm);
+  background: var(--color-paper-2);
+  white-space: nowrap;
+}
+
+.page-switch a {
+  display: inline-flex;
+  align-items: center;
+  min-height: 30px;
   padding: 0 var(--space-sm);
-  border: 1px solid var(--color-rule);
-  border-radius: 999px;
+  border-radius: var(--radius-xs);
   color: var(--color-ink-2);
   font-family: var(--font-display);
   font-weight: 700;
   font-size: var(--text-sm);
   text-decoration: none;
-  transition: border-color var(--dur-micro) var(--ease-out), color var(--dur-micro) var(--ease-out);
 }
 
-.mode-link::after {
-  content: "→";
-  font-family: var(--font-body);
-  color: var(--color-muted);
-}
-
-.mode-link:hover {
-  border-color: var(--color-ink-2);
+.page-switch a[aria-current="page"] {
   color: var(--color-ink);
+  background: var(--color-paper-4);
+}
+
+.page-switch a:hover,
+.mast-extra:hover {
+  color: var(--color-ink);
+}
+
+.mast-extra {
+  color: var(--color-muted);
+  font-size: var(--text-xs);
+  text-decoration-color: var(--color-rule);
+  text-underline-offset: var(--space-2xs);
+  white-space: nowrap;
 }
 
 .wordmark small {
@@ -490,7 +516,7 @@ body :is(.lora-modal, .lora-preview-tip, .tw-tip, .lora-toast, .lora-tarot, .sho
   display: flex;
   align-items: center;
   gap: var(--space-xs);
-  margin-left: auto;
+  margin-left: 0;
 }
 
 .ping {
@@ -537,6 +563,25 @@ body :is(.lora-modal, .lora-preview-tip, .tw-tip, .lora-toast, .lora-tarot, .sho
 @media (max-width: 44rem) {
   .mast {
     position: static;
+    display: grid;
+    grid-template-columns: minmax(0, 1fr);
+    gap: var(--space-2xs);
+  }
+  .mast-primary,
+  .mast-controls {
+    width: 100%;
+  }
+  .mast-controls {
+    overflow-x: auto;
+    scrollbar-width: none;
+    overscroll-behavior-x: contain;
+  }
+  .mast-controls::-webkit-scrollbar {
+    display: none;
+  }
+  .mast-controls > *,
+  .mast-tools > * {
+    flex: none;
   }
 }
 
@@ -548,15 +593,45 @@ body :is(.lora-modal, .lora-preview-tip, .tw-tip, .lora-toast, .lora-tarot, .sho
   .wordmark small {
     display: none;
   }
-  .mode-link {
-    min-height: 32px;
-    padding: 0 calc(var(--space-xs) * 0.75);
+  .mast-primary,
+  .mast-controls {
+    gap: var(--space-xs);
+  }
+  .page-switch a {
+    min-height: 30px;
+    padding: 0 var(--space-xs);
     font-size: var(--text-xs);
   }
+  .mast-extra {
+    margin-left: auto;
+  }
+  /* 第二排不要橫向捲：捲出去的工具和連線燈看不到、也不知道還有。LoRA、模型改成只留圖示
+   * （文字給螢幕閱讀器，滑鼠停上去仍有 title），整排就放得下。 */
+  .mast-controls {
+    overflow-x: visible;
+  }
+  .mast-tools .ghost .gen-pick-label {
+    position: absolute;
+    width: 1px;
+    height: 1px;
+    overflow: hidden;
+    clip-path: inset(50%);
+    white-space: nowrap;
+  }
+  .mast-tools :is(#lora-pick-btn, #ckpt-pick-btn, #wf-pick-btn) {
+    min-width: 36px;
+    padding-inline: var(--space-xs);
+  }
+  .mast-tools .ghost.icon-btn {
+    min-width: 36px;
+    padding-inline: var(--space-xs);
+  }
+  .mast-controls,
   .mast-tools {
-    gap: var(--space-2xs);
-    /* 工具自成一排時靠左，跟上面那排對齊，不要吊在右邊。 */
-    margin-left: 0;
+    column-gap: var(--space-2xs);
+  }
+  .mast-tools .keys-btn {
+    display: none;
   }
   .mast .segmented button {
     min-height: 30px;

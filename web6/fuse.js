@@ -2044,6 +2044,8 @@ function renderPrintBar() {
   const summary = [
     `你的 ${bed.pins.length} 張`,
     `引擎補 ${t.extra.length} 張`,
+  ];
+  const detail = [
     ERA_ZH[t.era] || "",
     RATING_ZH[settings.rating],
     (SIZES.find((s) => s.w === settings.width && s.h === settings.height) || SIZES[0]).zh,
@@ -2052,13 +2054,14 @@ function renderPrintBar() {
   // 不整排重畫 —— 以前「停」一秒換好幾次新的，滑鼠停在上面會閃、按下去常常按不到。
   const wasOffline = bar.dataset.offline === "1";
   bar.dataset.offline = offline ? "1" : "0";
-  const key = [t.letter, sigOf(t), p ? p.status : "", summary.join("・"), t.missing.join(","), offline, linkNow, p && p.status === "failed" ? p.note : "", !!bed.pins.length].join("|");
+  const key = [t.letter, sigOf(t), p ? p.status : "", summary.join("・"), detail.join("・"), t.missing.join(","), offline, linkNow, p && p.status === "failed" ? p.note : "", !!bed.pins.length].join("|");
   const go = bar.querySelector(".pb-go");
   if (bar.dataset.key === key && go) {
     if (go.textContent !== label) go.textContent = label;
     if (busy) go.style.setProperty("--p", String(p.status === "running" ? p.progress || 0 : 0));
     return;
   }
+  const moreOpen = bar.querySelector(".pb-more")?.open;
   bar.dataset.key = key;
   put(
     bar,
@@ -2070,7 +2073,8 @@ function renderPrintBar() {
         "div",
         { class: "pb-text" },
         el("p", { class: "pb-title" }, `試印 ${t.letter}`),
-        el("p", { class: "pb-sum" }, summary.join("・"))
+        el("p", { class: "pb-sum" }, summary.join("・")),
+        el("p", { class: "pb-detail" }, detail.join("・"))
       )
     ),
     t.missing.length ? el("p", { class: "pb-warn" }, `這張沒收到：${t.missing.map(zh).join("、")}`) : null,
@@ -2092,18 +2096,24 @@ function renderPrintBar() {
       ),
       busy ? el("button", { class: "btn", type: "button", onclick: stopPrinting }, "停") : null
     ),
-    seedNode || (seedNode = mountSeedControl(null, { compact: true })),
     offline
       ? el("p", { class: "pb-hint", dataset: { fresh: wasOffline ? "0" : "1" } }, linkNow === "net" ? "連不到主機（網路斷了？）。可以繼續疊版、挑試印，接上了再付印。" : "印刷機（ComfyUI）沒開。可以繼續疊版、挑試印，開了再付印。")
       : null,
     p && p.status === "failed" ? el("p", { class: "pb-hint", dataset: { kind: "err" } }, p.note || "印壞了") : null,
     el(
-      "p",
-      { class: "pb-links" },
-      el("button", { class: "link-btn pressable", type: "button", onclick: showPos }, "看 POS"),
-      el("button", { class: "link-btn pressable", type: "button", onclick: sendToPool, disabled: !bed.pins.length || undefined }, "把這一版放進墨池的合成池")
+      "details",
+      { class: "pb-more" },
+      el("summary", {}, "更多設定與操作"),
+      seedNode || (seedNode = mountSeedControl(null, { compact: true })),
+      el(
+        "p",
+        { class: "pb-links" },
+        el("button", { class: "link-btn pressable", type: "button", onclick: showPos }, "看 POS"),
+        el("button", { class: "link-btn pressable", type: "button", onclick: sendToPool, disabled: !bed.pins.length || undefined }, "把這一版放進墨池的合成池")
+      )
     )
   );
+  if (moreOpen) bar.querySelector(".pb-more").open = true;
   const hint = bar.querySelector('.pb-hint[data-fresh="1"]');
   if (hint) enter(hint);
 }

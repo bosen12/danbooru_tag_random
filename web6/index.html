@@ -22,12 +22,19 @@
   </head>
   <body>
     <header class="mast">
-      <h1 class="wordmark">墨池<small>排字匣・卡牌版</small></h1>
-      <a class="mode-link" href="fuse.html" title="一張牌一層墨：照花色疊進卡池，看引擎補了什麼再付印">疊印台</a>
-      <a class="mode-link" href="intro.html" title="兩分鐘的介紹影片（畫面、配樂即時產生）· Intro film">介紹影片</a>
-      <div class="segmented" id="rating" data-kind="rating" role="radiogroup" aria-label="尺度分級"></div>
-      <div class="mast-tools" id="mast-tools">
+      <div class="mast-primary">
+        <h1 class="wordmark">墨池</h1>
+        <nav class="page-switch" aria-label="墨池頁面">
+          <a href="./" aria-current="page">墨池</a>
+          <a href="fuse.html" title="一張牌一層墨：照花色疊進卡池，看引擎補了什麼再付印">疊印台</a>
+        </nav>
+        <a class="mast-extra" href="intro.html" title="兩分鐘的介紹影片（畫面、配樂即時產生）· Intro film">介紹影片</a>
+      </div>
+      <div class="mast-controls">
+        <div class="segmented" id="rating" data-kind="rating" role="radiogroup" aria-label="尺度分級"></div>
+        <div class="mast-tools" id="mast-tools">
           <div class="ping" id="ping" data-ok="" role="status" aria-live="polite"><i aria-hidden="true"></i><span>Comfy…</span></div>
+        </div>
       </div>
     </header>
 
