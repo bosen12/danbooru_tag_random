@@ -2545,7 +2545,7 @@ function indoorOutdoorClash(have) {
   let girlPenis = 0;
   for (let i = 0; i < 40; i++) {
     const h = tagsOf(drawOne(lex, girlOnly, new Set(), new Set(), mulberry32(97800 + i), 97800 + i));
-    if (["penis", "flaccid", "precum", "phimosis", "erection", "fivesome", "cum", "cum on body", "large testicles", "huge testicles", "small testicles", "covered testicles", "testicle sucking", "testicle grab"].some((t) => h.has(t))) girlPenis += 1;
+    if (["penis", "flaccid", "precum", "phimosis", "erection", "fivesome", "cum", "cum on body", "large testicles", "huge testicles", "small testicles", "covered testicles", "testicle sucking", "testicle grab", "stomach bulge", "cum on pussy", "nursing handjob", "straddling paizuri", "mutual masturbation", "licking nipple", "leg lock", "grabbing from behind", "kissing neck", "head between breasts", "breast smother", "spanking"].some((t) => h.has(t))) girlPenis += 1;
   }
   eq("girl-only sex does not emit penis or cum", girlPenis, 0);
 
@@ -2555,7 +2555,7 @@ function indoorOutdoorClash(have) {
   boyOnlySex.heats = ["sex"];
   boyOnlySex.weights = { tease: 0, flash: 0, sex: 1, activity: 0 };
   boyOnlySex.eras = ["modern"];
-  const boyReceives = ["cum in mouth", "facial", "gokkun", "cum on tongue", "cum in ass", "penis on face", "penis over eyes", "cum pool", "cum on body"];
+  const boyReceives = ["cum in mouth", "facial", "gokkun", "cum on tongue", "cum in ass", "penis on face", "penis over eyes", "cum pool", "cum on body", "stomach bulge", "cum on pussy", "nursing handjob", "straddling paizuri", "mutual masturbation", "licking nipple", "leg lock", "grabbing from behind", "kissing neck", "head between breasts", "breast smother", "spanking", "tentacle sex", "tentacles", "anal fingering", "folded", "spread ass", "sideboob", "underboob", "backboob", "bodystocking", "pasties", "torn thighhighs", "butt plug", "anal beads", "hickey", "crotch rope", "pussy juice trail", "pussy juice puddle", "torogao", "female ejaculation"];
   let boyRecv = 0;
   for (let i = 0; i < 24; i++) {
     const h = tagsOf(drawOne(lex, boyOnlySex, new Set(), new Set(), mulberry32(98920 + i), 98920 + i));
@@ -2597,6 +2597,37 @@ function indoorOutdoorClash(have) {
   ok("covered testicles can be flash", (item("covered testicles")?.heat || []).includes("flash") && (item("covered testicles")?.heat || []).includes("sex") && !(item("covered testicles")?.heat || []).includes("tease") && (item("covered testicles")?.implies || []).length === 0);
   ok("testicle sucking takes the sex act", item("testicle sucking")?.mutex === "sex_act" && need("testicle sucking").includes("pair") && (item("testicle sucking")?.implies || []).includes("testicles"));
   ok("testicle grab is not a sex act", item("testicle grab")?.mutex == null && need("testicle grab").includes("pair") && (item("testicle grab")?.implies || []).includes("penis"));
+  ok("stomach bulge stacks with a position", item("stomach bulge")?.mutex == null && need("stomach bulge").includes("male") && need("stomach bulge").includes("female") && (item("stomach bulge")?.implies || []).includes("sex") && !(item("stomach bulge")?.implies || []).includes("vaginal"));
+  ok("cum on pussy does not take the act", item("cum on pussy")?.mutex == null && (item("cum on pussy")?.implies || []).includes("cum") && !(item("cum on pussy")?.implies || []).includes("vaginal"));
+  ok("nursing handjob is a handjob", item("nursing handjob")?.mutex === "sex_act" && need("nursing handjob").includes("pair") && need("nursing handjob").includes("female") && (item("nursing handjob")?.implies || []).includes("handjob"));
+  ok("straddling paizuri keeps paizuri", item("straddling paizuri")?.mutex === "sex_act" && (item("straddling paizuri")?.implies || []).includes("paizuri") && (item("straddling paizuri")?.implies || []).includes("straddling"));
+  ok("tentacle sex is one woman and tentacles", item("tentacle sex")?.mutex === "sex_act" && !need("tentacle sex").includes("pair") && !need("tentacle sex").includes("male") && need("tentacle sex").includes("female") && (item("tentacle sex")?.implies || []).includes("tentacles") && !(item("tentacle sex")?.implies || []).includes("sex"));
+  ok("tentacles stay sex-only", (item("tentacles")?.heat || []).join(",") === "sex" && item("tentacles")?.group === "sex" && item("tentacles")?.gate === "female");
+  ok("torogao is a sex face", item("torogao")?.mutex === "expression" && (item("torogao")?.heat || []).join(",") === "sex" && item("torogao")?.group === "face");
+  ok("sideboob is her chest", item("sideboob")?.section === "feature" && item("sideboob")?.group === "body_f" && need("sideboob").includes("female") && !need("sideboob").includes("male"));
+  ok("torn thighhighs keep the stocking", item("torn thighhighs")?.mutex === "legs" && (item("torn thighhighs")?.implies || []).includes("thighhighs") && (item("torn thighhighs")?.heat || []).includes("tease"));
+  ok("butt plug stays out of tease", (item("butt plug")?.heat || []).join(",") === "sex" && (item("butt plug")?.implies || []).includes("sex toy") && item("butt plug")?.section === "pose");
+  ok("spread ass is sex not flash", item("spread ass")?.group === "sex" && (item("spread ass")?.heat || []).includes("flash"));
+  ok("kissing neck can be sensitive", item("kissing neck")?.group === "flash" && need("kissing neck").includes("male") && need("kissing neck").includes("female"));
+  ok("bodystocking is one garment", item("bodystocking")?.mutex === "onepiece" && item("bodystocking")?.group === "onepiece");
+  const pinTentacle = applyPin(lex, new Set(), new Set(), "tentacle sex").pinned;
+  let tentacleBad = 0;
+  for (let i = 0; i < 20; i++) {
+    const d = drawOne(lex, girlOnly, pinTentacle, new Set(), mulberry32(98700 + i), 98700 + i);
+    const h = tagsOf(d);
+    // 兩女時「sex」自己進得了池（pair 成立）。觸手性交沒有 implies sex，所以單人不能帶出 sex，也不能帶出男生。
+    if (!h.has("tentacle sex") || !h.has("tentacles") || h.has("1boy") || h.has("penis") || (d.people < 2 && h.has("sex"))) tentacleBad += 1;
+  }
+  eq("girl-only tentacle sex is her and tentacles", tentacleBad, 0);
+  const pinNurse = applyPin(lex, new Set(), new Set(), "nursing handjob").pinned;
+  let nurseBad = 0;
+  for (let i = 0; i < 20; i++) {
+    const h = tagsOf(drawOne(lex, sexBoth, pinNurse, new Set(), mulberry32(98800 + i), 98800 + i));
+    const girls = (h.has("1girl") ? 1 : 0) + (h.has("2girls") ? 2 : 0);
+    const boys = (h.has("1boy") ? 1 : 0) + (h.has("2boys") ? 2 : 0) + (h.has("3boys") ? 3 : 0);
+    if (!h.has("nursing handjob") || !h.has("handjob") || girls < 1 || boys < 1 || h.has("arms behind back")) nurseBad += 1;
+  }
+  eq("nursing handjob is a woman, a man, and a free hand", nurseBad, 0);
   for (const tag of ["large testicles", "huge testicles", "small testicles", "covered testicles", "testicle sucking", "testicle grab"]) {
     ok(`${tag} is explicit-only`, explicitOnly(item(tag)));
   }
@@ -5446,7 +5477,9 @@ function indoorOutdoorClash(have) {
     // 「背景」。這張從浴場換成白背景的立繪。
     // 第十七次（2026-09-27）：精液類改成必須有男性才進池（女生單獨的圖不再抽到 cum）。
     // 候選池變小，同一串亂數落到別的字。這張仍是單人女性的性愛，沒有陰莖或精液。
-    "1girl, solo, very short hair, aqua eyes, blue hair, straight hair, huge breasts, midriff, tattoo, breasts out, nude, jewelry, black collar, collar, mask, fingering, sitting, fisheye, looking back, pout, hand in panties, love hotel, indoors, night, lamp, bench, chinese new year, nsfw, explicit, masterpiece, best quality, amazing quality");
+    // 第十八次（2026-09-27）：加 30 個色情字。單人女性能進池的那些讓候選池變大，
+    // 牌序整條位移。這張仍是 1girl solo 的性愛，沒有男生、陰莖或精液。
+    "1girl, solo, very short hair, aqua eyes, blue hair, straight hair, huge breasts, dark-skinned female, dark skin, inverted nipples, long eyelashes, naked towel, fingering, reclining, pov crotch, looking at viewer, come hither, hand in panties, onsen, indoors, steam, sunrise, backlighting, nsfw, explicit, masterpiece, best quality, amazing quality");
   ok("drawOne exposes shadow diagnostics", Array.isArray(shadowIntegrationDraw.shadowViolations));
 
   const eatProneShadow = validateSupportShadow({

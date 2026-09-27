@@ -145,6 +145,10 @@ BODY_ANY = {
     "plump",
     "skinny",
     "long legs",
+    # boob 不含 breast，子字串規則不會把它們收進 body_f。
+    "sideboob",
+    "underboob",
+    "backboob",
 }
 
 SKY = {
@@ -213,6 +217,7 @@ FACE = {
     "shy",
     "aroused",
     "ahegao",
+    "torogao",
     "rolling eyes",
     "orgasm",
     "one eye closed",
@@ -395,6 +400,11 @@ SEX = {
     "cum in pussy",
     "internal cumshot",
     "cum on tongue",
+    # flash+sex 的性接觸。不進這個集合會被 heat 收成走光。
+    "spread ass",
+    "grabbing from behind",
+    "hickey",
+    "spanking",
 }
 
 

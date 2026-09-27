@@ -45,6 +45,7 @@ POSE_CLIMAX = {
     "rolling eyes",
     "orgasm",
     "moaning",
+    "torogao",
 }
 SECTIONS = {"quality", "subject", "feature", "pose", "clothing", "env"}
 GATES = {"any", "female", "male"}
@@ -426,6 +427,7 @@ IMPLIES = {
     "cum on tongue": ["cum"],
     "facial": ["cum"],
     "cum pool": ["cum"],
+    "female ejaculation": ["pussy juice"],
     "internal cumshot": ["cum"],
     "cum on hair": ["cum"],
     "cum in ass": ["cum"],
@@ -711,6 +713,7 @@ EXPRESSION = {
     "smug",
     "nervous",
     "ahegao",
+    "torogao",
     "naughty face",
     "embarrassed",
     "shy",
@@ -784,10 +787,16 @@ SEX_ACT = {
     "frottage",
     "reverse spitroast",
     "object insertion",
+    "nursing handjob",
+    "straddling paizuri",
+    "mutual masturbation",
+    "tentacle sex",
 }
 
 SOLO_SEX_ACT = {
     "object insertion",
+    # 觸手不是第二個人。佔住 sex_act，但不要求 pair，也不把男生拉進來。
+    "tentacle sex",
 }
 
 NEEDS_MALE = {
@@ -885,6 +894,18 @@ NEEDS_MALE = {
     "penis awe",
     "looking at penis",
     "cum pool",
+    "stomach bulge",
+    "cum on pussy",
+    "nursing handjob",
+    "straddling paizuri",
+    "mutual masturbation",
+    "licking nipple",
+    "leg lock",
+    "grabbing from behind",
+    "kissing neck",
+    "head between breasts",
+    "breast smother",
+    "spanking",
 }
 
 NEEDS_FEMALE = {
@@ -950,6 +971,35 @@ NEEDS_FEMALE = {
     "penis on face",
     "looking at penis",
     "cum pool",
+    "stomach bulge",
+    "cum on pussy",
+    "nursing handjob",
+    "straddling paizuri",
+    "mutual masturbation",
+    "licking nipple",
+    "leg lock",
+    "grabbing from behind",
+    "kissing neck",
+    "head between breasts",
+    "breast smother",
+    "spanking",
+    "pussy juice trail",
+    "pussy juice puddle",
+    "anal fingering",
+    "tentacle sex",
+    "tentacles",
+    "folded",
+    "spread ass",
+    "sideboob",
+    "underboob",
+    "backboob",
+    "bodystocking",
+    "pasties",
+    "torn thighhighs",
+    "butt plug",
+    "anal beads",
+    "hickey",
+    "crotch rope",
 }
 
 NEEDS_PAIR = {
@@ -2675,6 +2725,104 @@ def extra_fluid_tags() -> list[dict]:
     ]
 
 
+def extra_erotic_tags() -> list[dict]:
+    """上一輪沒有的色情字。全部先對過 Danbooru（category 0、有圖、未棄用）。
+
+    已經在詞庫的不重灌：潮吹、發抖、身體冒熱氣、愛心瞳、綁手腕、兔女郎。
+    射在她身上或要她當對象的，needs 同時要男和女，卡面才不會變成單人男生。
+    結果字不 implies vaginal／anal／sex_act，體位格才留得下來。
+    觸手性交只 implies tentacles，不 implies sex（sex 要 pair，會把第二個人拉進來）。
+    """
+    sex = ["sex"]
+    flash = ["flash", "sex"]
+    all_h = list(HEATS)
+    modern = ["modern"]
+    any_era = ["any"]
+    both = ["male", "female"]
+
+    def pose(tag, implies=None, needs=None, heat=None, gate="any", era=None, zh=""):
+        return {
+            "tag": tag,
+            "section": "pose",
+            "gate": gate,
+            "heat": list(heat or sex),
+            "mutex": None,
+            "bind": [],
+            "implies": implies or [],
+            "layer": "normal",
+            "era": era or any_era,
+            "needs": needs or [],
+            "zh": zh,
+        }
+
+    def feat(tag, gate="female", heat=None, era=None, zh=""):
+        return {
+            "tag": tag,
+            "section": "feature",
+            "gate": gate,
+            "heat": list(heat or all_h),
+            "mutex": None,
+            "bind": [],
+            "implies": [],
+            "layer": "normal",
+            "era": era or any_era,
+            "needs": ["female"] if gate == "female" else [],
+            "zh": zh,
+        }
+
+    def cloth(tag, mutex=None, layer="garment", implies=None, era=None, zh=""):
+        return {
+            "tag": tag,
+            "section": "clothing",
+            "gate": "female",
+            "heat": all_h,
+            "mutex": mutex,
+            "bind": [],
+            "implies": implies or [],
+            "layer": layer,
+            "era": era or modern,
+            "needs": ["female"],
+            "zh": zh,
+        }
+
+    return [
+        # 看得到的結果。sex 的 mutex 是空的，體位還能再抽；不要掛 vaginal。
+        pose("stomach bulge", implies=["sex"], needs=both, zh="腹部隆起"),
+        pose("cum on pussy", implies=["cum"], needs=both, zh="射在陰部"),
+        pose("pussy juice trail", implies=["pussy juice"], needs=["female"], gate="female", zh="愛液拉絲"),
+        pose("pussy juice puddle", implies=["pussy juice"], needs=["female"], gate="female", zh="愛液灘"),
+        # 這三個才是行為本身，所以進 SEX_ACT，可以 implies 同一個行為。
+        pose("nursing handjob", implies=["handjob"], needs=both, zh="乳交手交"),
+        pose("straddling paizuri", implies=["paizuri", "straddling"], needs=both, zh="跨坐乳交"),
+        pose("mutual masturbation", needs=both, zh="互相手淫"),
+        pose("anal fingering", needs=["female"], gate="female", zh="肛門指交"),
+        pose("licking nipple", needs=both, zh="舔乳頭"),
+        # 觸手不是男生。solo sex act，卡面維持 1girl。
+        pose("tentacle sex", implies=["tentacles"], needs=["female"], gate="female", zh="觸手性交"),
+        pose("tentacles", needs=["female"], gate="female", zh="觸手"),
+        pose("leg lock", needs=both, zh="鎖腿"),
+        pose("folded", needs=["female"], gate="female", zh="折疊體位"),
+        pose("spread ass", needs=["female"], gate="female", heat=flash, zh="掰開臀部"),
+        pose("grabbing from behind", needs=both, heat=flash, zh="從背後抓住"),
+        pose("kissing neck", needs=both, heat=flash, zh="親脖子"),
+        pose("head between breasts", needs=both, zh="頭埋在乳溝"),
+        pose("breast smother", needs=both, zh="乳壓臉"),
+        pose("spanking", needs=both, heat=flash, zh="打屁股"),
+        pose("hickey", needs=["female"], gate="female", heat=flash, zh="吻痕"),
+        pose("torogao", needs=["female"], gate="female", zh="蕩漾臉"),
+        # 塞在身上的東西走 pose，不走 clothing，才不會被服裝加寬推進誘惑。
+        pose("butt plug", implies=["sex toy"], needs=["female"], gate="female", era=modern, zh="肛塞"),
+        pose("anal beads", implies=["sex toy"], needs=["female"], gate="female", era=modern, zh="肛珠"),
+        pose("crotch rope", needs=["female"], gate="female", era=modern, zh="胯下繩"),
+        feat("sideboob", zh="側乳"),
+        feat("underboob", zh="下乳"),
+        feat("backboob", zh="背乳"),
+        cloth("bodystocking", mutex="onepiece", zh="連身襪"),
+        cloth("pasties", zh="乳貼"),
+        cloth("torn thighhighs", mutex="legs", implies=["thighhighs"], era=["modern", "victorian"], zh="破損過膝襪"),
+    ]
+
+
 def main() -> None:
     rows: list[dict] = []
     for path in sorted(PARTS.glob("*.json")):
@@ -2695,6 +2843,7 @@ def main() -> None:
     rows.extend(extra_expand_tags())
     rows.extend(extra_corpus_tags())
     rows.extend(extra_fluid_tags())
+    rows.extend(extra_erotic_tags())
     rows.extend(extra_loli_tags())
     rows.extend(extra_shota_tags())
     rows.extend(extra_style_tags())

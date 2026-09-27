@@ -78,7 +78,7 @@ const tagsOf = (positive) => positive.split(",").map((s) => s.trim());
     const j = jobs.find((x) => x.tag === t);
     if (j) ok(`學校味的「${t}」畫成熟女性`, tagsOf(j.positive).includes("mature female"), j.positive);
   }
-  const heteroPicture = ["cum in mouth", "facial", "gokkun", "cum on tongue", "cum on body", "cum in ass", "cum pool", "penis over eyes", "penis on face", "looking at penis", "after sex", "after vaginal", "after anal", "deep penetration", "internal cumshot"];
+  const heteroPicture = ["cum in mouth", "facial", "gokkun", "cum on tongue", "cum on body", "cum in ass", "cum pool", "penis over eyes", "penis on face", "looking at penis", "after sex", "after vaginal", "after anal", "deep penetration", "internal cumshot", "stomach bulge", "cum on pussy", "nursing handjob", "straddling paizuri", "mutual masturbation", "licking nipple", "leg lock", "grabbing from behind", "kissing neck", "head between breasts", "breast smother", "spanking"];
   for (const t of heteroPicture) {
     const j = jobs.find((x) => x.tag === t);
     const tags = j ? tagsOf(j.positive) : [];
@@ -91,6 +91,15 @@ const tagsOf = (positive) => positive.split(",").map((s) => s.trim());
   }
   const pool = jobs.find((x) => x.tag === "cum pool");
   ok("cum pool 不是空景", !!pool && !tagsOf(pool.positive).includes("no humans"), pool?.positive);
+  for (const t of ["tentacle sex", "tentacles", "anal fingering", "butt plug", "anal beads", "folded", "spread ass", "hickey", "crotch rope", "pussy juice trail", "sideboob", "pasties", "torogao", "female ejaculation"]) {
+    const j = jobs.find((x) => x.tag === t);
+    const tags = j ? tagsOf(j.positive) : [];
+    ok(`${t} 畫女生自己`, !!j && tags.includes("1girl") && tags.includes("solo") && !tags.includes("1boy"), j?.positive);
+  }
+  const tentacle = jobs.find((x) => x.tag === "tentacle sex");
+  ok("觸手性交的牌有觸手、沒有 yaoi", !!tentacle && tagsOf(tentacle.positive).includes("tentacles") && !(tentacle.negative || "").includes("yaoi"), tentacle?.positive);
+  const nurse = jobs.find((x) => x.tag === "nursing handjob");
+  ok("乳交手交的牌看得到手交", !!nurse && tagsOf(nurse.positive).includes("handjob") && tagsOf(nurse.positive).includes("1boy"), nurse?.positive);
 }
 
 /* ---------- 分級尾巴 ---------- */

@@ -6795,7 +6795,9 @@
       ],
       "mutex": null,
       "bind": [],
-      "implies": [],
+      "implies": [
+        "pussy juice"
+      ],
       "layer": "normal",
       "era": [
         "any"
@@ -28812,6 +28814,660 @@
         "female"
       ],
       "zh": "吞精"
+    },
+    {
+      "tag": "stomach bulge",
+      "section": "pose",
+      "gate": "any",
+      "heat": [
+        "sex"
+      ],
+      "mutex": null,
+      "bind": [],
+      "implies": [
+        "sex"
+      ],
+      "layer": "normal",
+      "era": [
+        "any"
+      ],
+      "group": "sex",
+      "needs": [
+        "male",
+        "female"
+      ],
+      "zh": "腹部隆起"
+    },
+    {
+      "tag": "cum on pussy",
+      "section": "pose",
+      "gate": "any",
+      "heat": [
+        "sex"
+      ],
+      "mutex": null,
+      "bind": [],
+      "implies": [
+        "cum"
+      ],
+      "layer": "normal",
+      "era": [
+        "any"
+      ],
+      "group": "sex",
+      "needs": [
+        "male",
+        "female"
+      ],
+      "zh": "射在陰部"
+    },
+    {
+      "tag": "pussy juice trail",
+      "section": "pose",
+      "gate": "female",
+      "heat": [
+        "sex"
+      ],
+      "mutex": null,
+      "bind": [],
+      "implies": [
+        "pussy juice"
+      ],
+      "layer": "normal",
+      "era": [
+        "any"
+      ],
+      "group": "sex",
+      "needs": [
+        "female"
+      ],
+      "zh": "愛液拉絲"
+    },
+    {
+      "tag": "pussy juice puddle",
+      "section": "pose",
+      "gate": "female",
+      "heat": [
+        "sex"
+      ],
+      "mutex": null,
+      "bind": [],
+      "implies": [
+        "pussy juice"
+      ],
+      "layer": "normal",
+      "era": [
+        "any"
+      ],
+      "group": "sex",
+      "needs": [
+        "female"
+      ],
+      "zh": "愛液灘"
+    },
+    {
+      "tag": "nursing handjob",
+      "section": "pose",
+      "gate": "any",
+      "heat": [
+        "sex"
+      ],
+      "mutex": "sex_act",
+      "bind": [],
+      "implies": [
+        "handjob"
+      ],
+      "layer": "normal",
+      "era": [
+        "any"
+      ],
+      "group": "sex",
+      "needs": [
+        "male",
+        "female",
+        "pair"
+      ],
+      "zh": "乳交手交"
+    },
+    {
+      "tag": "straddling paizuri",
+      "section": "pose",
+      "gate": "any",
+      "heat": [
+        "sex"
+      ],
+      "mutex": "sex_act",
+      "bind": [],
+      "implies": [
+        "paizuri",
+        "straddling"
+      ],
+      "layer": "normal",
+      "era": [
+        "any"
+      ],
+      "group": "sex",
+      "needs": [
+        "male",
+        "female",
+        "pair"
+      ],
+      "zh": "跨坐乳交"
+    },
+    {
+      "tag": "mutual masturbation",
+      "section": "pose",
+      "gate": "any",
+      "heat": [
+        "sex"
+      ],
+      "mutex": "sex_act",
+      "bind": [],
+      "implies": [],
+      "layer": "normal",
+      "era": [
+        "any"
+      ],
+      "group": "sex",
+      "needs": [
+        "male",
+        "female",
+        "pair"
+      ],
+      "zh": "互相手淫"
+    },
+    {
+      "tag": "anal fingering",
+      "section": "pose",
+      "gate": "female",
+      "heat": [
+        "sex"
+      ],
+      "mutex": null,
+      "bind": [],
+      "implies": [],
+      "layer": "normal",
+      "era": [
+        "any"
+      ],
+      "group": "sex",
+      "needs": [
+        "female"
+      ],
+      "zh": "肛門指交"
+    },
+    {
+      "tag": "licking nipple",
+      "section": "pose",
+      "gate": "any",
+      "heat": [
+        "sex"
+      ],
+      "mutex": null,
+      "bind": [],
+      "implies": [],
+      "layer": "normal",
+      "era": [
+        "any"
+      ],
+      "group": "sex",
+      "needs": [
+        "male",
+        "female"
+      ],
+      "zh": "舔乳頭"
+    },
+    {
+      "tag": "tentacle sex",
+      "section": "pose",
+      "gate": "female",
+      "heat": [
+        "sex"
+      ],
+      "mutex": "sex_act",
+      "bind": [],
+      "implies": [
+        "tentacles"
+      ],
+      "layer": "normal",
+      "era": [
+        "any"
+      ],
+      "group": "sex",
+      "needs": [
+        "female"
+      ],
+      "zh": "觸手性交"
+    },
+    {
+      "tag": "tentacles",
+      "section": "pose",
+      "gate": "female",
+      "heat": [
+        "sex"
+      ],
+      "mutex": null,
+      "bind": [],
+      "implies": [],
+      "layer": "normal",
+      "era": [
+        "any"
+      ],
+      "group": "sex",
+      "needs": [
+        "female"
+      ],
+      "zh": "觸手"
+    },
+    {
+      "tag": "leg lock",
+      "section": "pose",
+      "gate": "any",
+      "heat": [
+        "sex"
+      ],
+      "mutex": null,
+      "bind": [],
+      "implies": [],
+      "layer": "normal",
+      "era": [
+        "any"
+      ],
+      "group": "sex",
+      "needs": [
+        "male",
+        "female"
+      ],
+      "zh": "鎖腿"
+    },
+    {
+      "tag": "folded",
+      "section": "pose",
+      "gate": "female",
+      "heat": [
+        "sex"
+      ],
+      "mutex": null,
+      "bind": [],
+      "implies": [],
+      "layer": "normal",
+      "era": [
+        "any"
+      ],
+      "group": "sex",
+      "needs": [
+        "female"
+      ],
+      "zh": "折疊體位"
+    },
+    {
+      "tag": "spread ass",
+      "section": "pose",
+      "gate": "female",
+      "heat": [
+        "flash",
+        "sex"
+      ],
+      "mutex": null,
+      "bind": [],
+      "implies": [],
+      "layer": "normal",
+      "era": [
+        "any"
+      ],
+      "group": "sex",
+      "needs": [
+        "female"
+      ],
+      "zh": "掰開臀部"
+    },
+    {
+      "tag": "grabbing from behind",
+      "section": "pose",
+      "gate": "any",
+      "heat": [
+        "flash",
+        "sex"
+      ],
+      "mutex": null,
+      "bind": [],
+      "implies": [],
+      "layer": "normal",
+      "era": [
+        "any"
+      ],
+      "group": "sex",
+      "needs": [
+        "male",
+        "female"
+      ],
+      "zh": "從背後抓住"
+    },
+    {
+      "tag": "kissing neck",
+      "section": "pose",
+      "gate": "any",
+      "heat": [
+        "flash",
+        "sex"
+      ],
+      "mutex": null,
+      "bind": [],
+      "implies": [],
+      "layer": "normal",
+      "era": [
+        "any"
+      ],
+      "group": "flash",
+      "needs": [
+        "male",
+        "female"
+      ],
+      "zh": "親脖子"
+    },
+    {
+      "tag": "head between breasts",
+      "section": "pose",
+      "gate": "any",
+      "heat": [
+        "sex"
+      ],
+      "mutex": null,
+      "bind": [],
+      "implies": [],
+      "layer": "normal",
+      "era": [
+        "any"
+      ],
+      "group": "sex",
+      "needs": [
+        "male",
+        "female"
+      ],
+      "zh": "頭埋在乳溝"
+    },
+    {
+      "tag": "breast smother",
+      "section": "pose",
+      "gate": "any",
+      "heat": [
+        "sex"
+      ],
+      "mutex": null,
+      "bind": [],
+      "implies": [],
+      "layer": "normal",
+      "era": [
+        "any"
+      ],
+      "group": "sex",
+      "needs": [
+        "male",
+        "female"
+      ],
+      "zh": "乳壓臉"
+    },
+    {
+      "tag": "spanking",
+      "section": "pose",
+      "gate": "any",
+      "heat": [
+        "flash",
+        "sex"
+      ],
+      "mutex": null,
+      "bind": [],
+      "implies": [],
+      "layer": "normal",
+      "era": [
+        "any"
+      ],
+      "group": "sex",
+      "needs": [
+        "male",
+        "female"
+      ],
+      "zh": "打屁股"
+    },
+    {
+      "tag": "hickey",
+      "section": "pose",
+      "gate": "female",
+      "heat": [
+        "flash",
+        "sex"
+      ],
+      "mutex": null,
+      "bind": [],
+      "implies": [],
+      "layer": "normal",
+      "era": [
+        "any"
+      ],
+      "group": "sex",
+      "needs": [
+        "female"
+      ],
+      "zh": "吻痕"
+    },
+    {
+      "tag": "torogao",
+      "section": "pose",
+      "gate": "female",
+      "heat": [
+        "sex"
+      ],
+      "mutex": "expression",
+      "bind": [],
+      "implies": [],
+      "layer": "normal",
+      "era": [
+        "any"
+      ],
+      "group": "face",
+      "needs": [
+        "female"
+      ],
+      "zh": "蕩漾臉"
+    },
+    {
+      "tag": "butt plug",
+      "section": "pose",
+      "gate": "female",
+      "heat": [
+        "sex"
+      ],
+      "mutex": null,
+      "bind": [],
+      "implies": [
+        "sex toy"
+      ],
+      "layer": "normal",
+      "era": [
+        "modern"
+      ],
+      "group": "sex",
+      "needs": [
+        "female"
+      ],
+      "zh": "肛塞"
+    },
+    {
+      "tag": "anal beads",
+      "section": "pose",
+      "gate": "female",
+      "heat": [
+        "sex"
+      ],
+      "mutex": null,
+      "bind": [],
+      "implies": [
+        "sex toy"
+      ],
+      "layer": "normal",
+      "era": [
+        "modern"
+      ],
+      "group": "sex",
+      "needs": [
+        "female"
+      ],
+      "zh": "肛珠"
+    },
+    {
+      "tag": "crotch rope",
+      "section": "pose",
+      "gate": "female",
+      "heat": [
+        "sex"
+      ],
+      "mutex": null,
+      "bind": [],
+      "implies": [],
+      "layer": "normal",
+      "era": [
+        "modern"
+      ],
+      "group": "sex",
+      "needs": [
+        "female"
+      ],
+      "zh": "胯下繩"
+    },
+    {
+      "tag": "sideboob",
+      "section": "feature",
+      "gate": "female",
+      "heat": [
+        "tease",
+        "flash",
+        "sex"
+      ],
+      "mutex": null,
+      "bind": [],
+      "implies": [],
+      "layer": "normal",
+      "era": [
+        "any"
+      ],
+      "group": "body_f",
+      "needs": [
+        "female"
+      ],
+      "zh": "側乳"
+    },
+    {
+      "tag": "underboob",
+      "section": "feature",
+      "gate": "female",
+      "heat": [
+        "tease",
+        "flash",
+        "sex"
+      ],
+      "mutex": null,
+      "bind": [],
+      "implies": [],
+      "layer": "normal",
+      "era": [
+        "any"
+      ],
+      "group": "body_f",
+      "needs": [
+        "female"
+      ],
+      "zh": "下乳"
+    },
+    {
+      "tag": "backboob",
+      "section": "feature",
+      "gate": "female",
+      "heat": [
+        "tease",
+        "flash",
+        "sex"
+      ],
+      "mutex": null,
+      "bind": [],
+      "implies": [],
+      "layer": "normal",
+      "era": [
+        "any"
+      ],
+      "group": "body_f",
+      "needs": [
+        "female"
+      ],
+      "zh": "背乳"
+    },
+    {
+      "tag": "bodystocking",
+      "section": "clothing",
+      "gate": "female",
+      "heat": [
+        "tease",
+        "flash",
+        "sex"
+      ],
+      "mutex": "onepiece",
+      "bind": [],
+      "implies": [],
+      "layer": "garment",
+      "era": [
+        "modern"
+      ],
+      "group": "onepiece",
+      "needs": [
+        "female"
+      ],
+      "zh": "連身襪"
+    },
+    {
+      "tag": "pasties",
+      "section": "clothing",
+      "gate": "female",
+      "heat": [
+        "tease",
+        "flash",
+        "sex"
+      ],
+      "mutex": null,
+      "bind": [],
+      "implies": [],
+      "layer": "garment",
+      "era": [
+        "modern"
+      ],
+      "group": "acc",
+      "needs": [
+        "female"
+      ],
+      "zh": "乳貼"
+    },
+    {
+      "tag": "torn thighhighs",
+      "section": "clothing",
+      "gate": "female",
+      "heat": [
+        "tease",
+        "flash",
+        "sex"
+      ],
+      "mutex": "legs",
+      "bind": [],
+      "implies": [
+        "thighhighs"
+      ],
+      "layer": "garment",
+      "era": [
+        "modern",
+        "victorian"
+      ],
+      "group": "legs",
+      "needs": [
+        "female"
+      ],
+      "zh": "破損過膝襪"
     },
     {
       "tag": "petite",

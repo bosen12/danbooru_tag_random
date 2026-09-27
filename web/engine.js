@@ -365,6 +365,10 @@ const FACE_NEED_TAGS = new Set([
   "breast focus",
   "talking on phone",
   "breast sucking",
+  "licking nipple",
+  "kissing neck",
+  "head between breasts",
+  "breast smother",
   "singing",
   "karaoke",
   "smoking",
@@ -2144,8 +2148,12 @@ const NEEDS_FREE_HAND = new Set([
   "female masturbation",
   "male masturbation",
   "masturbation through clothes",
+  "nursing handjob",
+  "anal fingering",
+  "mutual masturbation",
+  "spanking",
 ]);
-const HANDS_BUSY_BODY = new Set(["crawling", "all fours", "top-down bottom-up", "bondage", "restrained", "handcuffs"]);
+const HANDS_BUSY_BODY = new Set(["crawling", "all fours", "top-down bottom-up", "bondage", "restrained", "handcuffs", "bound wrists"]);
 const BOTH_ARMS = new Set([
   "arms behind back",
   "arms behind head",

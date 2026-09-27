@@ -73,6 +73,12 @@ const SFW_EXTRA = new Set([
   "voyeurism",
   "netorare",
   "bouncing",
+  // 側乳／下乳／背乳是身材走光，敏感可以，全年齡不行。
+  "sideboob",
+  "underboob",
+  "backboob",
+  "bodystocking",
+  "torn thighhighs",
 ]);
 
 // 三段分級，對齊 Danbooru 自己的 rating 階梯。
@@ -150,6 +156,8 @@ const EXPLICIT_ONLY_EXTRA = new Set([
   "used condom",
   "dildo",
   "condom",
+  "torogao",
+  "pasties",
 ]);
 
 // 只有 explicit 能出現：真正的性、裸露、脫衣走光、內衣當外衣。
@@ -218,7 +226,8 @@ const EXPLICIT_CONTENT_RE = new RegExp(
 // 看得出尺度但還沒到露點的：內衣外露、泳裝、透視、乳溝、走光。
 const SENSITIVE_CONTENT_RE = new RegExp(
   "\\b(panty|panties|bra|lingerie|underwear|thong|garter|fundoshi|" +
-    "bikini|swimsuit|see-through|wet clothes|cleavage|underboob|sideboob|" +
+    "bikini|swimsuit|see-through|wet clothes|cleavage|underboob|sideboob|backboob|" +
+    "bodystocking|torn thighhighs|" +
     "cameltoe|upskirt|downblouse|crotch|bulge|revealing)\\b",
   "i"
 );
