@@ -73,6 +73,10 @@ def download(dest: Path) -> None:
                         shown = pct // 10
                         speed = got / max(0.1, time.time() - t0) / 1e6
                         print(f"  {pct:3d}%  {got / 1e6:5.1f}/{total / 1e6:.1f} MB  {speed:.1f} MB/s", flush=True)
+            # 連線提早關掉時 read() 會回空字串，不會丟例外。短檔若直接當成功，
+            # 後面的大小檢查失敗就結束，三次重試根本不會跑。
+            if got != SIZE:
+                raise OSError(f"incomplete download ({got} bytes, want {SIZE})")
             return
         except (urllib.error.URLError, OSError, TimeoutError) as err:
             last = err
