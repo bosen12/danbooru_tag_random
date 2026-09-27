@@ -234,7 +234,8 @@ export function createDrag({ zones, onDrop, onOver, onMove }) {
     }
     // 目的地可能正在讓位滑動（卡池整塊重畫的 FLIP）：先讓它到位再量，不然影子會落在它滑動的起點。
     // 它接著就會被藏起來等影子落下，跳到終點看不出來。
-    for (const a of target.getAnimations()) a.finish();
+    // 它所在的那一列也可能正在進場（空白的版第一次放牌，列從下面浮上來）：一路到落點區為止都先到位。
+    for (let e = target; e && e !== zone.el.parentElement; e = e.parentElement) for (const a of e.getAnimations()) a.finish();
     const to = target.getBoundingClientRect();
     if (quick || !to.width) {
       state.ghost.remove();

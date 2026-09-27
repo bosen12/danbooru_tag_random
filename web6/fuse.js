@@ -1299,20 +1299,18 @@ function renderPlate(events = []) {
   // 整塊重畫時同一張牌從舊位置滑到新位置（拿下一張、放上一張時，同一列的其他牌讓位）；
   // 影子被收下變成正式的牌，從影子的位置滑進去。
   const cardKey = (n) => (n.classList.contains("ghost-card") ? "g:" : "p:") + n.dataset.tag;
-  // 空白的版 → 第一次有牌：起手那一塊往上收走，六個列名從緊湊的格子滑到各自那一列，列的內容依序浮上來。
-  // 量「之前」要在重畫前（跟 FLIP 同一次讀版面）。
-  // 反過來（拿掉最後一張）也一樣：列名滑回緊湊的格子，起手那一塊浮上來。
+  // 空白的版 ↔ 有牌：整面舊的像一張紙往上收走，新的一列一列從上往下浮上來（兩個方向一樣）。
+  // 以前讓六個列名從緊湊格子各自滑到新位置，逐格看是斜著亂飛、跨半個畫面，太忙。
   const wasEmpty = box.dataset.empty === "true";
   const morph = box.dataset.empty !== undefined && wasEmpty !== empty && !reduced();
-  let heads = null;
-  let startSnap = null;
+  let sheet = null;
   if (morph) {
-    heads = new Map([...box.querySelectorAll(".register")].map((r) => [r.dataset.suit, r.querySelector(".reg-head")?.getBoundingClientRect()]));
-    const sb = wasEmpty ? box.querySelector(".pool-start") : null;
-    if (sb) startSnap = { node: sb.cloneNode(true), rect: sb.getBoundingClientRect() };
+    const r = box.getBoundingClientRect();
+    const g = box.cloneNode(true);
+    g.removeAttribute("id");
+    g.querySelector(".rel-layer")?.remove();
+    sheet = { node: g, rect: r };
   }
-  // 新的牌寬（--pool-card）跟新的牌在同一次變動裡套上：FLIP 量「之後」的位置時就是最後的大小，
-  // 不會先量一次、套了寬度又要整頁再排一次（而且牌寬一變，FLIP 算出來的起點也就不對了）。
   flipBy(box, ".plate-card, .ghost-card", cardKey, () => {
     put(box, empty ? startBlock() : null, rows);
     box.dataset.empty = empty ? "true" : "false";
@@ -1321,7 +1319,7 @@ function renderPlate(events = []) {
   }, {
     alias: (k) => (k.startsWith("p:") ? "g:" + k.slice(2) : null),
   });
-  if (morph) morphPlate(box, heads, startSnap);
+  if (morph) morphPlate(box, sheet);
   if (peeking) box.dataset.peek = t.letter;
   else delete box.dataset.peek;
   const sub = $("plate-sub");
@@ -1341,61 +1339,34 @@ function renderPlate(events = []) {
   requestRelations(events);
 }
 
-function morphPlate(box, heads, startSnap) {
-  if (startSnap) {
-    const g = startSnap.node;
-    const r = startSnap.rect;
+function morphPlate(box, sheet) {
+  if (sheet) {
+    const g = sheet.node;
+    const r = sheet.rect;
     g.setAttribute("aria-hidden", "true");
     g.inert = true;
     Object.assign(g.style, { position: "fixed", left: `${r.left}px`, top: `${r.top}px`, width: `${r.width}px`, margin: "0", zIndex: "5", pointerEvents: "none" });
-    document.body.append(g);
+    box.parentElement.append(g);
     g.animate(
       [
         { opacity: 1, transform: "none" },
-        { opacity: 0, transform: "translateY(-16px) scale(0.98)" },
+        { opacity: 0, transform: "translateY(-14px)" },
       ],
-      // 要比列的內容浮上來（DUR.micro 之後才開始）先走完大半，兩層字才不會疊在一起讀不清楚。
-      { duration: DUR.micro, easing: css(CURVE.exit), fill: "forwards" }
+      // 要在新的列浮上來之前走掉大半，兩層字才不會疊在一起讀不清楚。
+      // 用 out（一開始就走得快）不用 exit：exit 前段幾乎不動，舊的那張會整張停在原地、跟浮上來的新列疊在一起。
+      { duration: DUR.short, easing: css(CURVE.out), fill: "forwards" }
     ).onfinish = () => g.remove();
   }
-  const fresh = box.querySelector(".pool-start");
-  if (fresh) {
-    fresh.animate(
+  const step = DUR.micro / 4;
+  [...box.children].forEach((part, i) => {
+    if (part.classList.contains("rel-layer")) return;
+    part.animate(
       [
         { opacity: 0, transform: "translateY(10px)" },
         { opacity: 1, transform: "none" },
       ],
-      { duration: DUR.long, delay: DUR.micro, easing: css(CURVE.out), fill: "backwards" }
+      { duration: DUR.medium, delay: DUR.micro + i * step, easing: css(CURVE.out), fill: "backwards" }
     );
-  }
-  const step = DUR.micro / 4;
-  [...box.querySelectorAll(".register")].forEach((row, i) => {
-    const head = row.querySelector(".reg-head");
-    const from = heads.get(row.dataset.suit);
-    const delay = i * step;
-    if (head && from) {
-      const to = head.getBoundingClientRect();
-      const dx = from.left - to.left;
-      const dy = from.top - to.top;
-      if (dx || dy) {
-        head.animate([{ transform: `translate(${dx}px, ${dy}px)` }, { transform: "none" }], {
-          duration: DUR.medium,
-          delay,
-          easing: css(CURVE.out),
-          fill: "backwards",
-        });
-      }
-    }
-    for (const c of row.children) {
-      if (c === head) continue;
-      c.animate(
-        [
-          { opacity: 0, transform: "translateY(6px)" },
-          { opacity: 1, transform: "none" },
-        ],
-        { duration: DUR.medium, delay: delay + DUR.micro, easing: css(CURVE.out), fill: "backwards" }
-      );
-    }
   });
 }
 
