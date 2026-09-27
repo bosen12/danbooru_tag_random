@@ -742,8 +742,10 @@ function restorePrint(p) {
 /* ================= 畫面：全部 ================= */
 
 function renderAll(events = []) {
-  hand?.update();
+  // 卡池先畫：它的 FLIP 要量「之前」的位置，這時版面還是上一格畫面排好的（不用重排）。
+  // 托盤、試印這些之後才動 DOM，全部留給下一格畫面一起排。
   renderPlate(events);
+  hand?.update();
   renderPreview();
   renderTrials();
   renderPrintBar();
@@ -1241,7 +1243,13 @@ function renderPlate(events = []) {
   // 整塊重畫時同一張牌從舊位置滑到新位置（拿下一張、放上一張時，同一列的其他牌讓位）；
   // 影子被收下變成正式的牌，從影子的位置滑進去。
   const cardKey = (n) => (n.classList.contains("ghost-card") ? "g:" : "p:") + n.dataset.tag;
-  flipBy(box, ".plate-card, .ghost-card", cardKey, () => put(box, empty ? startBlock() : null, rows), {
+  // 新的牌寬（--pool-card）跟新的牌在同一次變動裡套上：FLIP 量「之後」的位置時就是最後的大小，
+  // 不會先量一次、套了寬度又要整頁再排一次（而且牌寬一變，FLIP 算出來的起點也就不對了）。
+  flipBy(box, ".plate-card, .ghost-card", cardKey, () => {
+    put(box, empty ? startBlock() : null, rows);
+    if (plan.w) box.style.setProperty("--pool-card", plan.w + "px");
+    else box.style.removeProperty("--pool-card");
+  }, {
     alias: (k) => (k.startsWith("p:") ? "g:" + k.slice(2) : null),
   });
   box.dataset.empty = empty ? "true" : "false";
@@ -2707,6 +2715,7 @@ function buildHand() {
   hand = createHand({
     key: "mochi.fuse.hand.v1",
     makeNode: (t) => cardNode(cardOf(t), assets),
+    blocked: (t) => (cardOf(t) && !rankOk(cardOf(t)) ? "分級擋掉" : null),
     // 托盤的牌跟字盒的一樣大：量字盒上的一張。
     sample: () => $("case-grid")?.querySelector(".card"),
     inPool: (t) => bed.pins.includes(t),

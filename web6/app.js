@@ -124,6 +124,8 @@ function saveSettings() {
 function setSettings(patch) {
   settings = sanitizeSettings({ ...settings, ...patch }, data);
   saveSettings();
+  // 規則換了（分級…）：托盤上出不了的牌要重新蓋章／拿掉章。
+  hand?.update();
 }
 
 function saveUi() {
@@ -380,6 +382,7 @@ function buildHand() {
   hand = createHand({
     key: "mochi.hand.v1",
     makeNode: (t) => cardNode(lib.byTag.get(t), assets),
+    blocked: (t) => (lib.byTag.get(t) && ratingBlocked(lib.byTag.get(t).item, settings.rating) ? "分級擋掉" : null),
     // 托盤的牌跟字盒的一樣大：量字盒上的一張。
     sample: () => $("lib-grid")?.querySelector(".card"),
     inPool: (t) => pool.has(t),

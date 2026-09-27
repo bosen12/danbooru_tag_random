@@ -650,6 +650,12 @@ body[data-dragging="true"] .fav-hand[data-open="false"][data-over="true"] {
   opacity: 0;
 }
 
+/* 現在的分級出不了的牌：淡一點、灰一點（牌上蓋著「分級擋掉」的章）。 */
+.fav-slot.is-blocked .fav-card {
+  opacity: 0.55;
+  filter: grayscale(0.7);
+}
+
 /* ×：指到牌才出現；觸控螢幕沒有「指到」，一直都在。 */
 .fav-x {
   position: absolute;

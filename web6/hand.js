@@ -20,10 +20,12 @@
  *   onPlay(t, r)   出牌（r：托盤上那張的位置，讓房間從這裡飛進卡池）
  *   onChange()     手牌變了（房間重畫字盒上的「手」記號、按鈕上的數字）
  *   known(t)       這張牌還在不在字盒（詞庫改了、被封鎖了就不要）
+ *   blocked(t)     這張牌現在出不了的原因（例如「分級擋掉」），沒有就 null：托盤上那張蓋章、變淡
  *   onRemoved(t, undo)  用手拿掉了一張（×、Delete、選單）：房間跳一個帶「復原」的提示，undo() 放回原位
  *   decorate(n,t)  托盤上的牌做好之後給房間掛東西（拖曳）
  */
 import { flight, CURVE, DUR, css } from "./motion.js";
+import { setCardFlag } from "./cards.js";
 const reduced = () => matchMedia("(prefers-reduced-motion: reduce)").matches;
 const ICON =
   '<svg viewBox="0 0 24 24" width="15" height="15" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linejoin="round" aria-hidden="true"><rect x="3" y="7" width="8" height="12" rx="1.5" transform="rotate(-14 7 13)"/><rect x="8" y="5" width="8" height="12" rx="1.5"/><rect x="13" y="7" width="8" height="12" rx="1.5" transform="rotate(14 17 13)"/></svg>';
@@ -42,6 +44,7 @@ export function createHand({
   known = () => true,
   onFull = () => {},
   onRemoved = () => {},
+  blocked = () => null,
   decorate = () => {},
 }) {
   let tags = read(key, []).filter(known).slice(0, max);
@@ -141,12 +144,15 @@ export function createHand({
           cancelAnimationFrame(reflow);
           reflow = requestAnimationFrame(() => {
             const w = size.w;
-            measure();
+            measure(true);
             if (Math.abs(size.w - w) > 0.5) layout(false);
           });
         })
       : null;
-  function measure() {
+  // 量過一次、字盒也在看著了：之後不再每次重擺都量（一量就逼整頁同步排版一次 —— 放一張牌
+  // 會連帶重擺托盤，實測每次多一次全頁排版）。字盒真的變寬變窄時 gridRo 會叫 measure(true)。
+  function measure(force = false) {
+    if (measured && watched && !force) return size;
     const n = sample();
     const grid = n?.parentElement;
     if (gridRo && grid && grid !== watched) {
@@ -423,15 +429,27 @@ export function createHand({
     const cards = kids.map((k) => k.querySelector(".fav-card"));
     const keep0 = cards.find((c) => c.tabIndex === 0) || cards[0];
     for (const c of cards) c.tabIndex = c === keep0 ? 0 : -1;
-    for (const t of show) slots.get(t).classList.toggle("is-arriving", pendingArrive.has(t));
+    for (const t of show) {
+      const s = slots.get(t);
+      s.classList.toggle("is-arriving", pendingArrive.has(t));
+      // 現在的分級（或別的規則）出不了這張：蓋章、變淡，說明寫在提示裡 —— 不然點下去牌上了版卻什麼都沒發生。
+      const why = blocked(t);
+      const card = s.querySelector(".fav-card");
+      setCardFlag(card, why ? { kind: "ban", text: why } : null);
+      s.classList.toggle("is-blocked", !!why);
+      card.title = why ? `${why}：現在的設定抽不到它` : "點一下放進卡池";
+    }
     el.dataset.open = open ? "true" : "false";
     el.dataset.editing = editing ? "true" : "false";
     el.dataset.count = String(n);
     el.dataset.hidden = !tags.length && !editing && !open ? "true" : "false";
     paintHead();
     placeAll(animate);
-    syncSpace();
+    // 托盤佔多高：下一格畫面開頭再量（那時本來就要排版），不在這裡逼一次同步排版。
+    cancelAnimationFrame(spaceRaf);
+    spaceRaf = requestAnimationFrame(syncSpace);
   }
+  let spaceRaf = 0;
 
   function setOpen(v) {
     const was = open;
