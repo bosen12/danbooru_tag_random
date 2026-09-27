@@ -285,7 +285,9 @@ loli、shota 永遠不畫（`web/card-art.js` 的 `HARD_BANNED`）。有人的�
 <http://127.0.0.1:8796/intro.html>（墨池右上角「介紹影片」）：兩分鐘，介紹排字匣、墨池、疊印台。畫面和配樂都是那一頁即時產生的 ——
 牌是真的牌（真的插畫）、提示詞是引擎用固定種子真的抽的、疊印台的層與附帶是 `fuse-bed.js` 真的算的；配樂是 Web Audio 現場合成（96 BPM，
 畫面跟著音樂的時鐘走，拖時間軸、暫停都不會錯拍）。空白鍵暫停、←→ 快轉五秒、F 全螢幕、M 靜音；網址加 `?t=秒` 從那裡開始。
-要錄成影片檔：全螢幕播放，用 OBS 或 Windows 的 Win+Alt+R 錄下來。
+輸出成影片檔（1080p60 .mp4，一格一格精準算、配樂離線合成，不是螢幕錄影；要 ffmpeg，墨池伺服器開著）：
+`node scripts/export_intro_video.mjs 輸出.mp4`（預設存到桌面，約 8～10 分鐘）。影片裡的成品圖是 ComfyUI 真的畫的，
+重畫用 `node scripts/render_intro_art.mjs`。
 
 ### 偏好卡牌（墨池、疊印台各一份）
 

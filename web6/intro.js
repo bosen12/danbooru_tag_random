@@ -1284,6 +1284,47 @@ async function main() {
       render(t);
       return t;
     },
+    /** 輸出影片檔用：整首配樂離線算好，存成 16-bit WAV，用 wavChunk(i) 一段段拿（base64）。回傳段數。 */
+    async renderAudio() {
+      const buf = await score.render(48000);
+      const n = buf.length;
+      const ch = [buf.getChannelData(0), buf.getChannelData(1)];
+      const bytes = new Uint8Array(44 + n * 4);
+      const dv = new DataView(bytes.buffer);
+      const str = (o, s) => [...s].forEach((c, i) => dv.setUint8(o + i, c.charCodeAt(0)));
+      str(0, "RIFF");
+      dv.setUint32(4, 36 + n * 4, true);
+      str(8, "WAVEfmt ");
+      dv.setUint32(16, 16, true);
+      dv.setUint16(20, 1, true);
+      dv.setUint16(22, 2, true);
+      dv.setUint32(24, 48000, true);
+      dv.setUint32(28, 48000 * 4, true);
+      dv.setUint16(32, 4, true);
+      dv.setUint16(34, 16, true);
+      str(36, "data");
+      dv.setUint32(40, n * 4, true);
+      let o = 44;
+      for (let i = 0; i < n; i++) {
+        for (const c of ch) {
+          const v = Math.max(-1, Math.min(1, c[i]));
+          dv.setInt16(o, v < 0 ? v * 0x8000 : v * 0x7fff, true);
+          o += 2;
+        }
+      }
+      const SIZE = 3 << 20;
+      window.__wavParts = [];
+      for (let i = 0; i < bytes.length; i += SIZE) {
+        let bin = "";
+        const part = bytes.subarray(i, i + SIZE);
+        for (let k = 0; k < part.length; k += 0x8000) bin += String.fromCharCode.apply(null, part.subarray(k, k + 0x8000));
+        window.__wavParts.push(btoa(bin));
+      }
+      return window.__wavParts.length;
+    },
+    wavChunk(i) {
+      return window.__wavParts[i];
+    },
     /** 播放中跳到 t（跟拖時間軸一樣）。 */
     jump(t) {
       seek(t);

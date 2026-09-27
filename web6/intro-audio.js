@@ -95,9 +95,9 @@ export function createScore(extraCues = []) {
   let timer = 0;
   const live = new Set();
 
-  function setup() {
-    if (ctx) return;
-    ctx = new (window.AudioContext || window.webkitAudioContext)();
+  function setup(given = null) {
+    if (ctx && !given) return;
+    ctx = given || new (window.AudioContext || window.webkitAudioContext)();
     const comp = ctx.createDynamicsCompressor();
     comp.threshold.value = -16;
     comp.ratio.value = 3;
@@ -391,6 +391,29 @@ export function createScore(extraCues = []) {
   }
 
   return {
+    /**
+     * 整首歌離線算好（輸出影片檔用）：同一組聲音、同一張事件表，排在準確的時間上，
+     * 回傳 AudioBuffer（立體聲、sampleRate）。算完原本的即時播放照常能用。
+     */
+    async render(sampleRate = 48000) {
+      const live0 = ctx;
+      const off = new OfflineAudioContext(2, Math.ceil((LENGTH + 2) * sampleRate), sampleRate);
+      const wasMuted = muted;
+      muted = false;
+      setup(off);
+      for (const e of events) voices[e.kind]?.(e, e.t + 0.001, 0);
+      const buf = await off.startRendering();
+      muted = wasMuted;
+      ctx = live0;
+      master = wet = noise = null;
+      if (live0) {
+        const c = live0;
+        ctx = null;
+        setup(c);
+      }
+      live.clear();
+      return buf;
+    },
     get ready() {
       return !!ctx;
     },
