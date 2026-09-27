@@ -1125,6 +1125,12 @@ ZH = {
     "surrounded by penises": "被陰莖包圍",
     "twitching penis": "陰莖抽動",
     "two-handed handjob": "雙手手交",
+    "large testicles": "大睪丸",
+    "huge testicles": "巨大睪丸",
+    "small testicles": "小睪丸",
+    "covered testicles": "睪丸被遮住",
+    "testicle sucking": "吸睪丸",
+    "testicle grab": "抓睪丸",
 }
 
 

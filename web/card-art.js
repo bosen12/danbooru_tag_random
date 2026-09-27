@@ -207,6 +207,50 @@ const ART_EXTRA = {
   // 多人的牌拉近到上半身時，底模會把中間那個畫成小孩；全身站著排開就不會。
   "multiple girls": "full body, standing",
   "multiple boys": "full body, standing, facial hair",
+  // Danbooru 上 testicle sucking 幾乎都同時標 oral，標 sex 的很少。
+  // 牌面若帶著 sex，底模會把嘴放在龜頭上，畫成口交。
+  "testicle sucking": "oral, close-up",
+  // 視線本身不 implies penis（penis 只有 sex，走光會整張抽失敗）。牌面仍要看得到。
+  "looking at penis": "penis",
+  "cum pool": "lying, on back, on bed, excessive cum",
+};
+
+// 精液落在對方身上，或這個動作的對象是女生。
+// needs 只有 male 時卡司會變成 1boy solo，圖就變成射進男生嘴裡。
+// 男生自己的陰莖、射精、先走汁不在這裡，那些維持 1boy solo。
+const HETERO_PICTURE = new Set([
+  "cum in mouth",
+  "facial",
+  "gokkun",
+  "cum on tongue",
+  "cum on hair",
+  "cum on body",
+  "cum on stomach",
+  "cum on legs",
+  "cum on feet",
+  "cum on hands",
+  "cum on clothes",
+  "cum in ass",
+  "cum overflow",
+  "internal cumshot",
+  "excessive cum",
+  "after anal",
+  "after sex",
+  "after vaginal",
+  "deep penetration",
+  "penis over eyes",
+  "penis on face",
+  "looking at penis",
+  "cum pool",
+]);
+
+// 牌面不要帶的 implies。抽牌邏輯仍保留；只影響插畫。
+const ART_SKIP_IMPLY = {
+  "testicle sucking": new Set(["sex"]),
+};
+
+const ART_NEG = {
+  "testicle sucking": "fellatio",
 };
 
 // 學校味重的衣著：畫的一定是成年人。
@@ -282,6 +326,7 @@ function castOf(item) {
     if (tag === "hetero") return ["1girl", "1boy", "hetero", "adult"];
     if (tag === "yuri") return ["2girls", "yuri", "adult"];
   }
+  if (HETERO_PICTURE.has(tag)) return ["1girl", "1boy", "hetero", "adult"];
   if (needs.has("five")) return ["4girls", "1boy", "adult"];
   if (needs.has("2female") && needs.has("male")) return ["2girls", "1boy", "adult"];
   if (needs.has("yuri") || needs.has("2female")) return ["2girls", "yuri", "adult"];
@@ -306,7 +351,9 @@ export function artPrompt(item, ctx = {}) {
   if (!isCard(item) || NO_ART.has(item.tag)) return null;
   const rating = ratingTier(item, ctx.ratingBlocked);
   const byTag = ctx.byTag || new Map();
-  const extra = [ART_EXTRA[item.tag], ...(item.implies || []), ...(item.bind || [])].filter((t) => t && (ART_EXTRA[item.tag] === t || byTag.has(t)));
+  const skip = ART_SKIP_IMPLY[item.tag];
+  const implied = (item.implies || []).filter((t) => !skip || !skip.has(t));
+  const extra = [ART_EXTRA[item.tag], ...implied, ...(item.bind || [])].filter((t) => t && (ART_EXTRA[item.tag] === t || byTag.has(t)));
   let parts;
   if (item.tag === "no humans") {
     parts = ["no humans", "scenery", "landscape", "sky", "cloud"];
@@ -330,7 +377,8 @@ export function artPrompt(item, ctx = {}) {
     parts = [...castFor(item), item.tag, ...extra, frame, bg];
   }
   const tags = [...new Set(parts.join(", ").split(",").map((s) => s.trim()).filter(Boolean))];
-  return { positive: `${tags.join(", ")}, ${TAIL[rating]}, ${QUALITY}`, rating, negative: artNegative(tags) };
+  const negative = [artNegative(tags), ART_NEG[item.tag], HETERO_PICTURE.has(item.tag) ? "yaoi" : ""].filter(Boolean).join(", ");
+  return { positive: `${tags.join(", ")}, ${TAIL[rating]}, ${QUALITY}`, rating, negative };
 }
 
 // 有人的牌一律擋掉看起來未成年的畫法；server 的分級負面詞沒有這一項。

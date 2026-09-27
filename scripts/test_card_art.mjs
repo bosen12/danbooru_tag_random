@@ -78,6 +78,19 @@ const tagsOf = (positive) => positive.split(",").map((s) => s.trim());
     const j = jobs.find((x) => x.tag === t);
     if (j) ok(`學校味的「${t}」畫成熟女性`, tagsOf(j.positive).includes("mature female"), j.positive);
   }
+  const heteroPicture = ["cum in mouth", "facial", "gokkun", "cum on tongue", "cum on body", "cum in ass", "cum pool", "penis over eyes", "penis on face", "looking at penis", "after sex", "after vaginal", "after anal", "deep penetration", "internal cumshot"];
+  for (const t of heteroPicture) {
+    const j = jobs.find((x) => x.tag === t);
+    const tags = j ? tagsOf(j.positive) : [];
+    ok(`${t} 畫一男一女`, !!j && tags.includes("1girl") && tags.includes("1boy") && tags.includes("hetero") && !tags.includes("solo") && (j.negative || "").includes("yaoi"), j?.positive);
+  }
+  for (const t of ["ejaculation", "cumdrip from penis", "cum on penis", "projectile cum", "handsfree ejaculation", "penis"]) {
+    const j = jobs.find((x) => x.tag === t);
+    const tags = j ? tagsOf(j.positive) : [];
+    ok(`${t} 畫男生自己`, !!j && tags.includes("1boy") && tags.includes("solo") && !tags.includes("1girl"), j?.positive);
+  }
+  const pool = jobs.find((x) => x.tag === "cum pool");
+  ok("cum pool 不是空景", !!pool && !tagsOf(pool.positive).includes("no humans"), pool?.positive);
 }
 
 /* ---------- 分級尾巴 ---------- */

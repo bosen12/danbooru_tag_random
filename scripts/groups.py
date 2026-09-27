@@ -331,6 +331,8 @@ SEX = {
     "cunnilingus",
     "anilingus",
     "handjob",
+    "testicle sucking",
+    "testicle grab",
     "footjob",
     "sitting on face",
     "tribadism",

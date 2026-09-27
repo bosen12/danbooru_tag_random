@@ -2454,9 +2454,12 @@ function indoorOutdoorClash(have) {
   ok("flaccid is male skin", item("flaccid")?.section === "feature" && item("flaccid")?.layer === "skin" && need("flaccid").includes("male") && (item("flaccid")?.implies || []).includes("penis"));
   ok("half-erect stays off the sex group", item("half-erect")?.group === "body_m" && item("half-erect")?.layer === "skin");
   ok("phimosis can stack with an erection", item("phimosis")?.mutex == null && item("phimosis")?.group === "body_m");
-  ok("cum in ass does not require a girl", need("cum in ass").includes("male") && !need("cum in ass").includes("female") && !(item("cum in ass")?.implies || []).includes("anal"));
+  ok("cum in ass is received by a woman", need("cum in ass").includes("male") && need("cum in ass").includes("female") && !(item("cum in ass")?.implies || []).includes("anal"));
   ok("cum in pussy implies cum and not vaginal", (item("cum in pussy")?.implies || []).includes("cum") && !(item("cum in pussy")?.implies || []).includes("vaginal"));
   ok("cum on clothes needs a male", need("cum on clothes").includes("male") && (item("cum on clothes")?.implies || []).includes("cum"));
+  ok("cum in mouth is received by a woman", need("cum in mouth").includes("male") && need("cum in mouth").includes("female"));
+  ok("facial is received by a woman", need("facial").includes("female"));
+  ok("cum pool is a sex result, not a place", item("cum pool")?.section === "pose" && item("cum pool")?.mutex == null && (item("cum pool")?.heat || []).join(",") === "sex" && need("cum pool").includes("male") && need("cum pool").includes("female") && (item("cum pool")?.implies || []).includes("cum"));
   ok("bare cum now needs a male", need("cum").includes("male"));
   ok("after ejaculation is aftermath", (item("after ejaculation")?.implies || []).includes("cum") && item("after ejaculation")?.mutex == null);
   ok("precum is not cum", (item("precum")?.implies || []).includes("penis") && !(item("precum")?.implies || []).includes("cum"));
@@ -2542,9 +2545,23 @@ function indoorOutdoorClash(have) {
   let girlPenis = 0;
   for (let i = 0; i < 40; i++) {
     const h = tagsOf(drawOne(lex, girlOnly, new Set(), new Set(), mulberry32(97800 + i), 97800 + i));
-    if (["penis", "flaccid", "precum", "phimosis", "erection", "fivesome", "cum", "cum on body"].some((t) => h.has(t))) girlPenis += 1;
+    if (["penis", "flaccid", "precum", "phimosis", "erection", "fivesome", "cum", "cum on body", "large testicles", "huge testicles", "small testicles", "covered testicles", "testicle sucking", "testicle grab"].some((t) => h.has(t))) girlPenis += 1;
   }
   eq("girl-only sex does not emit penis or cum", girlPenis, 0);
+
+  const boyOnlySex = settings();
+  boyOnlySex.girl = false;
+  boyOnlySex.boy = true;
+  boyOnlySex.heats = ["sex"];
+  boyOnlySex.weights = { tease: 0, flash: 0, sex: 1, activity: 0 };
+  boyOnlySex.eras = ["modern"];
+  const boyReceives = ["cum in mouth", "facial", "gokkun", "cum on tongue", "cum in ass", "penis on face", "penis over eyes", "cum pool", "cum on body"];
+  let boyRecv = 0;
+  for (let i = 0; i < 24; i++) {
+    const h = tagsOf(drawOne(lex, boyOnlySex, new Set(), new Set(), mulberry32(98920 + i), 98920 + i));
+    if (boyReceives.some((t) => h.has(t))) boyRecv += 1;
+  }
+  eq("boy-only sex does not make the boy the one receiving cum", boyRecv, 0);
 
   let sawFive = 0;
   let fiveMiss = 0;
@@ -2573,6 +2590,39 @@ function indoorOutdoorClash(have) {
   eq("girl-only never rolls 5girls", strayFive, 0);
   ok("girl-only sex sometimes reaches 4 girls", sawFour > 0, `seen=${sawFour}`);
   eq("4-person sex is stamped foursome", fourMiss, 0);
+
+  ok("large testicles is male skin", item("large testicles")?.section === "feature" && item("large testicles")?.layer === "skin" && item("large testicles")?.group === "body_m" && (item("large testicles")?.implies || []).includes("testicles") && (item("large testicles")?.implies || []).includes("penis"));
+  ok("huge testicles stays off the sex group", item("huge testicles")?.group === "body_m");
+  ok("small testicles is the other size", item("small testicles")?.section === "feature" && need("small testicles").includes("male"));
+  ok("covered testicles can be flash", (item("covered testicles")?.heat || []).includes("flash") && (item("covered testicles")?.heat || []).includes("sex") && !(item("covered testicles")?.heat || []).includes("tease") && (item("covered testicles")?.implies || []).length === 0);
+  ok("testicle sucking takes the sex act", item("testicle sucking")?.mutex === "sex_act" && need("testicle sucking").includes("pair") && (item("testicle sucking")?.implies || []).includes("testicles"));
+  ok("testicle grab is not a sex act", item("testicle grab")?.mutex == null && need("testicle grab").includes("pair") && (item("testicle grab")?.implies || []).includes("penis"));
+  for (const tag of ["large testicles", "huge testicles", "small testicles", "covered testicles", "testicle sucking", "testicle grab"]) {
+    ok(`${tag} is explicit-only`, explicitOnly(item(tag)));
+  }
+  const pinLarge = applyPin(lex, new Set(["huge testicles", "small testicles"]), new Set(), "large testicles").pinned;
+  ok("large testicles drops the other sizes", pinLarge.has("large testicles") && !pinLarge.has("huge testicles") && !pinLarge.has("small testicles"));
+  let sizeBad = 0;
+  for (let i = 0; i < 30; i++) {
+    const h = tagsOf(drawOne(lex, sexBoth, pinLarge, new Set(), mulberry32(98500 + i), 98500 + i));
+    if (!h.has("large testicles") || !h.has("testicles") || !h.has("penis") || h.has("huge testicles") || h.has("small testicles") || h.has("covered testicles")) sizeBad += 1;
+  }
+  eq("large testicles keeps the parent and blocks covered", sizeBad, 0);
+  const pinCovered = applyPin(lex, new Set(), new Set(), "covered testicles").pinned;
+  let coverBad = 0;
+  for (let i = 0; i < 30; i++) {
+    const h = tagsOf(drawOne(lex, sexBoth, pinCovered, new Set(), mulberry32(98600 + i), 98600 + i));
+    if (h.has("nude") || h.has("completely nude") || h.has("large testicles") || h.has("testicles") || h.has("huge testicles") || h.has("small testicles")) coverBad += 1;
+  }
+  eq("covered testicles blocks nude and bare sizes", coverBad, 0);
+  const pinSuck = applyPin(lex, new Set(), new Set(), "testicle sucking").pinned;
+  let suckBad = 0;
+  for (let i = 0; i < 24; i++) {
+    const d = drawOne(lex, sexBoth, pinSuck, new Set(), mulberry32(98700 + i), 98700 + i);
+    const h = tagsOf(d);
+    if (!h.has("testicle sucking") || !h.has("testicles") || h.has("fellatio") || h.has("vaginal") || d.people < 2) suckBad += 1;
+  }
+  eq("testicle sucking keeps balls and blocks another act", suckBad, 0);
 }
 
 {

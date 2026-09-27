@@ -6224,7 +6224,8 @@
       ],
       "group": "sex",
       "needs": [
-        "male"
+        "male",
+        "female"
       ],
       "zh": "射在身上"
     },
@@ -6269,7 +6270,8 @@
       ],
       "group": "sex",
       "needs": [
-        "male"
+        "male",
+        "female"
       ],
       "zh": "顏射"
     },
@@ -6540,7 +6542,8 @@
       ],
       "group": "sex",
       "needs": [
-        "male"
+        "male",
+        "female"
       ],
       "zh": "口內射精"
     },
@@ -15619,7 +15622,8 @@
       ],
       "group": "gaze",
       "needs": [
-        "male"
+        "male",
+        "female"
       ],
       "zh": "看著陰莖"
     },
@@ -16218,20 +16222,25 @@
     },
     {
       "tag": "cum pool",
-      "section": "env",
+      "section": "pose",
       "gate": "any",
       "heat": [
-        "flash",
         "sex"
       ],
-      "mutex": "place",
+      "mutex": null,
       "bind": [],
-      "implies": [],
+      "implies": [
+        "cum"
+      ],
       "layer": "normal",
       "era": [
         "any"
       ],
-      "group": "place",
+      "group": "sex",
+      "needs": [
+        "male",
+        "female"
+      ],
       "zh": "精液灘"
     },
     {
@@ -27798,7 +27807,8 @@
       ],
       "group": "sex",
       "needs": [
-        "male"
+        "male",
+        "female"
       ],
       "zh": "中出"
     },
@@ -27820,7 +27830,8 @@
       ],
       "group": "sex",
       "needs": [
-        "male"
+        "male",
+        "female"
       ],
       "zh": "精液滿溢"
     },
@@ -27859,7 +27870,8 @@
       ],
       "group": "sex",
       "needs": [
-        "male"
+        "male",
+        "female"
       ],
       "zh": "舌上精液"
     },
@@ -27926,7 +27938,8 @@
       ],
       "group": "sex",
       "needs": [
-        "male"
+        "male",
+        "female"
       ],
       "zh": "陰莖擋眼"
     },
@@ -27948,7 +27961,8 @@
       ],
       "group": "sex",
       "needs": [
-        "male"
+        "male",
+        "female"
       ],
       "zh": "陰莖貼臉"
     },
@@ -28085,6 +28099,145 @@
       "zh": "陰莖抽動"
     },
     {
+      "tag": "large testicles",
+      "section": "feature",
+      "gate": "male",
+      "heat": [
+        "sex"
+      ],
+      "mutex": null,
+      "bind": [],
+      "implies": [
+        "testicles",
+        "penis"
+      ],
+      "layer": "skin",
+      "era": [
+        "any"
+      ],
+      "group": "body_m",
+      "needs": [
+        "male"
+      ],
+      "zh": "大睪丸"
+    },
+    {
+      "tag": "huge testicles",
+      "section": "feature",
+      "gate": "male",
+      "heat": [
+        "sex"
+      ],
+      "mutex": null,
+      "bind": [],
+      "implies": [
+        "testicles",
+        "penis"
+      ],
+      "layer": "skin",
+      "era": [
+        "any"
+      ],
+      "group": "body_m",
+      "needs": [
+        "male"
+      ],
+      "zh": "巨大睪丸"
+    },
+    {
+      "tag": "small testicles",
+      "section": "feature",
+      "gate": "male",
+      "heat": [
+        "sex"
+      ],
+      "mutex": null,
+      "bind": [],
+      "implies": [
+        "testicles",
+        "penis"
+      ],
+      "layer": "skin",
+      "era": [
+        "any"
+      ],
+      "group": "body_m",
+      "needs": [
+        "male"
+      ],
+      "zh": "小睪丸"
+    },
+    {
+      "tag": "covered testicles",
+      "section": "feature",
+      "gate": "male",
+      "heat": [
+        "flash",
+        "sex"
+      ],
+      "mutex": null,
+      "bind": [],
+      "implies": [],
+      "layer": "skin",
+      "era": [
+        "any"
+      ],
+      "group": "body_m",
+      "needs": [
+        "male"
+      ],
+      "zh": "睪丸被遮住"
+    },
+    {
+      "tag": "testicle sucking",
+      "section": "pose",
+      "gate": "any",
+      "heat": [
+        "sex"
+      ],
+      "mutex": "sex_act",
+      "bind": [],
+      "implies": [
+        "testicles",
+        "penis",
+        "sex"
+      ],
+      "layer": "normal",
+      "era": [
+        "any"
+      ],
+      "group": "sex",
+      "needs": [
+        "male",
+        "pair"
+      ],
+      "zh": "吸睪丸"
+    },
+    {
+      "tag": "testicle grab",
+      "section": "pose",
+      "gate": "any",
+      "heat": [
+        "sex"
+      ],
+      "mutex": null,
+      "bind": [],
+      "implies": [
+        "testicles",
+        "penis"
+      ],
+      "layer": "normal",
+      "era": [
+        "any"
+      ],
+      "group": "sex",
+      "needs": [
+        "male",
+        "pair"
+      ],
+      "zh": "抓睪丸"
+    },
+    {
       "tag": "precum",
       "section": "pose",
       "gate": "any",
@@ -28168,7 +28321,8 @@
       ],
       "group": "sex",
       "needs": [
-        "male"
+        "male",
+        "female"
       ],
       "zh": "射在頭髮"
     },
@@ -28190,7 +28344,8 @@
       ],
       "group": "sex",
       "needs": [
-        "male"
+        "male",
+        "female"
       ],
       "zh": "肛內射精"
     },
@@ -28212,7 +28367,8 @@
       ],
       "group": "sex",
       "needs": [
-        "male"
+        "male",
+        "female"
       ],
       "zh": "射在衣服上"
     },
@@ -28234,7 +28390,8 @@
       ],
       "group": "sex",
       "needs": [
-        "male"
+        "male",
+        "female"
       ],
       "zh": "射在肚子"
     },
@@ -28256,7 +28413,8 @@
       ],
       "group": "sex",
       "needs": [
-        "male"
+        "male",
+        "female"
       ],
       "zh": "射在腿上"
     },
@@ -28300,7 +28458,8 @@
       ],
       "group": "sex",
       "needs": [
-        "male"
+        "male",
+        "female"
       ],
       "zh": "射在腳上"
     },
@@ -28322,7 +28481,8 @@
       ],
       "group": "sex",
       "needs": [
-        "male"
+        "male",
+        "female"
       ],
       "zh": "射在手上"
     },
@@ -28367,7 +28527,8 @@
       ],
       "group": "sex",
       "needs": [
-        "male"
+        "male",
+        "female"
       ],
       "zh": "大量精液"
     },
@@ -28556,7 +28717,8 @@
       ],
       "group": "sex",
       "needs": [
-        "male"
+        "male",
+        "female"
       ],
       "zh": "肛交事後"
     },
@@ -28646,7 +28808,8 @@
       ],
       "group": "sex",
       "needs": [
-        "male"
+        "male",
+        "female"
       ],
       "zh": "吞精"
     },

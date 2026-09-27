@@ -425,6 +425,7 @@ IMPLIES = {
     "cum on ass": ["cum"],
     "cum on tongue": ["cum"],
     "facial": ["cum"],
+    "cum pool": ["cum"],
     "internal cumshot": ["cum"],
     "cum on hair": ["cum"],
     "cum in ass": ["cum"],
@@ -451,6 +452,13 @@ IMPLIES = {
     "phimosis": ["penis"],
     "foreskin": ["penis"],
     "twitching penis": ["penis"],
+    "large testicles": ["testicles", "penis"],
+    "huge testicles": ["testicles", "penis"],
+    "small testicles": ["testicles", "penis"],
+    # 吸、抓都只有 sex，帶出睪丸和陰莖不會把整張抽失敗。
+    "testicle sucking": ["testicles", "penis", "sex"],
+    "testicle grab": ["testicles", "penis"],
+    # covered testicles 還要在 flash 抽得到，不能 implies 只有 sex 的 testicles／penis。
     "surrounded by penises": ["penis"],
     "penis awe": ["penis"],
     # 不 implies penis：penis 只有 sex，這個視線還要在 flash 抽得到。
@@ -656,6 +664,12 @@ RECLASS = {
     # 原本 flash+sex。implies cum 之後，flash 會讓 commit 失敗（cum 只有 sex）。
     # 收成 sex，這個字才真的進得了畫面。
     "cum on ass": {"heat": ["sex"]},
+    # 採集把它放進 env/place。精液灘不是場地，佔住 place 就會把臥室擠掉，
+    # 牌面也會變成 no humans 的空景。它是射完以後的結果。
+    "cum pool": {
+        "section": "pose", "mutex": None, "heat": ["sex"],
+        "layer": "normal", "gate": "any", "needs": ["male", "female"],
+    },
     "tall male": {"mutex": "height_m", "gate": "male"},
     "short male": {"mutex": "height_m", "gate": "male"},
     "male pubic hair": {"gate": "male", "heat": ["flash", "sex"]},
@@ -748,6 +762,7 @@ SEX_ACT = {
     "cunnilingus",
     "anilingus",
     "handjob",
+    "testicle sucking",
     "double handjob",
     "two-handed handjob",
     "cooperative handjob",
@@ -789,6 +804,12 @@ NEEDS_MALE = {
     "huge penis",
     "veiny penis",
     "testicles",
+    "large testicles",
+    "huge testicles",
+    "small testicles",
+    "covered testicles",
+    "testicle sucking",
+    "testicle grab",
     "cum in pussy",
     "cum in mouth",
     "facial",
@@ -863,6 +884,7 @@ NEEDS_MALE = {
     "twitching penis",
     "penis awe",
     "looking at penis",
+    "cum pool",
 }
 
 NEEDS_FEMALE = {
@@ -907,6 +929,27 @@ NEEDS_FEMALE = {
     "flight attendant",
     "idol",
     "cum on breasts",
+    # 精液落在對方身上，或陰莖貼在對方臉上。只有 male 時，單人男生會變成被射的那一個。
+    "cum in mouth",
+    "facial",
+    "gokkun",
+    "cum on tongue",
+    "cum on hair",
+    "cum on body",
+    "cum on stomach",
+    "cum on legs",
+    "cum on feet",
+    "cum on hands",
+    "cum on clothes",
+    "cum in ass",
+    "cum overflow",
+    "internal cumshot",
+    "excessive cum",
+    "after anal",
+    "penis over eyes",
+    "penis on face",
+    "looking at penis",
+    "cum pool",
 }
 
 NEEDS_PAIR = {
@@ -949,6 +992,8 @@ NEEDS_PAIR = {
     "cunnilingus",
     "paizuri",
     "handjob",
+    "testicle sucking",
+    "testicle grab",
     "sitting on face",
     "tribadism",
     "upright straddle",
@@ -1103,7 +1148,7 @@ def widen_heat(tag: str, section: str, mutex, layer: str, heat: list[str]) -> li
         return list(HEATS)
     if section == "clothing" and layer != "skin" and tag not in CLOTHING_STATE:
         return list(HEATS)
-    if section == "env" and tag != "cum pool":
+    if section == "env":
         return list(HEATS)
     if section == "feature" and tag in {"wet hair", "wet"}:
         return list(HEATS)
@@ -2584,6 +2629,24 @@ def extra_fluid_tags() -> list[dict]:
         feat("phimosis", implies=["penis"], zh="包莖"),
         feat("foreskin", implies=["penis"], zh="包皮"),
         feat("twitching penis", implies=["penis"], zh="陰莖抽動"),
+        feat("large testicles", implies=["testicles", "penis"], zh="大睪丸"),
+        feat("huge testicles", implies=["testicles", "penis"], zh="巨大睪丸"),
+        feat("small testicles", implies=["testicles", "penis"], zh="小睪丸"),
+        {
+            "tag": "covered testicles",
+            "section": "feature",
+            "gate": "male",
+            "heat": ["flash", "sex"],
+            "mutex": None,
+            "bind": [],
+            "implies": [],
+            "layer": "skin",
+            "era": any_era,
+            "needs": ["male"],
+            "zh": "睪丸被遮住",
+        },
+        pose("testicle sucking", implies=["testicles", "penis", "sex"], needs=["male", "pair"], zh="吸睪丸"),
+        pose("testicle grab", implies=["testicles", "penis"], needs=["male", "pair"], zh="抓睪丸"),
         pose("precum", implies=["penis"], needs=["male"], zh="先走汁"),
         pose("precum drip", implies=["precum"], needs=["male"], zh="先走汁滴落"),
         pose("precum string", implies=["precum"], needs=["male"], zh="先走汁拉絲"),

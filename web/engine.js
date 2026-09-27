@@ -293,7 +293,7 @@ const SEX_PHASE_AFTER = new Set([
 const PENIS_STATE = new Set(["erection", "half-erect", "flaccid"]);
 const PRECUM_TAGS = new Set(["precum", "precum drip", "precum string"]);
 const FULL_NUDE = new Set(["nude", "completely nude"]);
-const CLOTHED_ONLY = new Set(["cum on clothes", "penis peek", "erection under clothes"]);
+const CLOTHED_ONLY = new Set(["cum on clothes", "penis peek", "erection under clothes", "covered testicles"]);
 const PENIS_ON_HEAD = new Set(["penis over eyes", "penis on face"]);
 const EJACULATION_ACT = new Set(["ejaculation", "projectile cum", "handsfree ejaculation"]);
 
@@ -338,6 +338,7 @@ const FACE_NEED_TAGS = new Set([
   "penis over eyes",
   "penis on face",
   "licking penis",
+  "testicle sucking",
   "covering own mouth",
   "french kiss",
   "finger to mouth",
@@ -2100,6 +2101,8 @@ const LIE_BODY = new Set(["lying", "on back", "on stomach", "on side", "reclinin
 const LEG_EXTRA = new Set(["crossed legs", "legs up", "m legs", "leg lift"]);
 const HAIR_TEXTURE = new Set(["straight hair", "wavy hair", "curly hair"]);
 const PENIS_SIZE = new Set(["small penis", "large penis", "huge penis"]);
+const TESTICLE_SIZE = new Set(["small testicles", "large testicles", "huge testicles"]);
+const TESTICLE_BARE = new Set(["testicles", "small testicles", "large testicles", "huge testicles"]);
 const BOOK_ACT = new Set(["reading", "studying"]);
 const HANDS_BUSY_ACT = new Set([
   "playing guitar",
@@ -2135,6 +2138,7 @@ const NEEDS_FREE_HAND = new Set([
   "double handjob",
   "two-handed handjob",
   "cooperative handjob",
+  "testicle grab",
   "fingering",
   "masturbation",
   "female masturbation",
@@ -2192,6 +2196,7 @@ function extraMutex(item) {
   if (LEG_EXTRA.has(item.tag)) groups.push("legs");
   if (HAIR_TEXTURE.has(item.tag)) groups.push("hair_texture");
   if (PENIS_SIZE.has(item.tag)) groups.push("penis_size");
+  if (TESTICLE_SIZE.has(item.tag)) groups.push("testicle_size");
   if (HAND_GESTURE.has(item.tag) && item.tag !== "holding hands") groups.push("hand_g");
   if (item.tag === "navel" || item.tag === "covered navel") groups.push("navel");
   if (item.tag === "pale skin" || item.tag === "dark skin" || item.tag === "very dark skin") groups.push("skin_tone");
@@ -3892,6 +3897,9 @@ export function drawOne(lex, settings, pinned, userBanned, rand, seed, opts) {
     if (item.tag === "flaccid" && hasUsed((t) => EJACULATION_ACT.has(t))) return false;
     if (CLOTHED_ONLY.has(item.tag) && hasUsed((t) => FULL_NUDE.has(t))) return false;
     if (FULL_NUDE.has(item.tag) && hasUsed((t) => CLOTHED_ONLY.has(t))) return false;
+    // 大睪丸寫的是看得到的睪丸。被衣服擋住時不再同時標尺寸，也不再標裸露的 testicles。
+    if (item.tag === "covered testicles" && hasUsed((t) => TESTICLE_BARE.has(t))) return false;
+    if (TESTICLE_BARE.has(item.tag) && used.has("covered testicles")) return false;
     // 裸手性愛是單人 sex 場景的主要可用活動；非運動情境不要隨機抽入拳擊手套
     // 把整個 sex_act 槽堵死。使用者或拳擊 preset 明確釘選時仍完整尊重。
     if (item.tag === "boxing gloves" && heat === "sex" && !pinned.has(item.tag)) return false;
