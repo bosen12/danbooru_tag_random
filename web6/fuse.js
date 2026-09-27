@@ -34,7 +34,7 @@ import { initWorkflow, currentWorkflowId, wfHandleKeys } from "./workflow.js";
 import { HARD_BANNED, applyArtSources } from "./card-art.js";
 import { buildLibrary, createAssets, cardNode, cardFacts, setEnterTarget, eagerArt, CARD_SUIT_INFO, CARD_SUITS, RATING_ZH, ERA_ZH } from "./cards.js";
 import { el, openSheet, anyOverlay, toast } from "./ui.js";
-import { initMotion, flip, flipBy, leave, gatherHome, flight, CURVE, DUR, css } from "./motion.js";
+import { initMotion, flip, flipBy, leave, gatherHome, flight, enter, seat, refuse, CURVE, DUR, css } from "./motion.js";
 import { createHand } from "./hand.js";
 import { createDrag, inkRing } from "./drag.js";
 import { createGenerator, comfyOnline, viewSrc, tabTitle, watchLink, LINK_LABEL } from "./gen.js";
@@ -136,6 +136,19 @@ let dealCase = false;
 let lastPointer = "mouse";
 const sfx = createSfx();
 const reduced = () => typeof matchMedia === "function" && matchMedia("(prefers-reduced-motion: reduce)").matches;
+
+// 數字換了才滾一下。節點常常整塊重畫，所以記的是字，不是那一個元素。
+const tickSeen = new Map();
+function tickIfChanged(node, key) {
+  if (!node) return;
+  const next = node.textContent;
+  const prev = tickSeen.get(key);
+  tickSeen.set(key, next);
+  if (prev === undefined || prev === next || reduced()) return;
+  node.classList.remove("is-ticked");
+  void node.offsetWidth;
+  node.classList.add("is-ticked");
+}
 
 /* ================= 小工具 ================= */
 
@@ -421,7 +434,7 @@ function startWith(starter) {
 
 function undo() {
   const h = history.pop();
-  if (!h) return;
+  if (!h) return refuse($("undo"));
   // 撤掉的牌先記下位置（重畫之後原地掀起飄走），回來的牌重畫之後一張一張落回去。
   const back = new Set(h.bed.pins);
   const was = new Set(bed.pins);
@@ -484,7 +497,7 @@ function undoRestore(r) {
 }
 
 function clearBed() {
-  if (!bed.pins.length) return;
+  if (!bed.pins.length) return refuse($("clear"));
   const snaps = bed.pins.map((t) => plateNode(t)).filter(Boolean).map(snapshot);
   // 分兩路：偏好卡牌回到手上，其他的掃成一疊收回字盒。
   const toHand = snaps.filter((s) => hand?.has(s.node.dataset.tag));
@@ -512,7 +525,8 @@ function clearBed() {
 }
 
 function pick(i, { quiet = false } = {}) {
-  if (i < 0 || i >= trials.length || i === picked) return;
+  if (i < 0 || i >= trials.length) return;
+  if (i === picked) return seat(trialNodes[i]?.node);
   clearTimeout(peekTimer);
   peekTrial = null;
   trialNodes.forEach((n) => n.node.classList.remove("is-peek"));
@@ -522,6 +536,7 @@ function pick(i, { quiet = false } = {}) {
   renderPreview();
   renderTrials();
   renderPrintBar();
+  seat(trialNodes[i]?.node);
   if (!quiet) sfx.carry();
   announce(`換到試印 ${LETTERS[i]}`);
 }
@@ -573,6 +588,7 @@ const generator = createGenerator({
     } else if (p.status === "failed") {
       sfx.fail();
       savePrints();
+      if (trials[picked] && p.sig === sigOf(trials[picked])) refuse(pv?.sheet);
     } else if (p.status === "cancelled") dropCancelled(p);
   },
   stopped: (msg) => {
@@ -595,13 +611,14 @@ function printNow() {
   const same = printFor(sig);
   if (same && (same.status === "queued" || same.status === "running")) {
     announce("這一張已經在印了");
-    return;
+    return refuse($("print-bar").querySelector(".pb-go"));
   }
   if (comfyOk === false) {
     const bar = $("print-bar");
     bar.classList.remove("is-nudged");
     void bar.offsetWidth;
     bar.classList.add("is-nudged");
+    refuse(bar.querySelector(".pb-go"));
     announce(linkNow === "net" ? "連不到主機（網路斷了？），接上再送" : "印刷機（ComfyUI）沒開，先不送");
     return;
   }
@@ -647,7 +664,7 @@ function printNow() {
 }
 
 function reprint(p) {
-  if (p.status === "queued" || p.status === "running") return;
+  if (p.status === "queued" || p.status === "running") return refuse($("print-bar").querySelector(".pb-go"));
   p.note = "";
   p.preview = null;
   generator.enqueue(p);
@@ -769,6 +786,7 @@ function renderAll(events = []) {
   // 托盤、試印這些之後才動 DOM，全部留給下一格畫面一起排。
   renderPlate(events);
   hand?.update();
+  tickIfChanged($("hand-count"), "hand-count");
   renderPreview();
   renderTrials();
   renderPrintBar();
@@ -781,7 +799,7 @@ let pv = null;
 
 function buildPreview() {
   const sheet = el("button", {
-    class: "pv-sheet",
+    class: "pv-sheet pressable",
     type: "button",
     onclick: () => {
       const p = printFor(sigOf(trials[picked]));
@@ -920,7 +938,7 @@ function buildTrialShells() {
     const picks = el("span", { class: "trial-picks", "aria-hidden": "true" });
     const node = el(
       "button",
-      { class: "trial", type: "button", role: "radio", dataset: { i: String(i) }, onclick: () => pick(i) },
+      { class: "trial pressable", type: "button", role: "radio", dataset: { i: String(i) }, onclick: () => pick(i) },
       face,
       el("span", { class: "trial-body" }, meta, picks)
     );
@@ -1215,7 +1233,7 @@ function renderPlate(events = []) {
         el(
           "button",
           {
-            class: "ghost-more",
+            class: "ghost-more pressable",
             type: "button",
             "aria-expanded": open ? "true" : "false",
             title: open ? undefined : ghosts.slice(cap).map(zh).join("、"),
@@ -1257,7 +1275,7 @@ function renderPlate(events = []) {
             { class: "reg-note" },
             note.text,
             " ",
-            el("button", { class: "link-btn", type: "button", onclick: () => place(note.back) }, "換回")
+            el("button", { class: "link-btn pressable", type: "button", onclick: () => place(note.back) }, "換回")
           )
         : null
     );
@@ -1287,6 +1305,8 @@ function renderPlate(events = []) {
       : t
         ? `試印 ${t.letter}：你的 ${bed.pins.length} 張，引擎補 ${t.extra.length} 張`
         : `你的 ${bed.pins.length} 張`;
+  tickIfChanged(sub, "plate-sub");
+  for (const n of box.querySelectorAll(".reg-count")) tickIfChanged(n, "reg:" + (n.closest(".register")?.dataset.suit || ""));
   $("clear").disabled = empty;
   applyFit(plan);
   renderPill();
@@ -1339,12 +1359,12 @@ function startBlock() {
             "span",
             { class: "starters-label" },
             "或者從這裡起手",
-            el("button", { class: "starters-more link-btn", type: "button", onclick: reshuffleStarters }, "換一組")
+            el("button", { class: "starters-more link-btn pressable", type: "button", onclick: reshuffleStarters }, "換一組")
           ),
           starters.map((s) =>
             el(
               "button",
-              { class: "starter", type: "button", onclick: () => startWith(s) },
+              { class: "starter pressable", type: "button", onclick: () => startWith(s) },
               el(
                 "span",
                 { class: "starter-arts", "aria-hidden": "true" },
@@ -1459,7 +1479,9 @@ function renderPlateNotice() {
   const head = $("plate").querySelector(".plate-head");
   head.querySelector(".plate-notice")?.remove();
   if (!plateNotice) return;
-  head.append(el("p", { class: "plate-notice", dataset: { kind: plateNotice.kind } }, plateNotice.text));
+  const node = el("p", { class: "plate-notice", dataset: { kind: plateNotice.kind } }, plateNotice.text);
+  head.append(node);
+  if (plateNotice.kind === "err" || plateNotice.kind === "clash") refuse(node);
 }
 
 function renderUndo() {
@@ -1941,6 +1963,8 @@ function renderPrintBar() {
   ].filter(Boolean);
   // 印製中每一格進度都會叫到這裡。只有進度變了的話，只改付印鈕的字跟進度條，
   // 不整排重畫 —— 以前「停」一秒換好幾次新的，滑鼠停在上面會閃、按下去常常按不到。
+  const wasOffline = bar.dataset.offline === "1";
+  bar.dataset.offline = offline ? "1" : "0";
   const key = [t.letter, sigOf(t), p ? p.status : "", summary.join("・"), t.missing.join(","), offline, linkNow, p && p.status === "failed" ? p.note : "", !!bed.pins.length].join("|");
   const go = bar.querySelector(".pb-go");
   if (bar.dataset.key === key && go) {
@@ -1983,16 +2007,18 @@ function renderPrintBar() {
     ),
     seedNode || (seedNode = mountSeedControl(null, { compact: true })),
     offline
-      ? el("p", { class: "pb-hint" }, linkNow === "net" ? "連不到主機（網路斷了？）。可以繼續疊版、挑試印，接上了再付印。" : "印刷機（ComfyUI）沒開。可以繼續疊版、挑試印，開了再付印。")
+      ? el("p", { class: "pb-hint", dataset: { fresh: wasOffline ? "0" : "1" } }, linkNow === "net" ? "連不到主機（網路斷了？）。可以繼續疊版、挑試印，接上了再付印。" : "印刷機（ComfyUI）沒開。可以繼續疊版、挑試印，開了再付印。")
       : null,
     p && p.status === "failed" ? el("p", { class: "pb-hint", dataset: { kind: "err" } }, p.note || "印壞了") : null,
     el(
       "p",
       { class: "pb-links" },
-      el("button", { class: "link-btn", type: "button", onclick: showPos }, "看 POS"),
-      el("button", { class: "link-btn", type: "button", onclick: sendToPool, disabled: !bed.pins.length || undefined }, "把這一版放進墨池的合成池")
+      el("button", { class: "link-btn pressable", type: "button", onclick: showPos }, "看 POS"),
+      el("button", { class: "link-btn pressable", type: "button", onclick: sendToPool, disabled: !bed.pins.length || undefined }, "把這一版放進墨池的合成池")
     )
   );
+  const hint = bar.querySelector('.pb-hint[data-fresh="1"]');
+  if (hint) enter(hint);
 }
 
 function showPos() {
@@ -2075,7 +2101,7 @@ function lineItem(p) {
   const face = el("span", { class: "print-face", style: `aspect-ratio: ${p.width} / ${p.height}` });
   const node = el(
     "button",
-    { class: "print", type: "button", dataset: { id: p.id, status: p.status }, onclick: () => openPrint(p) },
+    { class: "print pressable", type: "button", dataset: { id: p.id, status: p.status }, onclick: () => openPrint(p) },
     el("span", { class: "print-pin", "aria-hidden": "true" }),
     face,
     el("span", { class: "print-ring", "aria-hidden": "true" })
@@ -2175,8 +2201,8 @@ function openPrint(p) {
       {
         class: "btn btn-small",
         type: "button",
-        onclick: () => {
-          if (p.status === "queued" || p.status === "running") return;
+        onclick: (e) => {
+          if (p.status === "queued" || p.status === "running") return refuse(e.currentTarget);
           const at = prints.indexOf(p);
           prints = prints.filter((x) => x !== p);
           savePrints();
@@ -2250,7 +2276,7 @@ function renderCaseTabs() {
       el(
         "button",
         {
-          class: "case-tab",
+          class: "case-tab pressable",
           type: "button",
           dataset: { tab: id, suit: suit || "" },
           title: suit ? `${label}（${CARD_SUIT_INFO[suit].glyph}）` : undefined,
@@ -2262,6 +2288,7 @@ function renderCaseTabs() {
             renderCaseTabs();
             dealCase = true;
             renderCase();
+            seat($("case-tabs").querySelector('[aria-pressed="true"]'));
           },
         },
         suit ? el("i", { class: "tab-dot", "aria-hidden": "true" }, CARD_SUIT_INFO[suit].glyph) : label,
@@ -2312,13 +2339,14 @@ function renderCaseGroups(inSuit) {
     el(
       "button",
       {
-        class: "group-chip",
+        class: "group-chip pressable",
         type: "button",
         "aria-pressed": caseGroup === g ? "true" : "false",
         onclick: () => {
           caseGroup = g;
           dealCase = true;
           renderCase();
+          seat($("case-groups").querySelector('[aria-pressed="true"]'));
         },
       },
       seal ? el("b", { class: "chip-seal", "aria-hidden": "true" }, seal) : null,
@@ -2349,17 +2377,34 @@ function renderCase() {
   grid.replaceChildren();
   grid._reasons = reasons;
   $("case-count").textContent = `${list.length} 張`;
+  tickIfChanged($("case-count"), "case-count");
+  const qEl = $("case-q");
+  const miss = !!q && !list.length;
+  if (miss && qEl.dataset.miss !== "1") {
+    qEl.dataset.miss = "1";
+    qEl.classList.remove("is-miss");
+    void qEl.offsetWidth;
+    qEl.classList.add("is-miss");
+  } else if (!miss) {
+    delete qEl.dataset.miss;
+    qEl.classList.remove("is-miss");
+  }
   if (!list.length) {
-    grid.append(
-      el(
-        "p",
-        { class: "case-empty" },
-        caseTab === "match" && !bed.pins.length ? "放一張牌上版，這裡會列出跟它呼應的牌，和引擎常常補進來的牌。" : "沒有符合的牌。"
-      )
+    const emptyKey = (q ? "q:" + q : "") + "|" + caseTab + "|" + caseGroup;
+    const empty = el(
+      "p",
+      { class: "case-empty" },
+      caseTab === "match" && !bed.pins.length ? "放一張牌上版，這裡會列出跟它呼應的牌，和引擎常常補進來的牌。" : "沒有符合的牌。"
     );
+    grid.append(empty);
+    if (emptyKey !== caseEmptyShown) {
+      caseEmptyShown = emptyKey;
+      enter(empty);
+    }
     markEnterTarget();
     return;
   }
+  caseEmptyShown = "";
   moreCase();
   markEnterTarget();
   // 換花色、換小分類：捲回最上面，前二十張依序發進來（跟墨池的字盒一樣）。放牌、打字重畫不發。
@@ -2382,6 +2427,7 @@ function markEnterTarget() {
 }
 
 let caseObserver = null;
+let caseEmptyShown = "";
 
 function moreCase() {
   const grid = $("case-grid");
@@ -2569,6 +2615,7 @@ function renderRating() {
       el(
         "button",
         {
+          class: "pressable",
           type: "button",
           role: "radio",
           "aria-checked": settings.rating === r ? "true" : "false",
@@ -2576,6 +2623,7 @@ function renderRating() {
           onclick: () => {
             setSettings({ rating: r });
             renderRating();
+            seat($("rating").querySelector('[aria-checked="true"]'));
           },
         },
         RATING_LABEL[r]
@@ -2587,12 +2635,17 @@ function renderRating() {
 function pingLoop() {
   watchLink((st) => {
     const ok = st === "ok";
-    const changed = ok !== comfyOk;
+    const prev = comfyOk;
+    const changed = ok !== prev;
     comfyOk = ok;
     linkNow = st;
     const p = $("ping");
     p.dataset.ok = ok ? "1" : "0";
     p.querySelector("span").textContent = LINK_LABEL[st];
+    if (prev !== null && changed) {
+      if (ok) seat(p);
+      else refuse(p);
+    }
     if (changed && trials.length) renderPrintBar();
   });
 }
@@ -2605,12 +2658,14 @@ function segmented(label, options, current, onPick) {
       el(
         "button",
         {
+          class: "pressable",
           type: "button",
           role: "radio",
           "aria-checked": current === v ? "true" : "false",
           onclick: (e) => {
             onPick(v);
             for (const b of e.currentTarget.parentNode.children) b.setAttribute("aria-checked", b === e.currentTarget ? "true" : "false");
+            seat(e.currentTarget);
           },
         },
         text
@@ -2623,8 +2678,8 @@ function segmented(label, options, current, onPick) {
 function stepper(label, value, min, max, onChange) {
   let v = value;
   const out = el("output", {}, v);
-  const minus = el("button", { type: "button", "aria-label": `${label}少一張` }, "−");
-  const plus = el("button", { type: "button", "aria-label": `${label}多一張` }, "＋");
+  const minus = el("button", { class: "pressable", type: "button", "aria-label": `${label}少一張` }, "−");
+  const plus = el("button", { class: "pressable", type: "button", "aria-label": `${label}多一張` }, "＋");
   const sync = () => {
     out.textContent = v;
     minus.disabled = v <= min;
@@ -2663,7 +2718,7 @@ function openRules() {
       return el(
         "button",
         {
-          class: "chip-toggle",
+          class: "chip-toggle pressable",
           type: "button",
           "aria-pressed": settings.heats.includes(h) && !blocked ? "true" : "false",
           disabled: blocked || undefined,
@@ -2924,6 +2979,7 @@ function renderPill() {
     el("span", { class: "pill-label" }, "卡池"),
     el("b", { class: "pill-count" }, String(bed.pins.length))
   );
+  tickIfChanged(pill.querySelector(".pill-count"), "pill-count");
   pill.setAttribute("aria-label", `回到卡池（${bed.pins.length} 張）`);
 }
 

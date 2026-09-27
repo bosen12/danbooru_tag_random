@@ -102,7 +102,7 @@ export function toast(text, { action = null, ms = action ? 5200 : 2600 } = {}) {
   if (action) {
     const b = document.createElement("button");
     b.type = "button";
-    b.className = "toast-action";
+    b.className = "toast-action pressable";
     b.textContent = action.label;
     b.addEventListener("click", () => {
       clearTimeout(toastTimer);

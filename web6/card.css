@@ -24,6 +24,7 @@
   transform: translateY(var(--lift, 0));
   transition:
     transform var(--dur-short) var(--ease-out),
+    scale var(--dur-short) var(--ease-settle),
     box-shadow var(--dur-short) var(--ease-out),
     opacity var(--dur-short) var(--ease-out);
   -webkit-tap-highlight-color: transparent;
@@ -242,8 +243,11 @@
   opacity: 0.35;
 }
 
+/* 點下去：牌往紙裡壓一點（跟按鈕同一種手感，但牌是紙，不暈墨：牌上的 ::before／::after 是章）。 */
 button.card:active {
   --lift: 1px;
+  scale: 0.98;
+  transition-duration: var(--dur-micro);
 }
 
 @media (hover: hover) and (pointer: fine) {

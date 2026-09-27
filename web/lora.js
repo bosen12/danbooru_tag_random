@@ -73,7 +73,13 @@ function overlayOpen(el) {
   const from = document.activeElement;
   if (from && from !== document.body && !el.contains(from)) el._returnFocus = from;
   el.classList.add("open");
+  markPress(el);
   lockScroll(el.id || "lora-overlay");
+}
+
+function markPress(root) {
+  if (typeof root?.querySelectorAll !== "function") return;
+  for (const button of root.querySelectorAll("button")) button.classList.add("pressable");
 }
 function fadeCloseOverlay(el, _inner, onDone, msOverride) {
   if (!el || !el.classList.contains("open") || el.dataset.closing === "1") return;
@@ -235,6 +241,7 @@ function renderLmCats() {
     const b = document.createElement("button");
     b.type = "button";
     b.className = "lm-cat" + (curScope().cat === key ? " on" : "");
+    b.setAttribute("aria-pressed", curScope().cat === key ? "true" : "false");
     const lb = document.createElement("span");
     lb.textContent = label;
     const nb = document.createElement("span");
@@ -242,16 +249,19 @@ function renderLmCats() {
     nb.textContent = n;
     b.append(lb, nb);
     b.addEventListener("click", () => {
+      const focused = document.activeElement === b;
       curScope().cat = key;
       curScope().subfolder = "";
       renderLmCats();
       renderLmSubcats();
       renderLmList($("lm-search").value, true);
+      if (focused) $("lm-cats")?.querySelector?.('[aria-pressed="true"]')?.focus({ preventScroll: true });
     });
     box.appendChild(b);
   };
   mk("all", "全部", items.length);
   folders.forEach((f) => mk(f, f, counts[f]));
+  markPress(box);
 }
 
 function renderLmSubcats() {
@@ -268,6 +278,7 @@ function renderLmSubcats() {
     const b = document.createElement("button");
     b.type = "button";
     b.className = "lm-subcat" + (curScope().subfolder === key ? " on" : "");
+    b.setAttribute("aria-pressed", curScope().subfolder === key ? "true" : "false");
     const lb = document.createElement("span");
     lb.textContent = label;
     const nb = document.createElement("span");
@@ -275,9 +286,11 @@ function renderLmSubcats() {
     nb.textContent = n;
     b.append(lb, nb);
     b.addEventListener("click", () => {
+      const focused = document.activeElement === b;
       curScope().subfolder = key;
       renderLmSubcats();
       renderLmList($("lm-search").value, true);
+      if (focused) $("lm-subcats")?.querySelector?.('[aria-pressed="true"]')?.focus({ preventScroll: true });
     });
     box.appendChild(b);
   };
@@ -286,6 +299,7 @@ function renderLmSubcats() {
     const label = f === curScope().cat ? "(根目錄)" : f.slice(curScope().cat.length + 1);
     mk(f, label, counts[f]);
   });
+  markPress(box);
 }
 
 function loraCatPool() {
@@ -325,8 +339,10 @@ function renderLmList(filter, resetPage) {
     empty.className = "lora-empty";
     empty.textContent = "找不到 LoRA";
     box.appendChild(empty);
+    box.dataset.result = "empty";
     return;
   }
+  box.dataset.result = "found";
   const pages = Math.ceil(items.length / GEN_LORA_PAGE_SIZE);
   if (GEN_LORA_PAGE >= pages) GEN_LORA_PAGE = pages - 1;
   if (GEN_LORA_PAGE < 0) GEN_LORA_PAGE = 0;
@@ -347,6 +363,7 @@ function renderLmList(filter, resetPage) {
     const row = document.createElement("button");
     row.type = "button";
     row.className = "lora-row" + (slotIdx === GEN_ACTIVE_SLOT ? " on" : "");
+    if (slotIdx === GEN_ACTIVE_SLOT) row.setAttribute("aria-current", "true");
     if (l.preview) row.appendChild(makeLoraPreviewEl(l));
     else {
       const ph = document.createElement("span");
@@ -408,9 +425,11 @@ function renderLmList(filter, resetPage) {
     nav.append(prev, info, next);
     box.appendChild(nav);
   }
+  markPress(box);
 }
 
 function selectGenLora(l) {
+  const focused = document.activeElement?.closest?.(".lora-row");
   const otherIdx = otherSlotIndex();
   const other = GEN_LORA_SLOTS[otherIdx];
   if (other.lora && other.lora.folder === l.folder && other.lora.file === l.file) {
@@ -426,6 +445,9 @@ function selectGenLora(l) {
   renderGenCurrent();
   renderLmCurrent();
   renderLmList($("lm-search").value);
+  const selected = $("lm-list")?.querySelector?.(".lora-row.on");
+  selected?.classList.add("is-seated");
+  if (focused) selected?.focus({ preventScroll: true });
 }
 
 function renderGenCurrent() {
@@ -450,6 +472,7 @@ function renderLmSlotTabs() {
     const tab = document.createElement("button");
     tab.type = "button";
     tab.className = "lm-slot-tab" + (GEN_ACTIVE_SLOT === i ? " on" : "");
+    tab.setAttribute("aria-pressed", GEN_ACTIVE_SLOT === i ? "true" : "false");
     if (slot.lora && slot.lora.preview) tab.appendChild(makeLoraPreviewEl(slot.lora));
     else {
       const ph = document.createElement("span");
@@ -467,10 +490,12 @@ function renderLmSlotTabs() {
     meta.append(lb, ti);
     tab.appendChild(meta);
     tab.addEventListener("click", () => {
+      const focused = document.activeElement === tab;
       hideLoraPreviewTip();
       setActiveSlot(i);
       renderLmCurrent();
       renderLmList($("lm-search").value);
+      if (focused) $("lm-current")?.querySelector?.('.lm-slot-tab[aria-pressed="true"]')?.focus({ preventScroll: true });
     });
     if (slot.lora) {
       tab.addEventListener("mouseenter", () => showSingleLoraPreviewTip(tab, slot.lora));
@@ -494,6 +519,7 @@ function renderLmSlotTabs() {
     }
     wrap.appendChild(tab);
   });
+  markPress(wrap);
   return wrap;
 }
 
@@ -901,6 +927,7 @@ function drawLoraTarot(pool, label) {
     wrap.appendChild(card);
   });
   overlayOpen(ov);
+  markPress(wrap);
 }
 function closeLoraTarot() {
   fadeCloseOverlay($("lora-tarot"));
@@ -1358,6 +1385,7 @@ async function fetchCkpts() {
 }
 
 function selectCkpt(c) {
+  const focused = document.activeElement?.closest?.("#ckpt-list .lora-row");
   GEN_CKPT = c.ckpt_name;
   try {
     localStorage.setItem(CKPT_STORE, GEN_CKPT);
@@ -1367,6 +1395,9 @@ function selectCkpt(c) {
   renderCkptBtn();
   renderCkptCurrent();
   renderCkptList($("ckpt-search")?.value);
+  const selected = $("ckpt-list")?.querySelector?.(".lora-row.on");
+  selected?.classList.add("is-seated");
+  if (focused) selected?.focus({ preventScroll: true });
   toast(`底模已換成「${c.title || c.file}」`);
 }
 
@@ -1387,8 +1418,10 @@ function renderCkptList(filter) {
           ? "ComfyUI 沒有回報 checkpoint"
           : "這個資料夾沒有 checkpoint。連上 ComfyUI 後會改問它要清單。";
     box.appendChild(empty);
+    box.dataset.result = "empty";
     return;
   }
+  box.dataset.result = "found";
   for (const c of items) {
     const row = document.createElement("button");
     row.type = "button";
@@ -1419,6 +1452,7 @@ function renderCkptList(filter) {
     row.addEventListener("click", () => selectCkpt(c));
     box.appendChild(row);
   }
+  markPress(box);
 }
 
 async function openCkptModal() {

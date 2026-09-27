@@ -409,6 +409,25 @@ body.fuse {
   color: var(--color-muted);
 }
 
+.case-count.is-ticked,
+.reg-count.is-ticked,
+.pill-count.is-ticked,
+#hand-count.is-ticked {
+  display: inline-block;
+  animation: count-tick var(--dur-short) var(--ease-settle);
+}
+
+.plate-sub.is-ticked {
+  animation: count-tick var(--dur-short) var(--ease-settle);
+}
+
+@keyframes count-tick {
+  from {
+    transform: translateY(0.35em);
+    opacity: 0;
+  }
+}
+
 .case-q {
   width: 100%;
   min-height: 40px;
@@ -418,6 +437,7 @@ body.fuse {
   background: var(--color-paper-2);
   color: var(--color-ink);
   font-size: var(--text-sm);
+  transition: border-color var(--dur-short) var(--ease-out), box-shadow var(--dur-short) var(--ease-out);
 }
 
 .case-q::placeholder {
@@ -427,6 +447,12 @@ body.fuse {
 .case-q:focus-visible {
   outline: 2px solid var(--color-focus);
   outline-offset: 1px;
+  box-shadow: inset 0 -2px 0 var(--color-ink);
+}
+
+.case-q.is-miss {
+  border-color: var(--color-warn);
+  animation: refuse var(--dur-medium) var(--ease-out);
 }
 
 .case-tabs {
@@ -592,6 +618,13 @@ body.fuse {
   color: var(--color-muted);
 }
 
+.case-grid .card:focus-visible,
+.registers .card:focus-visible {
+  outline: 2px solid var(--color-focus);
+  outline-offset: 3px;
+  z-index: 2;
+}
+
 .case-more {
   grid-column: 1 / -1;
   height: 1px;
@@ -652,6 +685,10 @@ body.fuse {
 .plate-notice[data-kind="clash"],
 .plate-notice[data-kind="err"] {
   border-left-color: var(--rel-clash);
+}
+
+.plate-notice.is-refused {
+  animation: refuse var(--dur-medium) var(--ease-out);
 }
 
 .plate-notice[data-kind="info"] {
@@ -1655,6 +1692,13 @@ body.fuse {
   translate: 0 1px;
 }
 
+.quiet-btn.pressable:active:not(:disabled),
+.trial.pressable:active,
+.starter.pressable:active,
+.ghost-more.pressable:active {
+  translate: none;
+}
+
 .trials {
   display: grid;
   grid-template-columns: repeat(2, minmax(0, 1fr));
@@ -1675,7 +1719,7 @@ body.fuse {
   background: var(--color-paper-2);
   color: var(--color-ink-2);
   text-align: left;
-  transition: border-color var(--dur-micro) var(--ease-out), translate var(--dur-short) var(--ease-out), background-color var(--dur-micro) var(--ease-out);
+  transition: border-color var(--dur-micro) var(--ease-out), translate var(--dur-short) var(--ease-out), background-color var(--dur-micro) var(--ease-out), outline-color var(--dur-short) var(--ease-out);
 }
 
 /* 左邊那一格：印過就是成品的小圖，沒印過就是字母。 */
@@ -2411,7 +2455,15 @@ body.fuse {
   .pool-pill.is-bumped,
   .print.is-hung,
   .print.is-dried,
-  .print-peek.is-in {
+  .print-peek.is-in,
+  .case-count.is-ticked,
+  .reg-count.is-ticked,
+  .pill-count.is-ticked,
+  #hand-count.is-ticked,
+  .plate-sub.is-ticked,
+  .case-q.is-miss,
+  .plate-notice.is-refused,
+  .case-empty {
     animation: none;
   }
   .pv-roller[data-state="queued"] i,

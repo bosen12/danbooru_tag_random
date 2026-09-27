@@ -288,6 +288,24 @@ p {
   opacity: 0.85;
 }
 
+/* LoRA／模型大面板（web/lora.css，三個版本共用、視覺鎖在暗房那套）自己定了一套時間和曲線。
+ * 在 web6 裡把它們接到同一套 token：面板的開合、列的進場跟整頁同一種節奏。顏色不動。 */
+:root {
+  --root-ease-out: var(--ease-out);
+  --root-ease-exit: var(--ease-exit);
+  --root-ease-settle: var(--ease-settle);
+}
+body :is(.lora-modal, .lora-preview-tip, .tw-tip, .lora-toast, .lora-tarot, .shortcuts-overlay, .shot-viewer) {
+  --ease-out: var(--root-ease-out);
+  --ease-in: var(--root-ease-exit);
+  --ease-entrance: var(--root-ease-out);
+  --ease-spring: var(--root-ease-settle);
+  --d-micro: var(--dur-micro);
+  --d-exit: var(--dur-micro);
+  --d-ui: var(--dur-short);
+  --d-pop: var(--dur-medium);
+}
+
 /* ---------- 桅杆 ---------- */
 
 .mast {
@@ -2107,4 +2125,105 @@ body[data-dragging="true"] .library[data-over="true"] {
   display: flex;
   align-items: center;
   gap: var(--space-xs);
+}
+
+/* 墨池的回饋：字先壓下，狀態像墨印落在紙上。 */
+.lib-search input {
+  transform-origin: left center;
+  transition: transform var(--dur-short) var(--ease-out), opacity var(--dur-short) var(--ease-out);
+}
+
+.lib-search:focus-within input {
+  transform: scale(1.005);
+}
+
+.library[data-search="found"] .lib-count {
+  color: var(--color-ink);
+}
+
+.lib-empty,
+.pool-empty,
+.lora-empty {
+  animation: ink-empty-in var(--dur-medium) var(--ease-out) both;
+}
+
+@keyframes ink-empty-in {
+  from { opacity: 0; transform: translateY(5px); }
+  to { opacity: 1; transform: none; }
+}
+
+.suit-tab,
+.group-chip,
+.chip-toggle,
+.stepper button,
+.pool-x,
+.shot-toggle,
+.toast-action {
+  transition: transform var(--dur-short) var(--ease-settle), opacity var(--dur-short) var(--ease-out);
+}
+
+.suit-tab[aria-pressed="true"] b,
+.group-chip[aria-pressed="true"] .chip-seal {
+  filter: saturate(1.3);
+}
+
+.toast-action:active {
+  transform: translateY(1px) scale(0.97);
+}
+
+.shot[data-status="queued"] .status,
+.shot[data-status="running"] .status {
+  opacity: 0.85;
+  animation: ink-working var(--dur-breath) var(--ease-in-out) infinite alternate;
+}
+
+@keyframes ink-working {
+  to { opacity: 0.5; }
+}
+
+.shot[data-status="done"] .status {
+  color: var(--color-ok, var(--color-accent));
+}
+
+.shot[data-status="failed"] .shot-frame {
+  filter: saturate(0.75);
+}
+
+body .lora-modal .pressable,
+body .lora-tarot .pressable,
+body .shortcuts-overlay .pressable {
+  transition: transform var(--dur-short) var(--ease-settle), opacity var(--dur-short) var(--ease-out);
+}
+
+body .lora-modal .pressable:active:not(:disabled),
+body .lora-tarot .pressable:active:not(:disabled),
+body .shortcuts-overlay .pressable:active:not(:disabled) {
+  transform: translateY(1px) scale(0.97);
+}
+
+body .lora-modal :focus-visible,
+body .lora-tarot :focus-visible,
+body .shortcuts-overlay :focus-visible {
+  outline: 2px solid var(--color-focus);
+  outline-offset: 2px;
+}
+
+body .lora-modal .lora-empty,
+body .lora-modal .lm-none {
+  animation: ink-empty-in var(--dur-medium) var(--ease-out) both;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .lib-empty,
+  .pool-empty,
+  .lora-empty,
+  .shot[data-status="queued"] .status,
+  .shot[data-status="running"] .status,
+  body .lora-modal .lm-none {
+    animation: none;
+  }
+  *, *::before, *::after {
+    animation: none !important;
+    transition: none !important;
+  }
 }

@@ -33,7 +33,7 @@ import { HARD_BANNED, applyArtSources } from "./card-art.js";
 import { buildLibrary, createAssets, cardNode, setCardFlag, setEnterTarget, eagerArt, cardFacts, CARD_SUIT_INFO, CARD_SUITS, RATING_ZH } from "./cards.js";
 import { el, openSheet, anyOverlay, toast, ICONS } from "./ui.js";
 import { createDrag, inkRing } from "./drag.js";
-import { initMotion, flip, flipBy, leave, enter, confirmButton, gatherHome, flight, CURVE, DUR, css } from "./motion.js";
+import { initMotion, flip, flipBy, leave, enter, confirmButton, gatherHome, flight, seat, refuse, reducedMotion, CURVE, DUR, css } from "./motion.js";
 import { createHand } from "./hand.js";
 import { createGenerator, comfyOnline, viewSrc, tabTitle, watchLink, LINK_LABEL } from "./gen.js";
 import { genSeed, mountSeedControl, seedUseButton } from "./seed-control.js";
@@ -63,6 +63,16 @@ let stopAsked = false;
 let looping = false;
 const ui = { suit: "all", group: "", query: "", eraOnly: true, collapsed: false, ...S.loadUi() };
 const $ = (id) => document.getElementById(id);
+
+// 數字換版時只讓字面輕輕落定，讀屏仍直接讀到最後的數值。
+function settleText(node, text) {
+  if (!node || node.textContent === text) return;
+  node.textContent = text;
+  if (!reducedMotion()) node.animate(
+    [{ opacity: 0.45, transform: "translateY(4px)" }, { opacity: 1, transform: "none" }],
+    { duration: DUR.short, easing: css(CURVE.out) }
+  );
+}
 
 /* ================= 開機 ================= */
 
@@ -145,9 +155,13 @@ function renderRating() {
           role: "radio",
           "aria-checked": settings.rating === r ? "true" : "false",
           dataset: { v: r },
-          onclick: () => {
+          onclick: (e) => {
+            const focused = document.activeElement === e.currentTarget;
             setSettings({ rating: r });
             renderRating();
+            const selected = box.querySelector('[aria-checked="true"]');
+            if (focused) selected?.focus({ preventScroll: true });
+            seat(selected);
             renderLibrary();
             renderPool();
             renderRules();
@@ -162,8 +176,11 @@ function renderRating() {
 function pingLoop() {
   watchLink((st) => {
     const p = $("ping");
+    const changed = p.dataset.ok !== (st === "ok" ? "1" : "0") || p.dataset.link !== st;
     p.dataset.ok = st === "ok" ? "1" : "0";
-    p.querySelector("span").textContent = LINK_LABEL[st];
+    p.dataset.link = st;
+    if (changed) p.querySelector("span").textContent = LINK_LABEL[st];
+    if (changed) seat(p);
   });
 }
 
@@ -172,11 +189,11 @@ function pingLoop() {
 function renderLibraryChrome() {
   const tabs = $("suit-tabs");
   tabs.replaceChildren(
-    el("button", { class: "suit-tab", type: "button", "aria-pressed": ui.suit === "all" ? "true" : "false", onclick: () => pickSuit("all") }, "全部"),
+    el("button", { class: "suit-tab pressable", type: "button", "aria-pressed": ui.suit === "all" ? "true" : "false", onclick: (e) => pickSuit("all", e.currentTarget) }, "全部"),
     ...CARD_SUITS.map((s) =>
       el(
         "button",
-        { class: "suit-tab", type: "button", style: `--suit: var(--suit-${s})`, "aria-pressed": ui.suit === s ? "true" : "false", onclick: () => pickSuit(s) },
+        { class: "suit-tab pressable", type: "button", style: `--suit: var(--suit-${s})`, "aria-pressed": ui.suit === s ? "true" : "false", onclick: (e) => pickSuit(s, e.currentTarget) },
         el("b", { "aria-hidden": "true" }, CARD_SUIT_INFO[s].glyph),
         CARD_SUIT_INFO[s].zh
       )
@@ -186,6 +203,7 @@ function renderLibraryChrome() {
   q.value = ui.query;
   q.oninput = () => {
     ui.query = q.value.trim();
+    q.closest(".lib-search").dataset.typing = ui.query ? "true" : "false";
     renderLibrary();
   };
   q.onkeydown = libSearchKeys;
@@ -207,11 +225,15 @@ function syncCollapse() {
   $("lib-toggle").setAttribute("aria-expanded", ui.collapsed ? "false" : "true");
 }
 
-function pickSuit(s) {
+function pickSuit(s, from) {
+  const focused = document.activeElement === from;
   ui.suit = s;
   ui.group = "";
   saveUi();
   renderLibraryChrome();
+  const selected = $("suit-tabs").querySelector('[aria-pressed="true"]');
+  if (focused) selected?.focus({ preventScroll: true });
+  seat(selected);
   dealLibrary = true;
   renderLibrary();
 }
@@ -248,7 +270,7 @@ function countLine(shown) {
     hid.era && `${hid.era} 張不屬於這個時代`,
   ].filter(Boolean);
   const box = $("lib-count");
-  box.textContent = `${shown} / ${total} 張`;
+  settleText(box, `${shown} / ${total} 張`);
   box.title = `字盒共 ${total} 張，這裡顯示 ${shown} 張` + (why.length ? `。${why.join("、")}` : "") + (shown < total - hid.rating - hid.gender - hid.era ? "。其餘被花色、分類或搜尋篩掉" : "");
 }
 
@@ -263,11 +285,11 @@ function renderLibrary() {
     const groups = [...new Map(inSuit.map((c) => [c.group, [c.groupZh, c.seal]])).entries()];
     chips.hidden = groups.length < 2;
     chips.replaceChildren(
-      el("button", { class: "group-chip", type: "button", "aria-pressed": ui.group === "" ? "true" : "false", onclick: () => pickGroup("") }, "全部"),
+      el("button", { class: "group-chip pressable", type: "button", "aria-pressed": ui.group === "" ? "true" : "false", onclick: (e) => pickGroup("", e.currentTarget) }, "全部"),
       ...groups.map(([g, [zh, seal]]) =>
         el(
           "button",
-          { class: "group-chip", type: "button", "aria-pressed": ui.group === g ? "true" : "false", onclick: () => pickGroup(g) },
+          { class: "group-chip pressable", type: "button", "aria-pressed": ui.group === g ? "true" : "false", onclick: (e) => pickGroup(g, e.currentTarget) },
           seal ? el("b", { class: "chip-seal", "aria-hidden": "true" }, seal) : null,
           zh
         )
@@ -277,6 +299,10 @@ function renderLibrary() {
   const list = inSuit.filter((c) => (!ui.group || c.group === ui.group) && (!q || c.zh.toLowerCase().includes(q) || c.tag.includes(q)));
   countLine(list.length);
   const grid = $("lib-grid");
+  const was = $("library").dataset.search;
+  $("library").dataset.search = q ? (list.length ? "found" : "empty") : "idle";
+  // 打到沒有符合的那一下，搜尋框輕輕搖頭（跟疊印台的找牌框一樣）。之後繼續打、仍然沒有，不再搖。
+  if (q && !list.length && was !== "empty") refuse($("lib-q"));
   if (!list.length) {
     grid.replaceChildren(el("p", { class: "lib-empty" }, q ? `字盒裡沒有「${ui.query}」。可能被分級、性別或時代收起來了。` : "這一格沒有字。"));
     markEnterTarget();
@@ -388,11 +414,15 @@ function moreLibrary(n = LIB_PAGE) {
   libObserver.observe(more);
 }
 
-function pickGroup(g) {
+function pickGroup(g, from) {
+  const focused = document.activeElement === from;
   ui.group = g;
   saveUi();
   dealLibrary = true;
   renderLibrary();
+  const selected = $("group-chips").querySelector('[aria-pressed="true"]');
+  if (focused) selected?.focus({ preventScroll: true });
+  seat(selected);
 }
 
 let hand = null;
@@ -802,7 +832,7 @@ function zh(tag) {
 function renderPool(fresh) {
   const well = $("pool-well");
   const tags = [...pool].filter((t) => lib.byTag.has(t));
-  $("pool-count").textContent = tags.length ? `${tags.length} 張會一定進圖` : "";
+  settleText($("pool-count"), tags.length ? `${tags.length} 張會一定進圖` : "");
   $("pool-clear").hidden = !tags.length;
   if (!tags.length) {
     lastClash = new Set();
@@ -873,7 +903,7 @@ function renderPool(fresh) {
         "div",
         { class: "pool-slot", style: poolInbound.has(t) ? "visibility: hidden" : undefined },
         node,
-        el("button", { class: "pool-x", type: "button", "aria-label": `把「${card.zh}」拿出合成池`, onclick: () => unpin(t) }, "×")
+        el("button", { class: "pool-x pressable", type: "button", "aria-label": `把「${card.zh}」拿出合成池`, onclick: () => unpin(t) }, "×")
       );
     })
   );
@@ -898,6 +928,7 @@ function renderPoolClash(pairs) {
 
 function renderRules() {
   const box = $("rules");
+  const moreOpen = box.querySelector(".more-rules")?.open || false;
   const heatRow = el(
     "div",
     { class: "rule-field", role: "group", "aria-label": "尺度" },
@@ -905,16 +936,20 @@ function renderRules() {
       el(
         "button",
         {
-          class: "chip-toggle",
+          class: "chip-toggle pressable",
           type: "button",
           dataset: { heat: h },
           "aria-pressed": settings.heats.includes(h) && !heatBlockedByRating(h, settings.rating) ? "true" : "false",
           // 分級擋掉的尺度跟主工具一樣變灰：這一級根本抽不到那種畫面。
           disabled: heatBlockedByRating(h, settings.rating),
           title: heatBlockedByRating(h, settings.rating) ? `${RATING_LABEL[settings.rating]}不會出現${HEAT_ZH[h]}` : undefined,
-          onclick: () => {
+          onclick: (e) => {
+            const focused = document.activeElement === e.currentTarget;
             setSettings({ heats: toggleHeat(settings.heats, h) });
             renderRules();
+            const selected = $("rules").querySelector(`.chip-toggle[data-heat="${h}"]`);
+            if (focused) selected?.focus({ preventScroll: true });
+            seat(selected);
           },
         },
         HEAT_ZH[h]
@@ -930,6 +965,7 @@ function renderRules() {
   eraSel.value = settings.eras.length === 1 ? settings.eras[0] : "mixed";
   eraSel.onchange = () => {
     setSettings({ eras: eraSel.value === "mixed" ? [...ERAS] : [eraSel.value] });
+    seat(eraSel);
     renderLibrary();
   };
   const who = settings.girl && settings.boy ? "any" : settings.boy ? "boy" : "girl";
@@ -947,9 +983,13 @@ function renderRules() {
           type: "button",
           role: "radio",
           "aria-checked": who === k ? "true" : "false",
-          onclick: () => {
+          onclick: (e) => {
+            const focused = document.activeElement === e.currentTarget;
             setSettings({ girl: k !== "boy", boy: k !== "girl" });
             renderRules();
+            const selected = $("rules").querySelector('[aria-label="畫面裡有誰"] [aria-checked="true"]');
+            if (focused) selected?.focus({ preventScroll: true });
+            seat(selected);
             renderLibrary();
           },
         },
@@ -976,10 +1016,11 @@ function renderRules() {
   sizeSel.onchange = () => {
     const s = SIZES.find((x) => x.id === sizeSel.value);
     setSettings({ width: s.w, height: s.h });
+    seat(sizeSel);
   };
   const sceneSel = el("select", { class: "select", "aria-label": "場景合理度" }, SCENE_MODES.map((m) => el("option", { value: m }, SCENE_MODE_LABELS[m])));
   sceneSel.value = settings.sceneMode;
-  sceneSel.onchange = () => setSettings({ sceneMode: sceneSel.value });
+  sceneSel.onchange = () => { setSettings({ sceneMode: sceneSel.value }); seat(sceneSel); };
   const job = switchBox("抽職業", settings.drawJob, (v) => setSettings({ drawJob: v }));
   const eraOnly = switchBox("字盒只看這個時代", ui.eraOnly, (v) => {
     ui.eraOnly = v;
@@ -991,8 +1032,8 @@ function renderRules() {
     el("div", { class: "rule-row" }, el("span", { class: "rule-label" }, "尺度"), heatRow, el("span", { class: "rule-label" }, "時代"), eraSel, el("span", { class: "rule-label" }, "人物"), whoRow),
     el(
       "details",
-      { class: "more-rules" },
-      el("summary", {}, "更多規則：每段張數、尺寸、場景、職業"),
+      { class: "more-rules", open: moreOpen },
+      el("summary", { class: "pressable" }, "更多規則：每段張數、尺寸、場景、職業"),
       el(
         "div",
         {},
@@ -1006,8 +1047,8 @@ function renderRules() {
 function stepper(label, value, min, max, onChange) {
   let v = value;
   const out = el("output", {}, v);
-  const minus = el("button", { type: "button", "aria-label": `${label}少一個` }, "−");
-  const plus = el("button", { type: "button", "aria-label": `${label}多一個` }, "＋");
+  const minus = el("button", { class: "pressable", type: "button", "aria-label": `${label}少一個` }, "−");
+  const plus = el("button", { class: "pressable", type: "button", "aria-label": `${label}多一個` }, "＋");
   const sync = () => {
     out.textContent = v;
     minus.disabled = v <= min;
@@ -1194,6 +1235,7 @@ function drawBatch(gen) {
     made.push(shot);
   }
   if (!made.length) {
+    refuse(document.activeElement?.closest?.("button") || $("go-bar"));
     toast("這一輪抽不出東西：合成池的字可能互相卡住，換一兩張試試");
     return;
   }
@@ -1202,6 +1244,10 @@ function drawBatch(gen) {
     const node = shotNode(shot, true);
     wall.prepend(node);
     layoutFans(node);
+    // 一次抽很多張：由上往下一張接一張落下（像一疊印好的紙依序攤開），不要全部同一瞬間冒出來。
+    // 前八張錯開，後面的跟第八張一起，整段不會拖太久。
+    const v = made.indexOf(shot);
+    enter(node, { delay: Math.min(v, 8) * (DUR.micro / 3) });
   }
   $("wall-empty").hidden = true;
   trimWall();
@@ -1209,7 +1255,7 @@ function drawBatch(gen) {
   // 一次抽超過 80 張時，最舊的幾張剛做好就被 trimWall 裁掉了：只送還在牆上的。
   if (gen) for (const shot of made) if (shots.includes(shot)) generator.enqueue(shot);
   renderGoBar();
-  document.getElementById("wall-head").scrollIntoView({ block: "nearest", behavior: "smooth" });
+  document.getElementById("wall-head").scrollIntoView({ block: "nearest", behavior: reducedMotion() ? "instant" : "smooth" });
 }
 
 function makeShot(drawn, seed, poolAtDraw) {
@@ -1312,7 +1358,7 @@ function shotNode(shot, deal) {
   const suits = CARD_SUITS.filter((s) => shot.drawn.some((d) => lib.byTag.get(d.tag)?.suit === s) || shot.mine.some((t) => lib.byTag.get(t)?.suit === s));
   const toggle = el(
     "button",
-    { class: "shot-toggle", type: "button", "aria-expanded": open ? "true" : "false", "aria-controls": cards.id, title: "展開／收起這張用到的牌" },
+    { class: "shot-toggle pressable", type: "button", "aria-expanded": open ? "true" : "false", "aria-controls": cards.id, title: "展開／收起這張用到的牌" },
     el("span", { class: "mini", "aria-hidden": "true" }, suits.map((s) => el("i", { style: `--suit: var(--suit-${s})` }))),
     `牌 · ${total}`,
     el("span", { class: "chev", "aria-hidden": "true" })
@@ -1443,7 +1489,9 @@ function layoutFans(shotEl) {
 }
 
 function paintShot(node, shot) {
+  const previousStatus = node.dataset.status;
   node.dataset.status = shot.status;
+  if (previousStatus && previousStatus !== shot.status && (shot.status === "done" || shot.status === "failed")) seat(node);
   const frame = node.querySelector(".shot-frame");
   const src = viewSrc(shot.image) || shot.preview;
   let img = frame.querySelector("img");
@@ -1521,8 +1569,8 @@ function paintShot(node, shot) {
   } else if (bar) bar.remove();
   const status = node.querySelector(".shot-meta .status");
   status.dataset.kind = shot.status === "failed" ? "err" : "";
-  status.textContent =
-    shot.status === "done" ? "印好了" : shot.status === "running" ? shot.note || "印製中" : shot.status === "drawn" ? "只抽牌" : words[shot.status] || "";
+  settleText(status,
+    shot.status === "done" ? "印好了" : shot.status === "running" ? shot.note || "印製中" : shot.status === "drawn" ? "只抽牌" : words[shot.status] || "");
 }
 
 const REPRINTABLE = new Set(["drawn", "failed", "cancelled", "stopped"]);
@@ -1601,6 +1649,7 @@ async function copyPos(shot, btn) {
     if (btn) confirmButton(btn);
     else toast("POS 複製好了");
   } catch {
+    refuse(btn);
     toast("複製不了，請到「放大」裡手動選取");
   }
 }
