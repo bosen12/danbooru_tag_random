@@ -26,8 +26,8 @@ const TOUCH_HOLD = 280;
 const TOUCH_SLOP = 8;
 // 落下、彈回、被吸進廢字簍：用兩個房間共用的動態詞彙（motion.js）。長按 TOUCH_HOLD 跟 CSS 的壓下綁在一起，不動。
 // 親手拖過來放下的那一下要看得到它「落進去」：short（220ms）像瞬移，medium（320ms）專案主試過還是偏快。
-// long（420ms）看得到弧線、放大、落定三段，又不會讓人等。
-const LAND_MS = DUR.long;
+// 專案主定在 480ms：long（420）和 xl（540）的正中間，看得到弧線、放大、落定三段，又不會讓人等。
+const LAND_MS = (DUR.long + DUR.xl) / 2;
 const HOME_MS = DUR.medium;
 const SINK_MS = DUR.short;
 const BASE_TILT = -2;
