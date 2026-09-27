@@ -451,16 +451,23 @@ function undo() {
 function clearBed() {
   if (!bed.pins.length) return;
   const snaps = bed.pins.map((t) => plateNode(t)).filter(Boolean).map(snapshot);
-  const tags = snaps.map((s) => s.node.dataset.tag);
-  for (const t of tags) if (hand?.has(t)) hand.arriveAt(t, 700);
+  // 分兩路：偏好卡牌回到手上，其他的掃成一疊收回字盒。
+  const toHand = snaps.filter((s) => hand?.has(s.node.dataset.tag));
+  const toCase = snaps.filter((s) => !hand?.has(s.node.dataset.tag));
+  // 托盤那幾格在重畫的同一刻就先藏著（等影子落地才亮）。
+  for (const s of toHand) hand.arriveAt(s.node.dataset.tag, 2400);
   commit(emptyBed(), "清版", []);
-  // 清版：先把版上的牌掃成一疊（它們自己的中心），整疊一起收回字盒；字盒裡看得到的那幾張依序輕輕收下。
-  const ms = sweepHome(snaps, tags);
-  // 「空白的版」等那一疊離開才浮上來：不要一按清版底下就瞬間換成起手組、牌還飄在上面。
-  if (ms && !reduced()) {
+  // 清版：其他的牌先掃成一疊（它們自己的中心），整疊一起收回字盒；字盒裡看得到的那幾張依序輕輕收下。
+  // 偏好卡牌同時一張一張飛回手上（托盤開著回那一格，收著收進標籤）。
+  // 偏好卡牌先動身（回到手上），其他的晚一拍才開始收成一疊：兩件事分得開，不會看起來像被吸進那疊又跳出來。
+  const handMs = hand ? hand.receive(toHand) : 0;
+  const ms = sweepHome(toCase, toCase.map((s) => s.node.dataset.tag), { start: toHand.length ? 110 : 0 });
+  // 「空白的版」等牌離開卡池才浮上來：不要一按清版底下就瞬間換成起手組、牌還飄在上面。
+  const away = Math.max(ms * 0.58, handMs * 0.45);
+  if (away && !reduced()) {
     $("registers").animate([{ opacity: 0, transform: "translateY(8px)" }, { opacity: 1, transform: "none" }], {
       duration: DUR.medium,
-      delay: Math.round(ms * 0.58),
+      delay: Math.round(away),
       easing: css(CURVE.out),
       fill: "backwards",
     });
@@ -1739,8 +1746,10 @@ function stamp(node, cls = "is-stamped") {
  * 以前一律原地往上飄走 —— 上面幾排的牌看起來像飛出畫面，也看不出牌去了哪裡。
  */
 function flyHome(snap, delay = 0) {
-  if (reduced() || !snap.rect.width) return;
   const tag = snap.node.dataset.tag;
+  // 偏好卡牌：回到手上（托盤開著回那一格，收著收進標籤），由托盤自己演。
+  if (tag && hand?.has(tag)) return void hand.receive([snap], { delay });
+  if (reduced() || !snap.rect.width) return;
   // 偏好卡牌裡的牌從版上拿下來：回到底下的扇形，不回字盒。
   const home = tag && ((hand?.has(tag) && hand.nodeOf(tag)) || caseCard(tag));
   const inView = (r) => r && r.width > 0 && r.bottom > 0 && r.top < innerHeight && r.right > 0 && r.left < innerWidth;
@@ -1769,7 +1778,7 @@ function flyHome(snap, delay = 0) {
 }
 
 /** 一疊牌收回字盒：疊在卡池中間，整疊飛到字盒那一欄（看不到字盒就原地淡掉）。 */
-function sweepHome(snaps, tags) {
+function sweepHome(snaps, tags, { start = 0 } = {}) {
   if (reduced() || !snaps.length) return 0;
   // 疊在這些牌的中心（不是整個卡池的中心）：牌各自往中間收一點點就疊好，不會橫越整個版、
   // 也不會疊在清版後才出現的「空白的版」上面。
@@ -1780,7 +1789,7 @@ function sweepHome(snaps, tags) {
   };
   const grid = $("case-grid").getBoundingClientRect();
   const home = grid.width && grid.bottom > 0 && grid.top < innerHeight ? { x: grid.left + grid.width / 2, y: Math.max(grid.top, 0) + 60 } : null;
-  const ms = gatherHome(snaps, pile, home, { cls: "flying" });
+  const ms = gatherHome(snaps, pile, home, { cls: "flying", start });
   if (!home) return ms;
   const seen = tags.map((t) => caseCard(t)).filter((n) => {
     const r = n && n.getBoundingClientRect();

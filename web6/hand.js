@@ -670,6 +670,80 @@ export function createHand({
     if (!reduced()) s.querySelector(".fav-card").animate([{ translate: "0 3px", scale: "0.98" }, { translate: "0 -1px", scale: "1.01" }, { translate: "0 0", scale: "1" }], { duration: DUR.short, easing: css(CURVE.out) });
   }
 
+  /**
+   * 牌從卡池回到手上（清版、拿下來、被擠掉）：snaps 是那幾張離開前的樣子 [{ node, rect }]
+   * （房間在重畫之前量好，重畫之後同一個 task 裡呼叫，中間不會有一格牌不見了的空白）。
+   *   托盤開著：每張飛回它在托盤上的那一格（那格先留好、藏著，托盤變寬、整排讓位都跟得上），
+   *             落地時轉到扇形上那一格的角度，落定才亮。
+   *   托盤收著：飛向那顆標籤的圖示、縮小被收進去，最後一張進去時標籤脹一下 —— 不自己打開托盤。
+   * delay：第一張什麼時候起飛；每張再錯開一點（像一張一張收回手裡）。回傳全部落地要多久。
+   */
+  function receive(snaps, { delay = 0, stagger = 45 } = {}) {
+    const mine = snaps.filter((s) => s && s.rect && s.rect.width && tags.includes(s.node.dataset.tag));
+    if (!mine.length) return 0;
+    if (reduced()) {
+      for (const s of mine) reveal(s.node.dataset.tag);
+      return 0;
+    }
+    // 由左到右收（跟手牌的順序一樣），看起來是一張一張拿回手裡，不是同時亂飛。
+    mine.sort((a, b) => a.rect.left - b.rect.left || a.rect.top - b.rect.top);
+    let end = 0;
+    let left = mine.length;
+    mine.forEach((snap, i) => {
+      const tag = snap.node.dataset.tag;
+      const d = delay + i * stagger;
+      // 托盤那一格先藏著；時間只是保險，正常是影子落地時 reveal。
+      arriveAt(tag, d + 2400);
+      const slotCard = open ? slots.get(tag)?.querySelector(".fav-card") : null;
+      // 影子用托盤那張（同一張牌，沒有卡池上的墨點、附帶章）：離開卡池就是手上的那張了。
+      const ghost = (slotCard || makeNode(tag)).cloneNode(true);
+      ghost.classList.remove("fav-card", "is-related", "is-stamped", "is-popped");
+      ghost.style.visibility = "";
+      ghost.removeAttribute("tabindex");
+      const landed = () => {
+        reveal(tag);
+        left -= 1;
+        if (!left && !open) pulse();
+      };
+      let f;
+      if (slotCard) {
+        f = flight(ghost, snap.rect, () => (open && slots.get(tag)?.isConnected ? slots.get(tag).querySelector(".fav-card") : null), {
+          delay: d,
+          // 弧拱低一點：托盤在下面，拱太高會先往上飛、跟收成一疊的牌撞在一起。
+          arc: 12,
+          zIndex: 95,
+          tilt: i % 2 ? 4 : -4,
+          endRotate: angleOf(tag),
+          onLand: landed,
+        });
+      } else {
+        // 收著：落點是標籤上那個圖示，牌縮成兩成被收進去。
+        const into = () => {
+          const icon = tab.querySelector("svg") || tab;
+          const r = icon.getBoundingClientRect();
+          const w = snap.rect.width * 0.2;
+          return { left: r.left + r.width / 2 - w / 2, top: r.top + r.height / 2 - (w * 1.4625) / 2, width: w };
+        };
+        f = flight(ghost, snap.rect, into, { delay: d, arc: 24, tilt: i % 2 ? 6 : -6, endOpacity: 0.15, scaleLate: 0.8, zIndex: 95, onLand: landed });
+      }
+      end = Math.max(end, d + f.duration);
+    });
+    return end;
+  }
+
+  /** 托盤上那一格現在的角度（扇形的那一點點斜）。 */
+  function angleOf(tag) {
+    const m = /rotate\((-?[\d.]+)deg\)/.exec(slots.get(tag)?.style.transform || "");
+    return m ? parseFloat(m[1]) : 0;
+  }
+
+  /** 收著的標籤脹一下（牌被收進去了）。 */
+  function pulse() {
+    if (reduced()) return;
+    el.animate([{ scale: "1" }, { scale: "1.08" }, { scale: "1" }], { duration: DUR.long, easing: css(CURVE.settle) });
+    el.querySelector(".fav-count")?.animate([{ scale: "1" }, { scale: "1.3" }, { scale: "1" }], { duration: DUR.long, easing: css(CURVE.settle) });
+  }
+
   /** 字盒上標出哪幾張在手牌裡（root 底下的 .card[data-tag]）。 */
   function mark(root) {
     if (!root) return;
@@ -714,6 +788,7 @@ export function createHand({
     update: () => layout(true),
     arriveAt,
     reveal,
+    receive,
     mark,
     /** 托盤上那張牌（收起來、沒擺出來就 null）：房間拿它當飛回來的落點。 */
     nodeOf: (t) => (open && slots.get(t)?.isConnected ? slots.get(t).querySelector(".fav-card") : null),

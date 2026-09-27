@@ -1687,7 +1687,7 @@ const ALBUM_FIXTURE = [
   const wf = readFileSync(join(ROOT, "web/workflow.js"), "utf8");
   const fuseHtml = readFileSync(join(ROOT, "web6/fuse.html"), "utf8");
   ok("墨池／疊印台右上角：工作流、聲音是圖示（名字在 aria-label），排字匣的工作流照舊是字", wf.includes('class="wf-ico"') && fuseHtml.includes('id="sound-btn"') && !fuseHtml.includes(">聲音</button>") && fuse6.includes("snd.innerHTML = sfx.on") && readFileSync(join(ROOT, "web/boot.css"), "utf8").includes("#wf-pick-btn .wf-ico {"));
-  ok("清版／清空／一次撤回四張以上：先掃成一疊再整疊收回字盒（不各飛各的）", motion6.includes("export function gatherHome(") && fuse6.includes("sweepHome(snaps, tags);") && fuse6.includes("if (leaving.length >= 4) sweepHome(") && app6.includes("gatherHome(leaving,"));
+  ok("清版／清空／一次撤回四張以上：先掃成一疊再整疊收回字盒（不各飛各的）", motion6.includes("export function gatherHome(") && fuse6.includes("sweepHome(toCase, toCase.map((s) => s.node.dataset.tag)") && fuse6.includes("if (leaving.length >= 4) sweepHome(") && app6.includes("gatherHome(toLib,"));
   const peekSrc = readFileSync(join(ROOT, "web/card-peek.js"), "utf8");
   ok("放大卡：停一下才出現、從牌那一側長出來、換到隔壁那張滑過去（離開延遲一下才收）", peekSrc.includes("const INTENT_MS = 120;") && peekSrc.includes("const LEAVE_MS = 80;") && peekSrc.includes('peek.classList.toggle("is-gliding", wasShown);') && peekSrc.includes('p.dataset.side = side;'));
   ok("墨池廢字簍：撿回來的浮起來、旁邊補位、標題數字跟著變；全部撿回來一張張起來", app6.includes("const rescue = (node, delay = 0) =>") && app6.includes("廢字簍・${left} 個字") && app6.includes("都撿回來了。"));
@@ -1746,7 +1746,7 @@ const ALBUM_FIXTURE = [
       ok("疊印台放牌：影子追落點，飛的路上版重畫出來的那張也藏著（不會出現兩張）", fuse6.includes("flight(ghost, from, () => plateNode(tag)") && fuse6.includes('if (inbound.has(tag)) node.style.visibility = "hidden";'));
       ok("墨池放牌：影子追落點，池裡那一格（牌＋×）落地才一起出現", app6.includes("flight(ghost, from, () => poolNode(tag)") && app6.includes('style: poolInbound.has(t) ? "visibility: hidden" : undefined'));
       ok("拿下來飛回托盤：托盤那格等影子落地才亮（reveal），不是猜一個固定時間", hand6.includes("function reveal(tag)") && fuse6.includes("hand.reveal(tag)") && app6.includes("hand.reveal(tag)") && hand6.includes("flight(f, from,"));
-      ok("清版：疊在牌自己的中心、兩段各用各的曲線，「空白的版」等那一疊離開才浮上來", motion6.includes('easing: "linear", fill: "both"') && fuse6.includes("cs.reduce((a, c) => a + c.x, 0)") && fuse6.includes("delay: Math.round(ms * 0.58),"));
+      ok("清版：疊在牌自己的中心、兩段各用各的曲線，「空白的版」等那一疊離開才浮上來", motion6.includes('easing: "linear", fill: "both"') && fuse6.includes("cs.reduce((a, c) => a + c.x, 0)") && fuse6.includes("const away = Math.max(ms * 0.58, handMs * 0.45);") && fuse6.includes("delay: Math.round(away),"));
       ok("托盤收起／打開有變形（外框縮成標籤、牌由外往內沉下去；打開由中間往兩旁浮上來）", hand6.includes("function morphTo(change, changed)") && hand6.includes("function riseCards(delay0)") && css6.includes(".fav-hand.is-collapsing[data-open]"));
     }
     {
@@ -1779,6 +1779,12 @@ const ALBUM_FIXTURE = [
         });
       }
       ok("CSS 的轉場／動畫、JS 的 animate() 都用時間 token（不寫裸的毫秒數）", !raw.length, raw.slice(0, 8).join("、"));
+    }
+    {
+      const motion6b = readFileSync(join(ROOT, "web6/motion.js"), "utf8");
+      ok("清版／清空：偏好卡牌回到手上（托盤開著回那一格、收著收進標籤），其他的收成一疊回字盒；偏好卡牌先動身", hand6.includes("function receive(snaps, { delay = 0, stagger = 45 } = {})") && fuse6.includes("const toHand = snaps.filter((s) => hand?.has(s.node.dataset.tag));") && app6.includes("const toHand = leaving.filter((l) => hand?.has(l.node.dataset.tag));") && fuse6.includes("{ start: toHand.length ? 110 : 0 }") && app6.includes("{ start: toHand.length ? 110 : 0 }"));
+      ok("單張回手上也走同一條路（拿下來、被擠掉、拿出合成池）：托盤收著就收進標籤，不回字盒", fuse6.includes("if (tag && hand?.has(tag)) return void hand.receive([snap], { delay });") && app6.includes("if (hand?.has(tag)) return void hand.receive([{ node, rect }], { delay });"));
+      ok("回到托盤：落地轉到扇形那一格的角度；收進標籤：一路是一張牌、最後才縮，最後一張進去標籤脹一下；不自己打開托盤", motion6b.includes("endRotate * e") && motion6b.includes("scaleLate") && hand6.includes("endRotate: angleOf(tag)") && hand6.includes("if (!left && !open) pulse();") && motion6b.includes("const w = n.offsetWidth || r.width;"));
     }
     ok("工具列鈕：沒牌直接進挑牌，有牌打開／收起托盤；選單和詳情也能加", hand6.includes("function fromButton()") && fuse6.includes("hand?.fromButton()") && app6.includes("hand?.fromButton()") && fuse6.includes('"加入偏好卡牌"') && app6.includes('"加入偏好卡牌"'));
   }

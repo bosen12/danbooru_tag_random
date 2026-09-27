@@ -79,10 +79,11 @@ export function travelTime(dist) {
  *
  * from：{ left, top, width[, height] }。target：() => Element 或 rect（拿不到就沿用上一次的）。
  * 選項：duration（預設照距離）、delay、curve、arc（弧高 px）、tilt（最大轉角）、
- *       endScale（落地大小／落點寬）、endOpacity、zIndex、onLand。回傳 { cancel }。
+ *       endScale（落地大小／落點寬）、endOpacity、endRotate（落地的角度）、scaleLate（大小晚點才變）、
+ *       zIndex、onLand。回傳 { cancel, duration }。
  */
 export function flight(ghost, from, target, opts = {}) {
-  const { delay = 0, curve = CURVE.travel, arc = 34, tilt = -5, lift = 0.05, endScale = 1, endOpacity = 1, zIndex = 90, onLand = null } = opts;
+  const { delay = 0, curve = CURVE.travel, arc = 34, tilt = -5, lift = 0.05, endScale = 1, endOpacity = 1, endRotate = 0, scaleLate = 0, zIndex = 90, onLand = null } = opts;
   const fh = from.height || from.width * 1.4625;
   Object.assign(ghost.style, {
     position: "fixed",
@@ -100,8 +101,16 @@ export function flight(ghost, from, target, opts = {}) {
   let last = null;
   const resolve = () => {
     const n = typeof target === "function" ? target() : target;
-    const r = n && (typeof n.getBoundingClientRect === "function" ? (n.isConnected ? n.getBoundingClientRect() : null) : n);
-    if (r && r.width) last = { left: r.left, top: r.top, width: r.width, height: r.height || r.width * 1.4625 };
+    if (n && typeof n.getBoundingClientRect === "function") {
+      if (!n.isConnected) return last;
+      // 落點是元素：中心用外框的中心，大小用它自己的寬高（托盤的牌是轉過的，外框比牌大一圈）。
+      const r = n.getBoundingClientRect();
+      const w = n.offsetWidth || r.width;
+      const h = n.offsetHeight || r.height;
+      if (w) last = { left: r.left + r.width / 2 - w / 2, top: r.top + r.height / 2 - h / 2, width: w, height: h };
+      return last;
+    }
+    if (n && n.width) last = { left: n.left, top: n.top, width: n.width, height: n.height || n.width * 1.4625 };
     return last;
   };
   const first = resolve() || { left: from.left, top: from.top, width: from.width, height: fh };
@@ -136,8 +145,12 @@ export function flight(ghost, from, target, opts = {}) {
     const bump = Math.sin(Math.PI * p);
     const x = fcx + (tcx - fcx) * e - fcx;
     const y = fcy + (tcy - fcy) * e - arc * bump - fcy;
-    const s = (1 + ((to.width * endScale) / from.width - 1) * e) * (1 + lift * bump);
-    ghost.style.transform = `translate(${x.toFixed(2)}px, ${y.toFixed(2)}px) rotate(${(tilt * bump).toFixed(2)}deg) scale(${s.toFixed(4)})`;
+    // scaleLate：大小晚一點才變（0＝跟位置一起變；1＝幾乎到了才縮）—— 飛進小東西（標籤）時，
+    // 一路都還是一張牌、最後一段才被收進去，不是一出發就縮成一個點。
+    const se = scaleLate ? Math.pow(e, 1 + scaleLate * 3) : e;
+    const s = (1 + ((to.width * endScale) / from.width - 1) * se) * (1 + lift * bump);
+    // 轉角：途中微微轉（tilt），落地時轉到落點自己的角度（endRotate，托盤那把扇形每張斜一點）。
+    ghost.style.transform = `translate(${x.toFixed(2)}px, ${y.toFixed(2)}px) rotate(${(tilt * bump + endRotate * e).toFixed(2)}deg) scale(${s.toFixed(4)})`;
     // 影子跟著高度：飛到弧頂最深最散，落地前收回貼著桌面的那一層。
     ghost.style.boxShadow = `0 1px 0 var(--color-shine) inset, 0 ${(6 + 18 * bump).toFixed(1)}px ${(14 + 22 * bump).toFixed(1)}px var(--color-shade)`;
     if (endOpacity !== 1) ghost.style.opacity = String(1 + (endOpacity - 1) * Math.max(0, (e - 0.6) / 0.4));
@@ -324,7 +337,7 @@ export function flipBy(container, selector, key, mutate, { duration = DUR.medium
  * （字盒不在畫面上）：那就疊好之後原地淡掉。cls：飛行影子要加的 class（疊印台是 "flying"）。
  * 回傳整段要多久（毫秒），呼叫端用來排「字盒收下」那一下。
  */
-export function gatherHome(snaps, pile, home, { cls = "", duration = DUR.xl } = {}) {
+export function gatherHome(snaps, pile, home, { cls = "", duration = DUR.xl, start = 0 } = {}) {
   if (reducedMotion() || !snaps.length || !pile) return 0;
   const n = snaps.length;
   snaps.forEach((snap, i) => {
@@ -359,11 +372,11 @@ export function gatherHome(snaps, pile, home, { cls = "", duration = DUR.xl } = 
       frames.push({ transform: `translate(${px}px, ${py + 10}px) scale(${s1 * 0.9}) rotate(${rot}deg)`, opacity: 0 });
     }
     // 聚攏那段各自出發（最多差 80ms），之後同一時間一起走。
-    const delay = Math.min(80, i * 14);
-    g.animate(frames, { duration: duration - delay, delay, easing: "linear", fill: "both" });
-    setTimeout(() => g.remove(), duration + 40);
+    const delay = start + Math.min(80, i * 14);
+    g.animate(frames, { duration: duration - (delay - start), delay, easing: "linear", fill: "both" });
+    setTimeout(() => g.remove(), start + duration + 40);
   });
-  return duration;
+  return start + duration;
 }
 
 /** 一個東西離場：縮一點、淡掉，結束後才真的拿掉（done 裡做 DOM 移除，通常配 flip）。 */

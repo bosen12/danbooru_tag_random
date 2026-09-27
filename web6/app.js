@@ -607,8 +607,10 @@ const poolNode = (tag) => [...$("pool-well").querySelectorAll(".card")].find((n)
  * 字盒整個不在畫面上才原地掀開飄走。以前一律往下飄走，看不出牌去了哪裡。
  */
 function liftOut({ node, rect }, delay = 0) {
-  if (matchMedia("(prefers-reduced-motion: reduce)").matches || !rect.width) return;
   const tag = node.dataset.tag;
+  // 偏好卡牌：回到手上（托盤開著回那一格，收著收進標籤），由托盤自己演。
+  if (hand?.has(tag)) return void hand.receive([{ node, rect }], { delay });
+  if (matchMedia("(prefers-reduced-motion: reduce)").matches || !rect.width) return;
   const inView = (r) => r && r.width > 0 && r.bottom > 0 && r.top < innerHeight;
   const homeNow = () => (hand?.has(tag) && hand.nodeOf(tag)) || libCardNode(tag);
   const home = homeNow();
@@ -1851,14 +1853,19 @@ $("pool-clear").addEventListener("click", () => {
   if (!before.length) return;
   // 一張接一張收回字盒（從最後放的那張開始），五秒內可以反悔。
   const leaving = before.map(poolNode).filter(Boolean).map((n) => ({ node: n, rect: n.getBoundingClientRect() })).reverse();
-  for (const t of before) if (hand?.has(t)) hand.arriveAt(t, 700);
+  // 分兩路：偏好卡牌回到手上，其他的掃成一疊收回字盒。托盤那幾格在重畫的同一刻先藏著。
+  const toHand = leaving.filter((l) => hand?.has(l.node.dataset.tag));
+  const toLib = leaving.filter((l) => !hand?.has(l.node.dataset.tag));
+  for (const l of toHand) hand.arriveAt(l.node.dataset.tag, 2400);
   pool = new Set();
   commitPins();
-  // 先在合成池中間掃成一疊，整疊一起收回字盒（一張張各飛各的會交叉亂飛）。
+  // 先在合成池中間掃成一疊，整疊一起收回字盒（一張張各飛各的會交叉亂飛）；偏好卡牌同時一張一張回到手上。
   const well = $("pool-well").getBoundingClientRect();
   const grid = $("lib-grid").getBoundingClientRect();
   const home = grid.width && grid.bottom > 0 && grid.top < innerHeight ? { x: grid.left + grid.width / 2, y: Math.max(grid.top, 0) + 60 } : null;
-  gatherHome(leaving, { x: well.left + well.width / 2, y: well.top + well.height / 2 }, home);
+  // 偏好卡牌先動身回到手上，其他的晚一拍才收成一疊（兩件事分得開）。
+  hand?.receive(toHand);
+  gatherHome(toLib, { x: well.left + well.width / 2, y: well.top + well.height / 2 }, home, { start: toHand.length ? 110 : 0 });
   toast(`清空了合成池（${before.length} 張）`, {
     action: {
       label: "復原",
