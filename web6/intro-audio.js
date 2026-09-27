@@ -32,25 +32,51 @@ const CHORDS = [
 ];
 const chordAt = (barIndex) => CHORDS[Math.floor(barIndex / 2) % 4];
 
+/**
+ * 段落表：每一段 { from, to（小節）, kind, hat?, clap? }。kind：
+ *   open  只有鋪底；light 加上低音、稀的撥弦（沒有鼓）；mid 大鼓兩拍一下，進段 hat 小節後加 hi-hat、clap 小節後加拍手；
+ *   full  四拍大鼓、全部樂器、撥弦高八度；outro 鼓退掉，最後的和弦加鐘聲。
+ * 每一段開頭有撞擊、前一小節有噪音的上升；進入 light／mid／full 前還有呼的一聲。
+ */
+export const PLAN_FULL = [
+  { from: 0, to: 4, kind: "open" },
+  { from: 4, to: 13, kind: "light" },
+  { from: 13, to: 28, kind: "mid", hat: 4, clap: 8 },
+  { from: 28, to: 43, kind: "full" },
+  { from: 43, to: 48, kind: "outro" },
+];
+/** 只有墨池和疊印台的版本：墨池 4–19、找牌與拖曳 19–24、疊印台 24–39、撤回 39–43。 */
+export const PLAN_CARDS = [
+  { from: 0, to: 4, kind: "open" },
+  { from: 4, to: 19, kind: "mid", hat: 4, clap: 8 },
+  { from: 19, to: 24, kind: "mid", hat: 0, clap: 0 },
+  { from: 24, to: 39, kind: "full" },
+  { from: 39, to: 43, kind: "mid", hat: 0, clap: 0 },
+  { from: 43, to: 48, kind: "outro" },
+];
+
 /** 整首歌的事件表（每個都是 { t, dur, kind, ...參數 }），照時間排好。純資料，跟播放無關。 */
-export function buildEvents(extraCues = []) {
+export function buildEvents(extraCues = [], plan = PLAN_FULL) {
   const ev = [];
   const add = (t, dur, kind, o = {}) => ev.push({ t, dur, kind, ...o });
+  const secAt = (b) => plan.find((p) => b >= p.from && b < p.to) || plan[plan.length - 1];
+  const BRIGHT = { open: 0.35, light: 0.55, mid: 0.7, full: 0.9, outro: 0.6 };
   for (let b = 0; b < 48; b += 2) {
     const ch = chordAt(b);
+    const sec = secAt(b);
     const end = b >= 42;
     // 鋪底：開場很薄、段落越後面越亮；結尾那個和弦拉長。
-    const bright = b < 4 ? 0.35 : b < 13 ? 0.55 : b < 28 ? 0.7 : b < 43 ? 0.9 : 0.6;
-    if (b < 46) add(bar(b), BAR * 2 + (end ? 0 : 0.4), "pad", { notes: ch.notes, bright, gain: b < 4 ? 0.1 : 0.13 });
-    if (b >= 4 && b < 43) {
-      add(bar(b), BAR * 2, "bass", { f: hz(ch.root, 1), gain: b < 13 ? 0.22 : 0.3 });
-      // 撥弦琶音：十六分音符，上行再下行；排字匣段落比較稀（八分）。
-      const step = b < 13 ? 2 : 1;
+    if (b < 46) add(bar(b), BAR * 2 + (end ? 0 : 0.4), "pad", { notes: ch.notes, bright: BRIGHT[sec.kind], gain: sec.kind === "open" ? 0.1 : 0.13 });
+    // 低音、撥弦跟著和弦走（兩小節一塊），密度看這一塊開頭是哪一段。
+    if (sec.kind !== "open" && sec.kind !== "outro") {
+      add(bar(b), BAR * 2, "bass", { f: hz(ch.root, 1), gain: sec.kind === "light" ? 0.22 : 0.3 });
+      // 撥弦琶音：十六分音符，上行再下行；light 比較稀（八分）。
+      const step = sec.kind === "light" ? 2 : 1;
       const seq = [0, 1, 2, 3, 2, 1, 2, 3];
       for (let i = 0; i < 32; i += step) {
         const n = ch.notes[seq[i % 8]];
-        const oct = n[1] + 1 + (i % 16 >= 8 && b >= 28 ? 1 : 0);
-        add(bar(b) + (i * BEAT) / 4, BEAT * 0.9, "pluck", { f: hz(n[0], oct), gain: (b < 13 ? 0.05 : 0.06) * (i % 4 === 0 ? 1.25 : 1) });
+        const oct = n[1] + 1 + (i % 16 >= 8 && sec.kind === "full" ? 1 : 0);
+        add(bar(b) + (i * BEAT) / 4, BEAT * 0.9, "pluck", { f: hz(n[0], oct), gain: (sec.kind === "light" ? 0.05 : 0.06) * (i % 4 === 0 ? 1.25 : 1) });
       }
     }
   }
@@ -60,29 +86,34 @@ export function buildEvents(extraCues = []) {
   add(bar(44, 2), BAR * 3, "bell", { f: hz("A", 5), gain: 0.1 });
   add(bar(44), BAR * 3, "bass", { f: hz("D", 1), gain: 0.3 });
   // 鼓。
-  for (let b = 13; b < 43; b++) {
+  for (let b = 0; b < 48; b++) {
+    const sec = secAt(b);
+    if (sec.kind !== "mid" && sec.kind !== "full") continue;
+    const into = b - sec.from;
+    const full = sec.kind === "full";
     for (let q = 0; q < 4; q++) {
       const t = bar(b, q);
-      if (b < 28 ? q === 0 || q === 2 : true) add(t, 0.4, "kick", { gain: b < 28 ? 0.55 : 0.7 });
-      if (b >= 17) add(t + BEAT / 2, 0.06, "hat", { gain: b < 28 ? 0.05 : 0.07 });
-      if (b >= 21 && (q === 1 || q === 3)) add(t, 0.2, "clap", { gain: b < 28 ? 0.12 : 0.16 });
+      if (full || q === 0 || q === 2) add(t, 0.4, "kick", { gain: full ? 0.7 : 0.55 });
+      if (full || into >= (sec.hat ?? 4)) add(t + BEAT / 2, 0.06, "hat", { gain: full ? 0.07 : 0.05 });
+      if ((full || into >= (sec.clap ?? 8)) && (q === 1 || q === 3)) add(t, 0.2, "clap", { gain: full ? 0.16 : 0.12 });
     }
   }
   // 轉場。
-  add(bar(3), BAR, "riser", { gain: 0.1 });
-  add(bar(12), BAR, "riser", { gain: 0.14 });
-  add(bar(27), BAR, "riser", { gain: 0.16 });
-  add(bar(42), BAR, "riser", { gain: 0.14 });
-  for (const t of [bar(4), bar(13), bar(28), bar(43)]) add(t, 1.6, "impact", { gain: 0.5 });
-  for (const t of [bar(12, 3.2), bar(27, 3.2)]) add(t, 0.9, "whoosh", { gain: 0.18 });
+  const RISE = { light: 0.14, mid: 0.14, full: 0.16, outro: 0.14, open: 0.1 };
+  for (const sec of plan) {
+    if (sec.from === 0) continue;
+    add(bar(sec.from - 1), BAR, "riser", { gain: sec.from === 4 ? 0.1 : RISE[sec.kind] });
+    add(bar(sec.from), 1.6, "impact", { gain: 0.5 });
+    if (sec.from !== 4 && sec.kind !== "outro") add(bar(sec.from - 1, 3.2), 0.9, "whoosh", { gain: 0.18 });
+  }
   // 畫面給的音效（打字的喀、牌落地、碰撞…）。
   for (const c of extraCues) add(c.t, c.dur || 0.2, c.kind, c);
   ev.sort((a, b) => a.t - b.t);
   return ev;
 }
 
-export function createScore(extraCues = []) {
-  const events = buildEvents(extraCues);
+export function createScore(extraCues = [], plan = PLAN_FULL) {
+  const events = buildEvents(extraCues, plan);
   let ctx = null;
   let master = null;
   let wet = null;

@@ -2,7 +2,7 @@
 /**
  * 把介紹影片（web6/intro.html）輸出成 1080p60 的 .mp4。不是螢幕錄影：一格一格精準算。
  *
- *   node scripts/export_intro_video.mjs [輸出.mp4] [伺服器，預設 http://127.0.0.1:8796] [--fps 60] [--from 秒] [--to 秒]
+ *   node scripts/export_intro_video.mjs [輸出.mp4] [伺服器，預設 http://127.0.0.1:8796] [--fps 60] [--from 秒] [--to 秒] [--page intro-cards.html]
  *
  * 畫面：無頭 Edge（或 Chrome）開 1920×1080 的頁面，每一格用 __intro.seek(t) 畫出那一刻再截圖，
  *       直接灌進 ffmpeg（不存暫存圖片）。一格都不會掉、時間完全準。
@@ -24,8 +24,10 @@ const flag = (name, def) => {
 };
 const FPS = +flag("--fps", 60);
 const FROM = +flag("--from", 0);
+// --page intro-cards.html：只有墨池、疊印台的版本。
+const PAGE = flag("--page", "intro.html");
 const TO_ARG = flag("--to", null);
-const OUT = args[0] || join(homedir(), "Desktop", "排字匣-介紹影片-1080p60.mp4");
+const OUT = args[0] || join(homedir(), "Desktop", PAGE === "intro-cards.html" ? "墨池疊印台-介紹影片-1080p60.mp4" : "排字匣-介紹影片-1080p60.mp4");
 const BASE = args[1] || "http://127.0.0.1:8796";
 const W = 1920;
 const H = 1080;
@@ -91,7 +93,7 @@ const js = async (expression) => {
 try {
   await send("Page.enable");
   await send("Emulation.setDeviceMetricsOverride", { width: W, height: H, deviceScaleFactor: 1, mobile: false });
-  await send("Page.navigate", { url: `${BASE}/intro.html` });
+  await send("Page.navigate", { url: `${BASE}/${PAGE}` });
   process.stdout.write("載入中…");
   for (let i = 0; i < 240; i++) {
     await sleep(250);

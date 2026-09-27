@@ -15,7 +15,7 @@
  *   1:47  結尾：牌環繞、三個名字、git clone
  * 測試用：window.__intro.seek(秒) 直接畫出那一格（不出聲）；網址 ?t=秒 從那裡開始。
  */
-import { createScore, bar, LENGTH } from "./intro-audio.js";
+import { createScore, bar, LENGTH, PLAN_FULL, PLAN_CARDS } from "./intro-audio.js";
 import { buildLibrary, createAssets, cardNode, eagerArt, CARD_SUIT_INFO } from "./cards.js";
 import { ratingBlocked } from "./rules/rating.js";
 import { indexLexicon, defaultSettings, sanitizeSettings, drawOne, mulberry32, applyPin, contradictions, ACT_PLACE } from "./engine.js";
@@ -82,8 +82,46 @@ const spring = (dt, amp, k = 2.4, w = 8) => (dt < 0 ? 0 : amp * Math.exp(-dt * k
 const stage = $("stage");
 const world = $("world");
 const hud = $("hud");
-const acts = []; // { win: [a, b], el?, update(t) }
-const cues = []; // 給配樂的音效：{ t, kind, gain }
+const acts = []; // { win: [a, b], el?, update(t) }：時間是原版影片的時間
+const cues = []; // 給配樂的音效：{ t, kind, gain }（原版的時間）
+// 剪輯版自己的東西（新場景、轉場）：時間是剪輯版的時間，每一格都跑（不經過 mapT）。
+const tacts = [];
+const tcues = [];
+
+/**
+ * 哪一個版本：full＝排字匣、墨池、疊印台（intro.html）；cards＝只有墨池、疊印台（intro-cards.html）。
+ * cards 版重用原版的鏡頭和畫面，用 mapT 把剪輯版的時間對回原版：去掉排字匣那 22.5 秒（九小節，
+ * 拍子不會錯），中間換成兩個新場景（找牌與拖曳、撤回），每一次切換都落在墨漫滿畫面的那一刻。
+ */
+const CUT = document.body.dataset.cut || new URLSearchParams(location.search).get("cut") || "full";
+const CARDS = CUT === "cards";
+const SEGMENTS = CARDS
+  ? [
+      [0, 10, 0],
+      [10, 47.5, 22.5],
+      [47.5, 59.0, "search", 55],
+      [59.0, 97.4, 10],
+      [97.4, 107.8, "undo", 96],
+      [107.8, 999, 2],
+    ]
+  : [[0, 999, 0]];
+/** 剪輯版的時間 → { t：原版的時間, ins：新場景名稱（這段不畫原版）, tint：背景色取原版哪一刻 }。 */
+function mapT(T) {
+  for (const [a, b, k, tint] of SEGMENTS) {
+    if (T >= a && T < b) return typeof k === "number" ? { t: T + k } : { t: -999, ins: k, tint };
+  }
+  return { t: T };
+}
+/** 原版的時間 → 剪輯版的時間（原版的音效要搬到剪輯版的時間上；被剪掉的段落回傳 null）。 */
+function unmapT(t) {
+  for (const [a, b, k] of SEGMENTS) {
+    if (typeof k !== "number") continue;
+    const T = t - k;
+    if (T >= a && T < b) return T;
+  }
+  return null;
+}
+const tact = (win, update, el = null) => tacts.push({ win, update, el });
 
 function act(win, update, el = null) {
   acts.push({ win, update, el });
@@ -139,7 +177,7 @@ function printEl(src, w, h, parent, label = "") {
  * 會動的字：中文一個字一個字從下面翻上來（帶一點模糊），英文從左邊拉開；
  * 離場往上、淡掉。cls：k-title／k-cap／k-big／k-sec。
  */
-function kinetic({ cls, zh, en = "", x, y, align = "left", inAt, outAt, st = 0.035, rule = false, drift = 0 }) {
+function kinetic({ cls, zh, en = "", x, y, align = "left", inAt, outAt, st = 0.035, rule = false, drift = 0, on = act }) {
   const box = mk("div", "k " + cls, hud);
   box.style.left = x + "px";
   box.style.top = y + "px";
@@ -150,7 +188,7 @@ function kinetic({ cls, zh, en = "", x, y, align = "left", inAt, outAt, st = 0.0
   const anchor = align === "center" ? "translate(-50%, -50%)" : align === "right" ? "translate(-100%, -50%)" : "translate(0, -50%)";
   const n = chars.length;
   const end = outAt + n * st * 0.5 + 0.6;
-  act([inAt - 0.1, end], (t) => {
+  on([inAt - 0.1, end], (t) => {
     box.style.transform = `${anchor} translateX(${((t - inAt) * drift).toFixed(1)}px)`;
     chars.forEach((c, i) => {
       const pin = EZ.out(seg(t, inAt + i * st, inAt + i * st + 0.75));
@@ -179,11 +217,11 @@ function kinetic({ cls, zh, en = "", x, y, align = "left", inAt, outAt, st = 0.0
 
 const caption = (zh, en, inAt, outAt, o = {}) => kinetic({ cls: "k-cap", zh, en, x: 130, y: 900, inAt, outAt, st: 0.028, rule: true, drift: 4, ...o });
 
-function sectionTag(num, zh, en, inAt, outAt) {
+function sectionTag(num, zh, en, inAt, outAt, on = act) {
   const box = mk("div", "k k-sec", hud, `<b>${num}</b>${esc(en)}<span>${esc(zh)}</span>`);
   box.style.left = "110px";
   box.style.top = "92px";
-  act([inAt - 0.1, outAt + 0.6], (t) => {
+  on([inAt - 0.1, outAt + 0.6], (t) => {
     const p = EZ.out(seg(t, inAt, inAt + 0.8));
     const q = EZ.exit(seg(t, outAt, outAt + 0.5));
     box.style.opacity = (p * (1 - q)).toFixed(3);
@@ -285,7 +323,8 @@ function buildOpen(words) {
   const g = group(X1, 0);
   const rnd = mulberry32(9);
   words.forEach((tag, i) => {
-    const el = mk("div", "w tagword", g, `${esc(tag)}<small>${esc(zhOf(tag))}</small>`);
+    // 剪輯版只講卡牌：飄在空中的是牌，不是字。
+    const el = CARDS ? cardEl(tag, 92, g) : mk("div", "w tagword", g, `${esc(tag)}<small>${esc(zhOf(tag))}</small>`);
     el.style.setProperty("--suit", `var(--suit-${suitOf(tag)})`);
     const x0 = (rnd() - 0.5) * 2200;
     const y0 = (rnd() - 0.5) * 1100;
@@ -306,8 +345,13 @@ function buildOpen(words) {
     }, el);
   });
   act([0, 10.2], () => {}, g);
-  kinetic({ cls: "k-title", zh: "排字匣", en: "DANBOORU CASE", x: 960, y: 470, align: "center", inAt: 7.35, outAt: 9.55, st: 0.09 });
-  kinetic({ cls: "k-cap", zh: "一張圖，是一組字", en: "Every image is a set of words", x: 960, y: 720, align: "center", inAt: 8.2, outAt: 9.65, st: 0.05 });
+  if (CARDS) {
+    kinetic({ cls: "k-title", zh: "墨池 · 疊印台", en: "MOCHI · OVERPRINT", x: 960, y: 470, align: "center", inAt: 7.1, outAt: 9.4, st: 0.08 });
+    kinetic({ cls: "k-cap", zh: "一張圖，是一疊牌", en: "Every image is a stack of cards", x: 960, y: 720, align: "center", inAt: 8.0, outAt: 9.5, st: 0.05 });
+  } else {
+    kinetic({ cls: "k-title", zh: "排字匣", en: "DANBOORU CASE", x: 960, y: 470, align: "center", inAt: 7.35, outAt: 9.55, st: 0.09 });
+    kinetic({ cls: "k-cap", zh: "一張圖，是一組字", en: "Every image is a set of words", x: 960, y: 720, align: "center", inAt: 8.2, outAt: 9.65, st: 0.05 });
+  }
 }
 
 function buildTagCase(data) {
@@ -515,7 +559,7 @@ function buildTagCase(data) {
 function buildMochi(data) {
   const g = group(X2, 0);
   act([31.4, 71], () => {}, g);
-  sectionTag("02", "墨池", "MOCHI", 33.0, 68.4);
+  sectionTag(CARDS ? "01" : "02", "墨池", "MOCHI", 33.0, 68.4);
 
   // 牌牆：九欄四列，斜著立在後面。
   const COLS = 9;
@@ -686,7 +730,7 @@ function buildMochi(data) {
 function buildOverprint(data) {
   const g = group(X3, 0);
   act([69, 111], () => {}, g);
-  sectionTag("03", "疊印台", "OVERPRINT", 70.4, 107.4);
+  sectionTag(CARDS ? "02" : "03", "疊印台", "OVERPRINT", 70.4, 107.4);
   const EN = { style: "STYLE", pose: "POSE", wear: "WEAR", look: "LOOK", cast: "CAST", scene: "SCENE" };
   const flatY = (i) => -345 + i * 138;
   const depthZ = (i) => (2.5 - i) * 230;
@@ -911,8 +955,13 @@ function buildOutro(data) {
       put(el, { x: Math.sin(rad) * R, y: Math.cos(rad * 2) * 30 * (1 - conv), z: Math.cos(rad) * R - 900, ry: a, o: p * (1 - fade) * (0.35 + 0.35 * front), blur: (1 - front) * 3 });
     });
   }, orbit);
-  kinetic({ cls: "k-title", zh: "排字匣", en: "DANBOORU CASE", x: 960, y: 420, align: "center", inAt: 109.0, outAt: 118.3, st: 0.1 });
-  kinetic({ cls: "k-cap", zh: "排字匣　·　墨池　·　疊印台", en: "TAG CASE · MOCHI · OVERPRINT", x: 960, y: 640, align: "center", inAt: 110.4, outAt: 118.3, st: 0.04 });
+  if (CARDS) {
+    kinetic({ cls: "k-title", zh: "墨池 · 疊印台", en: "MOCHI · OVERPRINT", x: 960, y: 420, align: "center", inAt: 109.8, outAt: 118.3, st: 0.08 });
+    kinetic({ cls: "k-cap", zh: "一張牌一層墨　·　疊好就付印", en: "ONE CARD, ONE LAYER OF INK · STACK IT, THEN PRINT", x: 960, y: 640, align: "center", inAt: 110.6, outAt: 118.3, st: 0.04 });
+  } else {
+    kinetic({ cls: "k-title", zh: "排字匣", en: "DANBOORU CASE", x: 960, y: 420, align: "center", inAt: 109.0, outAt: 118.3, st: 0.1 });
+    kinetic({ cls: "k-cap", zh: "排字匣　·　墨池　·　疊印台", en: "TAG CASE · MOCHI · OVERPRINT", x: 960, y: 640, align: "center", inAt: 110.4, outAt: 118.3, st: 0.04 });
+  }
   const cmd = "git clone https://github.com/bosen12/danbooru_tag_random";
   const mono = mk("div", "k k-mono", hud);
   mono.style.left = "960px";
@@ -943,11 +992,20 @@ function buildOutro(data) {
 
 function buildWipes() {
   const wipe = $("wipe");
-  const W = [
-    [31.3, 33.1, "0% 100%"],
-    [68.3, 70.5, "100% 0%"],
-  ];
-  act([0, 121], (t) => {
+  // 剪輯版：轉場排在剪輯版的時間上，每一次切換（mapT 的段落交界）都在墨漫滿的那一刻。
+  const W = CARDS
+    ? [
+        [8.8, 10.6, "0% 100%"],
+        [45.8, 48.0, "100% 0%"],
+        [57.8, 60.5, "0% 100%"],
+        [96.4, 98.6, "100% 0%"],
+        [106.7, 109.0, "0% 100%"],
+      ]
+    : [
+        [31.3, 33.1, "0% 100%"],
+        [68.3, 70.5, "100% 0%"],
+      ];
+  (CARDS ? tact : act)([0, 121], (t) => {
     let shown = false;
     for (const [a, b, from] of W) {
       if (t < a || t > b) continue;
@@ -1032,12 +1090,306 @@ function renderCamera(t) {
   world.style.transform = `translate3d(${sh.x.toFixed(2)}px, ${sh.y.toFixed(2)}px, ${c.z.toFixed(1)}px) rotateX(${c.rx.toFixed(2)}deg) rotateY(${c.ry.toFixed(2)}deg) rotateZ(${c.rz.toFixed(2)}deg) translate3d(${(-c.x).toFixed(1)}px, ${(-c.y).toFixed(1)}px, 0)`;
 }
 
+/* ================= 剪輯版的新場景（時間都是剪輯版的時間，用 tact／tcues） ================= */
+
+const XS = 20000;
+const XU = 26000;
+
+/** 新場景的一張牌：跟其他地方同一張（cardNode＋真插畫）。 */
+const scard = (tag, w, g) => cardEl(tag, w, g);
+
+/**
+ * 找牌與拖曳（47.5–59 秒，墨池之後）：
+ *   找牌框打「紅髮」→ 字盒只剩對得上的、第一張出現 Enter 鍵帽 → Enter，牌飛進合成池；再打「和服」一次。
+ *   接著把一張牌拖到偏好卡牌托盤：托盤在要放的地方先讓出一格，放下就插在那裡。
+ */
+function buildSearchScene(data) {
+  const g = group(XS, -50);
+  tact([46.6, 59.6], () => {}, g);
+  sectionTag("", "找牌與拖曳", "SEARCH & DRAG", 48.0, 57.6, tact);
+
+  const W = 112;
+  const colX = (c) => (c - 2.5) * 138;
+  const rowY = [-125, 50];
+  const grid = data.grid.map((tag, i) => ({ tag, el: scard(tag, W, g), x: colX(i % 6), y: rowY[Math.floor(i / 6)] }));
+  const byTag = (t) => grid.find((c) => c.tag === t);
+  const q1 = byTag(data.q1);
+  const q2 = byTag(data.q2);
+  const dragged = byTag(data.drag);
+
+  // Enter 鍵帽（跟真的字盒同一個樣式 .enter-chip）。
+  const chip = (c) => {
+    const k = mk("span", "enter-chip", c.el.firstChild, "Enter");
+    k.style.animation = "none";
+    k.style.opacity = "0";
+    return k;
+  };
+  const chip1 = chip(q1);
+  const chip2 = chip(q2);
+
+  // 找牌框。
+  const box = mk("div", "w sbox", g);
+  mk("span", "sbox-label", box, "找牌");
+  const text = mk("span", "sbox-text", box);
+  const caret = mk("i", "sbox-caret", box);
+  const TYPE = [
+    [48.9, "紅"],
+    [49.2, "紅髮"],
+    [51.15, "和"],
+    [51.45, "和服"],
+  ];
+  for (const [t] of TYPE) tcues.push({ t, kind: "tick", gain: 0.06 });
+  const ENTER1 = bar(20);
+  const ENTER2 = bar(21);
+  tcues.push({ t: ENTER1, kind: "tick", gain: 0.09 }, { t: ENTER2, kind: "tick", gain: 0.09 });
+  tact([47, 59.6], (T) => {
+    const p = EZ.out(seg(T, 47.5, 48.4));
+    put(box, { x: 0, y: -340 + (1 - p) * -40, o: p });
+    let s = "";
+    for (const [t, v] of TYPE) if (T >= t) s = v;
+    if (text.textContent !== s) text.textContent = s;
+    // 放完一張：字全選著（反白），接著打下一個就換掉。
+    text.classList.toggle("is-selected", (T > ENTER1 + 0.2 && T < 51.15) || T > ENTER2 + 0.2);
+    caret.style.opacity = Math.floor(T * 2.4) % 2 ? "0.2" : "1";
+  }, box);
+
+  // 合成池（前半）→ 偏好卡牌托盤（後半），同一個位置換班。
+  const pool = mk("div", "w pool", g);
+  pool.style.width = "820px";
+  pool.style.height = "210px";
+  mk("div", "pool-label", pool, "合成池<small>POOL</small>");
+  tact([47, 59.6], (T) => {
+    const p = EZ.out(seg(T, 48.2, 49.0));
+    const q = EZ.in(seg(T, 53.4, 54.0));
+    put(pool, { x: 0, y: 265 + (1 - p) * 60 + q * 80, rx: (1 - p) * 20, o: p * (1 - q) });
+  }, pool);
+  const tray = mk("div", "w tray", g);
+  mk("div", "tray-label", tray, "偏好卡牌 5/10<small>FAVORITES</small>");
+  tact([47, 59.6], (T) => {
+    const p = EZ.out(seg(T, 53.7, 54.5));
+    put(tray, { x: 0, y: 265 + (1 - p) * 200, o: p });
+  }, tray);
+
+  // 字盒：一張張發出來；打了字，對不上的淡下去。
+  const matchAt = (c, T) => {
+    if (T >= 49.45 && T < ENTER1 + 0.9) return c === q1;
+    if (T >= 51.7 && T < 53.4) return c === q2;
+    return null;
+  };
+  grid.forEach((c, i) => {
+    const a = 47.6 + i * 0.05;
+    const flyTo = c === q1 ? { x: -120, t0: ENTER1 } : c === q2 ? { x: 120, t0: ENTER2 } : null;
+    if (flyTo) tcues.push({ t: flyTo.t0 + 0.625, kind: "stamp", gain: 0.3 });
+    tact([47, 59.6], (T) => {
+      const p = EZ.out(seg(T, a, a + 0.7));
+      const m = matchAt(c, T);
+      const dim1 = m === false && T < 51.7 ? EZ.out(seg(T, 49.45, 49.8)) : 0;
+      const dim2 = m === false && T >= 51.7 ? EZ.out(seg(T, 51.7, 52.0)) : 0;
+      const dim = Math.max(dim1, dim2) * (1 - EZ.out(seg(T, 53.4, 53.9)));
+      let x = c.x;
+      let y = c.y;
+      let z = 0;
+      let s = 1;
+      let rz = 0;
+      let o = p * lerp(1, 0.22, dim);
+      if (flyTo) {
+        const f = EZ.travel(seg(T, flyTo.t0, flyTo.t0 + 0.625));
+        const bump = Math.sin(Math.PI * f);
+        x = quad(c.x, (c.x + flyTo.x) / 2, flyTo.x, f);
+        y = quad(c.y, -270, 265, f);
+        z = bump * 120;
+        s = (1 + bump * 0.1) * (1 + spring(T - flyTo.t0 - 0.625, 0.05, 7, 20));
+        rz = -bump * 6;
+        // 池子收走時一起走。
+        const q = EZ.in(seg(T, 53.4, 54.0));
+        y += q * 80;
+        o = f > 0 ? p * (1 - q) : o;
+      }
+      if (c === dragged) {
+        const lift = EZ.out(seg(T, 54.7, 54.9));
+        const mv = EZ.inOut(seg(T, 54.85, 56.2));
+        const land = seg(T, 56.2, 56.25);
+        x = quad(c.x, c.x - 120, data.dropX, mv);
+        y = quad(c.y, 180, 277, mv);
+        s = lerp(1, 1.08, lift) * lerp(1, 104 / W / 1.08, land) + spring(T - 56.25, 0.05, 7, 20);
+        z = lift * 90 * (1 - land) + land * 20;
+        rz = Math.sin(mv * Math.PI) * -5;
+      }
+      put(c.el, { x, y, z, rz, s, o });
+      c.el.classList.toggle("is-lit", c === dragged && T > 54.7 && T < 56.3);
+    }, c.el);
+  });
+  tact([49.5, 53.5], (T) => {
+    chip1.style.opacity = T > 49.6 && T < ENTER1 + 0.05 ? "1" : "0";
+    chip2.style.opacity = T > 51.8 && T < ENTER2 + 0.05 ? "1" : "0";
+  });
+
+  // 托盤上本來的四張：牌拖過來時，要放的那裡先讓出一格。
+  const TW = 104;
+  const base = data.tray.map((tag, i) => ({ tag, el: scard(tag, TW, g), i }));
+  const slotX = (i, n) => (i - (n - 1) / 2) * (TW + 18);
+  tcues.push({ t: 56.25, kind: "stamp", gain: 0.3 });
+  base.forEach((c) => {
+    tact([47, 59.6], (T) => {
+      const p = EZ.out(seg(T, 53.9 + c.i * 0.06, 54.6 + c.i * 0.06));
+      // 拖著靠近：從 4 張的位置滑到 5 張的位置，空出第 data.gapAt 格。
+      const open = EZ.out(seg(T, 55.5, 56.1));
+      const idx = c.i >= data.gapAt ? c.i + 1 : c.i;
+      const x = lerp(slotX(c.i, 4), slotX(idx, 5), open);
+      put(c.el, { x, y: 277 + (1 - p) * 200, z: 20, o: p });
+    }, c.el);
+  });
+  // 游標：按住那張牌、帶著走、放下。
+  const cur = mk("div", "w cursor", g);
+  tact([54, 57.2], (T) => {
+    const a = EZ.out(seg(T, 54.3, 54.6));
+    const q = EZ.exit(seg(T, 56.5, 56.9));
+    const mv = EZ.inOut(seg(T, 54.85, 56.2));
+    const x = quad(dragged.x, dragged.x - 120, data.dropX, mv) + 20;
+    const y = quad(dragged.y, 180, 277, mv) + 30;
+    const press = T > 54.7 && T < 56.25 ? 0.8 : 1;
+    put(cur, { x, y, z: 160, s: press, o: a * (1 - q) });
+  }, cur);
+
+  caption("找牌：打字，按 Enter 就放上", "Search — type it, press Enter, it's placed", 48.4, 53.3, { on: tact });
+  caption("拖到托盤：放在哪，就插在哪", "Drag to the tray — it lands right where you drop it", 54.3, 58.3, { on: tact });
+}
+
+/**
+ * 撤回（97.4–107.8 秒，疊印台之後）：清版時偏好卡牌回到手上、其他的收回字盒；
+ * 按撤回，全部從它們去的地方原路飛回來 —— 清版的反過來。
+ */
+function buildUndoScene(data) {
+  const g = group(XU, -60);
+  tact([96.8, 108.6], () => {}, g);
+  sectionTag("", "撤回", "UNDO", 98.0, 106.8, tact);
+  const W = 104;
+  const rowX = (i) => 90 + (i - 2.5) * 134;
+  const ROW_Y = -210;
+  const TRAY_Y = 230;
+  const CASE = { x: -610, y: -210 };
+
+  const plate = mk("div", "w pool", g);
+  plate.style.width = "900px";
+  plate.style.height = "230px";
+  mk("div", "pool-label", plate, "卡池<small>PLATE</small>");
+  const tray = mk("div", "w tray", g);
+  mk("div", "tray-label", tray, "偏好卡牌<small>FAVORITES</small>");
+  const box = mk("div", "w casebox", g, "<b>字盒</b><small>CASE</small>");
+  const btn = mk("div", "w go", g);
+  tact([96.8, 108.6], (T) => {
+    put(plate, { x: 90, y: ROW_Y, o: 1 });
+    put(tray, { x: 90, y: TRAY_Y, o: 1 });
+    put(box, { x: CASE.x, y: CASE.y, o: 1 });
+    const undo = T >= 101.9;
+    const label = undo ? "撤回 <small>UNDO · Z</small>" : "清版 <small>CLEAR</small>";
+    if (btn.innerHTML !== label) btn.innerHTML = label;
+    const tp = undo ? 102.5 : 98.75;
+    const press = T > tp && T < tp + 0.14 ? 0.92 : 1 + spring(T - tp - 0.14, 0.05, 8, 20);
+    put(btn, { x: 560, y: -400, s: press, o: 1 - EZ.inOut(seg(T, 101.6, 101.9)) * (1 - EZ.inOut(seg(T, 101.9, 102.2))) });
+  }, btn);
+  tcues.push({ t: 98.75, kind: "whoosh", gain: 0.14, dur: 0.8 }, { t: 102.5, kind: "whoosh", gain: 0.14, dur: 0.8 });
+
+  // 托盤：平常 3 張，偏好卡牌回來時變 5 張（在最後兩格），撤回時又變回 3 張。
+  const TW = 104;
+  const tslot = (i, n) => 90 + (i - (n - 1) / 2) * (TW + 18);
+  const handN = (T) => lerp(3, 5, EZ.out(seg(T, 98.75, 99.25))) - lerp(0, 2, EZ.out(seg(T, 102.5, 103.0)));
+  data.tray.forEach((tag, i) => {
+    const el = scard(tag, TW, g);
+    tact([96.8, 108.6], (T) => {
+      put(el, { x: tslot(i, handN(T)), y: TRAY_Y + 12, z: 20 });
+    }, el);
+  });
+
+  // 卡池上的六張：偏好卡牌（fav）先動身去托盤、其他的晚一拍收成一疊再回字盒；撤回反過來。
+  const nFav = data.row.filter((t) => data.favs.includes(t)).length;
+  let favK = 0;
+  let caseK = 0;
+  data.row.forEach((tag, i) => {
+    const el = scard(tag, W, g);
+    const fav = data.favs.includes(tag);
+    const k = fav ? favK++ : caseK++;
+    const home = { x: rowX(i), y: ROW_Y };
+    const hs = { x: tslot(3 + data.favs.indexOf(tag), 5), y: TRAY_Y + 12 };
+    const b0 = 102.5 + 0.18 + nFav * 0.045 + k * 0.07;
+    if (fav) tcues.push({ t: 98.75 + k * 0.045 + 0.62, kind: "stamp", gain: 0.22 }, { t: 102.5 + k * 0.045 + 0.62, kind: "stamp", gain: 0.26 });
+    else tcues.push({ t: b0 + 0.62, kind: "stamp", gain: 0.24 });
+    tact([96.8, 108.6], (T) => {
+      let x = home.x;
+      let y = home.y;
+      let z = 30;
+      let s = 1;
+      let rz = 0;
+      let o = 1;
+      if (fav) {
+        const t1 = 98.75 + k * 0.045;
+        const t2 = 102.5 + k * 0.045;
+        const out = EZ.travel(seg(T, t1, t1 + 0.62));
+        const back = EZ.travel(seg(T, t2, t2 + 0.62));
+        const bo = Math.sin(Math.PI * out);
+        const bb = Math.sin(Math.PI * back);
+        x = lerp(lerp(home.x, hs.x, out), home.x, back);
+        y = lerp(lerp(home.y, hs.y, out), home.y, back) - (bo + bb) * 40;
+        z = 30 + (bo + bb) * 80;
+        rz = (bo - bb) * 5;
+        s = 1 + (bo + bb) * 0.08 + spring(T - t1 - 0.62, 0.04, 7, 20) + spring(T - t2 - 0.62, 0.05, 7, 20);
+      } else {
+        // 收成一疊（它們自己的中心）→ 整疊飛進字盒、淡掉；撤回時從字盒一張張飛回原位。
+        const g1 = EZ.out(seg(T, 98.86, 99.2));
+        const g2 = EZ.travel(seg(T, 99.2, 99.95));
+        const pile = { x: 20 + (k - 1.5) * 3, y: ROW_Y - k * 2 };
+        x = lerp(lerp(home.x, pile.x, g1), CASE.x, g2);
+        y = lerp(lerp(home.y, pile.y, g1), CASE.y, g2) - Math.sin(Math.PI * g2) * 60;
+        s = lerp(1, 0.55, g2);
+        rz = (k - 1.5) * 3 * g1;
+        o = 1 - EZ.in(seg(T, 99.6, 99.95));
+        if (T >= b0) {
+          const back = EZ.travel(seg(T, b0, b0 + 0.62));
+          const bb = Math.sin(Math.PI * back);
+          x = lerp(CASE.x, home.x, back);
+          y = lerp(CASE.y, home.y, back) - bb * 70;
+          z = 30 + bb * 90;
+          s = lerp(0.7, 1, back) * (1 + bb * 0.08) + spring(T - b0 - 0.62, 0.05, 7, 20);
+          rz = -bb * 5;
+          o = Math.min(1, seg(T, b0, b0 + 0.08));
+        }
+      }
+      put(el, { x, y, z, s, rz, o });
+      el.classList.toggle("is-lit", fav && T > 97.6 && T < 98.7);
+    }, el);
+  });
+
+  caption("清版：偏好卡牌回到手上，其他的回字盒", "Clear — favorites return to your hand, the rest to the case", 98.9, 102.2, { on: tact });
+  caption("撤回：清版的反過來，原路飛回", "Undo — the clear, played in reverse", 102.7, 106.6, { on: tact });
+}
+
+const insertCam = {};
+
+function buildInsertCameras() {
+  insertCam.search = track([
+    [46, V(XS, -30, -140, 6, -6, 0)],
+    [50, V(XS, -20, -40, 4, -2, 0)],
+    [53.5, V(XS, 0, -30, 5, 2, 0)],
+    [56.5, V(XS, 20, -10, 6, 3, 0)],
+    [59.6, V(XS, 20, 20, 6, 1, 0)],
+  ]);
+  insertCam.undo = track([
+    [96, V(XU, -20, -160, 4, 6, 0)],
+    [99.5, V(XU, -10, -70, 5, 2, 0)],
+    [102.5, V(XU, -10, -60, 5, -2, 0)],
+    [108.6, V(XU, -20, -10, 4, -4, 0)],
+  ]);
+}
+
+function renderInsertCamera(name, T) {
+  const c = insertCam[name](T);
+  world.style.transform = `translate3d(0px, 0px, ${c.z.toFixed(1)}px) rotateX(${c.rx.toFixed(2)}deg) rotateY(${c.ry.toFixed(2)}deg) rotateZ(${c.rz.toFixed(2)}deg) translate3d(${(-c.x).toFixed(1)}px, ${(-c.y).toFixed(1)}px, 0)`;
+}
+
 /* ================= 畫一格 ================= */
 
-function render(t) {
-  drawBg(t);
-  renderCamera(t);
-  for (const a of acts) {
+function runActs(list, t) {
+  for (const a of list) {
     const on = t >= a.win[0] && t <= a.win[1];
     if (a.el) {
       const want = on ? "" : "none";
@@ -1045,6 +1397,16 @@ function render(t) {
     }
     if (on) a.update(t);
   }
+}
+
+/** 畫出剪輯版的第 T 秒（原版就是 T＝t）。 */
+function render(T) {
+  const m = mapT(T);
+  drawBg(m.ins ? m.tint : m.t);
+  if (m.ins) renderInsertCamera(m.ins, T);
+  else renderCamera(m.t);
+  runActs(acts, m.t);
+  runActs(tacts, T);
 }
 
 /* ================= 開機 ================= */
@@ -1142,6 +1504,23 @@ async function boot() {
   buildMochi({ wall, pool, tray, draws, art, prints });
   buildOverprint({ rows, drops, trials, glow, art, prints });
   buildOutro({ orbit });
+  if (CARDS) {
+    buildSearchScene({
+      grid: pickArt(["red hair", "school uniform", "night", "smile", "kimono", "umbrella", "sunset", "lantern", "snow", "cafe", "starry sky", "library"], 12),
+      q1: "red hair",
+      q2: "kimono",
+      drag: "starry sky",
+      tray: tray.slice(0, 4),
+      gapAt: 2,
+      dropX: 0,
+    });
+    buildUndoScene({
+      row: pickArt(["1girl", "red hair", "kimono", "smile", "sunset", "lantern"], 6),
+      favs: ["smile", "lantern"].filter(hasArt),
+      tray: pickArt(["night", "umbrella", "sparkle", "starry sky", "rain"], 3),
+    });
+    buildInsertCameras();
+  }
   buildWipes();
   // 鏡頭要知道「長髮」「和服」那兩張字條擺在哪（字條是量了寬度才排的）。
   const chipX = (tag) => {
@@ -1245,7 +1624,9 @@ async function main() {
   const q = new URLSearchParams(location.search);
   tPaused = Math.max(0, Math.min(LENGTH - 1, parseFloat(q.get("t")) || 0));
   const extra = await boot();
-  score = createScore(extra);
+  // 剪輯版：原版的音效搬到剪輯版的時間（被剪掉的那段不要），加上新場景自己的。
+  const mapped = CARDS ? [...extra.map((c) => ({ ...c, t: unmapT(c.t) })).filter((c) => c.t !== null), ...tcues] : extra;
+  score = createScore(mapped, CARDS ? PLAN_CARDS : PLAN_FULL);
   render(tPaused);
   raf = requestAnimationFrame(frame);
   const btn = $("play");
