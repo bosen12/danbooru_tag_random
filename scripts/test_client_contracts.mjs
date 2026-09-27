@@ -1672,7 +1672,7 @@ const ALBUM_FIXTURE = [
   ok("墨池／疊印台：分段選項有滑塊、數字增減會滾（motion.js 自動套用）", motion6.includes("function syncThumbs(") && motion6.includes("function syncSteppers(") && app6.includes("initMotion();") && fuse6.includes("initMotion();"));
   ok("撤下成品／從繩上撤下：縮掉、旁邊讓位，五秒內可以復原", ui6.includes("action = null") && app6.includes('toast("撤下了一張", { action: { label: "復原"') && fuse6.includes('toast("從繩上撤下了一張"') && fuse6.includes("lineSeen?.delete(p.id);"));
   ok("墨池：複製 POS 按鈕自己說已複製；同種子重印讓位＋進場；收起的牌先收再藏；換花色發牌", app6.includes("confirmButton(btn)") && app6.includes("flip($(\"wall\"), () => $(\"wall\").prepend(node));") && app6.includes("if (toggle.getAttribute(\"aria-expanded\") === \"false\") box.hidden = true;") && app6.includes("dealLibrary = true;"));
-  ok("疊印台拿下／撤回／清版：牌飛回字盒（不再原地往上飄走），撤回的牌從字盒飛回來", fuse6.includes("function flyHome(snap, delay = 0)") && fuse6.includes("snaps.forEach((s, i) => flyHome(s, i * 60));") && fuse6.includes("setTimeout(() => flyIn(t, r), 40 + i * 70)"));
+  ok("疊印台拿下／撤回／清版：牌飛回字盒（不再原地往上飄走），撤回的牌從字盒飛回來", fuse6.includes("function flyHome(snap, delay = 0)") && fuse6.includes("snaps.forEach((s, i) => flyHome(s, i * 60));") && fuse6.includes("flyIn(l.t, l.rect, { delay,"));
   ok("墨池被擠掉的牌也飛回字盒", app6.includes("const homeNow = () => (hand?.has(tag) && hand.nodeOf(tag)) || libCardNode(tag);") && app6.includes("leaving.forEach((l, i) => liftOut(l, i * 60));"));
   {
     const m = fuse6.replace(/\r\n/g, "\n").match(/const STARTERS = (\[[\s\S]*?\n\]);/);
@@ -1687,7 +1687,7 @@ const ALBUM_FIXTURE = [
   const wf = readFileSync(join(ROOT, "web/workflow.js"), "utf8");
   const fuseHtml = readFileSync(join(ROOT, "web6/fuse.html"), "utf8");
   ok("墨池／疊印台右上角：工作流、聲音是圖示（名字在 aria-label），排字匣的工作流照舊是字", wf.includes('class="wf-ico"') && fuseHtml.includes('id="sound-btn"') && !fuseHtml.includes(">聲音</button>") && fuse6.includes("snd.innerHTML = sfx.on") && readFileSync(join(ROOT, "web/boot.css"), "utf8").includes("#wf-pick-btn .wf-ico {"));
-  ok("清版／清空／一次撤回四張以上：先掃成一疊再整疊收回字盒（不各飛各的）", motion6.includes("export function gatherHome(") && fuse6.includes("sweepHome(toCase, toCase.map((s) => s.node.dataset.tag)") && fuse6.includes("if (leaving.length >= 4) sweepHome(") && app6.includes("gatherHome(toLib,"));
+  ok("清版／清空／一次撤回四張以上：先掃成一疊再整疊收回字盒（不各飛各的）", motion6.includes("export function gatherHome(") && fuse6.includes("sweepHome(toCase, toCase.map((s) => s.node.dataset.tag)") && fuse6.includes("if (leaveCase.length >= 4) sweepHome(") && app6.includes("gatherHome(toLib,"));
   const peekSrc = readFileSync(join(ROOT, "web/card-peek.js"), "utf8");
   ok("放大卡：停一下才出現、從牌那一側長出來、換到隔壁那張滑過去（離開延遲一下才收）", peekSrc.includes("const INTENT_MS = 120;") && peekSrc.includes("const LEAVE_MS = 80;") && peekSrc.includes('peek.classList.toggle("is-gliding", wasShown);') && peekSrc.includes('p.dataset.side = side;'));
   ok("墨池廢字簍：撿回來的浮起來、旁邊補位、標題數字跟著變；全部撿回來一張張起來", app6.includes("const rescue = (node, delay = 0) =>") && app6.includes("廢字簍・${left} 個字") && app6.includes("都撿回來了。"));
@@ -1723,7 +1723,7 @@ const ALBUM_FIXTURE = [
     ok("窄螢幕角落的廢字簍、「卡池」標籤讓到托盤上面；寬螢幕托盤兩旁留位置；提示浮在托盤上面", css6.includes(":is(.trash, .pool-pill) {\n    translate: 0 calc(-1 * var(--fav-h, 0px));") && css6.includes("width: min(calc(100vw - 200px)") && hand6.includes("innerWidth >= 1100 ? 200 : 20") && css6.includes("body .toast {\n  bottom: calc(var(--fav-h, 0px)") && hand6.includes("Math.ceil(innerHeight - r.top) + 12"));
     ok("疊印台字盒：在池又在手牌的牌，「手」排在「在池」下面", css6.includes('.case-grid .card[data-state="pinned"][data-in-hand="true"]::before {\n  top: 22px;'));
     ok("從托盤拿掉一張：提示帶「復原」，放回原位（挑牌模式不問）；滿了兩房間都有看得到的提示", hand6.includes("if (!quiet && !editing) onRemoved(tag, () => restore(tag, was));") && hand6.includes("function restore(tag, at)") && fuse6.includes('onRemoved: (t, undo) => toast(') && app6.includes('onRemoved: (t, undo) => toast(') && fuse6.includes("onFull: () => toast("));
-    ok("墨池：合成池捲出畫面時，牌往合成池的方向收進去＋「看合成池」，不飛出螢幕", app6.includes("function tuckAway(tag, from, dir)") && app6.includes("return tuckAway(tag, from, to.top < 0 ? -1 : 1);") && app6.includes('label: "看合成池"'));
+    ok("墨池：合成池捲出畫面時，牌往合成池的方向收進去＋「看合成池」，不飛出螢幕", app6.includes("function tuckAway(tag, from, dir)") && app6.includes("return from ? tuckAway(tag, from, to.top < 0 ? -1 : 1) : undefined;") && app6.includes('label: "看合成池"'));
     {
       const cards6 = readFileSync(join(ROOT, "web6/cards.js"), "utf8");
       ok("找牌框：Enter 放上第一張（注音選字的 Enter 不算，已經在的不拿下來），字全選著接著打；↓ 走進字盒", fuse6.includes("function caseSearchKeys(e)") && app6.includes("function libSearchKeys(e)") && fuse6.includes("e.isComposing || e.keyCode === 229") && app6.includes("e.isComposing || e.keyCode === 229") && fuse6.includes("q.select();") && app6.includes("q.select();"));
@@ -1785,6 +1785,12 @@ const ALBUM_FIXTURE = [
       ok("清版／清空：偏好卡牌回到手上（托盤開著回那一格、收著收進標籤），其他的收成一疊回字盒；偏好卡牌先動身", hand6.includes("function receive(snaps, { delay = 0, stagger = 45 } = {})") && fuse6.includes("const toHand = snaps.filter((s) => hand?.has(s.node.dataset.tag));") && app6.includes("const toHand = leaving.filter((l) => hand?.has(l.node.dataset.tag));") && fuse6.includes("{ start: toHand.length ? 110 : 0 }") && app6.includes("{ start: toHand.length ? 110 : 0 }"));
       ok("單張回手上也走同一條路（拿下來、被擠掉、拿出合成池）：托盤收著就收進標籤，不回字盒", fuse6.includes("if (tag && hand?.has(tag)) return void hand.receive([snap], { delay });") && app6.includes("if (hand?.has(tag)) return void hand.receive([{ node, rect }], { delay });"));
       ok("回到托盤：落地轉到扇形那一格的角度；收進標籤：一路是一張牌、最後才縮，最後一張進去標籤脹一下；不自己打開托盤", motion6b.includes("endRotate * e") && motion6b.includes("scaleLate") && hand6.includes("endRotate: angleOf(tag)") && hand6.includes("if (!left && !open) pulse();") && motion6b.includes("const w = n.offsetWidth || r.width;"));
+    }
+    {
+      const motion6c = readFileSync(join(ROOT, "web6/motion.js"), "utf8");
+      ok("撤回清版／復原清空是清版的反過來：回來的牌重畫出來就藏著，偏好卡牌從手上打出去（托盤那格／標籤），其他的從字盒來", fuse6.includes("hand.launchFrom(t, cardW)") && app6.includes("hand.launchFrom(t, cardW)") && fuse6.includes("if (!reduced()) for (const l of launch) inbound.add(l.t);") && app6.includes("for (const l of launch) poolInbound.add(l.t);") && hand6.includes("function launchFrom(tag, cardW = 84)"));
+      ok("撤回時撤掉的牌也分兩路（偏好卡牌回手上），影子都在同一刻做好、用 delay 錯開（不是 setTimeout 之後才飛）", fuse6.includes("if (hand) hand.receive(leaveHand);") && !fuse6.includes("if (seen) setTimeout(() => flyIn(t, r), 40 + i * 70);") && fuse6.includes("flyIn(l.t, l.rect, { delay, src: l.node, startRotate: l.rotate, startScale: l.scale || 1 });"));
+      ok("從標籤長出來的影子是正常大小的牌、用 scale 縮放（不縮寬度，不然固定 px 的墨點會被放大好幾倍）", motion6c.includes("startScale = 1") && hand6.includes("node: makeNode(tag), rotate: 0, scale: 0.2"));
     }
     ok("工具列鈕：沒牌直接進挑牌，有牌打開／收起托盤；選單和詳情也能加", hand6.includes("function fromButton()") && fuse6.includes("hand?.fromButton()") && app6.includes("hand?.fromButton()") && fuse6.includes('"加入偏好卡牌"') && app6.includes('"加入偏好卡牌"'));
   }

@@ -79,11 +79,12 @@ export function travelTime(dist) {
  *
  * from：{ left, top, width[, height] }。target：() => Element 或 rect（拿不到就沿用上一次的）。
  * 選項：duration（預設照距離）、delay、curve、arc（弧高 px）、tilt（最大轉角）、
- *       endScale（落地大小／落點寬）、endOpacity、endRotate（落地的角度）、scaleLate（大小晚點才變）、
+ *       startScale（出發時的縮放）、endScale（落地大小／落點寬）、endOpacity、startRotate／endRotate（起飛、落地的角度）、
+ *       scaleLate（大小晚點才變）、
  *       zIndex、onLand。回傳 { cancel, duration }。
  */
 export function flight(ghost, from, target, opts = {}) {
-  const { delay = 0, curve = CURVE.travel, arc = 34, tilt = -5, lift = 0.05, endScale = 1, endOpacity = 1, endRotate = 0, scaleLate = 0, zIndex = 90, onLand = null } = opts;
+  const { delay = 0, curve = CURVE.travel, arc = 34, tilt = -5, lift = 0.05, endScale = 1, endOpacity = 1, endRotate = 0, startRotate = 0, startScale = 1, scaleLate = 0, zIndex = 90, onLand = null } = opts;
   const fh = from.height || from.width * 1.4625;
   Object.assign(ghost.style, {
     position: "fixed",
@@ -148,9 +149,11 @@ export function flight(ghost, from, target, opts = {}) {
     // scaleLate：大小晚一點才變（0＝跟位置一起變；1＝幾乎到了才縮）—— 飛進小東西（標籤）時，
     // 一路都還是一張牌、最後一段才被收進去，不是一出發就縮成一個點。
     const se = scaleLate ? Math.pow(e, 1 + scaleLate * 3) : e;
-    const s = (1 + ((to.width * endScale) / from.width - 1) * se) * (1 + lift * bump);
+    // startScale：出發時比 from 小（從標籤裡長出來）。影子本身永遠是一張正常大小的牌，只用 scale 縮放
+    // —— 用寬度縮成一點點再放大，牌上固定 px 的東西（墨點、框線）會跟著被放大好幾倍。
+    const s = (startScale + ((to.width * endScale) / from.width - startScale) * se) * (1 + lift * bump);
     // 轉角：途中微微轉（tilt），落地時轉到落點自己的角度（endRotate，托盤那把扇形每張斜一點）。
-    ghost.style.transform = `translate(${x.toFixed(2)}px, ${y.toFixed(2)}px) rotate(${(tilt * bump + endRotate * e).toFixed(2)}deg) scale(${s.toFixed(4)})`;
+    ghost.style.transform = `translate(${x.toFixed(2)}px, ${y.toFixed(2)}px) rotate(${(tilt * bump + startRotate * (1 - e) + endRotate * e).toFixed(2)}deg) scale(${s.toFixed(4)})`;
     // 影子跟著高度：飛到弧頂最深最散，落地前收回貼著桌面的那一層。
     ghost.style.boxShadow = `0 1px 0 var(--color-shine) inset, 0 ${(6 + 18 * bump).toFixed(1)}px ${(14 + 22 * bump).toFixed(1)}px var(--color-shade)`;
     if (endOpacity !== 1) ghost.style.opacity = String(1 + (endOpacity - 1) * Math.max(0, (e - 0.6) / 0.4));

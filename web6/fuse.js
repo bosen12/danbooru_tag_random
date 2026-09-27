@@ -425,6 +425,22 @@ function undo() {
   const was = new Set(bed.pins);
   const leaving = bed.pins.filter((t) => !back.has(t)).map(plateNode).filter(Boolean).map(snapshot);
   const returning = h.bed.pins.filter((t) => !was.has(t));
+  // 回來的牌從哪裡飛出來（重畫之前量，重畫之後托盤那一格就讓出去了）：
+  // 偏好卡牌從手上打出去（托盤開著從那一格，收著從標籤長出來）；其他的從字盒那張；都看不到就原地落下。
+  const cardW = $("case-grid").querySelector(".card")?.offsetWidth || 84;
+  const launch = returning.map((t) => {
+    const fromHand = hand?.has(t) ? hand.launchFrom(t, cardW) : null;
+    if (fromHand) return { t, ...fromHand };
+    const c = caseCard(t);
+    const r = c && c.getBoundingClientRect();
+    return { t, rect: r && r.width && r.bottom > 0 && r.top < innerHeight ? r : null, node: null, rotate: 0 };
+  });
+  // 回來的牌重畫出來時就藏著（不要先亮一下、再被藏起來、再飛進來）。
+  if (!reduced()) for (const l of launch) inbound.add(l.t);
+  // 撤掉的牌跟清版一樣分兩路：偏好卡牌回到手上，其他的回字盒。托盤那幾格在重畫的同一刻先藏著。
+  const leaveHand = leaving.filter((s) => hand?.has(s.node.dataset.tag));
+  const leaveCase = leaving.filter((s) => !hand?.has(s.node.dataset.tag));
+  for (const s of leaveHand) hand.arriveAt(s.node.dataset.tag, 2400);
   bed = h.bed;
   rowNotes = {};
   plateNotice = null;
@@ -432,16 +448,17 @@ function undo() {
   renderAll([]);
   syncCaseStates();
   if (caseTab === "match") renderCase();
-  // 撤回：上一步放上來的回字盒（四張以上先疊成一疊再一起走，不然路線交叉看起來在亂飛）；
-  // 上一步拿走的從字盒飛回原位（字盒裡看不到它就原地落下）。
-  if (leaving.length >= 4) sweepHome(leaving, leaving.map((s) => s.node.dataset.tag));
-  else leaving.forEach((s, i) => flyHome(s, i * 50));
-  returning.forEach((t, i) => {
-    const home = caseCard(t);
-    const r = home && home.getBoundingClientRect();
-    const seen = r && r.width && r.bottom > 0 && r.top < innerHeight;
-    if (seen) setTimeout(() => flyIn(t, r), 40 + i * 70);
-    else popIn(t, 40 + i * 70);
+  // 撤回：上一步放上來的回去（字盒的四張以上先疊成一疊再一起走，不然路線交叉看起來在亂飛）；
+  // 上一步拿走的從它們去的地方飛回原位 —— 清版的反過來。影子都在這一刻做好，用 delay 錯開。
+  if (hand) hand.receive(leaveHand);
+  if (leaveCase.length >= 4) sweepHome(leaveCase, leaveCase.map((s) => s.node.dataset.tag), { start: leaveHand.length ? 110 : 0 });
+  else leaveCase.forEach((s, i) => flyHome(s, i * 50));
+  // 從手上打出去的先走（它們站在托盤上，托盤正在收攏，等久了會蓋住留下來的牌），字盒的跟著一張一張來。
+  const order = [...launch.filter((l) => l.node || (l.rect && hand?.has(l.t))), ...launch.filter((l) => !(l.node || (l.rect && hand?.has(l.t))))];
+  const nHand = order.length - launch.filter((l) => !(l.node || (l.rect && hand?.has(l.t)))).length;
+  order.forEach((l, i) => {
+    const delay = i < nHand ? i * 45 : 60 + nHand * 45 + (i - nHand) * 60;
+    flyIn(l.t, l.rect, { delay, src: l.node, startRotate: l.rotate, startScale: l.scale || 1 });
   });
   sfx.lift();
   if (returning.length) setTimeout(() => sfx.stamp(), 60);
@@ -1678,26 +1695,52 @@ function snapshot(node) {
   return { node, rect: node.getBoundingClientRect() };
 }
 
-function flyIn(tag, from) {
+/**
+ * 牌飛上版。from：出發的位置。delay：晚一點才起飛（影子先停在出發點）；src：影子要複製的那張
+ * （從托盤出發時是托盤那張，沒有版上的墨點）；startRotate：出發時的角度（托盤那把扇形的斜）。
+ */
+function flyIn(tag, from, { delay = 0, src = null, startRotate = 0, startScale = 1 } = {}) {
   const target = plateNode(tag);
-  if (!target) return;
+  if (!target) {
+    inbound.delete(tag);
+    return;
+  }
   const to = target.getBoundingClientRect();
   const visible = to.bottom > 0 && to.top < window.innerHeight && to.width > 0;
   if (!from || reduced() || !visible) {
     // 手機上卡池捲出畫面了：牌飛進角落那顆「卡池」，看得到它確實放進去了。
     const pill = $("pool-pill");
+    if (delay && !reduced() && !(from && !visible && !pill.hidden)) {
+      // 沒有出發點（字盒裡看不到它）：輪到它的時候才原地落下，不要一開始就亮在版上。
+      inbound.add(tag);
+      target.style.visibility = "hidden";
+      setTimeout(() => {
+        inbound.delete(tag);
+        const n = plateNode(tag);
+        if (!n) return;
+        n.style.visibility = "";
+        stamp(n);
+      }, delay);
+      return;
+    }
+    inbound.delete(tag);
+    target.style.visibility = "";
     if (from && !visible && !pill.hidden && !reduced()) flyToPill(target, from, pill);
     else stamp(target);
     return;
   }
   // 飛的是一張影子，版上那張先藏著，影子落地才亮出來。飛的路上版可能整塊重畫（卡池大小變了、
   // 影子張數重排）：重畫出來的新那張也要藏著（plateCard 看 inbound），影子追的也是新那張的位置。
-  const ghost = target.cloneNode(true);
+  const ghost = (src || target).cloneNode(true);
   ghost.classList.add("flying");
-  ghost.classList.remove("is-related", "is-stamped", "is-popped");
+  ghost.classList.remove("is-related", "is-stamped", "is-popped", "fav-card");
+  ghost.style.visibility = "";
   inbound.add(tag);
   target.style.visibility = "hidden";
   flight(ghost, from, () => plateNode(tag), {
+    delay,
+    startRotate,
+    startScale,
     onLand: () => {
       inbound.delete(tag);
       const n = plateNode(tag);

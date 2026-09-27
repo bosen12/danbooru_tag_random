@@ -731,6 +731,28 @@ export function createHand({
     return end;
   }
 
+  /**
+   * 牌從手上打出去（撤回清版、復原清空）時，影子從哪裡出發：
+   * 托盤開著是它那一格（牌本身的大小和角度，不是轉過之後的外框）；收著是標籤的圖示
+   * （scale 0.2，飛出來的路上才長成一張牌）；托盤完全藏著就 null（房間自己決定從哪裡來）。
+   * 要在重畫之前量（重畫之後那一格就讓出去了）。node：影子要複製的那張。
+   */
+  function launchFrom(tag, cardW = 84) {
+    const card = open ? slots.get(tag)?.querySelector(".fav-card") : null;
+    if (card && card.isConnected) {
+      const r = card.getBoundingClientRect();
+      const w = card.offsetWidth;
+      const h = card.offsetHeight;
+      return { rect: { left: r.left + r.width / 2 - w / 2, top: r.top + r.height / 2 - h / 2, width: w, height: h }, node: card, rotate: angleOf(tag) };
+    }
+    if (el.dataset.hidden === "true") return null;
+    // 收著：一張正常大小的牌，中心對著標籤的圖示，從兩成大開始長（startScale）。影子用乾淨的那張牌。
+    const icon = tab.querySelector("svg") || tab;
+    const r = icon.getBoundingClientRect();
+    const h = cardW * 1.4625;
+    return { rect: { left: r.left + r.width / 2 - cardW / 2, top: r.top + r.height / 2 - h / 2, width: cardW, height: h }, node: makeNode(tag), rotate: 0, scale: 0.2 };
+  }
+
   /** 托盤上那一格現在的角度（扇形的那一點點斜）。 */
   function angleOf(tag) {
     const m = /rotate\((-?[\d.]+)deg\)/.exec(slots.get(tag)?.style.transform || "");
@@ -789,6 +811,7 @@ export function createHand({
     arriveAt,
     reveal,
     receive,
+    launchFrom,
     mark,
     /** 托盤上那張牌（收起來、沒擺出來就 null）：房間拿它當飛回來的落點。 */
     nodeOf: (t) => (open && slots.get(t)?.isConnected ? slots.get(t).querySelector(".fav-card") : null),

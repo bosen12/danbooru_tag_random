@@ -428,22 +428,48 @@ function libCard(card) {
 }
 
 /** 字盒裡點一下：那張牌從原地飛進合成池。 */
-function flyInto(tag, from) {
-  if (matchMedia("(prefers-reduced-motion: reduce)").matches) return;
-  const target = [...$("pool-well").querySelectorAll(".card")].find((n) => n.dataset.tag === tag);
-  if (!target) return;
+/**
+ * 牌飛進合成池。delay：晚一點才起飛；src：影子要複製的那張（從托盤出發時是托盤那張）；
+ * startRotate：出發時的角度。from 是 null（看不到從哪裡來）：輪到它時原地冒出來。
+ */
+function flyInto(tag, from, { delay = 0, src = null, startRotate = 0, startScale = 1 } = {}) {
+  const target = poolNode(tag);
+  const slot0 = target?.closest(".pool-slot");
+  const show = () => {
+    poolInbound.delete(tag);
+    const n = poolNode(tag);
+    n?.closest(".pool-slot")?.style.setProperty("visibility", "");
+    return n;
+  };
+  if (matchMedia("(prefers-reduced-motion: reduce)").matches || !target) return void show();
   target.classList.remove("dropped");
   const to = target.getBoundingClientRect();
   // 合成池捲出畫面了（手機上從字盒底下、托盤出牌）：飛過去看起來像牌飛出螢幕。
   // 改成原地往合成池那個方向收進去，再說一聲、給一顆「看合成池」。
-  if (to.bottom < 0 || to.top > window.innerHeight || !to.width) return tuckAway(tag, from, to.top < 0 ? -1 : 1);
+  if (to.bottom < 0 || to.top > window.innerHeight || !to.width) {
+    show();
+    return from ? tuckAway(tag, from, to.top < 0 ? -1 : 1) : undefined;
+  }
+  if (!from) {
+    // 沒有出發點：那一格藏到輪到它，再從底下冒出來。
+    poolInbound.add(tag);
+    slot0?.style.setProperty("visibility", "hidden");
+    setTimeout(() => {
+      if (show()) popCarried(tag, 0);
+    }, delay);
+    return;
+  }
   // 飛的是一張影子；池裡那一格（牌＋×）先藏著，影子落地才一起出現。路上池子重畫（又放了一張、
   // 帶進來的牌擠開位置）也一樣：renderPool 看 poolInbound 把新那格藏著，影子追的是新位置。
-  const ghost = target.cloneNode(true);
-  ghost.classList.remove("dropped", "is-related", "is-clashing");
+  const ghost = (src || target).cloneNode(true);
+  ghost.classList.remove("dropped", "is-related", "is-clashing", "fav-card");
+  ghost.style.visibility = "";
   poolInbound.add(tag);
-  target.closest(".pool-slot")?.style.setProperty("visibility", "hidden");
+  slot0?.style.setProperty("visibility", "hidden");
   flight(ghost, from, () => poolNode(tag), {
+    delay,
+    startRotate,
+    startScale,
     onLand: () => {
       poolInbound.delete(tag);
       const n = poolNode(tag);
@@ -1870,9 +1896,25 @@ $("pool-clear").addEventListener("click", () => {
     action: {
       label: "復原",
       run: () => {
-        pool = new Set(before.filter((t) => lib.byTag.has(t) && !bans.has(t)));
+        // 清空的反過來：偏好卡牌從手上打出去（托盤那一格／標籤），其他的從字盒那張飛回來；
+        // 出發點在重畫之前量，回來的那幾格重畫出來時就藏著，影子都在這一刻做好、用 delay 錯開。
+        const restore = before.filter((t) => lib.byTag.has(t) && !bans.has(t));
+        const cardW = $("lib-grid").querySelector(".card")?.offsetWidth || 84;
+        const launch = restore.map((t) => {
+          const h = hand?.has(t) ? hand.launchFrom(t, cardW) : null;
+          if (h) return { t, ...h, fromHand: true };
+          const c = libCardNode(t);
+          const r = c && c.getBoundingClientRect();
+          return { t, rect: r && r.width && r.bottom > 0 && r.top < innerHeight ? r : null, node: null, rotate: 0 };
+        });
+        if (!matchMedia("(prefers-reduced-motion: reduce)").matches) for (const l of launch) poolInbound.add(l.t);
+        pool = new Set(restore);
         commitPins();
-        [...pool].forEach((t, i) => popCarried(t, i * 60));
+        // 從手上打出去的先走（托盤正在收攏，等久了會蓋住留下來的牌），字盒的跟著一張一張來。
+        const first = launch.filter((l) => l.fromHand);
+        const rest = launch.filter((l) => !l.fromHand);
+        first.forEach((l, i) => flyInto(l.t, l.rect, { delay: i * 45, src: l.node, startRotate: l.rotate, startScale: l.scale || 1 }));
+        rest.forEach((l, i) => flyInto(l.t, l.rect, { delay: 60 + first.length * 45 + i * 60 }));
       },
     },
   });
