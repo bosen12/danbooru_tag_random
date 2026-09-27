@@ -739,6 +739,8 @@ finally:
 # 負向詞加了 cross-section／x-ray／uterus／inset 之後備援脫節，這條印了紅字，
 # 整支卻還是 exit 0。它自己的註解說「沒有人會自然發現它壞掉」，
 # 而它本身就待在沒有人會發現它壞掉的位置。
+# 2026-09-28：基礎負面補上 loli、child、aged down。卡面本來就有這幾個字，
+# 生圖用的這條以前沒有。順序接在 inset 後面。
 # --- 備援負面字串不能跟 lexicon.json 脫節 -------------------------------------
 # server._negative() 讀不到 lexicon.json 時會退回一個寫死的字串，而它的註解一直
 #宣稱 merge_lexicon.NEGATIVE 是唯一來源。實際上它脫節了：正式那份已經把
@@ -762,9 +764,10 @@ _requested_base_negative = [
     "worst quality", "bad quality", "worst detail", "sketch", "bad hands", "extra digits",
     "censored", "bar censor", "mosaic censoring", "watermark", "signature", "english text",
     "speech bubble", "multiple views", "3d", "photorealistic", "cross-section", "x-ray", "inset",
+    "loli", "child", "aged down",
 ]
 ok(
-    "基礎 negative prompt 使用指定的 19 個 tag 且順序一致",
+    "基礎 negative prompt 使用指定的 22 個 tag 且順序一致",
     _live == _requested_base_negative,
     f"實際為 {_live}",
 )

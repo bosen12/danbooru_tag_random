@@ -45,7 +45,7 @@
     "pubic hair"
   ],
   "alwaysEnv": [],
-  "negative": "worst quality, bad quality, worst detail, sketch, bad hands, extra digits, censored, bar censor, mosaic censoring, watermark, signature, english text, speech bubble, multiple views, 3d, photorealistic, cross-section, x-ray, inset",
+  "negative": "worst quality, bad quality, worst detail, sketch, bad hands, extra digits, censored, bar censor, mosaic censoring, watermark, signature, english text, speech bubble, multiple views, 3d, photorealistic, cross-section, x-ray, inset, loli, child, aged down",
   "defaults": {
     "n": 1,
     "width": 1024,
@@ -17816,11 +17816,9 @@
     },
     {
       "tag": "grabbing another's hair",
-      "section": "feature",
+      "section": "pose",
       "gate": "any",
       "heat": [
-        "tease",
-        "flash",
         "sex"
       ],
       "mutex": null,
@@ -17830,11 +17828,13 @@
       "era": [
         "any"
       ],
-      "group": "other",
+      "group": "sex",
       "needs": [
-        "pair"
+        "pair",
+        "male",
+        "female"
       ],
-      "zh": "抓別人頭髮"
+      "zh": "抓頭髮"
     },
     {
       "tag": "track uniform",
@@ -26673,6 +26673,439 @@
       ],
       "group": "bottom",
       "zh": "格裙"
+    },
+    {
+      "tag": "low ponytail",
+      "section": "feature",
+      "gate": "any",
+      "heat": [
+        "tease",
+        "flash",
+        "sex"
+      ],
+      "mutex": "hair_style",
+      "bind": [],
+      "implies": [
+        "ponytail"
+      ],
+      "layer": "normal",
+      "era": [
+        "any"
+      ],
+      "group": "hair_style",
+      "zh": "低馬尾"
+    },
+    {
+      "tag": "braided ponytail",
+      "section": "feature",
+      "gate": "any",
+      "heat": [
+        "tease",
+        "flash",
+        "sex"
+      ],
+      "mutex": "hair_style",
+      "bind": [],
+      "implies": [
+        "ponytail"
+      ],
+      "layer": "normal",
+      "era": [
+        "any"
+      ],
+      "group": "hair_style",
+      "zh": "辮子馬尾"
+    },
+    {
+      "tag": "folded ponytail",
+      "section": "feature",
+      "gate": "any",
+      "heat": [
+        "tease",
+        "flash",
+        "sex"
+      ],
+      "mutex": "hair_style",
+      "bind": [],
+      "implies": [
+        "ponytail"
+      ],
+      "layer": "normal",
+      "era": [
+        "any"
+      ],
+      "group": "hair_style",
+      "zh": "折疊馬尾"
+    },
+    {
+      "tag": "grin",
+      "section": "pose",
+      "gate": "any",
+      "heat": [
+        "tease",
+        "flash",
+        "sex"
+      ],
+      "mutex": "expression",
+      "bind": [],
+      "implies": [],
+      "layer": "normal",
+      "era": [
+        "any"
+      ],
+      "group": "face",
+      "zh": "咧嘴笑"
+    },
+    {
+      "tag": "tearing up",
+      "section": "pose",
+      "gate": "any",
+      "heat": [
+        "tease",
+        "flash",
+        "sex"
+      ],
+      "mutex": "expression",
+      "bind": [],
+      "implies": [
+        "tears"
+      ],
+      "layer": "normal",
+      "era": [
+        "any"
+      ],
+      "group": "face",
+      "zh": "含淚"
+    },
+    {
+      "tag": "standing split",
+      "section": "pose",
+      "gate": "any",
+      "heat": [
+        "tease",
+        "flash",
+        "sex"
+      ],
+      "mutex": "body_pose",
+      "bind": [],
+      "implies": [],
+      "layer": "normal",
+      "era": [
+        "any"
+      ],
+      "group": "body",
+      "zh": "站立劈腿"
+    },
+    {
+      "tag": "tiptoes",
+      "section": "pose",
+      "gate": "any",
+      "heat": [
+        "tease",
+        "flash",
+        "sex"
+      ],
+      "mutex": "body_pose",
+      "bind": [],
+      "implies": [
+        "standing"
+      ],
+      "layer": "normal",
+      "era": [
+        "any"
+      ],
+      "group": "body",
+      "zh": "踮腳"
+    },
+    {
+      "tag": "leg up",
+      "section": "pose",
+      "gate": "any",
+      "heat": [
+        "tease",
+        "flash",
+        "sex"
+      ],
+      "mutex": null,
+      "bind": [],
+      "implies": [],
+      "layer": "normal",
+      "era": [
+        "any"
+      ],
+      "group": "tease",
+      "zh": "單腿抬起"
+    },
+    {
+      "tag": "covering privates",
+      "section": "pose",
+      "gate": "female",
+      "heat": [
+        "flash",
+        "sex"
+      ],
+      "mutex": null,
+      "bind": [],
+      "implies": [],
+      "layer": "normal",
+      "era": [
+        "any"
+      ],
+      "group": "flash",
+      "zh": "掩私處"
+    },
+    {
+      "tag": "hand on another's head",
+      "section": "pose",
+      "gate": "any",
+      "heat": [
+        "tease",
+        "flash",
+        "sex"
+      ],
+      "mutex": null,
+      "bind": [],
+      "implies": [],
+      "layer": "normal",
+      "era": [
+        "any"
+      ],
+      "group": "tease",
+      "needs": [
+        "pair",
+        "male",
+        "female"
+      ],
+      "zh": "按住頭"
+    },
+    {
+      "tag": "nose blush",
+      "section": "feature",
+      "gate": "any",
+      "heat": [
+        "tease",
+        "flash",
+        "sex"
+      ],
+      "mutex": null,
+      "bind": [],
+      "implies": [],
+      "layer": "normal",
+      "era": [
+        "any"
+      ],
+      "group": "skin",
+      "zh": "鼻頭紅"
+    },
+    {
+      "tag": "sweatdrop",
+      "section": "feature",
+      "gate": "any",
+      "heat": [
+        "tease",
+        "flash",
+        "sex"
+      ],
+      "mutex": null,
+      "bind": [],
+      "implies": [],
+      "layer": "normal",
+      "era": [
+        "any"
+      ],
+      "group": "other",
+      "zh": "汗滴"
+    },
+    {
+      "tag": "fang",
+      "section": "feature",
+      "gate": "any",
+      "heat": [
+        "tease",
+        "flash",
+        "sex"
+      ],
+      "mutex": null,
+      "bind": [],
+      "implies": [],
+      "layer": "normal",
+      "era": [
+        "any"
+      ],
+      "group": "other",
+      "zh": "虎牙"
+    },
+    {
+      "tag": "mole under mouth",
+      "section": "feature",
+      "gate": "any",
+      "heat": [
+        "tease",
+        "flash",
+        "sex"
+      ],
+      "mutex": null,
+      "bind": [],
+      "implies": [],
+      "layer": "normal",
+      "era": [
+        "any"
+      ],
+      "group": "skin",
+      "zh": "嘴下痣"
+    },
+    {
+      "tag": "skindentation",
+      "section": "feature",
+      "gate": "any",
+      "heat": [
+        "tease",
+        "flash",
+        "sex"
+      ],
+      "mutex": null,
+      "bind": [],
+      "implies": [],
+      "layer": "normal",
+      "era": [
+        "any"
+      ],
+      "group": "other",
+      "zh": "襪勒肉"
+    },
+    {
+      "tag": "cleft of venus",
+      "section": "feature",
+      "gate": "female",
+      "heat": [
+        "flash",
+        "sex"
+      ],
+      "mutex": null,
+      "bind": [],
+      "implies": [],
+      "layer": "normal",
+      "era": [
+        "any"
+      ],
+      "group": "body_f",
+      "zh": "股縫"
+    },
+    {
+      "tag": "hood up",
+      "section": "feature",
+      "gate": "any",
+      "heat": [
+        "tease",
+        "flash",
+        "sex"
+      ],
+      "mutex": null,
+      "bind": [],
+      "implies": [],
+      "layer": "normal",
+      "era": [
+        "any"
+      ],
+      "group": "other",
+      "zh": "戴上兜帽"
+    },
+    {
+      "tag": "turtleneck",
+      "section": "clothing",
+      "gate": "any",
+      "heat": [
+        "tease",
+        "flash",
+        "sex"
+      ],
+      "mutex": "top",
+      "bind": [],
+      "implies": [],
+      "layer": "garment",
+      "era": [
+        "modern"
+      ],
+      "group": "top",
+      "zh": "高領衫"
+    },
+    {
+      "tag": "hairclip",
+      "section": "clothing",
+      "gate": "female",
+      "heat": [
+        "tease",
+        "flash",
+        "sex"
+      ],
+      "mutex": "hair_acc",
+      "bind": [],
+      "implies": [],
+      "layer": "accessory",
+      "era": [
+        "any"
+      ],
+      "group": "acc",
+      "zh": "髮夾"
+    },
+    {
+      "tag": "headphones",
+      "section": "clothing",
+      "gate": "any",
+      "heat": [
+        "tease",
+        "flash",
+        "sex"
+      ],
+      "mutex": "headwear",
+      "bind": [],
+      "implies": [],
+      "layer": "accessory",
+      "era": [
+        "modern"
+      ],
+      "group": "acc",
+      "zh": "頭戴耳機"
+    },
+    {
+      "tag": "wrist cuffs",
+      "section": "clothing",
+      "gate": "any",
+      "heat": [
+        "tease",
+        "flash",
+        "sex"
+      ],
+      "mutex": "jewelry",
+      "bind": [],
+      "implies": [],
+      "layer": "accessory",
+      "era": [
+        "any"
+      ],
+      "group": "acc",
+      "zh": "腕環"
+    },
+    {
+      "tag": "sun hat",
+      "section": "clothing",
+      "gate": "any",
+      "heat": [
+        "tease",
+        "flash",
+        "sex"
+      ],
+      "mutex": "headwear",
+      "bind": [],
+      "implies": [
+        "hat"
+      ],
+      "layer": "accessory",
+      "era": [
+        "modern"
+      ],
+      "group": "acc",
+      "zh": "遮陽帽"
     },
     {
       "tag": "bride",

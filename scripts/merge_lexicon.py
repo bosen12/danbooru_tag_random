@@ -56,7 +56,8 @@ GATES = {"any", "female", "male"}
 NEGATIVE = (
     "worst quality, bad quality, worst detail, sketch, bad hands, extra digits, "
     "censored, bar censor, mosaic censoring, watermark, signature, english text, "
-    "speech bubble, multiple views, 3d, photorealistic, cross-section, x-ray, inset"
+    "speech bubble, multiple views, 3d, photorealistic, cross-section, x-ray, inset, "
+    "loli, child, aged down"
 )
 
 # 這張表有兩個用途：norm() 用它把字擋在詞庫外，rename_custom_tag.new_tag_ok()
@@ -673,6 +674,13 @@ RECLASS = {
         "section": "pose", "mutex": "sex_act", "heat": ["sex"],
         "needs": ["male", "pair"], "layer": "normal", "gate": "any",
     },
+    # 採集放進 feature，三檔都進，群組被改成 other（名字有 hair，不能佔髮型格）。
+    # 兩個女生在誘惑裡也抓得到頭髮。這次收成姿勢、只有性愛、要一男一女。
+    # 不佔 sex_act，才能跟按住頭、跟性交同時在。不另加同名的第二筆。
+    "grabbing another's hair": {
+        "section": "pose", "mutex": None, "heat": ["sex"],
+        "needs": ["pair", "male", "female"], "layer": "normal", "gate": "any",
+    },
     # 採集把它放進 feature/body_m、layer skin。它是視線，不是身體。
     # heat 停在走光與性愛：widen_heat 會把 gaze 攤成三檔，NARROW_HEAT 把它拉回來。
     "looking at penis": {
@@ -933,8 +941,11 @@ NEEDS_MALE = {
     "asphyxiation",
     "slap mark",
     # 內射受孕、抓手腕是一男一女。pair 只代表兩人，不擋兩個女生。
+    # 按住頭、抓頭髮也是男生對女生。pair 不夠，兩個女生會漏過去。
     "impregnation",
     "wrist grab",
+    "hand on another's head",
+    "grabbing another's hair",
 }
 
 NEEDS_FEMALE = {
@@ -1039,8 +1050,11 @@ NEEDS_FEMALE = {
     "asphyxiation",
     "slap mark",
     # 內射受孕要有被內射的女生。抓手腕是男生抓住女生的手腕。
+    # 按住頭、抓頭髮的對象是女生。
     "impregnation",
     "wrist grab",
+    "hand on another's head",
+    "grabbing another's hair",
 }
 
 NEEDS_PAIR = {
@@ -1120,6 +1134,7 @@ NEEDS_PAIR = {
     "slap mark",
     "impregnation",
     "wrist grab",
+    "hand on another's head",
 }
 
 NEEDS_GROUP = {
@@ -2488,11 +2503,11 @@ def extra_expand_tags() -> list[dict]:
             "zh": zh,
         }
 
-    def pose(tag, mutex=None, implies=None, needs=None, heat=None, era=None, zh=""):
+    def pose(tag, mutex=None, implies=None, needs=None, heat=None, era=None, zh="", gate="any"):
         return {
             "tag": tag,
             "section": "pose",
-            "gate": "any",
+            "gate": gate,
             "heat": list(heat or all_h),
             "mutex": mutex,
             "bind": [],
@@ -2742,6 +2757,31 @@ def extra_expand_tags() -> list[dict]:
         cloth("mary janes", mutex="feet", layer="garment", gate="female", zh="瑪麗珍鞋"),
         cloth("knee boots", mutex="feet", layer="garment", zh="及膝靴", era=["any"]),
         cloth("plaid skirt", mutex="bottom", layer="garment", implies=["skirt"], gate="female", zh="格裙"),
+        # 第三輪。三種馬尾只帶出 ponytail。braid 也在髮型格，一起帶會互斥失敗。
+        feat("low ponytail", mutex="hair_style", implies=["ponytail"], zh="低馬尾"),
+        feat("braided ponytail", mutex="hair_style", implies=["ponytail"], zh="辮子馬尾"),
+        feat("folded ponytail", mutex="hair_style", implies=["ponytail"], zh="折疊馬尾"),
+        pose("grin", mutex="expression", zh="咧嘴笑"),
+        pose("tearing up", mutex="expression", implies=["tears"], zh="含淚"),
+        pose("standing split", mutex="body_pose", zh="站立劈腿"),
+        pose("tiptoes", mutex="body_pose", implies=["standing"], zh="踮腳"),
+        pose("leg up", zh="單腿抬起"),
+        pose("covering privates", gate="female", heat=["flash", "sex"], zh="掩私處"),
+        pose("hand on another's head", needs=["pair"], zh="按住頭"),
+        # grabbing another's hair 已在採集詞裡。同名再加一筆會變成兩個字
+        # （去重鍵是 tag+section）。改走 RECLASS，不要在這裡再寫一筆。
+        feat("nose blush", zh="鼻頭紅"),
+        feat("sweatdrop", zh="汗滴"),
+        feat("fang", zh="虎牙"),
+        feat("mole under mouth", zh="嘴下痣"),
+        feat("skindentation", zh="襪勒肉"),
+        feat("cleft of venus", gate="female", heat=["flash", "sex"], zh="股縫"),
+        feat("hood up", zh="戴上兜帽"),
+        cloth("turtleneck", mutex="top", layer="garment", zh="高領衫"),
+        cloth("hairclip", mutex="hair_acc", gate="female", zh="髮夾", era=["any"]),
+        cloth("headphones", mutex="headwear", zh="頭戴耳機"),
+        cloth("wrist cuffs", mutex="jewelry", zh="腕環", era=["any"]),
+        cloth("sun hat", mutex="headwear", implies=["hat"], zh="遮陽帽"),
         feat("bride", needs=["female"], gate="female", zh="新娘"),
         feat("gyaru", needs=["female"], gate="female", zh="辣妹"),
         feat("small penis", needs=["male"], gate="male", heat=sex, zh="小陰莖"),

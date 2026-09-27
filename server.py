@@ -130,7 +130,7 @@ def _negative() -> str:
     # Last resort if lexicon.json is missing. Source of truth: merge_lexicon.NEGATIVE
     # —— test_server.py 會比對兩者，避免正式詞庫與備援路徑漂移。
     return (
-        "worst quality, bad quality, worst detail, sketch, bad hands, extra digits, censored, bar censor, mosaic censoring, watermark, signature, english text, speech bubble, multiple views, 3d, photorealistic, cross-section, x-ray, inset"
+        "worst quality, bad quality, worst detail, sketch, bad hands, extra digits, censored, bar censor, mosaic censoring, watermark, signature, english text, speech bubble, multiple views, 3d, photorealistic, cross-section, x-ray, inset, loli, child, aged down"
     )
 
 

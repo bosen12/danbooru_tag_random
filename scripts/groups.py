@@ -151,6 +151,7 @@ BODY_ANY = {
     "sideboob",
     "underboob",
     "backboob",
+    "cleft of venus",
 }
 
 SKY = {
@@ -168,6 +169,9 @@ HAIR_STYLE = {
     "braid",
     "twin braids",
     "single braid",
+    "low ponytail",
+    "braided ponytail",
+    "folded ponytail",
     "low twintails",
     "half updo",
     "hair intakes",
@@ -237,6 +241,7 @@ FACE = {
     "angry",
     "sad",
     "crying",
+    "tearing up",
     "drooling",
     "moaning",
     "clenched teeth",
@@ -267,6 +272,8 @@ SKIN = {
     "green skin",
     "mole",
     "mole under eye",
+    "mole under mouth",
+    "nose blush",
     "freckles",
     "body freckles",
     "scar",

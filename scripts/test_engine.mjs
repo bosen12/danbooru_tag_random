@@ -1050,7 +1050,7 @@ const MODERN_ONLY = [
   eq("male pubic hair is not a hair style", lex.byTag.get("male pubic hair")?.group, "body_m");
   eq("leg hair is not a hair style", lex.byTag.get("leg hair")?.group, "body_m");
   eq("facial hair is not a hair style", lex.byTag.get("facial hair")?.group, "body_m");
-  eq("grabbing another's hair is not a hair style", lex.byTag.get("grabbing another's hair")?.group, "other");
+  eq("grabbing another's hair is a sex pose, not a hair style", lex.byTag.get("grabbing another's hair")?.group, "sex");
   eq("hair flower is not a hair style", lex.byTag.get("hair flower")?.group, "other");
   eq("wet hair is not a hair style", lex.byTag.get("wet hair")?.group, "skin");
   eq("two-tone hair sits with hair color", lex.byTag.get("two-tone hair")?.group, "hair_color");
@@ -2102,17 +2102,16 @@ function indoorOutdoorClash(have) {
     const h = tagsOf(d);
     // 原本這裡還要求 h.has("adult")。adult 在 Danbooru 是 0 張、模型沒把它當 tag
     // 學過，2026-09-18 移除 —— 它當初是被無條件塞進每一張圖的，所以出現在這條
-    // 斷言裡只是順帶，不是這條要守的東西。這條守的是「釘 loli 會連帶釘住並保留
-    // petite 與 flat chest」，那部分一個字都沒放鬆。
-    if (!h.has("loli") || !h.has("petite") || !h.has("flat chest")) {
-      miss += 1;
-    }
+    // 2026-09-28：loli 本身隨機和釘選都不輸出。applyPin 仍會把 petite、
+    // flat chest 放進釘選，這兩個字留著，所以高個子和大胸仍被互斥擋掉。
+    if (h.has("loli")) miss += 1;
+    if (!h.has("petite") || !h.has("flat chest")) miss += 1;
     if (h.has("tall female")) tall += 1;
     if (h.has("huge breasts") || h.has("large breasts") || h.has("gigantic breasts") || h.has("medium breasts")) {
       big += 1;
     }
   }
-  eq("pin loli keeps petite flat chest", miss, 0);
+  eq("pin loli does not draw loli, petite and flat chest stay", miss, 0);
   eq("pin loli never draws tall female", tall, 0);
   eq("pin loli never draws a larger bust", big, 0);
   const sb = settings();
@@ -2161,13 +2160,12 @@ function indoorOutdoorClash(have) {
   for (let i = 0; i < 30; i++) {
     const d = drawOne(lex, s, pin.pinned, new Set(), mulberry32(31700 + i), 31700 + i);
     const h = tagsOf(d);
-    if (!h.has("shota") || !h.has("short male")) miss += 1;
+    if (h.has("shota")) miss += 1;
+    if (!h.has("short male")) miss += 1;
     if (h.has("tall male")) tall += 1;
   }
-  eq("pin shota keeps short male", miss, 0);
-  // shota 從來就抽不到，只有明確釘選才會出現。原本那是「shota 與 adult 互斥」
-  // 的副作用（adult 塞在每一張圖裡），adult 移除之後改寫成直接的規則，
-  // 行為要一模一樣 —— 這兩條守住它。
+  eq("pin shota does not draw shota, short male stays", miss, 0);
+  // 2026-09-28 起釘選也不輸出 shota。short male 是 applyPin 另外釘上的，留著。
   {
     const sAuto = settings();
     sAuto.girl = false;
@@ -5558,7 +5556,13 @@ function indoorOutdoorClash(have) {
     // 第二十一次（2026-09-28）：舉手、走路、跑步、跳躍、四種髮型，以及瑪麗珍鞋、及膝靴、格裙進池。
     // 立乳不進誘惑。內射受孕和抓手腕要一男一女，不進單人女性。這張仍是 1girl solo 的性愛，
     // 旅館、沒有男生。
-    "1girl, solo, very short hair, aqua eyes, blue hair, blunt bangs, large breasts, breasts on glass, body blush, hair flower, cardigan, pink sports bra, sports bra, panties aside, torn thighhighs, thighhighs, fingering, squatting, portrait, looking around, flustered, after vaginal, hotel room, indoors, sunrise, desk lamp, tribal, full-length mirror, mirror, nsfw, explicit, masterpiece, best quality, amazing quality");
+    // 第二十二次（2026-09-28）：第三輪 22 個新字進池。抓頭髮本來就在，改成只有性愛的姿勢，
+    // 不另加同名的一筆。單人女性能進的髮型、表情、衣服和特徵讓候選池變大，牌序整條位移。
+    // 按住頭要一男一女，不進這張。這張仍是 1girl solo，沒有男生。
+    // 第二十三次（2026-09-28）：loli 離開候選池。沒有水的濕、雪配泳衣、騎車配走跑跳、
+    // 跳水配走跑劈腿、漂浮配走跑、被褥配直立、全身動作配半身構圖、沒有怪物的獠牙都不再成立。
+    // 現代外套和聚光燈的權重也降了。牌序再位移一次。這張仍是 1girl solo，沒有男生。
+    "1girl, solo, very short hair, aqua eyes, blue hair, blunt bangs, large breasts, thighs, tanlines, collarbone, bathrobe, tiptoes, standing, worm's eye view, from below, looking around, dazed, masturbation, ofuro, bath, indoors, night, spotlight, curtains, nsfw, explicit, masterpiece, best quality, amazing quality");
   ok("drawOne exposes shadow diagnostics", Array.isArray(shadowIntegrationDraw.shadowViolations));
 
   const eatProneShadow = validateSupportShadow({
@@ -8560,6 +8564,198 @@ function indoorOutdoorClash(have) {
   const both = applyPin(lex, bath, new Set(), "running").pinned;
   const kept = tagsOf(drawOne(lex, teaseOnly, both, new Set(), mulberry32(155480), 155480));
   ok("pinned running stays in a pinned bathroom", kept.has("running") && kept.has("bathroom"));
+}
+
+// --- 第三輪：馬尾、表情、衣服、前提 -----------------------------------------
+{
+  const implies = (tag) => lex.byTag.get(tag).implies || [];
+  const needsCouple = (item) => {
+    const needs = item && item.needs ? item.needs : [];
+    return needs.includes("pair") && needs.includes("male") && needs.includes("female");
+  };
+  for (const tag of ["low ponytail", "braided ponytail", "folded ponytail"]) {
+    ok(`${tag} implies ponytail and not braid`, implies(tag).includes("ponytail") && !implies(tag).includes("braid"));
+    ok(`${tag} can sit with ponytail`, contradictions(lex, [tag, "ponytail"]).length === 0);
+    ok(`${tag} clashes with twintails`, contradictions(lex, [tag, "twintails"]).length > 0);
+  }
+  ok("grin does not imply smile", !implies("grin").includes("smile"));
+  ok("grin clashes with smile", contradictions(lex, ["grin", "smile"]).length > 0);
+  ok("tearing up implies tears and not crying", implies("tearing up").includes("tears") && !implies("tearing up").includes("crying"));
+  ok("tearing up clashes with crying", contradictions(lex, ["tearing up", "crying"]).length > 0);
+  ok("tearing up can sit with tears", contradictions(lex, ["tearing up", "tears"]).length === 0);
+  ok("turtleneck does not imply sweater", !implies("turtleneck").includes("sweater"));
+  ok("turtleneck clashes with a turtleneck sweater", contradictions(lex, ["turtleneck", "turtleneck sweater"]).length > 0);
+  ok("hairclip clashes with a hair ribbon", contradictions(lex, ["hairclip", "hair ribbon"]).length > 0);
+  ok("headphones do not imply a hat", !implies("headphones").includes("hat"));
+  ok("headphones clash with a sun hat", contradictions(lex, ["headphones", "sun hat"]).length > 0);
+  ok("sun hat implies hat", implies("sun hat").includes("hat"));
+  ok("sun hat can sit with hat", contradictions(lex, ["sun hat", "hat"]).length === 0);
+  ok("wrist cuffs do not imply handcuffs", !implies("wrist cuffs").includes("handcuffs"));
+  ok("tiptoes imply standing", implies("tiptoes").includes("standing"));
+  ok("tiptoes can sit with standing", contradictions(lex, ["tiptoes", "standing"]).length === 0);
+  ok("standing split clashes with sitting", contradictions(lex, ["standing split", "sitting"]).length > 0);
+  ok("cleft of venus stays in flash and sex", JSON.stringify(lex.byTag.get("cleft of venus").heat) === JSON.stringify(["flash", "sex"]));
+  ok("cleft of venus is a female body feature", lex.byTag.get("cleft of venus").group === "body_f");
+  ok("cleft of venus does not imply pussy", !implies("cleft of venus").includes("pussy"));
+  ok("covering privates stay in flash and sex", JSON.stringify(lex.byTag.get("covering privates").heat) === JSON.stringify(["flash", "sex"]));
+  ok("covering privates do not imply nude", !implies("covering privates").includes("nude"));
+  const head = lex.byTag.get("hand on another's head");
+  const hair = lex.byTag.get("grabbing another's hair");
+  ok("a hand on her head needs a man and a woman", needsCouple(head));
+  ok("grabbing her hair needs a man and a woman", needsCouple(hair));
+  ok("grabbing her hair is sex only", JSON.stringify(hair.heat) === JSON.stringify(["sex"]));
+  ok("a hand on her head is not a neck grip", contradictions(lex, ["hand on another's head", "strangling"]).length === 0);
+  ok("skindentation does not imply thighhighs", !implies("skindentation").includes("thighhighs"));
+  ok("hood up does not imply hood", !implies("hood up").includes("hood"));
+
+  const teaseOnly = defaultSettings(data);
+  teaseOnly.heats = ["tease"];
+  let teaseLeak = 0;
+  for (let i = 0; i < 80; i++) {
+    const got = tagsOf(drawOne(lex, teaseOnly, new Set(), new Set(), mulberry32(156000 + i), 156000 + i));
+    if (got.has("cleft of venus") || got.has("covering privates") || got.has("grabbing another's hair")) teaseLeak += 1;
+  }
+  eq("tease never draws cleft, covering privates, or a hair grab", teaseLeak, 0);
+
+  const girl = defaultSettings(data);
+  girl.girl = true;
+  girl.boy = false;
+  girl.heats = ["sex"];
+  let pairLeak = 0;
+  let splitInSex = 0;
+  for (let i = 0; i < 80; i++) {
+    const got = tagsOf(drawOne(lex, girl, new Set(), new Set(), mulberry32(156200 + i), 156200 + i));
+    if (got.has("hand on another's head") || got.has("grabbing another's hair")) pairLeak += 1;
+    if (got.has("standing split")) splitInSex += 1;
+  }
+  eq("girl-only sex never draws a head pat or a hair grab", pairLeak, 0);
+  eq("unpinned standing split stays out of sex", splitInSex, 0);
+
+  const bed = applyPin(lex, new Set(), new Set(), "on bed").pinned;
+  let uprightOnBed = 0;
+  for (let i = 0; i < 40; i++) {
+    const got = tagsOf(drawOne(lex, teaseOnly, bed, new Set(), mulberry32(156400 + i), 156400 + i));
+    if (got.has("standing split") || got.has("tiptoes")) uprightOnBed += 1;
+  }
+  eq("standing split and tiptoes stay off a bed", uprightOnBed, 0);
+
+  const pinToe = applyPin(lex, new Set(), new Set(), "tiptoes").pinned;
+  const toe = tagsOf(drawOne(lex, teaseOnly, pinToe, new Set(), mulberry32(156850), 156850));
+  ok("pinned tiptoes brings standing", toe.has("tiptoes") && toe.has("standing"));
+  const pinSplit = applyPin(lex, new Set(), new Set(), "standing split").pinned;
+  const split = tagsOf(drawOne(lex, girl, pinSplit, new Set(), mulberry32(156860), 156860));
+  ok("pinned standing split stays in sex", split.has("standing split"));
+
+  const pinShort = applyPin(lex, new Set(), new Set(), "short hair").pinned;
+  let shortPony = 0;
+  for (let i = 0; i < 40; i++) {
+    const got = tagsOf(drawOne(lex, teaseOnly, pinShort, new Set(), mulberry32(156800 + i), 156800 + i));
+    if (got.has("low ponytail") || got.has("braided ponytail") || got.has("folded ponytail")) shortPony += 1;
+  }
+  eq("short hair does not wear a ponytail variant", shortPony, 0);
+
+  const pinRun = applyPin(lex, new Set(), new Set(), "running").pinned;
+  let legWithRun = 0;
+  for (let i = 0; i < 40; i++) {
+    const got = tagsOf(drawOne(lex, teaseOnly, pinRun, new Set(), mulberry32(156500 + i), 156500 + i));
+    if (got.has("running") && got.has("leg up")) legWithRun += 1;
+  }
+  eq("leg up stays off a pinned run", legWithRun, 0);
+
+  const legwear = new Set(["thighhighs", "pantyhose", "kneehighs", "socks"]);
+  const hoods = new Set(["hoodie", "hood", "hooded cloak"]);
+  let indentBad = 0;
+  let hoodBad = 0;
+  const mixed = defaultSettings(data);
+  for (let i = 0; i < 200; i++) {
+    const got = tagsOf(drawOne(lex, mixed, new Set(), new Set(), mulberry32(156600 + i), 156600 + i));
+    if (got.has("skindentation") && ![...legwear].some((t) => got.has(t))) indentBad += 1;
+    if (got.has("hood up") && ![...hoods].some((t) => got.has(t))) hoodBad += 1;
+  }
+  eq("skindentation never appears without legwear", indentBad, 0);
+  eq("hood up never appears without a hood garment", hoodBad, 0);
+
+  const hasBoy = (got) => got.has("1boy") || got.has("2boys") || got.has("3boys");
+  const hasGirl = (got) => got.has("1girl") || got.has("2girls") || got.has("3girls") || got.has("4girls") || got.has("5girls");
+  const pinHead = applyPin(lex, new Set(), new Set(), "hand on another's head").pinned;
+  const pinHair = applyPin(lex, new Set(), new Set(), "grabbing another's hair").pinned;
+  let headSeen = 0;
+  let headBad = 0;
+  let hairSeen = 0;
+  let hairBad = 0;
+  for (let i = 0; i < 20; i++) {
+    const gotH = tagsOf(drawOne(lex, girl, pinHead, new Set(), mulberry32(157000 + i), 157000 + i));
+    if (gotH.has("hand on another's head")) {
+      headSeen += 1;
+      if (!hasBoy(gotH) || !hasGirl(gotH)) headBad += 1;
+    }
+    const gotR = tagsOf(drawOne(lex, girl, pinHair, new Set(), mulberry32(157100 + i), 157100 + i));
+    if (gotR.has("grabbing another's hair")) {
+      hairSeen += 1;
+      if (!hasBoy(gotR) || !hasGirl(gotR)) hairBad += 1;
+    }
+  }
+  ok("pinned hand on head was drawn with the boy switch off", headSeen > 0);
+  eq("pinned hand on head brings a man and a woman", headBad, 0);
+  ok("pinned hair grab was drawn with the boy switch off", hairSeen > 0);
+  eq("pinned hair grab brings a man and a woman", hairBad, 0);
+}
+
+// --- 品質規則：未成年不輸出，怪組合為 0 ------------------------------------
+{
+  const upright = new Set(["standing", "walking", "running", "jumping", "standing split", "tiptoes"]);
+  const full = new Set(["walking", "running", "jumping", "standing split", "tiptoes", "leg up"]);
+  const half = new Set(["portrait", "upper body", "close-up", "face", "head out of frame"]);
+  const wetOk = NEEDS_CONTEXT.wet;
+  const monster = (tag, have) => {
+    if (tag === "monster boy" || tag === "vampire" || tag === "dragon boy") return true;
+    return (lex.byTag.get(tag)?.implies || []).includes("monster boy") && have.has(tag);
+  };
+  const bad = { loli: 0, shota: 0, wet: 0, swim: 0, bike: 0, dive: 0, float: 0, futon: 0, crop: 0, tusks: 0 };
+  let n = 0;
+  for (const cast of ["girl", "boy", "both"]) {
+    for (const heat of ["tease", "flash", "sex"]) {
+      for (let i = 0; i < 40; i++) {
+        const s = settings();
+        s.girl = cast !== "boy";
+        s.boy = cast !== "girl";
+        s.heats = [heat];
+        s.eras = ["modern"];
+        s.sceneMode = "normal";
+        s.rating = "explicit";
+        const seed = 880000 + n;
+        const h = tagsOf(drawOne(lex, s, new Set(), new Set(), mulberry32(seed), seed));
+        n += 1;
+        if (h.has("loli")) bad.loli += 1;
+        if (h.has("shota")) bad.shota += 1;
+        if (h.has("wet") && ![...h].some((t) => wetOk.has(t))) bad.wet += 1;
+        if ((h.has("swimsuit") || h.has("bikini") || h.has("school swimsuit") || [...h].some((t) => t.includes("swimsuit") || t.includes("bikini"))) && h.has("snow")) bad.swim += 1;
+        if (h.has("riding bicycle") && (h.has("walking") || h.has("running") || h.has("jumping"))) bad.bike += 1;
+        if (h.has("diving") && (h.has("walking") || h.has("running") || h.has("standing split"))) bad.dive += 1;
+        if (h.has("floating") && (h.has("walking") || h.has("running"))) bad.float += 1;
+        if (h.has("futon") && [...h].some((t) => upright.has(t))) bad.futon += 1;
+        if ([...h].some((t) => full.has(t)) && [...h].some((t) => half.has(t))) bad.crop += 1;
+        if (h.has("tusks") && ![...h].some((t) => monster(t, h))) bad.tusks += 1;
+      }
+    }
+  }
+  for (const tag of ["loli", "shota"]) {
+    const pin = applyPin(lex, new Set(), new Set(), tag).pinned;
+    for (let i = 0; i < 40; i++) {
+      const s = settings();
+      s.girl = true;
+      s.boy = true;
+      s.heats = ["sex"];
+      s.eras = ["modern"];
+      s.rating = "explicit";
+      const seed = 890000 + (tag === "loli" ? 0 : 100) + i;
+      const h = tagsOf(drawOne(lex, s, pin, new Set(), mulberry32(seed), seed));
+      if (h.has("loli")) bad.loli += 1;
+      if (h.has("shota")) bad.shota += 1;
+    }
+  }
+  eq(`品質規則九格各 40 張加釘選，怪組合是 0（${n} 張隨機）`, Object.values(bad).reduce((a, b) => a + b, 0), 0);
+  if (Object.values(bad).some((v) => v)) console.error(`      ${JSON.stringify(bad)}`);
 }
 
 if (failed) {

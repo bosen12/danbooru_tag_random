@@ -131,6 +131,8 @@ const EXPLICIT_ONLY_EXTRA = new Set([
   // 露出／性器／性行為，收它就等於只看數字不看語意。
   "covering breasts",    // 3.5x，遮胸的前提是沒穿
   "covering crotch",     // 3.9x，同上
+  "covering privates",
+  "cleft of venus",
   "bulge",               // 4.1x，性器輪廓
   "hand on own crotch",  // 4.1x
   "grinding",            // 5.0x，性行為

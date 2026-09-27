@@ -142,7 +142,13 @@ const GROUND_BODY = new Set(["all fours", "crawling", "top-down bottom-up"]);
 // 站著、走著、跑著的人不會同時「在沙發上」。on bed／on chair 這幾個字原本是
 // body_pose，被改成 env/furniture 之後就脫離了姿勢相容那一整套檢查，於是
 // 「standing + on couch」這種組合一直畫得出來（基準線 4/24，六分之一）。
-const UPRIGHT_BODY = new Set(["standing", "walking", "running", "jumping", "standing split"]);
+const UPRIGHT_BODY = new Set(["standing", "walking", "running", "jumping", "standing split", "tiptoes"]);
+// 騎車是坐著。跳水、漂浮跟走跑不能同時成立。全身動作不配半身鏡頭。
+const BIKE_BLOCK_BODY = new Set(["walking", "running", "jumping"]);
+const DIVE_BLOCK_BODY = new Set(["walking", "running", "standing split"]);
+const FLOAT_BLOCK_BODY = new Set(["walking", "running"]);
+const FULL_SHOT_BODY = new Set(["walking", "running", "jumping", "standing split", "tiptoes", "leg up"]);
+const HALF_SHOT = new Set(["portrait", "upper body", "close-up", "face", "head out of frame"]);
 // 跑步、跳躍進不了的小室內。沒有衣櫃這個字，試衣間和更衣室是現成的小隔間。
 const NO_SPRINT_PLACE = new Set([
   "bathroom",
@@ -1874,6 +1880,24 @@ export const NEEDS_CONTEXT = {
   leash: new Set(["pet play", "animal collar", "collar", "bondage", "bdsm"]),
   handcuffs: new Set(["bondage", "bdsm", "prison", "policewoman", "police uniform"]),
   "o-ring": new Set(["bondage", "bdsm", "lingerie", "swimsuit", "bikini"]),
+  // 襪勒肉、戴上兜帽的前提是衣服。特徵比衣服先抽，所以不能在 allow() 裡問，
+  // 這裡等衣服定案再刪。釘選和必抽留著。
+  skindentation: new Set(["thighhighs", "pantyhose", "kneehighs", "socks"]),
+  "hood up": new Set(["hoodie", "hood", "hooded cloak"]),
+  // 濕也是特徵，比場地和天氣先抽。沒有水、雨、雪就在收尾拿掉。
+  // 漂浮可以在空中，不能單獨證明身上是濕的。
+  wet: new Set([
+    ...WATER_PLACE,
+    ...BATH_PLACE,
+    ...WATER_SOURCE_ACT,
+    ...WATER_DETAIL,
+    "rain",
+    "snow",
+    "lake",
+    "river",
+    "sea",
+    "water",
+  ]),
   // 桌子底下要先有桌子。少了這條，「under table」會變成傢俱那一格最好填的字
   // （它幾乎不跟任何姿勢衝突），實測佔掉那一格的 64%，還把 on bed 從 8 擠到 3 ——
   // 而且畫面上根本沒有桌子。on desk 同理。
@@ -2228,6 +2252,9 @@ const NEEDS_FREE_HAND = new Set([
   "headlock",
   "rear naked choke",
   "wrist grab",
+  "covering privates",
+  "hand on another's head",
+  "grabbing another's hair",
 ]);
 const HANDS_BUSY_BODY = new Set(["crawling", "all fours", "top-down bottom-up", "bondage", "restrained", "handcuffs", "bound wrists"]);
 const BOTH_ARMS = new Set([
@@ -3739,7 +3766,12 @@ function drawNoHumans(lex, settings, pinned, userBanned, rand, seed, opts) {
   };
 }
 
+// 看起來未成年的字：任何路徑都不輸出（隨機、釘選、預設組都一樣）。
+const NEVER_DRAW = new Set(["loli", "shota"]);
+
 export function drawOne(lex, settings, pinned, userBanned, rand, seed, opts) {
+  // 釘選會繞過 allow() 直接放進畫面，所以在最前面就從釘選裡拿掉。
+  if (pinned && [...pinned].some((t) => NEVER_DRAW.has(t))) pinned = new Set([...pinned].filter((t) => !NEVER_DRAW.has(t)));
   if (!(opts && opts[NO_HUMANS_INNER]) && pinned && typeof pinned.has === "function" && pinned.has(NO_HUMANS) && !(userBanned && userBanned.has && userBanned.has(NO_HUMANS))) {
     return drawNoHumans(lex, settings, pinned, userBanned, rand, seed, opts);
   }
@@ -4087,13 +4119,24 @@ export function drawOne(lex, settings, pinned, userBanned, rand, seed, opts) {
     if (item.tag === "skinny" && used.has("fat")) return false;
     if (item.tag === "long sleeves" && used.has("short sleeves")) return false;
     if (item.tag === "short sleeves" && used.has("long sleeves")) return false;
-    // shota 不進自動抽牌，只有明確釘選才留。
+    // loli、shota：這個工具不畫看起來未成年的人。隨機抽不到，釘住也不給。
+    // 釘選在 drawOne 一開頭就從 pin 集合拿掉，這裡再擋一次，避免別的路徑繞進來。
     //
-    // 這條原本寫成「shota 與 adult 互斥」，而 adult 是無條件塞進每一張圖的，
-    // 所以效果就是 shota 永遠抽不到（實測 8400 張 0 次）。2026-09-18 拿掉 adult
-    // （Danbooru 上是 0 張、模型沒把它當 tag 學過）之後，那個效果會連帶消失 ——
-    // 這裡把它改寫成直接的規則，行為一格都不動，只是不再靠一個死字繞一圈。
-    if (item.tag === "shota" && !pinned.has(item.tag)) return false;
+    // shota 原本靠「跟 adult 互斥」永遠抽不到。2026-09-18 拿掉 adult 之後改成直接規則。
+    // 2026-09-28 品質檢查：loli 仍會自動出現（1350 張有 5 張），連釘選也關掉。
+    if (NEVER_DRAW.has(item.tag)) return false;
+    // 獠牙是獸人、吸血鬼這類才有的。虎牙 fang 是普通人的牙齒，不走這裡。
+    // 種族在特徵補牌之前就填了，所以這裡問得到。正常模式不抽種族，獠牙也就不出現。
+    if (
+      item.tag === "tusks" &&
+      !pinned.has(item.tag) &&
+      !hasUsed((t) => {
+        if (t === "monster boy" || t === "vampire" || t === "dragon boy") return true;
+        return (lex.byTag.get(t)?.implies || []).includes("monster boy");
+      })
+    ) {
+      return false;
+    }
     if (
       (item.mutex === "clothes_action" || item.group === "flash") &&
       actionFitsWorn(item) === 0
@@ -4702,7 +4745,10 @@ export function drawOne(lex, settings, pinned, userBanned, rand, seed, opts) {
         t === "hair over shoulder" ||
         t === "hair bun" ||
         t === "single hair bun" ||
-        t === "double bun";
+        t === "double bun" ||
+        t === "low ponytail" ||
+        t === "braided ponytail" ||
+        t === "folded ponytail";
       if (shortHair(item.tag) && hasUsed(longStyle)) return false;
       if (longStyle(item.tag) && hasUsed(shortHair)) return false;
     }
@@ -5117,13 +5163,20 @@ export function drawOne(lex, settings, pinned, userBanned, rand, seed, opts) {
       // 6/40 張站著。on chair 另有雙向規則。on desk 站著合理，不擋。
       if (
         UPRIGHT_BODY.has(item.tag) &&
-        (used.has("on bed") || used.has("on couch") || used.has("bunk bed") || used.has("under table"))
+        (used.has("on bed") || used.has("on couch") || used.has("bunk bed") || used.has("under table") || used.has("futon"))
       ) {
         return false;
       }
+      // 被褥跟 on bed 一樣擋直立。它不在 furniture 那一格，反向要自己寫。
+      if (item.tag === "futon" && hasUsed((t) => UPRIGHT_BODY.has(t))) return false;
       // 詞庫沒有「衣櫃」。試衣間、更衣室是現有的小室內。床上已經由上面的直立規則擋住。
-      // 性愛那一檔不抽這三個移動姿勢：體位跟「正在跑」搶身體格，會把性行為擠掉。
-      if ((item.tag === "walking" || item.tag === "running" || item.tag === "jumping") && heat === "sex" && !pinned.has(item.tag)) {
+      // 性愛那一檔不抽走路、跑步、跳躍、站立劈腿：這些佔走身體格，會把體位擠掉。
+      // 踮腳留著，它是站著的一種。
+      if (
+        (item.tag === "walking" || item.tag === "running" || item.tag === "jumping" || item.tag === "standing split") &&
+        heat === "sex" &&
+        !pinned.has(item.tag)
+      ) {
         return false;
       }
       if ((item.tag === "running" || item.tag === "jumping") && !pinned.has(item.tag) && hasUsed((t) => NO_SPRINT_PLACE.has(t))) {
@@ -5132,6 +5185,28 @@ export function drawOne(lex, settings, pinned, userBanned, rand, seed, opts) {
       if (NO_SPRINT_PLACE.has(item.tag) && !pinned.has(item.tag) && hasUsed((t) => t === "running" || t === "jumping")) {
         return false;
       }
+      // 單腿抬起可以疊在站、躺、體位上，不跟跑步、跳躍同時成立。
+      if (item.tag === "leg up" && !pinned.has(item.tag) && hasUsed((t) => t === "running" || t === "jumping")) {
+        return false;
+      }
+      if ((item.tag === "running" || item.tag === "jumping") && !pinned.has(item.tag) && used.has("leg up")) {
+        return false;
+      }
+      // 騎腳踏車是坐著。走路、跑步、跳躍讓出來。坐著騎留著。
+      if (BIKE_BLOCK_BODY.has(item.tag) && !pinned.has(item.tag) && used.has("riding bicycle")) return false;
+      if (item.tag === "riding bicycle" && !pinned.has(item.tag) && hasUsed((t) => BIKE_BLOCK_BODY.has(t))) return false;
+      // 跳水時人不在跑、不在走、也不做站立劈腿。
+      if (DIVE_BLOCK_BODY.has(item.tag) && !pinned.has(item.tag) && used.has("diving")) return false;
+      if (item.tag === "diving" && !pinned.has(item.tag) && hasUsed((t) => DIVE_BLOCK_BODY.has(t))) return false;
+      // 漂浮不跟走路、跑步同時成立。水裡站著留著。
+      if (FLOAT_BLOCK_BODY.has(item.tag) && !pinned.has(item.tag) && used.has("floating")) return false;
+      if (item.tag === "floating" && !pinned.has(item.tag) && hasUsed((t) => FLOAT_BLOCK_BODY.has(t))) return false;
+      // 全身動作不配肖像、上半身、特寫、臉、頭出鏡。站著本身不在這份清單。
+      if (FULL_SHOT_BODY.has(item.tag) && !pinned.has(item.tag) && hasUsed((t) => HALF_SHOT.has(t))) return false;
+      if (HALF_SHOT.has(item.tag) && !pinned.has(item.tag) && hasUsed((t) => FULL_SHOT_BODY.has(t))) return false;
+      // 雪不跟泳衣、比基尼疊。學校泳衣的名字裡有 swimsuit，走同一條。
+      if (isSwimGarment(item) && !pinned.has(item.tag) && used.has("snow")) return false;
+      if (item.tag === "snow" && !pinned.has(item.tag) && hasUsed((t) => isSwimGarment(lex.byTag.get(t)))) return false;
       if (HANDS_BUSY_BODY.has(item.tag) && hasUsed((t) => ARM_POSE.has(t))) return false;
       if (HANDS_BUSY_ACT.has(item.tag) && hasUsed((t) => HANDS_BUSY_BODY.has(t))) return false;
       if (HANDS_BUSY_ACT.has(item.tag) && hasUsed((t) => HANDS_BUSY_ACT.has(t))) return false;
@@ -5375,8 +5450,10 @@ export function drawOne(lex, settings, pinned, userBanned, rand, seed, opts) {
   // 古代這個加權是正確性：江戶該穿木屐，不是皮鞋。可是現代的鞋子格只有 sneakers／cleats／
   // high heels 是「現代專屬」，布料格只有 latex／fishnets —— 加權全壓在這兩三個字上：
   // 實測現代 3000 張 sneakers 佔鞋子 47%、latex 佔布料 53%。涼鞋、靴子、襪子本來就是
-  // 現代的東西，在現代不需要靠加權「顯示年代」。主要衣服（上衣／下身／一件式／外套）照舊加權，
-  // 現代圖裡含現代專屬主衣的比例維持 91%；古代完全不變。
+  // 現代的東西，在現代不需要靠加權「顯示年代」。主要衣服（上衣／下身／一件式）照舊加權。
+  // 現代的外套不再吃時代加權：夾克、大衣和它們的顏色款以前跟時代上衣同一階，
+  // 1350 張裡夾克 26.5%、大衣 16.1%。降到普通衣服那一階，跟開襟衫、西裝外套一起分。
+  // 羽織、斗篷仍吃時代加權。古代的鞋子與主衣不變。
   // 三層時代加權都要改：只排除第二層的話，sneakers 會掉進第三層（時代專屬＋衣服，
   // 不管是不是顏色款）拿到 20，幾乎沒改善（實測 47% → 36%）。
   const MODERN_PLAIN_SLOTS = new Set(["feet", "fabric"]);
@@ -5388,12 +5465,19 @@ export function drawOne(lex, settings, pinned, userBanned, rand, seed, opts) {
         item.layer === "garment" &&
         !isColorVariant(item) &&
         (item.mutex === "onepiece" || item.mutex === "top" || item.mutex === "bottom"),
-      (item) => eraBoost(item) && item.layer === "garment" && !isColorVariant(item),
+      (item) =>
+        eraBoost(item) &&
+        item.layer === "garment" &&
+        !isColorVariant(item) &&
+        !(era === "modern" && item.mutex === "outer"),
       // 顏色變體也可能是這個時代專屬的 —— blue shirt 就是 modern 專屬。
       // 舊的階梯用 !isColorVariant 把它們一路壓到最底層，等於自己把時代訊號丟掉：
       // 這一層加回來之後，現代的時代衣服從 5.32 升到 6.21（比硬桶時期的 5.79 還高），
       // 同時可達的顏色款式從 26 種變成 52 種。古代時代沒有顏色變體，完全不受影響。
-      (item) => eraBoost(item) && item.layer === "garment",
+      (item) =>
+        eraBoost(item) &&
+        item.layer === "garment" &&
+        !(era === "modern" && item.mutex === "outer"),
       (item) =>
         item.layer === "garment" &&
         !isColorVariant(item) &&
@@ -6021,8 +6105,10 @@ export function drawOne(lex, settings, pinned, userBanned, rand, seed, opts) {
   // 中性），而歷史時代現在有五到九個時代光源，硬排序會把 window light、
   // sidelighting 這些中性光源整個餓死 —— 既有測試「era:[any] 燈光抽得到」
   // 就是在守這件事。四比一：時代光源仍然是主角，中性光源留得下來。
+  // 聚光燈是現代專屬，本來跟天花板燈同一階（權重 4），現代九格裡它自己就到兩成。
+  // 把它降到跟 sidelighting 這些中性光同一階。古代的火把、油燈仍是權重 4。
   fillSlot("env", "lighting", {
-    softTiers: [(item) => eraSpecific(item, era)],
+    softTiers: [(item) => eraSpecific(item, era) && item.tag !== "spotlight"],
     weights: [4, 1],
   });
   // 時代風味：非現代的時代，畫面上至少要有一個看得出年代的環境字。

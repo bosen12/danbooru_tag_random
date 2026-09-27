@@ -290,6 +290,29 @@ const ART_EXTRA = {
   "mary janes": "feet, full body, standing",
   "knee boots": "full body, standing, thighs",
   "plaid skirt": "skirt, full body, standing",
+  "low ponytail": "hair, upper body",
+  "braided ponytail": "hair, upper body",
+  "folded ponytail": "hair, upper body",
+  grin: "face, close-up",
+  "tearing up": "face, close-up, tears",
+  turtleneck: "shirt, upper body",
+  hairclip: "hair, upper body",
+  headphones: "headphones, upper body",
+  "wrist cuffs": "tank top, bare shoulders, sleeveless, wrist, upper body",
+  "sun hat": "hat, upper body, outdoors",
+  "standing split": "full body",
+  tiptoes: "full body, standing",
+  "nose blush": "portrait, blush",
+  sweatdrop: "portrait, sweat",
+  fang: "face, close-up, mature female",
+  "mole under mouth": "portrait",
+  skindentation: "thighhighs, thighs, cowboy shot, mature female",
+  "cleft of venus": "thighs, mature female, close-up",
+  "hood up": "hoodie, hood up, upper body",
+  "leg up": "full body",
+  "covering privates": "hand, crotch, mature female, full body",
+  "hand on another's head": "head, hand, upper body",
+  "grabbing another's hair": "hair, hand, from side, upper body",
 };
 
 // 精液落在對方身上，或這個動作的對象是女生。
@@ -343,6 +366,8 @@ const HETERO_PICTURE = new Set([
   "impregnation",
   "cumdrip from pussy",
   "wrist grab",
+  "hand on another's head",
+  "grabbing another's hair",
 ]);
 
 // 牌面不要帶的 implies。抽牌邏輯仍保留；只影響插畫。
@@ -365,6 +390,15 @@ const ART_NEG = {
   "slap mark": "guro, blood, injury",
   // 內射受孕是性行為，不是懷孕的肚子。
   impregnation: "pregnant, pregnant belly, maternity",
+  fang: "vampire, demon",
+  "covering privates": "spread pussy, visible pussy",
+  // 高領衫不要畫成高領毛衣。汗滴、鼻頭紅不要畫成眼淚。腕環是裸腕上的環，不是女僕袖口。
+  turtleneck: "sweater, ribbed sweater, turtleneck sweater",
+  sweatdrop: "tears, crying, tearing up",
+  "nose blush": "tears, crying, tearing up",
+  "mole under mouth": "freckles, mole under eye",
+  "wrist cuffs": "maid, maid headdress, dress, apron, frills, long sleeves, sleeves, shirt cuffs, handcuffs",
+  skindentation: "latex, leotard, bodysuit, bodystocking, school uniform, serafuku, plaid skirt, child, teenage",
 };
 
 // 學校味重的衣著：畫的一定是成年人。
