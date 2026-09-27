@@ -361,30 +361,47 @@ function place(tag, sourceEl, { viaDrag = false } = {}) {
   for (const e of events) if (e.kind === "replace" && hand?.has(e.out)) hand.arriveAt(e.out, 1200);
   commit(next, `放上「${zh(tag)}」`, events);
   const carried = events.filter((e) => e.kind === "carry").map((e) => e.tag);
-  const settle = (lag) => {
-    carried.forEach((t, i) => popIn(t, lag + i * 90));
+  const popCarried = (lag) => carried.forEach((t, i) => popIn(t, lag + i * 90));
+  const stampDown = () => {
     inkRow(suitOf(tag));
     sfx.stamp();
     if (carried.length) sfx.carry();
     haptic(8);
+  };
+  const settle = (lag) => {
+    popCarried(lag);
+    stampDown();
   };
   // 被擠掉的牌現在就離開（新的那張正飛過來）。
   leaving.forEach((snap) => flyHome(snap));
   if (leaving.length) setTimeout(() => sfx.lift(), 90);
   let result;
   if (viaDrag) {
-    // 目的地先藏著等影子落下；被帶上來的牌也先別跳出來。
+    // 被帶上來的牌跟點擊放牌同一個時間跳出來（放下後 140ms，主牌還在空中）：
+    // 以前等主牌落地才亮，落地放慢到 480ms 之後，附帶的牌看起來慢半拍才來。
+    // 蓋章聲、那一列的墨照舊等主牌落地。
     carried.forEach((t) => {
       const n = plateNode(t);
       if (n) n.style.visibility = "hidden";
     });
+    const reveal = () =>
+      carried.forEach((t) => {
+        const n = plateNode(t);
+        if (n) n.style.visibility = "";
+      });
+    const early = setTimeout(() => {
+      reveal();
+      popCarried(0);
+    }, 140);
     result = {
       landed: () => {
-        carried.forEach((t) => {
-          const n = plateNode(t);
-          if (n) n.style.visibility = "";
-        });
-        settle(60);
+        // 落得比 140ms 還快（減少動態、落點就在手邊）：現在就亮。
+        if (reduced()) {
+          clearTimeout(early);
+          reveal();
+          popCarried(0);
+        }
+        stampDown();
       },
     };
   } else {
