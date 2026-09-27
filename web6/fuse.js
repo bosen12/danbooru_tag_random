@@ -418,7 +418,11 @@ function toggle(tag, sourceEl) {
   else place(tag, sourceEl);
 }
 
-function startWith(starter) {
+function startWith(starter, btn = null) {
+  // 起手鈕上那幾張小圖：記下位置，放上版之後牌就從小圖那裡飛進各自的列（不是憑空冒出來）。
+  const withArt = starter.tags.slice(0, 3).filter((t) => assets.art(t));
+  const thumbs = btn ? [...btn.querySelectorAll(".starter-arts img")] : [];
+  const fromOf = new Map(withArt.map((t, i) => [t, thumbs[i]?.getBoundingClientRect()]).filter(([, r]) => r && r.width));
   let next = bed;
   const events = [];
   for (const t of starter.tags) {
@@ -427,7 +431,11 @@ function startWith(starter) {
     events.push(...r.events);
   }
   commit(next, `起手：${starter.name}`, events);
-  starter.tags.forEach((t, i) => popIn(t, i * 120));
+  starter.tags.forEach((t, i) => {
+    const from = fromOf.get(t);
+    if (from && !reduced()) flyIn(t, from, { delay: DUR.micro + i * (DUR.micro / 2) });
+    else popIn(t, i * 120);
+  });
   starter.tags.forEach((t, i) => setTimeout(() => (inkRow(suitOf(t)), sfx.stamp()), i * 120));
   announce(`起手：${starter.name}，疊上${starter.tags.map((t) => `「${zh(t)}」`).join("")}`);
 }
@@ -1291,6 +1299,18 @@ function renderPlate(events = []) {
   // 整塊重畫時同一張牌從舊位置滑到新位置（拿下一張、放上一張時，同一列的其他牌讓位）；
   // 影子被收下變成正式的牌，從影子的位置滑進去。
   const cardKey = (n) => (n.classList.contains("ghost-card") ? "g:" : "p:") + n.dataset.tag;
+  // 空白的版 → 第一次有牌：起手那一塊往上收走，六個列名從緊湊的格子滑到各自那一列，列的內容依序浮上來。
+  // 量「之前」要在重畫前（跟 FLIP 同一次讀版面）。
+  // 反過來（拿掉最後一張）也一樣：列名滑回緊湊的格子，起手那一塊浮上來。
+  const wasEmpty = box.dataset.empty === "true";
+  const morph = box.dataset.empty !== undefined && wasEmpty !== empty && !reduced();
+  let heads = null;
+  let startSnap = null;
+  if (morph) {
+    heads = new Map([...box.querySelectorAll(".register")].map((r) => [r.dataset.suit, r.querySelector(".reg-head")?.getBoundingClientRect()]));
+    const sb = wasEmpty ? box.querySelector(".pool-start") : null;
+    if (sb) startSnap = { node: sb.cloneNode(true), rect: sb.getBoundingClientRect() };
+  }
   // 新的牌寬（--pool-card）跟新的牌在同一次變動裡套上：FLIP 量「之後」的位置時就是最後的大小，
   // 不會先量一次、套了寬度又要整頁再排一次（而且牌寬一變，FLIP 算出來的起點也就不對了）。
   flipBy(box, ".plate-card, .ghost-card", cardKey, () => {
@@ -1301,6 +1321,7 @@ function renderPlate(events = []) {
   }, {
     alias: (k) => (k.startsWith("p:") ? "g:" + k.slice(2) : null),
   });
+  if (morph) morphPlate(box, heads, startSnap);
   if (peeking) box.dataset.peek = t.letter;
   else delete box.dataset.peek;
   const sub = $("plate-sub");
@@ -1318,6 +1339,64 @@ function renderPlate(events = []) {
   applyFit(plan);
   renderPill();
   requestRelations(events);
+}
+
+function morphPlate(box, heads, startSnap) {
+  if (startSnap) {
+    const g = startSnap.node;
+    const r = startSnap.rect;
+    g.setAttribute("aria-hidden", "true");
+    g.inert = true;
+    Object.assign(g.style, { position: "fixed", left: `${r.left}px`, top: `${r.top}px`, width: `${r.width}px`, margin: "0", zIndex: "5", pointerEvents: "none" });
+    document.body.append(g);
+    g.animate(
+      [
+        { opacity: 1, transform: "none" },
+        { opacity: 0, transform: "translateY(-16px) scale(0.98)" },
+      ],
+      // 要比列的內容浮上來（DUR.micro 之後才開始）先走完大半，兩層字才不會疊在一起讀不清楚。
+      { duration: DUR.micro, easing: css(CURVE.exit), fill: "forwards" }
+    ).onfinish = () => g.remove();
+  }
+  const fresh = box.querySelector(".pool-start");
+  if (fresh) {
+    fresh.animate(
+      [
+        { opacity: 0, transform: "translateY(10px)" },
+        { opacity: 1, transform: "none" },
+      ],
+      { duration: DUR.long, delay: DUR.micro, easing: css(CURVE.out), fill: "backwards" }
+    );
+  }
+  const step = DUR.micro / 4;
+  [...box.querySelectorAll(".register")].forEach((row, i) => {
+    const head = row.querySelector(".reg-head");
+    const from = heads.get(row.dataset.suit);
+    const delay = i * step;
+    if (head && from) {
+      const to = head.getBoundingClientRect();
+      const dx = from.left - to.left;
+      const dy = from.top - to.top;
+      if (dx || dy) {
+        head.animate([{ transform: `translate(${dx}px, ${dy}px)` }, { transform: "none" }], {
+          duration: DUR.medium,
+          delay,
+          easing: css(CURVE.out),
+          fill: "backwards",
+        });
+      }
+    }
+    for (const c of row.children) {
+      if (c === head) continue;
+      c.animate(
+        [
+          { opacity: 0, transform: "translateY(6px)" },
+          { opacity: 1, transform: "none" },
+        ],
+        { duration: DUR.medium, delay: delay + DUR.micro, easing: css(CURVE.out), fill: "backwards" }
+      );
+    }
+  });
 }
 
 function pickStarters(avoid = []) {
@@ -1371,7 +1450,7 @@ function startBlock() {
           starters.map((s) =>
             el(
               "button",
-              { class: "starter pressable", type: "button", onclick: () => startWith(s) },
+              { class: "starter pressable", type: "button", onclick: (e) => startWith(s, e.currentTarget) },
               el(
                 "span",
                 { class: "starter-arts", "aria-hidden": "true" },
