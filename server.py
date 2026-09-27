@@ -2958,7 +2958,33 @@ def main() -> None:
         )
         print(f"discord  {where}  自動送 {'開' if ds['enabled'] else '關'}")
     check_ckpt()
+    start_card_fetch()
     httpd.serve_forever()
+
+
+def start_card_fetch() -> None:
+    """卡面插畫不在（git clone 下來的第一次）：背景把全年齡那一包抓下來（scripts/fetch_card_art.py）。
+
+    Windows 的啟動檔會自己另開一個視窗抓，並設 CARD_FETCH_STARTED，這裡就不重複抓；
+    直接 `python server.py` 的（Mac、Linux）靠這裡。NO_CARD_FETCH=1 可以關掉。網頁照常先開，抓完重新整理就有圖。"""
+    if os.environ.get("NO_CARD_FETCH") or os.environ.get("CARD_FETCH_STARTED"):
+        return
+    try:
+        sys.path.insert(0, str(ROOT / "scripts"))
+        import fetch_card_art  # noqa: PLC0415 —— 只有真的要抓時才載
+    except ImportError:
+        return
+    if fetch_card_art.have_enough():
+        return
+    print("cards    插畫還沒有：背景從 GitHub 下載全年齡那一包（約 53MB），好了重新整理網頁就有圖")
+
+    def run() -> None:
+        try:
+            fetch_card_art.main()
+        except Exception as err:  # noqa: BLE001 —— 抓不到就維持佔位牌，不影響伺服器
+            print(f"cards    下載失敗：{err}")
+
+    threading.Thread(target=run, name="card-art-fetch", daemon=True).start()
 
 
 if __name__ == "__main__":

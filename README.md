@@ -131,6 +131,15 @@ WEB_DIR=web1 PORT=8788 python3 server.py
 
 視窗不要關。改過程式後請 **Ctrl+F5**。
 
+**4. 卡牌插畫會自己下載。** 插畫（墨池、疊印台、排字匣的卡牌模式用的）不在 git 裡，放在 GitHub Release
+[`card-art-v1`](https://github.com/bosen12/danbooru_tag_random/releases/tag/card-art-v1)（全年齡 1112 張，約 53MB）。
+第一次啟動發現沒有插畫時會自動下載、驗 SHA-256、解壓到 `web/cards/`：
+
+- Windows 的 `start.bat`、`start-web6.bat` 另開一個縮小的「card art download」視窗去抓，網頁照常先開（先是字的佔位牌），視窗說 Done 之後重新整理就有圖。
+- 直接跑 `python3 server.py` 的（macOS / Linux）由伺服器在背景抓，黑窗會印進度。
+- 已經有的圖一張都不覆蓋；沒網路就維持佔位牌，下次啟動再試。不想抓：`NO_CARD_FETCH=1`。也可以手動跑 `python3 scripts/fetch_card_art.py`。
+- 敏感、色情分級的卡面不公開。要的話用自己的 ComfyUI 烘：`python3 scripts/bake_card_art.py`（ComfyUI 開著時，Windows 啟動檔也會問）。
+
 ## 設定
 
 機器專屬的東西（ComfyUI 在哪、模型和 LoRA 資料夾在哪）都在 **`config.json`**，不用改程式。
@@ -270,6 +279,13 @@ loli、shota 永遠不畫（`web/card-art.js` 的 `HARD_BANNED`）。有人的�
 - 找牌：`/` 跳到搜尋框，打字時第一張牌右下角出現一顆「Enter」—— 按 Enter 就放進合成池，字會全選著，直接打下一張。
   ↓ 走進字盒、方向鍵在牌之間移動，第一排再 ↑ 回到搜尋框。注音、倉頡選字時按的 Enter 不算。
 - 清空合成池有五秒可以「復原」；清空時偏好卡牌回到手上，其他的收成一疊回字盒，復原時照原路飛回來。
+
+### 介紹影片
+
+<http://127.0.0.1:8796/intro.html>（墨池右上角「介紹影片」）：兩分鐘，介紹排字匣、墨池、疊印台。畫面和配樂都是那一頁即時產生的 ——
+牌是真的牌（真的插畫）、提示詞是引擎用固定種子真的抽的、疊印台的層與附帶是 `fuse-bed.js` 真的算的；配樂是 Web Audio 現場合成（96 BPM，
+畫面跟著音樂的時鐘走，拖時間軸、暫停都不會錯拍）。空白鍵暫停、←→ 快轉五秒、F 全螢幕、M 靜音；網址加 `?t=秒` 從那裡開始。
+要錄成影片檔：全螢幕播放，用 OBS 或 Windows 的 Win+Alt+R 錄下來。
 
 ### 偏好卡牌（墨池、疊印台各一份）
 

@@ -280,6 +280,8 @@ def start_server(comfy_port: int, extra_env=None):
         WORKFLOW_DATA_DIR=tempfile.mkdtemp(),
         APP_SETTINGS=str(Path(tempfile.mkdtemp()) / "settings.json"),
         WEBP_CACHE_DIR=tempfile.mkdtemp(),
+        # 測試起的伺服器不要去 GitHub 抓卡面（剛 clone 下來沒有插畫時會）。
+        NO_CARD_FETCH="1",
         **(extra_env or {}),
     )
     proc = subprocess.Popen(

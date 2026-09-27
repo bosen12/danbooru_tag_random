@@ -5,9 +5,21 @@ rem separate window. The page still opens right away; cards fill in as they fini
 rem Needs PY (set by the launcher). Pass "extras" to also check the zipu props/customers.
 rem Skip with: set NO_CARD_BAKE=1, or answer 4 once (creates .no-card-bake).
 rem Console text is ASCII on purpose: cmd's code page is not UTF-8.
+if not defined PY set "PY=python"
+rem First choice: download the published all-ages set (git clone does not include the art).
+rem Runs in its own window so the page opens right away; skip with: set NO_CARD_FETCH=1
+if defined NO_CARD_FETCH goto bakecheck
+%PY% "%~dp0fetch_card_art.py" --check
+if not errorlevel 3 goto bakecheck
+echo Card illustrations are missing; downloading them in a minimized window "card art download".
+echo The page opens now with placeholder cards; reload it when the download says Done.
+set "CARD_FETCH_STARTED=1"
+start "card art download" /min "%~dp0fetch-cards-window.bat"
+exit /b 0
+
+:bakecheck
 if defined NO_CARD_BAKE exit /b 0
 if exist "%~dp0..\.no-card-bake" exit /b 0
-if not defined PY set "PY=python"
 set "CA_EXTRAS=%~1"
 set "CA_XRC=0"
 %PY% "%~dp0bake_card_art.py" --status --rating general
