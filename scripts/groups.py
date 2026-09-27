@@ -126,6 +126,8 @@ FABRIC = {
     "sleeves rolled up",
     "detached sleeves",
     "puffy sleeves",
+    # 毛邊疊在衣服上，不跟「透視／乳膠」搶布料那一格。
+    "fur trim",
 }
 
 MAKEUP = {

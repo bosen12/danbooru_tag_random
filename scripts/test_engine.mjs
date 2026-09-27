@@ -5553,7 +5553,9 @@ function indoorOutdoorClash(have) {
     // 第十九次（2026-09-28）：鳥瞰、貼地仰視進鏡頭池；用過的保險套改成只有性愛。
     // 誘惑的鏡頭洗牌和衣服池都挪了，牌序整條位移。不再出現 hand in panties 是池子挪動，
     // 不是那個洞補上了。這張仍是 1girl solo，沒有男生、陰莖或粗暴。
-    "1girl, solo, very short hair, aqua eyes, blue hair, straight hair, huge breasts, dark-skinned female, dark skin, inverted nipples, long eyelashes, lingerie, blue bra, bra, black bowtie, bowtie, track jacket, jacket, thong, fingering, reclining, wide shot, looking ahead, pout, drooling, greenhouse, indoors, dusk, ceiling light, chair, lens flare, nsfw, explicit, masterpiece, best quality, amazing quality");
+    // 第二十次（2026-09-28）：現代、三檔都進的新衣服進了衣服池，牌序再位移一次。
+    // 女巫帽不在現代，廚師預設不抽。這張仍是 1girl solo，溫泉、裸巾、沒有男生。
+    "1girl, solo, very short hair, aqua eyes, blue hair, straight hair, huge breasts, dark-skinned female, dark skin, inverted nipples, long eyelashes, naked towel, masturbation, on back, pov crotch, looking at viewer, come hither, caught, onsen, indoors, steam, sunrise, backlighting, nsfw, explicit, masterpiece, best quality, amazing quality");
   ok("drawOne exposes shadow diagnostics", Array.isArray(shadowIntegrationDraw.shadowViolations));
 
   const eatProneShadow = validateSupportShadow({
@@ -8384,6 +8386,54 @@ function indoorOutdoorClash(have) {
     if (got.has("rape") && !got.has("1boy") && !got.has("2boys") && !got.has("3boys")) rapeNoBoy += 1;
   }
   eq("pinned rape brings a man even when the boy switch is off", rapeNoBoy, 0);
+}
+
+// --- 職業與服裝 -------------------------------------------------------------
+// 髮帶和髮箍不佔頭飾格，彼此只留一個，可以跟貝雷帽同時在。
+// 女巫帶出女巫帽。廚師不帶出廚師帽，場地是廚房或餐廳。
+{
+  const ribbon = lex.byTag.get("hair ribbon");
+  const band = lex.byTag.get("hairband");
+  const witch = lex.byTag.get("witch");
+  const chef = lex.byTag.get("chef");
+  eq("hair ribbon does not take the hat slot", ribbon && ribbon.mutex, "hair_acc");
+  eq("hairband shares that slot", band && band.mutex, "hair_acc");
+  ok("hair ribbon and hairband clash", contradictions(lex, ["hair ribbon", "hairband"]).length > 0);
+  ok("a hair ribbon can sit with a beret", contradictions(lex, ["hair ribbon", "beret"]).length === 0);
+  ok("witch implies witch hat", !!(witch && (witch.implies || []).includes("witch hat")));
+  ok("witch hat implies hat", (lex.byTag.get("witch hat").implies || []).includes("hat"));
+  ok("witch hat stays in the witch eras", JSON.stringify(lex.byTag.get("witch hat").era) === JSON.stringify(["medieval", "victorian"]));
+  ok("fingerless gloves imply gloves", (lex.byTag.get("fingerless gloves").implies || []).includes("gloves"));
+  ok("fingerless gloves clash with boxing gloves", contradictions(lex, ["fingerless gloves", "boxing gloves"]).length > 0);
+  const fur = lex.byTag.get("fur trim");
+  ok("fur trim is a fabric detail and does not take the coat slot", !!(fur && fur.group === "fabric" && !fur.mutex));
+  const girlOutfit = lex.byTag.get("magical girl");
+  ok("magical girl is a female one-piece", !!(girlOutfit && girlOutfit.mutex === "onepiece" && girlOutfit.gate === "female"));
+  ok("chef does not imply the hat", !(chef && (chef.implies || []).includes("chef hat")));
+  ok("chef hat is headwear", lex.byTag.get("chef hat").mutex === "headwear");
+
+  const plain = defaultSettings(data);
+  let chefLeak = 0;
+  for (let i = 0; i < 40; i++) {
+    if (tagsOf(drawOne(lex, plain, new Set(), new Set(), mulberry32(154000 + i), 154000 + i)).has("chef")) chefLeak += 1;
+  }
+  eq("default draws do not pull the chef job", chefLeak, 0);
+
+  const jobOn = defaultSettings(data);
+  jobOn.drawJob = true;
+  jobOn.eras = ["modern"];
+  const pinChef = applyPin(lex, new Set(), new Set(), "chef").pinned;
+  let badPlace = 0;
+  let seen = 0;
+  for (let i = 0; i < 20; i++) {
+    const got = tagsOf(drawOne(lex, jobOn, pinChef, new Set(), mulberry32(154200 + i), 154200 + i));
+    if (!got.has("chef")) continue;
+    seen += 1;
+    const place = [...got].find((t) => lex.byTag.get(t)?.mutex === "place");
+    if (place && place !== "kitchen" && place !== "restaurant") badPlace += 1;
+  }
+  ok("pinned chef was drawn", seen > 0);
+  eq("pinned chef stays in a kitchen or a restaurant", badPlace, 0);
 }
 
 if (failed) {

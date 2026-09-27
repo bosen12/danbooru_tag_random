@@ -245,7 +245,24 @@ const ART_EXTRA = {
   pasties: "breasts, upper body",
   "torn thighhighs": "full body",
   "bird's eye view": "full body, standing",
-  "worm's eye view": "full body, standing",
+  "worm's eye view": "full body, standing, low angle",
+  "fingerless gloves": "hands, upper body",
+  "thigh boots": "full body, standing, thighs",
+  "sunglasses": "face, close-up",
+  "scarf": "neck, upper body",
+  "hair ribbon": "hair, upper body",
+  hairband: "hair, upper body",
+  "fur trim": "coat, upper body",
+  "witch hat": "hat, upper body",
+  "maid headdress": "head, upper body",
+  loafers: "feet, full body, standing",
+  "magical girl": "full body, standing",
+  "garter straps": "thighs, thighhighs",
+  backpack: "from behind, upper body",
+  beret: "hat, upper body",
+  tiara: "hair, upper body",
+  "chef hat": "hat, upper body",
+  chef: "chef hat, upper body",
   "holding condom": "hand, upper body",
   "condom in mouth": "close-up, face, long hair, mature female",
   "condom box": "condom",
@@ -319,7 +336,7 @@ const ART_NEG = {
   // 粗暴類不要畫成血腥傷口。掌痕若被 injury 壓掉，烘焙後再拿掉 injury 重烤。
   rape: "guro, blood, injury",
   "after rape": "guro, blood, injury, penetration",
-  "worm's eye view": "worm, caterpillar, insect",
+  "worm's eye view": "worm, insect, bug, earthworm, caterpillar",
   "rough sex": "guro, blood, injury",
   strangling: "guro, blood, injury",
   "neck grab": "guro, blood, injury",
@@ -330,7 +347,8 @@ const ART_NEG = {
 };
 
 // 學校味重的衣著：畫的一定是成年人。
-const SCHOOL_CODED = new Set(["school uniform", "serafuku", "sailor dress", "school swimsuit", "gym uniform", "buruma"]);
+// 魔法少女在 Danbooru 上偏年幼的畫法，樂福鞋底模會自己配上學生制服：兩張都要明講成年。
+const SCHOOL_CODED = new Set(["school uniform", "serafuku", "sailor dress", "school swimsuit", "gym uniform", "buruma", "magical girl", "loafers"]);
 
 // 場景節裡要有人才畫得出來的：傢俱（坐在上面）、背景（白背景沒有人就是一張白紙）、
 // 畫面特效（速度線、集中線、花瓣都是圍著人物的）。剪影也是 —— 沒有人就沒有剪影。

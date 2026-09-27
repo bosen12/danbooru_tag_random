@@ -13192,7 +13192,9 @@
       ],
       "mutex": "job",
       "bind": [],
-      "implies": [],
+      "implies": [
+        "witch hat"
+      ],
       "layer": "normal",
       "era": [
         "medieval",
@@ -26018,6 +26020,338 @@
       ],
       "group": "nude",
       "zh": "人體彩繪"
+    },
+    {
+      "tag": "fingerless gloves",
+      "section": "clothing",
+      "gate": "any",
+      "heat": [
+        "tease",
+        "flash",
+        "sex"
+      ],
+      "mutex": "hands",
+      "bind": [],
+      "implies": [
+        "gloves"
+      ],
+      "layer": "accessory",
+      "era": [
+        "any"
+      ],
+      "group": "acc",
+      "zh": "露指手套"
+    },
+    {
+      "tag": "thigh boots",
+      "section": "clothing",
+      "gate": "any",
+      "heat": [
+        "tease",
+        "flash",
+        "sex"
+      ],
+      "mutex": "feet",
+      "bind": [],
+      "implies": [],
+      "layer": "garment",
+      "era": [
+        "any"
+      ],
+      "group": "feet",
+      "zh": "過膝靴"
+    },
+    {
+      "tag": "sunglasses",
+      "section": "clothing",
+      "gate": "any",
+      "heat": [
+        "tease",
+        "flash",
+        "sex"
+      ],
+      "mutex": "eyewear",
+      "bind": [],
+      "implies": [],
+      "layer": "accessory",
+      "era": [
+        "modern"
+      ],
+      "group": "acc",
+      "zh": "太陽眼鏡"
+    },
+    {
+      "tag": "scarf",
+      "section": "clothing",
+      "gate": "any",
+      "heat": [
+        "tease",
+        "flash",
+        "sex"
+      ],
+      "mutex": "neckwear",
+      "bind": [],
+      "implies": [],
+      "layer": "accessory",
+      "era": [
+        "any"
+      ],
+      "group": "acc",
+      "zh": "圍巾"
+    },
+    {
+      "tag": "hair ribbon",
+      "section": "clothing",
+      "gate": "female",
+      "heat": [
+        "tease",
+        "flash",
+        "sex"
+      ],
+      "mutex": "hair_acc",
+      "bind": [],
+      "implies": [],
+      "layer": "accessory",
+      "era": [
+        "any"
+      ],
+      "group": "acc",
+      "zh": "髮帶"
+    },
+    {
+      "tag": "hairband",
+      "section": "clothing",
+      "gate": "female",
+      "heat": [
+        "tease",
+        "flash",
+        "sex"
+      ],
+      "mutex": "hair_acc",
+      "bind": [],
+      "implies": [],
+      "layer": "accessory",
+      "era": [
+        "any"
+      ],
+      "group": "acc",
+      "zh": "髮箍"
+    },
+    {
+      "tag": "fur trim",
+      "section": "clothing",
+      "gate": "any",
+      "heat": [
+        "tease",
+        "flash",
+        "sex"
+      ],
+      "mutex": null,
+      "bind": [],
+      "implies": [],
+      "layer": "garment",
+      "era": [
+        "any"
+      ],
+      "group": "fabric",
+      "zh": "毛邊"
+    },
+    {
+      "tag": "witch hat",
+      "section": "clothing",
+      "gate": "any",
+      "heat": [
+        "tease",
+        "flash",
+        "sex"
+      ],
+      "mutex": "headwear",
+      "bind": [],
+      "implies": [
+        "hat"
+      ],
+      "layer": "accessory",
+      "era": [
+        "medieval",
+        "victorian"
+      ],
+      "group": "acc",
+      "zh": "女巫帽"
+    },
+    {
+      "tag": "maid headdress",
+      "section": "clothing",
+      "gate": "female",
+      "heat": [
+        "tease",
+        "flash",
+        "sex"
+      ],
+      "mutex": "headwear",
+      "bind": [],
+      "implies": [],
+      "layer": "accessory",
+      "era": [
+        "victorian",
+        "modern"
+      ],
+      "group": "acc",
+      "zh": "女僕頭飾"
+    },
+    {
+      "tag": "loafers",
+      "section": "clothing",
+      "gate": "any",
+      "heat": [
+        "tease",
+        "flash",
+        "sex"
+      ],
+      "mutex": "feet",
+      "bind": [],
+      "implies": [],
+      "layer": "garment",
+      "era": [
+        "modern"
+      ],
+      "group": "feet",
+      "zh": "樂福鞋"
+    },
+    {
+      "tag": "magical girl",
+      "section": "clothing",
+      "gate": "female",
+      "heat": [
+        "tease",
+        "flash",
+        "sex"
+      ],
+      "mutex": "onepiece",
+      "bind": [],
+      "implies": [],
+      "layer": "garment",
+      "era": [
+        "modern"
+      ],
+      "group": "onepiece",
+      "zh": "魔法少女"
+    },
+    {
+      "tag": "garter straps",
+      "section": "clothing",
+      "gate": "female",
+      "heat": [
+        "tease",
+        "flash",
+        "sex"
+      ],
+      "mutex": "legs",
+      "bind": [],
+      "implies": [],
+      "layer": "garment",
+      "era": [
+        "modern",
+        "victorian"
+      ],
+      "group": "legs",
+      "zh": "吊襪吊帶"
+    },
+    {
+      "tag": "backpack",
+      "section": "clothing",
+      "gate": "any",
+      "heat": [
+        "tease",
+        "flash",
+        "sex"
+      ],
+      "mutex": "bag",
+      "bind": [],
+      "implies": [],
+      "layer": "accessory",
+      "era": [
+        "modern"
+      ],
+      "group": "acc",
+      "zh": "背包"
+    },
+    {
+      "tag": "beret",
+      "section": "clothing",
+      "gate": "any",
+      "heat": [
+        "tease",
+        "flash",
+        "sex"
+      ],
+      "mutex": "headwear",
+      "bind": [],
+      "implies": [],
+      "layer": "accessory",
+      "era": [
+        "modern"
+      ],
+      "group": "acc",
+      "zh": "貝雷帽"
+    },
+    {
+      "tag": "tiara",
+      "section": "clothing",
+      "gate": "female",
+      "heat": [
+        "tease",
+        "flash",
+        "sex"
+      ],
+      "mutex": "headwear",
+      "bind": [],
+      "implies": [],
+      "layer": "accessory",
+      "era": [
+        "any"
+      ],
+      "group": "acc",
+      "zh": "頭冠"
+    },
+    {
+      "tag": "chef hat",
+      "section": "clothing",
+      "gate": "any",
+      "heat": [
+        "tease",
+        "flash",
+        "sex"
+      ],
+      "mutex": "headwear",
+      "bind": [],
+      "implies": [
+        "hat"
+      ],
+      "layer": "accessory",
+      "era": [
+        "modern"
+      ],
+      "group": "acc",
+      "zh": "廚師帽"
+    },
+    {
+      "tag": "chef",
+      "section": "feature",
+      "gate": "any",
+      "heat": [
+        "tease",
+        "flash",
+        "sex"
+      ],
+      "mutex": "job",
+      "bind": [],
+      "implies": [],
+      "layer": "normal",
+      "era": [
+        "modern"
+      ],
+      "group": "job",
+      "zh": "廚師"
     },
     {
       "tag": "bride",

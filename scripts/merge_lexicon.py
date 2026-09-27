@@ -380,6 +380,8 @@ IMPLIES = {
     "competition swimsuit": ["one-piece swimsuit", "swimsuit"],
     "school swimsuit": ["one-piece swimsuit", "swimsuit"],
     "one-piece swimsuit": ["swimsuit"],
+    # 女巫的圖有 84% 戴女巫帽。帽子跟女巫同一個時代，帶出來不會把現代帽子塞進中世紀。
+    "witch": ["witch hat"],
     "casual one-piece swimsuit": ["one-piece swimsuit", "swimsuit"],
     "wedding ring": ["ring"],
     "pool": ["outdoors"],
@@ -2506,7 +2508,7 @@ def extra_expand_tags() -> list[dict]:
             "zh": zh,
         }
 
-    def cloth(tag, mutex=None, layer="accessory", implies=None, gate="any", heat=None, zh=""):
+    def cloth(tag, mutex=None, layer="accessory", implies=None, gate="any", heat=None, zh="", era=None):
         return {
             "tag": tag,
             "section": "clothing",
@@ -2516,7 +2518,7 @@ def extra_expand_tags() -> list[dict]:
             "bind": [],
             "implies": implies or [],
             "layer": layer,
-            "era": modern,
+            "era": era or modern,
             "zh": zh,
         }
 
@@ -2692,6 +2694,25 @@ def extra_expand_tags() -> list[dict]:
         cloth("handcuffs", layer="accessory", heat=sex, zh="手銬"),
         cloth("leash", layer="accessory", zh="牽繩"),
         cloth("bodypaint", layer="skin", zh="人體彩繪"),
+        # 職業與服裝。髮帶、髮箍共用 hair_acc，不佔頭飾格，同一張只留一種。
+        # 背包用 bag，毛邊不佔外套格。女巫帽由女巫帶出，其餘只進池。
+        cloth("fingerless gloves", mutex="hands", zh="露指手套", era=["any"]),
+        cloth("thigh boots", mutex="feet", layer="garment", zh="過膝靴", era=["any"]),
+        cloth("sunglasses", mutex="eyewear", zh="太陽眼鏡"),
+        cloth("scarf", mutex="neckwear", zh="圍巾", era=["any"]),
+        cloth("hair ribbon", mutex="hair_acc", gate="female", zh="髮帶", era=["any"]),
+        cloth("hairband", mutex="hair_acc", gate="female", zh="髮箍", era=["any"]),
+        cloth("fur trim", layer="garment", zh="毛邊", era=["any"]),
+        cloth("witch hat", mutex="headwear", zh="女巫帽", era=["medieval", "victorian"]),
+        cloth("maid headdress", mutex="headwear", gate="female", zh="女僕頭飾", era=["victorian", "modern"]),
+        cloth("loafers", mutex="feet", layer="garment", zh="樂福鞋"),
+        cloth("magical girl", mutex="onepiece", layer="garment", gate="female", zh="魔法少女"),
+        cloth("garter straps", mutex="legs", layer="garment", gate="female", zh="吊襪吊帶", era=["modern", "victorian"]),
+        cloth("backpack", mutex="bag", zh="背包"),
+        cloth("beret", mutex="headwear", zh="貝雷帽"),
+        cloth("tiara", mutex="headwear", gate="female", zh="頭冠", era=["any"]),
+        cloth("chef hat", mutex="headwear", zh="廚師帽"),
+        job("chef", zh="廚師"),
         feat("bride", needs=["female"], gate="female", zh="新娘"),
         feat("gyaru", needs=["female"], gate="female", zh="辣妹"),
         feat("small penis", needs=["male"], gate="male", heat=sex, zh="小陰莖"),

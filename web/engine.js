@@ -1270,6 +1270,7 @@ const JOB_PLACE = {
   teacher: new Set(["classroom", "library", "school gym"]),
   waitress: new Set(["restaurant", "cafe", "bar (place)", "izakaya"]),
   barista: new Set(["cafe", "restaurant"]),
+  chef: new Set(["kitchen", "restaurant"]),
   policewoman: new Set(["street", "city", "cityscape", "alley", "office", "prison"]),
   // 女僕原本只有六個場地，而其中 mansion 是維多利亞、palace 是古中國／中世紀，
   // 所以**現代的女僕實際上只有四個地方可去**：釘 maid 抽 3000 張，只看得到
@@ -5675,10 +5676,11 @@ export function drawOne(lex, settings, pinned, userBanned, rand, seed, opts) {
     );
     takeFromPool(cover, 1, rand, commit, clothingPrefer, allow, mPre);
   }
-  const nudeAccMutex = new Set(["jewelry", "eyewear", "neckwear", "hands", "headwear", "feet"]);
+  const nudeAccMutex = new Set(["jewelry", "eyewear", "neckwear", "hands", "headwear", "feet", "hair_acc"]);
   const wornAccMutex = new Set([
     "feet", "waist", "legs", "jewelry", "eyewear", "neckwear",
     "underwear_top", "underwear_bottom", "outer", "hands", "headwear",
+    "hair_acc", "bag",
   ]);
   const gotNude = someUsed((it) => it.section === "clothing" && it.layer === "skin");
   const hasBodyGarment = () =>

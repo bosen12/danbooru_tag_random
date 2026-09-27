@@ -1175,6 +1175,23 @@ ZH = {
     "covered testicles": "睪丸被遮住",
     "testicle sucking": "吸睪丸",
     "testicle grab": "抓睪丸",
+    "fingerless gloves": "露指手套",
+    "thigh boots": "過膝靴",
+    "sunglasses": "太陽眼鏡",
+    "scarf": "圍巾",
+    "hair ribbon": "髮帶",
+    "hairband": "髮箍",
+    "fur trim": "毛邊",
+    "witch hat": "女巫帽",
+    "maid headdress": "女僕頭飾",
+    "loafers": "樂福鞋",
+    "magical girl": "魔法少女",
+    "garter straps": "吊襪吊帶",
+    "backpack": "背包",
+    "beret": "貝雷帽",
+    "tiara": "頭冠",
+    "chef hat": "廚師帽",
+    "chef": "廚師",
 }
 
 
