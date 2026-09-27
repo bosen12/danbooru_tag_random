@@ -140,7 +140,7 @@
     "era": [
       "any"
     ],
-    "zh": "露肩",
+    "zh": "裸肩",
     "group": "acc"
   },
   {
@@ -3304,7 +3304,8 @@
     "needs": [
       "male"
     ],
-    "group": "body_m"
+    "group": "body_m",
+    "zh": "套著保險套"
   },
   {
     "tag": "red bodysuit",

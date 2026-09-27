@@ -244,6 +244,19 @@ const ART_EXTRA = {
   bodystocking: "full body",
   pasties: "breasts, upper body",
   "torn thighhighs": "full body",
+  "bird's eye view": "full body, standing",
+  "worm's eye view": "full body, standing",
+  "holding condom": "hand, upper body",
+  "condom in mouth": "close-up, face, long hair, mature female",
+  "condom box": "condom",
+  "after rape": "nude, lying, on bed, tears, cum on body, afterglow",
+  "rough sex": "nude, sex",
+  strangling: "neck, from side, close-up",
+  "neck grab": "neck, close-up",
+  headlock: "upper body",
+  "rear naked choke": "from behind, nude, upper body",
+  asphyxiation: "neck, close-up",
+  "slap mark": "face, cheek, close-up",
 };
 
 // 精液落在對方身上，或這個動作的對象是女生。
@@ -285,6 +298,15 @@ const HETERO_PICTURE = new Set([
   "head between breasts",
   "breast smother",
   "spanking",
+  "rape",
+  "after rape",
+  "rough sex",
+  "strangling",
+  "neck grab",
+  "headlock",
+  "rear naked choke",
+  "asphyxiation",
+  "slap mark",
 ]);
 
 // 牌面不要帶的 implies。抽牌邏輯仍保留；只影響插畫。
@@ -294,6 +316,17 @@ const ART_SKIP_IMPLY = {
 
 const ART_NEG = {
   "testicle sucking": "fellatio",
+  // 粗暴類不要畫成血腥傷口。掌痕若被 injury 壓掉，烘焙後再拿掉 injury 重烤。
+  rape: "guro, blood, injury",
+  "after rape": "guro, blood, injury, penetration",
+  "worm's eye view": "worm, caterpillar, insect",
+  "rough sex": "guro, blood, injury",
+  strangling: "guro, blood, injury",
+  "neck grab": "guro, blood, injury",
+  headlock: "guro, blood, injury",
+  "rear naked choke": "guro, blood, injury",
+  asphyxiation: "guro, blood, injury",
+  "slap mark": "guro, blood, injury",
 };
 
 // 學校味重的衣著：畫的一定是成年人。
@@ -319,7 +352,7 @@ export const STILL_LIFE = new Set([
   "paintbrush", "kiseru", "smoking pipe", "cigar", "calligraphy brush", "quill", "pencil", "newspaper",
   "mop", "bucket", "ladle", "camera", "desk", "nightstand", "whiteboard", "microphone stand",
   "tea set", "crystal ball", "ofuda", "lamp", "oil lamp", "candelabra", "candle", "desk lamp",
-  "microphone", "stethoscope", "condom", "dildo", "vibrator", "sex toy", "lube",
+  "microphone", "stethoscope", "condom", "condom wrapper", "condom box", "dildo", "vibrator", "sex toy", "lube",
 ]);
 
 export const ART_SEED = 1383;

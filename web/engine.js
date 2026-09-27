@@ -276,6 +276,11 @@ const SEX_PHASE_BEFORE = new Set([
   "imminent penetration",
   "imminent vaginal",
   "imminent fellatio",
+  // 還沒拆開用的保險套。跟「已經用過」不能出現在同一張。
+  "holding condom",
+  "condom wrapper",
+  "condom box",
+  "condom in mouth",
 ]);
 const SEX_PHASE_AFTER = new Set([
   "after vaginal",
@@ -289,6 +294,39 @@ const SEX_PHASE_AFTER = new Set([
   "cum drip",
   "cumdrip",
   "cumdrip from penis",
+  "used condom",
+  "after rape",
+]);
+// 未使用的可以同時在（拿著＋包裝＋盒子）。套上跟用過各是另一態，三態互斥。
+const CONDOM_UNUSED = new Set(["holding condom", "condom wrapper", "condom box", "condom in mouth"]);
+const CONDOM_USING = new Set(["condom on penis"]);
+const CONDOM_USED = new Set(["used condom"]);
+function condomState(tag) {
+  if (CONDOM_UNUSED.has(tag)) return "unused";
+  if (CONDOM_USING.has(tag)) return "using";
+  if (CONDOM_USED.has(tag)) return "used";
+  return "";
+}
+function condomStateClash(tag, used) {
+  const state = condomState(tag);
+  if (!state) return false;
+  for (const t of used) {
+    if (t === tag) continue;
+    const other = condomState(t);
+    if (other && other !== state) return true;
+  }
+  return false;
+}
+// 一張圖只留一個主勒法。粗暴、窒息、掌痕、強姦不在這裡，可以跟其中一個同時成立。
+const GRIP = new Set(["strangling", "neck grab", "headlock", "rear naked choke"]);
+// 事後還在勒、還在粗暴交，是進行中的動作。掌痕會留下，不在這組。
+const ROUGH_DURING = new Set([
+  "strangling",
+  "neck grab",
+  "headlock",
+  "rear naked choke",
+  "asphyxiation",
+  "rough sex",
 ]);
 const PENIS_STATE = new Set(["erection", "half-erect", "flaccid"]);
 const PRECUM_TAGS = new Set(["precum", "precum drip", "precum string"]);
@@ -331,6 +369,7 @@ const FACE_NEED_TAGS = new Set([
   "closed eyes",
   "facial",
   "cum in mouth",
+  "condom in mouth",
   "cum on face",
   "cum on tongue",
   "cum on hair",
@@ -468,6 +507,7 @@ const MOUTH_EXTRA = new Set([
   "licking lips",
   "drooling",
   "moaning",
+  "condom in mouth",
 ]);
 const OUTDOOR_LEFTOVER = new Set([
   "tree",
@@ -2152,6 +2192,11 @@ const NEEDS_FREE_HAND = new Set([
   "anal fingering",
   "mutual masturbation",
   "spanking",
+  "holding condom",
+  "strangling",
+  "neck grab",
+  "headlock",
+  "rear naked choke",
 ]);
 const HANDS_BUSY_BODY = new Set(["crawling", "all fours", "top-down bottom-up", "bondage", "restrained", "handcuffs", "bound wrists"]);
 const BOTH_ARMS = new Set([
@@ -3978,6 +4023,10 @@ export function drawOne(lex, settings, pinned, userBanned, rand, seed, opts) {
     if (synonymClash(item.tag, used)) return false;
     // 同一張圖不能既還沒開始又已經結束。天生對稱，誰先進場都擋得住。
     if (sexPhaseClash(item.tag, used)) return false;
+    if (condomStateClash(item.tag, used)) return false;
+    if (peerIn(item.tag, used, GRIP)) return false;
+    if (ROUGH_DURING.has(item.tag) && hasUsed((t) => SEX_PHASE_AFTER.has(t))) return false;
+    if (SEX_PHASE_AFTER.has(item.tag) && hasUsed((t) => ROUGH_DURING.has(t))) return false;
     if (peerIn(item.tag, used, PENIS_STATE)) return false;
     if (peerIn(item.tag, used, PENIS_ON_HEAD)) return false;
     // 先走汁是射之前。軟掉、以及已經結束的那一輪，都不再滴先走汁。

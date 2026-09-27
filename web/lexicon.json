@@ -256,6 +256,11 @@
     "masterpiece": "傑作",
     "best quality": "最高品質",
     "amazing quality": "極致品質",
+    "absurdres": "超高解析",
+    "highres": "高解析",
+    "very aesthetic": "非常有美感",
+    "highly aesthetic": "極有美感",
+    "newest": "最新風",
     "nsfw": "限制級",
     "explicit": "露骨"
   },
@@ -22908,8 +22913,6 @@
       "section": "clothing",
       "gate": "any",
       "heat": [
-        "tease",
-        "flash",
         "sex"
       ],
       "mutex": null,
@@ -22923,6 +22926,80 @@
       ],
       "group": "acc",
       "zh": "用過的保險套"
+    },
+    {
+      "tag": "holding condom",
+      "section": "clothing",
+      "gate": "any",
+      "heat": [
+        "sex"
+      ],
+      "mutex": null,
+      "bind": [],
+      "implies": [
+        "condom"
+      ],
+      "layer": "accessory",
+      "era": [
+        "modern"
+      ],
+      "group": "acc",
+      "zh": "拿著保險套"
+    },
+    {
+      "tag": "condom in mouth",
+      "section": "clothing",
+      "gate": "any",
+      "heat": [
+        "sex"
+      ],
+      "mutex": null,
+      "bind": [],
+      "implies": [
+        "condom"
+      ],
+      "layer": "accessory",
+      "era": [
+        "modern"
+      ],
+      "group": "acc",
+      "zh": "口含保險套"
+    },
+    {
+      "tag": "condom wrapper",
+      "section": "clothing",
+      "gate": "any",
+      "heat": [
+        "sex"
+      ],
+      "mutex": null,
+      "bind": [],
+      "implies": [
+        "condom"
+      ],
+      "layer": "accessory",
+      "era": [
+        "modern"
+      ],
+      "group": "acc",
+      "zh": "保險套包裝"
+    },
+    {
+      "tag": "condom box",
+      "section": "clothing",
+      "gate": "any",
+      "heat": [
+        "sex"
+      ],
+      "mutex": null,
+      "bind": [],
+      "implies": [],
+      "layer": "accessory",
+      "era": [
+        "modern"
+      ],
+      "group": "acc",
+      "zh": "保險套盒"
     },
     {
       "tag": "dildo",
@@ -25310,9 +25387,187 @@
       ],
       "group": "sex",
       "needs": [
-        "pair"
+        "pair",
+        "male",
+        "female"
       ],
       "zh": "強姦"
+    },
+    {
+      "tag": "after rape",
+      "section": "pose",
+      "gate": "any",
+      "heat": [
+        "sex"
+      ],
+      "mutex": null,
+      "bind": [],
+      "implies": [],
+      "layer": "normal",
+      "era": [
+        "any"
+      ],
+      "group": "sex",
+      "needs": [
+        "pair",
+        "male",
+        "female"
+      ],
+      "zh": "強暴事後"
+    },
+    {
+      "tag": "rough sex",
+      "section": "pose",
+      "gate": "any",
+      "heat": [
+        "sex"
+      ],
+      "mutex": null,
+      "bind": [],
+      "implies": [],
+      "layer": "normal",
+      "era": [
+        "any"
+      ],
+      "group": "sex",
+      "needs": [
+        "pair",
+        "male",
+        "female"
+      ],
+      "zh": "粗暴性愛"
+    },
+    {
+      "tag": "strangling",
+      "section": "pose",
+      "gate": "any",
+      "heat": [
+        "sex"
+      ],
+      "mutex": null,
+      "bind": [],
+      "implies": [],
+      "layer": "normal",
+      "era": [
+        "any"
+      ],
+      "group": "sex",
+      "needs": [
+        "pair",
+        "male",
+        "female"
+      ],
+      "zh": "勒頸"
+    },
+    {
+      "tag": "neck grab",
+      "section": "pose",
+      "gate": "any",
+      "heat": [
+        "sex"
+      ],
+      "mutex": null,
+      "bind": [],
+      "implies": [],
+      "layer": "normal",
+      "era": [
+        "any"
+      ],
+      "group": "sex",
+      "needs": [
+        "pair",
+        "male",
+        "female"
+      ],
+      "zh": "抓脖子"
+    },
+    {
+      "tag": "headlock",
+      "section": "pose",
+      "gate": "any",
+      "heat": [
+        "sex"
+      ],
+      "mutex": null,
+      "bind": [],
+      "implies": [],
+      "layer": "normal",
+      "era": [
+        "any"
+      ],
+      "group": "sex",
+      "needs": [
+        "pair",
+        "male",
+        "female"
+      ],
+      "zh": "鎖頭"
+    },
+    {
+      "tag": "rear naked choke",
+      "section": "pose",
+      "gate": "any",
+      "heat": [
+        "sex"
+      ],
+      "mutex": null,
+      "bind": [],
+      "implies": [],
+      "layer": "normal",
+      "era": [
+        "any"
+      ],
+      "group": "sex",
+      "needs": [
+        "pair",
+        "male",
+        "female"
+      ],
+      "zh": "裸絞"
+    },
+    {
+      "tag": "asphyxiation",
+      "section": "pose",
+      "gate": "any",
+      "heat": [
+        "sex"
+      ],
+      "mutex": null,
+      "bind": [],
+      "implies": [],
+      "layer": "normal",
+      "era": [
+        "any"
+      ],
+      "group": "sex",
+      "needs": [
+        "pair",
+        "male",
+        "female"
+      ],
+      "zh": "窒息"
+    },
+    {
+      "tag": "slap mark",
+      "section": "pose",
+      "gate": "any",
+      "heat": [
+        "sex"
+      ],
+      "mutex": null,
+      "bind": [],
+      "implies": [],
+      "layer": "normal",
+      "era": [
+        "any"
+      ],
+      "group": "sex",
+      "needs": [
+        "pair",
+        "male",
+        "female"
+      ],
+      "zh": "掌痕"
     },
     {
       "tag": "orgy",
@@ -30941,6 +31196,48 @@
       ],
       "group": "camera",
       "zh": "透視前縮"
+    },
+    {
+      "tag": "bird's eye view",
+      "section": "pose",
+      "gate": "any",
+      "heat": [
+        "tease",
+        "flash",
+        "sex"
+      ],
+      "mutex": "camera",
+      "bind": [],
+      "implies": [
+        "from above"
+      ],
+      "layer": "normal",
+      "era": [
+        "any"
+      ],
+      "group": "camera",
+      "zh": "鳥瞰"
+    },
+    {
+      "tag": "worm's eye view",
+      "section": "pose",
+      "gate": "any",
+      "heat": [
+        "tease",
+        "flash",
+        "sex"
+      ],
+      "mutex": "camera",
+      "bind": [],
+      "implies": [
+        "from below"
+      ],
+      "layer": "normal",
+      "era": [
+        "any"
+      ],
+      "group": "camera",
+      "zh": "貼地仰視"
     },
     {
       "tag": "no humans",

@@ -5550,7 +5550,10 @@ function indoorOutdoorClash(have) {
     // 候選池變小，同一串亂數落到別的字。這張仍是單人女性的性愛，沒有陰莖或精液。
     // 第十八次（2026-09-27）：加 30 個色情字。單人女性能進池的那些讓候選池變大，
     // 牌序整條位移。這張仍是 1girl solo 的性愛，沒有男生、陰莖或精液。
-    "1girl, solo, very short hair, aqua eyes, blue hair, straight hair, huge breasts, dark-skinned female, dark skin, inverted nipples, long eyelashes, naked towel, fingering, reclining, pov crotch, looking at viewer, come hither, hand in panties, onsen, indoors, steam, sunrise, backlighting, nsfw, explicit, masterpiece, best quality, amazing quality");
+    // 第十九次（2026-09-28）：鳥瞰、貼地仰視進鏡頭池；用過的保險套改成只有性愛。
+    // 誘惑的鏡頭洗牌和衣服池都挪了，牌序整條位移。不再出現 hand in panties 是池子挪動，
+    // 不是那個洞補上了。這張仍是 1girl solo，沒有男生、陰莖或粗暴。
+    "1girl, solo, very short hair, aqua eyes, blue hair, straight hair, huge breasts, dark-skinned female, dark skin, inverted nipples, long eyelashes, lingerie, blue bra, bra, black bowtie, bowtie, track jacket, jacket, thong, fingering, reclining, wide shot, looking ahead, pout, drooling, greenhouse, indoors, dusk, ceiling light, chair, lens flare, nsfw, explicit, masterpiece, best quality, amazing quality");
   ok("drawOne exposes shadow diagnostics", Array.isArray(shadowIntegrationDraw.shadowViolations));
 
   const eatProneShadow = validateSupportShadow({
@@ -8227,6 +8230,160 @@ function indoorOutdoorClash(have) {
     if (tagsOf(drawOne(lex, s, new Set(), new Set(), mulberry32(i * 17), i * 17)).has("yuri")) yuriAuto += 1;
   }
   eq("yuri 不會被自動補上（共現率只有 6.6%，不該比照 hetero）", yuriAuto, 0);
+}
+
+// --- 新詞：鏡頭、保險套、粗暴 ------------------------------------------------
+// 鳥瞰／貼地仰視跟俯視／仰視是父子，同一格可以並存。未拆的保險套可以同時在，
+// 套上與用過不行。勒頸四個只留一個。事後不跟進行中的粗暴疊，掌痕可以留下。
+{
+  const needsBoth = (tag) => {
+    const it = lex.byTag.get(tag);
+    const needs = it && it.needs ? it.needs : [];
+    return needs.includes("male") && needs.includes("female") && needs.includes("pair");
+  };
+  const bird = lex.byTag.get("bird's eye view");
+  const worm = lex.byTag.get("worm's eye view");
+  ok("bird's eye view implies from above", !!(bird && (bird.implies || []).includes("from above")));
+  eq("bird's eye view shares the camera slot", bird && bird.mutex, "camera");
+  ok("worm's eye view implies from below", !!(worm && (worm.implies || []).includes("from below")));
+  eq("worm's eye view shares the camera slot", worm && worm.mutex, "camera");
+  eq("bird's eye and from above are not a camera clash", contradictions(lex, ["bird's eye view", "from above"]).length, 0);
+  ok(
+    "bird's eye and worm's eye clash as two cameras",
+    contradictions(lex, ["bird's eye view", "worm's eye view"]).some((row) => row[0] === "camera")
+  );
+  eq("wide shot stays a camera", lex.byTag.get("wide shot") && lex.byTag.get("wide shot").mutex, "camera");
+  eq("looking up stays a gaze", lex.byTag.get("looking up") && lex.byTag.get("looking up").mutex, "gaze");
+  const silly = lex.byTag.get("fucked silly");
+  ok("fucked silly does not imply sex", !!silly && !(silly.implies || []).includes("sex"));
+  eq("fucked silly stays sex-heat", JSON.stringify(silly && silly.heat), JSON.stringify(["sex"]));
+  const cum = lex.byTag.get("excessive cum");
+  ok(
+    "excessive cum still needs a man and a woman",
+    !!(cum && (cum.needs || []).includes("male") && (cum.needs || []).includes("female"))
+  );
+
+  const usedCondom = lex.byTag.get("used condom");
+  eq("used condom is sex-heat only", JSON.stringify(usedCondom && usedCondom.heat), JSON.stringify(["sex"]));
+  ok("used condom still implies condom", !!(usedCondom && (usedCondom.implies || []).includes("condom")));
+  ok("plain condom stays drawable at tease", (lex.byTag.get("condom").heat || []).includes("tease"));
+  const onPenis = lex.byTag.get("condom on penis");
+  ok(
+    "condom on penis stays the existing during-state and does not imply penis",
+    !!(onPenis && onPenis.section === "feature" && (onPenis.implies || []).includes("condom") && !(onPenis.implies || []).includes("penis") && (onPenis.heat || []).includes("flash") && (onPenis.heat || []).includes("sex"))
+  );
+  ok(
+    "condom on penis needs a man, not a woman",
+    !!(onPenis && (onPenis.needs || []).includes("male") && !(onPenis.needs || []).includes("female"))
+  );
+  ok("condom box does not imply condom", !(lex.byTag.get("condom box").implies || []).includes("condom"));
+
+  const couple = [
+    "rape",
+    "after rape",
+    "rough sex",
+    "strangling",
+    "neck grab",
+    "headlock",
+    "rear naked choke",
+    "asphyxiation",
+    "slap mark",
+  ];
+  for (const tag of couple) {
+    const it = lex.byTag.get(tag);
+    ok(`${tag} is in the lexicon`, !!it);
+    eq(`${tag} is sex-heat only`, JSON.stringify(it && it.heat), JSON.stringify(["sex"]));
+    ok(`${tag} needs a man and a woman`, needsBoth(tag));
+    eq(`${tag} is not a sex-act slot`, it && it.mutex, null);
+  }
+
+  const sex = defaultSettings(data);
+  sex.girl = true;
+  sex.boy = true;
+  sex.heats = ["sex"];
+  sex.weights = { activity: 0, tease: 0, flash: 0, sex: 1 };
+  sex.eras = ["modern"];
+  sex.sceneMode = "normal";
+  sex.lockScene = true;
+  sex.rating = "explicit";
+  const neverWith = (pin, banned, n, seed0) => {
+    const pinned = applyPin(lex, new Set(), new Set(), pin).pinned;
+    let hit = 0;
+    for (let i = 0; i < n; i++) {
+      const got = tagsOf(drawOne(lex, sex, pinned, new Set(), mulberry32(seed0 + i), seed0 + i));
+      if (banned.some((tag) => got.has(tag))) hit += 1;
+    }
+    return hit;
+  };
+  const keptAll = (pins, banned, n, seed0) => {
+    let pinned = new Set();
+    for (const pin of pins) pinned = applyPin(lex, pinned, new Set(), pin).pinned;
+    let hit = 0;
+    for (let i = 0; i < n; i++) {
+      const got = tagsOf(drawOne(lex, sex, pinned, new Set(), mulberry32(seed0 + i), seed0 + i));
+      if (pins.every((tag) => got.has(tag)) && !banned.some((tag) => got.has(tag))) hit += 1;
+    }
+    return hit;
+  };
+
+  eq("holding condom never with used condom", neverWith("holding condom", ["used condom"], 30, 151000), 0);
+  eq("condom wrapper never with condom on penis", neverWith("condom wrapper", ["condom on penis"], 30, 151040), 0);
+  eq(
+    "unopened condom pieces stay together",
+    keptAll(["holding condom", "condom wrapper", "condom box"], ["used condom", "condom on penis"], 20, 151080),
+    20
+  );
+  eq("condom in mouth never with closed mouth", neverWith("closed mouth", ["condom in mouth"], 30, 151120), 0);
+  eq("holding condom never with boxing gloves", neverWith("boxing gloves", ["holding condom"], 20, 151160), 0);
+  eq(
+    "two grips never together",
+    neverWith("strangling", ["neck grab", "headlock", "rear naked choke"], 40, 151200),
+    0
+  );
+  eq(
+    "after rape never with rough sex, a grip, or asphyxiation",
+    neverWith("after rape", ["rough sex", "strangling", "neck grab", "headlock", "rear naked choke", "asphyxiation"], 40, 151260),
+    0
+  );
+  eq(
+    "after rape can keep a slap mark and a bedroom",
+    keptAll(["after rape", "slap mark", "bedroom"], ["strangling", "rough sex"], 20, 151320),
+    20
+  );
+  eq("pinned bird's eye never also draws worm's eye", neverWith("bird's eye view", ["worm's eye view"], 20, 151360), 0);
+  ok("pinning bird's eye view keeps from above", applyPin(lex, new Set(), new Set(), "bird's eye view").pinned.has("from above"));
+
+  const girl = defaultSettings(data);
+  girl.girl = true;
+  girl.boy = false;
+  girl.heats = ["sex"];
+  girl.rating = "explicit";
+  let leak = 0;
+  for (let i = 0; i < 60; i++) {
+    const got = tagsOf(drawOne(lex, girl, new Set(), new Set(), mulberry32(152000 + i), 152000 + i));
+    if (couple.some((tag) => got.has(tag))) leak += 1;
+  }
+  eq("girl-only sex never draws the rough family", leak, 0);
+
+  const tease = defaultSettings(data);
+  tease.girl = true;
+  tease.boy = true;
+  tease.heats = ["tease"];
+  let teaseHit = 0;
+  const sexOnly = couple.concat(["used condom", "holding condom", "condom on penis", "condom wrapper", "condom box", "condom in mouth"]);
+  for (let i = 0; i < 40; i++) {
+    const got = tagsOf(drawOne(lex, tease, new Set(), new Set(), mulberry32(152200 + i), 152200 + i));
+    if (sexOnly.some((tag) => got.has(tag))) teaseHit += 1;
+  }
+  eq("tease never draws sex-only condom or rough tags", teaseHit, 0);
+
+  const pinRape = applyPin(lex, new Set(), new Set(), "rape").pinned;
+  let rapeNoBoy = 0;
+  for (let i = 0; i < 20; i++) {
+    const got = tagsOf(drawOne(lex, girl, pinRape, new Set(), mulberry32(153000 + i), 153000 + i));
+    if (got.has("rape") && !got.has("1boy") && !got.has("2boys") && !got.has("3boys")) rapeNoBoy += 1;
+  }
+  eq("pinned rape brings a man even when the boy switch is off", rapeNoBoy, 0);
 }
 
 if (failed) {

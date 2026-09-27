@@ -281,6 +281,10 @@ ERA_OF = {
     "blazer": _M,
     "condom": _M,
     "used condom": _M,
+    "holding condom": _M,
+    "condom in mouth": _M,
+    "condom wrapper": _M,
+    "condom box": _M,
     "dildo": _M,
     "recording": _M,
     "chikan": _M,
@@ -527,6 +531,15 @@ IMPLIES = {
     "breastfeeding": ["lactation"],
     "full-length mirror": ["mirror"],
     "used condom": ["condom"],
+    # Danbooru 仍有效的父子：拿著／含著／包裝都是 condom。盒子沒有這條，不要補。
+    # condom on penis 已經在詞庫，只暗示 condom（見上面）。penis 只有 sex，
+    # 而這個字還有走光，再暗示 penis 會讓走光整張失敗。holding、mouth_hold 不在詞庫。
+    "holding condom": ["condom"],
+    "condom in mouth": ["condom"],
+    "condom wrapper": ["condom"],
+    # 2026-05、2025-11 仍有效。跟 from above／from below 同一格，父子可並存。
+    "bird's eye view": ["from above"],
+    "worm's eye view": ["from below"],
     "object insertion": ["sex"],
     "locker room": ["indoors"],
     "fitness gym": ["indoors"],
@@ -906,6 +919,16 @@ NEEDS_MALE = {
     "head between breasts",
     "breast smother",
     "spanking",
+    # 對象是女生的粗暴。卡面與抽牌都要一男一女，不能落在兩個女生或單人男生。
+    "rape",
+    "after rape",
+    "rough sex",
+    "strangling",
+    "neck grab",
+    "headlock",
+    "rear naked choke",
+    "asphyxiation",
+    "slap mark",
 }
 
 NEEDS_FEMALE = {
@@ -1000,6 +1023,15 @@ NEEDS_FEMALE = {
     "anal beads",
     "hickey",
     "crotch rope",
+    "rape",
+    "after rape",
+    "rough sex",
+    "strangling",
+    "neck grab",
+    "headlock",
+    "rear naked choke",
+    "asphyxiation",
+    "slap mark",
 }
 
 NEEDS_PAIR = {
@@ -1068,6 +1100,15 @@ NEEDS_PAIR = {
     "foursome",
     "fivesome",
     "penis awe",
+    "rape",
+    "after rape",
+    "rough sex",
+    "strangling",
+    "neck grab",
+    "headlock",
+    "rear naked choke",
+    "asphyxiation",
+    "slap mark",
 }
 
 NEEDS_GROUP = {
@@ -1186,6 +1227,13 @@ def apply_relations(tag: str, implies: list[str], bind: list[str], mutex, sectio
 NARROW_HEAT = {
     "looking at penis": ["flash", "sex"],
     "penis awe": ["sex"],
+    # 衣物不在 CLOTHING_STATE 會被 widen_heat 攤成三檔。這些是性愛當下或事後的物件，
+    # 不該在誘惑裡當配件。一般的 condom 維持三檔，那是已經出貨的行為。
+    "used condom": ["sex"],
+    "holding condom": ["sex"],
+    "condom in mouth": ["sex"],
+    "condom wrapper": ["sex"],
+    "condom box": ["sex"],
 }
 
 
@@ -1529,6 +1577,9 @@ def extra_look_tags() -> list[dict]:
     camera = [
         row("very wide shot", "pose", "camera", "大遠景"),
         row("foreshortening", "pose", "perspective", "透視前縮"),
+        # Danbooru：bird's eye view → from_above，worm's eye view → from_below。
+        row("bird's eye view", "pose", "camera", "鳥瞰", ["from above"]),
+        row("worm's eye view", "pose", "camera", "貼地仰視", ["from below"]),
     ]
     # 沒有人物（2026-09-26）：no humans 237k、scenery 75k、solo focus 507k。三個都只能釘，
     # 引擎不會隨機抽（engine allow() 擋著）。no humans 釘上之後那一張只畫場景（engine drawNoHumans）。
@@ -1930,6 +1981,11 @@ def extra_job_scene_tags() -> list[dict]:
         cloth("clipboard", zh="寫字夾板"),
         cloth("condom", heat=sex, zh="保險套"),
         cloth("used condom", implies=["condom"], heat=sex, zh="用過的保險套"),
+        cloth("holding condom", implies=["condom"], heat=sex, zh="拿著保險套"),
+        cloth("condom in mouth", implies=["condom"], heat=sex, zh="口含保險套"),
+        cloth("condom wrapper", implies=["condom"], heat=sex, zh="保險套包裝"),
+        # 盒子在 Danbooru 沒有 implication，不暗示 condom。
+        cloth("condom box", heat=sex, zh="保險套盒"),
         cloth("dildo", implies=["sex toy"], heat=sex, zh="假陽具"),
         pose("gangbang", implies=["group sex", "sex"], needs=["pair"], heat=sex, zh="輪姦"),
         pose("netorare", needs=["pair"], zh="NTR"),
@@ -2601,6 +2657,16 @@ def extra_expand_tags() -> list[dict]:
         pose("diving", mutex="activity", zh="潛水"),
         pose("weightlifting", mutex="activity", era=modern, zh="重訓"),
         pose("rape", needs=["pair"], heat=sex, zh="強姦"),
+        # 不放進 SEX_ACT：rough sex 跟一個體位同時成立。勒頸四個在引擎裡互斥，不佔 sex_act。
+        # Danbooru 上 strangling 不暗示 asphyxiation，這裡也不補。
+        pose("after rape", needs=["pair"], heat=sex, zh="強暴事後"),
+        pose("rough sex", needs=["pair"], heat=sex, zh="粗暴性愛"),
+        pose("strangling", needs=["pair"], heat=sex, zh="勒頸"),
+        pose("neck grab", needs=["pair"], heat=sex, zh="抓脖子"),
+        pose("headlock", needs=["pair"], heat=sex, zh="鎖頭"),
+        pose("rear naked choke", needs=["pair"], heat=sex, zh="裸絞"),
+        pose("asphyxiation", needs=["pair"], heat=sex, zh="窒息"),
+        pose("slap mark", needs=["pair"], heat=sex, zh="掌痕"),
         pose("orgy", needs=["pair"], heat=sex, implies=["group sex", "sex"], zh="狂歡雜交"),
         pose("bondage", heat=sex, zh="束縛"),
         pose("bdsm", heat=sex, zh="BDSM"),
