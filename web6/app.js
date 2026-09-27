@@ -232,6 +232,26 @@ function visible(card) {
   return true;
 }
 
+// 「1328 / 1504」單看數字不知道在數什麼：字面寫「張」，滑過去說清楚少掉的去哪了。
+function countLine(shown) {
+  const total = lib.cards.length;
+  const hid = { rating: 0, gender: 0, era: 0 };
+  for (const c of lib.cards) {
+    if (pool.has(c.tag)) continue;
+    if (ratingBlocked(c.item, settings.rating)) hid.rating += 1;
+    else if ((c.gate === "male" && !settings.boy) || (c.gate === "female" && !settings.girl)) hid.gender += 1;
+    else if (!visible(c)) hid.era += 1;
+  }
+  const why = [
+    hid.rating && `${hid.rating} 張被分級收起來`,
+    hid.gender && `${hid.gender} 張是${settings.boy ? "女生" : "男生"}專用（${settings.boy ? "女生" : "男生"}沒開）`,
+    hid.era && `${hid.era} 張不屬於這個時代`,
+  ].filter(Boolean);
+  const box = $("lib-count");
+  box.textContent = `${shown} / ${total} 張`;
+  box.title = `字盒共 ${total} 張，這裡顯示 ${shown} 張` + (why.length ? `。${why.join("、")}` : "") + (shown < total - hid.rating - hid.gender - hid.era ? "。其餘被花色、分類或搜尋篩掉" : "");
+}
+
 function renderLibrary() {
   const q = ui.query.toLowerCase();
   const inSuit = lib.cards.filter((c) => (ui.suit === "all" || c.suit === ui.suit) && visible(c));
@@ -255,7 +275,7 @@ function renderLibrary() {
     );
   }
   const list = inSuit.filter((c) => (!ui.group || c.group === ui.group) && (!q || c.zh.toLowerCase().includes(q) || c.tag.includes(q)));
-  $("lib-count").textContent = `${list.length} / ${lib.cards.length}`;
+  countLine(list.length);
   const grid = $("lib-grid");
   if (!list.length) {
     grid.replaceChildren(el("p", { class: "lib-empty" }, q ? `字盒裡沒有「${ui.query}」。可能被分級、性別或時代收起來了。` : "這一格沒有字。"));

@@ -3082,13 +3082,8 @@ function chooseCast(lex, settings, pinned, banned, rand, ctx) {
   if (n === 1 && !banned.has("solo") && (!ctx.needPair || povLock)) parts.push("solo");
   if (n > 1) parts = parts.filter((t) => t !== "solo");
   if (pinned.has("solo") && n > 1 && !ctx.needPair) {
-    parts = parts.filter(
-      (t) =>
-        !/^(\d+)girls$/.test(t) &&
-        !/^(\d+)boys$/.test(t) &&
-        t !== "multiple girls" &&
-        t !== "multiple boys"
-    );
+    // 1girl、1boy 是單數，以前的 /^(\d+)boys$/ 對不上，1boy 會留下來變成「1girl, 1boy, solo」。
+    parts = parts.filter((t) => !FEMALE_COUNT.has(t) && !MALE_COUNT.has(t));
     if (ctx.needFemale || settings.girl !== false) parts.unshift("1girl");
     else parts.unshift("1boy");
     parts.push("solo");
@@ -3449,8 +3444,21 @@ export function contradictions(lex, tags) {
     }
   }
   const names = new Set(tags);
-  if (names.has("solo") && (names.has("2girls") || names.has("3girls") || names.has("2boys"))) {
-    found.push(["solo_count", "solo", "2+"]);
+  // solo 是畫面上只有一個人。卡司加起來超過一人（1girl＋1boy 也算），或釘了一張
+  // 要兩人以上的牌（hetero、fellatio、threesome…），都跟它打架。點名是哪一張。
+  if (names.has("solo")) {
+    let heads = 0;
+    let multi = null;
+    for (const t of tags) {
+      if (FEMALE_COUNT.has(t) || MALE_COUNT.has(t)) {
+        heads += COUNT_NUM[t] || 0;
+        if ((COUNT_NUM[t] || 0) > 1 && !multi) multi = t;
+      }
+    }
+    const crowdNeed = ["pair", "group", "crowd", "five"];
+    const needy = tags.find((t) => t !== "solo" && (lex.byTag.get(t)?.needs || []).some((k) => crowdNeed.includes(k)));
+    const other = multi || (heads > 1 ? tags.find((t) => t !== "1girl" && MALE_COUNT.has(t)) || tags.find((t) => FEMALE_COUNT.has(t) || MALE_COUNT.has(t)) : null) || needy;
+    if (other) found.push(["solo_count", "solo", other]);
   }
   const nude = names.has("nude") || names.has("completely nude");
   if (nude && (names.has("dress") || names.has("sundress") || names.has("jeans"))) {
@@ -3701,6 +3709,8 @@ export function drawOne(lex, settings, pinned, userBanned, rand, seed, opts) {
     settings.girl !== false &&
     settings.boy &&
     !countPinned &&
+    // 釘了 solo 的人，chooseCast 已經把卡司收回一人；升級不能把它蓋掉。
+    !pinned.has("solo") &&
     !pinned.has("pov") &&
     !pinned.has("pov crotch") &&
     !ctx.needGroup &&
@@ -3717,7 +3727,17 @@ export function drawOne(lex, settings, pinned, userBanned, rand, seed, opts) {
         ["4girls", "1boy"],
         ["3girls", "2boys"],
         ["2girls", "3boys"],
-      ].filter((parts) => parts.every((t) => lex.byTag.has(t) && !banned.has(t)));
+      ]
+        .filter((parts) => parts.every((t) => lex.byTag.has(t) && !banned.has(t)))
+        // 釘住的字要在新卡司裡照樣成立（例如只要女生的 yuri 類），不然升級等於把釘選丟掉。
+        .filter((parts) => {
+          const girls = genderCount(parts, true);
+          const boys = genderCount(parts, false);
+          return [...pinned].every((t) => {
+            const it = lex.byTag.get(t);
+            return !it || castOk(it, girls > 0, boys > 0, girls + boys, girls, boys);
+          });
+        });
       if (options.length) cast = options[Math.floor(fiveRand() * options.length)];
     }
   }
@@ -6474,6 +6494,10 @@ export function drawOne(lex, settings, pinned, userBanned, rand, seed, opts) {
   }
   // 在自己家裡的場景不會有人群：隨機抽到、後來又進了私人場地的人群拿掉（釘的人群那種場地本來就進不來）。
   if (env.some((t) => CROWD_BAD_PLACE.has(t))) {
+    for (let i = env.length - 1; i >= 0; i--) if (CROWD_TAGS.has(env[i]) && !pinned.has(env[i])) env.splice(i, 1);
+  }
+  // 釘了 solo 就是要畫面上只有一個人：隨機抽到的人群拿掉，不要反過來把 solo 換成 solo focus。
+  if (pinned.has("solo")) {
     for (let i = env.length - 1; i >= 0; i--) if (CROWD_TAGS.has(env[i]) && !pinned.has(env[i])) env.splice(i, 1);
   }
   // 有人群（crowd／people）：畫面上不只一個人，只是焦點在一個主角身上 ——

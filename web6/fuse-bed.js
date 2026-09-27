@@ -118,7 +118,6 @@ export function relationsOf(bed, { lex, contradictions, actPlace }) {
   for (const [kind, x, y] of contradictions(lex, bed.pins)) {
     let a = x;
     let b = y;
-    if (kind === "solo_count") b = ["2girls", "3girls", "2boys"].find((t) => has.has(t));
     if (kind === "nude_garment") {
       a = has.has("completely nude") ? "completely nude" : "nude";
       b = ["dress", "sundress", "jeans"].find((t) => has.has(t));

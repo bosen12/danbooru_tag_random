@@ -2575,6 +2575,30 @@ function indoorOutdoorClash(have) {
   ok("both-gender sex sometimes reaches 5 people", sawFive > 0, `seen=${sawFive}`);
   eq("5-person sex is stamped fivesome", fiveMiss, 0);
 
+  // 五人升級是另一條亂數，只看種子。釘了 solo 的抽，同一批種子不能被升級成五人。
+  let soloFive = 0;
+  for (let i = 0; i < 250; i++) {
+    const d = drawOne(lex, sexBoth, new Set(["solo"]), new Set(), mulberry32(97900 + i), 97900 + i);
+    if (d.people >= 5 || tagsOf(d).has("fivesome")) soloFive += 1;
+  }
+  eq("pinned solo is never upgraded to five", soloFive, 0);
+
+  // 釘 solo 就是一個人：1girl／1boy 是單數，以前刪人數的 regex 對不上，會變成「1girl, 1boy, solo」；
+  // 隨機抽到的人群也會把 solo 換成 solo focus。兩邊性別都開的性愛最容易撞到。
+  let soloMany = 0;
+  let soloGone = 0;
+  for (let i = 0; i < 300; i++) {
+    const d = drawOne(lex, sexBoth, new Set(["solo"]), new Set(), mulberry32(96400 + i), 96400 + i);
+    if (d.people !== 1) soloMany += 1;
+    if (!tagsOf(d).has("solo")) soloGone += 1;
+  }
+  eq("pinned solo draws exactly one person", soloMany, 0);
+  eq("pinned solo stays solo (not solo focus)", soloGone, 0);
+  // 釘了互相矛盾的 solo 和要兩人的牌：兩張都留（是使用者釘的），但要報相剋、點名是哪一張。
+  eq("solo + hetero is a clash naming hetero", JSON.stringify(contradictions(lex, ["solo", "hetero"])), JSON.stringify([["solo_count", "solo", "hetero"]]));
+  eq("solo + 1girl + 1boy is a clash", contradictions(lex, ["1girl", "1boy", "solo"]).length, 1);
+  eq("1girl solo is not a clash", contradictions(lex, ["1girl", "solo"]).length, 0);
+
   let sawFour = 0;
   let fourMiss = 0;
   let strayFive = 0;
