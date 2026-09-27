@@ -56,7 +56,9 @@ export function castOk(item, female, male, people, girls = 0, boys = 0) {
   if (needs.includes("female") && !female) return false;
   if (needs.includes("2male") && boys < 2) return false;
   if (needs.includes("2female") && girls < 2) return false;
-  if (needs.includes("yuri") && male) return false;
+  // 磨鏡的 needs 寫了 yuri。百合這個字本身的 needs 只有 pair、female，
+  // 以前 1girl+1boy 也算過關。兩個都是不要男生。
+  if ((needs.includes("yuri") || item.tag === "yuri") && male) return false;
   return true;
 }
 

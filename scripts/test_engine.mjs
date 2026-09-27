@@ -2598,6 +2598,53 @@ function indoorOutdoorClash(have) {
   eq("solo + hetero is a clash naming hetero", JSON.stringify(contradictions(lex, ["solo", "hetero"])), JSON.stringify([["solo_count", "solo", "hetero"]]));
   eq("solo + 1girl + 1boy is a clash", contradictions(lex, ["1girl", "1boy", "solo"]).length, 1);
   eq("1girl solo is not a clash", contradictions(lex, ["1girl", "solo"]).length, 0);
+  // 疊印台拿釘選算相剋：卡司還沒補齊，釘 1girl＋口交不是打架（抽的時候會補男生）。只有補不起來的才報。
+  for (const pins of [["1girl", "hetero"], ["1girl", "fellatio"], ["1boy", "paizuri"], ["1girl", "threesome"]]) {
+    eq(`pins ${pins.join("+")} is not a clash on the proof sheet`, JSON.stringify(contradictions(lex, pins, { pins: true })), "[]");
+  }
+  eq("pins yuri + 2boys is a clash on the proof sheet", JSON.stringify(contradictions(lex, ["2boys", "yuri"], { pins: true })), JSON.stringify([["cast_need", "yuri", "2boys"]]));
+
+  // 釘選和卡司：百合／磨鏡不能配男生；只開男生時 4P／5P 仍要補滿人數；單人焦點不能再寫 solo。
+  const boyOnlyCast = settings();
+  boyOnlyCast.girl = false;
+  boyOnlyCast.boy = true;
+  boyOnlyCast.heats = ["sex"];
+  boyOnlyCast.weights = { tease: 0, flash: 0, sex: 1 };
+  boyOnlyCast.eras = ["modern"];
+  const girlCount = (h) => (h.has("5girls") ? 5 : h.has("4girls") ? 4 : h.has("3girls") ? 3 : h.has("2girls") ? 2 : h.has("multiple girls") ? 2 : h.has("1girl") ? 1 : 0);
+  const boyCount = (h) => (h.has("3boys") ? 3 : h.has("2boys") ? 2 : h.has("multiple boys") ? 2 : h.has("1boy") ? 1 : 0);
+  let yuriBad = 0;
+  for (const tag of ["yuri", "tribadism"]) {
+    const pin = applyPin(lex, new Set(), new Set(), tag).pinned;
+    for (const scene of [sexBoth, boyOnlyCast]) {
+      for (let i = 0; i < 30; i++) {
+        const h = tagsOf(drawOne(lex, scene, pin, new Set(), mulberry32(99200 + i), 99200 + i));
+        if (!h.has(tag) || boyCount(h) > 0 || girlCount(h) < 2) yuriBad += 1;
+      }
+    }
+  }
+  eq("pinned yuri and tribadism stay two or more girls and no boy", yuriBad, 0);
+
+  let headBad = 0;
+  for (const [tag, need] of [["foursome", 4], ["gangbang", 4], ["fivesome", 5]]) {
+    const pin = applyPin(lex, new Set(), new Set(), tag).pinned;
+    for (let i = 0; i < 20; i++) {
+      const d = drawOne(lex, boyOnlyCast, pin, new Set(), mulberry32(99320 + i), 99320 + i);
+      if (!tagsOf(d).has(tag) || d.people < need) headBad += 1;
+    }
+  }
+  eq("boy-only pin of foursome, gangbang, or fivesome still fills the count", headBad, 0);
+
+  let focusBad = 0;
+  const pinFocus = applyPin(lex, new Set(), new Set(), "solo focus").pinned;
+  for (let i = 0; i < 40; i++) {
+    const h = tagsOf(drawOne(lex, sexBoth, pinFocus, new Set(), mulberry32(99440 + i), 99440 + i));
+    if (!h.has("solo focus") || h.has("solo")) focusBad += 1;
+  }
+  eq("pinned solo focus is not also solo", focusBad, 0);
+  ok("yuri with a boy is a cast clash", contradictions(lex, ["yuri", "1girl", "1boy"]).some((row) => row[0] === "cast_need" && row[1] === "yuri"));
+  ok("foursome with one boy is a cast clash", contradictions(lex, ["foursome", "1boy"]).some((row) => row[0] === "cast_need" && row[1] === "foursome"));
+  ok("solo and solo focus clash", contradictions(lex, ["solo", "solo focus", "1girl"]).some((row) => row[0] === "solo_focus"));
 
   let sawFour = 0;
   let fourMiss = 0;

@@ -115,7 +115,8 @@ export function relationsOf(bed, { lex, contradictions, actPlace }) {
     if (!places) continue;
     for (const b of bed.pins) if (places.has(b)) push("echo", a, b);
   }
-  for (const [kind, x, y] of contradictions(lex, bed.pins)) {
+  // 釘選不是抽完的卡司：釘 1girl＋口交不算相剋（抽的時候會補一個男生）。
+  for (const [kind, x, y] of contradictions(lex, bed.pins, { pins: true })) {
     let a = x;
     let b = y;
     if (kind === "nude_garment") {

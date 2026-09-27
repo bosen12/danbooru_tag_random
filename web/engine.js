@@ -2790,15 +2790,17 @@ function bumpGender(parts, female, want) {
 
 function ensureCast(parts, settings, ctx) {
   let out = parts.slice();
+  if (ctx.needYuri) out = out.filter((t) => !MALE_COUNT.has(t));
   if (ctx.needFemale && !hasFemale(out)) out.push("1girl");
-  if (ctx.needMale && !hasMale(out)) out.push("1boy");
+  if (ctx.needMale && !ctx.needYuri && !hasMale(out)) out.push("1boy");
   if (ctx.need2Female) out = bumpGender(out, true, 2);
-  if (ctx.need2Male) out = bumpGender(out, false, 2);
+  if (ctx.need2Male && !ctx.needYuri) out = bumpGender(out, false, 2);
   const min = ctx.needFive ? 5 : ctx.needCrowd ? 4 : ctx.needGroup ? 3 : ctx.needPair ? 2 : 1;
   const canGirl = settings.girl !== false;
-  const canBoy = settings.boy !== false;
+  const canBoy = settings.boy !== false && !ctx.needYuri;
   let guard = 0;
-  while (personCount(out) < min && guard++ < 6) {
+  while (personCount(out) < min && guard++ < 8) {
+    const before = personCount(out);
     const g = genderCount(out, true);
     const b = genderCount(out, false);
     if (canGirl && canBoy) {
@@ -2808,7 +2810,15 @@ function ensureCast(parts, settings, ctx) {
       else out = bumpGender(out, false, b + 1);
     } else if (canGirl) out = bumpGender(out, true, g + 1);
     else if (canBoy) out = bumpGender(out, false, b + 1);
-    else break;
+    // 男生最多 3boys。釘了 4P／5P、又只開男生時，卡在 3 人就永遠補不滿。
+    // 牌要的是人數，不是「面板上的性別開關」；差的人數用另一個性別補。
+    if (personCount(out) === before) {
+      const gg = genderCount(out, true);
+      const bb = genderCount(out, false);
+      if (gg < 5) out = bumpGender(out, true, gg + 1);
+      else if (!ctx.needYuri && bb < 3) out = bumpGender(out, false, bb + 1);
+      else break;
+    }
   }
   return out;
 }
@@ -2989,6 +2999,7 @@ function pinContext(lex, pinned) {
   let needFive = false;
   let need2Male = false;
   let need2Female = false;
+  let needYuri = false;
   const heatLists = [];
   const eraLists = [];
   for (const tag of pinned) {
@@ -3013,11 +3024,19 @@ function pinContext(lex, pinned) {
       needFemale = true;
       need2Female = true;
     }
+    // 百合這個字的 needs 只有 pair、female，castOk 不會因此把男生排掉。
+    // 磨鏡則是 needs 裡寫了 yuri。兩種都是「只要女生、至少兩個」。
+    if (tag === "yuri" || needs.includes("yuri")) {
+      needFemale = true;
+      needPair = true;
+      need2Female = true;
+      needYuri = true;
+    }
     heatLists.push(item.heat && item.heat.length ? item.heat : MIXED_HEATS);
     const e = erasOf(item);
     if (e) eraLists.push(e);
   }
-  return { needFemale, needMale, needPair, needGroup, needCrowd, needFive, need2Male, need2Female, heatLists, eraLists };
+  return { needFemale, needMale, needPair, needGroup, needCrowd, needFive, need2Male, need2Female, needYuri, heatLists, eraLists };
 }
 
 function intersectOrUnion(lists) {
@@ -3054,8 +3073,9 @@ function chooseCast(lex, settings, pinned, banned, rand, ctx) {
   } else {
     let girl = settings.girl;
     let boy = settings.boy;
-    if (ctx.needFemale) girl = true;
-    if (ctx.needMale) boy = true;
+    if (ctx.needFemale || ctx.needYuri) girl = true;
+    if (ctx.needMale && !ctx.needYuri) boy = true;
+    if (ctx.needYuri) boy = false;
     let table;
     if (girl && boy) {
       table = lex.data.castWeights.mixed;
@@ -3079,7 +3099,7 @@ function chooseCast(lex, settings, pinned, banned, rand, ctx) {
   }
   if (!povLock) parts = ensureCast(parts, settings, ctx);
   const n = personCount(parts);
-  if (n === 1 && !banned.has("solo") && (!ctx.needPair || povLock)) parts.push("solo");
+  if (n === 1 && !banned.has("solo") && (!ctx.needPair || povLock) && (pinned.has("solo") || !pinned.has("solo focus"))) parts.push("solo");
   if (n > 1) parts = parts.filter((t) => t !== "solo");
   if (pinned.has("solo") && n > 1 && !ctx.needPair) {
     // 1girl、1boy 是單數，以前的 /^(\d+)boys$/ 對不上，1boy 會留下來變成「1girl, 1boy, solo」。
@@ -3430,7 +3450,11 @@ export function reconcile(lex, used, female, male, people, pinned = new Set(), l
   return new Set(keep.map((i) => i.tag));
 }
 
-export function contradictions(lex, tags) {
+/**
+ * opts.pins：tags 是疊印台上的釘選，不是抽完的結果。卡司還沒補齊（釘 1girl＋口交，抽的時候會補一個男生），
+ * 所以 cast_need 只報補不起來的那種：要只有女生的牌（百合、磨鏡）配上釘住的男生人數牌。
+ */
+export function contradictions(lex, tags, opts = {}) {
   const items = tags.map((t) => lex.byTag.get(t)).filter(Boolean);
   const found = [];
   const seen = new Map();
@@ -3459,6 +3483,47 @@ export function contradictions(lex, tags) {
     const needy = tags.find((t) => t !== "solo" && (lex.byTag.get(t)?.needs || []).some((k) => crowdNeed.includes(k)));
     const other = multi || (heads > 1 ? tags.find((t) => t !== "1girl" && MALE_COUNT.has(t)) || tags.find((t) => FEMALE_COUNT.has(t) || MALE_COUNT.has(t)) : null) || needy;
     if (other) found.push(["solo_count", "solo", other]);
+  }
+  if (names.has("solo") && names.has("solo focus")) found.push(["solo_focus", "solo", "solo focus"]);
+  // 人數已經寫在卡司上、卻跟某張牌的 needs／gate 對不起來。單獨一張「要兩人」的牌
+  // 不算：抽的時候會把人補上。這裡抓的是結果裡已經有 1girl／1boy，人還是不夠或性別錯了。
+  {
+    let girls = 0;
+    let boys = 0;
+    let maleTag = null;
+    let femaleTag = null;
+    for (const t of tags) {
+      if (FEMALE_COUNT.has(t)) {
+        girls += COUNT_NUM[t] || 0;
+        if (!femaleTag) femaleTag = t;
+      }
+      if (MALE_COUNT.has(t)) {
+        boys += COUNT_NUM[t] || 0;
+        if (!maleTag) maleTag = t;
+      }
+    }
+    if (girls + boys > 0) {
+      const female = girls > 0;
+      const male = boys > 0;
+      const peopleN = girls + boys;
+      for (const t of tags) {
+        if (t === "solo" || t === "solo focus") continue;
+        const item = lex.byTag.get(t);
+        if (!item) continue;
+        const needs = item.needs || [];
+        const yuriBad = (item.tag === "yuri" || needs.includes("yuri")) && (male || girls < 2);
+        if (opts.pins) {
+          if ((item.tag === "yuri" || needs.includes("yuri")) && male) found.push(["cast_need", item.tag, maleTag]);
+          continue;
+        }
+        if (!yuriBad && gateOk(item, female, male) && castOk(item, female, male, peopleN, girls, boys)) continue;
+        let pointed = maleTag || femaleTag;
+        if ((item.tag === "yuri" || needs.includes("yuri")) && maleTag) pointed = maleTag;
+        else if ((needs.includes("male") || item.gate === "male") && !male) pointed = femaleTag || pointed;
+        else if ((needs.includes("female") || item.gate === "female") && !female) pointed = maleTag || pointed;
+        found.push(["cast_need", item.tag, pointed || item.tag]);
+      }
+    }
   }
   const nude = names.has("nude") || names.has("completely nude");
   if (nude && (names.has("dress") || names.has("sundress") || names.has("jeans"))) {
@@ -6479,7 +6544,7 @@ export function drawOne(lex, settings, pinned, userBanned, rand, seed, opts) {
   for (const t of cast) {
     if (kept.has(t) && !subject.includes(t)) subject.push(t);
   }
-  if (people === 1 && !subject.includes("solo")) subject.push("solo");
+  if (people === 1 && !subject.includes("solo") && (pinned.has("solo") || (!pinned.has("solo focus") && !subject.includes("solo focus")))) subject.push("solo");
 
   for (const tag of kept) {
     const item = lex.byTag.get(tag);
@@ -6504,8 +6569,13 @@ export function drawOne(lex, settings, pinned, userBanned, rand, seed, opts) {
   // Danbooru 用 solo focus，不是 solo（solo 是「畫面上只有一個人」）。要等上面各段都填好才看得到人群。
   if (env.some((t) => CROWD_TAGS.has(t))) {
     const i = subject.indexOf("solo");
-    if (i >= 0) subject.splice(i, 1);
+    if (i >= 0 && !pinned.has("solo")) subject.splice(i, 1);
     if (people === 1 && !subject.includes("solo focus")) subject.push("solo focus");
+  }
+  // reconcile 在單人時會補回 solo。釘了單人焦點就是不要再寫 solo。
+  if (subject.includes("solo focus") && !pinned.has("solo")) {
+    const i = subject.indexOf("solo");
+    if (i >= 0) subject.splice(i, 1);
   }
   // 尾巴就是滑桿選的那一級。選色情就寫 nsfw, explicit。
   //
@@ -6907,6 +6977,8 @@ export function clashLine(lex, tags) {
     seen.add(key);
     if (kind === "day_night") parts.push("同時是白天和夜晚");
     else if (kind === "solo_count") parts.push("寫著單人卻有兩個以上的人");
+    else if (kind === "solo_focus") parts.push("寫著單人又寫著單人焦點");
+    else if (kind === "cast_need") parts.push(`${L(a)} 跟現在的人數對不上`);
     else if (kind === "nude_garment") parts.push("說全裸卻還穿著衣服");
     else parts.push(`${L(a)} 和 ${L(b)} 不能同時成立`);
   }
