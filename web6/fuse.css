@@ -207,7 +207,7 @@ body.fuse {
 
 /* 新夾上繩子：往下一落、左右晃幾下才停（夾子在上緣，transform-origin 就是夾子）。 */
 .print.is-hung {
-  animation: print-hang 900ms cubic-bezier(0.3, 0.7, 0.3, 1) both;
+  animation: print-hang var(--dur-story) var(--ease-out) both;
 }
 
 @keyframes print-hang {
@@ -234,7 +234,7 @@ body.fuse {
 
 /* 剛印好：紙被風吹一下。 */
 .print.is-dried {
-  animation: print-flutter 700ms var(--ease-out);
+  animation: print-flutter var(--dur-story) var(--ease-out);
 }
 
 @keyframes print-flutter {
@@ -325,7 +325,7 @@ body.fuse {
 }
 
 .print-peek.is-in {
-  animation: print-peek-in 150ms var(--ease-out);
+  animation: print-peek-in var(--dur-micro) var(--ease-out);
 }
 
 @keyframes print-peek-in {
@@ -557,7 +557,7 @@ body.fuse {
 }
 
 .case-grid .card.is-flag-stamp[data-state="pinned"]::after {
-  animation: case-flag-stamp 380ms cubic-bezier(0.2, 0.9, 0.3, 1.2);
+  animation: case-flag-stamp var(--dur-long) var(--ease-settle);
 }
 
 @keyframes case-flag-stamp {
@@ -725,7 +725,7 @@ body.fuse {
 
 /* 拖著一張牌經過卡池：它會落到的那一列先亮起來。 */
 .register::before {
-  transition: opacity 160ms var(--ease-out);
+  transition: opacity var(--dur-micro) var(--ease-out);
 }
 
 .register.is-drop-target::before {
@@ -737,7 +737,7 @@ body.fuse {
 }
 
 .register.is-inked::before {
-  animation: ink-wash 0.9s var(--ease-out);
+  animation: ink-wash var(--dur-story) var(--ease-out);
 }
 
 @keyframes ink-wash {
@@ -919,7 +919,7 @@ body.fuse {
 
 /* 換一張試印：影子換成那一張補的，淡入。 */
 .registers.ghosts-in .ghost-card {
-  animation: ghost-in 0.4s var(--ease-out) both;
+  animation: ghost-in var(--dur-long) var(--ease-out) both;
 }
 
 @keyframes ghost-in {
@@ -966,7 +966,7 @@ body.fuse {
 
 /* 壓印：落下、壓一下、彈回 */
 .card.is-stamped {
-  animation: stamp 0.5s var(--ease-out);
+  animation: stamp var(--dur-xl) var(--ease-out);
 }
 
 @keyframes stamp {
@@ -982,7 +982,7 @@ body.fuse {
 }
 
 .card.is-carried {
-  animation: carried 0.5s var(--ease-out) both;
+  animation: carried var(--dur-xl) var(--ease-out) both;
 }
 
 @keyframes carried {
@@ -1009,7 +1009,7 @@ body.fuse {
 
 /* 回到字盒的那張：字盒裡的牌輕輕一沉一彈，收下了。 */
 .card.is-returned {
-  animation: card-returned 420ms var(--ease-out);
+  animation: card-returned var(--dur-long) var(--ease-out);
 }
 
 @keyframes card-returned {
@@ -1023,7 +1023,7 @@ body.fuse {
 
 /* 起手：換一組時三張往上翻過來。 */
 .starters.is-shuffled .starter {
-  animation: starter-in 360ms var(--ease-out) backwards;
+  animation: starter-in var(--dur-medium) var(--ease-out) backwards;
 }
 
 .starters.is-shuffled .starter:nth-of-type(2) {
@@ -1046,7 +1046,7 @@ body.fuse {
 }
 
 .card.is-clashing {
-  animation: clash 0.42s var(--ease-out);
+  animation: clash var(--dur-long) var(--ease-out);
 }
 
 @keyframes clash {
@@ -1402,7 +1402,7 @@ body.fuse {
 
 /* 印好的那一刻：像紙從滾筒下面出來，由上往下顯影。 */
 .pv-sheet.is-developing img:not(.pv-under) {
-  animation: develop 1.2s var(--ease-out) both;
+  animation: develop var(--dur-develop) var(--ease-out) both;
 }
 
 /* 上一幀墊在底下，主圖疊在上面（主圖是 prepend 的，DOM 順序在前，要靠 z-index 排上來）。 */
@@ -1416,7 +1416,7 @@ body.fuse {
 }
 
 .pv-sheet img.is-pv-in {
-  animation: pv-in 260ms var(--ease-out);
+  animation: pv-in var(--dur-short) var(--ease-out);
 }
 
 @keyframes develop {
@@ -1493,7 +1493,7 @@ body.fuse {
 .pv-roller[data-state="drawn"] i {
   width: 22%;
   transform: none;
-  animation: queued 1.4s var(--ease-in-out) infinite alternate;
+  animation: queued var(--dur-breath) var(--ease-in-out) infinite alternate;
 }
 
 @keyframes queued {
@@ -1516,7 +1516,7 @@ body.fuse {
   opacity: 0;
   mix-blend-mode: multiply;
   pointer-events: none;
-  animation: roll 0.85s var(--ease-in-out) forwards;
+  animation: roll var(--dur-story) var(--ease-in-out) forwards;
 }
 
 @keyframes roll {
@@ -1815,7 +1815,7 @@ body.fuse {
 
 /* 換一批：四張像一疊樣張被翻過。 */
 .trials.is-shuffling .trial {
-  animation: shuffle 0.5s var(--ease-out) both;
+  animation: shuffle var(--dur-xl) var(--ease-out) both;
 }
 
 .trials.is-shuffling .trial:nth-child(2) { animation-delay: 40ms; }
@@ -1927,7 +1927,7 @@ body.fuse {
 }
 
 .print-bar.is-nudged {
-  animation: clash 0.42s var(--ease-out);
+  animation: clash var(--dur-long) var(--ease-out);
 }
 
 .keys-hint {
@@ -1967,7 +1967,7 @@ body.fuse {
   background: var(--color-paper-3);
   box-shadow: 0 20px 40px var(--color-shade);
   transform-origin: 0 var(--tail-y, 50%);
-  animation: pop-in 200ms var(--ease-out);
+  animation: pop-in var(--dur-short) var(--ease-out);
 }
 
 .pop[data-side="left"] {
@@ -2050,7 +2050,7 @@ body.fuse {
 }
 
 .pop.is-closing {
-  animation: pop-out 120ms var(--ease-in, ease-in) forwards;
+  animation: pop-out var(--dur-micro) var(--ease-exit) forwards;
 }
 
 @keyframes pop-out {
@@ -2228,7 +2228,7 @@ body.fuse {
   color: var(--color-ink);
   box-shadow: 0 12px 26px var(--color-shade);
   font-size: var(--text-sm);
-  transition: border-color var(--dur-micro) var(--ease-out), background-color var(--dur-micro) var(--ease-out), translate 280ms var(--ease-out);
+  transition: border-color var(--dur-micro) var(--ease-out), background-color var(--dur-micro) var(--ease-out), translate var(--dur-medium) var(--ease-out);
 }
 
 .pool-pill[hidden] {
@@ -2286,7 +2286,7 @@ body.fuse {
 }
 
 .pool-pill.is-bumped {
-  animation: bump 0.5s var(--ease-out);
+  animation: bump var(--dur-xl) var(--ease-out);
 }
 
 @keyframes bump {

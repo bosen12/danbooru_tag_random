@@ -1749,6 +1749,37 @@ const ALBUM_FIXTURE = [
       ok("清版：疊在牌自己的中心、兩段各用各的曲線，「空白的版」等那一疊離開才浮上來", motion6.includes('easing: "linear", fill: "both"') && fuse6.includes("cs.reduce((a, c) => a + c.x, 0)") && fuse6.includes("delay: Math.round(ms * 0.58),"));
       ok("托盤收起／打開有變形（外框縮成標籤、牌由外往內沉下去；打開由中間往兩旁浮上來）", hand6.includes("function morphTo(change, changed)") && hand6.includes("function riseCards(delay0)") && css6.includes(".fav-hand.is-collapsing[data-open]"));
     }
+    {
+      // 動態詞彙只有一套：tokens.css 的 --ease-*／--dur-* 跟 motion.js 的 CURVE／DUR 一模一樣，
+      // 其他地方不自己寫曲線、不寫裸的毫秒數（長按 280ms 跟 drag.js 綁在一起，是唯一的例外）。
+      const { CURVE: C, DUR: D } = await import(pathToFileURL(join(ROOT, "web6/motion.js")).href);
+      const tok = readFileSync(join(ROOT, "web6/tokens.css"), "utf8");
+      const names = { out: "ease-out", in: "ease-in", exit: "ease-exit", inOut: "ease-in-out", travel: "ease-travel", settle: "ease-settle" };
+      const curveBad = Object.entries(names).filter(([k, v]) => {
+        const m = tok.match(new RegExp(String.raw`--${v}: cubic-bezier\(([^)]*)\)`));
+        return !m || m[1].split(",").map(Number).join(",") !== C[k].join(",");
+      });
+      const durBad = Object.entries(D).filter(([k, v]) => {
+        const m = tok.match(new RegExp(String.raw`--dur-${k}: (\d+)ms`));
+        return !m || +m[1] !== v;
+      });
+      ok("動態詞彙：tokens.css 跟 motion.js 的曲線、時間一模一樣", !curveBad.length && !durBad.length, JSON.stringify({ curveBad, durBad }));
+      const files = ["card.css", "styles.css", "fuse.css", "app.js", "fuse.js", "hand.js", "drag.js", "cards.js", "ui.js"].map((f) => [f, readFileSync(join(ROOT, "web6", f), "utf8")]);
+      const adhoc = files.filter(([, t]) => /cubic-bezier\(/.test(t)).map(([f]) => f);
+      ok("曲線只在 tokens.css／motion.js 定義，其他地方用 var(--ease-*) 或 css(CURVE.*)", !adhoc.length, adhoc.join("、"));
+      const raw = [];
+      for (const [f, t] of files.filter(([f]) => f.endsWith(".css"))) {
+        t.split("\n").forEach((line, i) => {
+          if (/(transition|animation)(-duration)?\s*:|^\s+[a-z-]+ \d/.test(line) && /\b\d+(\.\d+)?m?s\b\s+(var\(--ease|ease|linear|cubic)/.test(line) && !line.includes("280ms linear")) raw.push(`${f}:${i + 1}`);
+        });
+      }
+      for (const [f, t] of files.filter(([f]) => f.endsWith(".js"))) {
+        t.split("\n").forEach((line, i) => {
+          if (/\bduration: \d{2,}/.test(line) || /easing: "(ease|cubic)/.test(line)) raw.push(`${f}:${i + 1}`);
+        });
+      }
+      ok("CSS 的轉場／動畫、JS 的 animate() 都用時間 token（不寫裸的毫秒數）", !raw.length, raw.slice(0, 8).join("、"));
+    }
     ok("工具列鈕：沒牌直接進挑牌，有牌打開／收起托盤；選單和詳情也能加", hand6.includes("function fromButton()") && fuse6.includes("hand?.fromButton()") && app6.includes("hand?.fromButton()") && fuse6.includes('"加入偏好卡牌"') && app6.includes('"加入偏好卡牌"'));
   }
   ok("疊印台的規則鈕也是圖示", fuseHtml.includes('id="rules-btn" type="button" aria-label="規則"') && !fuseHtml.includes(">規則</button>"));

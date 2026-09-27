@@ -34,7 +34,7 @@ import { initWorkflow, currentWorkflowId, wfHandleKeys } from "./workflow.js";
 import { HARD_BANNED, applyArtSources } from "./card-art.js";
 import { buildLibrary, createAssets, cardNode, cardFacts, setEnterTarget, CARD_SUIT_INFO, CARD_SUITS, RATING_ZH, ERA_ZH } from "./cards.js";
 import { el, openSheet, anyOverlay, toast } from "./ui.js";
-import { initMotion, flip, flipBy, leave, gatherHome, flight } from "./motion.js";
+import { initMotion, flip, flipBy, leave, gatherHome, flight, CURVE, DUR, css } from "./motion.js";
 import { createHand } from "./hand.js";
 import { createDrag, inkRing } from "./drag.js";
 import { createGenerator, comfyOnline, viewSrc, tabTitle, watchLink, LINK_LABEL } from "./gen.js";
@@ -459,9 +459,9 @@ function clearBed() {
   // 「空白的版」等那一疊離開才浮上來：不要一按清版底下就瞬間換成起手組、牌還飄在上面。
   if (ms && !reduced()) {
     $("registers").animate([{ opacity: 0, transform: "translateY(8px)" }, { opacity: 1, transform: "none" }], {
-      duration: 360,
+      duration: DUR.medium,
       delay: Math.round(ms * 0.58),
-      easing: "cubic-bezier(0.16, 1, 0.3, 1)",
+      easing: css(CURVE.out),
       fill: "backwards",
     });
   }
@@ -1510,7 +1510,7 @@ function drawRelations(events = []) {
     const len = Math.ceil(path.getTotalLength());
     path.style.strokeDasharray = String(len);
     path.style.strokeDashoffset = String(len);
-    path.animate([{ strokeDashoffset: len }, { strokeDashoffset: 0 }], { duration: 600, easing: "cubic-bezier(0.16, 1, 0.3, 1)", fill: "forwards" });
+    path.animate([{ strokeDashoffset: len }, { strokeDashoffset: 0 }], { duration: DUR.xl, easing: css(CURVE.out), fill: "forwards" });
     setTimeout(() => {
       path.getAnimations().forEach((a) => a.cancel());
       path.style.strokeDasharray = "";
@@ -1803,9 +1803,9 @@ function liftAway(snap, dir) {
       { transform: "none", opacity: 1 },
       { transform: to, opacity: 0 },
     ],
-    { duration: 340, easing: "cubic-bezier(0.7, 0, 0.84, 0)", fill: "forwards" }
+    { duration: DUR.medium, easing: css(CURVE.in), fill: "forwards" }
   );
-  setTimeout(() => clone.remove(), 360);
+  setTimeout(() => clone.remove(), DUR.medium + 20);
 }
 
 /* ================= 付印那一條 ================= */

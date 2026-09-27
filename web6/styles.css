@@ -315,9 +315,9 @@ p {
   background: var(--color-paper-4);
   pointer-events: none;
   transition:
-    transform 260ms cubic-bezier(0.16, 1, 0.3, 1),
-    width 260ms cubic-bezier(0.16, 1, 0.3, 1),
-    background-color 260ms ease;
+    transform var(--dur-short) var(--ease-out),
+    width var(--dur-short) var(--ease-out),
+    background-color var(--dur-short) var(--ease-out);
 }
 
 .segmented[data-kind="rating"] .seg-thumb[data-v="explicit"] {
@@ -744,7 +744,7 @@ p {
 }
 
 .pool-slot .card.is-clashing {
-  animation: pool-clash-shake 0.42s var(--ease-out);
+  animation: pool-clash-shake var(--dur-long) var(--ease-out);
 }
 
 @keyframes pool-clash-shake {
@@ -1154,7 +1154,7 @@ p {
 
 /* 剛印好：由上往下顯影，亮一下再沉回正常。 */
 .shot-frame.is-developing img:not(.shot-under) {
-  animation: shot-develop 1.2s var(--ease-out) both;
+  animation: shot-develop var(--dur-develop) var(--ease-out) both;
 }
 
 /* 上一幀墊在底下；主圖疊在上面淡進來（預覽之間）或由上往下顯影（成品）。 */
@@ -1171,7 +1171,7 @@ p {
 }
 
 .shot-frame img.is-pv-in {
-  animation: pv-in 260ms var(--ease-out);
+  animation: pv-in var(--dur-short) var(--ease-out);
 }
 
 @keyframes pv-in {
@@ -1494,7 +1494,7 @@ p {
   box-shadow: 0 10px 24px var(--color-shade);
   transition:
     transform var(--dur-short) var(--ease-out),
-    translate 280ms var(--ease-out),
+    translate var(--dur-medium) var(--ease-out),
     border-color var(--dur-short) var(--ease-out),
     background-color var(--dur-short) var(--ease-out);
 }
@@ -1893,9 +1893,9 @@ body[data-dragging="true"] .library[data-over="true"] {
   *,
   *::before,
   *::after {
-    animation-duration: 120ms !important;
+    animation-duration: var(--dur-micro) !important;
     animation-delay: 0ms !important;
-    transition-duration: 120ms !important;
+    transition-duration: var(--dur-micro) !important;
   }
   .dealt,
   .dropped {

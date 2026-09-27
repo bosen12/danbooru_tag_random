@@ -9,10 +9,11 @@
  *   seal：小分類的一字章（鏡、表、上…），蓋在書脊最底下，跟牌面上的一樣。
  */
 
+// 時間、曲線用頁面的動態詞彙（web6/tokens.css）；別的房間沒定義就用括號裡的預設值。
 const STYLE_ID = "card-peek-style";
 const CSS = `
 .card-peek{position:fixed;z-index:180;width:248px;pointer-events:none;opacity:0;transform:translateY(6px) scale(.96);
-transition:opacity 180ms cubic-bezier(.16,1,.3,1),transform 220ms cubic-bezier(.16,1,.3,1);
+transition:opacity var(--dur-micro,120ms) var(--ease-out,cubic-bezier(.16,1,.3,1)),transform var(--dur-short,220ms) var(--ease-out,cubic-bezier(.16,1,.3,1));
 border-radius:14px;background:var(--peek-panel,oklch(21% .016 250));border:1px solid var(--peek-line,oklch(34% .016 250));
 box-shadow:0 22px 50px oklch(6% .01 250/.6);padding:10px;color:var(--peek-ink,oklch(94% .012 90));
 font-family:var(--peek-body,"Noto Sans TC","Microsoft JhengHei",sans-serif)}
@@ -21,7 +22,7 @@ font-family:var(--peek-body,"Noto Sans TC","Microsoft JhengHei",sans-serif)}
 .card-peek[data-side="left"]{transform-origin:right center;transform:translateX(10px) scale(.92)}
 .card-peek[data-side="above"]{transform-origin:center bottom;transform:translateY(10px) scale(.92)}
 .card-peek[data-side="right"][data-show="true"],.card-peek[data-side="left"][data-show="true"],.card-peek[data-side="above"][data-show="true"]{transform:none}
-.card-peek.is-gliding{transition:opacity 180ms cubic-bezier(.16,1,.3,1),transform 220ms cubic-bezier(.16,1,.3,1),left 170ms cubic-bezier(.16,1,.3,1),top 170ms cubic-bezier(.16,1,.3,1)}
+.card-peek.is-gliding{transition:opacity var(--dur-micro,120ms) var(--ease-out,cubic-bezier(.16,1,.3,1)),transform var(--dur-short,220ms) var(--ease-out,cubic-bezier(.16,1,.3,1)),left var(--dur-short,220ms) var(--ease-out,cubic-bezier(.16,1,.3,1)),top var(--dur-short,220ms) var(--ease-out,cubic-bezier(.16,1,.3,1))}
 @media (prefers-reduced-motion:reduce){.card-peek,.card-peek.is-gliding{transition:none}}
 .card-peek-face{position:relative;display:grid;grid-template-columns:22% minmax(0,1fr);aspect-ratio:480/702;border-radius:10px;overflow:hidden;
 background:oklch(93.5% .024 86);color:oklch(24% .02 50);box-shadow:0 1px 0 oklch(99% .012 85/.35) inset}

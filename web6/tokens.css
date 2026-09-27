@@ -72,12 +72,30 @@
   --radius-md: 10px;
   --radius-lg: 16px;
 
+  /* 動態詞彙（跟 motion.js 的 CURVE／DUR 同一套，改一邊要改另一邊）。
+     out     進場、落定：一開始就快、長長地停下來。
+     in      長的離場（≥ 300ms）：慢慢起步、越走越快。
+     exit    短的離場（< 250ms）：in 太陡，短時間裡前半段幾乎不動；這條一開始就在走。
+     in-out  原地的狀態轉換（展開、收合、來回的呼吸）。
+     travel  東西飛越畫面：從靜止加速、大半段在減速落下。
+     settle  壓印、彈一下：略過頭再回來。 */
   --ease-out: cubic-bezier(0.16, 1, 0.3, 1);
   --ease-in: cubic-bezier(0.7, 0, 0.84, 0);
+  --ease-exit: cubic-bezier(0.4, 0, 1, 1);
   --ease-in-out: cubic-bezier(0.65, 0, 0.35, 1);
+  --ease-travel: cubic-bezier(0.22, 0.06, 0.08, 1);
+  --ease-settle: cubic-bezier(0.2, 0.9, 0.3, 1.2);
+  /* 時間：micro 指到、按下的回饋；short 小東西進出；medium 面板、選單、托盤；long 牌的落定、抖一下；
+     xl 一整段編排（墨圈散開、洗牌、清版）；story 敘事性的慢動作（晾上繩子、墨暈開、骰種子）；
+     develop 成品顯影；breath 排隊中那種來回的呼吸（無限循環）。 */
   --dur-micro: 120ms;
   --dur-short: 220ms;
+  --dur-medium: 320ms;
   --dur-long: 420ms;
+  --dur-xl: 540ms;
+  --dur-story: 800ms;
+  --dur-develop: 1200ms;
+  --dur-breath: 1400ms;
 
   --shadow-card: 0 1px 0 var(--color-shine) inset, 0 6px 14px var(--color-shade);
   --shadow-lift: 0 1px 0 var(--color-shine) inset, 0 18px 30px var(--color-shade);

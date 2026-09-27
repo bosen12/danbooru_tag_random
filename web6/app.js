@@ -33,7 +33,7 @@ import { HARD_BANNED, applyArtSources } from "./card-art.js";
 import { buildLibrary, createAssets, cardNode, setCardFlag, setEnterTarget, cardFacts, CARD_SUIT_INFO, CARD_SUITS, RATING_ZH } from "./cards.js";
 import { el, openSheet, anyOverlay, toast, ICONS } from "./ui.js";
 import { createDrag, inkRing } from "./drag.js";
-import { initMotion, flip, flipBy, leave, enter, confirmButton, gatherHome, flight } from "./motion.js";
+import { initMotion, flip, flipBy, leave, enter, confirmButton, gatherHome, flight, CURVE, DUR, css } from "./motion.js";
 import { createHand } from "./hand.js";
 import { createGenerator, comfyOnline, viewSrc, tabTitle, watchLink, LINK_LABEL } from "./gen.js";
 import { genSeed, mountSeedControl, seedUseButton } from "./seed-control.js";
@@ -298,7 +298,7 @@ function libSearchKeys(e) {
   const tag = first.dataset.tag;
   if (pool.has(tag)) {
     const n = poolNode(tag) || first;
-    n.animate([{ translate: "0 0" }, { translate: "0 -6px" }, { translate: "0 0" }], { duration: 280, easing: "cubic-bezier(0.16, 1, 0.3, 1)" });
+    n.animate([{ translate: "0 0" }, { translate: "0 -6px" }, { translate: "0 0" }], { duration: DUR.medium, easing: css(CURVE.out) });
     toast(`「${lib.byTag.get(tag).zh}」已經在合成池裡`);
   } else if (bans.has(tag)) showCard(tag, "library");
   else {
@@ -450,8 +450,8 @@ function flyInto(tag, from) {
       const slot = n?.closest(".pool-slot");
       if (!n || !slot) return;
       slot.style.visibility = "";
-      n.animate([{ scale: "1.04" }, { scale: "0.99" }, { scale: "1" }], { duration: 260, easing: "cubic-bezier(0.16, 1, 0.3, 1)" });
-      slot.querySelector(".pool-x")?.animate([{ opacity: 0, scale: "0.6" }, { opacity: 1, scale: "1" }], { duration: 200, delay: 60, easing: "cubic-bezier(0.16, 1, 0.3, 1)", fill: "backwards" });
+      n.animate([{ scale: "1.04" }, { scale: "0.99" }, { scale: "1" }], { duration: DUR.short, easing: css(CURVE.out) });
+      slot.querySelector(".pool-x")?.animate([{ opacity: 0, scale: "0.6" }, { opacity: 1, scale: "1" }], { duration: DUR.short, delay: 60, easing: css(CURVE.out), fill: "backwards" });
       // 落定的那一刻散一圈墨（跟拖曳放下同一個效果）。
       inkRing(n);
     },
@@ -477,7 +477,7 @@ function tuckAway(tag, from, dir) {
       { transform: `translateY(${dir * -10}px) scale(1.05)`, opacity: 1, offset: 0.25 },
       { transform: `translateY(${dir * 90}px) scale(0.5)`, opacity: 0 },
     ],
-    { duration: 420, easing: "cubic-bezier(0.5, 0, 0.75, 0)", fill: "forwards" }
+    { duration: DUR.long, easing: css(CURVE.in), fill: "forwards" }
   );
   setTimeout(() => f.remove(), 460);
   toast(`「${card.zh}」放進合成池`, {
@@ -555,7 +555,7 @@ function popCarried(tag, delay) {
       { transform: "translateY(-3px) scale(1.04)", opacity: 1, offset: 0.7 },
       { transform: "none", opacity: 1 },
     ],
-    { duration: 360, delay, easing: "cubic-bezier(0.16, 1, 0.3, 1)", fill: "backwards" }
+    { duration: DUR.medium, delay, easing: css(CURVE.out), fill: "backwards" }
   );
 }
 
@@ -632,7 +632,7 @@ function liftOut({ node, rect }, delay = 0) {
       onLand: () => {
         if (hand?.has(tag)) hand.reveal(tag);
         const h = goingHome && homeNow();
-        if (h?.isConnected && !h.closest(".fav-hand")) h.animate([{ transform: "none" }, { transform: "translateY(3px) scale(0.96)" }, { transform: "translateY(-1px) scale(1.01)" }, { transform: "none" }], { duration: 320, easing: "cubic-bezier(0.16, 1, 0.3, 1)" });
+        if (h?.isConnected && !h.closest(".fav-hand")) h.animate([{ transform: "none" }, { transform: "translateY(3px) scale(0.96)" }, { transform: "translateY(-1px) scale(1.01)" }, { transform: "none" }], { duration: DUR.medium, easing: css(CURVE.out) });
       },
     });
     return;
@@ -646,9 +646,9 @@ function liftOut({ node, rect }, delay = 0) {
       { transform: "none", opacity: 1 },
       { transform: "translate(-18px, 26px) rotate(-10deg)", opacity: 0 },
     ],
-    { duration: 380, easing: "cubic-bezier(0.7, 0, 0.84, 0)", fill: "forwards" }
+    { duration: DUR.long, easing: css(CURVE.in), fill: "forwards" }
   );
-  setTimeout(() => ghost.remove(), 400);
+  setTimeout(() => ghost.remove(), DUR.long + 20);
 }
 
 /** 給螢幕閱讀器的一句話（畫面上的回饋已經在發生的地方了）。 */
@@ -709,9 +709,9 @@ function flyToTrash({ node, rect }) {
       { transform: `translate(${dx * 0.5}px, ${dy * 0.5 - 40}px) scale(0.7) rotate(-14deg)`, opacity: 1, offset: 0.55 },
       { transform: `translate(${dx}px, ${dy}px) scale(0.08) rotate(-200deg)`, opacity: 0.2 },
     ],
-    { duration: 520, easing: "cubic-bezier(0.5, 0, 0.3, 1)", fill: "forwards" }
+    { duration: DUR.xl, easing: css(CURVE.travel), fill: "forwards" }
   );
-  setTimeout(() => ghost.remove(), 540);
+  setTimeout(() => ghost.remove(), DUR.xl + 20);
 }
 
 function unban(tag) {
@@ -1266,7 +1266,7 @@ function shotNode(shot, deal) {
           { opacity: 1, transform: "none" },
           { opacity: 0, transform: "translateY(-8px)" },
         ],
-        { duration: 180, easing: "cubic-bezier(0.55, 0, 1, 0.45)" }
+        { duration: DUR.micro, easing: css(CURVE.exit) }
       ).onfinish = () => {
         if (toggle.getAttribute("aria-expanded") === "false") box.hidden = true;
       };
@@ -1683,7 +1683,7 @@ function flyToDetail(src, sheetEl) {
       { left: from.left + "px", top: from.top + "px", width: from.width + "px", height: from.height + "px" },
       { left: to.left + "px", top: to.top + "px", width: to.width + "px", height: to.height + "px" },
     ],
-    { duration: 380, easing: "cubic-bezier(0.16, 1, 0.3, 1)", fill: "forwards" }
+    { duration: DUR.long, easing: css(CURVE.out), fill: "forwards" }
   );
   const land = () => {
     f.remove();
@@ -1700,7 +1700,7 @@ function renderTrash(bump) {
   t.querySelector("b").textContent = bans.size;
   t.setAttribute("aria-label", `廢字簍：封鎖了 ${bans.size} 個字，點開可以撿回來`);
   if (bump && !matchMedia("(prefers-reduced-motion: reduce)").matches) {
-    t.animate([{ transform: "scale(1)" }, { transform: "scale(1.15)" }, { transform: "scale(1)" }], { duration: 260, easing: "cubic-bezier(0.16, 1, 0.3, 1)" });
+    t.animate([{ transform: "scale(1)" }, { transform: "scale(1.15)" }, { transform: "scale(1)" }], { duration: DUR.short, easing: css(CURVE.out) });
   }
 }
 
@@ -1737,7 +1737,7 @@ function showBans() {
         { transform: "translateY(-6px) scale(1.05)", opacity: 1, filter: "none", offset: 0.35 },
         { transform: "translateY(-26px) scale(0.9)", opacity: 0, filter: "none" },
       ],
-      { duration: 360, delay, easing: "cubic-bezier(0.45, 0, 0.25, 1)", fill: "forwards" }
+      { duration: DUR.medium, delay, easing: css(CURVE.inOut), fill: "forwards" }
     ).onfinish = done;
   };
   const sheet = openSheet(`廢字簍・${list.length} 個字`, el("div", {}, list.length ? el("p", { class: "tag-en", style: "margin-bottom:0.75rem" }, "點一張就撿回來（之後又可能抽到）。") : null, grid), {
@@ -1761,7 +1761,7 @@ function showBans() {
                     { transform: "none", opacity: 1 },
                     { transform: "translateY(-26px) scale(0.9)", opacity: 0 },
                   ],
-                  { duration: 320, delay: i * step, easing: "cubic-bezier(0.45, 0, 0.25, 1)", fill: "forwards" }
+                  { duration: DUR.medium, delay: i * step, easing: css(CURVE.inOut), fill: "forwards" }
                 )
               );
               setTimeout(() => sheet.close(), 320 + cards.length * step);

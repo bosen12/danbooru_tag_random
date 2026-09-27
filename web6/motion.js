@@ -7,8 +7,6 @@
  * aria-label），新畫出來的那一組從舊位置滑過去。
  */
 
-const EASE = "cubic-bezier(0.16, 1, 0.3, 1)";
-
 export const reducedMotion = () => matchMedia("(prefers-reduced-motion: reduce)").matches;
 
 /* ---------- 動態詞彙：兩個房間的曲線與時間（跟 tokens.css 的 --ease-*／--dur-* 同一套） ---------- */
@@ -27,9 +25,9 @@ export const CURVE = {
   exit: [0.4, 0, 1, 1],
   inOut: [0.65, 0, 0.35, 1],
   travel: [0.22, 0.06, 0.08, 1],
-  settle: [0.34, 1.4, 0.64, 1],
+  settle: [0.2, 0.9, 0.3, 1.2],
 };
-export const DUR = { micro: 120, short: 220, medium: 320, long: 420 };
+export const DUR = { micro: 120, short: 220, medium: 320, long: 420, xl: 540, story: 800, develop: 1200, breath: 1400 };
 export const css = (c) => `cubic-bezier(${c.join(", ")})`;
 
 /** cubic-bezier 曲線 → 函式 t(0..1) → 進度。JS 自己算位置的動畫（飛行）跟 CSS 用同一條曲線。 */
@@ -227,7 +225,7 @@ function syncSteppers(root = document) {
         { transform: `translateY(${up ? 60 : -60}%)`, opacity: 0 },
         { transform: "none", opacity: 1 },
       ],
-      { duration: 220, easing: EASE }
+      { duration: DUR.short, easing: css(CURVE.out) }
     );
   }
 }
@@ -268,7 +266,7 @@ export function initMotion() {
  * flip(container, () => { ...改 DOM... })：改之前量一次每個子元素的位置，改完再量一次，
  * 位置變了的從舊位置滑過去。新加進來的不管（呼叫端自己決定它怎麼進場）。
  */
-export function flip(container, mutate, { duration = 320 } = {}) {
+export function flip(container, mutate, { duration = DUR.medium } = {}) {
   if (!container || reducedMotion()) {
     mutate();
     return;
@@ -283,7 +281,7 @@ export function flip(container, mutate, { duration = 320 } = {}) {
     const dx = a.left - b.left;
     const dy = a.top - b.top;
     if (Math.abs(dx) < 1 && Math.abs(dy) < 1) continue;
-    n.animate([{ transform: `translate(${dx}px, ${dy}px)` }, { transform: "none" }], { duration, easing: EASE });
+    n.animate([{ transform: `translate(${dx}px, ${dy}px)` }, { transform: "none" }], { duration, easing: css(CURVE.out) });
   }
 }
 
@@ -293,7 +291,7 @@ export function flip(container, mutate, { duration = 320 } = {}) {
  * alias(key) 回傳「沒有舊位置時可以借用的 key」：疊印台的影子被收下變成正式的牌，
  * 就從影子的位置滑進去。
  */
-export function flipBy(container, selector, key, mutate, { duration = 320, alias = null } = {}) {
+export function flipBy(container, selector, key, mutate, { duration = DUR.medium, alias = null } = {}) {
   if (!container || reducedMotion()) {
     mutate();
     return;
@@ -313,7 +311,7 @@ export function flipBy(container, selector, key, mutate, { duration = 320, alias
     const dx = a.left - b.left;
     const dy = a.top - b.top;
     if (Math.abs(dx) < 1 && Math.abs(dy) < 1) continue;
-    n.animate([{ transform: `translate(${dx}px, ${dy}px)` }, { transform: "none" }], { duration, easing: EASE });
+    n.animate([{ transform: `translate(${dx}px, ${dy}px)` }, { transform: "none" }], { duration, easing: css(CURVE.out) });
   }
 }
 
@@ -326,7 +324,7 @@ export function flipBy(container, selector, key, mutate, { duration = 320, alias
  * （字盒不在畫面上）：那就疊好之後原地淡掉。cls：飛行影子要加的 class（疊印台是 "flying"）。
  * 回傳整段要多久（毫秒），呼叫端用來排「字盒收下」那一下。
  */
-export function gatherHome(snaps, pile, home, { cls = "", duration = 560 } = {}) {
+export function gatherHome(snaps, pile, home, { cls = "", duration = DUR.xl } = {}) {
   if (reducedMotion() || !snaps.length || !pile) return 0;
   const n = snaps.length;
   snaps.forEach((snap, i) => {
@@ -369,7 +367,7 @@ export function gatherHome(snaps, pile, home, { cls = "", duration = 560 } = {})
 }
 
 /** 一個東西離場：縮一點、淡掉，結束後才真的拿掉（done 裡做 DOM 移除，通常配 flip）。 */
-export function leave(node, done, { duration = 200 } = {}) {
+export function leave(node, done, { duration = DUR.short } = {}) {
   if (!node || reducedMotion()) {
     done();
     return;
@@ -379,7 +377,7 @@ export function leave(node, done, { duration = 200 } = {}) {
       { transform: "none", opacity: 1 },
       { transform: "scale(0.92)", opacity: 0 },
     ],
-    { duration, easing: "cubic-bezier(0.55, 0, 1, 0.45)", fill: "forwards" }
+    { duration, easing: css(CURVE.exit), fill: "forwards" }
   );
   let finished = false;
   const end = () => {
@@ -400,7 +398,7 @@ export function enter(node, { delay = 0 } = {}) {
       { transform: "translateY(-12px) scale(0.97)", opacity: 0 },
       { transform: "none", opacity: 1 },
     ],
-    { duration: 380, delay, easing: EASE, fill: "backwards" }
+    { duration: DUR.long, delay, easing: css(CURVE.out), fill: "backwards" }
   );
 }
 

@@ -19,12 +19,15 @@
  * 可能永遠不 resolve。減量動態時全部直接到位。
  */
 
+import { CURVE, DUR, css } from "./motion.js";
+
 const MOUSE_SLOP = 5;
 const TOUCH_HOLD = 280;
 const TOUCH_SLOP = 8;
-const LAND_MS = 260;
-const HOME_MS = 300;
-const SINK_MS = 280;
+// 落下、彈回、被吸進廢字簍：用兩個房間共用的動態詞彙（motion.js）。長按 TOUCH_HOLD 跟 CSS 的壓下綁在一起，不動。
+const LAND_MS = DUR.short;
+const HOME_MS = DUR.medium;
+const SINK_MS = DUR.short;
 const BASE_TILT = -2;
 
 const reduced = () => typeof matchMedia === "function" && matchMedia("(prefers-reduced-motion: reduce)").matches;
@@ -205,7 +208,7 @@ export function createDrag({ zones, onDrop, onOver, onMove }) {
             { transform: `translate3d(${tx}px, ${ty}px, 0) scale(0.18) rotate(160deg)`, opacity: 0.2 },
           ],
           SINK_MS,
-          "cubic-bezier(0.55, 0, 0.8, 0.2)",
+          css(CURVE.exit),
           () => landed && landed()
         );
         return;
@@ -252,7 +255,7 @@ export function createDrag({ zones, onDrop, onOver, onMove }) {
         { transform: `translate3d(${to.left}px, ${to.top}px, 0) scale(${s})` },
       ],
       LAND_MS,
-      "cubic-bezier(0.3, 0.7, 0.4, 1)",
+      css(CURVE.out),
       () => {
         target.style.visibility = "";
         stampLanded(target, false);
@@ -298,7 +301,7 @@ export function createDrag({ zones, onDrop, onOver, onMove }) {
         { transform: `translate3d(${home.left}px, ${home.top}px, 0) scale(${home.width / state.w})` },
       ],
       HOME_MS,
-      "cubic-bezier(0.2, 0.9, 0.3, 1.15)",
+      css(CURVE.settle),
       done
     );
   }

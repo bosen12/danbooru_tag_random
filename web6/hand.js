@@ -23,9 +23,7 @@
  *   onRemoved(t, undo)  用手拿掉了一張（×、Delete、選單）：房間跳一個帶「復原」的提示，undo() 放回原位
  *   decorate(n,t)  托盤上的牌做好之後給房間掛東西（拖曳）
  */
-import { flight, CURVE, css } from "./motion.js";
-
-const EASE = "cubic-bezier(0.16, 1, 0.3, 1)";
+import { flight, CURVE, DUR, css } from "./motion.js";
 const reduced = () => matchMedia("(prefers-reduced-motion: reduce)").matches;
 const ICON =
   '<svg viewBox="0 0 24 24" width="15" height="15" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linejoin="round" aria-hidden="true"><rect x="3" y="7" width="8" height="12" rx="1.5" transform="rotate(-14 7 13)"/><rect x="8" y="5" width="8" height="12" rx="1.5"/><rect x="13" y="7" width="8" height="12" rx="1.5" transform="rotate(14 17 13)"/></svg>';
@@ -461,7 +459,7 @@ export function createHand({
     for (const a of el.getAnimations()) if (a.id === "fav-morph") a.cancel();
     if (!after) return;
     if (!before) {
-      el.animate([{ opacity: 0, translate: "-50% 16px" }, { opacity: 1, translate: "-50% 0" }], { duration: 320, easing: css(CURVE.out), id: "fav-morph" });
+      el.animate([{ opacity: 0, translate: "-50% 16px" }, { opacity: 1, translate: "-50% 0" }], { duration: DUR.medium, easing: css(CURVE.out), id: "fav-morph" });
       riseCards(80);
       return;
     }
@@ -491,7 +489,7 @@ export function createHand({
       const mid = (cards.length - 1) / 2;
       cards.forEach((c, i) => {
         const d = Math.abs(i - mid);
-        sunk.push(c.animate([{ translate: "0 0", opacity: 1 }, { translate: "0 22px", opacity: 0 }], { duration: 180, delay: Math.round((mid - d) * 18), easing: css(CURVE.exit), fill: "forwards" }));
+        sunk.push(c.animate([{ translate: "0 0", opacity: 1 }, { translate: "0 22px", opacity: 0 }], { duration: DUR.micro, delay: Math.round((mid - d) * 18), easing: css(CURVE.exit), fill: "forwards" }));
       });
     } else riseCards(90);
   }
@@ -502,7 +500,7 @@ export function createHand({
     const mid = (cards.length - 1) / 2;
     cards.forEach((c, i) => {
       c.animate([{ translate: "0 20px", opacity: 0 }, { translate: "0 0", opacity: 1 }], {
-        duration: 300,
+        duration: DUR.medium,
         delay: delay0 + Math.round(Math.abs(i - mid) * 26),
         easing: css(CURVE.out),
         fill: "backwards",
@@ -548,11 +546,11 @@ export function createHand({
     if (!open) setOpen(true);
     if (tags.includes(tag)) {
       const c = slots.get(tag)?.querySelector(".fav-card");
-      if (c?.isConnected && !reduced()) c.animate([{ translate: "0 0" }, { translate: "0 -8px" }, { translate: "0 0" }], { duration: 300, easing: EASE });
+      if (c?.isConnected && !reduced()) c.animate([{ translate: "0 0" }, { translate: "0 -8px" }, { translate: "0 0" }], { duration: DUR.medium, easing: css(CURVE.out) });
       return false;
     }
     if (tags.length >= max) {
-      if (!reduced()) tab.animate([{ translate: "0 0" }, { translate: "-6px 0" }, { translate: "6px 0" }, { translate: "-3px 0" }, { translate: "0 0" }], { duration: 340, easing: "ease-out" });
+      if (!reduced()) tab.animate([{ translate: "0 0" }, { translate: "-6px 0" }, { translate: "6px 0" }, { translate: "-3px 0" }, { translate: "0 0" }], { duration: DUR.medium, easing: css(CURVE.out) });
       onFull();
       return false;
     }
@@ -564,9 +562,9 @@ export function createHand({
     const s = slots.get(tag);
     if (s?.isConnected && !reduced() && !quiet) {
       if (from) flyInto(s, from);
-      else s.querySelector(".fav-card").animate([{ translate: "0 18px", opacity: 0 }, { translate: "0 0", opacity: 1 }], { duration: 300, easing: EASE });
+      else s.querySelector(".fav-card").animate([{ translate: "0 18px", opacity: 0 }, { translate: "0 0", opacity: 1 }], { duration: DUR.medium, easing: css(CURVE.out) });
     }
-    if (!reduced()) el.querySelector(".fav-count")?.animate([{ scale: "1" }, { scale: "1.35" }, { scale: "1" }], { duration: 300, easing: EASE });
+    if (!reduced()) el.querySelector(".fav-count")?.animate([{ scale: "1" }, { scale: "1.35" }, { scale: "1" }], { duration: DUR.medium, easing: css(CURVE.out) });
     return true;
   }
 
@@ -588,7 +586,7 @@ export function createHand({
       tilt: -4,
       onLand: () => {
         card.style.visibility = "";
-        if (!reduced()) card.animate([{ translate: "0 3px", scale: "0.98" }, { translate: "0 -1px", scale: "1.01" }, { translate: "0 0", scale: "1" }], { duration: 240, easing: EASE });
+        if (!reduced()) card.animate([{ translate: "0 3px", scale: "0.98" }, { translate: "0 -1px", scale: "1.01" }, { translate: "0 0", scale: "1" }], { duration: DUR.short, easing: css(CURVE.out) });
       },
     });
   }
@@ -620,7 +618,7 @@ export function createHand({
           { opacity: 1, translate: "0 0", scale: "1" },
           { opacity: 0, translate: "0 22px", scale: "0.92" },
         ],
-        { duration: 180, easing: "cubic-bezier(0.55, 0, 1, 0.45)", fill: "forwards" }
+        { duration: DUR.micro, easing: css(CURVE.exit), fill: "forwards" }
       );
       a.onfinish = finish;
       setTimeout(finish, 320);
@@ -636,7 +634,7 @@ export function createHand({
     layout(true);
     onChange();
     const c = slots.get(tag)?.querySelector(".fav-card");
-    if (c?.isConnected && !reduced()) c.animate([{ translate: "0 22px", opacity: 0 }, { translate: "0 0", opacity: 1 }], { duration: 320, easing: EASE });
+    if (c?.isConnected && !reduced()) c.animate([{ translate: "0 22px", opacity: 0 }, { translate: "0 0", opacity: 1 }], { duration: DUR.medium, easing: css(CURVE.out) });
   }
 
   function toggleEdit(force) {
@@ -669,7 +667,7 @@ export function createHand({
     const s = slots.get(tag);
     if (!s) return;
     s.classList.remove("is-arriving");
-    if (!reduced()) s.querySelector(".fav-card").animate([{ translate: "0 3px", scale: "0.98" }, { translate: "0 -1px", scale: "1.01" }, { translate: "0 0", scale: "1" }], { duration: 240, easing: EASE });
+    if (!reduced()) s.querySelector(".fav-card").animate([{ translate: "0 3px", scale: "0.98" }, { translate: "0 -1px", scale: "1.01" }, { translate: "0 0", scale: "1" }], { duration: DUR.short, easing: css(CURVE.out) });
   }
 
   /** 字盒上標出哪幾張在手牌裡（root 底下的 .card[data-tag]）。 */
