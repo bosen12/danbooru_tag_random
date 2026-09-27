@@ -68,6 +68,23 @@
     ]
   },
   {
+    "tag": "5girls",
+    "section": "subject",
+    "gate": "female",
+    "heat": [
+      "tease",
+      "flash",
+      "sex"
+    ],
+    "mutex": "female_count",
+    "bind": [],
+    "implies": [],
+    "layer": "normal",
+    "era": [
+      "any"
+    ]
+  },
+  {
     "tag": "1boy",
     "section": "subject",
     "gate": "male",

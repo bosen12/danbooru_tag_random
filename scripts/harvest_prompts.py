@@ -448,7 +448,7 @@ def era_for(tag: str) -> list[str]:
 def classify(tag: str) -> dict | None:
     if banned(tag):
         return None
-    if tag in {"1girl", "2girls", "3girls", "4girls", "multiple girls", "1boy", "2boys", "3boys", "multiple boys", "solo", "adult"}:
+    if tag in {"1girl", "2girls", "3girls", "4girls", "5girls", "multiple girls", "1boy", "2boys", "3boys", "multiple boys", "solo", "adult"}:
         return None
     heat = heat_for(tag)
     era = era_for(tag)

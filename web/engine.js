@@ -282,9 +282,26 @@ const SEX_PHASE_AFTER = new Set([
   "after sex",
   "after fellatio",
   "after paizuri",
+  "after ejaculation",
+  "after anal",
   "afterglow",
+  // 詞庫裡的字是 cumdrip，沒有空格。舊的 "cum drip" 留著，避免哪天寫法回來對不上。
   "cum drip",
+  "cumdrip",
+  "cumdrip from penis",
 ]);
+const PENIS_STATE = new Set(["erection", "half-erect", "flaccid"]);
+const PRECUM_TAGS = new Set(["precum", "precum drip", "precum string"]);
+const FULL_NUDE = new Set(["nude", "completely nude"]);
+const CLOTHED_ONLY = new Set(["cum on clothes", "penis peek", "erection under clothes"]);
+const PENIS_ON_HEAD = new Set(["penis over eyes", "penis on face"]);
+const EJACULATION_ACT = new Set(["ejaculation", "projectile cum", "handsfree ejaculation"]);
+
+function peerIn(tag, used, group) {
+  if (!group.has(tag)) return false;
+  for (const t of used) if (t !== tag && group.has(t)) return true;
+  return false;
+}
 
 function sexPhaseClash(tag, used) {
   if (SEX_PHASE_BEFORE.has(tag)) {
@@ -315,6 +332,11 @@ const FACE_NEED_TAGS = new Set([
   "facial",
   "cum in mouth",
   "cum on face",
+  "cum on tongue",
+  "cum on hair",
+  "gokkun",
+  "penis over eyes",
+  "penis on face",
   "licking penis",
   "covering own mouth",
   "french kiss",
@@ -2110,6 +2132,9 @@ const HANDS_BUSY_ACT = new Set([
 const HANDS_OCCUPIED = new Set(["boxing gloves"]);
 const NEEDS_FREE_HAND = new Set([
   "handjob",
+  "double handjob",
+  "two-handed handjob",
+  "cooperative handjob",
   "fingering",
   "masturbation",
   "female masturbation",
@@ -2739,7 +2764,7 @@ export function cycleTag(lex, pinned, userBanned, tag) {
   return applyClear(pinned, userBanned, tag);
 }
 
-const FEMALE_SEQ = ["1girl", "2girls", "3girls", "4girls"];
+const FEMALE_SEQ = ["1girl", "2girls", "3girls", "4girls", "5girls"];
 const MALE_SEQ = ["1boy", "2boys", "3boys"];
 
 function bumpGender(parts, female, want) {
@@ -2756,7 +2781,7 @@ function ensureCast(parts, settings, ctx) {
   if (ctx.needMale && !hasMale(out)) out.push("1boy");
   if (ctx.need2Female) out = bumpGender(out, true, 2);
   if (ctx.need2Male) out = bumpGender(out, false, 2);
-  const min = ctx.needCrowd ? 4 : ctx.needGroup ? 3 : ctx.needPair ? 2 : 1;
+  const min = ctx.needFive ? 5 : ctx.needCrowd ? 4 : ctx.needGroup ? 3 : ctx.needPair ? 2 : 1;
   const canGirl = settings.girl !== false;
   const canBoy = settings.boy !== false;
   let guard = 0;
@@ -2948,6 +2973,7 @@ function pinContext(lex, pinned) {
   let needPair = false;
   let needGroup = false;
   let needCrowd = false;
+  let needFive = false;
   let need2Male = false;
   let need2Female = false;
   const heatLists = [];
@@ -2965,6 +2991,7 @@ function pinContext(lex, pinned) {
     if (needs.includes("pair")) needPair = true;
     if (needs.includes("group")) needGroup = true;
     if (needs.includes("crowd")) needCrowd = true;
+    if (needs.includes("five")) needFive = true;
     if (needs.includes("2male")) {
       needMale = true;
       need2Male = true;
@@ -2977,7 +3004,7 @@ function pinContext(lex, pinned) {
     const e = erasOf(item);
     if (e) eraLists.push(e);
   }
-  return { needFemale, needMale, needPair, needGroup, needCrowd, need2Male, need2Female, heatLists, eraLists };
+  return { needFemale, needMale, needPair, needGroup, needCrowd, needFive, need2Male, need2Female, heatLists, eraLists };
 }
 
 function intersectOrUnion(lists) {
@@ -2999,7 +3026,7 @@ function chooseCast(lex, settings, pinned, banned, rand, ctx) {
   ctx = ctx || pinContext(lex, pinned);
   const povLock = pinned.has("pov") || pinned.has("pov crotch");
   const forced = [];
-  for (const t of ["1girl", "2girls", "3girls", "4girls", "1boy", "2boys", "3boys"]) {
+  for (const t of ["1girl", "2girls", "3girls", "4girls", "5girls", "1boy", "2boys", "3boys"]) {
     if (pinned.has(t) && !banned.has(t)) forced.push(t);
   }
   let parts;
@@ -3650,7 +3677,37 @@ export function drawOne(lex, settings, pinned, userBanned, rand, seed, opts) {
         return ok;
       }
     : innerCommit;
-  const cast = chooseCast(lex, settings, pinned, banned, rand, ctx);
+  let cast = chooseCast(lex, settings, pinned, banned, rand, ctx);
+  // 五人只在「兩邊性別都開、這一抽是性愛、沒有釘人數或特定多人」時，用另一條亂數
+  // 低機率換掉卡司。不碰主 rand，沒升級的種子後面的衣服姿勢照舊。
+  const countPinned = ["1girl", "2girls", "3girls", "4girls", "5girls", "1boy", "2boys", "3boys"].some((t) =>
+    pinned.has(t)
+  );
+  if (
+    heat === "sex" &&
+    settings.girl !== false &&
+    settings.boy &&
+    !countPinned &&
+    !pinned.has("pov") &&
+    !pinned.has("pov crotch") &&
+    !ctx.needGroup &&
+    !ctx.needCrowd &&
+    !ctx.need2Male &&
+    !ctx.need2Female &&
+    !ctx.needFive &&
+    personCount(cast) < 5 &&
+    Number.isFinite(seed)
+  ) {
+    const fiveRand = mulberry32(((seed >>> 0) ^ 0x0f17e50e) >>> 0);
+    if (fiveRand() < 0.04) {
+      const options = [
+        ["4girls", "1boy"],
+        ["3girls", "2boys"],
+        ["2girls", "3boys"],
+      ].filter((parts) => parts.every((t) => lex.byTag.has(t) && !banned.has(t)));
+      if (options.length) cast = options[Math.floor(fiveRand() * options.length)];
+    }
+  }
   let female = hasFemale(cast);
   let male = hasMale(cast);
   let people = personCount(cast);
@@ -3823,6 +3880,18 @@ export function drawOne(lex, settings, pinned, userBanned, rand, seed, opts) {
     if (synonymClash(item.tag, used)) return false;
     // 同一張圖不能既還沒開始又已經結束。天生對稱，誰先進場都擋得住。
     if (sexPhaseClash(item.tag, used)) return false;
+    if (peerIn(item.tag, used, PENIS_STATE)) return false;
+    if (peerIn(item.tag, used, PENIS_ON_HEAD)) return false;
+    // 先走汁是射之前。軟掉、以及已經結束的那一輪，都不再滴先走汁。
+    // 射精後可以是軟的，所以 flaccid 不跟 SEX_PHASE_AFTER 互斥。
+    if (PRECUM_TAGS.has(item.tag) && (used.has("flaccid") || hasUsed((t) => SEX_PHASE_AFTER.has(t)))) return false;
+    if ((item.tag === "flaccid" || SEX_PHASE_AFTER.has(item.tag)) && hasUsed((t) => PRECUM_TAGS.has(t))) return false;
+    if (item.tag === "twitching penis" && used.has("flaccid")) return false;
+    if (item.tag === "flaccid" && used.has("twitching penis")) return false;
+    if (EJACULATION_ACT.has(item.tag) && used.has("flaccid")) return false;
+    if (item.tag === "flaccid" && hasUsed((t) => EJACULATION_ACT.has(t))) return false;
+    if (CLOTHED_ONLY.has(item.tag) && hasUsed((t) => FULL_NUDE.has(t))) return false;
+    if (FULL_NUDE.has(item.tag) && hasUsed((t) => CLOTHED_ONLY.has(t))) return false;
     // 裸手性愛是單人 sex 場景的主要可用活動；非運動情境不要隨機抽入拳擊手套
     // 把整個 sex_act 槽堵死。使用者或拳擊 preset 明確釘選時仍完整尊重。
     if (item.tag === "boxing gloves" && heat === "sex" && !pinned.has(item.tag)) return false;
@@ -4121,24 +4190,8 @@ export function drawOne(lex, settings, pinned, userBanned, rand, seed, opts) {
     if ((item.tag === "nude" || item.tag === "completely nude") && used.has("hand in pocket")) return false;
     if (item.tag === "hand in pocket" && hasUsed((t) => /\b(bikini|swimsuit)\b/.test(t))) return false;
     if (/\b(bikini|swimsuit)\b/.test(item.tag) && used.has("hand in pocket")) return false;
-    if (
-      BOTH_ARMS.has(item.tag) &&
-      (used.has("fingering") ||
-        used.has("female masturbation") ||
-        used.has("masturbation") ||
-        used.has("masturbation through clothes"))
-    ) {
-      return false;
-    }
-    if (
-      (item.tag === "fingering" ||
-        item.tag === "female masturbation" ||
-        item.tag === "masturbation" ||
-        item.tag === "masturbation through clothes") &&
-      hasUsed((t) => BOTH_ARMS.has(t))
-    ) {
-      return false;
-    }
+    if (BOTH_ARMS.has(item.tag) && hasUsed((t) => NEEDS_FREE_HAND.has(t))) return false;
+    if (NEEDS_FREE_HAND.has(item.tag) && hasUsed((t) => BOTH_ARMS.has(t))) return false;
     if (
       used.has("lower body") &&
       (BOTH_ARMS.has(item.tag) || HAND_GESTURE.has(item.tag) || ARM_POSE.has(item.tag) || HANDS_BUSY_ACT.has(item.tag))
@@ -6190,6 +6243,17 @@ export function drawOne(lex, settings, pinned, userBanned, rand, seed, opts) {
       return it && (it.mutex === "sex_act" || it.group === "sex");
     });
     if (doingIt) commit("hetero");
+  }
+
+  // 四人、五人在性愛時直接補上人數標籤。五人幾乎不會從姿勢池自己抽到
+  // （要 people>=5，而權重表沒有五人），所以升級或釘選之後在這裡蓋章。
+  if (heat === "sex" && people >= 5 && !used.has("fivesome")) {
+    const it = lex.byTag.get("fivesome");
+    if (it && allow(it)) commit("fivesome");
+  }
+  if (heat === "sex" && people === 4 && !used.has("fivesome") && !used.has("foursome")) {
+    const it = lex.byTag.get("foursome");
+    if (it && allow(it)) commit("foursome");
   }
 
   // 正向的一半：場合已經定了，把跟它成對的配件拉進來。

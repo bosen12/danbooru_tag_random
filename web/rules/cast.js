@@ -1,13 +1,14 @@
 /** Cast / gender / person-count rules. No UI copy. */
 import { REASONS } from "../trace.js";
 
-export const FEMALE_COUNT = new Set(["1girl", "2girls", "3girls", "4girls", "multiple girls"]);
+export const FEMALE_COUNT = new Set(["1girl", "2girls", "3girls", "4girls", "5girls", "multiple girls"]);
 export const MALE_COUNT = new Set(["1boy", "2boys", "3boys", "multiple boys"]);
 export const COUNT_NUM = {
   "1girl": 1,
   "2girls": 2,
   "3girls": 3,
   "4girls": 4,
+  "5girls": 5,
   "multiple girls": 2,
   "1boy": 1,
   "2boys": 2,
@@ -50,6 +51,7 @@ export function castOk(item, female, male, people, girls = 0, boys = 0) {
   if (needs.includes("pair") && people < 2) return false;
   if (needs.includes("group") && people < 3) return false;
   if (needs.includes("crowd") && people < 4) return false;
+  if (needs.includes("five") && people < 5) return false;
   if (needs.includes("male") && !male) return false;
   if (needs.includes("female") && !female) return false;
   if (needs.includes("2male") && boys < 2) return false;

@@ -23,28 +23,30 @@ const GOLD = {
   // 2026-09-26：詞庫加進背景、用色、打光、畫面特效、構圖共 47 個字，場地前面多了一格
   // 「背景」（現代、沒有活動時 12% 改用素色／圖樣背景），env 的候選池也跟著變大 ——
   // 五張全部換過一次。見 merge_lexicon.extra_look_tags 與 engine 的 BACKGROUND_CHANCE。
+  // 2026-09-27：精液類改成必須有男性。預設是單人女性，這些字離開性愛與走光的候選池，
+  // 池子變小，同一顆亂數落到別的字。seed 100 是誘惑，池子沒變。五張都沒有陰莖或精液。
   1: {
-    rng: 309,
-    pos: "1girl, solo, pixie cut, purple eyes, green hair, wavy hair, small breasts, tusks, hair between eyes, skinny, school swimsuit, one-piece swimsuit, swimsuit, boots, green jacket, jacket, female masturbation, seiza, from behind, looking at mirror, serious, nipple tweak, grey background, simple background, spotlight, fantasy, sparkle, chromatic aberration, nsfw, explicit, masterpiece, best quality, amazing quality",
+    rng: 303,
+    pos: "1girl, solo, pixie cut, purple eyes, green hair, wavy hair, small breasts, thick eyebrows, skinny, breasts on glass, pink shirt, shirt, garter belt, black bra, bra, jacket, brown pants, pants, masturbation through clothes, sitting, wide shot, sideways glance, furrowed brow, half-closed eyes, pink background, simple background, spotlight, speed lines, wooden bench, tribal, nsfw, explicit, masterpiece, best quality, amazing quality",
   },
   42: {
-    rng: 311,
-    pos: "1girl, solo, very short hair, aqua eyes, blue hair, straight hair, huge breasts, mature female, hair between eyes, blush, sweater, black skirt, skirt, kneehighs, white bra, bra, open cardigan, cardigan, masturbation, standing, upper body, looking ahead, happy, smile, white background, simple background, light rays, confetti, smoke, nsfw, explicit, masterpiece, best quality, amazing quality",
+    rng: 337,
+    pos: "1girl, solo, very short hair, aqua eyes, blue hair, straight hair, huge breasts, midriff, tattoo, breasts out, nude, jewelry, black collar, collar, mask, fingering, sitting, fisheye, looking back, pout, hand in panties, love hotel, indoors, night, lamp, bench, chinese new year, nsfw, explicit, masterpiece, best quality, amazing quality",
   },
   100: {
     rng: 379,
     pos: "1girl, solo, medium hair, purple eyes, red hair, ahoge, flat chest, two-tone hair, toned, armpits, qipao, sleeves rolled up, coat, fishnet thighhighs, thighhighs, sneakers, eating, indian style, profile, looking at breasts, angry, after bathing, living room, indoors, sunset, mecha, tiles, nsfw, explicit, masterpiece, best quality, amazing quality",
   },
   999: {
-    rng: 365,
-    pos: "1girl, solo, long hair, grey eyes, orange hair, parted bangs, medium breasts, breast bondage, body freckles, curvy, playboy bunny, open coat, coat, black panties, panties, white socks, socks, bra, female masturbation, reclining, from below, looking around, happy, smile, love hotel, indoors, on bed, day, tribal, nsfw, explicit, masterpiece, best quality, amazing quality",
+    rng: 353,
+    pos: "1girl, solo, long hair, grey eyes, orange hair, parted bangs, medium breasts, tan, clitoris, body freckles, bathrobe, fingering, top-down bottom-up, straight-on, looking ahead, light smile, smile, bathtub, indoors, day, ceiling light, depth of field, curtains, nsfw, explicit, masterpiece, best quality, amazing quality",
   },
   // 2026-09-23：走光補抽改成「所有成立的走光動作同一池、衣服吻合的權重 10」之後，
   // 這張的走光動作從 exhibitionism 換成 cameltoe（她穿 thong，吻合），場景跟著換。
   // 見 test_clothing_reachability.mjs 的走光段落與討論區同日那輪。
   2026: {
-    rng: 372,
-    pos: "1girl, solo, bob cut, grey eyes, black hair, straight hair, medium breasts, hair flower, hair scrunchie, hair over one eye, nightgown, coat, thong, kneehighs, white bra, bra, drinking, reclining, facing away, looking at mirror, naughty face, cameltoe, living room, indoors, sunrise, ceiling light, locker, depth of field, nsfw, explicit, masterpiece, best quality, amazing quality",
+    rng: 367,
+    pos: "1girl, solo, bob cut, grey eyes, black hair, straight hair, medium breasts, unaligned breasts, puffy nipples, nipple stimulation, torn bodysuit, bodysuit, sports bra, blue jacket, jacket, thong, drinking, on back, over shoulder, looking to the side, seductive smile, cameltoe, cafe, indoors, evening, ceiling light, grass, nsfw, explicit, masterpiece, best quality, amazing quality",
   },
 };
 
@@ -134,7 +136,9 @@ const MATRIX_SEEDS = 200;
 // 室內落葉 0、夜晚陽光 0、同時兩個畫面特效 0。
 // 2026-09-26 第二次：no humans／scenery／solo focus／people 進詞庫（只能釘），人群不進私人場地；
 // 候選池多了被擋掉的字，同一顆亂數落點岔開，換成 b71e9966。
-const MATRIX_GOLD = "b71e9966";
+// 2026-09-27：精液類必須有男性才進池，四人性愛補上 foursome，雙手被佔的姿勢不再配手交。
+// 單人女性的性愛／走光池變小；男性和兩邊都開的情境多了新字。指紋換成 a6b607a5。
+const MATRIX_GOLD = "a6b607a5";
 
 function matrixSettings(over) {
   const s = defaultSettings(data);

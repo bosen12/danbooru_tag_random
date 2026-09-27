@@ -5,7 +5,8 @@ cd /d "%~dp0.."
 set "PYTHONUTF8=1"
 if not defined PY set "PY=python"
 title card art bake
-echo Baking card illustrations with your local ComfyUI.
+echo Baking missing and out-of-date card illustrations with your local ComfyUI.
+echo Cards that already match their prompt are skipped.
 echo You can keep using the page. Reload it to see new cards.
 echo Close this window to stop; finished cards are kept and the next launch continues.
 echo.

@@ -282,6 +282,8 @@ function castOf(item) {
     if (tag === "hetero") return ["1girl", "1boy", "hetero", "adult"];
     if (tag === "yuri") return ["2girls", "yuri", "adult"];
   }
+  if (needs.has("five")) return ["4girls", "1boy", "adult"];
+  if (needs.has("2female") && needs.has("male")) return ["2girls", "1boy", "adult"];
   if (needs.has("yuri") || needs.has("2female")) return ["2girls", "yuri", "adult"];
   if (needs.has("2male")) return ["1girl", "2boys", "adult"];
   if (needs.has("group") || needs.has("crowd")) return ["1girl", "multiple boys", "adult"];

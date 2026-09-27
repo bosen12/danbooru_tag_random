@@ -407,6 +407,55 @@ IMPLIES = {
     "group sex": ["sex"],
     "mmf threesome": ["threesome", "sex"],
     "ffm threesome": ["threesome", "sex"],
+    # 結果標籤只掛「看得到的東西」（精液、陰莖、手交），不掛 vaginal／anal。
+    # 那些是 sex_act，結果字再 implies 進去，格被別的體位佔走時整條 commit 會失敗。
+    "double handjob": ["handjob"],
+    "two-handed handjob": ["handjob"],
+    "cooperative handjob": ["handjob"],
+    "foursome": ["group sex", "sex"],
+    "fivesome": ["group sex", "sex"],
+    "after ejaculation": ["cum"],
+    "cumdrip": ["cum"],
+    "cumdrip from penis": ["cumdrip", "penis"],
+    "cum on body": ["cum"],
+    "cum on breasts": ["cum"],
+    "cum overflow": ["cum"],
+    "cum in mouth": ["cum"],
+    "cum in pussy": ["cum"],
+    "cum on ass": ["cum"],
+    "cum on tongue": ["cum"],
+    "facial": ["cum"],
+    "internal cumshot": ["cum"],
+    "cum on hair": ["cum"],
+    "cum in ass": ["cum"],
+    "cum on clothes": ["cum"],
+    "cum on stomach": ["cum"],
+    "cum on legs": ["cum"],
+    "cum string": ["cum"],
+    "cum on feet": ["cum"],
+    "cum on hands": ["cum"],
+    "cum on penis": ["cum", "penis"],
+    "excessive cum": ["cum"],
+    "bukkake": ["cum"],
+    "projectile cum": ["ejaculation", "cum"],
+    "handsfree ejaculation": ["ejaculation"],
+    "gokkun": ["cum in mouth"],
+    "precum": ["penis"],
+    "precum drip": ["precum"],
+    "precum string": ["precum"],
+    "penis over eyes": ["penis"],
+    "penis on face": ["penis"],
+    "penis peek": ["penis"],
+    "flaccid": ["penis"],
+    "half-erect": ["penis"],
+    "phimosis": ["penis"],
+    "foreskin": ["penis"],
+    "twitching penis": ["penis"],
+    "surrounded by penises": ["penis"],
+    "penis awe": ["penis"],
+    # 不 implies penis：penis 只有 sex，這個視線還要在 flash 抽得到。
+    # 字本身就是 looking at penis。
+    "condom on penis": ["condom"],
     "squatting cowgirl position": ["cowgirl position", "sex"],
     "upright straddle": ["sex"],
     "reverse upright straddle": ["sex"],
@@ -598,6 +647,15 @@ RECLASS = {
         "section": "pose", "mutex": "sex_act", "heat": ["sex"],
         "needs": ["male", "pair"], "layer": "normal", "gate": "any",
     },
+    # 採集把它放進 feature/body_m、layer skin。它是視線，不是身體。
+    # heat 停在走光與性愛：widen_heat 會把 gaze 攤成三檔，NARROW_HEAT 把它拉回來。
+    "looking at penis": {
+        "section": "pose", "mutex": "gaze", "heat": ["flash", "sex"],
+        "needs": ["male"], "layer": "normal", "gate": "any",
+    },
+    # 原本 flash+sex。implies cum 之後，flash 會讓 commit 失敗（cum 只有 sex）。
+    # 收成 sex，這個字才真的進得了畫面。
+    "cum on ass": {"heat": ["sex"]},
     "tall male": {"mutex": "height_m", "gate": "male"},
     "short male": {"mutex": "height_m", "gate": "male"},
     "male pubic hair": {"gate": "male", "heat": ["flash", "sex"]},
@@ -690,6 +748,9 @@ SEX_ACT = {
     "cunnilingus",
     "anilingus",
     "handjob",
+    "double handjob",
+    "two-handed handjob",
+    "cooperative handjob",
     "footjob",
     "sitting on face",
     "tribadism",
@@ -759,6 +820,49 @@ NEEDS_MALE = {
     "mmf threesome",
     "ffm threesome",
     "salaryman",
+    "cum",
+    "cum on body",
+    "cum on breasts",
+    "cum overflow",
+    "cumdrip",
+    "cum on ass",
+    "cum on tongue",
+    "internal cumshot",
+    "after ejaculation",
+    "after anal",
+    "cumdrip from penis",
+    "penis over eyes",
+    "penis on face",
+    "penis peek",
+    "flaccid",
+    "half-erect",
+    "phimosis",
+    "foreskin",
+    "precum",
+    "precum drip",
+    "precum string",
+    "cum on hair",
+    "cum in ass",
+    "cum on clothes",
+    "cum on stomach",
+    "cum on legs",
+    "cum string",
+    "cum on feet",
+    "cum on hands",
+    "cum on penis",
+    "excessive cum",
+    "double handjob",
+    "two-handed handjob",
+    "cooperative handjob",
+    "surrounded by penises",
+    "bukkake",
+    "projectile cum",
+    "handsfree ejaculation",
+    "gokkun",
+    "condom on penis",
+    "twitching penis",
+    "penis awe",
+    "looking at penis",
 }
 
 NEEDS_FEMALE = {
@@ -802,6 +906,7 @@ NEEDS_FEMALE = {
     "policewoman",
     "flight attendant",
     "idol",
+    "cum on breasts",
 }
 
 NEEDS_PAIR = {
@@ -865,6 +970,9 @@ NEEDS_PAIR = {
     "size difference",
     "gangbang",
     "afterglow",
+    "foursome",
+    "fivesome",
+    "penis awe",
 }
 
 NEEDS_GROUP = {
@@ -876,10 +984,15 @@ NEEDS_GROUP = {
     "reverse spitroast",
     "double penetration",
     "gangbang",
+    "foursome",
+    "fivesome",
+    "surrounded by penises",
 }
 
 NEEDS_CROWD = {
     "gangbang",
+    "foursome",
+    "fivesome",
 }
 
 NEEDS_2MALE = {
@@ -887,13 +1000,22 @@ NEEDS_2MALE = {
     "spitroast",
     "reverse spitroast",
     "double penetration",
+    "double handjob",
+    "surrounded by penises",
+    "bukkake",
 }
 
 NEEDS_2FEMALE = {
     "ffm threesome",
+    "cooperative handjob",
 }
 
-NEED_KEYS = {"female", "male", "pair", "yuri", "group", "crowd", "2male", "2female"}
+# 5 人。不進 castWeights，只給釘選與性愛時的低機率升級用。
+NEEDS_FIVE = {
+    "fivesome",
+}
+
+NEED_KEYS = {"female", "male", "pair", "yuri", "group", "crowd", "2male", "2female", "five"}
 
 YURI_ONLY = {
     "tribadism",
@@ -964,9 +1086,19 @@ def apply_relations(tag: str, implies: list[str], bind: list[str], mutex, sectio
     return im, bind, mutex, section, gate, layer, heat, era, needs
 
 
+# gaze／expression 會被 widen_heat 攤成三檔。這兩個只能停在走光或性愛，
+# 否則「看著陰莖」會進誘惑。
+NARROW_HEAT = {
+    "looking at penis": ["flash", "sex"],
+    "penis awe": ["sex"],
+}
+
+
 def widen_heat(tag: str, section: str, mutex, layer: str, heat: list[str]) -> list[str]:
     """Outfits, places, sitting, looking, and clothes-moves are not a heat."""
     heat = [h for h in heat if h in HEATS] or list(HEATS)
+    if tag in NARROW_HEAT:
+        return [h for h in NARROW_HEAT[tag] if h in HEATS]
     if tag in {"nude", "completely nude"}:
         return list(HEATS)
     if section == "clothing" and layer != "skin" and tag not in CLOTHING_STATE:
@@ -1093,6 +1225,9 @@ def norm(item: dict) -> dict | None:
     if tag in NEEDS_2FEMALE and "2female" not in seen_needs:
         needs.append("2female")
         seen_needs.add("2female")
+    if tag in NEEDS_FIVE and "five" not in seen_needs:
+        needs.append("five")
+        seen_needs.add("five")
     if tag in YURI_ONLY and "yuri" not in seen_needs:
         needs.append("yuri")
         seen_needs.add("yuri")
@@ -2403,6 +2538,80 @@ def extra_expand_tags() -> list[dict]:
     return out
 
 
+def extra_fluid_tags() -> list[dict]:
+    """精液、陰莖狀態、人數與手交。已在詞庫的字只走 IMPLIES／NEEDS／RECLASS。"""
+    sex = ["sex"]
+    any_era = ["any"]
+
+    def pose(tag, implies=None, needs=None, zh="", mutex=None):
+        return {
+            "tag": tag,
+            "section": "pose",
+            "gate": "any",
+            "heat": sex,
+            "mutex": mutex,
+            "bind": [],
+            "implies": implies or [],
+            "layer": "normal",
+            "era": any_era,
+            "needs": needs or [],
+            "zh": zh,
+        }
+
+    def feat(tag, implies=None, zh=""):
+        return {
+            "tag": tag,
+            "section": "feature",
+            "gate": "male",
+            "heat": sex,
+            "mutex": None,
+            "bind": [],
+            "implies": implies or [],
+            "layer": "skin",
+            "era": any_era,
+            "needs": ["male"],
+            "zh": zh,
+        }
+
+    return [
+        pose("after ejaculation", implies=["cum"], needs=["male"], zh="射精後"),
+        pose("cumdrip from penis", implies=["cumdrip", "penis"], needs=["male"], zh="陰莖滴精"),
+        pose("penis over eyes", implies=["penis"], needs=["male"], zh="陰莖擋眼"),
+        pose("penis on face", implies=["penis"], needs=["male"], zh="陰莖貼臉"),
+        feat("penis peek", implies=["penis"], zh="陰莖探出"),
+        feat("flaccid", implies=["penis"], zh="疲軟"),
+        feat("half-erect", implies=["penis"], zh="半勃起"),
+        feat("phimosis", implies=["penis"], zh="包莖"),
+        feat("foreskin", implies=["penis"], zh="包皮"),
+        feat("twitching penis", implies=["penis"], zh="陰莖抽動"),
+        pose("precum", implies=["penis"], needs=["male"], zh="先走汁"),
+        pose("precum drip", implies=["precum"], needs=["male"], zh="先走汁滴落"),
+        pose("precum string", implies=["precum"], needs=["male"], zh="先走汁拉絲"),
+        pose("cum on hair", implies=["cum"], needs=["male"], zh="射在頭髮"),
+        pose("cum in ass", implies=["cum"], needs=["male"], zh="肛內射精"),
+        pose("cum on clothes", implies=["cum"], needs=["male"], zh="射在衣服上"),
+        pose("cum on stomach", implies=["cum"], needs=["male"], zh="射在肚子"),
+        pose("cum on legs", implies=["cum"], needs=["male"], zh="射在腿上"),
+        pose("cum string", implies=["cum"], needs=["male"], zh="精液拉絲"),
+        pose("cum on feet", implies=["cum"], needs=["male"], zh="射在腳上"),
+        pose("cum on hands", implies=["cum"], needs=["male"], zh="射在手上"),
+        pose("cum on penis", implies=["cum", "penis"], needs=["male"], zh="射在陰莖"),
+        pose("excessive cum", implies=["cum"], needs=["male"], zh="大量精液"),
+        pose("fivesome", implies=["group sex", "sex"], needs=["five", "pair", "group", "crowd"], zh="5P"),
+        pose("foursome", implies=["group sex", "sex"], needs=["pair", "group", "crowd"], zh="4P"),
+        pose("double handjob", implies=["handjob"], needs=["male", "2male"], zh="雙陰莖手交"),
+        pose("two-handed handjob", implies=["handjob"], needs=["male"], zh="雙手手交"),
+        pose("cooperative handjob", implies=["handjob"], needs=["male", "2female"], zh="協力手交"),
+        pose("surrounded by penises", implies=["penis"], needs=["male", "group", "2male"], zh="被陰莖包圍"),
+        pose("bukkake", implies=["cum"], needs=["male", "2male"], zh="集團顏射"),
+        pose("after anal", needs=["male"], zh="肛交事後"),
+        pose("penis awe", implies=["penis"], needs=["male", "pair"], mutex="expression", zh="陰莖震撼"),
+        pose("projectile cum", implies=["ejaculation", "cum"], needs=["male"], zh="噴射精液"),
+        pose("handsfree ejaculation", implies=["ejaculation"], needs=["male"], zh="無手射精"),
+        pose("gokkun", implies=["cum in mouth"], needs=["male"], zh="吞精"),
+    ]
+
+
 def main() -> None:
     rows: list[dict] = []
     for path in sorted(PARTS.glob("*.json")):
@@ -2422,6 +2631,7 @@ def main() -> None:
     rows.extend(extra_job_scene_tags())
     rows.extend(extra_expand_tags())
     rows.extend(extra_corpus_tags())
+    rows.extend(extra_fluid_tags())
     rows.extend(extra_loli_tags())
     rows.extend(extra_shota_tags())
     rows.extend(extra_style_tags())

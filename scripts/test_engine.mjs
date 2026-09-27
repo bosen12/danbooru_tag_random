@@ -42,6 +42,7 @@ import {
   toggleHeat,
   HEATS,
   sfwBlocked,
+  explicitOnly,
   ratingBlocked,
   RATINGS,
   heatPresetOf,
@@ -2437,6 +2438,141 @@ function indoorOutdoorClash(have) {
     if (h.has("threesome") || h.has("group sex") || h.has("mmf threesome") || h.has("ffm threesome")) leftover3 += 1;
   }
   eq("1girl+1boy never leftover 3P", leftover3, 0);
+}
+
+{
+  const need = (tag) => lex.byTag.get(tag)?.needs || [];
+  const item = (tag) => lex.byTag.get(tag);
+  ok("5girls is a female count", item("5girls")?.mutex === "female_count" && item("5girls")?.section === "subject");
+  ok("fivesome needs five people", ["five", "pair", "group", "crowd"].every((k) => need("fivesome").includes(k)));
+  ok("fivesome is not a sex act", item("fivesome")?.mutex == null && item("fivesome")?.heat?.includes("sex") && !item("fivesome")?.heat?.includes("tease"));
+  ok("foursome needs a crowd", need("foursome").includes("crowd") && need("foursome").includes("group"));
+  ok("double handjob is two penises", item("double handjob")?.mutex === "sex_act" && need("double handjob").includes("2male") && (item("double handjob")?.implies || []).includes("handjob"));
+  ok("two-handed handjob is one penis", item("two-handed handjob")?.mutex === "sex_act" && !need("two-handed handjob").includes("2male") && (item("two-handed handjob")?.implies || []).includes("handjob"));
+  ok("cooperative handjob needs two girls", need("cooperative handjob").includes("2female") && need("cooperative handjob").includes("male"));
+  ok("looking at penis is a gaze", item("looking at penis")?.section === "pose" && item("looking at penis")?.mutex === "gaze" && !item("looking at penis")?.heat?.includes("tease"));
+  ok("flaccid is male skin", item("flaccid")?.section === "feature" && item("flaccid")?.layer === "skin" && need("flaccid").includes("male") && (item("flaccid")?.implies || []).includes("penis"));
+  ok("half-erect stays off the sex group", item("half-erect")?.group === "body_m" && item("half-erect")?.layer === "skin");
+  ok("phimosis can stack with an erection", item("phimosis")?.mutex == null && item("phimosis")?.group === "body_m");
+  ok("cum in ass does not require a girl", need("cum in ass").includes("male") && !need("cum in ass").includes("female") && !(item("cum in ass")?.implies || []).includes("anal"));
+  ok("cum in pussy implies cum and not vaginal", (item("cum in pussy")?.implies || []).includes("cum") && !(item("cum in pussy")?.implies || []).includes("vaginal"));
+  ok("cum on clothes needs a male", need("cum on clothes").includes("male") && (item("cum on clothes")?.implies || []).includes("cum"));
+  ok("bare cum now needs a male", need("cum").includes("male"));
+  ok("after ejaculation is aftermath", (item("after ejaculation")?.implies || []).includes("cum") && item("after ejaculation")?.mutex == null);
+  ok("precum is not cum", (item("precum")?.implies || []).includes("penis") && !(item("precum")?.implies || []).includes("cum"));
+  ok("penis awe stays an expression", item("penis awe")?.mutex === "expression" && !item("penis awe")?.heat?.includes("tease"));
+  for (const tag of ["phimosis", "flaccid", "precum", "fivesome", "double handjob", "half-erect", "cum on clothes", "gokkun"]) {
+    ok(`${tag} is explicit-only`, explicitOnly(item(tag)));
+  }
+
+  const sexBoth = settings();
+  sexBoth.girl = true;
+  sexBoth.boy = true;
+  sexBoth.heats = ["sex"];
+  sexBoth.weights = { tease: 0, flash: 0, sex: 1 };
+  sexBoth.eras = ["modern"];
+
+  const pinFiveGirl = applyPin(lex, new Set(), new Set(), "fivesome").pinned;
+  const girlOnly = settings();
+  girlOnly.girl = true;
+  girlOnly.boy = false;
+  girlOnly.heats = ["sex"];
+  girlOnly.weights = { tease: 0, flash: 0, sex: 1 };
+  girlOnly.eras = ["modern"];
+  let fiveGirlBad = 0;
+  for (let i = 0; i < 20; i++) {
+    const d = drawOne(lex, girlOnly, pinFiveGirl, new Set(), mulberry32(97100 + i), 97100 + i);
+    const h = tagsOf(d);
+    if (!h.has("fivesome") || !h.has("5girls") || d.people < 5) fiveGirlBad += 1;
+  }
+  eq("girl-only pin fivesome is 5girls", fiveGirlBad, 0);
+
+  const pinFive = applyPin(lex, new Set(), new Set(), "fivesome").pinned;
+  let fiveBad = 0;
+  for (let i = 0; i < 20; i++) {
+    const d = drawOne(lex, sexBoth, pinFive, new Set(), mulberry32(97200 + i), 97200 + i);
+    if (!tagsOf(d).has("fivesome") || d.people < 5) fiveBad += 1;
+  }
+  eq("pin fivesome always has 5+ people", fiveBad, 0);
+
+  const pinDH = applyPin(lex, new Set(), new Set(), "double handjob").pinned;
+  let dhBad = 0;
+  let dhArms = 0;
+  for (let i = 0; i < 30; i++) {
+    const h = tagsOf(drawOne(lex, sexBoth, pinDH, new Set(), mulberry32(97300 + i), 97300 + i));
+    const boys = (h.has("3boys") ? 3 : 0) || (h.has("2boys") ? 2 : 0) || (h.has("1boy") ? 1 : 0);
+    if (!h.has("double handjob") || !h.has("handjob") || boys < 2) dhBad += 1;
+    if (h.has("arms behind back") || h.has("arms behind head") || h.has("crossed arms")) dhArms += 1;
+  }
+  eq("pin double handjob keeps handjob and 2+ boys", dhBad, 0);
+  eq("double handjob never auto both-arms poses", dhArms, 0);
+
+  let lockedPair = applyPin(lex, new Set(), new Set(), "1girl").pinned;
+  lockedPair = applyPin(lex, lockedPair, new Set(), "1boy").pinned;
+  let dhLeak = 0;
+  for (let i = 0; i < 40; i++) {
+    if (tagsOf(drawOne(lex, sexBoth, lockedPair, new Set(), mulberry32(97400 + i), 97400 + i)).has("double handjob")) dhLeak += 1;
+  }
+  eq("1girl+1boy never draws double handjob", dhLeak, 0);
+
+  const pinFlaccid = applyPin(lex, new Set(), new Set(), "flaccid").pinned;
+  let stateBad = 0;
+  for (let i = 0; i < 40; i++) {
+    const h = tagsOf(drawOne(lex, sexBoth, pinFlaccid, new Set(), mulberry32(97500 + i), 97500 + i));
+    if (h.has("erection") || h.has("half-erect") || h.has("precum") || h.has("precum drip") || h.has("twitching penis") || h.has("ejaculation")) stateBad += 1;
+  }
+  eq("flaccid blocks erection, precum, and ejaculation", stateBad, 0);
+
+  const pinCumClothes = applyPin(lex, new Set(), new Set(), "cum on clothes").pinned;
+  let nudeBad = 0;
+  for (let i = 0; i < 40; i++) {
+    const h = tagsOf(drawOne(lex, sexBoth, pinCumClothes, new Set(), mulberry32(97600 + i), 97600 + i));
+    if (h.has("nude") || h.has("completely nude")) nudeBad += 1;
+  }
+  eq("cum on clothes blocks full nude", nudeBad, 0);
+
+  const pinAfter = applyPin(lex, new Set(), new Set(), "after ejaculation").pinned;
+  let phaseBad = 0;
+  for (let i = 0; i < 80; i++) {
+    const h = tagsOf(drawOne(lex, sexBoth, pinAfter, new Set(), mulberry32(97700 + i), 97700 + i));
+    if (h.has("imminent penetration") || h.has("imminent fellatio") || h.has("precum")) phaseBad += 1;
+  }
+  eq("after ejaculation blocks imminent acts and precum", phaseBad, 0);
+
+  let girlPenis = 0;
+  for (let i = 0; i < 40; i++) {
+    const h = tagsOf(drawOne(lex, girlOnly, new Set(), new Set(), mulberry32(97800 + i), 97800 + i));
+    if (["penis", "flaccid", "precum", "phimosis", "erection", "fivesome", "cum", "cum on body"].some((t) => h.has(t))) girlPenis += 1;
+  }
+  eq("girl-only sex does not emit penis or cum", girlPenis, 0);
+
+  let sawFive = 0;
+  let fiveMiss = 0;
+  for (let i = 0; i < 250; i++) {
+    const d = drawOne(lex, sexBoth, new Set(), new Set(), mulberry32(97900 + i), 97900 + i);
+    if (d.people >= 5) {
+      sawFive += 1;
+      if (!tagsOf(d).has("fivesome")) fiveMiss += 1;
+    }
+  }
+  ok("both-gender sex sometimes reaches 5 people", sawFive > 0, `seen=${sawFive}`);
+  eq("5-person sex is stamped fivesome", fiveMiss, 0);
+
+  let sawFour = 0;
+  let fourMiss = 0;
+  let strayFive = 0;
+  for (let i = 0; i < 300; i++) {
+    const d = drawOne(lex, girlOnly, new Set(), new Set(), mulberry32(98200 + i), 98200 + i);
+    const h = tagsOf(d);
+    if (h.has("5girls") || h.has("fivesome")) strayFive += 1;
+    if (d.people === 4) {
+      sawFour += 1;
+      if (!h.has("foursome")) fourMiss += 1;
+    }
+  }
+  eq("girl-only never rolls 5girls", strayFive, 0);
+  ok("girl-only sex sometimes reaches 4 girls", sawFour > 0, `seen=${sawFour}`);
+  eq("4-person sex is stamped foursome", fourMiss, 0);
 }
 
 {
@@ -5258,7 +5394,9 @@ function indoorOutdoorClash(have) {
     // 且固定快照依然逐字驗證，避免後續變更悄悄改掉 seed 42。
     // 第十六次（2026-09-26）：詞庫加進背景／用色／打光／特效／構圖 47 個字，場地前面多了一格
     // 「背景」。這張從浴場換成白背景的立繪。
-    "1girl, solo, very short hair, aqua eyes, blue hair, straight hair, huge breasts, mature female, hair between eyes, blush, sweater, black skirt, skirt, kneehighs, white bra, bra, open cardigan, cardigan, masturbation, standing, upper body, looking ahead, happy, smile, white background, simple background, light rays, confetti, smoke, nsfw, explicit, masterpiece, best quality, amazing quality");
+    // 第十七次（2026-09-27）：精液類改成必須有男性才進池（女生單獨的圖不再抽到 cum）。
+    // 候選池變小，同一串亂數落到別的字。這張仍是單人女性的性愛，沒有陰莖或精液。
+    "1girl, solo, very short hair, aqua eyes, blue hair, straight hair, huge breasts, midriff, tattoo, breasts out, nude, jewelry, black collar, collar, mask, fingering, sitting, fisheye, looking back, pout, hand in panties, love hotel, indoors, night, lamp, bench, chinese new year, nsfw, explicit, masterpiece, best quality, amazing quality");
   ok("drawOne exposes shadow diagnostics", Array.isArray(shadowIntegrationDraw.shadowViolations));
 
   const eatProneShadow = validateSupportShadow({

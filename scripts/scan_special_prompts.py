@@ -35,6 +35,7 @@ SKIP = {
     "2girls",
     "3girls",
     "4girls",
+    "5girls",
     "1boy",
     "2boys",
     "3boys",

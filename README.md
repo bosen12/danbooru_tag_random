@@ -138,7 +138,7 @@ WEB_DIR=web1 PORT=8788 python3 server.py
 - Windows 的 `start.bat`、`start-web6.bat` 另開一個縮小的「card art download」視窗去抓，網頁照常先開（先是字的佔位牌），視窗說 Done 之後重新整理就有圖。
 - 直接跑 `python3 server.py` 的（macOS / Linux）由伺服器在背景抓，黑窗會印進度。
 - 已經有的圖一張都不覆蓋；沒網路就維持佔位牌，下次啟動再試。不想抓：`NO_CARD_FETCH=1`。也可以手動跑 `python3 scripts/fetch_card_art.py`。
-- 敏感、色情分級的卡面不公開。要的話用自己的 ComfyUI 烘：`python3 scripts/bake_card_art.py`（ComfyUI 開著時，Windows 啟動檔也會問）。
+- 敏感、色情分級的卡面不公開。ComfyUI 開著時，Windows 的 `start.bat` 會在縮小視窗自動烘還沒有的卡，以及提示詞已經改過的卡。已經烤好、提示詞沒變的不會重烘。不想自動烘：設 `NO_CARD_BAKE=1`，或在專案根目錄放一個 `.no-card-bake` 檔。也可以手動跑 `python3 scripts/bake_card_art.py`。
 
 ## 設定
 

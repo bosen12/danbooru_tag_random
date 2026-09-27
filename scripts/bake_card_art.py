@@ -207,8 +207,23 @@ def release(out_dir: Path) -> None:
 
 
 def pending(jobs: list[dict], out_dir: Path, manifest: dict) -> list[dict]:
-    """圖在、manifest 也有才算烤過；只有圖沒有紀錄的（上次寫 manifest 失敗）要補。"""
-    return [j for j in jobs if not ((out_dir / j["file"]).exists() and j["key"] in manifest)]
+    """圖在、而且 manifest 裡的提示詞還是現在這版，才算烤過。
+
+    只有圖沒有紀錄的（上次寫 manifest 失敗）要補。提示詞或分級改過的也要重烤，
+    不然啟動檔會把舊圖當成完成、新字永遠停在字形佔位牌。
+    """
+    todo = []
+    for job in jobs:
+        rec = manifest.get(job["key"])
+        if not ((out_dir / job["file"]).exists() and isinstance(rec, dict)):
+            todo.append(job)
+            continue
+        if rec.get("positive") != job.get("positive"):
+            todo.append(job)
+            continue
+        if "rating" in job and rec.get("rating", "general") != job.get("rating", "general"):
+            todo.append(job)
+    return todo
 
 
 def comfy_up() -> bool:
