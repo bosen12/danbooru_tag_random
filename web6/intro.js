@@ -21,6 +21,7 @@ import { ratingBlocked } from "./rules/rating.js";
 import { indexLexicon, defaultSettings, sanitizeSettings, drawOne, mulberry32, applyPin, contradictions, ACT_PLACE } from "./engine.js";
 import { emptyBed, placeCard, relationsOf, REGISTERS, REGISTER_ROLE } from "./fuse-bed.js";
 import { bezier, CURVE } from "./motion.js";
+import * as idata from "./intro-data.js";
 
 /* ================= 小工具 ================= */
 
@@ -117,19 +118,17 @@ const suitOf = (tag) => lib.byTag.get(tag)?.suit || "look";
 const zhOf = (tag) => lib.byTag.get(tag)?.zh || tag;
 const hasArt = (tag) => !!(lib.byTag.get(tag) && assets.art(tag) && !ratingBlocked(lib.byTag.get(tag).item, "general"));
 
-/** 一張「成品」：場景那張的插畫墊底、人物那張疊印上去（multiply）。 */
-function printEl(bgTag, fgTag, w, h, parent, label = "") {
+/** 一張「成品」：ComfyUI 真的畫出來的那張（web6/intro-art/，scripts/render_intro_art.mjs 產生）。 */
+function printEl(src, w, h, parent, label = "") {
   const el = mk("figure", "w print", parent);
   el.style.width = w + "px";
   el.style.height = h + "px";
   el.style.margin = "0";
   const shot = mk("div", "shot", el);
-  const bg = mk("img", "", shot);
-  bg.src = assets.art(bgTag) || "";
-  bg.decoding = "sync";
-  const fg = mk("img", "fg", shot);
-  fg.src = assets.art(fgTag) || "";
-  fg.decoding = "sync";
+  const img = mk("img", "", shot);
+  img.src = src || "";
+  img.decoding = "sync";
+  img.alt = "";
   mk("figcaption", "", el, label);
   return el;
 }
@@ -196,24 +195,12 @@ function sectionTag(num, zh, en, inAt, outAt) {
 /* ================= 資料（真的引擎、真的牌） ================= */
 
 // 公開展示：不讓身材、裸露、哭泣這類字出現在畫面上的摘錄裡（引擎照規則抽，展示只挑乾淨的種子、摘乾淨的字）。
-// 整組不要的（抽到就換下一個種子）：裸露、內衣、泳裝、哭泣…
-const DRAW_BAD = /nude|naked|pant(y|ie)|underwear|lingerie|cleavage|bikini|swimsuit|sex|blood|cry|tears|bath|wet|lying/;
 // 摘錄裡不顯示的（引擎每一張都會抽身材；照實抽，但展示不秀）。
 const BAD = /breast|chest|wet|nude|naked|pant(y|ie)|cleavage|underwear|bath|lingerie|\bass\b|thigh|navel|gyaru|bikini|swimsuit|cry|tears|empty eyes|blood|sweat|lying|armpit|skin|sex|kiss|size difference|flat|curvy|plump|muscular|pregnant/;
 
-function cleanDraws(pins, count, from = 1) {
-  const out = [];
-  for (let seed = from; out.length < count && seed < 5000; seed++) {
-    const tags = drawOne(lex, settings, new Set(pins), new Set(), mulberry32(seed), seed)
-      .positive.split(",")
-      .map((s) => s.trim())
-      .filter(Boolean);
-    if (!tags.includes("1girl")) continue;
-    if (tags.some((t) => DRAW_BAD.test(t))) continue;
-    out.push({ seed, tags });
-  }
-  return out;
-}
+// 引擎的函式交給 intro-data.js（它也給 node 的 render_intro_art.mjs 用，不能自己 import engine.js）。
+const ENG = { drawOne, mulberry32, applyPin, emptyBed, placeCard };
+const cleanDraws = (pins, count, from = 1) => idata.cleanDraws(ENG, lex, settings, pins, count, from);
 
 function pickArt(list, n) {
   return list.filter(hasArt).slice(0, n);
@@ -628,7 +615,7 @@ function buildMochi(data) {
     if (mLabel.textContent !== s) mLabel.textContent = s;
     put(meterBox, { x: 0, y: 490, o: p * (1 - q) });
   }, meterBox);
-  const out = printEl(data.printBg, data.printFg, 440, 600, g, `<span>成品 · output</span><span>牌 5 · seed ${data.draws[0]?.seed ?? 204}</span>`);
+  const out = printEl(data.art.mochi, 440, 643, g, `<span>成品 · output</span><span>牌 5 · seed ${data.prints.mochi.seed}</span>`);
   const shot = out.querySelector(".shot");
   act([54.4, 68.8], (t) => {
     const p = EZ.out(seg(t, 54.6, 55.6));
@@ -855,8 +842,11 @@ function buildOverprint(data) {
     line.style.clipPath = `inset(0 ${((1 - p) * 50).toFixed(1)}% 0 ${((1 - p) * 50).toFixed(1)}%)`;
     put(line, { x: 0, y: LINE_Y, z: 0, o: 1 - fade });
   }, line);
-  const hangs = data.hung.map(([bgTag, fgTag], k) => {
-    const el = printEl(bgTag, fgTag, 210, 290, g, "");
+  const hangs = [
+    [data.art.fuseB, `B · ${data.prints.fuseB.seed}`],
+    [data.art.fuseC, `C · ${data.prints.fuseC.seed}`],
+  ].map(([src, cap], k) => {
+    const el = printEl(src, 210, 330, g, `<span>試印 ${cap}</span>`);
     const peg = mk("i", "peg", el);
     void peg;
     const hx = k === 0 ? -520 : 520;
@@ -868,7 +858,7 @@ function buildOverprint(data) {
     return el;
   });
   void hangs;
-  const main = printEl(data.printBg, data.printFg, 520, 720, g, `<span>付印 · printed</span><span>試印 A · seed ${data.trials[0]?.seed ?? ""}</span>`);
+  const main = printEl(data.art.fuseA, 520, 760, g, `<span>付印 · printed</span><span>試印 A · seed ${data.prints.fuseA.seed}</span>`);
   mk("i", "peg", main);
   const mshot = main.querySelector(".shot");
   cues.push({ t: 106.25, kind: "stamp", gain: 0.25 });
@@ -1118,7 +1108,9 @@ async function boot() {
     }
     n++;
   }
-  const trialDraws = cleanDraws(bed.pins, 4, 1);
+  // 四張試印的種子是挑定的（intro-data.js 的 PICKED）：A、B、C 就是 ComfyUI 畫出來、晾在繩上的那三張。
+  const prints = idata.filmPrints(ENG, lex, settings);
+  const trialDraws = prints.trials;
   const trials = trialDraws.map(({ seed, tags }) => {
     const r = Object.fromEntries(REGISTERS.map((s) => [s, []]));
     for (const t of tags) {
@@ -1135,12 +1127,11 @@ async function boot() {
   void ACT_PLACE;
 
   const chipsData = { typed, pins, draws, words, count: lib.cards.length };
-  const printBg = hasArt("cherry blossoms") ? "cherry blossoms" : words[4];
-  const printFg = hasArt("kimono") ? "kimono" : words[3];
-  const hung = [
-    [hasArt("night") ? "night" : printBg, hasArt("umbrella") ? "umbrella" : printFg],
-    [hasArt("beach") ? "beach" : printBg, hasArt("dress") ? "dress" : printFg],
-  ];
+  // 成品圖：ComfyUI 畫的（沒有 intro-art 就退回櫻花那張牌的插畫，影片照樣能看）。
+  const artManifest = await fetch("intro-art/manifest.json").then((r) => (r.ok ? r.json() : {})).catch(() => ({}));
+  const art = Object.fromEntries(
+    ["mochi", "fuseA", "fuseB", "fuseC"].map((k) => [k, artManifest[k] ? `intro-art/${artManifest[k].file}?v=${artManifest[k].seed}` : assets.art("cherry blossoms")])
+  );
   const orbit = pickArt([...pool, ...tray, "school uniform", "rain", "library", "starry sky", "cafe", "snow", "hoodie", "bicycle"], 16);
 
   // ---- 搭景 ----
@@ -1148,8 +1139,8 @@ async function boot() {
   buildTagCase(chipsData);
   const lh = document.querySelectorAll(".chip");
   void lh;
-  buildMochi({ wall, pool, tray, printBg, printFg, draws });
-  buildOverprint({ rows, drops, trials, glow, printBg, printFg, hung });
+  buildMochi({ wall, pool, tray, draws, art, prints });
+  buildOverprint({ rows, drops, trials, glow, art, prints });
   buildOutro({ orbit });
   buildWipes();
   // 鏡頭要知道「長髮」「和服」那兩張字條擺在哪（字條是量了寬度才排的）。
