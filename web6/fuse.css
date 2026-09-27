@@ -107,6 +107,11 @@ body.fuse {
   color: var(--color-muted);
 }
 
+.line-count {
+  display: none;
+  letter-spacing: 0;
+}
+
 .line-list {
   display: flex;
   gap: var(--space-sm);
@@ -606,6 +611,34 @@ body.fuse {
   }
 }
 
+@media (max-width: 40rem) {
+  .line[data-empty="true"] {
+    min-height: calc(var(--space-2xl) - var(--space-xs));
+    align-items: center;
+    padding: var(--space-xs) var(--space-md);
+  }
+  .line[data-empty="true"]::before,
+  .line[data-empty="true"] .line-empty {
+    display: none;
+  }
+  /* 手機上有作品時標題只給螢幕閱讀器（下面 40rem 那段把它縮成 1px）；空的時候它就是這一條本身，要看得到。 */
+  .line[data-empty="true"] .line-title {
+    position: static;
+    width: auto;
+    height: auto;
+    overflow: visible;
+    clip: auto;
+    margin: 0;
+    color: var(--color-ink-2);
+  }
+  .line[data-empty="true"] .line-count {
+    display: inline;
+  }
+  .reg-cards .ghost-card {
+    --card-w: max(calc(var(--pool-card) * 0.85), calc(var(--space-2xl) + var(--space-sm)));
+  }
+}
+
 .case-grid .card-flag[data-kind="src"] {
   color: color-mix(in oklch, var(--color-warn) 55%, var(--color-stock-ink));
   border-color: currentColor;
@@ -854,8 +887,18 @@ body.fuse {
 }
 
 /* 空白的版：六列縮成一行一行的標籤，讓上面的起手式當主角。 */
+.registers[data-empty="true"] {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  column-gap: var(--space-md);
+}
+
+.registers[data-empty="true"] .pool-start {
+  grid-column: 1 / -1;
+}
+
 .registers[data-empty="true"] .register {
-  padding: 0.5rem 0;
+  padding: var(--space-xs) 0;
 }
 
 .registers[data-empty="true"] .reg-cards {
@@ -864,6 +907,33 @@ body.fuse {
 
 .registers[data-empty="true"] .reg-glyph {
   font-size: 1.3rem;
+}
+
+.registers[data-empty="true"] .register {
+  grid-template-columns: 1fr;
+}
+
+.registers[data-empty="true"] .reg-cards {
+  display: none;
+}
+
+.registers[data-empty="true"] .reg-head {
+  display: flex;
+  gap: var(--space-xs);
+}
+
+.registers[data-empty="true"] .reg-role {
+  color: var(--color-ink);
+}
+
+@media (max-width: 40rem) {
+  .registers[data-empty="true"] {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+}
+
+.reg-role {
+  color: var(--color-ink);
 }
 
 
@@ -934,8 +1004,8 @@ body.fuse {
 }
 
 .ghost-card {
-  opacity: 0.6;
-  filter: grayscale(0.9) contrast(0.92);
+  opacity: 0.85;
+  filter: grayscale(0.9);
   outline: 1px dashed var(--color-rule);
   outline-offset: 2px;
   transition: opacity var(--dur-short) var(--ease-out), filter var(--dur-short) var(--ease-out), transform var(--dur-short) var(--ease-out);
@@ -1372,6 +1442,34 @@ body.fuse {
   border-bottom: 1px solid var(--color-rule-2);
 }
 
+.preview[data-empty="true"] {
+  --pv-h: calc(var(--space-xl) * 4);
+  align-content: center;
+  padding-block: var(--space-md);
+}
+
+.preview[data-empty="true"] .pv-frame {
+  width: min(100%, calc(var(--space-2xl) * 6));
+  margin: 0;
+}
+
+.preview[data-empty="true"] .crop {
+  display: none;
+}
+
+.preview[data-empty="true"] .pv-sheet {
+  aspect-ratio: auto;
+  min-height: calc(var(--space-xl) * 4);
+  border: 1px dashed var(--color-rule);
+  background: var(--press-bed);
+  color: var(--color-ink-2);
+  box-shadow: none;
+}
+
+.preview[data-empty="true"] .pv-cap-seed {
+  display: none;
+}
+
 .pv-frame {
   position: relative;
   /* 四周留給裁切線。 */
@@ -1389,6 +1487,14 @@ body.fuse {
   }
   .pv-frame {
     width: min(calc(100cqw - 2.4rem), calc((100cqh - 3.9rem) * var(--arn, 1)));
+  }
+  .preview[data-empty="true"] {
+    flex: 0 0 auto;
+    min-height: 0;
+    container-type: normal;
+  }
+  .preview[data-empty="true"] .pv-frame {
+    width: min(100%, calc(var(--space-2xl) * 6));
   }
 }
 

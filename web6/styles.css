@@ -2086,10 +2086,11 @@ body:has(.go-float[data-show="true"]) .toast {
 /* 手機：字盒改成可以收起來 */
 @media (max-width: 63.99rem) {
   .library[data-collapsed="true"] .suit-tabs,
-  .library[data-collapsed="true"] .group-chips,
-  .library[data-collapsed="true"] .lib-grid,
-  .library[data-collapsed="true"] .lib-search {
+  .library[data-collapsed="true"] .group-chips {
     display: none;
+  }
+  .library[data-collapsed="true"] .lib-grid {
+    max-height: calc(var(--space-2xl) * 4);
   }
   .library {
     overflow: visible;
@@ -2097,6 +2098,41 @@ body:has(.go-float[data-show="true"]) .toast {
   .trash {
     width: 64px;
     height: 64px;
+  }
+}
+
+.wall-empty {
+  display: grid;
+  align-content: center;
+  justify-items: center;
+  gap: var(--space-sm);
+  min-height: min(34dvh, calc(var(--space-2xl) * 6));
+  margin-block: var(--space-md);
+  padding: var(--space-lg);
+  border: 1px dashed var(--color-rule-2);
+  border-radius: var(--radius-md);
+  text-align: center;
+}
+
+.wall-empty[hidden] {
+  display: none;
+}
+
+.wall-empty h3 {
+  font-family: var(--font-display);
+  font-size: var(--text-lg);
+  color: var(--color-ink);
+}
+
+.wall-empty p {
+  max-width: 26em;
+  color: var(--color-ink-2);
+  font-size: var(--text-sm);
+}
+
+@media (max-width: 40rem) {
+  .wall:not(:empty) {
+    padding-bottom: calc(var(--space-2xl) * 2 + var(--space-lg) + env(safe-area-inset-bottom));
   }
 }
 

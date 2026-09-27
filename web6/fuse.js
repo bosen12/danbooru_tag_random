@@ -690,7 +690,7 @@ function dropCancelled(p) {
   const li = node?.closest("li");
   leave(node, () => {
     flip($("line-list"), () => li?.remove());
-    $("line-empty").hidden = prints.length > 0;
+    syncLineEmpty();
     setTimeout(syncLineFade, 0);
     renderAll([]);
   });
@@ -847,6 +847,7 @@ function renderPreview({ develop = false } = {}) {
   pv.frame.style.setProperty("--arn", String(w / h));
   pv.sheet.style.setProperty("--ar", `${w} / ${h}`);
   const state = p ? p.status : "none";
+  $("preview").dataset.empty = p ? "false" : "true";
   pv.sheet.dataset.state = state;
   const src = p ? viewSrc(p.image) || p.preview : null;
   let img = pv.sheet.querySelector("img");
@@ -902,14 +903,14 @@ function renderPreview({ develop = false } = {}) {
     else img.addEventListener("load", go, { once: true });
   }
   pv.sheet.disabled = !src;
-  pv.sheet.setAttribute("aria-label", src ? `試印 ${t.letter} 的成品，點開看大圖` : `試印 ${t.letter}：${previewState(p)}`);
+  pv.sheet.setAttribute("aria-label", src ? `試印 ${t.letter} 的成品，點開看大圖` : p ? `試印 ${t.letter}：${previewState(p)}` : "預覽：選試印後付印");
   pv.blank.hidden = !!src;
   if (!src) {
     put(
       pv.blank,
-      el("b", { class: "pv-letter", "aria-hidden": "true" }, t.letter),
-      el("span", { class: "pv-state" }, previewState(p)),
-      !p ? el("span", { class: "pv-hint" }, otherPrinting() ? "晾紙繩上還有一張在印；這一版挑好也可以先付印，會排在它後面。" : "挑好就付印。印好的圖出現在這裡，也會夾一張到上面的繩子。") : null,
+      p ? el("b", { class: "pv-letter", "aria-hidden": "true" }, t.letter) : null,
+      el("span", { class: "pv-state" }, p ? previewState(p) : "選試印後付印"),
+      !p ? el("span", { class: "pv-hint" }, otherPrinting() ? "晾紙繩上還有一張在印；這一版也可以先付印。" : "從下方選一張試印，再付印成圖。") : null,
       p && p.status === "failed" && p.note ? el("span", { class: "pv-hint" }, p.note) : null
     );
   }
@@ -918,7 +919,7 @@ function renderPreview({ develop = false } = {}) {
   pv.roller.style.setProperty("--p", String(state === "running" ? p.progress || 0 : 0));
   put(
     pv.cap,
-    el("b", { class: "pv-cap-letter" }, `試印 ${t.letter}`),
+    el("b", { class: "pv-cap-letter" }, p ? `試印 ${t.letter}` : "預覽"),
     el("span", { class: "pv-cap-state", dataset: { state } }, previewState(p)),
     el("span", { class: "pv-cap-seed" }, `${isFixedSeed() ? "固定 seed" : "seed"} ${p ? p.seed : printSeedOf(t)}`)
   );
@@ -1273,7 +1274,7 @@ function renderPlate(events = []) {
       el(
         "div",
         { class: "reg-cards" },
-        cards.length ? cards : el("span", { class: "reg-empty" }, suit === "style" ? "不罩色" : empty ? "空著：引擎會補" : "空著")
+        cards.length ? cards : empty ? null : el("span", { class: "reg-empty" }, suit === "style" ? "不罩色" : "空著")
       ),
       note
         ? el(
@@ -1294,12 +1295,12 @@ function renderPlate(events = []) {
   // 不會先量一次、套了寬度又要整頁再排一次（而且牌寬一變，FLIP 算出來的起點也就不對了）。
   flipBy(box, ".plate-card, .ghost-card", cardKey, () => {
     put(box, empty ? startBlock() : null, rows);
+    box.dataset.empty = empty ? "true" : "false";
     if (plan.w) box.style.setProperty("--pool-card", plan.w + "px");
     else box.style.removeProperty("--pool-card");
   }, {
     alias: (k) => (k.startsWith("p:") ? "g:" + k.slice(2) : null),
   });
-  box.dataset.empty = empty ? "true" : "false";
   if (peeking) box.dataset.peek = t.letter;
   else delete box.dataset.peek;
   const sub = $("plate-sub");
@@ -1355,7 +1356,7 @@ function startBlock() {
     el(
       "p",
       { class: "pool-start-body" },
-      "從字盒挑牌放進來：點一下，或拖進這一區。牌照花色落進自己那一列；右邊四張試印跟著重抽，引擎替你補的牌會以灰色的影子排在同一列。"
+      "從字盒挑牌，或用下方起手式；留白的層由引擎補上。"
     ),
     starters.length
       ? el(
@@ -2075,6 +2076,12 @@ function sendToPool() {
 
 let lineSeen = null;
 
+function syncLineEmpty() {
+  $("line").dataset.empty = prints.length ? "false" : "true";
+  $("line-count").textContent = `・${prints.length}`;
+  $("line-empty").hidden = prints.length > 0;
+}
+
 function renderLine() {
   const list = $("line-list");
   const items = prints.map((p) => el("li", {}, lineItem(p)));
@@ -2086,7 +2093,7 @@ function renderLine() {
     });
   }
   lineSeen = new Set(prints.map((p) => p.id));
-  $("line-empty").hidden = prints.length > 0;
+  syncLineEmpty();
   // 等這一輪的畫面都放好再量（量捲動寬度會逼瀏覽器當場排版；開機時字盒還在長）。
   clearTimeout(lineFadeTimer);
   lineFadeTimer = setTimeout(syncLineFade, 0);
@@ -2220,7 +2227,7 @@ function openPrint(p) {
           leave(node, () => {
             // 只拿掉那一張，不整條重畫 —— 重畫會把正在滑的那幾張換成新的節點，讓位就看不到了。
             flip($("line-list"), () => li?.remove());
-            $("line-empty").hidden = prints.length > 0;
+            syncLineEmpty();
             setTimeout(syncLineFade, 0);
             renderAll([]);
           });

@@ -61,7 +61,7 @@ let infinite = false;
 let stopAsked = false;
 // 無限抽印完一輪、還沒排下一輪的那一小段空檔：照樣算「在忙」，「停」不能在這時候閃掉。
 let looping = false;
-const ui = { suit: "all", group: "", query: "", eraOnly: true, collapsed: false, ...S.loadUi() };
+const ui = { suit: "all", group: "", query: "", eraOnly: true, collapsed: matchMedia("(max-width: 63.99rem)").matches, ...S.loadUi() };
 const $ = (id) => document.getElementById(id);
 
 // 數字換版時只讓字面輕輕落定，讀屏仍直接讀到最後的數值。
@@ -118,6 +118,7 @@ async function boot() {
   renderRules();
   renderGoBar();
   renderWall();
+  $("wall-start").addEventListener("click", () => $("go-bar").querySelector(".btn-primary")?.click());
   renderTrash();
   for (const s of resumable) generator.resume(s);
   for (const root of [$("lib-grid"), $("pool-well"), $("wall"), hand?.fan]) attachPeek(root, ".card[data-tag]", peekInfo);
@@ -221,7 +222,7 @@ function renderLibraryChrome() {
 
 function syncCollapse() {
   $("library").dataset.collapsed = ui.collapsed ? "true" : "false";
-  $("lib-toggle").textContent = ui.collapsed ? "打開字盒" : "收起字盒";
+  $("lib-toggle").textContent = ui.collapsed ? "展開全部" : "收起字盒";
   $("lib-toggle").setAttribute("aria-expanded", ui.collapsed ? "false" : "true");
 }
 
