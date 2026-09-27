@@ -915,3 +915,61 @@ body {
 .go small {
   margin-left: 6px;
 }
+
+/* 開場閘門：選版本（完整版／墨池 · 疊印台）。換版本會重新載入（兩支片搭的場景不一樣）。 */
+.gate-cuts {
+  display: inline-flex;
+  gap: 6px;
+  margin: 0 0 22px;
+  padding: 5px;
+  border-radius: 14px;
+  background: oklch(18% 0.014 250);
+  border: 1px solid oklch(30% 0.016 250);
+}
+
+.gate-cuts button {
+  display: grid;
+  gap: 5px;
+  min-width: 210px;
+  padding: 11px 18px;
+  border: 0;
+  border-radius: 10px;
+  background: transparent;
+  color: oklch(78% 0.015 250);
+  font: 700 17px/1.1 var(--font-display);
+  cursor: pointer;
+  transition:
+    background-color var(--dur-micro) var(--ease-out),
+    color var(--dur-micro) var(--ease-out);
+}
+
+.gate-cuts button small {
+  font: 500 12px/1 var(--font-mono);
+  letter-spacing: 0.04em;
+  color: oklch(62% 0.015 250);
+}
+
+.gate-cuts button:hover {
+  background: oklch(24% 0.016 250);
+  color: var(--color-ink);
+}
+
+.gate-cuts button[aria-checked="true"] {
+  background: var(--color-accent);
+  color: #fff;
+}
+
+.gate-cuts button[aria-checked="true"] small {
+  color: rgb(255 255 255 / 0.8);
+}
+
+.gate-cuts button:focus-visible {
+  outline: 3px solid var(--color-focus);
+  outline-offset: 2px;
+}
+
+@media (max-width: 560px) {
+  .gate-cuts {
+    display: grid;
+  }
+}

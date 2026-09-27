@@ -1618,7 +1618,26 @@ function wake() {
   }, 2200);
 }
 
+/** 閘門上的版本選擇：現在這一支亮著；點另一支就帶著 ?cut= 重新載入（兩支片搭的場景不一樣）。 */
+function wireCuts() {
+  const box = $("cuts");
+  if (!box) return;
+  const title = { full: "排字匣 · 介紹影片 Intro", cards: "墨池 · 疊印台 · 介紹影片 Intro" };
+  document.title = title[CUT] || document.title;
+  for (const b of box.querySelectorAll("button")) {
+    const on = b.dataset.cut === CUT;
+    b.setAttribute("aria-checked", on ? "true" : "false");
+    b.addEventListener("click", () => {
+      if (b.dataset.cut === CUT) return $("play").focus();
+      const u = new URL("intro.html", location.href);
+      if (b.dataset.cut !== "full") u.searchParams.set("cut", b.dataset.cut);
+      location.href = u.href;
+    });
+  }
+}
+
 async function main() {
+  wireCuts();
   fit();
   addEventListener("resize", fit);
   const q = new URLSearchParams(location.search);
