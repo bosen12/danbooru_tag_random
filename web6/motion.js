@@ -260,7 +260,96 @@ function schedule() {
   });
 }
 
+/* ---------- 按下去的手感：墨暈、蓋章、搖頭 ---------- */
+
+// 同一套手感的東西。其他元件要一樣：加 class="press" 或 data-press。
+const PRESS = ".btn, .mast-tools .ghost, .press, [data-press]";
+
+/** 從 (x, y)（視窗座標；沒給就是正中間）暈開一圈墨。重複按會從頭再暈一次。 */
+export function inkPress(el, x, y) {
+  if (!el || reducedMotion()) return;
+  const r = el.getBoundingClientRect();
+  const px = x === undefined ? r.width / 2 : x - r.left;
+  const py = y === undefined ? r.height / 2 : y - r.top;
+  el.style.setProperty("--px", `${px}px`);
+  el.style.setProperty("--py", `${py}px`);
+  // 暈到最遠的那個角：大按鈕、小按鈕都剛好蓋滿。
+  el.style.setProperty("--ink-reach", `${Math.ceil(Math.hypot(Math.max(px, r.width - px), Math.max(py, r.height - py)))}px`);
+  el.classList.remove("is-inking");
+  void el.offsetWidth;
+  el.classList.add("is-inking");
+  clearTimeout(el._inkTimer);
+  el._inkTimer = setTimeout(() => el.classList.remove("is-inking"), DUR.xl + 40);
+}
+
+/** 狀態換過去了（開／關、選中）：蓋一下章。 */
+export function seat(el) {
+  if (!el || reducedMotion()) return;
+  el.classList.remove("is-seated");
+  void el.offsetWidth;
+  el.classList.add("is-seated");
+  clearTimeout(el._seatTimer);
+  el._seatTimer = setTimeout(() => el.classList.remove("is-seated"), DUR.medium + 40);
+}
+
+/** 這一下做不了：輕輕搖頭（按鈕還在、只是現在不行，比什麼都不發生好懂）。 */
+export function refuse(el) {
+  if (!el || reducedMotion()) return;
+  el.classList.remove("is-refused");
+  void el.offsetWidth;
+  el.classList.add("is-refused");
+  clearTimeout(el._refuseTimer);
+  el._refuseTimer = setTimeout(() => el.classList.remove("is-refused"), DUR.medium + 40);
+}
+
+let pressWired = false;
+function wirePress() {
+  if (pressWired) return;
+  pressWired = true;
+  // 墨在「放開」那一刻暈開（按住時是壓痕，放開才是印上去）。只認按下去的那一顆，拖出去放開不算。
+  let down = null;
+  document.addEventListener(
+    "pointerdown",
+    (e) => {
+      if (e.button !== 0) return;
+      const el = e.target.closest?.(PRESS);
+      down = el && !el.disabled ? { el, id: e.pointerId } : null;
+    },
+    { capture: true, passive: true }
+  );
+  document.addEventListener(
+    "pointerup",
+    (e) => {
+      if (!down || down.id !== e.pointerId) return;
+      const { el } = down;
+      down = null;
+      if (el.disabled || !el.isConnected) return;
+      // 用位置判斷放開時還在不在按鈕上：有的按鈕按下去會重寫自己的內容（偏好卡牌的標籤），e.target 已經不在了。
+      const r = el.getBoundingClientRect();
+      if (e.clientX < r.left || e.clientX > r.right || e.clientY < r.top || e.clientY > r.bottom) return;
+      inkPress(el, e.clientX, e.clientY);
+    },
+    { capture: true, passive: true }
+  );
+  document.addEventListener("pointercancel", () => (down = null), { capture: true, passive: true });
+  // 鍵盤按 Enter／空白鍵：從正中間暈開，手感跟滑鼠一樣。
+  document.addEventListener(
+    "keydown",
+    (e) => {
+      if ((e.key !== "Enter" && e.key !== " ") || e.repeat) return;
+      const el = e.target.closest?.(PRESS);
+      if (el && el === e.target && !el.disabled) inkPress(el);
+    },
+    { capture: true }
+  );
+  // aria-pressed 換了（開關按鈕）：蓋一下章。
+  new MutationObserver((records) => {
+    for (const r of records) if (r.target.matches?.(PRESS)) seat(r.target);
+  }).observe(document.body, { subtree: true, attributes: true, attributeFilter: ["aria-pressed"] });
+}
+
 export function initMotion() {
+  wirePress();
   new MutationObserver(schedule).observe(document.body, {
     subtree: true,
     childList: true,
