@@ -1950,7 +1950,9 @@ class Handler(BaseHTTPRequestHandler):
         for k, v in (extra or {}).items():
             self.send_header(k, v)
         self.end_headers()
-        self.wfile.write(blob)
+        # HEAD 只給標頭：主體寫出去會留在持續連線上，下一個回應就解析錯位。
+        if getattr(self, "command", "GET") != "HEAD":
+            self.wfile.write(blob)
 
     def _bytes(self, code: int, body: bytes, mime: str, extra=None) -> None:
         self.send_response(code)
@@ -2665,14 +2667,25 @@ class Handler(BaseHTTPRequestHandler):
         path = urllib.parse.urlparse(self.path).path
         if not self._mutation_allowed(path):
             return
-        length = int(self.headers.get("Content-Length") or 0)
+        # 負數長度會讓 rfile.read(-1) 一直等到對方關連線，佔住一條執行緒；非數字直接 400。
+        try:
+            length = int(self.headers.get("Content-Length") or 0)
+        except ValueError:
+            length = -1
+        if length < 0:
+            self.close_connection = True
+            self._json(400, {"ok": False, "error": "Content-Length 不對。", "code": "invalid"})
+            return
         if length > workflows.MAX_WORKFLOW_BYTES:
             self._json(413, {"ok": False, "error": "JSON 太大（上限 5MB）", "code": "too_large"})
             return
         raw = self.rfile.read(length) if length else b"{}"
         try:
             payload = json.loads(raw.decode("utf-8") or "{}")
-        except json.JSONDecodeError:
+        except (json.JSONDecodeError, UnicodeDecodeError):
+            payload = None
+        # 每一個 POST 端點都把 payload 當物件用；[]、"x"、1 會在 .get() 那裡炸掉連線。
+        if not isinstance(payload, dict):
             self._json(400, {"ok": False, "error": "不是有效的 JSON。", "code": "invalid"})
             return
         if path == "/api/comfy":

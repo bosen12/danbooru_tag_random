@@ -724,6 +724,55 @@ finally:
 ok("帶版本的首頁：主控台沒有 traceback", "Traceback" not in log, log[-800:])
 
 
+# === 8. 請求本體：負數長度、頂層不是物件、不是 UTF-8；HEAD 不帶主體 ============
+import http.client as _hc
+import socket as _socket
+
+comfy = FakeComfy("happy")
+comfy.start()
+proc, port = start_server(comfy.port)
+try:
+    def raw_post(body: bytes, length: str) -> str:
+        s = _socket.create_connection(("127.0.0.1", port), timeout=5)
+        s.sendall(
+            b"POST /api/workflows HTTP/1.1\r\nHost: 127.0.0.1:" + str(port).encode()
+            + b"\r\nContent-Type: application/json\r\nContent-Length: " + length.encode()
+            + b"\r\n\r\n" + body
+        )
+        try:
+            return s.recv(4096).decode("utf-8", "replace").split("\r\n")[0]
+        except _socket.timeout:
+            return "TIMEOUT"
+        finally:
+            s.close()
+
+    ok("Content-Length 負數：馬上 400，不會卡住等連線關掉", " 400 " in raw_post(b"{}", "-1"))
+    ok("Content-Length 不是數字：400", " 400 " in raw_post(b"{}", "abc"))
+    ok("頂層是陣列：400，不是斷線", " 400 " in raw_post(b"[1]", "3"))
+    ok("不是 UTF-8：400", " 400 " in raw_post(b"\xff\xfe", "2"))
+
+    c = _hc.HTTPConnection("127.0.0.1", port, timeout=10)
+    c.request("HEAD", "/api/ping")
+    r = c.getresponse()
+    r.read()
+    ok("HEAD /api/ping 有 Content-Length", r.status == 200 and int(r.headers.get("Content-Length") or 0) > 0)
+    # 同一條連線接著問：HEAD 若多寫了主體，這一次會解析錯位。
+    c.request("GET", "/api/ping")
+    r2 = c.getresponse()
+    body2 = r2.read()
+    ok("HEAD 之後同一條連線的 GET 解析正常", r2.status == 200 and body2.startswith(b"{"), repr(body2[:80]))
+    c.close()
+finally:
+    proc.terminate()
+    try:
+        proc.wait(10)
+    except subprocess.TimeoutExpired:
+        proc.kill()
+    log = proc.stdout.read() or ""
+    comfy.close()
+ok("壞請求本體：主控台沒有 traceback", "Traceback" not in log, log[-800:])
+
+
 if failed:
     print(f"\n{failed} failed")
     sys.exit(1)

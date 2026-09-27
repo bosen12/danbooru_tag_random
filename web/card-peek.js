@@ -62,6 +62,7 @@ function ensure() {
   if (!peek) {
     peek = document.createElement("div");
     peek.className = "card-peek";
+    peek.id = "card-peek";
     peek.setAttribute("role", "tooltip");
     peek.setAttribute("aria-hidden", "true");
     document.body.append(peek);
@@ -157,8 +158,12 @@ export function showPeek(anchor, info) {
   clearTimeout(intentTimer);
   clearTimeout(hideTimer);
   const wasShown = !!peek && peek.dataset.show === "true";
+  if (current && current !== anchor && current.getAttribute("aria-describedby") === "card-peek") current.removeAttribute("aria-describedby");
   current = anchor;
   render(info);
+  // 畫面上浮出的附帶規則、分級這些，螢幕閱讀器也要讀得到：開著時掛成那張牌的描述。
+  peek.setAttribute("aria-hidden", "false");
+  if (!anchor.hasAttribute("aria-describedby")) anchor.setAttribute("aria-describedby", "card-peek");
   // 已經開著、換到隔壁那張：放大卡滑過去，不是瞬間跳到新位置。
   peek.classList.toggle("is-gliding", wasShown);
   place(anchor);
@@ -176,8 +181,12 @@ const LEAVE_MS = 80;
 export function hidePeek(anchor) {
   if (anchor && current && anchor !== current) return;
   clearTimeout(intentTimer);
+  if (current?.getAttribute("aria-describedby") === "card-peek") current.removeAttribute("aria-describedby");
   current = null;
-  if (peek) peek.dataset.show = "false";
+  if (peek) {
+    peek.dataset.show = "false";
+    peek.setAttribute("aria-hidden", "true");
+  }
 }
 
 /** 事件委派：root 底下符合 selector 的元素，滑鼠一移上去就浮出放大卡。 */

@@ -42,7 +42,7 @@ import { attachPeek, hidePeek } from "./card-peek.js";
 import * as S from "./store.js";
 import { REGISTERS, REGISTER_ROLE, emptyBed, sanitizeBed, placeCard, removeCard, relationsOf } from "./fuse-bed.js";
 import { createSfx } from "./fuse-sfx.js";
-import { genSeed, isFixedSeed, mountSeedControl, onSeedChange, seedUseButton, useSeed } from "./seed-control.js";
+import { genSeed, isFixedSeed, mountSeedControl, onSeedChange, restoreSeed, seedState, seedUseButton, useSeed } from "./seed-control.js";
 
 const $ = (id) => document.getElementById(id);
 const LETTERS = ["A", "B", "C", "D"];
@@ -294,7 +294,9 @@ function missReason(tag) {
 
 // 試印的 seed 是抽牌用的；送 ComfyUI 的那顆看「生圖種子」（固定就換成固定的那顆）。
 const printSeedOf = (t) => genSeed(t.seed);
-const sigOf = (t) => (t ? `${printSeedOf(t)}|${settings.width}x${settings.height}|${t.positive}` : "");
+// 模型、LoRA、workflow 也算進去：換了其中一個再按付印是另一張圖，不是「這一張已經在印了」。
+const sigOf = (t) =>
+  t ? `${printSeedOf(t)}|${settings.width}x${settings.height}|${t.positive}|${currentCkpt() || ""}|${JSON.stringify(currentLorasPayload() || [])}|${currentWorkflowId() || ""}` : "";
 
 function printFor(sig) {
   return sig ? prints.find((p) => p.sig === sig) : null;
@@ -436,12 +438,13 @@ function undo() {
     return { t, rect: r && r.width && r.bottom > 0 && r.top < innerHeight ? r : null, node: null, rotate: 0 };
   });
   // 回來的牌重畫出來時就藏著（不要先亮一下、再被藏起來、再飛進來）。
-  if (!reduced()) for (const l of launch) inbound.add(l.t);
+  if (!reduced()) for (const l of launch) claimInbound(l.t);
   // 撤掉的牌跟清版一樣分兩路：偏好卡牌回到手上，其他的回字盒。托盤那幾格在重畫的同一刻先藏著。
   const leaveHand = leaving.filter((s) => hand?.has(s.node.dataset.tag));
   const leaveCase = leaving.filter((s) => !hand?.has(s.node.dataset.tag));
   for (const s of leaveHand) hand.arriveAt(s.node.dataset.tag, 2400);
   bed = h.bed;
+  if (h.restore) undoRestore(h.restore);
   rowNotes = {};
   plateNotice = null;
   retrial();
@@ -463,6 +466,21 @@ function undo() {
   sfx.lift();
   if (returning.length) setTimeout(() => sfx.stamp(), 60);
   announce(`撤回：${h.label}`);
+}
+
+function undoRestore(r) {
+  seeds = [...r.seeds];
+  picked = r.picked;
+  restoreSeed(r.seed);
+  const ratingBack = r.rating !== settings.rating;
+  if (ratingBack || r.width !== settings.width || r.height !== settings.height) {
+    settings = sanitizeSettings({ ...settings, width: r.width, height: r.height, rating: r.rating }, data);
+    writeJ(FK.settings, settings);
+  }
+  if (ratingBack) {
+    renderRating();
+    renderCase();
+  }
 }
 
 function clearBed() {
@@ -703,7 +721,12 @@ function savePrints() {
 }
 
 function restorePrint(p) {
-  history.push({ bed, label: "回到舊版之前" });
+  // 回到舊版同時換了尺度、尺寸、試印種子、生圖種子：撤回要一起換回來，不然只有卡牌回去。
+  history.push({
+    bed,
+    label: "回到舊版之前",
+    restore: { seeds: [...seeds], picked, width: settings.width, height: settings.height, rating: settings.rating, seed: seedState() },
+  });
   bed = sanitizeBed(p.bed, (t) => lib.byTag.has(t));
   if (Array.isArray(p.seeds) && p.seeds.length === TRIALS) seeds = [...p.seeds];
   // 當時是用固定種子印的：把那顆也帶回來，否則同一版會對不上那張成品。
@@ -1627,7 +1650,10 @@ function openPop(anchor, tag, from) {
           class: "btn btn-small",
           type: "button",
           onclick: () => {
+            // 焦點在選單的按鈕上，選單一收就沒了：跟牌上按 Delete 一樣，交給隔壁那張（或找牌框）。
+            const node = plateNode(tag);
             closePop();
+            if (node) focusAfterRemoval(node);
             remove(tag);
           },
         },
@@ -1644,6 +1670,8 @@ function openPop(anchor, tag, from) {
           onclick: () => {
             closePop();
             place(tag, anchor);
+            // 收下之後焦點落在版上那張（它現在是卡池的牌了），不要掉回頁面最上面。
+            setTimeout(() => plateNode(tag)?.focus({ preventScroll: true }), 30);
           },
         },
         "收下這張"
@@ -1720,10 +1748,10 @@ function flyIn(tag, from, { delay = 0, src = null, startRotate = 0, startScale =
     const pill = $("pool-pill");
     if (delay && !reduced() && !(from && !visible && !pill.hidden)) {
       // 沒有出發點（字盒裡看不到它）：輪到它的時候才原地落下，不要一開始就亮在版上。
-      inbound.add(tag);
+      const tok = claimInbound(tag);
       target.style.visibility = "hidden";
       setTimeout(() => {
-        inbound.delete(tag);
+        if (!releaseInbound(tag, tok)) return;
         const n = plateNode(tag);
         if (!n) return;
         n.style.visibility = "";
@@ -1743,14 +1771,15 @@ function flyIn(tag, from, { delay = 0, src = null, startRotate = 0, startScale =
   ghost.classList.add("flying");
   ghost.classList.remove("is-related", "is-stamped", "is-popped", "fav-card");
   ghost.style.visibility = "";
-  inbound.add(tag);
+  const tok = claimInbound(tag);
   target.style.visibility = "hidden";
   flight(ghost, from, () => plateNode(tag), {
     delay,
     startRotate,
     startScale,
     onLand: () => {
-      inbound.delete(tag);
+      // 同一張牌在飛的路上被拿下、又放上一次：舊影子落地時不能把新那次還藏著的牌亮出來。
+      if (!releaseInbound(tag, tok)) return;
       const n = plateNode(tag);
       if (n) {
         n.style.visibility = "";
@@ -1762,7 +1791,19 @@ function flyIn(tag, from, { delay = 0, src = null, startRotate = 0, startScale =
 }
 
 // 正在飛上版的牌（影子還沒落地）：這段時間重畫出來的版上那張先藏著。
-const inbound = new Set();
+// 值是這一趟的號碼：只有最後一趟落地才揭牌，較早那趟的回呼晚到也不會提早亮。
+const inbound = new Map();
+let inboundSeq = 0;
+function claimInbound(tag) {
+  const tok = ++inboundSeq;
+  inbound.set(tag, tok);
+  return tok;
+}
+function releaseInbound(tag, tok) {
+  if (inbound.get(tag) !== tok) return false;
+  inbound.delete(tag);
+  return true;
+}
 
 function flyToPill(target, from, pill) {
   const ghost = target.cloneNode(true);

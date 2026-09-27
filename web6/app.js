@@ -475,9 +475,10 @@ function flyInto(tag, from, { delay = 0, src = null, startRotate = 0, startScale
   }
   if (!from) {
     // 沒有出發點：那一格藏到輪到它，再從底下冒出來。
-    poolInbound.add(tag);
+    const tok = claimPoolInbound(tag);
     slot0?.style.setProperty("visibility", "hidden");
     setTimeout(() => {
+      if (poolInbound.get(tag) !== tok) return;
       if (show()) popCarried(tag, 0);
     }, delay);
     return;
@@ -487,13 +488,15 @@ function flyInto(tag, from, { delay = 0, src = null, startRotate = 0, startScale
   const ghost = (src || target).cloneNode(true);
   ghost.classList.remove("dropped", "is-related", "is-clashing", "fav-card");
   ghost.style.visibility = "";
-  poolInbound.add(tag);
+  const tok = claimPoolInbound(tag);
   slot0?.style.setProperty("visibility", "hidden");
   flight(ghost, from, () => poolNode(tag), {
     delay,
     startRotate,
     startScale,
     onLand: () => {
+      // 飛的路上被拿走又放進來一次：舊影子落地時不能把新那趟還藏著的那一格亮出來。
+      if (poolInbound.get(tag) !== tok) return;
       poolInbound.delete(tag);
       const n = poolNode(tag);
       const slot = n?.closest(".pool-slot");
@@ -507,8 +510,14 @@ function flyInto(tag, from, { delay = 0, src = null, startRotate = 0, startScale
   });
 }
 
-// 正在飛進合成池的牌（影子還沒落地）：這段時間重畫出來的那一格先藏著。
-const poolInbound = new Set();
+// 正在飛進合成池的牌（影子還沒落地）：這段時間重畫出來的那一格先藏著。值是這一趟的號碼。
+const poolInbound = new Map();
+let poolInboundSeq = 0;
+function claimPoolInbound(tag) {
+  const tok = ++poolInboundSeq;
+  poolInbound.set(tag, tok);
+  return tok;
+}
 
 /** 牌往合成池的方向（dir：-1 上、1 下）收進去：浮起一點、縮小、淡掉。 */
 function tuckAway(tag, from, dir) {
@@ -1197,7 +1206,8 @@ function drawBatch(gen) {
   $("wall-empty").hidden = true;
   trimWall();
   S.saveShots(shots);
-  if (gen) for (const shot of made) generator.enqueue(shot);
+  // 一次抽超過 80 張時，最舊的幾張剛做好就被 trimWall 裁掉了：只送還在牆上的。
+  if (gen) for (const shot of made) if (shots.includes(shot)) generator.enqueue(shot);
   renderGoBar();
   document.getElementById("wall-head").scrollIntoView({ block: "nearest", behavior: "smooth" });
 }
@@ -1242,6 +1252,7 @@ function trimWall() {
   if (shots.length <= 80) return;
   const drop = shots.splice(80);
   for (const s of drop) document.querySelector(`.shot[data-id="${s.id}"]`)?.remove();
+  generator.drop(new Set(drop.map((s) => s.id)));
 }
 
 /* ================= 成品牆 ================= */
@@ -1340,7 +1351,8 @@ function shotNode(shot, deal) {
   };
   toggle.addEventListener("click", () => {
     userToggled = true;
-    setOpen(cards.hidden);
+    // 看按鈕說的狀態，不看 hidden：收起的動畫還在跑時 hidden 仍是 false，連按第二下要能把它叫回來。
+    setOpen(toggle.getAttribute("aria-expanded") !== "true");
   });
   const node = el(
     "article",
@@ -1602,6 +1614,8 @@ function reprint(shot) {
   enter(node);
   const r = node.getBoundingClientRect();
   if (r.top < 0 || r.top > innerHeight - 80) node.scrollIntoView({ behavior: matchMedia("(prefers-reduced-motion: reduce)").matches ? "auto" : "smooth", block: "nearest" });
+  trimWall();
+  S.saveShots(shots);
   generator.enqueue(copy);
   renderGoBar();
 }
@@ -1930,7 +1944,7 @@ $("pool-clear").addEventListener("click", () => {
           const r = c && c.getBoundingClientRect();
           return { t, rect: r && r.width && r.bottom > 0 && r.top < innerHeight ? r : null, node: null, rotate: 0 };
         });
-        if (!matchMedia("(prefers-reduced-motion: reduce)").matches) for (const l of launch) poolInbound.add(l.t);
+        if (!matchMedia("(prefers-reduced-motion: reduce)").matches) for (const l of launch) claimPoolInbound(l.t);
         pool = new Set(restore);
         commitPins();
         // 從手上打出去的先走（托盤正在收攏，等久了會蓋住留下來的牌），字盒的跟著一張一張來。

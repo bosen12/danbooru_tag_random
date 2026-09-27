@@ -349,9 +349,12 @@ export function createDrag({ zones, onDrop, onOver, onMove }) {
     node.addEventListener("pointerdown", (e) => {
       if (e.button !== 0 || active) return;
       const touch = e.pointerType === "touch";
-      const state = { node, payload: typeof payload === "function" ? payload() : payload, x0: e.clientX, y0: e.clientY, dragging: false, touch };
+      const state = { node, payload: typeof payload === "function" ? payload() : payload, x0: e.clientX, y0: e.clientY, dragging: false, touch, pointer: e.pointerId };
       active = state;
+      // 多點觸控：只認拿起這張牌的那根手指。另一根手指的移動、放開不能拖走或放下這張。
+      const mine = (ev) => ev.pointerId === state.pointer;
       state.onMove = (ev) => {
+        if (!mine(ev)) return;
         if (state.dragging) {
           ev.preventDefault();
           move(state, ev.clientX, ev.clientY);
@@ -364,8 +367,8 @@ export function createDrag({ zones, onDrop, onOver, onMove }) {
           begin(state, ev.clientX, ev.clientY);
         }
       };
-      state.onUp = () => end(state, false);
-      state.onCancel = () => end(state, true);
+      state.onUp = (ev) => mine(ev) && end(state, false);
+      state.onCancel = (ev) => mine(ev) && end(state, true);
       state.onKey = (ev) => {
         if (ev.key === "Escape" && state.dragging) {
           ev.stopPropagation();

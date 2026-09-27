@@ -85,6 +85,13 @@ function set(next) {
   }
 }
 
+/** 撤回「回到舊版」用：把 seedState() 記下的那一份原樣放回去（隨機模式也放得回去）。 */
+export function restoreSeed(saved) {
+  if (!saved || (saved.mode !== "fixed" && saved.mode !== "random")) return;
+  if (saved.mode === state.mode && saved.value === state.value) return;
+  set({ mode: saved.mode, value: saved.value });
+}
+
 export function useSeed(n) {
   const v = typeof n === "string" ? parse(n) : n;
   if (!valid(v)) return false;

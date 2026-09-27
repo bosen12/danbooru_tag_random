@@ -1744,6 +1744,7 @@ const ALBUM_FIXTURE = [
       ok("動態詞彙：JS 的曲線跟 CSS 一樣（bezier 解出來的 ease 在 0.5 是 0.802），飛行曲線從靜止起步、不瞬移", Math.abs(ease(0.5) - 0.8024) < 0.002 && bezier(CURVE.travel)(0.055) < 0.08 && bezier(CURVE.travel)(0.5) > 0.75 && CURVE.exit && travelTime(300) < travelTime(1000));
       ok("牌飛過去會追落點（每格重量）、有阻尼、影子跟著高度", motion6.includes("export function flight(ghost, from, target, opts = {})") && motion6.includes("const w = e * e * e * e;") && motion6.includes("ghost.style.boxShadow"));
       ok("疊印台放牌：影子追落點，飛的路上版重畫出來的那張也藏著（不會出現兩張）", fuse6.includes("flight(ghost, from, () => plateNode(tag)") && fuse6.includes('if (inbound.has(tag)) node.style.visibility = "hidden";'));
+      ok("同一張牌飛兩趟：只有最後一趟落地才揭牌（舊影子的回呼不會提早亮出新那趟）", fuse6.includes("if (!releaseInbound(tag, tok)) return;") && app6.includes("if (poolInbound.get(tag) !== tok) return;"));
       ok("墨池放牌：影子追落點，池裡那一格（牌＋×）落地才一起出現", app6.includes("flight(ghost, from, () => poolNode(tag)") && app6.includes('style: poolInbound.has(t) ? "visibility: hidden" : undefined'));
       ok("拿下來飛回托盤：托盤那格等影子落地才亮（reveal），不是猜一個固定時間", hand6.includes("function reveal(tag)") && fuse6.includes("hand.reveal(tag)") && app6.includes("hand.reveal(tag)") && hand6.includes("flight(f, from,"));
       ok("清版：疊在牌自己的中心、兩段各用各的曲線，「空白的版」等那一疊離開才浮上來", motion6.includes('easing: "linear", fill: "both"') && fuse6.includes("cs.reduce((a, c) => a + c.x, 0)") && fuse6.includes("const away = Math.max(ms * 0.58, handMs * 0.45);") && fuse6.includes("delay: Math.round(away),"));
@@ -1788,7 +1789,7 @@ const ALBUM_FIXTURE = [
     }
     {
       const motion6c = readFileSync(join(ROOT, "web6/motion.js"), "utf8");
-      ok("撤回清版／復原清空是清版的反過來：回來的牌重畫出來就藏著，偏好卡牌從手上打出去（托盤那格／標籤），其他的從字盒來", fuse6.includes("hand.launchFrom(t, cardW)") && app6.includes("hand.launchFrom(t, cardW)") && fuse6.includes("if (!reduced()) for (const l of launch) inbound.add(l.t);") && app6.includes("for (const l of launch) poolInbound.add(l.t);") && hand6.includes("function launchFrom(tag, cardW = 84)"));
+      ok("撤回清版／復原清空是清版的反過來：回來的牌重畫出來就藏著，偏好卡牌從手上打出去（托盤那格／標籤），其他的從字盒來", fuse6.includes("hand.launchFrom(t, cardW)") && app6.includes("hand.launchFrom(t, cardW)") && fuse6.includes("if (!reduced()) for (const l of launch) claimInbound(l.t);") && app6.includes("for (const l of launch) claimPoolInbound(l.t);") && hand6.includes("function launchFrom(tag, cardW = 84)"));
       ok("撤回時撤掉的牌也分兩路（偏好卡牌回手上），影子都在同一刻做好、用 delay 錯開（不是 setTimeout 之後才飛）", fuse6.includes("if (hand) hand.receive(leaveHand);") && !fuse6.includes("if (seen) setTimeout(() => flyIn(t, r), 40 + i * 70);") && fuse6.includes("flyIn(l.t, l.rect, { delay, src: l.node, startRotate: l.rotate, startScale: l.scale || 1 });"));
       ok("從標籤長出來的影子是正常大小的牌、用 scale 縮放（不縮寬度，不然固定 px 的墨點會被放大好幾倍）", motion6c.includes("startScale = 1") && hand6.includes("node: makeNode(tag), rotate: 0, scale: 0.2"));
     }

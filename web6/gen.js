@@ -244,6 +244,10 @@ export function createGenerator(hooks) {
       hooks.update(shot);
       pump();
     },
+    /** 成品牆裁掉的：還在排隊的就拿出來，不要替看不到的牌耗 ComfyUI。正在畫的那張照畫完。 */
+    drop(ids) {
+      for (let i = queue.length - 1; i >= 0; i--) if (ids.has(queue[i].id)) queue.splice(i, 1);
+    },
     /** 停：正在畫的那張也一起砍（帶 prompt_id），排隊的全部取消。 */
     stop() {
       for (const s of queue.splice(0)) {
