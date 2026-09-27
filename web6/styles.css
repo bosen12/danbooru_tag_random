@@ -133,14 +133,14 @@ p {
 /* ---------- 按下去：像鉛字壓進紙裡 ----------
  * 按住：往下沉一點、縮一點，邊緣內側吃進一圈陰影（壓痕）。放開：用 settle 曲線彈回來，稍微過頭再落定。
  * 放開的同時，按下去的那一點暈開一圈墨（motion.js 的 initMotion 放 --px/--py、加 .is-inking）。
- * 其他可以按的東西要同一種手感：加 class="press"（或 data-press）就好。 */
-:where(.btn, .mast-tools .ghost, .press, [data-press]) {
+ * 其他可以按的東西要同一種手感：加 class="pressable"（或 data-press）。不要用 .press：疊印台的印刷機外框就叫 .press。 */
+:where(.btn, .mast-tools .ghost, .pressable, [data-press]) {
   position: relative;
 }
 
 .btn:active:not(:disabled),
 .mast-tools .ghost:active,
-.press:active:not(:disabled),
+.pressable:active:not(:disabled),
 [data-press]:active:not(:disabled) {
   transform: translateY(1px) scale(0.97);
   box-shadow: inset 0 1px 3px var(--color-shade);
@@ -156,7 +156,7 @@ p {
 
 .btn::after,
 .mast-tools .ghost::after,
-.press::after,
+.pressable::after,
 [data-press]::after {
   content: "";
   position: absolute;
@@ -225,7 +225,7 @@ p {
 @media (prefers-reduced-motion: reduce) {
   .btn:active:not(:disabled),
   .mast-tools .ghost:active,
-  .press:active:not(:disabled),
+  .pressable:active:not(:disabled),
   [data-press]:active:not(:disabled) {
     transform: none;
   }

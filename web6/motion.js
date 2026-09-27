@@ -262,8 +262,9 @@ function schedule() {
 
 /* ---------- 按下去的手感：墨暈、蓋章、搖頭 ---------- */
 
-// 同一套手感的東西。其他元件要一樣：加 class="press" 或 data-press。
-const PRESS = ".btn, .mast-tools .ghost, .press, [data-press]";
+// 同一套手感的東西。其他元件要一樣：加 class="pressable" 或 data-press。
+// 不能叫 .press：疊印台整個印刷機的外框就是 .press，按住裡面任何一張牌整塊都會被壓小。
+const PRESS = ".btn, .mast-tools .ghost, .pressable, [data-press]";
 
 /** 從 (x, y)（視窗座標；沒給就是正中間）暈開一圈墨。重複按會從頭再暈一次。 */
 export function inkPress(el, x, y) {
