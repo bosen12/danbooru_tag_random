@@ -32,7 +32,7 @@ import { heatBlockedByRating } from "./scene-policy.js";
 import { initLoraPicker, currentLorasPayload, currentTriggerText, currentCkpt, handleLoraKeys } from "./lora.js";
 import { initWorkflow, currentWorkflowId, wfHandleKeys } from "./workflow.js";
 import { HARD_BANNED, applyArtSources } from "./card-art.js";
-import { buildLibrary, createAssets, cardNode, cardFacts, setEnterTarget, CARD_SUIT_INFO, CARD_SUITS, RATING_ZH, ERA_ZH } from "./cards.js";
+import { buildLibrary, createAssets, cardNode, cardFacts, setEnterTarget, eagerArt, CARD_SUIT_INFO, CARD_SUITS, RATING_ZH, ERA_ZH } from "./cards.js";
 import { el, openSheet, anyOverlay, toast } from "./ui.js";
 import { initMotion, flip, flipBy, leave, gatherHome, flight, CURVE, DUR, css } from "./motion.js";
 import { createHand } from "./hand.js";
@@ -1360,7 +1360,7 @@ function inkDots(tag) {
 
 function plateCard(tag) {
   const card = cardOf(tag);
-  const node = cardNode(card, assets, { src: bed.carried[tag] ? "附帶" : null });
+  const node = eagerArt(cardNode(card, assets, { src: bed.carried[tag] ? "附帶" : null }));
   const take = takeOf(tag);
   node.classList.add("plate-card");
   if (inbound.has(tag)) node.style.visibility = "hidden";
@@ -1382,7 +1382,7 @@ function plateCard(tag) {
 
 function ghostCard(tag, t) {
   const card = cardOf(tag);
-  const node = cardNode(card, assets, {});
+  const node = eagerArt(cardNode(card, assets, {}));
   node.classList.add("ghost-card");
   node.setAttribute("aria-label", `${card.zh}（${card.tag}）：引擎在試印 ${t.letter} 補的。Enter 看選項，可以收下`);
   node.addEventListener("click", () => openPop(node, tag, "ghost"));

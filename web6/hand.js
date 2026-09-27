@@ -771,8 +771,16 @@ export function createHand({
     if (!root) return;
     const set = new Set(tags);
     for (const n of root.querySelectorAll(".card[data-tag]")) {
-      if (set.has(n.dataset.tag)) n.dataset.inHand = "true";
-      else delete n.dataset.inHand;
+      if (set.has(n.dataset.tag)) {
+        // 剛加進手牌的那張：「手」像橡皮章壓下來（跟「在池」同一個手感）；本來就有的不重蓋。
+        if (n.dataset.inHand !== "true" && !reduced()) {
+          n.classList.remove("is-hand-stamp");
+          void n.offsetWidth;
+          n.classList.add("is-hand-stamp");
+          setTimeout(() => n.classList.remove("is-hand-stamp"), DUR.long + 40);
+        }
+        n.dataset.inHand = "true";
+      } else delete n.dataset.inHand;
     }
   }
 

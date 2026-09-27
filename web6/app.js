@@ -30,7 +30,7 @@ import { SCENE_MODES, SCENE_MODE_LABELS, heatBlockedByRating } from "./scene-pol
 import { initLoraPicker, currentLorasPayload, currentTriggerText, currentCkpt, handleLoraKeys } from "./lora.js";
 import { initWorkflow, currentWorkflowId, wfHandleKeys } from "./workflow.js";
 import { HARD_BANNED, applyArtSources } from "./card-art.js";
-import { buildLibrary, createAssets, cardNode, setCardFlag, setEnterTarget, cardFacts, CARD_SUIT_INFO, CARD_SUITS, RATING_ZH } from "./cards.js";
+import { buildLibrary, createAssets, cardNode, setCardFlag, setEnterTarget, eagerArt, cardFacts, CARD_SUIT_INFO, CARD_SUITS, RATING_ZH } from "./cards.js";
 import { el, openSheet, anyOverlay, toast, ICONS } from "./ui.js";
 import { createDrag, inkRing } from "./drag.js";
 import { initMotion, flip, flipBy, leave, enter, confirmButton, gatherHome, flight, CURVE, DUR, css } from "./motion.js";
@@ -818,7 +818,7 @@ function renderPool(fresh) {
     ...tags.map((t) => {
       const card = lib.byTag.get(t);
       const blocked = ratingBlocked(card.item, settings.rating);
-      const node = cardNode(card, assets, { flag: blocked ? { kind: "ban", text: "分級擋掉" } : null, src: carriedBy[t] ? "附帶" : null });
+      const node = eagerArt(cardNode(card, assets, { flag: blocked ? { kind: "ban", text: "分級擋掉" } : null, src: carriedBy[t] ? "附帶" : null }));
       if (t === fresh) node.classList.add("dropped");
       if (carriedBy[t]) node.title = `跟著「${zh(carriedBy[t])}」進來的`;
       if (clashing.has(t)) {

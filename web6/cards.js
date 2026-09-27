@@ -4,6 +4,7 @@
  */
 import { isCard, cardSuit, ratingTier, artFile, artSources, artUrl, applyArtSources, groupSeal, CARD_SUIT_INFO, CARD_SUITS } from "./card-art.js";
 import { el } from "./ui.js";
+import { DUR, CURVE, css, reducedMotion } from "./motion.js";
 
 export { CARD_SUIT_INFO, CARD_SUITS };
 
@@ -96,7 +97,30 @@ export function cardNode(card, assets, { tagName = "button", flag, src } = {}) {
 function artImg(sources) {
   const i = applyArtSources(el("img", { alt: "", decoding: "async", draggable: "false" }), sources);
   i.addEventListener("error", () => i.remove(), { once: true });
+  // 圖晚到的（新換上來的影子、捲進來的字盒、連線慢的時候）：淡進來，不要啪一下蓋上去。
+  // 本來就在快取裡的（60ms 內就到）直接出現 —— 不能一律先藏起來等 load，那會讓每次重畫都閃一格空白。
+  const born = performance.now();
+  i.addEventListener(
+    "load",
+    () => {
+      if (performance.now() - born > 60 && !reducedMotion()) i.animate([{ opacity: 0 }, { opacity: 1 }], { duration: DUR.short, easing: css(CURVE.out) });
+    },
+    { once: true }
+  );
   return i;
+}
+
+/**
+ * 會整塊重畫、又一直在畫面上的牌（卡池、合成池）：圖立刻載、同步解碼。
+ * 預設的 lazy＋async 是給上千張的字盒用的；這些牌每放一張、換一張試印就重畫一次，
+ * lazy 的新 <img> 要等版面排好才開始載，重畫後第一格畫面圖是空的 —— 整排牌閃一下。
+ */
+export function eagerArt(node) {
+  for (const img of node.querySelectorAll("img")) {
+    img.loading = "eager";
+    img.decoding = "sync";
+  }
+  return node;
 }
 
 /**

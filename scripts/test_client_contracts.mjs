@@ -1792,6 +1792,12 @@ const ALBUM_FIXTURE = [
       ok("撤回時撤掉的牌也分兩路（偏好卡牌回手上），影子都在同一刻做好、用 delay 錯開（不是 setTimeout 之後才飛）", fuse6.includes("if (hand) hand.receive(leaveHand);") && !fuse6.includes("if (seen) setTimeout(() => flyIn(t, r), 40 + i * 70);") && fuse6.includes("flyIn(l.t, l.rect, { delay, src: l.node, startRotate: l.rotate, startScale: l.scale || 1 });"));
       ok("從標籤長出來的影子是正常大小的牌、用 scale 縮放（不縮寬度，不然固定 px 的墨點會被放大好幾倍）", motion6c.includes("startScale = 1") && hand6.includes("node: makeNode(tag), rotate: 0, scale: 0.2"));
     }
+    {
+      const cards6b = readFileSync(join(ROOT, "web6/cards.js"), "utf8");
+      ok("整塊重畫的牌（卡池、影子、合成池）圖立刻載、同步解碼：重畫後第一格畫面不會整排空白", cards6b.includes("export function eagerArt(node)") && fuse6.includes("const node = eagerArt(cardNode(card, assets, { src: bed.carried[tag]") && fuse6.includes("const node = eagerArt(cardNode(card, assets, {}));") && app6.includes("const node = eagerArt(cardNode(card, assets, { flag: blocked"));
+      ok("晚到的圖淡進來（快取裡的直接出現，不先藏起來等 load）", cards6b.includes("if (performance.now() - born > 60 && !reducedMotion())"));
+      ok("剛加進手牌的那張，字盒上的「手」像橡皮章壓下來；本來就有的不重蓋", hand6.includes('n.classList.add("is-hand-stamp")') && hand6.includes('if (n.dataset.inHand !== "true" && !reduced())') && css6.includes("@keyframes hand-stamp"));
+    }
     ok("工具列鈕：沒牌直接進挑牌，有牌打開／收起托盤；選單和詳情也能加", hand6.includes("function fromButton()") && fuse6.includes("hand?.fromButton()") && app6.includes("hand?.fromButton()") && fuse6.includes('"加入偏好卡牌"') && app6.includes('"加入偏好卡牌"'));
   }
   ok("疊印台的規則鈕也是圖示", fuseHtml.includes('id="rules-btn" type="button" aria-label="規則"') && !fuseHtml.includes(">規則</button>"));

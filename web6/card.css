@@ -769,6 +769,31 @@ body[data-hand-edit="true"] :is(#case-grid, #lib-grid) .card[data-in-hand="true"
   content: none;
 }
 
+/* 剛加進手牌：「手」像橡皮章壓下來（跟字盒的「在池」同一個手感）。 */
+.card.is-hand-stamp[data-in-hand="true"]::before {
+  animation: hand-stamp var(--dur-long) var(--ease-settle);
+}
+
+@keyframes hand-stamp {
+  0% {
+    opacity: 0;
+    scale: 1.8;
+  }
+  55% {
+    opacity: 1;
+    scale: 0.9;
+  }
+  100% {
+    scale: 1;
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .card.is-hand-stamp[data-in-hand="true"]::before {
+    animation: none;
+  }
+}
+
 /* 疊印台的字盒：在池的牌右上角已經有「在池」，「手」排到它下面，不疊在一起。 */
 .case-grid .card[data-state="pinned"][data-in-hand="true"]::before {
   top: 22px;
