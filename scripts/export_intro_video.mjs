@@ -123,6 +123,8 @@ try {
       "-ss", String(FROM), "-t", String(TO - FROM), "-i", wav,
       "-map", "0:v", "-map", "1:a",
       "-c:v", "libx264", "-preset", "slow", "-crf", "16", "-pix_fmt", "yuv420p", "-profile:v", "high", "-r", String(FPS),
+      // 最響的那幾下（撞擊、鼓）會碰到 0 dBFS，壓縮成 AAC 之後可能破音：限到約 −1.5 dB。
+      "-af", "alimiter=limit=0.84:attack=2:release=60:level=false",
       "-c:a", "aac", "-b:a", "256k",
       "-shortest", "-movflags", "+faststart",
       OUT,
