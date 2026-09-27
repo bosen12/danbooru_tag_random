@@ -1932,6 +1932,11 @@ body[data-dragging="true"] .library[data-over="true"] {
   transform: none;
 }
 
+/* 底部那條「只抽牌／抽並生圖」浮出來時，提示浮在它上面，不要蓋住按鈕（手機上最明顯）。 */
+body:has(.go-float[data-show="true"]) .toast {
+  bottom: calc(var(--fav-h, 0px) + var(--space-md) + 3.25rem + var(--space-xs) + env(safe-area-inset-bottom));
+}
+
 /* 帶「復原」鈕的提示要點得到。 */
 .toast[data-show="true"][data-action="true"] {
   pointer-events: auto;
