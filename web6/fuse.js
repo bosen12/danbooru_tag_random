@@ -1590,6 +1590,49 @@ function requestRelations(events) {
 
 const REL_ZH = { carry: "附帶", echo: "呼應", clash: "相剋" };
 
+/**
+ * 牌在卡池（box）裡「排好之後」的位置，不含動畫。
+ * getBoundingClientRect 會把正在跑的 FLIP（讓位滑過去）、空白版的變形、落地那一下的縮放都算進去：
+ * 重畫後 16ms 量的時候牌多半還在半路，線就接到半路上、動畫結束後整條跑掉。offsetLeft/Top 不管 transform。
+ */
+function layoutRect(node, box) {
+  let x = 0;
+  let y = 0;
+  let e = node;
+  while (e && e !== box) {
+    x += e.offsetLeft;
+    y += e.offsetTop;
+    const parent = e.offsetParent;
+    if (parent && parent !== box) {
+      x -= parent.scrollLeft;
+      y -= parent.scrollTop;
+    }
+    e = parent;
+  }
+  if (e !== box) {
+    // 萬一牌不在 box 的 offsetParent 鏈上（版面結構改過）：退回舊的量法。
+    const r = node.getBoundingClientRect();
+    const b = box.getBoundingClientRect();
+    return { left: r.left - b.left, top: r.top - b.top, width: r.width, height: r.height };
+  }
+  return { left: x, top: y, width: node.offsetWidth, height: node.offsetHeight };
+}
+
+// 卡池大小變了但沒有重畫（托盤開合、右欄換寬、字型載入）：線要跟著重算，不然整批錯位。
+let relResize = null;
+function watchRelations() {
+  if (relResize || typeof ResizeObserver !== "function") return;
+  let last = "";
+  relResize = new ResizeObserver(([entry]) => {
+    const r = entry.contentRect;
+    const key = `${Math.round(r.width)}x${Math.round(r.height)}`;
+    if (key === last) return;
+    last = key;
+    if ($("registers").querySelector(".rel-layer")) requestRelations([]);
+  });
+  relResize.observe($("registers"));
+}
+
 function drawRelations(events = []) {
   const box = $("registers");
   box.querySelector(".rel-layer")?.remove();
@@ -1600,7 +1643,7 @@ function drawRelations(events = []) {
   const fresh = rels.filter((r) => !lastRelKeys.has(r.kind + "|" + r.a + "|" + r.b));
   lastRelKeys = keys;
   if (!rels.length) return;
-  const base = box.getBoundingClientRect();
+  watchRelations();
   const layer = el("div", { class: "rel-layer", "aria-hidden": "true" });
   const svg = document.createElementNS("http://www.w3.org/2000/svg", "svg");
   svg.setAttribute("width", String(box.scrollWidth));
@@ -1616,12 +1659,12 @@ function drawRelations(events = []) {
     const na = plateNode(r.a);
     const nb = plateNode(r.b);
     if (!na || !nb) return;
-    const ra = na.getBoundingClientRect();
-    const rb = nb.getBoundingClientRect();
-    const ax = ra.left + ra.width / 2 - base.left;
-    const bx = rb.left + rb.width / 2 - base.left;
-    const aTop = ra.top - base.top;
-    const bTop = rb.top - base.top;
+    const ra = layoutRect(na, box);
+    const rb = layoutRect(nb, box);
+    const ax = ra.left + ra.width / 2;
+    const bx = rb.left + rb.width / 2;
+    const aTop = ra.top;
+    const bTop = rb.top;
     let d;
     let mid;
     if (Math.abs(aTop - bTop) < 12) {
