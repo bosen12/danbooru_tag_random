@@ -457,6 +457,15 @@ button.card:active {
   display: none;
 }
 
+/* 收起來的那 300ms：外框在縮，裡面的東西還要看得到（被外框切掉、牌一張張沉下去）。 */
+.fav-hand.is-collapsing[data-open] :is(.fav-body, .fav-hint, .fav-pick) {
+  display: revert;
+}
+
+.fav-hand.is-collapsing[data-open] .fav-body {
+  display: block;
+}
+
 /* 收起來：只剩一顆標籤。 */
 .fav-hand[data-open="false"] {
   width: max-content;

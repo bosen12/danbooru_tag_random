@@ -33,7 +33,7 @@ import { HARD_BANNED, applyArtSources } from "./card-art.js";
 import { buildLibrary, createAssets, cardNode, setCardFlag, setEnterTarget, cardFacts, CARD_SUIT_INFO, CARD_SUITS, RATING_ZH } from "./cards.js";
 import { el, openSheet, anyOverlay, toast, ICONS } from "./ui.js";
 import { createDrag, inkRing } from "./drag.js";
-import { initMotion, flip, flipBy, leave, enter, confirmButton, gatherHome } from "./motion.js";
+import { initMotion, flip, flipBy, leave, enter, confirmButton, gatherHome, flight } from "./motion.js";
 import { createHand } from "./hand.js";
 import { createGenerator, comfyOnline, viewSrc, tabTitle, watchLink, LINK_LABEL } from "./gen.js";
 import { genSeed, mountSeedControl, seedUseButton } from "./seed-control.js";
@@ -437,20 +437,29 @@ function flyInto(tag, from) {
   // 合成池捲出畫面了（手機上從字盒底下、托盤出牌）：飛過去看起來像牌飛出螢幕。
   // 改成原地往合成池那個方向收進去，再說一聲、給一顆「看合成池」。
   if (to.bottom < 0 || to.top > window.innerHeight || !to.width) return tuckAway(tag, from, to.top < 0 ? -1 : 1);
-  const dx = from.left - to.left;
-  const dy = from.top - to.top;
-  const s = from.width / Math.max(1, to.width);
-  target.animate(
-    [
-      { transform: `translate(${dx}px, ${dy}px) scale(${s}) rotate(-6deg)`, opacity: 0.6 },
-      { transform: "translate(0, 0) scale(1.06) rotate(1deg)", opacity: 1, offset: 0.75 },
-      { transform: "none", opacity: 1 },
-    ],
-    { duration: 420, easing: "cubic-bezier(0.16, 1, 0.3, 1)" }
-  );
-  // 落定的那一刻散一圈墨（跟拖曳放下同一個效果）。
-  setTimeout(() => inkRing(target), 330);
+  // 飛的是一張影子；池裡那一格（牌＋×）先藏著，影子落地才一起出現。路上池子重畫（又放了一張、
+  // 帶進來的牌擠開位置）也一樣：renderPool 看 poolInbound 把新那格藏著，影子追的是新位置。
+  const ghost = target.cloneNode(true);
+  ghost.classList.remove("dropped", "is-related", "is-clashing");
+  poolInbound.add(tag);
+  target.closest(".pool-slot")?.style.setProperty("visibility", "hidden");
+  flight(ghost, from, () => poolNode(tag), {
+    onLand: () => {
+      poolInbound.delete(tag);
+      const n = poolNode(tag);
+      const slot = n?.closest(".pool-slot");
+      if (!n || !slot) return;
+      slot.style.visibility = "";
+      n.animate([{ scale: "1.04" }, { scale: "0.99" }, { scale: "1" }], { duration: 260, easing: "cubic-bezier(0.16, 1, 0.3, 1)" });
+      slot.querySelector(".pool-x")?.animate([{ opacity: 0, scale: "0.6" }, { opacity: 1, scale: "1" }], { duration: 200, delay: 60, easing: "cubic-bezier(0.16, 1, 0.3, 1)", fill: "backwards" });
+      // 落定的那一刻散一圈墨（跟拖曳放下同一個效果）。
+      inkRing(n);
+    },
+  });
 }
+
+// 正在飛進合成池的牌（影子還沒落地）：這段時間重畫出來的那一格先藏著。
+const poolInbound = new Set();
 
 /** 牌往合成池的方向（dir：-1 上、1 下）收進去：浮起一點、縮小、淡掉。 */
 function tuckAway(tag, from, dir) {
@@ -529,7 +538,7 @@ function pin(tag) {
   // 後果寫在池子底下，不是右下角的提示：發生在哪裡就說在哪裡，旁邊給「換回」。
   poolNote = gone.length ? replaceNote(tag, gone) : null;
   commitPins(tag);
-  leaving.forEach(liftOut);
+  leaving.forEach((l, i) => liftOut(l, i * 60));
   // 跟著進來的牌（implies）不是憑空出現：放的那張落定之後，一張接一張從底下彈上來。
   const carried = [...pool].filter((t) => t !== tag && !before.has(t));
   carried.forEach((t, i) => popCarried(t, 200 + i * 90));
@@ -597,36 +606,35 @@ const poolNode = (tag) => [...$("pool-well").querySelectorAll(".card")].find((n)
  * 被擠出池子的牌：回到字盒裡它的位置（跟疊印台一樣）。字盒裡看不到它就飛向字盒那一欄；
  * 字盒整個不在畫面上才原地掀開飄走。以前一律往下飄走，看不出牌去了哪裡。
  */
-function liftOut({ node, rect }) {
+function liftOut({ node, rect }, delay = 0) {
   if (matchMedia("(prefers-reduced-motion: reduce)").matches || !rect.width) return;
+  const tag = node.dataset.tag;
   const inView = (r) => r && r.width > 0 && r.bottom > 0 && r.top < innerHeight;
-  const home = (hand?.has(node.dataset.tag) && hand.nodeOf(node.dataset.tag)) || libCardNode(node.dataset.tag);
+  const homeNow = () => (hand?.has(tag) && hand.nodeOf(tag)) || libCardNode(tag);
+  const home = homeNow();
   let to = home && home.getBoundingClientRect();
-  if (!inView(to)) {
+  const goingHome = inView(to);
+  if (!goingHome) {
     const g = $("lib-grid").getBoundingClientRect();
     to = inView(g) ? { left: g.left + g.width / 2 - 20, top: Math.max(g.top, 0) + 20, width: 40 } : null;
   }
   if (to) {
+    // 偏好卡牌的牌回托盤：托盤那一格先藏著，影子落地才亮（hand.reveal）。
+    if (hand?.has(tag)) hand.arriveAt(tag, 1400);
     const ghost = node.cloneNode(true);
-    Object.assign(ghost.style, { position: "fixed", left: rect.left + "px", top: rect.top + "px", width: rect.width + "px", margin: "0", zIndex: "80", pointerEvents: "none" });
-    ghost.style.setProperty("--card-w", rect.width + "px");
-    document.body.append(ghost);
-    const dx = to.left - rect.left;
-    const dy = to.top - rect.top;
-    const s = to.width / rect.width;
-    ghost.animate(
-      [
-        { transform: "none", opacity: 1 },
-        { transform: "translate(0, -6px) scale(1.04) rotate(-2deg)", opacity: 1, offset: 0.14 },
-        { transform: `translate(${dx * 0.55}px, ${dy * 0.55 - 30}px) scale(${(1 + s) / 2}) rotate(-6deg)`, opacity: 1, offset: 0.6 },
-        { transform: `translate(${dx}px, ${dy}px) scale(${s})`, opacity: home ? 0.9 : 0 },
-      ],
-      { duration: 480, easing: "cubic-bezier(0.45, 0, 0.25, 1)", fill: "forwards" }
-    );
-    setTimeout(() => {
-      ghost.remove();
-      if (home?.isConnected) home.animate([{ transform: "none" }, { transform: "translateY(3px) scale(0.95)" }, { transform: "translateY(-2px) scale(1.02)" }, { transform: "none" }], { duration: 420, easing: "cubic-bezier(0.16, 1, 0.3, 1)" });
-    }, 490);
+    ghost.classList.remove("is-related", "is-clash", "is-clashing", "dropped");
+    // 追著落點飛：字盒捲動、托盤變寬都跟得上，落在那張牌上、壓一下。
+    flight(ghost, rect, goingHome ? () => (inView(homeNow()?.getBoundingClientRect()) ? homeNow() : to) : to, {
+      delay,
+      tilt: 5,
+      zIndex: 80,
+      endOpacity: goingHome ? 1 : 0,
+      onLand: () => {
+        if (hand?.has(tag)) hand.reveal(tag);
+        const h = goingHome && homeNow();
+        if (h?.isConnected && !h.closest(".fav-hand")) h.animate([{ transform: "none" }, { transform: "translateY(3px) scale(0.96)" }, { transform: "translateY(-1px) scale(1.01)" }, { transform: "none" }], { duration: 320, easing: "cubic-bezier(0.16, 1, 0.3, 1)" });
+      },
+    });
     return;
   }
   const ghost = node.cloneNode(true);
@@ -658,11 +666,13 @@ function unpin(tag, { viaDrag = false } = {}) {
   pool.delete(tag);
   for (const b of lex.byTag.get(tag)?.bind || []) pool.delete(b);
   const gone = [...before].filter((t) => !pool.has(t) && !(viaDrag && t === tag));
-  for (const t of [...before].filter((x) => !pool.has(x))) if (hand?.has(t)) hand.arriveAt(t, viaDrag && t === tag ? 0 : 520);
+  // 拖回托盤的那張 drag.js 自己落下去，托盤那格立刻亮；其他的由 liftOut 的影子落地才亮。
+  if (viaDrag && hand?.has(tag)) hand.arriveAt(tag, 0);
   // 以前按 × 牌就不見了：現在先記下位置，重畫之後從原地飛回字盒。
+  // 影子跟重畫在同一個 task 裡做好（不用 setTimeout）：中間不會有一格牌不見了的空白。
   const leaving = gone.map(poolNode).filter(Boolean).map((n) => ({ node: n, rect: n.getBoundingClientRect() }));
   commitPins();
-  leaving.forEach((l, i) => setTimeout(() => liftOut(l), i * 60));
+  leaving.forEach((l, i) => liftOut(l, i * 60));
 }
 
 /** 丟進廢字簍。viaDrag：拖進去的那張 drag.js 已經演過被吸進去，這裡不重演。 */
@@ -801,7 +811,7 @@ function renderPool(fresh) {
       drag.attach(node, { tag: t, from: "pool" });
       return el(
         "div",
-        { class: "pool-slot" },
+        { class: "pool-slot", style: poolInbound.has(t) ? "visibility: hidden" : undefined },
         node,
         el("button", { class: "pool-x", type: "button", "aria-label": `把「${card.zh}」拿出合成池`, onclick: () => unpin(t) }, "×")
       );

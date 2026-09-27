@@ -23,6 +23,8 @@
  *   onRemoved(t, undo)  用手拿掉了一張（×、Delete、選單）：房間跳一個帶「復原」的提示，undo() 放回原位
  *   decorate(n,t)  托盤上的牌做好之後給房間掛東西（拖曳）
  */
+import { flight, CURVE, css } from "./motion.js";
+
 const EASE = "cubic-bezier(0.16, 1, 0.3, 1)";
 const reduced = () => matchMedia("(prefers-reduced-motion: reduce)").matches;
 const ICON =
@@ -441,11 +443,71 @@ export function createHand({
       editing = false;
       document.body.dataset.handEdit = "false";
     }
-    layout(false);
-    if (open && !was && !reduced()) {
-      body.animate([{ opacity: 0, transform: "translateY(14px)" }, { opacity: 1, transform: "none" }], { duration: 280, easing: EASE });
-    }
+    morphTo(() => layout(false), was !== open);
     onChange();
+  }
+
+  /**
+   * 托盤打開／收起的變形：量變之前、變之後的大小，外框從一個大小長（縮）到另一個，
+   * 牌跟著浮上來（沉下去）。收起來的時候牌還要看得到一下，所以先留著 .is-collapsing。
+   * 從完全藏著（沒有牌）變出來：整個托盤從底下浮上來。
+   */
+  function morphTo(change, changed) {
+    const wasHidden = el.dataset.hidden === "true";
+    const before = !wasHidden ? el.getBoundingClientRect() : null;
+    change();
+    if (!changed || reduced()) return;
+    const after = el.dataset.hidden === "true" ? null : el.getBoundingClientRect();
+    for (const a of el.getAnimations()) if (a.id === "fav-morph") a.cancel();
+    if (!after) return;
+    if (!before) {
+      el.animate([{ opacity: 0, translate: "-50% 16px" }, { opacity: 1, translate: "-50% 0" }], { duration: 320, easing: css(CURVE.out), id: "fav-morph" });
+      riseCards(80);
+      return;
+    }
+    const closing = !open;
+    if (closing) el.classList.add("is-collapsing");
+    el.style.overflow = "hidden";
+    const a = el.animate(
+      [
+        // 圓角只到標籤自己的圓（高度的一半），不要用 999px：一路插值過去，托盤中途會變成膠囊把牌切成橢圓。
+        { width: before.width + "px", height: before.height + "px", borderRadius: (closing ? 16 : before.height / 2) + "px" },
+        { width: after.width + "px", height: after.height + "px", borderRadius: (closing ? after.height / 2 : 16) + "px" },
+      ],
+      { duration: closing ? 300 : 360, easing: css(closing ? CURVE.inOut : CURVE.out), id: "fav-morph" }
+    );
+    // 沉下去的牌停在看不見的地方，等外框縮完、托盤真的收起來才一起復原（不然會閃回來一下）。
+    const sunk = [];
+    const done = () => {
+      el.classList.remove("is-collapsing");
+      el.style.overflow = "";
+      for (const s of sunk) s.cancel();
+    };
+    a.onfinish = done;
+    a.oncancel = done;
+    if (closing) {
+      // 由外往內一張一張沉下去（最外面的先走）。
+      const cards = [...fan.querySelectorAll(".fav-card")];
+      const mid = (cards.length - 1) / 2;
+      cards.forEach((c, i) => {
+        const d = Math.abs(i - mid);
+        sunk.push(c.animate([{ translate: "0 0", opacity: 1 }, { translate: "0 22px", opacity: 0 }], { duration: 180, delay: Math.round((mid - d) * 18), easing: css(CURVE.exit), fill: "forwards" }));
+      });
+    } else riseCards(90);
+  }
+
+  /** 牌從底下一張一張浮上來（由中間往兩旁）。 */
+  function riseCards(delay0) {
+    const cards = [...fan.querySelectorAll(".fav-card")];
+    const mid = (cards.length - 1) / 2;
+    cards.forEach((c, i) => {
+      c.animate([{ translate: "0 20px", opacity: 0 }, { translate: "0 0", opacity: 1 }], {
+        duration: 300,
+        delay: delay0 + Math.round(Math.abs(i - mid) * 26),
+        easing: css(CURVE.out),
+        fill: "backwards",
+      });
+    });
   }
 
   /** 工具列上的「偏好卡牌」：沒牌就直接進挑牌；有牌就打開／收起托盤。 */
@@ -516,47 +578,19 @@ export function createHand({
 
   function flyInto(slot, from) {
     const card = slot.querySelector(".fav-card");
-    // 量最後的落點：先關掉轉場讓 slot 直接到目標位置，量完再開回來。
-    const tr = slot.style.transition;
-    slot.style.transition = "none";
-    const to = card.getBoundingClientRect();
-    slot.style.transition = tr;
-    if (!to.width) return;
     const f = card.cloneNode(true);
     f.classList.remove("fav-card");
-    Object.assign(f.style, {
-      position: "fixed",
-      left: from.left + "px",
-      top: from.top + "px",
-      width: from.width + "px",
-      margin: "0",
-      zIndex: "90",
-      pointerEvents: "none",
-      // 起飛時跟字盒那張一樣大：字級照寬度比例放回去（手機上托盤的牌是縮過的）。
-      fontSize: (parseFloat(getComputedStyle(card).fontSize) * from.width) / (card.offsetWidth || from.width) + "px",
-    });
-    f.style.setProperty("--card-w", from.width + "px");
-    document.body.append(f);
+    // 起飛時跟字盒那張一樣大：字級照寬度比例放回去（手機上托盤的牌是縮過的）。
+    f.style.fontSize = (parseFloat(getComputedStyle(card).fontSize) * from.width) / (card.offsetWidth || from.width) + "px";
     card.style.visibility = "hidden";
-    const dx = to.left - from.left;
-    const dy = to.top - from.top;
-    const sc = to.width / from.width;
-    const a = f.animate(
-      [
-        { transform: "none", boxShadow: "var(--shadow-card)" },
-        { transform: `translate(${dx * 0.55}px, ${dy * 0.55 - 36}px) scale(${(1 + sc) / 2 + 0.06}) rotate(-3deg)`, boxShadow: "0 18px 30px var(--color-shade)", offset: 0.55 },
-        { transform: `translate(${dx}px, ${dy}px) scale(${sc})`, boxShadow: "var(--shadow-card)" },
-      ],
-      { duration: 460, easing: "cubic-bezier(0.45, 0, 0.25, 1)", fill: "forwards" }
-    );
-    const land = () => {
-      if (!f.isConnected) return;
-      f.remove();
-      card.style.visibility = "";
-      card.animate([{ translate: "0 3px" }, { translate: "0 -2px" }, { translate: "0 0" }], { duration: 240, easing: EASE });
-    };
-    a.onfinish = land;
-    setTimeout(land, 640);
+    // 追著落點飛：托盤正在變寬、整排往兩旁讓，落點一路在動，影子跟著它落下。
+    flight(f, from, () => (card.isConnected ? card : null), {
+      tilt: -4,
+      onLand: () => {
+        card.style.visibility = "";
+        if (!reduced()) card.animate([{ translate: "0 3px", scale: "0.98" }, { translate: "0 -1px", scale: "1.01" }, { translate: "0 0", scale: "1" }], { duration: 240, easing: EASE });
+      },
+    });
   }
 
   /** 從手牌拿掉（×、Delete、拖回字盒、被封鎖、挑牌時再點一次）。 */
@@ -607,13 +641,14 @@ export function createHand({
 
   function toggleEdit(force) {
     editing = force === undefined ? !editing : !!force;
-    if (editing && !open) {
+    const opening = editing && !open;
+    if (opening) {
       open = true;
       write(key + ".open", true);
     }
     document.body.dataset.handEdit = editing ? "true" : "false";
     hot = -1;
-    layout(true);
+    morphTo(() => layout(true), opening);
     onChange();
   }
 
@@ -624,13 +659,17 @@ export function createHand({
   function arriveAt(tag, delay = 480) {
     pendingArrive.add(tag);
     slots.get(tag)?.classList.add("is-arriving");
-    setTimeout(() => {
-      if (!pendingArrive.delete(tag)) return;
-      const s = slots.get(tag);
-      if (!s) return;
-      s.classList.remove("is-arriving");
-      if (!reduced()) s.querySelector(".fav-card").animate([{ translate: "0 4px" }, { translate: "0 -2px" }, { translate: "0 0" }], { duration: 260, easing: EASE });
-    }, delay);
+    // delay 是保險：影子落地時房間會先呼叫 reveal()；沒呼叫（影子沒飛）時間到也會亮。
+    setTimeout(() => reveal(tag), delay);
+  }
+
+  /** 飛回來的影子落地了：那張亮出來，輕輕壓一下。 */
+  function reveal(tag) {
+    if (!pendingArrive.delete(tag)) return;
+    const s = slots.get(tag);
+    if (!s) return;
+    s.classList.remove("is-arriving");
+    if (!reduced()) s.querySelector(".fav-card").animate([{ translate: "0 3px", scale: "0.98" }, { translate: "0 -1px", scale: "1.01" }, { translate: "0 0", scale: "1" }], { duration: 240, easing: EASE });
   }
 
   /** 字盒上標出哪幾張在手牌裡（root 底下的 .card[data-tag]）。 */
@@ -676,6 +715,7 @@ export function createHand({
     fromButton,
     update: () => layout(true),
     arriveAt,
+    reveal,
     mark,
     /** 托盤上那張牌（收起來、沒擺出來就 null）：房間拿它當飛回來的落點。 */
     nodeOf: (t) => (open && slots.get(t)?.isConnected ? slots.get(t).querySelector(".fav-card") : null),

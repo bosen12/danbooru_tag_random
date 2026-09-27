@@ -11,6 +11,156 @@ const EASE = "cubic-bezier(0.16, 1, 0.3, 1)";
 
 export const reducedMotion = () => matchMedia("(prefers-reduced-motion: reduce)").matches;
 
+/* ---------- 動態詞彙：兩個房間的曲線與時間（跟 tokens.css 的 --ease-*／--dur-* 同一套） ---------- */
+
+/**
+ * out     進場、落定、回彈之後的收尾：一開始就快、長長地停下來。
+ * in      離場（長的、≥ 300ms）：慢慢起步、越走越快，走的時候不拖泥帶水。
+ * exit    短的離場（< 250ms）：in 太陡，短時間裡前半段幾乎不動、最後一下才消失；這條一開始就在走。
+ * inOut   原地的狀態轉換（展開、收合）。
+ * travel  牌飛越畫面：從靜止加速（不會瞬間移位），大半段在減速、輕輕落下。
+ * settle  落地那一下的回彈（略過頭再回來）。
+ */
+export const CURVE = {
+  out: [0.16, 1, 0.3, 1],
+  in: [0.7, 0, 0.84, 0],
+  exit: [0.4, 0, 1, 1],
+  inOut: [0.65, 0, 0.35, 1],
+  travel: [0.22, 0.06, 0.08, 1],
+  settle: [0.34, 1.4, 0.64, 1],
+};
+export const DUR = { micro: 120, short: 220, medium: 320, long: 420 };
+export const css = (c) => `cubic-bezier(${c.join(", ")})`;
+
+/** cubic-bezier 曲線 → 函式 t(0..1) → 進度。JS 自己算位置的動畫（飛行）跟 CSS 用同一條曲線。 */
+export function bezier([x1, y1, x2, y2]) {
+  const cx = 3 * x1;
+  const bx = 3 * (x2 - x1) - cx;
+  const ax = 1 - cx - bx;
+  const cy = 3 * y1;
+  const by = 3 * (y2 - y1) - cy;
+  const ay = 1 - cy - by;
+  const sx = (t) => ((ax * t + bx) * t + cx) * t;
+  const sy = (t) => ((ay * t + by) * t + cy) * t;
+  const dx = (t) => (3 * ax * t + 2 * bx) * t + cx;
+  return (x) => {
+    if (x <= 0) return 0;
+    if (x >= 1) return 1;
+    let t = x;
+    for (let i = 0; i < 8; i++) {
+      const e = sx(t) - x;
+      if (Math.abs(e) < 1e-5) return sy(t);
+      const d = dx(t);
+      if (Math.abs(d) < 1e-6) break;
+      t -= e / d;
+    }
+    let lo = 0;
+    let hi = 1;
+    t = x;
+    for (let i = 0; i < 24; i++) {
+      const v = sx(t);
+      if (Math.abs(v - x) < 1e-5) break;
+      if (v < x) lo = t;
+      else hi = t;
+      t = (lo + hi) / 2;
+    }
+    return sy(t);
+  };
+}
+
+/** 飛行要多久：照距離，近的快、遠的慢一點（300px 約 350ms，1000px 約 500ms）。 */
+export function travelTime(dist) {
+  return Math.round(Math.max(320, Math.min(540, 280 + dist * 0.22)));
+}
+
+/**
+ * 牌飛過去（會追落點）：影子 ghost 從 from 飛到 target() 「現在」的位置。
+ * 每一格重量一次落點，所以路上版面動了（整列重排、托盤變寬、捲動）也剛好落在牌上，
+ * 不會飛到舊位置、落地再跳一下。路徑往上拱成弧、途中微微轉、中段稍微放大（像被拿起來），
+ * 兩端都是正的、原尺寸。ghost 由呼叫端做好（通常是那張牌的複製），落地後這裡拿掉。
+ *
+ * from：{ left, top, width[, height] }。target：() => Element 或 rect（拿不到就沿用上一次的）。
+ * 選項：duration（預設照距離）、delay、curve、arc（弧高 px）、tilt（最大轉角）、
+ *       endScale（落地大小／落點寬）、endOpacity、zIndex、onLand。回傳 { cancel }。
+ */
+export function flight(ghost, from, target, opts = {}) {
+  const { delay = 0, curve = CURVE.travel, arc = 34, tilt = -5, lift = 0.05, endScale = 1, endOpacity = 1, zIndex = 90, onLand = null } = opts;
+  const fh = from.height || from.width * 1.4625;
+  Object.assign(ghost.style, {
+    position: "fixed",
+    left: from.left + "px",
+    top: from.top + "px",
+    width: from.width + "px",
+    margin: "0",
+    zIndex: String(zIndex),
+    pointerEvents: "none",
+    transformOrigin: "50% 50%",
+    willChange: "transform, opacity",
+  });
+  ghost.style.setProperty("--card-w", from.width + "px");
+  ghost.setAttribute("aria-hidden", "true");
+  let last = null;
+  const resolve = () => {
+    const n = typeof target === "function" ? target() : target;
+    const r = n && (typeof n.getBoundingClientRect === "function" ? (n.isConnected ? n.getBoundingClientRect() : null) : n);
+    if (r && r.width) last = { left: r.left, top: r.top, width: r.width, height: r.height || r.width * 1.4625 };
+    return last;
+  };
+  const first = resolve() || { left: from.left, top: from.top, width: from.width, height: fh };
+  const fcx = from.left + from.width / 2;
+  const fcy = from.top + fh / 2;
+  const duration = opts.duration || travelTime(Math.hypot(first.left + first.width / 2 - fcx, first.top + first.height / 2 - fcy));
+  const ease = bezier(curve);
+  let done = false;
+  let raf = 0;
+  let t0 = null;
+  // 瞄準點：跟著落點走但有阻尼（落點突然跳一大段，影子不會跟著瞬移），最後一段完全換成真的落點，
+  // 所以一定剛好落在牌上。
+  let aim = { ...first };
+  let lastNow = null;
+  const finish = () => {
+    if (done) return;
+    done = true;
+    cancelAnimationFrame(raf);
+    ghost.remove();
+    if (onLand) onLand();
+  };
+  const paint = (p, dt = 16) => {
+    const e = ease(p);
+    const raw = resolve() || first;
+    const k = 1 - Math.exp(-dt / 70);
+    for (const key of ["left", "top", "width", "height"]) aim[key] += (raw[key] - aim[key]) * k;
+    const w = e * e * e * e;
+    const to = {};
+    for (const key of ["left", "top", "width", "height"]) to[key] = aim[key] + (raw[key] - aim[key]) * w;
+    const tcx = to.left + to.width / 2;
+    const tcy = to.top + to.height / 2;
+    const bump = Math.sin(Math.PI * p);
+    const x = fcx + (tcx - fcx) * e - fcx;
+    const y = fcy + (tcy - fcy) * e - arc * bump - fcy;
+    const s = (1 + ((to.width * endScale) / from.width - 1) * e) * (1 + lift * bump);
+    ghost.style.transform = `translate(${x.toFixed(2)}px, ${y.toFixed(2)}px) rotate(${(tilt * bump).toFixed(2)}deg) scale(${s.toFixed(4)})`;
+    // 影子跟著高度：飛到弧頂最深最散，落地前收回貼著桌面的那一層。
+    ghost.style.boxShadow = `0 1px 0 var(--color-shine) inset, 0 ${(6 + 18 * bump).toFixed(1)}px ${(14 + 22 * bump).toFixed(1)}px var(--color-shade)`;
+    if (endOpacity !== 1) ghost.style.opacity = String(1 + (endOpacity - 1) * Math.max(0, (e - 0.6) / 0.4));
+  };
+  paint(0);
+  document.body.append(ghost);
+  const frame = (now) => {
+    if (done) return;
+    if (t0 === null) t0 = now + delay;
+    const p = Math.max(0, Math.min(1, (now - t0) / duration));
+    paint(p, lastNow === null ? 16 : Math.max(1, now - lastNow));
+    lastNow = now;
+    if (p >= 1) return finish();
+    raf = requestAnimationFrame(frame);
+  };
+  raf = requestAnimationFrame(frame);
+  // 分頁在背景時 rAF 不跑：時間到了直接落地，不會卡一張影子在畫面上。
+  setTimeout(finish, delay + duration + 300);
+  return { cancel: finish, duration };
+}
+
 /* ---------- 分段選項：選到的那一格底下有一塊會滑的底 ---------- */
 
 const thumbAt = new Map();
@@ -176,7 +326,7 @@ export function flipBy(container, selector, key, mutate, { duration = 320, alias
  * （字盒不在畫面上）：那就疊好之後原地淡掉。cls：飛行影子要加的 class（疊印台是 "flying"）。
  * 回傳整段要多久（毫秒），呼叫端用來排「字盒收下」那一下。
  */
-export function gatherHome(snaps, pile, home, { cls = "", duration = 640 } = {}) {
+export function gatherHome(snaps, pile, home, { cls = "", duration = 560 } = {}) {
   if (reducedMotion() || !snaps.length || !pile) return 0;
   const n = snaps.length;
   snaps.forEach((snap, i) => {
@@ -196,10 +346,14 @@ export function gatherHome(snaps, pile, home, { cls = "", duration = 640 } = {})
     const py = pile.y - cy - i * 1.2;
     const rot = k * 3;
     const s1 = Math.min(1, 96 / r.width);
+    // 兩段各用各的曲線（整段只給一條曲線會把兩段一起扭曲）：
+    // 聚攏＝減速停進那一疊（out，視覺上大約 110ms 就疊好）；收走＝帶一點初速離開、進字盒前放慢。
+    // 中間不另外停：out 的尾巴本身就是那一拍「疊好了」。
     const frames = [
-      { transform: "none", opacity: 1 },
-      { transform: `translate(${px}px, ${py}px) scale(${s1}) rotate(${rot}deg)`, opacity: 1, offset: 0.42 },
-      { transform: `translate(${px}px, ${py - 8}px) scale(${s1 * 1.03}) rotate(${rot}deg)`, opacity: 1, offset: 0.52 },
+      { transform: "none", opacity: 1, easing: css(CURVE.out) },
+      { transform: `translate(${px}px, ${py}px) scale(${s1}) rotate(${rot}deg)`, opacity: 1, offset: 0.3, easing: css([0.3, 0.1, 0.4, 1]) },
+      // 飛的路上是實的，快進字盒才淡掉（只寫 opacity：transform 照上下兩格接著走）。
+      { opacity: 1, offset: 0.78 },
     ];
     if (home) {
       frames.push({ transform: `translate(${home.x - cx}px, ${home.y - cy}px) scale(${s1 * 0.35}) rotate(${rot - 12}deg)`, opacity: 0 });
@@ -208,7 +362,7 @@ export function gatherHome(snaps, pile, home, { cls = "", duration = 640 } = {})
     }
     // 聚攏那段各自出發（最多差 80ms），之後同一時間一起走。
     const delay = Math.min(80, i * 14);
-    g.animate(frames, { duration: duration - delay, delay, easing: "cubic-bezier(0.45, 0, 0.25, 1)", fill: "both" });
+    g.animate(frames, { duration: duration - delay, delay, easing: "linear", fill: "both" });
     setTimeout(() => g.remove(), duration + 40);
   });
   return duration;

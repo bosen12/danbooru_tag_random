@@ -1673,7 +1673,7 @@ const ALBUM_FIXTURE = [
   ok("撤下成品／從繩上撤下：縮掉、旁邊讓位，五秒內可以復原", ui6.includes("action = null") && app6.includes('toast("撤下了一張", { action: { label: "復原"') && fuse6.includes('toast("從繩上撤下了一張"') && fuse6.includes("lineSeen?.delete(p.id);"));
   ok("墨池：複製 POS 按鈕自己說已複製；同種子重印讓位＋進場；收起的牌先收再藏；換花色發牌", app6.includes("confirmButton(btn)") && app6.includes("flip($(\"wall\"), () => $(\"wall\").prepend(node));") && app6.includes("if (toggle.getAttribute(\"aria-expanded\") === \"false\") box.hidden = true;") && app6.includes("dealLibrary = true;"));
   ok("疊印台拿下／撤回／清版：牌飛回字盒（不再原地往上飄走），撤回的牌從字盒飛回來", fuse6.includes("function flyHome(snap, delay = 0)") && fuse6.includes("snaps.forEach((s, i) => flyHome(s, i * 60));") && fuse6.includes("setTimeout(() => flyIn(t, r), 40 + i * 70)"));
-  ok("墨池被擠掉的牌也飛回字盒", app6.includes("|| libCardNode(node.dataset.tag);"));
+  ok("墨池被擠掉的牌也飛回字盒", app6.includes("const homeNow = () => (hand?.has(tag) && hand.nodeOf(tag)) || libCardNode(tag);") && app6.includes("leaving.forEach((l, i) => liftOut(l, i * 60));"));
   {
     const m = fuse6.replace(/\r\n/g, "\n").match(/const STARTERS = (\[[\s\S]*?\n\]);/);
     const starters = m ? eval(m[1]) : [];
@@ -1700,7 +1700,7 @@ const ALBUM_FIXTURE = [
     const css6 = readFileSync(join(ROOT, "web6/card.css"), "utf8").replace(/\r\n/g, "\n");
     ok("偏好卡牌：共用 hand.js，最多十張，兩個房間各存一份", hand6.includes("export function createHand(") && hand6.includes("max = 10") && app6.includes('key: "mochi.hand.v1"') && fuse6.includes('key: "mochi.fuse.hand.v1"'));
     ok("偏好卡牌鈕：墨池在只抽牌左邊、疊印台在撤回左邊", fuseHtml6.indexOf('id="hand-btn"') >= 0 && fuseHtml6.indexOf('id="hand-btn"') < fuseHtml6.indexOf('id="undo"') && app6.indexOf("hand-btn") < app6.indexOf('"只抽牌"'));
-    ok("已經在卡池的不擺在托盤上；從卡池拿下來飛回托盤、不回字盒", hand6.includes("tags.filter((t) => !inPool(t))") && fuse6.includes("(hand?.has(tag) && hand.nodeOf(tag)) || caseCard(tag)") && app6.includes("(hand?.has(node.dataset.tag) && hand.nodeOf(node.dataset.tag)) || libCardNode"));
+    ok("已經在卡池的不擺在托盤上；從卡池拿下來飛回托盤、不回字盒", hand6.includes("tags.filter((t) => !inPool(t))") && fuse6.includes("(hand?.has(tag) && hand.nodeOf(tag)) || caseCard(tag)") && app6.includes("const homeNow = () => (hand?.has(tag) && hand.nodeOf(tag)) || libCardNode(tag);"));
     ok("挑牌模式：字盒點一下加、再點一下拿掉；托盤可以拖進拖出", fuse6.includes("if (hand?.editing) hand.toggle(card.tag") && app6.includes("if (hand?.editing) return void hand.toggle(card.tag") && fuse6.includes('{ id: "hand", el: hand?.el') && app6.includes('{ id: "hand", el: hand?.el'));
     ok("托盤的牌跟字盒同一張：量字盒那張的寬度和字級，圖立刻載", hand6.includes("n?.offsetWidth") && hand6.includes('img.loading = "eager"') && fuse6.includes('sample: () => $("case-grid")?.querySelector(".card")') && app6.includes('sample: () => $("lib-grid")?.querySelector(".card")') && !/\n\.fav-card \{[^}]*box-shadow/.test(css6));
     {
@@ -1736,6 +1736,18 @@ const ALBUM_FIXTURE = [
       ok("疊印台牌的選單：兩邊都放不下（手機）就開在牌的下面／上面，不蓋住那張牌", fuse6.includes('pop.dataset.side = below ? "below" : "above";') && fuseCss6.includes("@keyframes pop-in-below") && fuseCss6.includes('.pop:is([data-side="below"], [data-side="above"])::before'));
       ok("疊印台字盒換花色、換小分類：捲回最上面、前二十張依序發進來；放牌、打字重畫不發", fuse6.includes("let dealCase = false;") && fuse6.includes("const deal = dealCase;") && (fuse6.match(/dealCase = true;/g) || []).length === 2);
       ok("手機上卡池的說明自己一行，不被按鈕擠成好幾行", /@media \(max-width: 40rem\) \{\n  \.plate-sub \{\n    grid-row: 2;/.test(fuseCss6));
+    }
+    {
+      const motion6 = readFileSync(join(ROOT, "web6/motion.js"), "utf8");
+      const { bezier, CURVE, travelTime } = await import(pathToFileURL(join(ROOT, "web6/motion.js")).href);
+      const ease = bezier([0.25, 0.1, 0.25, 1]);
+      ok("動態詞彙：JS 的曲線跟 CSS 一樣（bezier 解出來的 ease 在 0.5 是 0.802），飛行曲線從靜止起步、不瞬移", Math.abs(ease(0.5) - 0.8024) < 0.002 && bezier(CURVE.travel)(0.055) < 0.08 && bezier(CURVE.travel)(0.5) > 0.75 && CURVE.exit && travelTime(300) < travelTime(1000));
+      ok("牌飛過去會追落點（每格重量）、有阻尼、影子跟著高度", motion6.includes("export function flight(ghost, from, target, opts = {})") && motion6.includes("const w = e * e * e * e;") && motion6.includes("ghost.style.boxShadow"));
+      ok("疊印台放牌：影子追落點，飛的路上版重畫出來的那張也藏著（不會出現兩張）", fuse6.includes("flight(ghost, from, () => plateNode(tag)") && fuse6.includes('if (inbound.has(tag)) node.style.visibility = "hidden";'));
+      ok("墨池放牌：影子追落點，池裡那一格（牌＋×）落地才一起出現", app6.includes("flight(ghost, from, () => poolNode(tag)") && app6.includes('style: poolInbound.has(t) ? "visibility: hidden" : undefined'));
+      ok("拿下來飛回托盤：托盤那格等影子落地才亮（reveal），不是猜一個固定時間", hand6.includes("function reveal(tag)") && fuse6.includes("hand.reveal(tag)") && app6.includes("hand.reveal(tag)") && hand6.includes("flight(f, from,"));
+      ok("清版：疊在牌自己的中心、兩段各用各的曲線，「空白的版」等那一疊離開才浮上來", motion6.includes('easing: "linear", fill: "both"') && fuse6.includes("cs.reduce((a, c) => a + c.x, 0)") && fuse6.includes("delay: Math.round(ms * 0.58),"));
+      ok("托盤收起／打開有變形（外框縮成標籤、牌由外往內沉下去；打開由中間往兩旁浮上來）", hand6.includes("function morphTo(change, changed)") && hand6.includes("function riseCards(delay0)") && css6.includes(".fav-hand.is-collapsing[data-open]"));
     }
     ok("工具列鈕：沒牌直接進挑牌，有牌打開／收起托盤；選單和詳情也能加", hand6.includes("function fromButton()") && fuse6.includes("hand?.fromButton()") && app6.includes("hand?.fromButton()") && fuse6.includes('"加入偏好卡牌"') && app6.includes('"加入偏好卡牌"'));
   }

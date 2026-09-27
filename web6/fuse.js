@@ -34,7 +34,7 @@ import { initWorkflow, currentWorkflowId, wfHandleKeys } from "./workflow.js";
 import { HARD_BANNED, applyArtSources } from "./card-art.js";
 import { buildLibrary, createAssets, cardNode, cardFacts, setEnterTarget, CARD_SUIT_INFO, CARD_SUITS, RATING_ZH, ERA_ZH } from "./cards.js";
 import { el, openSheet, anyOverlay, toast } from "./ui.js";
-import { initMotion, flip, flipBy, leave, gatherHome } from "./motion.js";
+import { initMotion, flip, flipBy, leave, gatherHome, flight } from "./motion.js";
 import { createHand } from "./hand.js";
 import { createDrag, inkRing } from "./drag.js";
 import { createGenerator, comfyOnline, viewSrc, tabTitle, watchLink, LINK_LABEL } from "./gen.js";
@@ -342,6 +342,8 @@ function place(tag, sourceEl, { viaDrag = false } = {}) {
   const { bed: next, events } = placeCard(bed, tag, deps());
   if (!events.length) return;
   const leaving = events.filter((e) => e.kind === "replace").map((e) => plateNode(e.out)).filter(Boolean).map(snapshot);
+  // 被擠掉的牌如果是偏好卡牌：托盤先藏著那一格，影子飛回去落地才亮。
+  for (const e of events) if (e.kind === "replace" && hand?.has(e.out)) hand.arriveAt(e.out, 1200);
   commit(next, `放上「${zh(tag)}」`, events);
   const carried = events.filter((e) => e.kind === "carry").map((e) => e.tag);
   const settle = (lag) => {
@@ -385,7 +387,8 @@ function place(tag, sourceEl, { viaDrag = false } = {}) {
 function remove(tag, { viaDrag = false } = {}) {
   if (!bed.pins.includes(tag)) return;
   const { bed: next, events } = removeCard(bed, tag);
-  for (const t of events[0]?.tags || [tag]) if (hand?.has(t)) hand.arriveAt(t, viaDrag && t === tag ? 0 : 520);
+  // 偏好卡牌裡的牌：托盤先留好位置藏著，影子落地（flyHome 的 onLand）才亮；拖回去的立刻亮。
+  for (const t of events[0]?.tags || [tag]) if (hand?.has(t)) hand.arriveAt(t, viaDrag && t === tag ? 0 : 1200);
   const snaps = (events[0]?.tags || [tag]).filter((t) => !(viaDrag && t === tag)).map((t) => plateNode(t)).filter(Boolean).map(snapshot);
   commit(next, `拿下「${zh(tag)}」`, events);
   snaps.forEach((s, i) => flyHome(s, i * 60));
@@ -451,8 +454,17 @@ function clearBed() {
   const tags = snaps.map((s) => s.node.dataset.tag);
   for (const t of tags) if (hand?.has(t)) hand.arriveAt(t, 700);
   commit(emptyBed(), "清版", []);
-  // 清版：先把版上的牌掃成一疊（卡池中間），整疊一起收回字盒；字盒裡看得到的那幾張依序輕輕收下。
-  sweepHome(snaps, tags);
+  // 清版：先把版上的牌掃成一疊（它們自己的中心），整疊一起收回字盒；字盒裡看得到的那幾張依序輕輕收下。
+  const ms = sweepHome(snaps, tags);
+  // 「空白的版」等那一疊離開才浮上來：不要一按清版底下就瞬間換成起手組、牌還飄在上面。
+  if (ms && !reduced()) {
+    $("registers").animate([{ opacity: 0, transform: "translateY(8px)" }, { opacity: 1, transform: "none" }], {
+      duration: 360,
+      delay: Math.round(ms * 0.58),
+      easing: "cubic-bezier(0.16, 1, 0.3, 1)",
+      fill: "backwards",
+    });
+  }
   sfx.lift();
   announce("清版了。按撤回可以拿回來");
 }
@@ -1327,6 +1339,7 @@ function plateCard(tag) {
   const node = cardNode(card, assets, { src: bed.carried[tag] ? "附帶" : null });
   const take = takeOf(tag);
   node.classList.add("plate-card");
+  if (inbound.has(tag)) node.style.visibility = "hidden";
   node.dataset.ink = take === trials.length ? "full" : take === 0 ? "none" : "part";
   node.append(inkDots(tag));
   const why = take < trials.length ? `，${take}/${trials.length} 張試印有它：${missReason(tag)}` : "";
@@ -1670,56 +1683,39 @@ function flyIn(tag, from) {
     else stamp(target);
     return;
   }
-  const clone = target.cloneNode(true);
-  clone.classList.add("flying");
-  Object.assign(clone.style, { left: to.left + "px", top: to.top + "px", width: to.width + "px" });
-  clone.style.setProperty("--card-w", to.width + "px");
-  document.body.append(clone);
+  // 飛的是一張影子，版上那張先藏著，影子落地才亮出來。飛的路上版可能整塊重畫（卡池大小變了、
+  // 影子張數重排）：重畫出來的新那張也要藏著（plateCard 看 inbound），影子追的也是新那張的位置。
+  const ghost = target.cloneNode(true);
+  ghost.classList.add("flying");
+  ghost.classList.remove("is-related", "is-stamped", "is-popped");
+  inbound.add(tag);
   target.style.visibility = "hidden";
-  const dx = from.left - to.left;
-  const dy = from.top - to.top;
-  const s = from.width / to.width;
-  clone.animate(
-    [
-      { transform: `translate(${dx}px, ${dy}px) scale(${s})`, opacity: 1 },
-      { transform: `translate(${dx * 0.45}px, ${dy * 0.45 - 26}px) scale(${(s + 1) / 2}) rotate(-4deg)`, opacity: 1, offset: 0.55 },
-      { transform: "translate(0, 0) scale(1)", opacity: 1 },
-    ],
-    { duration: 420, easing: "cubic-bezier(0.16, 1, 0.3, 1)", fill: "forwards" }
-  );
-  // 不等 animation.finished：分頁在背景時它可能永遠不 resolve。
-  setTimeout(() => {
-    clone.remove();
-    const n = plateNode(tag);
-    if (n) {
-      n.style.visibility = "";
-      stamp(n);
-      inkRing(n);
-    }
-  }, 430);
+  flight(ghost, from, () => plateNode(tag), {
+    onLand: () => {
+      inbound.delete(tag);
+      const n = plateNode(tag);
+      if (n) {
+        n.style.visibility = "";
+        stamp(n);
+        inkRing(n);
+      }
+    },
+  });
 }
 
+// 正在飛上版的牌（影子還沒落地）：這段時間重畫出來的版上那張先藏著。
+const inbound = new Set();
+
 function flyToPill(target, from, pill) {
-  const to = pill.getBoundingClientRect();
-  const clone = target.cloneNode(true);
-  clone.classList.add("flying");
-  Object.assign(clone.style, { left: from.left + "px", top: from.top + "px", width: from.width + "px" });
-  clone.style.setProperty("--card-w", from.width + "px");
-  document.body.append(clone);
-  const dx = to.left + to.width / 2 - (from.left + from.width / 2);
-  const dy = to.top + to.height / 2 - (from.top + from.height / 2);
-  clone.animate(
-    [
-      { transform: "none", opacity: 1 },
-      { transform: `translate(${dx * 0.3}px, ${dy * 0.3 - 30}px) scale(0.8) rotate(-5deg)`, opacity: 1, offset: 0.4 },
-      { transform: `translate(${dx}px, ${dy}px) scale(0.22)`, opacity: 0.3 },
-    ],
-    { duration: 460, easing: "cubic-bezier(0.45, 0, 0.7, 1)", fill: "forwards" }
-  );
-  setTimeout(() => {
-    clone.remove();
-    stamp(pill, "is-bumped");
-  }, 470);
+  const ghost = target.cloneNode(true);
+  ghost.classList.add("flying");
+  // 落點是那顆標籤的中心，牌縮成原本的兩成被吸進去。
+  const into = () => {
+    const r = pill.getBoundingClientRect();
+    const w = from.width * 0.22;
+    return { left: r.left + r.width / 2 - w / 2, top: r.top + r.height / 2 - (w * 1.4625) / 2, width: w };
+  };
+  flight(ghost, from, into, { endOpacity: 0.3, onLand: () => stamp(pill, "is-bumped") });
 }
 
 function popIn(tag, delay) {
@@ -1754,46 +1750,44 @@ function flyHome(snap, delay = 0) {
     to = inView(grid) ? { left: grid.left + grid.width / 2 - 20, top: Math.max(grid.top, 0) + 20, width: 40, height: 56 } : null;
   }
   if (!to) return liftAway(snap, "aside");
-  const from = snap.rect;
-  const clone = snap.node.cloneNode(true);
-  clone.classList.add("flying");
-  clone.classList.remove("is-related", "is-stamped");
-  Object.assign(clone.style, { left: from.left + "px", top: from.top + "px", width: from.width + "px" });
-  clone.style.setProperty("--card-w", from.width + "px");
-  document.body.append(clone);
-  const dx = to.left - from.left;
-  const dy = to.top - from.top;
-  const s = to.width / from.width;
-  // 先微微拎起來，再弧線落回去（往上拱一點，不是直線滑過去）。
-  clone.animate(
-    [
-      { transform: "none", opacity: 1 },
-      { transform: "translate(0, -6px) scale(1.04) rotate(-2deg)", opacity: 1, offset: 0.14 },
-      { transform: `translate(${dx * 0.55}px, ${dy * 0.55 - 30}px) scale(${(1 + s) / 2}) rotate(-6deg)`, opacity: 1, offset: 0.6 },
-      { transform: `translate(${dx}px, ${dy}px) scale(${s})`, opacity: home ? 0.9 : 0 },
-    ],
-    { duration: 480, delay, easing: "cubic-bezier(0.45, 0, 0.25, 1)", fill: "both" }
-  );
-  setTimeout(() => {
-    clone.remove();
-    if (home && home.isConnected) stamp(home, "is-returned");
-  }, delay + 490);
+  const ghost = snap.node.cloneNode(true);
+  ghost.classList.add("flying");
+  ghost.classList.remove("is-related", "is-stamped", "is-popped");
+  // 追著落點飛（字盒捲動、托盤變寬都跟得上）；落地那一刻托盤那張才亮、字盒那張壓一下。
+  const homeNow = () => (tag && ((hand?.has(tag) && hand.nodeOf(tag)) || caseCard(tag))) || null;
+  const goingHome = home && inView(to) && to.width === home.getBoundingClientRect().width;
+  flight(ghost, snap.rect, goingHome ? () => (inView(homeNow()?.getBoundingClientRect()) ? homeNow() : to) : to, {
+    delay,
+    tilt: 5,
+    endOpacity: goingHome ? 1 : 0,
+    onLand: () => {
+      if (tag && hand?.has(tag)) hand.reveal(tag);
+      const n = goingHome && homeNow();
+      if (n && n.isConnected) stamp(n, "is-returned");
+    },
+  });
 }
 
 /** 一疊牌收回字盒：疊在卡池中間，整疊飛到字盒那一欄（看不到字盒就原地淡掉）。 */
 function sweepHome(snaps, tags) {
-  if (reduced() || !snaps.length) return;
-  const reg = $("registers").getBoundingClientRect();
-  const pile = { x: reg.left + reg.width / 2, y: Math.max(reg.top + 80, Math.min(reg.top + reg.height / 2, innerHeight / 2)) };
+  if (reduced() || !snaps.length) return 0;
+  // 疊在這些牌的中心（不是整個卡池的中心）：牌各自往中間收一點點就疊好，不會橫越整個版、
+  // 也不會疊在清版後才出現的「空白的版」上面。
+  const cs = snaps.filter((s) => s.rect.width).map((s) => ({ x: s.rect.left + s.rect.width / 2, y: s.rect.top + s.rect.height / 2 }));
+  const pile = {
+    x: Math.max(80, Math.min(innerWidth - 80, cs.reduce((a, c) => a + c.x, 0) / (cs.length || 1))),
+    y: Math.max(90, Math.min(innerHeight - 90, cs.reduce((a, c) => a + c.y, 0) / (cs.length || 1))),
+  };
   const grid = $("case-grid").getBoundingClientRect();
   const home = grid.width && grid.bottom > 0 && grid.top < innerHeight ? { x: grid.left + grid.width / 2, y: Math.max(grid.top, 0) + 60 } : null;
   const ms = gatherHome(snaps, pile, home, { cls: "flying" });
-  if (!home) return;
+  if (!home) return ms;
   const seen = tags.map((t) => caseCard(t)).filter((n) => {
     const r = n && n.getBoundingClientRect();
     return r && r.width && r.bottom > 0 && r.top < innerHeight;
   });
   seen.forEach((n, i) => setTimeout(() => stamp(n, "is-returned"), ms - 60 + i * 40));
+  return ms;
 }
 
 function liftAway(snap, dir) {
