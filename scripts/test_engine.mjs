@@ -5567,7 +5567,10 @@ function indoorOutdoorClash(have) {
     // 站立劈腿再按種子擋掉三成。牌序再位移一次。這張仍是 1girl solo，沒有男生。
     // 第二十五次（2026-09-28）：立乳、穴口滴精離開池。抓手腕改成 holding another's wrist，
     // 要一男一女，不進這張。牌序再位移一次。這張仍是 1girl solo，沒有男生。
-    "1girl, solo, very short hair, aqua eyes, blue hair, blunt bangs, large breasts, nipple piercing, narrow waist, half updo, underwear only, black bra, bra, torn thighhighs, thighhighs, blue panties, panties, handcuffs, fingering, kneeling, pov, looking at viewer, drunk, bondage, dojo, indoors, night, depth of field, winter, nsfw, explicit, masterpiece, best quality, amazing quality");
+    // 第二十六次（2026-09-29）：路人不再跟「無人類」寫在同一行硬擋，環境池多了一個字。
+    // 這張的環境落點換了，後面的束縛沒抽到，手銬也就沒被拉進來，換成咬自己的嘴唇。
+    // 仍是單人女性、道場、室內、夜。乳貼和運動服這張都沒補。
+    "1girl, solo, very short hair, aqua eyes, blue hair, blunt bangs, large breasts, nipple piercing, narrow waist, half updo, underwear only, black bra, bra, torn thighhighs, thighhighs, blue panties, panties, fingering, kneeling, pov, looking at viewer, drunk, biting own lip, dojo, indoors, night, depth of field, nsfw, explicit, masterpiece, best quality, amazing quality");
   ok("drawOne exposes shadow diagnostics", Array.isArray(shadowIntegrationDraw.shadowViolations));
 
   const eatProneShadow = validateSupportShadow({
@@ -7499,6 +7502,291 @@ function indoorOutdoorClash(have) {
 }
 
 {
+  // 釘了活動或室外之後，私密清單會把場地收到一個時代字（竹林、道場、試衣間）。
+  // 沒釘的性愛仍由上面那條守著。身份鎖（滑雪=山、煮飯=廚房、OL=辦公室）不動。
+  // 歷史時代沒有淋浴間、網球場時，場地格不該整格空白。
+  const s = defaultSettings(data);
+  s.girl = true;
+  s.boy = false;
+  const N = 80;
+  const placeHist = (pins) => {
+    const m = new Map();
+    let empty = 0;
+    for (let i = 1; i <= N; i += 1) {
+      const h = tagsOf(drawOne(lex, s, new Set(pins), new Set(), mulberry32(5000 + i), 5000 + i));
+      let place = "";
+      for (const t of h) {
+        const it = lex.byTag.get(t);
+        if (it && (it.mutex === "place" || it.group === "place")) {
+          place = t;
+          break;
+        }
+      }
+      if (!place) empty += 1;
+      else m.set(place, (m.get(place) || 0) + 1);
+    }
+    return { m, empty };
+  };
+  const topShare = (hist) => {
+    let tag = "";
+    let n = 0;
+    for (const [t, c] of hist.m) {
+      if (c > n) {
+        tag = t;
+        n = c;
+      }
+    }
+    return { tag, n };
+  };
+  s.heats = ["sex"];
+  s.eras = ["modern"];
+  const outdoors = placeHist(["outdoors"]);
+  const outTop = topShare(outdoors);
+  ok(
+    "現代性愛釘室外，竹林不超過四成",
+    outdoors.m.size >= 6 && (outdoors.m.get("bamboo forest") || 0) / N < 0.4,
+    `${outTop.tag} ${outTop.n}/${N} bamboo=${outdoors.m.get("bamboo forest") || 0} kinds=${outdoors.m.size} empty=${outdoors.empty}`,
+  );
+  const sports = placeHist(["playing sports"]);
+  const sportTop = topShare(sports);
+  ok(
+    "現代性愛釘運動，不是只剩道場",
+    sports.m.size >= 4 && (sports.m.get("dojo") || 0) / N < 0.5,
+    `${sportTop.tag} ${sportTop.n}/${N} kinds=${sports.m.size}`,
+  );
+  const shop = placeHist(["shopping"]);
+  const shopTop = topShare(shop);
+  ok(
+    "現代性愛釘購物，不是只剩更衣室",
+    shop.m.size >= 3 && (shop.m.get("changing room") || 0) / N < 0.5,
+    `${shopTop.tag} ${shopTop.n}/${N} kinds=${shop.m.size}`,
+  );
+  const cook = placeHist(["cooking"]);
+  ok("現代煮飯仍是廚房", (cook.m.get("kitchen") || 0) >= N * 0.9, `kitchen=${cook.m.get("kitchen") || 0}/${N}`);
+  const ol = placeHist(["office lady"]);
+  ok("OL 仍是辦公室", (ol.m.get("office") || 0) >= N * 0.9, `office=${ol.m.get("office") || 0}/${N}`);
+  s.heats = ["tease"];
+  const ski = placeHist(["skiing"]);
+  ok("滑雪仍是山", (ski.m.get("mountain") || 0) >= N * 0.9, `mountain=${ski.m.get("mountain") || 0}/${N}`);
+  s.heats = ["sex"];
+  s.eras = ["ancient_greece"];
+  const shower = placeHist(["showering"]);
+  ok(
+    "古希臘釘淋浴有場地，而且是浴場",
+    shower.empty <= N * 0.2 && (shower.m.get("bath") || 0) >= N * 0.5,
+    `bath=${shower.m.get("bath") || 0}/${N} empty=${shower.empty} kinds=${shower.m.size}`,
+  );
+  s.eras = ["medieval"];
+  const tennis = placeHist(["tennis"]);
+  ok(
+    "中世紀釘網球不是整格空白",
+    tennis.empty <= N * 0.2 && tennis.m.size >= 1,
+    `empty=${tennis.empty}/${N} kinds=${tennis.m.size}`,
+  );
+}
+
+{
+  // 釘了室外之後，海邊、森林、山、街道和竹林同一個權重。
+  // 溫泉、道場、泳池、神社兩邊都算場景：跟得了釘選的那一側，不再補上相反的字。
+  // 臥室、廚房、辦公室、浴室仍然只能室內。
+  let pin = applyPin(lex, new Set(), new Set(), "outdoors").pinned;
+  pin = applyPin(lex, pin, new Set(), "onsen").pinned;
+  ok("先釘室外再釘溫泉，室外留著", pin.has("outdoors") && pin.has("onsen") && !pin.has("indoors"));
+  const onsenFirst = applyPin(lex, new Set(), new Set(), "onsen").pinned;
+  ok("沒釘過室內外時，溫泉仍帶室內", onsenFirst.has("onsen") && onsenFirst.has("indoors"));
+  let pinIn = applyPin(lex, new Set(), new Set(), "indoors").pinned;
+  pinIn = applyPin(lex, pinIn, new Set(), "castle").pinned;
+  ok("先釘室內再釘城堡，室內留著", pinIn.has("indoors") && pinIn.has("castle") && !pinIn.has("outdoors"));
+  const clash = (tags) => contradictions(lex, tags).some((row) => row[0] === "in_out");
+  ok("溫泉加室外不算相剋", !clash(["onsen", "outdoors"]));
+  ok("臥室加室外仍相剋", clash(["bedroom", "outdoors"]));
+  ok("城堡加室內不算相剋", !clash(["castle", "indoors"]));
+  ok("森林加室內仍相剋", clash(["forest", "indoors"]));
+
+  const s = defaultSettings(data);
+  s.girl = true;
+  s.boy = false;
+  s.heats = ["sex"];
+  s.eras = ["modern"];
+  const kept = tagsOf(drawOne(lex, s, pin, new Set(), mulberry32(7), 7));
+  ok("釘了室外和溫泉的那一張沒有再補室內", kept.has("onsen") && kept.has("outdoors") && !kept.has("indoors"));
+  const N = 200;
+  const OPEN = ["beach", "forest", "mountain", "street", "ocean", "garden"];
+  const ROOM = ["living room", "bedroom", "kitchen", "office", "classroom", "bathroom"];
+  const DUAL = ["onsen", "dojo", "pool", "shrine", "cafe", "bar (place)", "restaurant", "izakaya", "church", "greenhouse", "ryokan", "bath"];
+  let bamboo = 0;
+  let open = 0;
+  let room = 0;
+  let dual = 0;
+  let dualAlsoIn = 0;
+  const kinds = new Set();
+  for (let i = 1; i <= N; i += 1) {
+    const h = tagsOf(drawOne(lex, s, new Set(["outdoors"]), new Set(), mulberry32(8000 + i), 8000 + i));
+    let place = "";
+    for (const t of h) {
+      const it = lex.byTag.get(t);
+      if (it && (it.mutex === "place" || it.group === "place")) {
+        place = t;
+        break;
+      }
+    }
+    if (!place) continue;
+    kinds.add(place);
+    if (place === "bamboo forest") bamboo += 1;
+    if (OPEN.includes(place)) open += 1;
+    if (ROOM.includes(place)) room += 1;
+    if (DUAL.includes(place)) {
+      dual += 1;
+      if (h.has("indoors")) dualAlsoIn += 1;
+    }
+  }
+  eq("釘室外不抽臥室廚房辦公室", room, 0);
+  ok(
+    "釘室外時海邊森林山街道不會少於竹林",
+    open > bamboo && kinds.size >= 15,
+    `open=${open} bamboo=${bamboo} kinds=${kinds.size}`,
+  );
+  ok("釘室外抽得到兩邊都行的場地", dual > 0, `dual=${dual}`);
+  eq("兩邊都行的場地不會再補上室內", dualAlsoIn, 0);
+
+  const OUT_DUAL = ["pool", "shrine"];
+  let outDual = 0;
+  let leaked = 0;
+  for (let i = 1; i <= N; i += 1) {
+    const h = tagsOf(drawOne(lex, s, new Set(["indoors"]), new Set(), mulberry32(9000 + i), 9000 + i));
+    let place = "";
+    for (const t of h) {
+      const it = lex.byTag.get(t);
+      if (it && (it.mutex === "place" || it.group === "place")) {
+        place = t;
+        break;
+      }
+    }
+    if (!OUT_DUAL.includes(place)) continue;
+    outDual += 1;
+    if (h.has("outdoors")) leaked += 1;
+  }
+  ok("釘室內抽得到泳池或神社", outDual > 0, `n=${outDual}`);
+  eq("泳池神社不會再補上室外", leaked, 0);
+}
+
+{
+  // 沒被關掉、閘門也開著，卻以前整段進不了池的字。
+  // 乳貼沒有互斥格，正常模式的衣服補牌直接丟掉。
+  // 路人被跟「無人類／風景」寫在同一行，隨機永遠是 0。
+  // 三角泳褲不算泳裝，游泳場面會把它脫掉，沒游泳又被場合檢查刪掉。
+  // 百合、多個女生／男生沒有抽卡司的權重，另開一條亂數才碰得到。五個女生仍不自動抽。
+  const girl = defaultSettings(data);
+  girl.girl = true;
+  girl.boy = false;
+  girl.heats = ["tease"];
+  girl.eras = ["modern"];
+  girl.counts = { subject: 10, feature: 10, pose: 10, clothing: 10, env: 10 };
+  const chestOpen = new Set([
+    "breasts out", "one breast out", "nipple slip", "areola slip",
+    "shirt lift", "shirt pull", "open shirt", "open clothes", "naked shirt",
+    "downblouse", "sports bra lift",
+  ]);
+  const sportNeed = new Set([
+    "playing sports", "exercising", "training", "jogging",
+    "tennis", "soccer", "basketball", "volleyball", "baseball",
+    "boxing", "badminton", "table tennis", "track and field",
+    "golf", "archery", "skiing", "skating",
+    "fitness gym", "school gym", "stadium", "sports court", "running track",
+    "basketball court", "tennis court", "soccer field", "baseball stadium",
+    "boxing ring", "golf course", "bowling alley",
+    "gym uniform", "track uniform", "soccer uniform", "basketball uniform",
+    "tennis uniform", "volleyball uniform", "baseball uniform",
+    "cheerleader", "buruma",
+  ]);
+  let pasties = 0;
+  let pastiesHidden = 0;
+  let sportBad = 0;
+  let people = 0;
+  let yuri = 0;
+  let multiG = 0;
+  let five = 0;
+  let yuriBoy = 0;
+  let loli = 0;
+  for (let i = 0; i < 400; i += 1) {
+    const h = tagsOf(drawOne(lex, girl, new Set(), new Set(), mulberry32(120000 + i), 120000 + i));
+    if (h.has("pasties")) {
+      pasties += 1;
+      let covered = false;
+      let open = false;
+      for (const t of h) {
+        if (chestOpen.has(t)) open = true;
+        const it = lex.byTag.get(t);
+        if (it?.layer === "skin") open = true;
+        if (
+          it &&
+          it.layer === "garment" &&
+          t !== "pasties" &&
+          (it.mutex === "top" || it.mutex === "onepiece" || it.mutex === "underwear_top")
+        ) {
+          covered = true;
+        }
+      }
+      if (covered && !open) pastiesHidden += 1;
+    }
+    if (h.has("sportswear")) {
+      let ctx = false;
+      for (const t of h) if (sportNeed.has(t)) ctx = true;
+      if (!ctx) sportBad += 1;
+    }
+    if (h.has("people")) people += 1;
+    if (h.has("yuri")) {
+      yuri += 1;
+      if (h.has("1boy") || h.has("2boys") || h.has("3boys")) yuriBoy += 1;
+    }
+    if (h.has("multiple girls")) multiG += 1;
+    if (h.has("5girls")) five += 1;
+    if (h.has("loli") || h.has("shota")) loli += 1;
+  }
+  ok("正常模式抽得到乳貼", pasties > 0, `pasties=${pasties}`);
+  eq("乳貼不會藏在蓋住的胸口底下", pastiesHidden, 0);
+  eq("運動服要有運動場合", sportBad, 0);
+  ok("路人進得了環境池", people > 0, `people=${people}`);
+  ok("多個女生時抽得到百合", yuri > 0, `yuri=${yuri}`);
+  eq("百合不會帶男生", yuriBoy, 0);
+  ok("正好兩女時抽得到多個女生", multiG > 0, `multi=${multiG}`);
+  eq("只開女生不會自動抽五個女生", five, 0);
+  eq("乳貼這條沒有把蘿莉正太放回來", loli, 0);
+
+  const boy = defaultSettings(data);
+  boy.girl = false;
+  boy.boy = true;
+  boy.heats = ["tease"];
+  boy.eras = ["modern"];
+  boy.counts = { subject: 10, feature: 10, pose: 10, clothing: 10, env: 10 };
+  let briefs = 0;
+  let briefsDry = 0;
+  let multiB = 0;
+  let swimSport = 0;
+  const wet = new Set(["swimming", "diving", "pool", "poolside", "ocean", "beach", "underwater"]);
+  for (let i = 0; i < 200; i += 1) {
+    const h = tagsOf(drawOne(lex, boy, new Set(["swimming"]), new Set(), mulberry32(130000 + i), 130000 + i));
+    if (h.has("swim briefs")) {
+      briefs += 1;
+      if (![...wet].some((t) => h.has(t))) briefsDry += 1;
+    }
+    if (h.has("multiple boys")) multiB += 1;
+    if (h.has("sportswear")) swimSport += 1;
+  }
+  ok("男生游泳抽得到三角泳褲", briefs > 0, `briefs=${briefs}`);
+  eq("三角泳褲不會出現在沒有水的地方", briefsDry, 0);
+  ok("兩男時抽得到多個男生", multiB > 0, `multiB=${multiB}`);
+  eq("游泳不會再蓋上運動服", swimSport, 0);
+
+  let sportHit = 0;
+  for (let i = 0; i < 80; i += 1) {
+    const h = tagsOf(drawOne(lex, girl, new Set(["playing sports"]), new Set(), mulberry32(140000 + i), 140000 + i));
+    if (h.has("sportswear")) sportHit += 1;
+  }
+  ok("釘運動抽得到運動服", sportHit > 0, `sportswear=${sportHit}`);
+}
+
+{
   // 光源槽是死的。env 明確填的是 place / in_out / day_night，lighting 只能在
   // 剩下的 fill("env") 裡跟道具、天氣、天空搶，結果 14 個光源 tag 加起來只有
   // 大約 3% 的機率出現 —— 而每一張圖都被無條件加上同一句 soft lighting，
@@ -8232,18 +8520,28 @@ function indoorOutdoorClash(have) {
   eq("沒有性行為就不標 hetero", wrongNoSex, 0);
   eq("同性或單人不標 hetero", wrongSameSex, 0);
 
-  // yuri 不比照辦理：查過 Danbooru，「2girls sex」只有 6.6% 帶 yuri，
-  // 跟 hetero 的 98.9% 不是同一個量級。這條守著別人（或我）之後手癢補對稱。
+  // yuri 不跟 hetero 一樣每張都補。Danbooru「2girls sex」只有 6.6% 帶 yuri。
+  // 完全不抽又只剩釘選，所以多女、沒有男生時大約一成，而且用另一條亂數。
+  // 上限守的是「不會變成每一張都有」。
   let yuriAuto = 0;
+  let yuriSolo = 0;
+  let yuriWithBoy = 0;
   for (let i = 1; i <= 400; i++) {
     const s = defaultSettings(data);
     s.girl = true;
     s.boy = false;
     s.rating = "explicit";
     s.heats = ["sex"];
-    if (tagsOf(drawOne(lex, s, new Set(), new Set(), mulberry32(i * 17), i * 17)).has("yuri")) yuriAuto += 1;
+    const h = tagsOf(drawOne(lex, s, new Set(), new Set(), mulberry32(i * 17), i * 17));
+    if (!h.has("yuri")) continue;
+    yuriAuto += 1;
+    const girls = h.has("4girls") ? 4 : h.has("3girls") ? 3 : h.has("2girls") ? 2 : h.has("1girl") ? 1 : 0;
+    if (girls < 2) yuriSolo += 1;
+    if (h.has("1boy") || h.has("2boys") || h.has("3boys")) yuriWithBoy += 1;
   }
-  eq("yuri 不會被自動補上（共現率只有 6.6%，不該比照 hetero）", yuriAuto, 0);
+  ok("多女性愛抽得到百合，但不是每張都有", yuriAuto > 0 && yuriAuto <= 40, `yuri=${yuriAuto}`);
+  eq("百合不會補在單人身上", yuriSolo, 0);
+  eq("這批百合抽樣沒有男生", yuriWithBoy, 0);
 }
 
 // --- 新詞：鏡頭、保險套、粗暴 ------------------------------------------------

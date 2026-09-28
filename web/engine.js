@@ -434,6 +434,20 @@ const FACE_NEED_TAGS = new Set([
   "playing games",
   "playing video games",
 ]);
+// 乳貼要畫在看得到的胸口上。上衣還扣著、只是旁邊有性愛或掀裙子，不算露出。
+const CHEST_OPEN_TAGS = new Set([
+  "breasts out",
+  "one breast out",
+  "nipple slip",
+  "areola slip",
+  "shirt lift",
+  "shirt pull",
+  "open shirt",
+  "open clothes",
+  "naked shirt",
+  "downblouse",
+  "sports bra lift",
+]);
 const CHEST_NEED_TAGS = new Set([
   "breast hold",
   "breastfeeding",
@@ -1431,6 +1445,43 @@ function sportGearPlaceOk(item, used, lex) {
   return sportIdsFitPlaces(own, places);
 }
 
+// 同一個場地字，室內、室外都畫得成。釘了其中一邊時，不要因為詞庫的 implies
+// 把這個場地擋掉，也不要再補上相反的那個字；沒有釘室內外時，詞庫的 implies 照舊。
+// 臥室、廚房、辦公室、浴室不在這裡：那些釘了室外仍然不該出現。
+const BOTH_IO = new Set([
+  "onsen",
+  "bath",
+  "dojo",
+  "pool",
+  "castle",
+  "shrine",
+  "temple",
+  "church",
+  "palace",
+  "mansion",
+  "ruins",
+  "greenhouse",
+  "ryokan",
+  "courtyard",
+  "cafe",
+  "bar (place)",
+  "restaurant",
+  "izakaya",
+  "tavern",
+]);
+
+function oppositeInOut(dep) {
+  if (dep === "indoors") return "outdoors";
+  if (dep === "outdoors") return "indoors";
+  return "";
+}
+
+// 兩邊都行的場地，對方那一側已經在場上時，略過詞庫要補的室內／室外。
+function keepPlaceSide(tag, dep, otherIsIn) {
+  const other = oppositeInOut(dep);
+  return !!other && BOTH_IO.has(tag) && otherIsIn(other);
+}
+
 const PRIVATE_SEX_PLACE = new Set([
   // 廁所隔間沒有對應的活動，所以在一般的場地那一格永遠排不進去（實測 0/4800）。
   // 它的天然用途本來就是私密場景，放這裡才是它該在的地方。
@@ -1627,7 +1678,7 @@ function isSwimScene(used) {
 function isSwimClothItem(item) {
   if (!item || item.section !== "clothing") return false;
   if (item.layer === "skin" || item.layer === "accessory") return true;
-  if (item.tag === "wet clothes") return true;
+  if (item.tag === "wet clothes" || item.tag === "swim briefs") return true;
   if (/\b(swimsuit|bikini)\b/.test(item.tag)) return true;
   if ((item.implies || []).some((d) => /\b(swimsuit|bikini)\b/.test(d))) return true;
   return false;
@@ -1848,6 +1899,20 @@ function isBathOkGarment(item) {
 // 以前這些是在 allow() 裡一條一條手寫的 if，寫到哪擋到哪：stethoscope、hard hat、
 // police hat、lab coat 有，goggles、swim cap、boxing gloves、microphone 沒有 ——
 // 結果辦公室裡有人戴蛙鏡、教堂裡有人拿麥克風、溫泉裡有人戴拳擊手套。
+// 運動服沒有互斥格。沒有這張表時，收尾的低機率會把它蓋到西裝、旗袍、泳裝上。
+const SPORTWEAR_NEEDS = new Set([
+  "playing sports", "exercising", "training", "jogging",
+  "tennis", "soccer", "basketball", "volleyball", "baseball",
+  "boxing", "badminton", "table tennis", "track and field",
+  "golf", "archery", "skiing", "skating",
+  "fitness gym", "school gym", "stadium", "sports court", "running track",
+  "basketball court", "tennis court", "soccer field", "baseball stadium",
+  "boxing ring", "golf course", "bowling alley",
+  "gym uniform", "track uniform", "soccer uniform", "basketball uniform",
+  "tennis uniform", "volleyball uniform", "baseball uniform",
+  "cheerleader", "buruma",
+]);
+
 export const NEEDS_CONTEXT = {
   "beach umbrella": new Set(["beach", "poolside"]),
   innertube: new Set(["swimming", "wading", "floating", "pool", "poolside", "beach", "ocean"]),
@@ -1954,6 +2019,7 @@ export const NEEDS_CONTEXT = {
     "track and field", "jogging", "running track", "stadium", "playing sports",
     "exercising", "training", "school gym",
   ]),
+  sportswear: SPORTWEAR_NEEDS,
 
   // 三把傘原本是 allow() 裡各自一行的 if。但傘要看的天氣和場地都排在衣服後面才填，
   // 在 allow() 問「有沒有下雨」永遠是沒有 —— 三個字於是全部抽不到。實測 rain 自然
@@ -2440,6 +2506,8 @@ export function applyPin(lex, pinned, userBanned, tag) {
       nextBan.delete(b);
     }
     for (const i of implyChain(lex, tag)) {
+      // 先釘了室外再釘溫泉，不該把室外換掉。沒有釘過室內外時，溫泉仍會帶進室內。
+      if (keepPlaceSide(tag, i, (other) => nextPin.has(other))) continue;
       nextPin.add(i);
       nextBan.delete(i);
       for (const sib of mutexSiblings(lex, i)) nextPin.delete(sib);
@@ -3053,12 +3121,14 @@ function jobHasSleepPlace(job, era, lex) {
 // 只剩室外場地的活動（騎馬、足球、游泳）會把場地格抽空；釘了雨之後
 // 室內房間被擋，只剩室內場地的活動（煮飯、打掃、洗澡）同一種空場。
 function placeCountsIndoor(place, lex) {
+  if (BOTH_IO.has(place)) return true;
   if (INDOOR_ROOM.has(place)) return true;
   const it = lex.byTag.get(place);
   return !!(it && (it.implies || []).includes("indoors"));
 }
 
 function placeCountsOutdoor(place, lex) {
+  if (BOTH_IO.has(place)) return true;
   const it = lex.byTag.get(place);
   if (!it) return false;
   if ((it.implies || []).includes("outdoors")) return true;
@@ -3331,6 +3401,7 @@ function makeCommit(lex, used, mutexTaken, banned, era, allowDep) {
     used.add(tag);
     try {
       for (const d of deps) {
+        if (keepPlaceSide(tag, d, (other) => used.has(other) || mutexTaken.get("in_out") === other)) continue;
         if (used.has(d) || !depAllowed(lex, d, era)) continue;
         if (banned.has(d)) return false;
         if (mutexOccupants(lex, mutexTaken, d).some((occ) => !parentChild(lex, occ, d))) return false;
@@ -3357,6 +3428,7 @@ function makeCommit(lex, used, mutexTaken, banned, era, allowDep) {
     }
     occupy(tag);
     for (const d of deps) {
+      if (keepPlaceSide(tag, d, (other) => used.has(other) || mutexTaken.get("in_out") === other)) continue;
       if (banned.has(d) || used.has(d) || !depAllowed(lex, d, era)) continue;
       if (mutexBusy(lex, mutexTaken, d) && !parentChild(lex, tag, d)) continue;
       occupy(d);
@@ -3401,6 +3473,42 @@ function takeFromPool(pool, count, rand, commit, prefer, allow, mPre) {
       const index = tier < 0 ? tiers.length : tier;
       return { item, weight: Math.max(0.01, Number(weights[index]) || 1) };
     });
+    // 單一格的軟權重在池子被規則收得很小時會一家獨大：一個時代字 14、其餘各 1，
+    // 四個候選裡時代字吃掉八成。大池子每個字本來就低於上限，權重不動，亂數序列也不變。
+    if (Number.isFinite(prefer.capShare) && candidates.length >= 2) {
+      const cap = candidates.length === 2 ? Math.max(prefer.capShare, 0.65) : prefer.capShare;
+      let total = 0;
+      let maxW = 0;
+      for (const c of candidates) {
+        total += c.weight;
+        if (c.weight > maxW) maxW = c.weight;
+      }
+      if (maxW > cap * total + 1e-6) {
+        const ws = candidates.map((c) => c.weight);
+        for (let iter = 0; iter < 8; iter += 1) {
+          let sum = 0;
+          for (const w of ws) sum += w;
+          const limit = cap * sum;
+          let excess = 0;
+          let under = 0;
+          let any = false;
+          const over = new Array(ws.length);
+          for (let i = 0; i < ws.length; i += 1) {
+            over[i] = ws[i] > limit + 1e-6;
+            if (over[i]) {
+              any = true;
+              excess += ws[i] - limit;
+              ws[i] = limit;
+            } else under += ws[i];
+          }
+          if (!any || under <= 0) break;
+          for (let i = 0; i < ws.length; i += 1) {
+            if (!over[i]) ws[i] += (excess * ws[i]) / under;
+          }
+        }
+        for (let i = 0; i < candidates.length; i += 1) candidates[i].weight = ws[i];
+      }
+    }
     let n = 0;
     while (n < count && candidates.length) {
       let total = 0;
@@ -3636,6 +3744,7 @@ export function contradictions(lex, tags, opts = {}) {
   if (names.has("day") && names.has("night")) found.push(["day_night", "day", "night"]);
   for (const t of tags) {
     const impl = lex.byTag.get(t)?.implies || [];
+    if (BOTH_IO.has(t)) continue;
     if (impl.includes("indoors") && names.has("outdoors")) found.push(["in_out", t, "outdoors"]);
     if (impl.includes("outdoors") && names.has("indoors")) found.push(["in_out", t, "indoors"]);
   }
@@ -3955,6 +4064,8 @@ export function drawOne(lex, settings, pinned, userBanned, rand, seed, opts) {
     if (item) {
       for (const g of extraMutex(item)) mutexTaken.set(g, tag);
       for (const d of dependents(lex, tag)) {
+        // 兩邊都行的場地：使用者已經釘了另一側，就不要把詞庫的室內／室外再補進來。
+        if (keepPlaceSide(tag, d, (other) => pinned.has(other) || used.has(other))) continue;
         if (banned.has(d) && !pinned.has(d)) continue;
         if (!pinned.has(d) && era && !depAllowed(lex, d, era)) continue;
         forcePin(d, tag);
@@ -4075,6 +4186,73 @@ export function drawOne(lex, settings, pinned, userBanned, rand, seed, opts) {
     // 過了上面這幾道的字才進後面那串。函式本身有一千多行，絕大多數候選在
     // 尺度、時代或互斥就離開；把它們留在同一支函式裡，光是呼叫就要付整支的進場成本。
     return allowSlow(item);
+  };
+
+  // 釘了「比私密清單更具體」的關係時，性愛不再硬套 PRIVATE_SEX_PLACE。
+  // 沒釘的性愛不進這裡，場地仍是臥室／溫泉那一組。
+  let sexPlaceRelax = null;
+  const relaxesPrivateSex = () => {
+    if (sexPlaceRelax !== null) return sexPlaceRelax;
+    let yes = pinned.has("outdoors") || pinned.has("indoors");
+    if (!yes) {
+      for (const t of pinned) {
+        if (
+          OUTDOOR_WEATHER.has(t) ||
+          OUTDOOR_LEFTOVER.has(t) ||
+          INDOOR_PROP.has(t) ||
+          INDOOR_FURN.has(t)
+        ) {
+          yes = true;
+          break;
+        }
+        const it = lex.byTag.get(t);
+        if (!it) continue;
+        const implied = it.implies || [];
+        if (implied.includes("outdoors") || implied.includes("indoors")) {
+          yes = true;
+          break;
+        }
+        if (it.mutex === "activity" && ACT_PLACE[t]) {
+          yes = true;
+          break;
+        }
+      }
+    }
+    sexPlaceRelax = yes;
+    return yes;
+  };
+  const fittingPlace = new Map();
+  const eraHasFittingPlace = (acts) => {
+    const key = [...acts].sort().join("\0");
+    const hit = fittingPlace.get(key);
+    if (hit !== undefined) return hit;
+    let yes = false;
+    const list = lex.bySection.env;
+    for (let i = 0; i < list.length; i += 1) {
+      const cand = list[i];
+      if (cand.mutex !== "place" && cand.group !== "place") continue;
+      if (!eraOk(cand, era)) continue;
+      if (placeFitsActs(cand.tag, acts, real)) {
+        yes = true;
+        break;
+      }
+    }
+    fittingPlace.set(key, yes);
+    return yes;
+  };
+  let sportEra = null;
+  const eraHasSportPlace = () => {
+    if (sportEra !== null) return sportEra;
+    let yes = false;
+    for (const p of SPORT_PLACE) {
+      const it = lex.byTag.get(p);
+      if (it && eraOk(it, era)) {
+        yes = true;
+        break;
+      }
+    }
+    sportEra = yes;
+    return yes;
   };
 
   const allowSlow = (item) => {
@@ -5027,7 +5205,11 @@ export function drawOne(lex, settings, pinned, userBanned, rand, seed, opts) {
     // commit() 會拿這條去驗那個 indoors，所以落葉先在場時，臥室、教室整個抽不進來。
     // （詞庫那邊不讓非場地的環境字帶 indoors／outdoors，見 merge_lexicon.apply_relations。）
     if (item.tag === "falling leaves" && used.has("indoors")) return false;
-    if (item.tag === NO_HUMANS || item.tag === "scenery" || item.tag === "solo focus" || item.tag === "people") return false;
+    // no humans 是另一種抽法，scenery／solo focus 是收尾才補的字，不進隨機池。
+    // people（路人）跟 crowd 同一件事，以前寫在這行就變成永遠抽不到。
+    if (item.tag === NO_HUMANS || item.tag === "scenery" || item.tag === "solo focus") return false;
+    if (item.tag === "people" && used.has("crowd")) return false;
+    if (item.tag === "crowd" && used.has("people")) return false;
     // 人群不在自己家裡：已經在臥室、浴室、客廳…就不抽人群。
     // 反方向只擋「釘的」人群：隨機抽到的人群不能把情境要的場地擋掉（做菜一定在廚房、性愛要私密場地）——
     // 那種時候讓人群讓出來，最後整理時拿掉（見下面組 POS 那段）。
@@ -5254,7 +5436,21 @@ export function drawOne(lex, settings, pinned, userBanned, rand, seed, opts) {
     }
     if (lockOn) {
       if (!sportKitOk(item, used)) return false;
-      if (!sportPlaceOk(item, used)) return false;
+      if (!sportPlaceOk(item, used)) {
+        // 網球場、高爾夫球場只有現代。歷史時代釘了該運動時，專用場地一個都不在，
+        // 這條會把所有場地擋光。退到這個時代還有的運動場，而不是整格空白。
+        const placeLike = item.mutex === "place" || item.group === "place";
+        const specific = compatibleSportPlaces(sportGearIdsOf(used));
+        let inEra = false;
+        for (const p of specific) {
+          const it = lex.byTag.get(p);
+          if (it && eraOk(it, era)) {
+            inEra = true;
+            break;
+          }
+        }
+        if (!placeLike || inEra || !SPORT_PLACE.has(item.tag)) return false;
+      }
       if (!sportGearPlaceOk(item, used, lex)) return false;
       if (
         (item.mutex === "sport_ball" || item.mutex === "sport_prop") &&
@@ -5291,7 +5487,24 @@ export function drawOne(lex, settings, pinned, userBanned, rand, seed, opts) {
       }
       const acts = usedActs(used, lex);
       const places = usedPlaces(used, lex);
-      if ((item.mutex === "place" || item.group === "place") && !placeFitsActs(item.tag, acts, real)) return false;
+      if ((item.mutex === "place" || item.group === "place") && !placeFitsActs(item.tag, acts, real)) {
+        // 活動清單在這個時代一個場地都對不上時，硬交集會把場地格抽空
+        // （歷史時代釘淋浴、網球、卡拉 OK，實測整格是空的）。
+        // 洗澡退到浴場，運動退到這個時代還在的運動場，其餘不要留白。
+        if (eraHasFittingPlace(acts)) return false;
+        const bath = [...acts].some((a) => BATH_ACT.has(a));
+        const water = [...acts].some((a) => WATER_ACT.has(a));
+        const sport = [...acts].some(
+          (a) => SPORT_ACTS.has(a) || a === "playing sports" || a === "exercising" || a === "training"
+        );
+        if (bath) {
+          if (!BATH_PLACE.has(item.tag)) return false;
+        } else if (water) {
+          if (!WATER_PLACE.has(item.tag) && !BATH_PLACE.has(item.tag)) return false;
+        } else if (sport && eraHasSportPlace() && !SPORT_PLACE.has(item.tag)) {
+          return false;
+        }
+      }
       if (item.mutex === "activity" && !actFitsPlaces(item.tag, places, real)) return false;
       if (item.section === "clothing" && isBathScene(used) && isBathBadCloth(item.tag)) return false;
       {
@@ -5421,15 +5634,18 @@ export function drawOne(lex, settings, pinned, userBanned, rand, seed, opts) {
           if (!WATER_PLACE.has(item.tag) && !BATH_PLACE.has(item.tag)) return false;
         } else if (!jobs.size) {
           if (!PRIVATE_SEX_PLACE.has(item.tag)) {
-            // 自動抽的性愛仍進臥室／溫泉。只有「場上已有活動、且那些活動在這個
-            // 時代一個私密場地都沒有」才放行 ACT_PLACE —— 否則釘購物／開車／網球
-            // 開著性愛會 100% 沒場地（實測各 40/40）。
+            // 自動抽的性愛仍進臥室／溫泉。活動在這個時代一個私密場地都沒有時照舊放行，
+            // 否則釘購物／開車／網球會 100% 沒場地。釘了活動或室內外則改走對方的清單。
             const listed = [...acts].filter(
               (a) => ACT_PLACE[a] && !WATER_ACT.has(a) && !BATH_ACT.has(a)
             );
             const noPrivateVenue =
               listed.length > 0 && listed.every((a) => !actHasPrivatePlace(a, era, lex));
-            if (!noPrivateVenue) return false;
+            // 釘了活動，或釘了會決定室內外的字（室外、雨、篝火、路燈）時，
+            // 私密清單會把對方的場地收到只剩一個時代字：現代室外性愛是竹林，
+            // 釘運動是道場，釘購物是試衣間。活動自己的場地規則在上面。
+            // 沒有這些釘選的性愛仍只進臥室／溫泉。
+            if (!noPrivateVenue && !relaxesPrivateSex()) return false;
           }
         } else if (PUBLIC_SEX_PLACE.has(item.tag)) {
           // 自動抽的有職業性愛仍避開大街。只有「場上已有職業、且那些職業在這個
@@ -6029,10 +6245,23 @@ export function drawOne(lex, settings, pinned, userBanned, rand, seed, opts) {
       weights: [4, 1],
     });
   }
-  fillSlot("env", "place", {
-    softTiers: [(item) => eraSpecific(item, era)],
-    weights: [14, 1],
-  });
+  // 十四比一在大池子裡每個時代場地大約 3%。釘了活動、池子被收到幾個字時，
+  // 唯一的時代場地會吃掉七到九成。候選達到兩個就封頂：兩個字最多 65%，
+  // 三個以上最多 40%。沒有這些釘選時不封頂，既有種子的抽法不變。
+  // 使用者已經釘了室內或室外時，時代權重不再加在場地上：海邊、森林、山、街道
+  // 和竹林、公園都是這一側的場景，權重一樣。時代錨（城堡、東亞建築）仍在上面擲過。
+  const sidePinned = pinned.has("outdoors") || pinned.has("indoors");
+  fillSlot(
+    "env",
+    "place",
+    sidePinned
+      ? { softTiers: [() => false], weights: [1, 1] }
+      : {
+          softTiers: [(item) => eraSpecific(item, era)],
+          weights: [14, 1],
+          ...(relaxesPrivateSex() ? { capShare: 0.4 } : {}),
+        },
+  );
   // 女僕裝不是職業，但場地會照女僕的屋子收。購物的場地跟那份清單沒有交集，
   // 釘了購物又抽到女僕裝，場地就空了。裝沒被釘、也不是必抽時，把裝拿掉，
   // 下面的修補才能把試衣間補回來。已有場地的圖不走這裡。
@@ -6556,10 +6785,11 @@ export function drawOne(lex, settings, pinned, userBanned, rand, seed, opts) {
   // fill("subject")（主體段整段由 chooseCast 決定人數，見 QUOTA_SECTIONS 的註解）。
   // 那個設計對「人數」是對的，但把 hetero 這種**配對描述**一起排除掉了。
   //
-  // yuri 不比照辦理：同樣查過，「2girls sex」只有 6.6% 帶 yuri，
-  // 跟 hetero 完全不是同一個量級，自動補上會是錯的。
+  // yuri 不跟 hetero 一樣無條件補：「2girls sex」只有 6.6% 帶 yuri。
+  // 完全不抽又會讓這個字只剩釘選。另開一條亂數，大約一成的多女、沒有男生的圖才補，
+  // 不消耗主亂數，沒抽到的種子後面的衣服姿勢照舊。
   //
-  // 只在有性行為時補。純粹一男一女同框（沒有性）在 Danbooru 上是 58%，
+  // 只在有性行為時補 hetero。純粹一男一女同框（沒有性）在 Danbooru 上是 58%，
   // 不夠高到可以無條件加。
   if (female && male && !used.has("hetero") && lex.byTag.has("hetero")) {
     const doingIt = [...used].some((t) => {
@@ -6567,6 +6797,61 @@ export function drawOne(lex, settings, pinned, userBanned, rand, seed, opts) {
       return it && (it.mutex === "sex_act" || it.group === "sex");
     });
     if (doingIt) commit("hetero");
+  }
+  if (
+    Number.isFinite(seed) &&
+    female &&
+    !male &&
+    people >= 2 &&
+    !used.has("yuri") &&
+    !banned.has("yuri")
+  ) {
+    const yuriRand = mulberry32(((seed >>> 0) ^ 0x79757269) >>> 0);
+    const item = lex.byTag.get("yuri");
+    if (item && yuriRand() < 0.1 && allow(item)) commit("yuri");
+  }
+  // multiple girls 的 implies 是 2girls。三人以上再補會跟人數格打架，所以只在正好兩女時抽。
+  if (Number.isFinite(seed) && used.has("2girls") && !used.has("multiple girls") && !banned.has("multiple girls")) {
+    const r = mulberry32(((seed >>> 0) ^ 0x6d676972) >>> 0);
+    const item = lex.byTag.get("multiple girls");
+    if (item && r() < 0.4 && allow(item)) commit("multiple girls");
+  }
+  if (Number.isFinite(seed) && used.has("2boys") && !used.has("3boys") && !used.has("multiple boys") && !banned.has("multiple boys")) {
+    const r = mulberry32(((seed >>> 0) ^ 0x6d626f79) >>> 0);
+    const item = lex.byTag.get("multiple boys");
+    if (item && r() < 0.4 && allow(item)) commit("multiple boys");
+  }
+  // 乳貼、運動服沒有互斥格。放進一般衣服池會跟時代衣服同一階，400 張裡八成都會中。
+  // 另開一條亂數，沒中的種子主亂數不動。服裝張數 0 就是不要衣服，這裡不能再補。
+  // 乳貼只在胸口露得出來時考慮：沒有上衣／連身／胸罩，或已經掀開、走光、裸體。
+  // 運動服只在真的有運動場合時考慮，避免蓋到西裝和旗袍上。
+  if (Number.isFinite(seed) && Math.max(0, Number(counts.clothing) || 0) > 0) {
+    let chestCovered = false;
+    let chestOpen = false;
+    let sportCtx = false;
+    for (const t of used) {
+      if (CHEST_OPEN_TAGS.has(t)) chestOpen = true;
+      if (SPORTWEAR_NEEDS.has(t)) sportCtx = true;
+      const it = lex.byTag.get(t);
+      if (!it) continue;
+      if (it.layer === "skin") chestOpen = true;
+      if (
+        it.layer === "garment" &&
+        t !== "pasties" &&
+        (it.mutex === "top" || it.mutex === "onepiece" || it.mutex === "underwear_top")
+      ) {
+        chestCovered = true;
+      }
+    }
+    const r = mulberry32(((seed >>> 0) ^ 0x70617374) >>> 0);
+    if (!chestCovered || chestOpen) {
+      const item = lex.byTag.get("pasties");
+      if (item && !used.has("pasties") && !banned.has("pasties") && r() < 0.22 && allow(item)) commit("pasties");
+    }
+    const sport = lex.byTag.get("sportswear");
+    if (sport && sportCtx && !used.has("sportswear") && !banned.has("sportswear") && r() < 0.3 && allow(sport)) {
+      commit("sportswear");
+    }
   }
 
   // 四人、五人在性愛時直接補上人數標籤。五人幾乎不會從姿勢池自己抽到

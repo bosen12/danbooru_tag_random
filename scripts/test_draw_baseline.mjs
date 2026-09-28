@@ -51,13 +51,16 @@ const GOLD = {
     rng: 342,
     pos: "1girl, solo, pixie cut, purple eyes, green hair, swept bangs, small breasts, female pubic hair, freckles, bride, santa costume, thong, thighhighs, sports bra, knee boots, fingering, on stomach, bird's eye view, from above, looking to the side, expressionless, bathroom, indoors, steam, dusk, sidelighting, confetti, nsfw, explicit, masterpiece, best quality, amazing quality",
   },
+  // 2026-09-29：路人進了環境池，同一顆亂數落到別的環境字，後面的姿勢跟著換。
+  // seed 42 少了束縛和手銬（手銬是束縛之後才拉的），多了咬唇。seed 100 花瓣換成剪影。
+  // seed 1、999、2026 的落點沒變。百合、多女、多男、乳貼、運動服不消耗主亂數。
   42: {
-    rng: 335,
-    pos: "1girl, solo, very short hair, aqua eyes, blue hair, blunt bangs, large breasts, nipple piercing, narrow waist, half updo, underwear only, black bra, bra, torn thighhighs, thighhighs, blue panties, panties, handcuffs, fingering, kneeling, pov, looking at viewer, drunk, bondage, dojo, indoors, night, depth of field, winter, nsfw, explicit, masterpiece, best quality, amazing quality",
+    rng: 333,
+    pos: "1girl, solo, very short hair, aqua eyes, blue hair, blunt bangs, large breasts, nipple piercing, narrow waist, half updo, underwear only, black bra, bra, torn thighhighs, thighhighs, blue panties, panties, fingering, kneeling, pov, looking at viewer, drunk, biting own lip, dojo, indoors, night, depth of field, nsfw, explicit, masterpiece, best quality, amazing quality",
   },
   100: {
-    rng: 384,
-    pos: "1girl, solo, medium hair, purple eyes, red hair, side ponytail, ponytail, gigantic breasts, muscular, bruise, pink shirt, shirt, jeans, pants, table tennis, squatting, bird's eye view, from above, looking around, drunk, sports court, outdoors, fog, day, shadow, petals, table tennis paddle, table tennis ball, nsfw, explicit, masterpiece, best quality, amazing quality",
+    rng: 385,
+    pos: "1girl, solo, medium hair, purple eyes, red hair, side ponytail, ponytail, gigantic breasts, muscular, bruise, pink shirt, shirt, jeans, pants, table tennis, squatting, bird's eye view, from above, looking around, drunk, sports court, outdoors, fog, day, shadow, silhouette, table tennis paddle, table tennis ball, nsfw, explicit, masterpiece, best quality, amazing quality",
   },
   999: {
     rng: 343,
@@ -189,7 +192,13 @@ const MATRIX_SEEDS = 200;
 // 指紋 a188bd33 → 0cd7db41。
 // 2026-09-28 第七次：立乳和穴口滴精離開池。抓手腕改成 holding another's wrist，
 // 單人女性抽不到。指紋 0cd7db41 → aa8c9d3f。
-const MATRIX_GOLD = "aa8c9d3f";
+// 2026-09-29：路人進環境池，所以環境格和它後面的姿勢會換。
+// 釘了室內或室外時場地改成平權，兩邊都能畫的場地不再補上相反的那一側。
+// 沒釘的預設路徑裡，seed 1、999、2026 逐字沒變。
+// 另開亂數補的字（百合、多女、多男、露胸時的乳貼、有運動場合的運動服）
+// 只在補中的那張多一個字。2400 張沒有矛盾，也沒有藏在衣服裡的乳貼、
+// 沒有運動場合的運動服、帶男生的百合。指紋 aa8c9d3f → 276690ea。
+const MATRIX_GOLD = "276690ea";
 
 function matrixSettings(over) {
   const s = defaultSettings(data);
