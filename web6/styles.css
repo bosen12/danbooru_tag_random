@@ -2733,12 +2733,24 @@ body:has(.fav-hand) .tray-bridge { display: none; }
 }
 
 /* 預覽幀：蓋滿整張，跟付印時一樣看得到它一步步重畫。有預覽了就不再壓暗，掃描線照走。 */
-.hv-preview {
+/* 選擇器要比 .shot-frame img:not(.shot-under) 強：那條把畫框裡每張圖都設成 relative、z-index 1，
+ * 預覽幀也被套到，結果蓋在步數那一行上面。 */
+.hires-veil img.hv-preview {
   position: absolute;
   inset: 0;
+  z-index: 0;
   width: 100%;
   height: 100%;
   object-fit: cover;
+}
+
+.hires-veil .hv-dim,
+.hires-veil .hv-rule {
+  z-index: 1;
+}
+
+.hires-veil .hv-bar {
+  z-index: 2;
 }
 
 .hires-veil[data-preview="true"] .hv-dim {
