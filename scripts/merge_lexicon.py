@@ -1477,7 +1477,9 @@ def extra_style_tags() -> list[dict]:
     coloring：上色／媒材互斥。line_weight：線條粗細。era_style：年代畫風。
     drop shadow 可跟平塗／賽璐璐疊，不加 mutex。"""
     rows = [
-        ("cel shading", "賽璐璐上色", "coloring"),
+        # cel shading 拿掉（2026-09-28）：Danbooru 2024-08 以「意思含糊」停用，貼文改標成
+        # anime coloring（2D 賽璐璐）或 cel rendering（3D 卡通渲染）。模型學到的是兩種混在一起，
+        # 釘了會不知道畫哪一種；2D 那個意思就是下面的 anime coloring。
         ("anime coloring", "動畫上色", "coloring"),
         ("flat color", "平塗", "coloring"),
         ("watercolor (medium)", "水彩", "coloring"),

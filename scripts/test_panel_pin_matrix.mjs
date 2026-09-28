@@ -95,6 +95,14 @@ function tagsOf(drawn) {
     for (let index = 0; index < data.tags.length; index += 1) {
       const item = data.tags[index];
       if (item.section === "quality") continue;
+      // loli、shota 永遠不輸出（engine.js NEVER_DRAW），釘了也不給：這兩個反過來要確定沒出現。
+      if (item.tag === "loli" || item.tag === "shota") {
+        const seed = 760000 + index;
+        const drawn = drawOne(lex, { ...defaultSettings(data), rating: "explicit", sceneMode: mode, girl: true, boy: true }, new Set([item.tag]), new Set(), mulberry32(seed), seed);
+        draws += 1;
+        if (tagsOf(drawn).has(item.tag)) misses.push(`${mode}/${item.tag} 應該永遠不出現: ${drawn.positive}`);
+        continue;
+      }
       const needs = new Set(item.needs || []);
       const settings = defaultSettings(data);
       settings.rating = "explicit";

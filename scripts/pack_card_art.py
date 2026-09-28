@@ -23,6 +23,21 @@ ROOT = Path(__file__).resolve().parent.parent
 CARDS = ROOT / "web" / "cards"
 
 
+def hard_banned() -> set[str]:
+    """web/card-art.js 的 HARD_BANNED（看起來未成年的字）。讀不到就不打包，不猜。"""
+    import re
+
+    src = (ROOT / "web" / "card-art.js").read_text(encoding="utf-8")
+    m = re.search(r"HARD_BANNED\s*=\s*Object\.freeze\(\[([^\]]*)\]\)", src)
+    if not m:
+        raise SystemExit("找不到 web/card-art.js 的 HARD_BANNED，不打包")
+    banned = set(re.findall(r'"([^"]+)"', m.group(1)))
+    # 底線本身被改掉（例如換成亂碼）也不打包：公開包絕不能放進這兩張。
+    if not {"loli", "shota"} <= banned:
+        raise SystemExit("HARD_BANNED 少了 loli／shota，不打包")
+    return banned
+
+
 def main() -> int:
     args = sys.argv[1:]
     previous = None
@@ -35,10 +50,14 @@ def main() -> int:
         return 2
     out = Path(args[0])
     manifest = json.loads((CARDS / "manifest.json").read_text(encoding="utf-8"))
+    banned = hard_banned()
     general = {
         k: v
         for k, v in manifest.items()
-        if isinstance(v, dict) and v.get("rating", "general") == "general" and (CARDS / str(v.get("file", ""))).exists()
+        if isinstance(v, dict)
+        and k not in banned
+        and v.get("rating", "general") == "general"
+        and (CARDS / str(v.get("file", ""))).exists()
     }
     history = {}
     if previous:
