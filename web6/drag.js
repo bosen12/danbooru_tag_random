@@ -161,14 +161,77 @@ export function createDrag({ zones, onDrop, onOver, onMove }) {
       state.settle = setTimeout(() => state.card && state.card.style.setProperty("--g-tilt", `${BASE_TILT}deg`), 90);
     }
     const over = zoneAt(x, y, state.payload);
-    if ((over && over.id) !== (state.over && state.over.id)) {
+    // 區域的標記只在換區域時寫（以前每動一下就把每個區域的 data-* 重寫一次，每一格都要重算樣式）。
+    if ((over && over.id) !== (state.over && state.over.id) || !state.marked) {
       state.over = over;
+      state.marked = true;
       state.ghost.dataset.over = over ? (over.sink ? "sink" : "valid") : "";
       if (over && state.touch) buzz(6);
       if (onOver) onOver(over ? over.id : null, state.payload);
+      markZones(state.payload, state.over);
     }
-    markZones(state.payload, state.over);
     if (onMove) onMove(state.over ? state.over.id : null, state.payload, x, y);
+    edgeScroll(state);
+  }
+
+  /*
+   * 拖到邊緣自己捲：字盒捲下去之後，牌要拖回上面的合成池／卡池，不用放手、捲上去、再拖一次。
+   * 先看指標底下有沒有自己會捲的框（字盒、卡池），靠近它的上下緣就捲它；不然靠近視窗上下緣就捲整頁。
+   * 越靠邊捲越快（平方，剛碰到邊緣時很慢，不會一拖過去就飛走）。
+   */
+  const EDGE = 64;
+  const EDGE_MAX = 22;
+  function scrollerAt(x, y) {
+    for (const e of document.elementsFromPoint(x, y)) {
+      if (e.closest(".drag-ghost")) continue;
+      for (let n = e; n && n !== document.body && n !== document.documentElement; n = n.parentElement) {
+        if (n.scrollHeight > n.clientHeight + 1 && /(auto|scroll)/.test(getComputedStyle(n).overflowY)) return n;
+      }
+      return null;
+    }
+    return null;
+  }
+  function edgeSpeed(depth) {
+    const k = Math.max(0, Math.min(1, depth / EDGE));
+    return k ? Math.max(1, Math.round(k * k * EDGE_MAX)) : 0;
+  }
+  function edgeStep(state) {
+    const { px: x, py: y } = state;
+    const now = performance.now();
+    // 找框要量樣式：同一個位置附近 150ms 內沿用上一次找到的。
+    if (!state.scrollerAt || now - state.scrollerAt > 150) {
+      state.scroller = scrollerAt(x, y);
+      state.scrollerAt = now;
+    }
+    const s = state.scroller;
+    if (s) {
+      const r = s.getBoundingClientRect();
+      const up = y < r.top + EDGE && s.scrollTop > 0 ? -edgeSpeed(r.top + EDGE - y) : 0;
+      const down = y > r.bottom - EDGE && s.scrollTop + s.clientHeight < s.scrollHeight - 1 ? edgeSpeed(y - (r.bottom - EDGE)) : 0;
+      if (up || down) {
+        s.scrollTop += up || down;
+        return true;
+      }
+    }
+    const doc = document.scrollingElement || document.documentElement;
+    const up = y < EDGE && doc.scrollTop > 0 ? -edgeSpeed(EDGE - y) : 0;
+    const down = y > innerHeight - EDGE && doc.scrollTop + innerHeight < doc.scrollHeight - 1 ? edgeSpeed(y - (innerHeight - EDGE)) : 0;
+    if (up || down) {
+      window.scrollBy(0, up || down);
+      return true;
+    }
+    return false;
+  }
+  function edgeScroll(state) {
+    if (state.edgeRaf) return;
+    state.edgeRaf = requestAnimationFrame(() => {
+      state.edgeRaf = 0;
+      if (!state.dragging || active !== state) return;
+      if (!edgeStep(state)) return;
+      // 捲動之後指標底下換了東西：重新認一次區域（位置沒變，不算甩動）。move 會排下一格。
+      state.lx = state.px;
+      move(state, state.px, state.py);
+    });
   }
 
   /** 影子現在畫在哪（含放大、傾斜之前的那張牌的位置）。 */
@@ -314,6 +377,7 @@ export function createDrag({ zones, onDrop, onOver, onMove }) {
   function end(state, cancelled) {
     clearTimeout(state.hold);
     clearTimeout(state.settle);
+    cancelAnimationFrame(state.edgeRaf);
     state.node.classList.remove("is-pressing");
     window.removeEventListener("pointermove", state.onMove);
     window.removeEventListener("pointerup", state.onUp);

@@ -1456,6 +1456,13 @@ body #wf-pick-btn.has {
     linear-gradient(var(--color-ink-2), var(--color-ink-2)) top right / 14px 2px no-repeat,
     linear-gradient(var(--color-rule), var(--color-rule)) top / 100% 1px no-repeat;
   min-width: 0;
+  /* 牆上幾十張成品，捲出畫面的那些不排版、不繪製（只抽牌的每張攤著三十張牌，
+     四十張就是一萬個節點）：放一張牌、抽一張，樣式重算不再掃過整面牆。
+     auto：記得它上一次真正排出來的高度，捲回來時不會跳。 */
+  content-visibility: auto;
+  contain-intrinsic-size: auto 19rem auto 36rem;
+  /* 上面那把扇子的牌指著會浮起來、陰影往外暈：content-visibility 會裁掉溢出去的，留一點邊。 */
+  overflow-clip-margin: 12px;
 }
 
 /* 只抽了牌、還沒送印：不需要留一整張直式畫框的空白，扇形牌夠放就好。送印之後照圖的比例長回來。 */
@@ -1765,7 +1772,12 @@ body #wf-pick-btn.has {
   gap: var(--space-2xs);
 }
 
+/* 一把扇子：一種花色的牌排一排，放不下就疊得更緊、只露出書脊。
+   疊多緊由 CSS 自己算（--n 是張數，100cqw 是這把扇子的寬）：以前 JS 一把一把量寬度再寫回去，
+   量、寫交錯，每把扇子都逼整頁排版一次 —— 抽一張成品光這裡 20～35ms。 */
 .fan {
+  --fan-w: 60px;
+  container-type: inline-size;
   display: flex;
   align-items: flex-end;
   min-width: 0;
@@ -1773,11 +1785,11 @@ body #wf-pick-btn.has {
 }
 
 .fan .card {
-  --card-w: 60px;
+  --card-w: var(--fan-w);
 }
 
 .fan .card + .card {
-  margin-left: var(--fan-overlap, -30px);
+  margin-left: min(4px, (100cqw - var(--n, 2) * var(--fan-w)) / (var(--n, 2) - 1));
 }
 
 @media (hover: hover) and (pointer: fine) {
@@ -2100,6 +2112,49 @@ body:has(.go-float[data-show="true"]) .toast {
   .toast-action:hover {
     background: var(--color-accent);
     color: var(--color-accent-ink);
+  }
+}
+
+.toast-action kbd {
+  margin-left: 6px;
+  padding: 0 4px;
+  border: 1px solid currentColor;
+  border-radius: 3px;
+  font: 600 0.72em/1.4 var(--font-mono, ui-monospace, monospace);
+  opacity: 0.7;
+}
+
+/* 還能反悔多久：一條線從右往左收（滑鼠停在提示上就停住）。 */
+.toast-clock {
+  position: absolute;
+  left: var(--space-xs);
+  right: var(--space-xs);
+  bottom: 3px;
+  height: 2px;
+  border-radius: 2px;
+  background: var(--color-accent);
+  opacity: 0.55;
+  transform-origin: 0 50%;
+  animation: toast-clock var(--toast-ms) linear forwards;
+}
+
+.toast[data-paused="true"] .toast-clock {
+  animation-play-state: paused;
+  opacity: 0.9;
+}
+
+@keyframes toast-clock {
+  from {
+    transform: scaleX(1);
+  }
+  to {
+    transform: scaleX(0);
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .toast-clock {
+    animation: none;
   }
 }
 

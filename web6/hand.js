@@ -60,10 +60,9 @@ export function createHand({
   // 托盤的牌多大：兩個房間都照墨池字盒那張（墨池量、存起來；疊印台只讀）。一開頁就用存著的，
   // 不先用預設大小畫一次、等字盒畫好量完再縮 —— 那樣一載入、一換房間托盤就跳一下。
   const SIZE_KEY = "mochi.fav.size";
-  let size = (() => {
-    const v = read(SIZE_KEY, null);
-    return v && v.w > 30 && v.w < 200 && v.fs > 4 ? { w: v.w, fs: v.fs } : { w: 83, fs: 10.5 };
-  })();
+  const storedSize = read(SIZE_KEY, null);
+  const hadStored = !!(storedSize && storedSize.w > 30 && storedSize.w < 200 && storedSize.fs > 4);
+  let size = hadStored ? { w: storedSize.w, fs: storedSize.fs } : { w: 83, fs: 10.5 };
   const slots = new Map();
   const pendingArrive = new Set();
 
@@ -188,6 +187,9 @@ export function createHand({
       if (watched) gridRo.unobserve(watched);
       gridRo.observe((watched = grid));
     }
+    // 有存著的大小：開頁先用它，等字盒排好、ResizeObserver 回報時再量（那時排版已經做完，量不花錢）。
+    // 開頁就量會在字盒、成品牆剛建好的時候逼整頁同步排版一次（牆上成品多時 25ms）。
+    if (!force && !measured && hadStored && watched) return size;
     // 量 offsetWidth（沒轉過的寬度）；字盒還沒畫出來就等一下再量（最多十秒）。
     const w = n?.offsetWidth || 0;
     if (w > 30) {

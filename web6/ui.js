@@ -91,30 +91,92 @@ export function anyOverlay() {
 /* ---------- 提示 ---------- */
 
 let toastTimer = null;
+// 帶按鈕的提示還剩多久：滑鼠移過去、鍵盤走到按鈕上就先停住倒數（伸手去按的時候不會剛好消失）。
+let toastDeadline = 0;
+let toastLeft = 0;
+let toastNow = null;
+let toastWired = false;
+
+function hideToast() {
+  const t = document.getElementById("toast");
+  clearTimeout(toastTimer);
+  toastNow = null;
+  if (t) t.dataset.show = "false";
+}
+
+function wireToast(t) {
+  if (toastWired) return;
+  toastWired = true;
+  const hold = () => {
+    if (!toastNow || t.dataset.paused === "true") return;
+    clearTimeout(toastTimer);
+    toastLeft = Math.max(0, toastDeadline - Date.now());
+    t.dataset.paused = "true";
+  };
+  const release = () => {
+    if (!toastNow || t.dataset.paused !== "true" || t.matches(":hover") || t.contains(document.activeElement)) return;
+    t.dataset.paused = "false";
+    // 放開之後至少再留一秒多，不要一移開就不見。
+    const ms = Math.max(toastLeft, 1400);
+    toastDeadline = Date.now() + ms;
+    toastTimer = setTimeout(hideToast, ms);
+  };
+  t.addEventListener("pointerenter", hold);
+  t.addEventListener("focusin", hold);
+  t.addEventListener("pointerleave", release);
+  t.addEventListener("focusout", () => setTimeout(release, 0));
+}
+
 /**
- * 畫面下方的提示。action：{ label, run } 帶一顆按鈕（例如「復原」），這時提示多留一會兒、
- * 可以點；按了就收起來。沒帶 action 的跟以前一樣 2.6 秒自己消失。
+ * 畫面下方的提示。action：{ label, run, key? } 帶一顆按鈕（例如「復原」），這時提示多留一會兒、
+ * 可以點；按了就收起來。底下一條線倒數還剩多久；key 是鍵盤上也能按的那個字（見 runToastAction）。
+ * 沒帶 action 的跟以前一樣 2.6 秒自己消失。
  */
 export function toast(text, { action = null, ms = action ? 5200 : 2600 } = {}) {
   const t = document.getElementById("toast");
   if (!t) return;
+  wireToast(t);
   t.replaceChildren(document.createTextNode(text));
+  toastNow = action;
   if (action) {
     const b = document.createElement("button");
     b.type = "button";
     b.className = "toast-action pressable";
     b.textContent = action.label;
+    if (action.key) {
+      const k = document.createElement("kbd");
+      k.textContent = action.key;
+      b.append(k);
+      b.setAttribute("aria-keyshortcuts", action.key);
+    }
     b.addEventListener("click", () => {
-      clearTimeout(toastTimer);
-      t.dataset.show = "false";
+      hideToast();
       action.run();
     });
     t.append(b);
+    // 倒數線：每次都是新的一條，動畫從頭跑（CSS 用 --toast-ms）。
+    const clock = document.createElement("i");
+    clock.className = "toast-clock";
+    clock.setAttribute("aria-hidden", "true");
+    t.append(clock);
   }
+  t.style.setProperty("--toast-ms", ms + "ms");
   t.dataset.action = action ? "true" : "false";
+  t.dataset.paused = "false";
   t.dataset.show = "true";
   clearTimeout(toastTimer);
-  toastTimer = setTimeout(() => (t.dataset.show = "false"), ms);
+  toastDeadline = Date.now() + ms;
+  toastTimer = setTimeout(hideToast, ms);
+}
+
+/** 提示上那顆按鈕的快捷鍵（墨池的 Z＝復原）：提示還在、快捷鍵對得上就按它，回傳有沒有按到。 */
+export function runToastAction(key) {
+  const t = document.getElementById("toast");
+  const a = toastNow;
+  if (!a || !a.key || a.key.toLowerCase() !== String(key).toLowerCase() || !t || t.dataset.show !== "true") return false;
+  hideToast();
+  a.run();
+  return true;
 }
 
 /* ---------- 滑鼠停留說明：滑鼠停 800ms，鍵盤聚焦立刻 ---------- */

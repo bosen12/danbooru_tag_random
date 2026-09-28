@@ -949,6 +949,12 @@ body.fuse {
   background: var(--suit);
 }
 
+/* 那一張試印還在抽（放牌後的下一格才抽完）：先空著，抽完再一個一個上墨。 */
+.ink i[data-on="wait"] {
+  background: transparent;
+  box-shadow: inset 0 0 0 1px color-mix(in oklch, var(--color-stock-ink) 22%, transparent);
+}
+
 .ink i[data-pick="1"] {
   box-shadow: 0 0 0 1px var(--color-stock-ink);
 }

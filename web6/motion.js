@@ -98,6 +98,10 @@ export function flight(ghost, from, target, opts = {}) {
     pointerEvents: "none",
     transformOrigin: "50% 50%",
     willChange: "transform, opacity",
+    // 影子是牌的複製，牌本身有 transform 的過渡（hover 浮起用）：每一格改位置都被過渡拖著走，
+    // 一路落後在曲線後面，最後一格離落點還差 15～20px 就被拿掉，真的那張在落點冒出來 —— 看得到一跳。
+    // 位置、大小、影子、透明度每一格都由這裡算好，不要再過渡一次。
+    transition: "none",
   });
   ghost.style.setProperty("--card-w", from.width + "px");
   ghost.setAttribute("aria-hidden", "true");
@@ -397,7 +401,18 @@ export function initMotion() {
     const t = e.target;
     if ((e.animationName === "deal" || e.animationName === "fade-in") && t.classList?.contains("dealt")) t.classList.remove("dealt");
   });
-  new MutationObserver(schedule).observe(document.body, {
+  // 只在分段選項、數字步進器真的有變的時候才量：以前頁面上任何 DOM 一動（放一張牌、飛行的影子、
+  // 成品的進度）都排一次，下一格就把每一組滑塊量一遍 —— 每次都逼整頁排版，牆上成品多的時候一次 40ms。
+  const WATCH = ".segmented, .stepper";
+  const relevant = (r) => {
+    const t = r.target.nodeType === 1 ? r.target : r.target.parentElement;
+    if (t && t.closest && t.closest(WATCH)) return true;
+    for (const n of r.addedNodes) if (n.nodeType === 1 && (n.matches(WATCH) || n.querySelector(WATCH))) return true;
+    return false;
+  };
+  new MutationObserver((records) => {
+    if (records.some(relevant)) schedule();
+  }).observe(document.body, {
     subtree: true,
     childList: true,
     characterData: true,

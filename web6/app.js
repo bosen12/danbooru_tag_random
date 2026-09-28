@@ -31,7 +31,7 @@ import { initLoraPicker, currentLorasPayload, currentTriggerText, currentCkpt, h
 import { initWorkflow, currentWorkflowId, currentSampling, wfHandleKeys } from "./workflow.js";
 import { HARD_BANNED, applyArtSources } from "./card-art.js";
 import { buildLibrary, createAssets, cardNode, setCardFlag, setEnterTarget, eagerArt, cardFacts, CARD_SUIT_INFO, CARD_SUITS, RATING_ZH } from "./cards.js";
-import { el, openSheet, anyOverlay, toast, ICONS } from "./ui.js";
+import { el, openSheet, anyOverlay, toast, runToastAction, ICONS } from "./ui.js";
 import { createDrag, inkRing } from "./drag.js";
 import { initMotion, settleMotion, flip, flipBy, leave, enter, confirmButton, gatherHome, flight, seat, refuse, reducedMotion, CURVE, DUR, css } from "./motion.js";
 import { createHand } from "./hand.js";
@@ -135,9 +135,6 @@ async function boot() {
   for (const s of shots) if (s.status === "done" && s.hiresJob) hiresRun.resume(s, s.hiresJob);
   for (const root of [$("lib-grid"), $("pool-well"), $("wall"), hand?.fan]) attachPeek(root, ".card[data-tag]", peekInfo);
   document.addEventListener("keydown", onKey);
-  window.addEventListener("resize", () => {
-    for (const node of document.querySelectorAll(".shot")) layoutFans(node);
-  });
   settleMotion();
 }
 
@@ -461,7 +458,7 @@ function buildHand() {
       hand.mark($("lib-grid"));
     },
     onFull: () => toast(`偏好卡牌最多 ${hand.max} 張，先拿掉一張再加`),
-    onRemoved: (t, undo) => toast(`「${lib.byTag.get(t)?.zh || t}」拿出偏好卡牌`, { action: { label: "復原", run: undo } }),
+    onRemoved: (t, undo) => toast(`「${lib.byTag.get(t)?.zh || t}」拿出偏好卡牌`, { action: { label: "復原", key: "Z", run: undo } }),
     decorate: (node, t) => drag.attach(node, { tag: t, from: "hand" }),
   });
 }
@@ -1309,7 +1306,6 @@ function drawBatch(gen) {
   for (const shot of made.slice().reverse()) {
     const node = shotNode(shot, true);
     wall.prepend(node);
-    layoutFans(node);
     // 一次抽很多張：由上往下一張接一張落下（像一疊印好的紙依序攤開），不要全部同一瞬間冒出來。
     // 前八張錯開，後面的跟第八張一起，整段不會拖太久。
     const v = made.indexOf(shot);
@@ -1383,12 +1379,6 @@ function renderWall() {
   const wall = $("wall");
   wall.replaceChildren(...shots.map((s) => shotNode(s, false)));
   $("wall-empty").hidden = shots.length > 0;
-  requestAnimationFrame(() => {
-    for (const node of wall.children) layoutFans(node);
-  });
-  setTimeout(() => {
-    for (const node of wall.children) layoutFans(node);
-  }, 80);
 }
 
 /**
@@ -1406,8 +1396,9 @@ function shotNode(shot, deal) {
   const open = !shot.image && REPRINTABLE.has(shot.status);
   // 收著的那疊牌第一次打開才建：一張成品底下三十張牌、兩百個節點，
   // 牆上四十張就是七千多個看不到的節點，載入時白白排版一次（實測 50＋126ms 的長任務）。
-  let cards = open ? shotCards(shot, false) : el("div", { class: "shot-cards" });
-  let built = open;
+  // 攤開的（只抽牌的）也一樣：剛抽的當場建；重新整理時整面牆一起畫的，捲到快看得到才建。
+  let cards = open && deal ? shotCards(shot, false) : el("div", { class: "shot-cards" });
+  let built = open && deal;
   cards.id = "cards-" + shot.id;
   let userToggled = false;
   cards.hidden = !open;
@@ -1459,7 +1450,6 @@ function shotNode(shot, deal) {
           c.classList.add("dealt");
         });
       }
-      layoutFans(node);
     }
   };
   toggle.addEventListener("click", () => {
@@ -1506,8 +1496,30 @@ function shotNode(shot, deal) {
     if (!userToggled && !cards.hidden) setOpen(false);
   };
   if (open && deal) setOpen(true);
+  else if (open) whenNear(node, () => !cards.hidden && ensureCards());
   paintShot(node, shot);
   return node;
+}
+
+// 快捲到才做的事（一個 IntersectionObserver 顧整面牆）：提早一個半畫面開始。
+const nearJobs = new WeakMap();
+let nearObserver = null;
+function whenNear(node, job) {
+  if (typeof IntersectionObserver !== "function") return job();
+  nearObserver ||= new IntersectionObserver(
+    (entries) => {
+      for (const e of entries) {
+        if (!e.isIntersecting) continue;
+        nearObserver.unobserve(e.target);
+        const run = nearJobs.get(e.target);
+        nearJobs.delete(e.target);
+        run?.();
+      }
+    },
+    { rootMargin: "150% 0px" }
+  );
+  nearJobs.set(node, job);
+  nearObserver.observe(node);
 }
 
 function shotCards(shot, deal) {
@@ -1532,8 +1544,9 @@ function shotCards(shot, deal) {
     if (!bySuit.has(card.suit)) bySuit.set(card.suit, []);
     bySuit.get(card.suit).push(d);
   }
+  // --n：這把扇子幾張（疊多緊由 CSS 照寬度算，見 styles.css 的 .fan）。
   const fans = CARD_SUITS.filter((s) => bySuit.has(s)).map((s) =>
-    el("div", { class: "fan", dataset: { suit: s }, "aria-label": CARD_SUIT_INFO[s].zh }, bySuit.get(s).map((d) => dealt(resultCard(d.tag, SRC_ZH[d.src] || null))))
+    el("div", { class: "fan", dataset: { suit: s }, style: `--n: ${bySuit.get(s).length}`, "aria-label": CARD_SUIT_INFO[s].zh }, bySuit.get(s).map((d) => dealt(resultCard(d.tag, SRC_ZH[d.src] || null))))
   );
   return el(
     "div",
@@ -1551,19 +1564,6 @@ function resultCard(tag, src, flag) {
   node.addEventListener("click", () => showCard(tag, "shot"));
   drag.attach(node, { tag, from: "shot" });
   return node;
-}
-
-/** 扇形：一種花色疊成一把，放不下就疊得更緊，只露出書脊。 */
-function layoutFans(shotEl) {
-  for (const fan of shotEl.querySelectorAll(".fan")) {
-    const n = fan.children.length;
-    if (n < 2) continue;
-    const W = fan.clientWidth;
-    const w = fan.children[0].getBoundingClientRect().width || 60;
-    const natural = n * (w + 4);
-    const overlap = natural > W ? -Math.ceil((n * w - W) / (n - 1)) : 4;
-    fan.style.setProperty("--fan-overlap", `${Math.min(4, overlap)}px`);
-  }
 }
 
 function paintShot(node, shot) {
@@ -1747,7 +1747,6 @@ function reprint(shot) {
   shots.unshift(copy);
   const node = shotNode(copy, true);
   flip($("wall"), () => $("wall").prepend(node));
-  layoutFans(node);
   enter(node);
   const r = node.getBoundingClientRect();
   if (r.top < 0 || r.top > innerHeight - 80) node.scrollIntoView({ behavior: matchMedia("(prefers-reduced-motion: reduce)").matches ? "auto" : "smooth", block: "nearest" });
@@ -1774,7 +1773,7 @@ function removeShot(shot) {
   $("wall-empty").hidden = shots.length > 0;
   S.saveShots(shots);
   renderGoFloat();
-  toast("撤下了一張", { action: { label: "復原", run: () => restoreShot(shot, at) } });
+  toast("撤下了一張", { action: { label: "復原", key: "Z", run: () => restoreShot(shot, at) } });
 }
 
 function restoreShot(shot, at) {
@@ -1785,7 +1784,6 @@ function restoreShot(shot, at) {
   const wall = $("wall");
   const next = shots[i + 1] && wall.querySelector(`.shot[data-id="${shots[i + 1].id}"]`);
   flip(wall, () => (next ? next.before(node) : wall.append(node)));
-  layoutFans(node);
   enter(node);
   $("wall-empty").hidden = true;
   S.saveShots(shots);
@@ -2044,6 +2042,9 @@ function onKey(e) {
     drawBatch(false);
   } else if (e.key === "Escape" && generator.busy) {
     stopAll();
+  } else if ((e.key === "z" || e.key === "Z") && runToastAction("Z")) {
+    // 提示上有「復原」（清空合成池、撤下成品、拿出偏好卡牌）：Z 就是按它。
+    e.preventDefault();
   } else if (e.key === "/") {
     e.preventDefault();
     $("lib-q").focus();
@@ -2093,6 +2094,7 @@ $("pool-clear").addEventListener("click", () => {
   toast(`清空了合成池（${before.length} 張）`, {
     action: {
       label: "復原",
+      key: "Z",
       run: () => {
         // 清空的反過來：偏好卡牌從手上打出去（托盤那一格／標籤），其他的從字盒那張飛回來；
         // 出發點在重畫之前量，回來的那幾格重畫出來時就藏著，影子都在這一刻做好、用 delay 錯開。

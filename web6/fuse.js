@@ -314,10 +314,58 @@ function retrial(start = 0, end = seeds.length) {
       eraClash: d.eraClash || [],
     });
   }
-  trials = start === 0 ? batch : trials.slice(0, start).concat(batch);
+  // 整批重抽就整個換掉；只抽其中幾張就換掉那幾格（其他的留著）。
+  const whole = start === 0 && end >= seeds.length;
+  const next = whole ? [] : trials.slice();
+  batch.forEach((b, k) => (next[start + k] = b));
+  trials = next;
+  if (whole) settleTrials();
+  else if (trialsPending) for (let i = start; i < end; i++) trialsPending.delete(i);
 }
 
-const takeOf = (tag) => trials.filter((t) => t.mine.includes(tag)).length;
+/*
+ * 放牌、拿牌、撤回：四張試印一次抽完要 25～40ms，加上重畫卡池，按下去到牌起飛常常超過 50ms。
+ * 改成先抽選中的那一張（卡池的影子就是它補的）、當場畫、牌當場起飛；其他三張等這一格畫面出去了
+ * 再抽，抽完只補牌角的四個小點和試印那一排。還沒抽的那幾張，小點先不亮（data-on="wait"），
+ * 不會先亮錯的再跳成對的。
+ */
+let trialsPending = null;
+let trialsTimer = 0;
+let trialsFrame = 0;
+
+function retrialPicked() {
+  retrial(picked, picked + 1);
+  trialsPending = new Set(seeds.map((_, i) => i).filter((i) => i !== picked));
+  clearTimeout(trialsTimer);
+  cancelAnimationFrame(trialsFrame);
+  // 下一格畫面之後的第一個任務；分頁在背景（不畫畫面）時也保證會抽完。
+  trialsFrame = requestAnimationFrame(() => {
+    clearTimeout(trialsTimer);
+    trialsTimer = setTimeout(finishTrials, 0);
+  });
+  trialsTimer = setTimeout(finishTrials, 250);
+}
+
+function settleTrials() {
+  trialsPending = null;
+  clearTimeout(trialsTimer);
+  cancelAnimationFrame(trialsFrame);
+}
+
+/** 還沒抽的試印現在抽完（要讀四張試印的地方先叫這個）；抽完補上小點、試印那一排。 */
+function finishTrials() {
+  if (!trialsPending) return;
+  const todo = [...trialsPending];
+  for (const i of todo) retrial(i, i + 1);
+  settleTrials();
+  refreshInk();
+  renderTrials();
+  if (caseTab === "match") renderCase();
+}
+
+const trialKnown = (i) => !trialsPending || !trialsPending.has(i);
+const takeOf = (tag) => trials.filter((t, i) => trialKnown(i) && t.mine.includes(tag)).length;
+const knownTrials = () => trials.filter((_, i) => trialKnown(i)).length;
 
 function missReason(tag) {
   const item = lex.byTag.get(tag);
@@ -362,10 +410,10 @@ function commit(next, label, events = []) {
       back: e.out,
     };
   }
-  retrial();
+  retrialPicked();
   renderAll(events);
   syncCaseStates();
-  if (caseTab === "match") renderCase();
+  // 呼應分頁要看四張試印「常補」什麼：等其他三張抽完（finishTrials）才重畫。
 }
 
 /**
@@ -507,10 +555,9 @@ function undo() {
   if (h.restore) undoRestore(h.restore);
   rowNotes = {};
   plateNotice = null;
-  retrial();
+  retrialPicked();
   renderAll([]);
   syncCaseStates();
-  if (caseTab === "match") renderCase();
   // 撤回：上一步放上來的回去（字盒的四張以上先疊成一疊再一起走，不然路線交叉看起來在亂飛）；
   // 上一步拿走的從它們去的地方飛回原位 —— 清版的反過來。影子都在這一刻做好，用 delay 錯開。
   if (hand) hand.receive(leaveHand);
@@ -572,6 +619,7 @@ function clearBed() {
 }
 
 function pick(i, { quiet = false } = {}) {
+  finishTrials();
   if (i < 0 || i >= trials.length) return;
   if (i === picked) return seat(trialNodes[i]?.node);
   clearTimeout(peekTimer);
@@ -1064,6 +1112,7 @@ function buildTrialShells() {
 }
 
 function peekAt(i) {
+  if (i !== null) finishTrials();
   const next = i === null || i === picked || !trials[i] || !bed.pins.length ? null : i;
   if (next === peekTrial) return;
   peekTrial = next;
@@ -1270,10 +1319,25 @@ function applyFit(plan) {
   const real = box.querySelector(".reg-cards")?.clientWidth;
   if (real && Math.abs(real - plan.cardsW) > 2) scheduleFit();
   if (wideLayout.matches && !expanded.size) {
+    // 算的還是放不下（第一次放牌時列頭高度、欄寬都還是猜的）：找放得下的最大牌寬。
+    // 用二分搜尋：每試一次都要整個卡池排版一次，以前一次縮 2px、最多試 16 次，第一次放牌光這裡 45ms。
     const sc = $("plate-scroll");
-    let guard = 0;
-    while (sc.scrollHeight > sc.clientHeight + 1 && w > FIT_MIN && guard++ < 16) {
-      w -= 2;
+    const fits = (x) => {
+      box.style.setProperty("--pool-card", x + "px");
+      return sc.scrollHeight <= sc.clientHeight + 1;
+    };
+    if (!fits(w)) {
+      let lo = FIT_MIN;
+      let hi = w - 2;
+      let best = FIT_MIN;
+      while (lo <= hi) {
+        const mid = lo + Math.floor((hi - lo) / 4) * 2;
+        if (fits(mid)) {
+          best = mid;
+          lo = mid + 2;
+        } else hi = mid - 2;
+      }
+      w = best;
       box.style.setProperty("--pool-card", w + "px");
     }
   }
@@ -1542,24 +1606,48 @@ function swapGhosts() {
 }
 
 /** 牌底下四個小點：四張試印各一個，這張牌有進那一張就上墨。 */
+const dotState = (tag, i) => (!trialKnown(i) ? "wait" : trials[i]?.mine.includes(tag) ? "1" : "0");
+
 function inkDots(tag) {
   return el(
     "span",
     { class: "ink", "aria-hidden": "true" },
-    trials.map((tr, i) => el("i", { dataset: { on: tr.mine.includes(tag) ? "1" : "0", pick: i === picked ? "1" : "0" } }))
+    trials.map((_, i) => el("i", { dataset: { on: dotState(tag, i), pick: i === picked ? "1" : "0" } }))
   );
+}
+
+/** 這張牌上墨的狀態：四張試印（還沒抽完的不算）裡進了幾張，寫在牌上和讀屏的說明裡。 */
+function paintInk(node, tag) {
+  const card = cardOf(tag);
+  const take = takeOf(tag);
+  const known = knownTrials();
+  node.dataset.ink = take === known ? "full" : take === 0 ? "none" : "part";
+  const why = take < known ? `，${take}/${trials.length} 張試印有它：${missReason(tag)}` : "";
+  node.setAttribute("aria-label", `${card.zh}（${card.tag}）${bed.carried[tag] ? `・跟著「${zh(bed.carried[tag])}」上來` : ""}${why}。Enter 看選項，Delete 拿掉`);
+}
+
+/** 其他試印抽完：卡池裡每張牌的小點原地上墨（一個一個亮起來），牌不重畫。 */
+function refreshInk() {
+  for (const node of $("registers").querySelectorAll(".plate-card")) {
+    const tag = node.dataset.tag;
+    const dots = node.querySelectorAll(".ink i");
+    dots.forEach((d, i) => {
+      const on = dotState(tag, i);
+      if (d.dataset.on === on) return;
+      d.style.transitionDelay = reduced() ? "" : `${i * 45}ms`;
+      d.dataset.on = on;
+    });
+    paintInk(node, tag);
+  }
 }
 
 function plateCard(tag) {
   const card = cardOf(tag);
   const node = eagerArt(cardNode(card, assets, { src: bed.carried[tag] ? "附帶" : null }));
-  const take = takeOf(tag);
   node.classList.add("plate-card");
   if (inbound.has(tag)) node.style.visibility = "hidden";
-  node.dataset.ink = take === trials.length ? "full" : take === 0 ? "none" : "part";
   node.append(inkDots(tag));
-  const why = take < trials.length ? `，${take}/${trials.length} 張試印有它：${missReason(tag)}` : "";
-  node.setAttribute("aria-label", `${card.zh}（${card.tag}）${bed.carried[tag] ? `・跟著「${zh(bed.carried[tag])}」上來` : ""}${why}。Enter 看選項，Delete 拿掉`);
+  paintInk(node, tag);
   node.addEventListener("click", () => openPop(node, tag, "plate"));
   node.addEventListener("keydown", (e) => {
     if (e.key === "Delete" || e.key === "Backspace") {
@@ -1822,6 +1910,7 @@ function onPopOutside(e) {
 }
 
 function openPop(anchor, tag, from) {
+  finishTrials();
   closePop();
   hidePeek();
   const card = cardOf(tag);
@@ -2740,6 +2829,7 @@ function caseSearchKeys(e) {
 function peekInfo(node) {
   const card = cardOf(node.dataset.tag);
   if (!card || document.body.dataset.dragging === "true" || pop) return null;
+  finishTrials();
   const facts = cardFacts(card, lex, data).filter(([k]) => k !== "分級").slice(0, 4);
   if (bed.pins.includes(card.tag)) {
     const take = takeOf(card.tag);
