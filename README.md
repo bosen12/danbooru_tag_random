@@ -174,6 +174,10 @@ cp config.example.json config.json
 換句話說**兩個都不填也能用**。清單為什麼是空的、或為什麼沒有預覽圖，畫面上會直接講。
 
 `comfy.checkpointDir` 沒填 → 底模預覽圖沒有，清單仍問 ComfyUI。生圖本身不受影響。
+它指的是 `checkpointPrefix` 那一層（例如 `…\models\checkpoints\illurtrious`）；填成整個 `…\models\checkpoints` 也行，伺服器會自動接上 prefix 子資料夾。
+
+**從舊版升級：** `config.json` 不進版控，換新資料夾或重新 clone 時它不會跟過來——把舊的 `config.json` 直接複製到新版專案根目錄就好，欄位名稱沒變。
+沒有它，LoRA 就只剩 ComfyUI 給的檔名、沒有預覽圖和觸發詞。開機黑窗的 `設定檔`、`loras`、`ckptdir` 三行會說讀到了什麼、哪個路徑不存在。
 
 ### 用自己的 ComfyUI workflow
 

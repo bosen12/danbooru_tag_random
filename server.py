@@ -105,6 +105,22 @@ def _existing_dir(raw) -> Path | None:
 
 CKPT_DIR = _existing_dir(_ckpt_dir)
 CKPT_PREFIX = str(cfg("comfy.checkpointPrefix", "COMFY_CKPT_PREFIX", "illurtrious"))
+
+
+def _prefix_subdir(folder: Path | None, prefix: str) -> Path | None:
+    r"""checkpointDir 應該指到 checkpointPrefix 那一層（…\checkpoints\illurtrious），
+    list_ckpts 只掃這一層、名字拼成 prefix\檔名。不少舊的 config.json 填的是整個
+    …\checkpoints：那就把 prefix 子資料夾接上去，否則預覽圖和離線清單都對不上。"""
+    if folder is None or not prefix or not folder.is_dir():
+        return folder
+    if folder.name.lower() == prefix.replace("/", "\\").split("\\")[-1].lower():
+        return folder
+    sub = folder / prefix
+    return sub if sub.is_dir() else folder
+
+
+_ckpt_dir_given = CKPT_DIR
+CKPT_DIR = _prefix_subdir(CKPT_DIR, CKPT_PREFIX)
 CKPT_EXTS = {".safetensors", ".ckpt", ".pt"}
 CKPT_PREVIEW_EXTS = (
     ".preview.png",
@@ -3509,15 +3525,26 @@ def main() -> None:
     print(f"ckpt     {CKPT}")
     # 第一次 clone 下來最常見的兩個「怎麼是空的」就是這兩項沒設定。
     # 與其讓使用者從空清單反推，開機就講清楚。
-    print(
-        f"loras    {lora_scan.LORA_ROOT}"
-        if lora_scan.LORA_ROOT
-        else "loras    （未設定 config.json 的 paths.loraRoot，LoRA 面板會是空的）"
-    )
+    if not lora_scan.LORA_ROOT:
+        print("loras    （未設定 config.json 的 paths.loraRoot，LoRA 清單改問 Comfy，沒有預覽圖和觸發詞）")
+    elif not lora_scan.LORA_ROOT.is_dir():
+        print(
+            f"loras    {lora_scan.LORA_ROOT}（路徑不存在，LoRA 面板會是空的）\n"
+            "         請把 config.json 的 paths.loraRoot 改成這台電腦的 ComfyUI\\models\\loras"
+        )
+    else:
+        print(f"loras    {lora_scan.LORA_ROOT}")
+        if lora_scan.LORA_FOLDERS:
+            missing = [f for f in lora_scan.LORA_FOLDERS if not (lora_scan.LORA_ROOT / f).is_dir()]
+            print(f"         只掃 paths.loraFolders：{', '.join(lora_scan.LORA_FOLDERS)}（改成 [] 就掃全部子資料夾）")
+            if missing:
+                print(f"         這幾個資料夾不存在：{', '.join(missing)}")
     if not _ckpt_dir:
         print("ckptdir  （未設定 config.json 的 comfy.checkpointDir，換底模清單改問 Comfy）")
     elif CKPT_DIR is not None and CKPT_DIR.is_dir():
         print(f"ckptdir  {CKPT_DIR}")
+        if CKPT_DIR != _ckpt_dir_given:
+            print(f"         （comfy.checkpointDir 指到整個 checkpoints，自動接上 checkpointPrefix 子資料夾 {CKPT_PREFIX}）")
     else:
         print(f"ckptdir  {_ckpt_dir}（路徑不存在，換底模清單改問 Comfy）")
     st = tg_status()

@@ -226,6 +226,14 @@ ok("preview rejects slash", ckpt_preview_path("a/b.png", td) is None)
 ok("preview rejects dotdot", ckpt_preview_path("..", td) is None)
 ok("preview allows sibling png", ckpt_preview_path("alpha.png", td) is not None)
 
+# 舊 config.json：checkpointDir 指整個 checkpoints、另填 checkpointPrefix。
+_ck_root = Path(tempfile.mkdtemp()) / "checkpoints"
+(_ck_root / "illurtrious").mkdir(parents=True)
+ok("old checkpointDir gains prefix subfolder", server._prefix_subdir(_ck_root, "illurtrious") == _ck_root / "illurtrious")
+ok("checkpointDir already at prefix stays", server._prefix_subdir(_ck_root / "illurtrious", "illurtrious") == _ck_root / "illurtrious")
+ok("checkpointDir without prefix subfolder stays", server._prefix_subdir(_ck_root, "other") == _ck_root)
+ok("missing checkpointDir stays", server._prefix_subdir(td / "nope", "illurtrious") == td / "nope")
+
 
 class _Client:
     def __init__(self, ip: str) -> None:
