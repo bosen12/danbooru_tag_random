@@ -3043,6 +3043,18 @@ def main() -> None:
     for t in unique:
         by_sec[t["section"]] = by_sec.get(t["section"], 0) + 1
 
+    # 五個品質加分的中文以產生腳本為準。頂層 zh 若只從舊 lexicon 複製，重產會洗掉。
+    boost_zh = {row["tag"]: row["zh"] for row in extra_quality_boost_tags()}
+    top_zh: dict[str, str] = {}
+    for t in (
+        "masterpiece", "best quality", "amazing quality",
+        "absurdres", "highres", "very aesthetic", "highly aesthetic", "newest",
+        "nsfw", "explicit",
+    ):
+        label = boost_zh.get(t) or old_zh.get(t)
+        if label:
+            top_zh[t] = label
+
     data = {
         "quality": [
             "masterpiece",
@@ -3150,11 +3162,7 @@ def main() -> None:
         "groupZh": GROUP_ZH,
         "eraAnchors": ERA_ANCHORS,
         "eraAnchorAlts": ERA_ANCHOR_ALTS,
-        "zh": {t: old_zh[t] for t in (
-            "masterpiece", "best quality", "amazing quality",
-            "absurdres", "highres", "very aesthetic", "highly aesthetic", "newest",
-            "nsfw", "explicit",
-        ) if t in old_zh},
+        "zh": top_zh,
         "tags": unique,
     }
     OUT.write_text(json.dumps(data, ensure_ascii=False, indent=2), encoding="utf-8")

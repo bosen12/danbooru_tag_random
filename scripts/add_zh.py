@@ -1305,8 +1305,22 @@ def check_tables() -> None:
         raise SystemExit("add_zh.py 的 ZH 與 ITEMS 對同一個字給了不同的中文")
 
 
+# 可選的品質加分。不在 quality／nsfwTail／alwaysEnv，但頂層 zh 仍要留中文。
+# 2026-09-28：只從那三份名單重組時，這五個對照會在 add_zh 被洗掉。
+QUALITY_BOOST = (
+    "absurdres",
+    "highres",
+    "very aesthetic",
+    "highly aesthetic",
+    "newest",
+)
+
+
 def main() -> None:
     check_tables()
+    absent = [t for t in QUALITY_BOOST if t not in ZH]
+    if absent:
+        raise SystemExit("QUALITY_BOOST 沒有中文: " + ", ".join(absent))
     data = json.loads(LEX.read_text(encoding="utf-8"))
     missing = []
     for item in data["tags"]:
@@ -1323,7 +1337,7 @@ def main() -> None:
         item["zh"] = zh
     data["zh"] = {
         t: ZH[t]
-        for t in list(data["quality"]) + list(data["nsfwTail"]) + list(data["alwaysEnv"])
+        for t in list(data["quality"]) + list(data["nsfwTail"]) + list(data["alwaysEnv"]) + list(QUALITY_BOOST)
         if t in ZH
     }
     LEX.write_text(json.dumps(data, ensure_ascii=False, indent=2), encoding="utf-8")

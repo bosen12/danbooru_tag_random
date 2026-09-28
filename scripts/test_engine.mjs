@@ -1521,7 +1521,7 @@ function indoorOutdoorClash(have) {
   const girlAt = parts.indexOf("1girl");
   ok("quality sits after subject", qAt > girlAt && girlAt >= 0, `girl@${girlAt} quality@${qAt}`);
   ok("quality sits after nsfw tail", qAt > nsfwAt && nsfwAt >= 0, `nsfw@${nsfwAt} quality@${qAt}`);
-  ok("default draw has no cel shading", !parts.includes("cel shading"));
+  ok("default draw has no anime coloring", !parts.includes("anime coloring"));
   ok("default draw has no absurdres", !parts.includes("absurdres"));
   ok("default draw has no highres", !parts.includes("highres"));
   ok("default draw has no very aesthetic", !parts.includes("very aesthetic"));
@@ -1536,17 +1536,17 @@ function indoorOutdoorClash(have) {
   s.eras = ["modern"];
   s.heats = ["tease"];
   s.weights = { tease: 1, flash: 0, sex: 0 };
-  const pinned = applyPin(lex, new Set(), new Set(), "cel shading").pinned;
+  const pinned = applyPin(lex, new Set(), new Set(), "anime coloring").pinned;
   const d = drawOne(lex, s, pinned, new Set(), mulberry32(43), 43);
   const parts = d.positive.split(", ").map((t) => t.trim()).filter(Boolean);
-  ok("pinned cel shading enters POS", parts.includes("cel shading"));
+  ok("pinned anime coloring enters POS", parts.includes("anime coloring"));
   ok(
     "style sits before quality",
-    parts.indexOf("cel shading") >= 0 && parts.indexOf("cel shading") < parts.indexOf("masterpiece"),
-    `style@${parts.indexOf("cel shading")} quality@${parts.indexOf("masterpiece")}`
+    parts.indexOf("anime coloring") >= 0 && parts.indexOf("anime coloring") < parts.indexOf("masterpiece"),
+    `style@${parts.indexOf("anime coloring")} quality@${parts.indexOf("masterpiece")}`
   );
-  eq("cel shading is optional quality", lex.byTag.get("cel shading")?.section, "quality");
-  eq("cel shading is style group", lex.byTag.get("cel shading")?.group, "style");
+  eq("anime coloring is optional quality", lex.byTag.get("anime coloring")?.section, "quality");
+  eq("anime coloring is style group", lex.byTag.get("anime coloring")?.group, "style");
   eq("absurdres is optional boost", lex.byTag.get("absurdres")?.group, "boost");
 }
 
@@ -1588,8 +1588,8 @@ function indoorOutdoorClash(have) {
     ok(`default draw has no ${tag}`, !parts.includes(tag));
   }
 
-  const pinWater = applyPin(lex, new Set(["cel shading"]), new Set(), "watercolor (medium)");
-  ok("watercolor pin drops cel shading", !pinWater.pinned.has("cel shading"));
+  const pinWater = applyPin(lex, new Set(["anime coloring"]), new Set(), "watercolor (medium)");
+  ok("watercolor pin drops anime coloring", !pinWater.pinned.has("anime coloring"));
   ok("watercolor pin keeps watercolor", pinWater.pinned.has("watercolor (medium)"));
 
   const pinEra = applyPin(lex, new Set(["1990s (style)"]), new Set(), "retro artstyle");
@@ -1597,13 +1597,13 @@ function indoorOutdoorClash(have) {
 
   // 原本這裡用 thick outlines/clean lines 示範同格互斥。clean lines 是 0 張、
   // 2026-09-18 移除，line_weight 只剩 thick outlines 一個成員，沒有同伴可以擠掉。
-  // 同一件事上面兩條（watercolor 擠掉 cel shading、retro 擠掉 1990s）還在守。
+  // 同一件事上面兩條（watercolor 擠掉 anime coloring、retro 擠掉 1990s）還在守。
 
   const pinAes = applyPin(lex, new Set(["very aesthetic"]), new Set(), "highly aesthetic");
   ok("highly aesthetic pin drops very aesthetic", !pinAes.pinned.has("very aesthetic"));
 
-  const pinDrop = applyPin(lex, new Set(["cel shading"]), new Set(), "drop shadow");
-  ok("drop shadow stacks with cel shading", pinDrop.pinned.has("cel shading") && pinDrop.pinned.has("drop shadow"));
+  const pinDrop = applyPin(lex, new Set(["anime coloring"]), new Set(), "drop shadow");
+  ok("drop shadow stacks with anime coloring", pinDrop.pinned.has("anime coloring") && pinDrop.pinned.has("drop shadow"));
 
   const pinnedNew = applyPin(lex, new Set(), new Set(), "newest").pinned;
   const dNew = drawOne(lex, s, pinnedNew, new Set(), mulberry32(45), 45);
