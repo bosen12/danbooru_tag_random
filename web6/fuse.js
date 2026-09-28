@@ -135,6 +135,11 @@ let caseSearchTimer = 0;
 let dealCase = false;
 let lastPointer = "mouse";
 const sfx = createSfx();
+// 聲音引擎第一次建立要 40ms 左右：以前落在第一次放牌那一下（整段 123ms 的長任務）。
+// 第一個手勢（按下去、按鍵）時先在下一輪建好，等 click 真的要出聲時已經在了。
+for (const type of ["pointerdown", "keydown"]) {
+  addEventListener(type, () => setTimeout(() => sfx.warm(), 0), { once: true, capture: true, passive: true });
+}
 const reduced = () => typeof matchMedia === "function" && matchMedia("(prefers-reduced-motion: reduce)").matches;
 
 // 數字換了才滾一下。節點常常整塊重畫，所以記的是字，不是那一個元素。
@@ -145,9 +150,10 @@ function tickIfChanged(node, key) {
   const prev = tickSeen.get(key);
   tickSeen.set(key, next);
   if (prev === undefined || prev === next || reduced()) return;
+  // 下一格才加回去：同一格裡「拿掉、讀 offsetWidth、加回去」會逼整塊剛重畫的卡池當場排版，
+  // 一次重畫有十來個數字要滾，第一次放牌光這裡 25ms。隔一格重開，動畫一樣、不強制排版。
   node.classList.remove("is-ticked");
-  void node.offsetWidth;
-  node.classList.add("is-ticked");
+  requestAnimationFrame(() => node.classList.add("is-ticked"));
 }
 
 /* ================= 小工具 ================= */

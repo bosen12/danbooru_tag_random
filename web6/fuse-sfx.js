@@ -125,6 +125,10 @@ export function createSfx() {
 
   return {
     ...sounds,
+    /** 在手勢裡先把 AudioContext 建好（聲音關著就不建）。 */
+    warm() {
+      ac();
+    },
     get on() {
       return on;
     },
