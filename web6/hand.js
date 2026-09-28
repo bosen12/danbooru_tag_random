@@ -34,6 +34,8 @@ const CHEVRON =
 const GAP = 10;
 const noSample = () => null;
 
+const TRAY_SCALE = 1.15;
+
 export function createHand({
   key,
   max = 10,
@@ -106,7 +108,12 @@ export function createHand({
   });
 
   // 托盤佔多高，房間的捲動區底下就墊多高（CSS 讀 --fav-h）。
-  const ro = typeof ResizeObserver === "function" ? new ResizeObserver(syncSpace) : null;
+  // 觀察回呼若當場量，會在載入那一輪逼整頁排版。跟 layout 一樣，下一格畫面再量。
+  let spaceRaf = 0;
+  const ro = typeof ResizeObserver === "function" ? new ResizeObserver(() => {
+    cancelAnimationFrame(spaceRaf);
+    spaceRaf = requestAnimationFrame(syncSpace);
+  }) : null;
   ro?.observe(el);
   // 量的是托盤頂端到視窗底邊（墨池的浮動按鈕列出來時托盤會墊高）：角落的按鈕要讓到這麼高。
   el.addEventListener("transitionend", (e) => {
@@ -411,7 +418,8 @@ export function createHand({
   function layout(animate = true) {
     const m = measure();
     // 手機上字盒的牌很大（一排三張），托盤照原樣會吃掉半個螢幕：整張等比例縮到 76px，長相不變。
-    const k = innerWidth < 640 ? Math.min(1, 76 / m.w) : 1;
+    // 桌機上比字盒的牌大 15%：托盤浮在畫面最下面、離眼睛最遠，跟字盒一樣大看起來反而偏小。
+    const k = innerWidth < 640 ? Math.min(1, 76 / m.w) : TRAY_SCALE;
     const w = Math.round(m.w * k * 10) / 10;
     const fs = Math.round(m.fs * k * 100) / 100;
     size.shown = w;
@@ -458,7 +466,6 @@ export function createHand({
     cancelAnimationFrame(spaceRaf);
     spaceRaf = requestAnimationFrame(syncSpace);
   }
-  let spaceRaf = 0;
 
   function setOpen(v) {
     const was = open;

@@ -442,7 +442,7 @@ button.card:active {
   box-sizing: border-box;
   width: min(calc(100vw - 20px), max(var(--fav-want, 360px), 360px));
   translate: -50% 0;
-  padding: 6px 10px 12px;
+  padding: 8px 12px 14px;
   border: 1px solid var(--color-rule-2);
   border-radius: 16px;
   background: color-mix(in oklch, var(--color-paper) 90%, transparent);
@@ -470,11 +470,16 @@ button.card:active {
   display: block;
 }
 
-/* 收起來：只剩一顆標籤。 */
+/* 收起來：只剩一顆標籤（大一點，底部一眼找得到、好按）。 */
 .fav-hand[data-open="false"] {
   width: max-content;
-  padding: 3px 4px;
+  padding: 5px 6px;
   border-radius: 999px;
+}
+
+.fav-hand[data-open="false"] .fav-tab {
+  padding: 7px 14px;
+  font-size: 0.9375rem;
 }
 
 .fav-hand[data-open="false"] :is(.fav-body, .fav-hint, .fav-pick) {
@@ -541,7 +546,7 @@ body[data-dragging="true"] .fav-hand[data-open="false"][data-over="true"] {
   display: flex;
   align-items: center;
   gap: 8px;
-  min-height: 30px;
+  min-height: 34px;
 }
 
 .fav-tab {
@@ -554,7 +559,7 @@ body[data-dragging="true"] .fav-hand[data-open="false"][data-over="true"] {
   background: transparent;
   color: var(--color-ink);
   font: inherit;
-  font-size: 13px;
+  font-size: 0.875rem;
   font-weight: 700;
   white-space: nowrap;
   cursor: pointer;
@@ -586,19 +591,19 @@ body[data-dragging="true"] .fav-hand[data-open="false"][data-over="true"] {
   overflow: hidden;
   text-overflow: ellipsis;
   white-space: nowrap;
-  font-size: 12px;
+  font-size: 0.8125rem;
   color: var(--color-muted);
 }
 
 .fav-pick {
   flex: none;
-  padding: 3px 12px;
+  padding: 4px 14px;
   border: 1px solid var(--color-rule);
   border-radius: 999px;
   background: var(--color-paper-3);
   color: var(--color-ink);
   font: inherit;
-  font-size: 12px;
+  font-size: 0.8125rem;
   font-weight: 600;
   white-space: nowrap;
   cursor: pointer;
