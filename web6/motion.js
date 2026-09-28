@@ -250,16 +250,40 @@ function syncSteppers(root = document) {
 
 /* ---------- 自動：DOM 一變就補上 ---------- */
 
-let queued = false;
+let scheduled = false;
+let syncing = false;
+let ready = false;
 function schedule() {
-  if (queued) return;
-  queued = true;
-  // 不用 rAF：分頁不在前面時 rAF 幾乎不跑，滑塊會停在半路。微任務在同一輪畫面前就做完。
-  queueMicrotask(() => {
-    queued = false;
-    syncThumbs();
-    syncSteppers();
-  });
+  // 開機過程一直在改 DOM。這時候量滑塊會逼整頁同步排版，算進同一個長任務。
+  // 等這一格排完、畫上去，settleMotion() 才把 ready 打開。
+  if (!ready || scheduled || syncing) return;
+  scheduled = true;
+  const run = () => {
+    scheduled = false;
+    syncing = true;
+    try {
+      syncThumbs();
+      syncSteppers();
+    } finally {
+      syncing = false;
+    }
+  };
+  // 分頁在背景時 rAF 不跑，那時仍用微任務，滑塊才不會停在半路。
+  if (document.hidden) queueMicrotask(run);
+  else requestAnimationFrame(run);
+}
+
+/** 開機的 DOM 都放好了：下一格排完版、畫上去之後再量滑塊。 */
+export function settleMotion() {
+  if (document.hidden) {
+    ready = true;
+    schedule();
+    return;
+  }
+  requestAnimationFrame(() => setTimeout(() => {
+    ready = true;
+    schedule();
+  }, 0));
 }
 
 /* ---------- 按下去的手感：墨暈、蓋章、搖頭 ---------- */
@@ -288,8 +312,13 @@ export function inkPress(el, x, y) {
 /** 狀態換過去了（開／關、選中）：蓋一下章。 */
 export function seat(el) {
   if (!el || reducedMotion()) return;
-  el.classList.remove("is-seated");
-  void el.offsetWidth;
+  // 章本來沒蓋過：直接掛上就會從第一格開始播。為了重播去讀 offsetWidth 會逼整頁排版，
+  // 載入時每顆選中的按鈕都這樣一次，長任務就從這裡來。只有章還在、要重頭播，才讀一次。
+  const replay = el.classList.contains("is-seated");
+  if (replay) {
+    el.classList.remove("is-seated");
+    void el.offsetWidth;
+  }
   el.classList.add("is-seated");
   clearTimeout(el._seatTimer);
   el._seatTimer = setTimeout(() => el.classList.remove("is-seated"), DUR.medium + 40);
@@ -350,9 +379,13 @@ function wirePress() {
     { capture: true }
   );
   // aria-pressed 換了（開關按鈕）：蓋一下章。
+  // 第一次寫上屬性是畫出來，不是使用者切換。那時蓋章會為了重播動畫去量版面，載入就多一次整頁排版。
   new MutationObserver((records) => {
-    for (const r of records) if (r.target.matches?.(PRESS)) seat(r.target);
-  }).observe(document.body, { subtree: true, attributes: true, attributeFilter: ["aria-pressed"] });
+    for (const r of records) {
+      if (r.oldValue === null) continue;
+      if (r.target.matches?.(PRESS)) seat(r.target);
+    }
+  }).observe(document.body, { subtree: true, attributes: true, attributeOldValue: true, attributeFilter: ["aria-pressed"] });
 }
 
 export function initMotion() {

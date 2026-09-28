@@ -1127,6 +1127,9 @@ for _w, _h, _scale, _mode in ((1024, 1024, 1.25, "quick"), (1000, 803, 1.37, "qu
 _saved_api = server.api
 _saved_upload = server.comfy_upload_image
 _saved_models = server.models_from_comfy
+_saved_hires_dir = server.hires_input_dir
+# 放大測試會順手清上傳目錄。指到暫存，不要碰到本機 Comfy 的 input。
+server.hires_input_dir = lambda checkpoint_dir=None: Path(_tempfile.mkdtemp(prefix="hires-prune-test-"))
 
 
 class _HiresHold:
@@ -1138,6 +1141,8 @@ class _HiresHold:
 def _hires_api(method, path, data=None, timeout=60):
     if method == "GET" and str(path).startswith("/view?"):
         return _HiresHold.png
+    if method == "GET" and path == "/queue":
+        return {"queue_running": [], "queue_pending": []}
     raise AssertionError((method, path))
 
 
@@ -1244,6 +1249,7 @@ finally:
     server.api = _saved_api
     server.comfy_upload_image = _saved_upload
     server.models_from_comfy = _saved_models
+    server.hires_input_dir = _saved_hires_dir
 
 
 # ---- 取樣參數（工作流面板）：payload 指定 steps／CFG／denoise，夾在範圍裡，沒給用預設 ----

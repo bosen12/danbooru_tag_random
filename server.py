@@ -930,6 +930,128 @@ def comfy_upload_image(raw: bytes, filename: str) -> str:
     return f"{sub}/{name}" if sub else name
 
 
+# 同一張原圖再放大不會重複上傳（檔名是內容雜湊）。不同的原圖會各留一份，
+# input/danbooru_hires 會一直長大。只留最近這幾張；佇列裡還指著的那張不刪。
+HIRES_INPUT_KEEP = 24
+
+
+def comfy_is_local(base: str | None = None) -> bool:
+    """只在 Comfy 跑在這台機器上時才去清它的 input 目錄。"""
+    raw = comfy_base() if base is None else str(base)
+    host = (urllib.parse.urlparse(raw).hostname or "").strip().lower()
+    if host.startswith("[") and host.endswith("]"):
+        host = host[1:-1]
+    return host in {"127.0.0.1", "localhost", "::1"}
+
+
+def hires_input_dir(checkpoint_dir: str | Path | None = None) -> Path | None:
+    """checkpointDir 往上找到 models，旁邊就是 Comfy 根目錄的 input/danbooru_hires。"""
+    text = str(_ckpt_dir if checkpoint_dir is None else checkpoint_dir).strip()
+    if not text:
+        return None
+    current = Path(text)
+    for parent in [current, *current.parents]:
+        if parent.name.lower() == "models":
+            return parent.parent / "input" / "danbooru_hires"
+    return None
+
+
+def _hires_basename(image: str) -> str:
+    name = str(image or "").replace("\\", "/").split("/")[-1]
+    if not name.startswith("hires_") or not name.endswith(".png"):
+        return ""
+    if name != Path(name).name:
+        return ""
+    return name
+
+
+def queued_hires_names(queue) -> set[str]:
+    """Comfy /queue 裡 LoadImage 正用著的 hires_*.png 檔名（不含資料夾）。"""
+    found: set[str] = set()
+    if not isinstance(queue, dict):
+        return found
+    for key in ("queue_running", "queue_pending"):
+        items = queue.get(key) or []
+        if not isinstance(items, list):
+            continue
+        for item in items:
+            prompt = item[2] if isinstance(item, (list, tuple)) and len(item) > 2 else None
+            if not isinstance(prompt, dict):
+                continue
+            for node in prompt.values():
+                if not isinstance(node, dict) or node.get("class_type") != "LoadImage":
+                    continue
+                base = _hires_basename(str((node.get("inputs") or {}).get("image") or ""))
+                if base:
+                    found.add(base)
+    return found
+
+
+def prune_hires_dir(directory: Path, keep: int = HIRES_INPUT_KEEP, protect: set[str] | None = None) -> list[str]:
+    """刪掉 directory 裡較舊的 hires_*.png，留下最近 keep 張。protect 裡的檔名一律不刪。
+
+    只動這一層的檔案，不進子資料夾。目錄不在就什麼都不做。回傳刪掉的檔名。
+    """
+    folder = Path(directory)
+    if not folder.is_dir():
+        return []
+    safe = {_hires_basename(n) for n in (protect or set())}
+    safe.discard("")
+    files: list[tuple[float, str, Path]] = []
+    for path in folder.iterdir():
+        if not path.is_file():
+            continue
+        name = path.name
+        if not _hires_basename(name):
+            continue
+        if path.parent.resolve() != folder.resolve():
+            continue
+        try:
+            stamp = path.stat().st_mtime
+        except OSError:
+            continue
+        files.append((stamp, name, path))
+    files.sort(key=lambda row: (row[0], row[1]))
+    # 最新的 keep 張留下。更舊的如果正在佇列裡也留下，所以最後可能超過 keep 張。
+    newest = {name for _, name, _ in files[-keep:]} if keep > 0 else set()
+    deleted: list[str] = []
+    for _, name, path in files:
+        if name in newest or name in safe:
+            continue
+        try:
+            path.unlink()
+        except OSError:
+            continue
+        deleted.append(name)
+    return deleted
+
+
+def prune_hires_inputs(extra: set[str] | None = None) -> list[str]:
+    """開機或上傳成功後呼叫。遠端 Comfy、問不到佇列、或不在本機，都不刪。"""
+    if os.environ.get("NO_HIRES_PRUNE"):
+        return []
+    if not comfy_is_local():
+        return []
+    folder = hires_input_dir()
+    if folder is None:
+        return []
+    try:
+        queue = api("GET", "/queue", timeout=5)
+    except Exception:
+        return []
+    if not isinstance(queue, dict):
+        return []
+    protect = queued_hires_names(queue)
+    for name in extra or ():
+        base = _hires_basename(name)
+        if base:
+            protect.add(base)
+    try:
+        return prune_hires_dir(folder, HIRES_INPUT_KEEP, protect)
+    except OSError:
+        return []
+
+
 def prepare_hires(payload: dict) -> tuple[dict, dict]:
     """有 hires 就走這裡：下載原圖、量尺寸、上傳、組內建圖。workflowId 不用。"""
     spec = parse_hires(payload.get("hires"))
@@ -967,6 +1089,11 @@ def prepare_hires(payload: dict) -> tuple[dict, dict]:
     # Comfy 的 input/danbooru_hires 不會每做一次就多一份原圖。
     filename = "hires_" + image_digest(bytes(raw))[:20] + ".png"
     image_name = comfy_upload_image(bytes(raw), filename)
+    # 上傳成功才清。清失敗不影響這次放大；剛傳上去的這張和佇列裡的不刪。
+    try:
+        prune_hires_inputs({filename, image_name})
+    except Exception:
+        pass
     wf = build_hires_workflow(
         positive,
         seed,
@@ -3406,6 +3533,9 @@ def main() -> None:
         print(f"discord  {where}  自動送 {'開' if ds['enabled'] else '關'}")
     check_ckpt()
     start_card_fetch()
+    removed = prune_hires_inputs()
+    if removed:
+        print(f"hires    清掉 {len(removed)} 張舊的上傳原圖，input/danbooru_hires 留下最近 {HIRES_INPUT_KEEP} 張")
     httpd.serve_forever()
 
 

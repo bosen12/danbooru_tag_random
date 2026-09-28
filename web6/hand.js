@@ -120,9 +120,23 @@ export function createHand({
     if (e.target === el && e.propertyName === "bottom") syncSpace();
   });
   function syncSpace() {
+    const cur = document.documentElement.style.getPropertyValue("--fav-h");
+    // 托盤收著：高度就是 0，樣式表的後備值已經是 0。這時去量、再寫上 0px，
+    // 會把整頁弄髒，同一格裡接著量滑塊又排一次。
+    if (el.dataset.hidden === "true") {
+      if (cur && cur !== "0px") document.documentElement.style.setProperty("--fav-h", "0px");
+      return;
+    }
     const r = el.getBoundingClientRect();
-    const h = el.dataset.hidden === "true" || !r.height ? 0 : Math.ceil(innerHeight - r.top) + 12;
-    document.documentElement.style.setProperty("--fav-h", h + "px");
+    const h = !r.height ? 0 : Math.ceil(innerHeight - r.top) + 12;
+    const next = h + "px";
+    if (cur === next || (h === 0 && !cur)) return;
+    // 這格已經量過了。立刻寫 --fav-h 會弄髒 body 的底邊，同一格後面的讀尺寸再排整頁。
+    requestAnimationFrame(() => {
+      if (document.documentElement.style.getPropertyValue("--fav-h") !== next) {
+        document.documentElement.style.setProperty("--fav-h", next);
+      }
+    });
   }
 
   function read(k, fallback) {

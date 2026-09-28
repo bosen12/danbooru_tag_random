@@ -309,6 +309,12 @@ body :is(.lora-modal, .lora-preview-tip, .tw-tip, .lora-toast, .lora-tarot, .sho
   --d-pop: var(--dur-medium);
 }
 
+/* 沒打開的整頁面板是 display:flex，只靠 visibility 藏起來，載入時仍會整棵排版。
+ * 收起內容之後第一格的字盒不變；加上 .open 才恢復排版。 */
+body :is(.lora-modal, .lora-tarot, .shortcuts-overlay):not(.open) {
+  content-visibility: hidden;
+}
+
 /* 模型、workflow 選好了不用強調色描邊（web/lora.css 給三個版本共用，這裡只蓋 web6）：
  * 桅杆上最亮的東西應該是「現在要做的事」，強調色留給付印／抽並生圖。 */
 body #ckpt-pick-btn.has,

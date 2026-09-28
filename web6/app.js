@@ -33,7 +33,7 @@ import { HARD_BANNED, applyArtSources } from "./card-art.js";
 import { buildLibrary, createAssets, cardNode, setCardFlag, setEnterTarget, eagerArt, cardFacts, CARD_SUIT_INFO, CARD_SUITS, RATING_ZH } from "./cards.js";
 import { el, openSheet, anyOverlay, toast, ICONS } from "./ui.js";
 import { createDrag, inkRing } from "./drag.js";
-import { initMotion, flip, flipBy, leave, enter, confirmButton, gatherHome, flight, seat, refuse, reducedMotion, CURVE, DUR, css } from "./motion.js";
+import { initMotion, settleMotion, flip, flipBy, leave, enter, confirmButton, gatherHome, flight, seat, refuse, reducedMotion, CURVE, DUR, css } from "./motion.js";
 import { createHand } from "./hand.js";
 import { createGenerator, comfyOnline, viewSrc, tabTitle, watchLink, LINK_LABEL } from "./gen.js";
 import { genSeed, mountSeedControl, seedUseButton } from "./seed-control.js";
@@ -138,6 +138,7 @@ async function boot() {
   window.addEventListener("resize", () => {
     for (const node of document.querySelectorAll(".shot")) layoutFans(node);
   });
+  settleMotion();
 }
 
 function saveSettings() {

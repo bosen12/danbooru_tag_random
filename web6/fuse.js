@@ -34,7 +34,7 @@ import { initWorkflow, currentWorkflowId, currentSampling, wfHandleKeys } from "
 import { HARD_BANNED, applyArtSources } from "./card-art.js";
 import { buildLibrary, createAssets, cardNode, cardFacts, setEnterTarget, eagerArt, CARD_SUIT_INFO, CARD_SUITS, RATING_ZH, ERA_ZH } from "./cards.js";
 import { el, openSheet, anyOverlay, toast } from "./ui.js";
-import { initMotion, flip, flipBy, leave, gatherHome, flight, enter, seat, refuse, CURVE, DUR, css } from "./motion.js";
+import { initMotion, settleMotion, flip, flipBy, leave, gatherHome, flight, enter, seat, refuse, CURVE, DUR, css } from "./motion.js";
 import { createHand } from "./hand.js";
 import { createDrag, inkRing } from "./drag.js";
 import { createGenerator, comfyOnline, viewSrc, tabTitle, watchLink, LINK_LABEL } from "./gen.js";
@@ -243,9 +243,19 @@ async function boot() {
   buildTrialShells();
   renderRating();
   renderCaseTabs();
-  retrial();
+  // 字盒先畫完。四次試印抽牌跟字盒排在同一個任務裡會超過 50ms。
+  // 呼應分頁要等試印的「常補」出來才列得準，所以那種分頁留到抽完再畫。
+  if (caseTab !== "match") renderCase();
+  // 抽牌、把試印畫上去，各是一個任務：合在一起會超過 50ms。yield 的後續比繪製優先，第一格仍一起出來。
+  const yoke = () => (typeof scheduler !== "undefined" && scheduler.yield ? scheduler.yield() : Promise.resolve());
+  // 四次抽牌約 50ms 出頭。拆成兩半，每一半自己一個任務。
+  await yoke();
+  retrial(0, 2);
+  await yoke();
+  retrial(2, seeds.length);
+  await yoke();
   renderAll();
-  renderCase();
+  if (caseTab === "match") renderCase();
   renderLine();
   for (const p of prints) if (p.status === "queued" && p.live && p.job) generator.resume(p);
   for (const p of prints) if (p.status === "done" && p.hiresJob) hiresRun.resume(p, p.hiresJob);
@@ -259,6 +269,7 @@ async function boot() {
   attachPeek($("registers"), ".card[data-tag]", peekInfo);
   if (hand) attachPeek(hand.fan, ".card[data-tag]", peekInfo);
   watchPoolPill();
+  settleMotion();
 
   if (new URLSearchParams(location.search).has("debug")) {
     window.fuse = { get bed() { return bed; }, get trials() { return trials; }, get prints() { return prints; }, place, remove, undo, pick, reroll, printNow };
@@ -279,17 +290,19 @@ function setSettings(patch) {
 
 /* ================= 試印：engine 真的會怎麼補 ================= */
 
-function retrial() {
+function retrial(start = 0, end = seeds.length) {
   const pins = new Set(bed.pins);
   const banned = new Set([...bans, ...HARD_BANNED]);
-  trials = seeds.map((seed, i) => {
-    const d = drawWithSeed(lex, settings, pins, banned, seed, { trace: true });
+  const batch = [];
+  for (let i = start; i < end && i < seeds.length; i++) {
+    const seed = seeds[i];
+    const d = drawWithSeed(lex, settings, pins, banned, seed);
     const inPos = new Set(String(d.positive || "").split(",").map((x) => x.trim()));
     const extra = [];
     for (const sec of SECTION_ORDER) {
       for (const t of d.sections[sec] || []) if (lib.byTag.has(t) && !pins.has(t) && !extra.includes(t)) extra.push(t);
     }
-    return {
+    batch.push({
       letter: LETTERS[i],
       seed,
       positive: d.positive || "",
@@ -299,8 +312,9 @@ function retrial() {
       missing: bed.pins.filter((t) => !inPos.has(t)),
       extra,
       eraClash: d.eraClash || [],
-    };
-  });
+    });
+  }
+  trials = start === 0 ? batch : trials.slice(0, start).concat(batch);
 }
 
 const takeOf = (tag) => trials.filter((t) => t.mine.includes(tag)).length;
