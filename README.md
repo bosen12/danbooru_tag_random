@@ -132,12 +132,14 @@ WEB_DIR=web1 PORT=8788 python3 server.py
 視窗不要關。改過程式後請 **Ctrl+F5**。
 
 **4. 卡牌插畫會自己下載。** 插畫（墨池、疊印台、排字匣的卡牌模式用的）不在 git 裡，放在 GitHub Release
-[`card-art-v1`](https://github.com/bosen12/danbooru_tag_random/releases/tag/card-art-v1)（全年齡 1112 張，約 53MB）。
+[`card-art-v2`](https://github.com/bosen12/danbooru_tag_random/releases/tag/card-art-v2)（全年齡 1161 張，約 55MB；舊版本用的 `card-art-v1` 還在）。
 第一次啟動發現沒有插畫時會自動下載、驗 SHA-256、解壓到 `web/cards/`：
 
 - Windows 的 `start.bat`、`start-web6.bat` 另開一個縮小的「card art download」視窗去抓，網頁照常先開（先是字的佔位牌），視窗說 Done 之後重新整理就有圖。
 - 直接跑 `python3 server.py` 的（macOS / Linux）由伺服器在背景抓，黑窗會印進度。
-- 已經有的圖一張都不覆蓋；沒網路就維持佔位牌，下次啟動再試。不想抓：`NO_CARD_FETCH=1`。也可以手動跑 `python3 scripts/fetch_card_art.py`。
+- 已經有的圖一張都不覆蓋（唯一的例外：上一版公開包放的、之後重畫過、而且你沒自己重烘過的卡，會換成新畫的）；沒網路就維持佔位牌，下次啟動再試。不想抓：`NO_CARD_FETCH=1`。也可以手動跑 `python3 scripts/fetch_card_art.py`。
+- 已經抓過 v1 的，下次啟動會自己補 v2 多的那幾十張，不用重下整包。
+- 發新版的卡圖包：`python3 scripts/pack_card_art.py 輸出.zip --previous 上一版.zip`，把印出來的大小、SHA-256、張數貼進 `scripts/fetch_card_art.py`。
 - 敏感、色情分級的卡面不公開。ComfyUI 開著時，Windows 的 `start.bat` 會在縮小視窗自動烘還沒有的卡，以及提示詞已經改過的卡。已經烤好、提示詞沒變的不會重烘。不想自動烘：設 `NO_CARD_BAKE=1`，或在專案根目錄放一個 `.no-card-bake` 檔。也可以手動跑 `python3 scripts/bake_card_art.py`。
 
 ## 設定

@@ -7,6 +7,9 @@
 插畫是用 ComfyUI 烘焙出來的（scripts/bake_card_art.py），不進 git（一包 50MB 以上，每次重烘都會讓歷史變大）。
 git clone 下來的人第一次開墨池、疊印台、排字匣的卡牌模式時，這支把全年齡的那一包抓下來：
 驗大小和 SHA-256、解壓到 web/cards/。已經有的圖（自己烘的）一張都不覆蓋，manifest 只補沒有的條目。
+唯一的例外：上一版公開包放的、之後重畫過的卡（包裡的 cards/previous.json 記著上一版的提示詞），
+本機那張的提示詞跟上一版一模一樣時才換成新的 —— 那張是公開包放的、沒被自己重烘過。
+打包用 scripts/pack_card_art.py。
 敏感、色情分級的卡面不公開，要的話用自己的 ComfyUI 烘：python scripts/bake_card_art.py
 
 退出碼：0 好了（或本來就有）、1 下載失敗（沒網路、GitHub 連不上）、2 檔案對不上（大小或雜湊錯）、3 缺圖（--check）。
@@ -28,12 +31,15 @@ from pathlib import Path
 
 ROOT = Path(__file__).resolve().parent.parent
 CARDS = ROOT / "web" / "cards"
-MARKER = CARDS / ".card-art-v1"
+# 換版時標記跟著換：有 v1 標記、沒有 v2 標記的人，下次啟動會去補 v2 多的那些。
+MARKER = CARDS / ".card-art-v2"
 
-URL = "https://github.com/bosen12/danbooru_tag_random/releases/download/card-art-v1/card-art-general.zip"
-SIZE = 52911952
-SHA256 = "74a3820e6f50a328d132373dbd382e6626368113152ae19120aed7cfb57ec6ff"
-EXPECTED = 1112  # 這一包裡全年齡的張數
+# v2（2026-09-28）：1161 張，比 v1 多 49 張新卡，另外 crowd、witch 兩張重畫。v1 留在 GitHub 給舊版本用。
+# CARD_ART_URL 可以換來源（測試時指向本機的 file:// 包）；大小、雜湊照樣要對。
+URL = os.environ.get("CARD_ART_URL") or "https://github.com/bosen12/danbooru_tag_random/releases/download/card-art-v2/card-art-general.zip"
+SIZE = 55230586
+SHA256 = "27dd32e4844719822a0c00c210a14a87abcb821b1597a59d2a100c82d2681f2c"
+EXPECTED = 1161  # 這一包裡全年齡的張數
 
 
 def have_enough() -> bool:
@@ -103,21 +109,6 @@ def unpack(path: Path) -> tuple[int, int]:
     """解到 web/cards/：只放沒有的檔；manifest 只補沒有的條目。回傳（新放的圖、補的條目）。"""
     CARDS.mkdir(parents=True, exist_ok=True)
     added = 0
-    with zipfile.ZipFile(path) as z:
-        incoming = json.loads(z.read("cards/manifest.json").decode("utf-8"))
-        for name in z.namelist():
-            if not name.startswith("cards/") or name.endswith("/") or name == "cards/manifest.json":
-                continue
-            rel = name[len("cards/"):]
-            dest = (CARDS / rel).resolve()
-            # 壓縮檔裡的路徑不能跑出 web/cards/（zip slip）。
-            if not dest.is_relative_to(CARDS.resolve()) or dest.exists():
-                continue
-            dest.parent.mkdir(parents=True, exist_ok=True)
-            tmp = dest.with_suffix(dest.suffix + ".part")
-            tmp.write_bytes(z.read(name))
-            os.replace(tmp, dest)
-            added += 1
     mpath = CARDS / "manifest.json"
     try:
         manifest = json.loads(mpath.read_text(encoding="utf-8"))
@@ -125,7 +116,41 @@ def unpack(path: Path) -> tuple[int, int]:
             manifest = {}
     except (OSError, ValueError):
         manifest = {}
-    fresh = {k: v for k, v in incoming.items() if k not in manifest}
+    with zipfile.ZipFile(path) as z:
+        incoming = json.loads(z.read("cards/manifest.json").decode("utf-8"))
+        try:
+            previous = json.loads(z.read("cards/previous.json").decode("utf-8"))
+        except KeyError:
+            previous = {}
+        # 可以換新的：上一版公開包放的（本機提示詞 = 上一版的），而且這一版重畫了。
+        upgrade = {
+            k
+            for k, v in incoming.items()
+            if k in previous
+            and isinstance(manifest.get(k), dict)
+            and manifest[k].get("positive") == previous[k]
+            and v.get("positive") != previous[k]
+        }
+        replace_files = set()
+        for k in upgrade:
+            f = str(incoming[k].get("file", ""))
+            replace_files.update({f, f"thumb/{f}"})
+        for name in z.namelist():
+            if not name.startswith("cards/") or name.endswith("/") or name in ("cards/manifest.json", "cards/previous.json"):
+                continue
+            rel = name[len("cards/"):]
+            dest = (CARDS / rel).resolve()
+            # 壓縮檔裡的路徑不能跑出 web/cards/（zip slip）。
+            if not dest.is_relative_to(CARDS.resolve()):
+                continue
+            if dest.exists() and rel not in replace_files:
+                continue
+            dest.parent.mkdir(parents=True, exist_ok=True)
+            tmp = dest.with_suffix(dest.suffix + ".part")
+            tmp.write_bytes(z.read(name))
+            os.replace(tmp, dest)
+            added += 1
+    fresh = {k: v for k, v in incoming.items() if k not in manifest or k in upgrade}
     if fresh:
         manifest.update(fresh)
         tmp = mpath.with_suffix(".json.part")
@@ -143,7 +168,7 @@ def main() -> int:
         return 0 if have_enough() else 3
     if not force and have_enough():
         return 0
-    print("Card illustrations are missing. Downloading the all-ages set (about 53 MB) from GitHub...")
+    print("Card illustrations are missing. Downloading the all-ages set (about 55 MB) from GitHub...")
     with tempfile.TemporaryDirectory() as tmpdir:
         zpath = Path(tmpdir) / "card-art.zip"
         try:
