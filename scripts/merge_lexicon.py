@@ -943,7 +943,7 @@ NEEDS_MALE = {
     # 內射受孕、抓手腕是一男一女。pair 只代表兩人，不擋兩個女生。
     # 按住頭、抓頭髮也是男生對女生。pair 不夠，兩個女生會漏過去。
     "impregnation",
-    "wrist grab",
+    "holding another's wrist",
     "hand on another's head",
     "grabbing another's hair",
 }
@@ -1052,7 +1052,7 @@ NEEDS_FEMALE = {
     # 內射受孕要有被內射的女生。抓手腕是男生抓住女生的手腕。
     # 按住頭、抓頭髮的對象是女生。
     "impregnation",
-    "wrist grab",
+    "holding another's wrist",
     "hand on another's head",
     "grabbing another's hair",
 }
@@ -1133,7 +1133,7 @@ NEEDS_PAIR = {
     "asphyxiation",
     "slap mark",
     "impregnation",
-    "wrist grab",
+    "holding another's wrist",
     "hand on another's head",
 }
 
@@ -2744,15 +2744,14 @@ def extra_expand_tags() -> list[dict]:
         pose("running", mutex="body_pose", zh="跑步"),
         pose("jumping", mutex="body_pose", zh="跳躍"),
         pose("impregnation", needs=["pair"], heat=sex, zh="內射受孕"),
-        # 不 implies cumdrip：那個父標要求有男性，女生單人的事後狀態會整張抽不到。
-        # 有男生時引擎再補上 cumdrip。pussy 沒有這道門。
-        pose("cumdrip from pussy", implies=["pussy"], needs=["female"], heat=sex, zh="穴口滴精"),
-        pose("wrist grab", needs=["pair"], heat=sex, zh="抓手腕"),
+        # 加字之前先對 danbooru.donmai.us/tags.json：要現役、post_count > 0、
+        # 不是停用的別名。2026-09-28 拿掉 cumdrip from pussy（沒有這個 tag）
+        # 和 erect nipples（已停用、0 張）。wrist grab 自 2021-10-15 起的正式名是下面這個。
+        pose("holding another's wrist", needs=["pair"], heat=sex, zh="抓手腕"),
         feat("single braid", mutex="hair_style", implies=["braid"], zh="單辮"),
         feat("low twintails", mutex="hair_style", implies=["twintails"], zh="低雙馬尾"),
         feat("half updo", zh="半扎"),
         feat("hair intakes", zh="內彎鬢髮"),
-        feat("erect nipples", implies=["nipples"], needs=["female"], gate="female", heat=["flash", "sex"], zh="立乳"),
         cloth("panties around one leg", mutex="underwear_bottom", layer="garment", gate="female", heat=sex, zh="內褲掛一腿"),
         cloth("mary janes", mutex="feet", layer="garment", gate="female", zh="瑪麗珍鞋"),
         cloth("knee boots", mutex="feet", layer="garment", zh="及膝靴", era=["any"]),

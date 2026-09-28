@@ -26452,29 +26452,7 @@
       "zh": "內射受孕"
     },
     {
-      "tag": "cumdrip from pussy",
-      "section": "pose",
-      "gate": "any",
-      "heat": [
-        "sex"
-      ],
-      "mutex": null,
-      "bind": [],
-      "implies": [
-        "pussy"
-      ],
-      "layer": "normal",
-      "era": [
-        "any"
-      ],
-      "group": "sex",
-      "needs": [
-        "female"
-      ],
-      "zh": "穴口滴精"
-    },
-    {
-      "tag": "wrist grab",
+      "tag": "holding another's wrist",
       "section": "pose",
       "gate": "any",
       "heat": [
@@ -26574,29 +26552,6 @@
       ],
       "group": "hair_style",
       "zh": "內彎鬢髮"
-    },
-    {
-      "tag": "erect nipples",
-      "section": "feature",
-      "gate": "female",
-      "heat": [
-        "flash",
-        "sex"
-      ],
-      "mutex": null,
-      "bind": [],
-      "implies": [
-        "nipples"
-      ],
-      "layer": "normal",
-      "era": [
-        "any"
-      ],
-      "group": "body_f",
-      "needs": [
-        "female"
-      ],
-      "zh": "立乳"
     },
     {
       "tag": "panties around one leg",

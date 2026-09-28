@@ -1201,10 +1201,9 @@ ZH = {
     "half updo": "半扎",
     "hair intakes": "內彎鬢髮",
     "impregnation": "內射受孕",
-    "cumdrip from pussy": "穴口滴精",
-    "erect nipples": "立乳",
+
     "panties around one leg": "內褲掛一腿",
-    "wrist grab": "抓手腕",
+    "holding another's wrist": "抓手腕",
     "mary janes": "瑪麗珍鞋",
     "knee boots": "及膝靴",
     "plaid skirt": "格裙",

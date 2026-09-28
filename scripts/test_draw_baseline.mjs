@@ -45,28 +45,30 @@ const GOLD = {
   // negative，這五張的 POS 不含那一串。五張仍是 1girl solo，沒有男生。
   // 2026-09-28 第六次：身體格不再均權。站立劈腿權重 1、踮腳 60、走跑跳各 50，其餘 300。
   // 站立劈腿在唯一合法時權重救不了，再按種子擋掉三成。五張仍是 1girl solo，沒有男生。
+  // 2026-09-28 第七次：立乳、穴口滴精離開候選池。抓手腕改成 holding another's wrist，
+  // 要一男一女，不進這五張。池子變小，牌序位移。五張仍是 1girl solo，沒有男生。seed 100 沒變。
   1: {
-    rng: 344,
-    pos: "1girl, solo, pixie cut, purple eyes, green hair, swept bangs, small breasts, arm under breasts, bruise, hanging breasts, school uniform, no bra, panties aside, white coat, coat, kneehighs, female masturbation, top-down bottom-up, over shoulder, looking up, scared, empty eyes, bamboo forest, outdoors, sunrise, shadow, bush, tree, nsfw, explicit, masterpiece, best quality, amazing quality",
+    rng: 342,
+    pos: "1girl, solo, pixie cut, purple eyes, green hair, swept bangs, small breasts, female pubic hair, freckles, bride, santa costume, thong, thighhighs, sports bra, knee boots, fingering, on stomach, bird's eye view, from above, looking to the side, expressionless, bathroom, indoors, steam, dusk, sidelighting, confetti, nsfw, explicit, masterpiece, best quality, amazing quality",
   },
   42: {
     rng: 335,
-    pos: "1girl, solo, very short hair, aqua eyes, blue hair, blunt bangs, large breasts, thighs, tanlines, collarbone, tears, competition swimsuit, one-piece swimsuit, swimsuit, torn thighhighs, thighhighs, sneakers, masturbation through clothes, standing, wide shot, looking back, crying, folded, locker room, indoors, evening, ceiling light, light particles, grass, nsfw, explicit, masterpiece, best quality, amazing quality",
+    pos: "1girl, solo, very short hair, aqua eyes, blue hair, blunt bangs, large breasts, nipple piercing, narrow waist, half updo, underwear only, black bra, bra, torn thighhighs, thighhighs, blue panties, panties, handcuffs, fingering, kneeling, pov, looking at viewer, drunk, bondage, dojo, indoors, night, depth of field, winter, nsfw, explicit, masterpiece, best quality, amazing quality",
   },
   100: {
     rng: 384,
     pos: "1girl, solo, medium hair, purple eyes, red hair, side ponytail, ponytail, gigantic breasts, muscular, bruise, pink shirt, shirt, jeans, pants, table tennis, squatting, bird's eye view, from above, looking around, drunk, sports court, outdoors, fog, day, shadow, petals, table tennis paddle, table tennis ball, nsfw, explicit, masterpiece, best quality, amazing quality",
   },
   999: {
-    rng: 336,
-    pos: "1girl, solo, long hair, grey eyes, orange hair, twin braids, braid, flat chest, saliva, tears, nude, hairband, earrings, elbow gloves, gloves, veil, female masturbation, on stomach, from behind, looking outside, tearing up, bdsm, floral background, backlighting, arrow (projectile), depth of field, lens flare, nsfw, explicit, masterpiece, best quality, amazing quality",
+    rng: 343,
+    pos: "1girl, solo, long hair, grey eyes, orange hair, twin braids, braid, flat chest, gyaru, body blush, bodypaint, fingering, on side, pov, looking at viewer, smug, against wall, shower (place), indoors, dusk, city lights, nsfw, explicit, masterpiece, best quality, amazing quality",
   },
   // 2026-09-23：走光補抽改成「所有成立的走光動作同一池、衣服吻合的權重 10」之後，
   // 這張的走光動作從 exhibitionism 換成 cameltoe（她穿 thong，吻合），場景跟著換。
   // 見 test_clothing_reachability.mjs 的走光段落與討論區同日那輪。
   2026: {
-    rng: 388,
-    pos: "1girl, solo, bob cut, grey eyes, black hair, hair intakes, large breasts, underboob, lactation, midriff, black pants, pants, bra visible through clothes, sleeveless shirt, shirt, torn thighhighs, thighhighs, reading, squatting, from behind, looking to the side, seductive smile, shirt lift, newspaper, train, indoors, sunset, sunlight, crystal ball, nsfw, explicit, masterpiece, best quality, amazing quality",
+    rng: 381,
+    pos: "1girl, solo, bob cut, grey eyes, black hair, hair intakes, large breasts, saliva trail, breast suppress, thick thighs, black pants, pants, open coat, coat, bra visible through clothes, sleeveless shirt, shirt, reading, seiza, dutch angle, looking around, shy, shirt lift, book, futon, indoors, day, lamp, nsfw, explicit, masterpiece, best quality, amazing quality",
   },
 };
 
@@ -185,7 +187,9 @@ const MATRIX_SEEDS = 200;
 // 2026-09-28 第六次：身體格的站立劈腿、踮腳、走路、跑步、跳躍降權。
 // 站立劈腿在它是唯一合法姿勢時還會被抽到，所以再按種子擋掉三成。
 // 指紋 a188bd33 → 0cd7db41。
-const MATRIX_GOLD = "0cd7db41";
+// 2026-09-28 第七次：立乳和穴口滴精離開池。抓手腕改成 holding another's wrist，
+// 單人女性抽不到。指紋 0cd7db41 → aa8c9d3f。
+const MATRIX_GOLD = "aa8c9d3f";
 
 function matrixSettings(over) {
   const s = defaultSettings(data);

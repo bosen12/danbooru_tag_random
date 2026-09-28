@@ -415,6 +415,12 @@ function ok(name, rows) {
     if (!by.has(real)) stale.push(`「${real}」不在詞庫（${old} 的正確拼法）`);
   }
   ok("Danbooru 查無的自創 tag 沒有留在詞庫", stale);
+  // 2026-09-28：加字前先對 tags.json。現役、有貼文、不是停用別名才進詞庫。
+  // cumdrip from pussy 查無。erect nipples 已停用、0 張。wrist grab 自 2021-10-15
+  // 起併成 holding another's wrist。covered nipples 是透出衣服，不拿來頂立乳。
+  const unrecognized = ["cumdrip from pussy", "erect nipples", "wrist grab"].filter((t) => by.has(t));
+  ok("模型沒學過的三個字沒有留在詞庫", unrecognized);
+  ok("抓手腕用現役名 holding another's wrist", by.has("holding another's wrist"));
   // 反面：替代品要真的還在，不能連同被砍掉
   const gone = ["pond", "close-up", "bathing", "throne"].filter((t) => !by.has(t));
   ok("被拿來頂替的真 tag 都還在", gone.map((t) => `替代品「${t}」不見了`));

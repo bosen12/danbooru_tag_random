@@ -5565,7 +5565,9 @@ function indoorOutdoorClash(have) {
     // 現代外套和聚光燈的權重也降了。牌序再位移一次。這張仍是 1girl solo，沒有男生。
     // 第二十四次（2026-09-28）：站立劈腿、踮腳、走路、跑步、跳躍在身體格降權。
     // 站立劈腿再按種子擋掉三成。牌序再位移一次。這張仍是 1girl solo，沒有男生。
-    "1girl, solo, very short hair, aqua eyes, blue hair, blunt bangs, large breasts, thighs, tanlines, collarbone, tears, competition swimsuit, one-piece swimsuit, swimsuit, torn thighhighs, thighhighs, sneakers, masturbation through clothes, standing, wide shot, looking back, crying, folded, locker room, indoors, evening, ceiling light, light particles, grass, nsfw, explicit, masterpiece, best quality, amazing quality");
+    // 第二十五次（2026-09-28）：立乳、穴口滴精離開池。抓手腕改成 holding another's wrist，
+    // 要一男一女，不進這張。牌序再位移一次。這張仍是 1girl solo，沒有男生。
+    "1girl, solo, very short hair, aqua eyes, blue hair, blunt bangs, large breasts, nipple piercing, narrow waist, half updo, underwear only, black bra, bra, torn thighhighs, thighhighs, blue panties, panties, handcuffs, fingering, kneeling, pov, looking at viewer, drunk, bondage, dojo, indoors, night, depth of field, winter, nsfw, explicit, masterpiece, best quality, amazing quality");
   ok("drawOne exposes shadow diagnostics", Array.isArray(shadowIntegrationDraw.shadowViolations));
 
   const eatProneShadow = validateSupportShadow({
@@ -8447,7 +8449,8 @@ function indoorOutdoorClash(have) {
 }
 
 // --- 走路、髮型、受孕 -------------------------------------------------------
-// 半扎不佔髮型格，可以跟馬尾同時在。跑步不進浴室。立乳不進誘惑。
+// 半扎不佔髮型格，可以跟馬尾同時在。跑步不進浴室。
+// 立乳和穴口滴精已從詞庫拿掉。抓手腕的現役名是 holding another's wrist。
 {
   const half = lex.byTag.get("half updo");
   const braid = lex.byTag.get("single braid");
@@ -8470,28 +8473,18 @@ function indoorOutdoorClash(have) {
   const preg = lex.byTag.get("impregnation");
   ok("impregnation does not imply pregnant", !(preg && (preg.implies || []).includes("pregnant")));
   ok("impregnation needs a man and a woman", needsCouple(preg));
-  const drip = lex.byTag.get("cumdrip from pussy");
-  ok("cumdrip from pussy implies pussy and not the male-gated drip", !!(drip && (drip.implies || []).includes("pussy") && !(drip.implies || []).includes("cumdrip")));
-  ok(
-    "cumdrip from pussy stays a woman's tag",
-    !!(drip && (drip.needs || []).includes("female") && !(drip.needs || []).includes("male"))
-  );
-  const nipples = lex.byTag.get("erect nipples");
-  ok("erect nipples stay in flash and sex", JSON.stringify(nipples && nipples.heat) === JSON.stringify(["flash", "sex"]));
-  const wrist = lex.byTag.get("wrist grab");
-  ok("wrist grab is not one of the neck grips", needsCouple(wrist));
-  ok("wrist grab can sit with strangling", contradictions(lex, ["wrist grab", "strangling"]).length === 0);
+  ok("cumdrip from pussy is not a tag", !lex.byTag.has("cumdrip from pussy"));
+  ok("erect nipples is not a tag", !lex.byTag.has("erect nipples"));
+  ok("wrist grab is not a tag", !lex.byTag.has("wrist grab"));
+  const wrist = lex.byTag.get("holding another's wrist");
+  ok("holding another's wrist is not one of the neck grips", needsCouple(wrist));
+  ok("holding another's wrist can sit with strangling", contradictions(lex, ["holding another's wrist", "strangling"]).length === 0);
   ok("panties around one leg take the panty slot", lex.byTag.get("panties around one leg").mutex === "underwear_bottom");
   ok("knee boots do not imply boots", !(lex.byTag.get("knee boots").implies || []).includes("boots"));
   ok("plaid skirt implies skirt", (lex.byTag.get("plaid skirt").implies || []).includes("skirt"));
 
   const teaseOnly = defaultSettings(data);
   teaseOnly.heats = ["tease"];
-  let nippleLeak = 0;
-  for (let i = 0; i < 80; i++) {
-    if (tagsOf(drawOne(lex, teaseOnly, new Set(), new Set(), mulberry32(155000 + i), 155000 + i)).has("erect nipples")) nippleLeak += 1;
-  }
-  eq("tease never draws erect nipples", nippleLeak, 0);
 
   const girl = defaultSettings(data);
   girl.girl = true;
@@ -8500,13 +8493,13 @@ function indoorOutdoorClash(have) {
   let pairLeak = 0;
   for (let i = 0; i < 60; i++) {
     const got = tagsOf(drawOne(lex, girl, new Set(), new Set(), mulberry32(155200 + i), 155200 + i));
-    if (got.has("impregnation") || got.has("wrist grab")) pairLeak += 1;
+    if (got.has("impregnation") || got.has("holding another's wrist")) pairLeak += 1;
   }
-  eq("girl-only sex never draws impregnation or a wrist grab", pairLeak, 0);
+  eq("girl-only sex never draws impregnation or a wrist hold", pairLeak, 0);
 
   const hasBoy = (got) => got.has("1boy") || got.has("2boys") || got.has("3boys");
   const hasGirl = (got) => got.has("1girl") || got.has("2girls") || got.has("3girls") || got.has("4girls") || got.has("5girls");
-  const pinWrist = applyPin(lex, new Set(), new Set(), "wrist grab").pinned;
+  const pinWrist = applyPin(lex, new Set(), new Set(), "holding another's wrist").pinned;
   const pinPreg = applyPin(lex, new Set(), new Set(), "impregnation").pinned;
   let wristSeen = 0;
   let wristNoBoy = 0;
@@ -8514,7 +8507,7 @@ function indoorOutdoorClash(have) {
   let pregNoBoy = 0;
   for (let i = 0; i < 20; i++) {
     const gotW = tagsOf(drawOne(lex, girl, pinWrist, new Set(), mulberry32(155500 + i), 155500 + i));
-    if (gotW.has("wrist grab")) {
+    if (gotW.has("holding another's wrist")) {
       wristSeen += 1;
       if (!hasBoy(gotW) || !hasGirl(gotW)) wristNoBoy += 1;
     }
@@ -8524,37 +8517,10 @@ function indoorOutdoorClash(have) {
       if (!hasBoy(gotP) || !hasGirl(gotP)) pregNoBoy += 1;
     }
   }
-  ok("pinned wrist grab was drawn with the boy switch off", wristSeen > 0);
-  eq("pinned wrist grab brings a man and a woman", wristNoBoy, 0);
+  ok("pinned holding another's wrist was drawn with the boy switch off", wristSeen > 0);
+  eq("pinned holding another's wrist brings a man and a woman", wristNoBoy, 0);
   ok("pinned impregnation was drawn with the boy switch off", pregSeen > 0);
   eq("pinned impregnation brings a man and a woman", pregNoBoy, 0);
-
-  const pinDrip = applyPin(lex, new Set(), new Set(), "cumdrip from pussy").pinned;
-  let dripSeen = 0;
-  let dripBoy = 0;
-  for (let i = 0; i < 20; i++) {
-    const gotD = tagsOf(drawOne(lex, girl, pinDrip, new Set(), mulberry32(155800 + i), 155800 + i));
-    if (!gotD.has("cumdrip from pussy")) continue;
-    dripSeen += 1;
-    if (hasBoy(gotD)) dripBoy += 1;
-  }
-  ok("pinned cumdrip from pussy stays on a girl-only draw", dripSeen > 0);
-  eq("pinned cumdrip from pussy does not pull a man", dripBoy, 0);
-
-  const bothOn = defaultSettings(data);
-  bothOn.girl = true;
-  bothOn.boy = true;
-  bothOn.heats = ["sex"];
-  let dripWithMan = 0;
-  let dripParent = 0;
-  for (let i = 0; i < 20; i++) {
-    const gotD = tagsOf(drawOne(lex, bothOn, pinDrip, new Set(), mulberry32(155900 + i), 155900 + i));
-    if (!gotD.has("cumdrip from pussy") || !hasBoy(gotD)) continue;
-    dripWithMan += 1;
-    if (gotD.has("cumdrip") && hasGirl(gotD)) dripParent += 1;
-  }
-  ok("cumdrip from pussy with a man was drawn", dripWithMan > 0);
-  eq("a man in the picture adds the cumdrip parent", dripParent, dripWithMan);
 
   const bath = applyPin(lex, new Set(), new Set(), "bathroom").pinned;
   let sprint = 0;

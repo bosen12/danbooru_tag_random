@@ -283,10 +283,9 @@ const ART_EXTRA = {
   "half updo": "hair, upper body",
   "hair intakes": "hair, upper body",
   impregnation: "vaginal, cum, lying, on bed",
-  "cumdrip from pussy": "pussy, cumdrip, cum, thighs, lying",
-  "erect nipples": "breasts, nipples, upper body",
   "panties around one leg": "panties, thighs, full body",
-  "wrist grab": "wrist, hand, upper body",
+  // 上半身加 hand 會把男方的手畫到胸口。側面近景才看得到被握住的手腕。
+  "holding another's wrist": "from side, close-up, outstretched arms, wrist, forearm, a hand gripping the wrist",
   "mary janes": "feet, full body, standing",
   "knee boots": "full body, standing, thighs",
   "plaid skirt": "skirt, full body, standing",
@@ -364,8 +363,7 @@ const HETERO_PICTURE = new Set([
   "asphyxiation",
   "slap mark",
   "impregnation",
-  "cumdrip from pussy",
-  "wrist grab",
+  "holding another's wrist",
   "hand on another's head",
   "grabbing another's hair",
 ]);
@@ -390,6 +388,8 @@ const ART_NEG = {
   "slap mark": "guro, blood, injury",
   // 內射受孕是性行為，不是懷孕的肚子。
   impregnation: "pregnant, pregnant belly, maternity",
+  // 抓手腕的手要在手腕上，不要改畫成摸胸。
+  "holding another's wrist": "breast grab, grabbing another's breast, groping, paizuri, nipple tweak, hands on breasts, covering breasts, holding hands, handshake, interlocked fingers, ass grab, grabbing another's ass, breasts, ass, thighs, nipples, bandage, bandages, gauze, wristband, wrist wrap",
   fang: "vampire, demon",
   "covering privates": "spread pussy, visible pussy",
   // 高領衫不要畫成高領毛衣。汗滴、鼻頭紅不要畫成眼淚。腕環是裸腕上的環，不是女僕袖口。

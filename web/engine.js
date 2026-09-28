@@ -311,7 +311,6 @@ const SEX_PHASE_AFTER = new Set([
   "cum drip",
   "cumdrip",
   "cumdrip from penis",
-  "cumdrip from pussy",
   "used condom",
   "after rape",
 ]);
@@ -2251,7 +2250,7 @@ const NEEDS_FREE_HAND = new Set([
   "neck grab",
   "headlock",
   "rear naked choke",
-  "wrist grab",
+  "holding another's wrist",
   "covering privates",
   "hand on another's head",
   "grabbing another's hair",
@@ -6568,13 +6567,6 @@ export function drawOne(lex, settings, pinned, userBanned, rand, seed, opts) {
       return it && (it.mutex === "sex_act" || it.group === "sex");
     });
     if (doingIt) commit("hetero");
-  }
-
-  // 穴口滴精不在詞庫裡帶出 cumdrip。那個父標要求有男性，帶了的話女生單人就抽不到。
-  // 畫面上已經有男生時再補，跟 Danbooru 的父子一致；沒有男生就只留這個字和 pussy。
-  if (used.has("cumdrip from pussy") && male && !used.has("cumdrip")) {
-    const drip = lex.byTag.get("cumdrip");
-    if (drip && allow(drip)) commit("cumdrip");
   }
 
   // 四人、五人在性愛時直接補上人數標籤。五人幾乎不會從姿勢池自己抽到
