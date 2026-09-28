@@ -1,6 +1,7 @@
 #!/usr/bin/env node
 /**
- * 把介紹影片（web6/intro.html）輸出成 1080p60 的 .mp4。不是螢幕錄影：一格一格精準算。
+ * 把介紹影片（web6/intro.html，三分鐘版；--page intro-cards.html 是兩分鐘的墨池・疊印台版）輸出成 1080p60 的 .mp4。
+ * 不是螢幕錄影：一格一格精準算。
  *
  *   node scripts/export_intro_video.mjs [輸出.mp4] [伺服器，預設 http://127.0.0.1:8796] [--fps 60] [--from 秒] [--to 秒] [--page intro-cards.html]
  *
@@ -27,7 +28,7 @@ const FROM = +flag("--from", 0);
 // --page intro-cards.html：只有墨池、疊印台的版本。
 const PAGE = flag("--page", "intro.html");
 const TO_ARG = flag("--to", null);
-const OUT = args[0] || join(homedir(), "Desktop", PAGE === "intro-cards.html" ? "墨池疊印台-介紹影片-1080p60.mp4" : "排字匣-介紹影片-1080p60.mp4");
+const OUT = args[0] || join(homedir(), "Desktop", PAGE === "intro-cards.html" ? "墨池疊印台-介紹影片-1080p60.mp4" : "排字匣-介紹影片-3分鐘-1080p60.mp4");
 const BASE = args[1] || "http://127.0.0.1:8796";
 const W = 1920;
 const H = 1080;
@@ -56,6 +57,9 @@ const proc = spawn(browser, [
   "--hide-scrollbars",
   "--mute-audio",
   "--force-device-scale-factor=1",
+  // 三分鐘版的星河是 WebGL：沒有顯示卡可用時退回軟體算（慢一點，但畫得出來）。
+  "--ignore-gpu-blocklist",
+  "--enable-unsafe-swiftshader",
   "about:blank",
 ], { stdio: "ignore" });
 
