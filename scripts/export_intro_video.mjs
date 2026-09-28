@@ -157,6 +157,11 @@ try {
   if (code !== 0) throw new Error(`ffmpeg 結束碼 ${code}`);
   console.log(`輸出：${OUT}（${(statSync(OUT).size / 1e6).toFixed(1)} MB）`);
 } finally {
+  // Edge 的啟動程序會把真正的瀏覽器交出去就結束，只殺 proc 那一支會留下一整組無頭 Edge
+  // 停在影片頁一直畫（三分鐘版的星河是 WebGL，一組就吃好幾趴 GPU）。先請瀏覽器自己關。
+  try {
+    await Promise.race([send("Browser.close"), sleep(3000)]);
+  } catch {}
   try {
     ws.close();
   } catch {}

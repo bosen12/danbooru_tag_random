@@ -2252,9 +2252,14 @@ let tPaused = 0;
 const clock = () => (score && score.playing ? Math.min(LENGTH, score.now()) : tPaused);
 const fmt = (t) => `${Math.floor(t / 60)}:${String(Math.floor(t % 60)).padStart(2, "0")}`;
 
+let drawnAt = -1;
 function frame() {
   const t = clock();
-  render(t);
+  // 暫停時同一格不用一直重畫（停在星河那幾秒，WebGL 每一幀重畫會一直吃 GPU）。
+  if (t !== drawnAt) {
+    render(t);
+    drawnAt = t;
+  }
   $("fill").style.transform = `scaleX(${(t / LENGTH).toFixed(4)})`;
   $("time").textContent = `${fmt(t)} / ${fmt(LENGTH)}`;
   if (t >= LENGTH - 0.01 && score?.playing) {
@@ -2365,6 +2370,7 @@ async function main() {
     seek(t) {
       tPaused = t;
       render(t);
+      drawnAt = t;
       return t;
     },
     /** 輸出影片檔用：整首配樂離線算好，存成 16-bit WAV，用 wavChunk(i) 一段段拿（base64）。回傳段數。 */
