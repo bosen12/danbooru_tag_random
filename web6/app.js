@@ -1587,8 +1587,9 @@ function paintShot(node, shot) {
           under = el("img", { class: "shot-under", alt: "", "aria-hidden": "true" });
           frame.append(under);
         }
-        under.src = prevSrc;
+        under.src = shot._hiresUnder || prevSrc;
       }
+      shot._hiresUnder = null;
       img.src = src;
       const start = () => {
         if (img.getAttribute("src") !== src) return; // 已經又換了下一幀

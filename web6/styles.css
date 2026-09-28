@@ -2732,6 +2732,19 @@ body:has(.fav-hand) .tray-bridge { display: none; }
   transition: top var(--dur-long) var(--ease-out);
 }
 
+/* 預覽幀：蓋滿整張，跟付印時一樣看得到它一步步重畫。有預覽了就不再壓暗，掃描線照走。 */
+.hv-preview {
+  position: absolute;
+  inset: 0;
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+}
+
+.hires-veil[data-preview="true"] .hv-dim {
+  opacity: 0;
+}
+
 /* 還在排隊（前面有圖在印）：線停在頂端呼吸，整張壓暗一層。 */
 .hires-veil[data-status="queued"] .hv-rule {
   animation: hv-breathe var(--dur-breath) var(--ease-in-out) infinite alternate;

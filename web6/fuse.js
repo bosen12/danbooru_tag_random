@@ -935,7 +935,8 @@ function renderPreview({ develop = false } = {}) {
           under = el("img", { class: "pv-under", alt: "", "aria-hidden": "true", draggable: "false" });
           pv.sheet.append(under);
         }
-        under.src = prevSrc;
+        under.src = (p && p._hiresUnder) || prevSrc;
+        if (p) p._hiresUnder = null;
         if (!develop) {
           const fade = () => {
             if (img.getAttribute("src") !== src) return;

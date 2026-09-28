@@ -100,6 +100,8 @@ export function createHires(hooks) {
         if (!t.baseImage) t.baseImage = t.image;
         const [W, H] = hiresSize(...baseSize(t), task.scale);
         const r = task.result || {};
+        // 最後一幀預覽墊在底下，新圖從它上面由上往下顯影（不會先跳回舊圖再顯影）。
+        t._hiresUnder = t.hi?.preview || null;
         t.image = task.image;
         t.hires = { mode: task.mode, scale: task.scale, width: r.width || W, height: r.height || H, seed: task.seed };
         t.hi = null;
@@ -113,7 +115,14 @@ export function createHires(hooks) {
         hooks.update(t);
         return;
       }
-      t.hi = { ...t.hi, status: task.status === "running" && task.note !== "排隊中" ? "running" : "queued", progress: task.progress || 0, note: task.note };
+      t.hi = {
+        ...t.hi,
+        status: task.status === "running" && task.note !== "排隊中" ? "running" : "queued",
+        progress: task.progress || 0,
+        note: task.note,
+        // Comfy 一路送來的預覽幀（跟付印一樣看得到它一步步重畫）。
+        preview: task.preview || t.hi?.preview || null,
+      };
       hooks.update(t);
     },
     stopped: () => {},
@@ -384,6 +393,7 @@ export function paintHiresVeil(frame, t, { onCancel, onDismiss }) {
     veil = el(
       "div",
       { class: "hires-veil" },
+      el("img", { class: "hv-preview", alt: "", "aria-hidden": "true", decoding: "async", hidden: true }),
       el("div", { class: "hv-dim" }),
       el("div", { class: "hv-rule" }),
       el("div", { class: "hv-bar" }, el("span", { class: "hv-text", role: "status" }), el("button", { class: "hv-act pressable", type: "button" }))
@@ -391,6 +401,20 @@ export function paintHiresVeil(frame, t, { onCancel, onDismiss }) {
     frame.append(veil);
   }
   veil.dataset.status = hi.status;
+  const pv = veil.querySelector(".hv-preview");
+  if (hi.preview && pv.getAttribute("src") !== hi.preview) {
+    // 新的一幀解碼好才換上：上一幀留著，不會閃一下空白。
+    const next = new Image();
+    next.onload = () => {
+      if (!veil.isConnected || t.hi?.preview !== hi.preview) return;
+      const first = pv.hidden;
+      pv.src = hi.preview;
+      pv.hidden = false;
+      veil.dataset.preview = "true";
+      if (first && !reducedMotion()) pv.animate([{ opacity: 0 }, { opacity: 1 }], { duration: DUR.short, easing: css(CURVE.out) });
+    };
+    next.src = hi.preview;
+  }
   veil.style.setProperty("--p", String(hi.status === "running" ? hi.progress || 0 : 0));
   const text = veil.querySelector(".hv-text");
   const label = hiresLabel(t);
