@@ -1682,6 +1682,11 @@ const ALBUM_FIXTURE = [
   ok("重新整理清掉沒印出來的（墨池、疊印台）；疊印台取消的不掛上繩子", app6.includes('s.status === "done" || s.status === "drawn" || (s.live && s.job)') && fuse6.includes('.filter((p) => p.status === "done" || (p.live && p.job))') && fuse6.includes('else if (p.status === "cancelled") dropCancelled(p);'));
   const drag6 = readFileSync(join(ROOT, "web6/drag.js"), "utf8");
   ok("整塊重畫也讓位（flipBy 用牌名認人）：墨池合成池、疊印台卡池；影子收下從影子的位置滑進去", motion6.includes("export function flipBy(") && app6.includes('flipBy($("pool-well"), ".pool-slot"') && fuse6.includes('flipBy(box, ".plate-card, .ghost-card", cardKey') && fuse6.includes('alias: (k) => (k.startsWith("p:") ? "g:" + k.slice(2) : null)'));
+  ok("首屏兩包 JSON：fetch 跟 preload 用同一個（帶版本的）網址，不會下載兩次", app6.includes(`fetch(document.querySelector('link[rel="preload"][href^="lexicon.json"]')?.href || "lexicon.json")`) && fuse6.includes(`fetch(document.querySelector('link[rel="preload"][href^="cards/manifest.json"]')?.href || "cards/manifest.json")`));
+  {
+    const loraSrc = readFileSync(join(ROOT, "web", "lora.js"), "utf8");
+    ok("LoRA 清單：失敗或伺服器回 error 都不快取空清單（下次開選單再問）", loraSrc.includes("if (!got.error) GEN_LORAS = got.items || [];") && !/catch \(e\) \{\s*GEN_LORAS = \[\];/.test(loraSrc));
+  }
   ok("拖曳落點先讓讓位動畫到位再量（連它所在那一列的進場也先到位）", drag6.includes("for (let e = target; e && e !== zone.el.parentElement; e = e.parentElement) for (const a of e.getAnimations()) a.finish();"));
   ok("墨池：× 拿出飛回字盒、按鈕封鎖飛進廢字簍、清空一張張收回可以復原（拖曳的不重演）", app6.includes("function unpin(tag, { viaDrag = false } = {})") && app6.includes("function flyToTrash(") && app6.includes("清空了合成池") && app6.includes("ban(p.tag, { viaDrag: true })") && app6.includes("unpin(p.tag, { viaDrag: true })"));
   const wf = readFileSync(join(ROOT, "web/workflow.js"), "utf8");

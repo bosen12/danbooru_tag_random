@@ -773,6 +773,48 @@ finally:
 ok("壞請求本體：主控台沒有 traceback", "Traceback" not in log, log[-800:])
 
 
+# === 9. 首屏兩包 JSON 走內容版本網址、/api/loras 條件式快取 ==================
+comfy = FakeComfy("happy")
+comfy.start()
+proc, port = start_server(comfy.port, {"WEB_DIR": "web6"})
+try:
+    with urllib.request.urlopen(urllib.request.Request(f"http://127.0.0.1:{port}/"), timeout=20) as resp:
+        page = resp.read().decode("utf-8")
+    mv = re.search(r'href="lexicon\.json\?v=([0-9a-f]{10})"', page)
+    ok("首頁的 lexicon.json preload 帶內容版本", bool(mv), page[:800])
+    if mv:
+        def head_of(path):
+            with urllib.request.urlopen(urllib.request.Request(f"http://127.0.0.1:{port}{path}"), timeout=20) as r:
+                return r.headers.get("Cache-Control", ""), r.status
+        cc, st = head_of(f"/lexicon.json?v={mv.group(1)}")
+        ok("lexicon.json 版本對得上：整年快取", st == 200 and "immutable" in cc, cc)
+        cc, st = head_of("/lexicon.json?v=0000000000")
+        ok("lexicon.json 版本對不上：不准快取", "immutable" not in cc, cc)
+        cc, st = head_of("/lexicon.json")
+        ok("lexicon.json 沒帶版本：照舊每次回來問", "immutable" not in cc, cc)
+    # /api/loras：同一份清單第二次帶 ETag 問，回 304、沒有本文。
+    r1 = urllib.request.urlopen(urllib.request.Request(f"http://127.0.0.1:{port}/api/loras"), timeout=30)
+    body1 = r1.read()
+    etag = r1.headers.get("ETag")
+    ok("/api/loras 有 ETag、private no-cache", bool(etag) and "private" in (r1.headers.get("Cache-Control") or ""), str(dict(r1.headers)))
+    if etag:
+        c = _hc.HTTPConnection("127.0.0.1", port, timeout=30)
+        c.request("GET", "/api/loras", headers={"If-None-Match": etag})
+        r2 = c.getresponse()
+        body2 = r2.read()
+        ok("/api/loras 清單沒變：304、0 byte", r2.status == 304 and body2 == b"", f"{r2.status} {len(body2)}")
+        c.close()
+finally:
+    proc.terminate()
+    try:
+        proc.wait(10)
+    except subprocess.TimeoutExpired:
+        proc.kill()
+    log = proc.stdout.read() or ""
+    comfy.close()
+ok("快取標頭：主控台沒有 traceback", "Traceback" not in log, log[-800:])
+
+
 if failed:
     print(f"\n{failed} failed")
     sys.exit(1)

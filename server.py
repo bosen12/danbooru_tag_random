@@ -341,7 +341,7 @@ def _local_rel(url: str) -> str | None:
 
 
 def versioned_html(html: str, version_of, module_files) -> str:
-    """HTML 裡自己的程式檔、樣式表換成帶版本的網址，並在所有 <link>／<script> 前面放 import map。
+    """HTML 裡自己的程式檔、樣式表和 fetch 預載換成帶版本的網址，並放入 import map。
 
     version_of(rel) → 短雜湊（找不到就 None，那個檔照舊）。
     module_files：放進 import map 的 .js（模組彼此 import 的時候用）。
@@ -372,7 +372,8 @@ def versioned_html(html: str, version_of, module_files) -> str:
         if low.startswith("<script"):
             if 'type="module"' not in low:
                 return tag
-        elif 'rel="modulepreload"' not in low and 'rel="stylesheet"' not in low:
+        elif ('rel="modulepreload"' not in low and 'rel="stylesheet"' not in low
+              and not ('rel="preload"' in low and 'as="fetch"' in low)):
             return tag
 
         def one(a: re.Match) -> str:
@@ -1929,8 +1930,18 @@ class Handler(BaseHTTPRequestHandler):
             # 真正該看的錯誤淹掉了。
             self.close_connection = True
 
-    def _json(self, code: int, obj: dict, extra=None) -> None:
+    def _json(self, code: int, obj: dict, extra=None, *, cache_control="no-store", conditional=False) -> None:
         blob = json.dumps(obj, ensure_ascii=False).encode("utf-8")
+        if conditional:
+            # The validator covers the complete JSON representation, regardless of transfer encoding.
+            etag = f'W/"{hashlib.sha1(blob).hexdigest()}"'
+            if self.headers.get("If-None-Match") == etag:
+                self.send_response(304)
+                self.send_header("ETag", etag)
+                self.send_header("Cache-Control", cache_control)
+                self.send_header("Vary", "Accept-Encoding")
+                self.end_headers()
+                return
         # 跟靜態檔同一條規則：過 1 KB、客戶端收 gzip、壓完真的比較小才壓。
         # /api/loras 518 KB → 96 KB，手機開 LoRA 選單等的就是這一包。
         packed = None
@@ -1943,10 +1954,14 @@ class Handler(BaseHTTPRequestHandler):
         self.send_response(code)
         self.send_header("Content-Type", "application/json; charset=utf-8")
         self.send_header("Content-Length", str(len(blob)))
-        self.send_header("Cache-Control", "no-store")
+        self.send_header("Cache-Control", cache_control)
+        if conditional:
+            self.send_header("ETag", etag)
+            self.send_header("Vary", "Accept-Encoding")
         if packed is not None:
             self.send_header("Content-Encoding", "gzip")
-            self.send_header("Vary", "Accept-Encoding")
+            if not conditional:
+                self.send_header("Vary", "Accept-Encoding")
         for k, v in (extra or {}).items():
             self.send_header(k, v)
         self.end_headers()
@@ -1964,7 +1979,7 @@ class Handler(BaseHTTPRequestHandler):
         self.wfile.write(body)
 
     def _serve_loras(self) -> None:
-        self._json(200, lora_scan.list_loras())
+        self._json(200, lora_scan.list_loras(), cache_control="private, no-cache", conditional=True)
 
     def _serve_checkpoints(self) -> None:
         try:
@@ -2560,11 +2575,11 @@ class Handler(BaseHTTPRequestHandler):
         # 內容一換網址就換，所以可以放心整年快取，不必每次回來驗證。
         # 字盒一捲就是幾百張縮圖，手機走 Tailscale 時每張一個 304 來回很有感。
         # 沒帶版本的照舊 no-cache（每次回來問，內容一樣才回 304）。
-        # 自己的 .js／.css 的版本是這裡算的，要對得上現在的內容才給整年快取：改檔的那一瞬間
+        # 自己的 .js／.css／.json 的版本是這裡算的，要對得上現在的內容才給整年快取：改檔的那一瞬間
         # 拿著舊版本號來要的，拿到的是新內容 —— 不能讓新內容被記成舊版本號（之後改回去就會拿錯）。
-        # 卡面縮圖的 v 是原圖的雜湊（不是縮圖自己的），所以只驗 .js／.css。
+        # 卡面縮圖的 v 是原圖的雜湊（不是縮圖自己的），所以只驗 .js／.css／.json。
         vq = (urllib.parse.parse_qs(urllib.parse.urlsplit(self.path).query).get("v") or [""])[0]
-        if vq and dest.suffix.lower() in (".js", ".css"):
+        if vq and dest.suffix.lower() in (".js", ".css", ".json"):
             if "v" not in rec:
                 rec["v"] = hashlib.sha1(rec["raw"]).hexdigest()[:10]
             versioned = vq == rec["v"]

@@ -80,8 +80,8 @@ async function boot() {
   initMotion();
   try {
     const [lexicon, manifest] = await Promise.all([
-      fetch("lexicon.json").then((r) => r.json()),
-      fetch("cards/manifest.json").then((r) => (r.ok ? r.json() : {})).catch(() => ({})),
+      fetch(document.querySelector('link[rel="preload"][href^="lexicon.json"]')?.href || "lexicon.json").then((r) => r.json()),
+      fetch(document.querySelector('link[rel="preload"][href^="cards/manifest.json"]')?.href || "cards/manifest.json").then((r) => (r.ok ? r.json() : {})).catch(() => ({})),
     ]);
     data = lexicon;
     lex = indexLexicon(data);
