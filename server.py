@@ -230,6 +230,25 @@ STEPS = int(cfg("comfy.steps", "", 25))
 CFG = float(cfg("comfy.cfg", "", 6.5))
 SAMPLER = str(cfg("comfy.sampler", "", "euler_ancestral"))
 SCHEDULER = str(cfg("comfy.scheduler", "", "normal"))
+
+# 網頁（工作流面板的「取樣參數」）可以每次指定 steps／CFG／denoise。夾在這個範圍裡，
+# 手滑打成 500 步或 CFG 0 不會把 Comfy 卡住、也不會畫出一片灰。沒給就用設定檔／預設。
+SAMPLING_LIMITS = {"steps": (1, 80), "cfg": (1.0, 15.0), "denoise": (0.05, 1.0)}
+
+
+def sampling_value(raw, kind: str, default):
+    """payload 裡的一個取樣參數：沒給、不是數字就用 default；給了就夾在 SAMPLING_LIMITS。"""
+    if raw is None or raw == "" or isinstance(raw, bool):
+        return default
+    try:
+        v = float(raw)
+    except (TypeError, ValueError):
+        return default
+    if v != v:  # NaN
+        return default
+    lo, hi = SAMPLING_LIMITS[kind]
+    v = min(hi, max(lo, v))
+    return int(round(v)) if kind == "steps" else round(v, 2)
 SEED_MAX = 0xFFFFFFFFFFFFFFFF
 
 # LoRA Manager（獨立埠 7861）點「送到 workflow」時 POST /api/lora-push。
@@ -491,7 +510,7 @@ def inject_lora(wf: dict, lora_name: str, strength: float) -> None:
 
 
 def build_workflow(positive: str, width: int, height: int, seed: int, loras=None,
-                   ckpt=None, sfw: bool = False, rating=None) -> dict:
+                   ckpt=None, sfw: bool = False, rating=None, steps=None, cfg_scale=None) -> dict:
     ckpt_name = resolve_ckpt(ckpt)
     wf = {
         "13": {
@@ -514,8 +533,8 @@ def build_workflow(positive: str, width: int, height: int, seed: int, loras=None
             "class_type": "KSampler",
             "inputs": {
                 "seed": int(seed),
-                "steps": STEPS,
-                "cfg": CFG,
+                "steps": sampling_value(steps, "steps", STEPS),
+                "cfg": sampling_value(cfg_scale, "cfg", CFG),
                 "sampler_name": SAMPLER,
                 "scheduler": SCHEDULER,
                 "denoise": 1.0,
@@ -700,7 +719,8 @@ def parse_hires(raw) -> dict:
     view = comfy_view_query(filename, subfolder, type_)
     if not view:
         raise HiresError("hires.image 路徑不合法")
-    return {"mode": mode, "scale": scale, "view": view}
+    sampling = {k: raw.get(k) for k in ("steps", "cfg", "denoise") if raw.get(k) not in (None, "")}
+    return {"mode": mode, "scale": scale, "view": view, "sampling": sampling}
 
 
 def upscale_factor(name: str) -> int:
@@ -735,26 +755,36 @@ def pick_upscale_model(names: list[str], configured: str = "") -> str:
     raise HiresError("Comfy 沒有放大模型，深度 Hires 做不了；快速 Hires 不需要")
 
 
-def hires_sampler(mode: str) -> tuple[int, float, float]:
-    """steps / cfg / denoise。沒設就用兩種圖各自的預設。"""
-    try:
-        steps = int(round(float(cfg("hires.steps", "", 20))))
-    except (TypeError, ValueError):
-        steps = 20
-    try:
-        cfg_v = float(cfg("hires.cfg", "", 5))
-    except (TypeError, ValueError):
-        cfg_v = 5.0
-    default_denoise = 0.5 if mode == "quick" else 0.4
-    raw = cfg("hires.denoise", "", None)
-    if raw is None or raw == "":
-        denoise = default_denoise
-    else:
-        try:
-            denoise = float(raw)
-        except (TypeError, ValueError):
-            denoise = default_denoise
-    return max(1, steps), cfg_v, denoise
+def hires_defaults(mode: str) -> dict:
+    """兩種 Hires 各自的預設（參考工作流）。設定檔 hires.<mode>.* 優先，其次 hires.*（兩種共用）。"""
+    base = {"steps": 20, "cfg": 5.0, "denoise": 0.5 if mode == "quick" else 0.4}
+    out = {}
+    for k, d in base.items():
+        raw = cfg(f"hires.{mode}.{k}", "", None)
+        if raw is None or raw == "":
+            raw = cfg(f"hires.{k}", "", None)
+        out[k] = sampling_value(raw, k, d)
+    return out
+
+
+def hires_sampler(mode: str, overrides: dict | None = None) -> tuple[int, float, float]:
+    """steps / cfg / denoise：網頁這次指定的 → 設定檔 → 預設。"""
+    d = hires_defaults(mode)
+    o = overrides or {}
+    steps = sampling_value(o.get("steps"), "steps", d["steps"])
+    cfg_v = sampling_value(o.get("cfg"), "cfg", d["cfg"])
+    denoise = sampling_value(o.get("denoise"), "denoise", d["denoise"])
+    return max(1, int(steps)), float(cfg_v), float(denoise)
+
+
+def sampling_defaults() -> dict:
+    """給工作流面板：目前這台的預設值和可調範圍（顯示用，沒改的就送空值、伺服器用這些）。"""
+    return {
+        "ok": True,
+        "base": {"steps": STEPS, "cfg": CFG},
+        "hires": {"quick": hires_defaults("quick"), "deep": hires_defaults("deep")},
+        "limits": {k: list(v) for k, v in SAMPLING_LIMITS.items()},
+    }
 
 
 def build_hires_workflow(
@@ -768,10 +798,11 @@ def build_hires_workflow(
     rating=None,
     sfw: bool = False,
     upscale_model: str = "",
+    sampling: dict | None = None,
 ) -> dict:
     """內建 Hires 圖。不管原來是不是 profile 工作流，放大一律走這張。"""
     ckpt_name = resolve_ckpt(ckpt)
-    steps, cfg_v, denoise = hires_sampler(mode)
+    steps, cfg_v, denoise = hires_sampler(mode, sampling)
     negative = negative_for(rating if rating is not None else sfw)
     wf = {
         "13": {
@@ -947,6 +978,7 @@ def prepare_hires(payload: dict) -> tuple[dict, dict]:
         payload.get("rating"),
         sfw=bool(payload.get("sfw")),
         upscale_model=model,
+        sampling=spec.get("sampling"),
     )
     meta = {
         "kind": "hires",
@@ -991,6 +1023,8 @@ def prepare_workflow(payload: dict):
             payload.get("ckpt"),
             sfw=bool(payload.get("sfw")),
             rating=payload.get("rating"),
+            steps=payload.get("steps"),
+            cfg_scale=payload.get("cfg"),
         )
         return wf, meta
     prof = workflows.get_profile(wid)
@@ -3028,6 +3062,9 @@ class Handler(BaseHTTPRequestHandler):
             return
         if path == "/api/checkpoints":
             self._serve_checkpoints()
+            return
+        if path == "/api/sampling":
+            self._json(200, sampling_defaults())
             return
         if path == "/api/models":
             self._serve_models()

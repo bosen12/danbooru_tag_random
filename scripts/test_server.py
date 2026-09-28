@@ -1245,6 +1245,26 @@ finally:
     server.comfy_upload_image = _saved_upload
     server.models_from_comfy = _saved_models
 
+
+# ---- 取樣參數（工作流面板）：payload 指定 steps／CFG／denoise，夾在範圍裡，沒給用預設 ----
+sv = server.sampling_value
+ok("sampling: 沒給用預設", sv(None, "steps", 25) == 25 and sv("", "cfg", 6.5) == 6.5 and sv(True, "steps", 25) == 25)
+ok("sampling: 夾在範圍裡", sv(500, "steps", 25) == 80 and sv(0, "cfg", 6.5) == 1.0 and sv(3, "denoise", 0.5) == 1.0 and sv(0, "denoise", 0.5) == 0.05)
+ok("sampling: 不是數字用預設", sv("abc", "steps", 25) == 25 and sv(float("nan"), "cfg", 6.5) == 6.5)
+ok("sampling: steps 是整數", sv("30.6", "steps", 25) == 31 and isinstance(sv(30.6, "steps", 25), int))
+wf_b = server.build_workflow("1girl", 1024, 1024, 1, steps=30, cfg_scale=4.5)
+ok("sampling: 內建生圖套用 steps／CFG", wf_b["35"]["inputs"]["steps"] == 30 and wf_b["35"]["inputs"]["cfg"] == 4.5)
+wf_d = server.build_workflow("1girl", 1024, 1024, 1)
+ok("sampling: 沒給就是設定檔的", wf_d["35"]["inputs"]["steps"] == server.STEPS and wf_d["35"]["inputs"]["cfg"] == server.CFG)
+st, cf, dn = server.hires_sampler("quick", {"steps": 12, "cfg": 7, "denoise": 0.35})
+ok("sampling: Hires 套用這次指定的", (st, cf, dn) == (12, 7.0, 0.35), str((st, cf, dn)))
+st, cf, dn = server.hires_sampler("deep", {"denoise": 9})
+ok("sampling: Hires 沒給的用預設、給的夾範圍", st == server.hires_defaults("deep")["steps"] and dn == 1.0, str((st, cf, dn)))
+spec = server.parse_hires({"mode": "deep", "scale": 2, "image": "/api/image?filename=a.png&type=output", "steps": 25, "denoise": 0.3})
+ok("sampling: parse_hires 帶出取樣參數", spec["sampling"] == {"steps": 25, "denoise": 0.3}, str(spec.get("sampling")))
+d = server.sampling_defaults()
+ok("sampling: /api/sampling 給兩種 Hires 各自的預設", d["hires"]["quick"]["denoise"] != d["hires"]["deep"]["denoise"] and d["base"]["steps"] == server.STEPS)
+
 if failed:
     print(f"\n{failed} failed")
     sys.exit(1)

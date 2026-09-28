@@ -18,6 +18,52 @@ try {
   WORKFLOW_ID = "";
 }
 
+/* ---------- 取樣參數：生圖的 steps／CFG，兩種 Hires 的 steps／CFG／denoise ----------
+ * 只存「改過的」：沒改的不送，伺服器用它自己的預設（config.json），預設換了這裡跟著換。
+ * 只有呼叫 initWorkflow({ sampling: true }) 的頁面（墨池、疊印台）才顯示、才送。 */
+const SAMPLING_STORE = "yz-sampling";
+const SAMPLING_ROWS = [
+  { id: "base", zh: "生圖", keys: ["steps", "cfg"] },
+  { id: "quick", zh: "快速 Hires", keys: ["steps", "cfg", "denoise"] },
+  { id: "deep", zh: "深度 Hires", keys: ["steps", "cfg", "denoise"] },
+];
+const SAMPLING_FIELD = {
+  steps: { zh: "Steps", step: 1, digits: 0 },
+  cfg: { zh: "CFG", step: 0.5, digits: 1 },
+  denoise: { zh: "Denoise", step: 0.05, digits: 2 },
+};
+const SAMPLING_LIMITS = { steps: [1, 80], cfg: [1, 15], denoise: [0.05, 1] };
+let samplingOn = false;
+let samplingDefaults = null;
+let sampling = { base: {}, quick: {}, deep: {} };
+try {
+  const raw = JSON.parse(localStorage.getItem(SAMPLING_STORE) || "{}");
+  for (const r of SAMPLING_ROWS) {
+    const src = raw && typeof raw[r.id] === "object" ? raw[r.id] : {};
+    for (const k of r.keys) if (Number.isFinite(src[k])) sampling[r.id][k] = src[k];
+  }
+} catch {
+  /* 讀不到就全部用預設 */
+}
+
+function saveSampling() {
+  try {
+    localStorage.setItem(SAMPLING_STORE, JSON.stringify(sampling));
+  } catch {
+    /* 無痕模式：這次有效 */
+  }
+}
+
+/** 付印時帶上：{ steps, cfg } 裡改過的那幾個（沒改就是空物件）。 */
+export function currentSampling() {
+  return samplingOn ? { ...sampling.base } : {};
+}
+
+/** Hires 帶上：{ steps, cfg, denoise } 裡改過的那幾個。 */
+export function currentHiresSampling(mode) {
+  return samplingOn && sampling[mode] ? { ...sampling[mode] } : {};
+}
+
 let profiles = [];
 let current = null;
 let lastFocus = null;
@@ -126,6 +172,7 @@ function ensureDom() {
           <input id="wf-url" type="url" autocomplete="off" spellcheck="false" aria-label="ComfyUI 網址" placeholder="http://127.0.0.1:8188" />
           <button type="button" class="ghost" id="wf-url-save">存位址</button>
         </div>
+        <div id="wf-sampling" class="wf-sampling" hidden></div>
         <div id="wf-current" class="lm-current"></div>
         <p class="wf-msg" id="wf-msg" role="status"></p>
       </div>
@@ -235,7 +282,109 @@ function keepButton(on, label, onClick) {
   return b;
 }
 
+async function loadSamplingDefaults() {
+  if (samplingDefaults) return samplingDefaults;
+  const j = await getJson("/api/sampling");
+  if (j.ok) samplingDefaults = j;
+  return samplingDefaults;
+}
+
+const defaultOf = (row, k) => (row === "base" ? samplingDefaults?.base?.[k] : samplingDefaults?.hires?.[row]?.[k]);
+
+function renderSampling() {
+  const box = $("wf-sampling");
+  if (!box || !samplingOn) return;
+  box.hidden = false;
+  box.replaceChildren();
+  const head = document.createElement("div");
+  head.className = "wf-samp-head";
+  const title = document.createElement("span");
+  title.className = "lm-right-head";
+  title.textContent = "取樣參數";
+  const reset = document.createElement("button");
+  reset.type = "button";
+  reset.className = "wf-samp-reset";
+  reset.textContent = "全部恢復預設";
+  reset.disabled = !SAMPLING_ROWS.some((r) => Object.keys(sampling[r.id]).length);
+  reset.addEventListener("click", () => {
+    sampling = { base: {}, quick: {}, deep: {} };
+    saveSampling();
+    renderSampling();
+    say("取樣參數都回到預設了。");
+  });
+  head.append(title, reset);
+  box.append(head);
+  for (const r of SAMPLING_ROWS) {
+    const row = document.createElement("div");
+    row.className = "wf-samp-row";
+    row.dataset.row = r.id;
+    const lab = document.createElement("span");
+    lab.className = "wf-samp-label";
+    lab.textContent = r.zh;
+    row.append(lab);
+    for (const k of r.keys) {
+      const f = SAMPLING_FIELD[k];
+      const [lo, hi] = SAMPLING_LIMITS[k];
+      const def = defaultOf(r.id, k);
+      const wrap = document.createElement("label");
+      wrap.className = "wf-samp-field";
+      const name = document.createElement("span");
+      name.textContent = f.zh;
+      const input = document.createElement("input");
+      input.type = "number";
+      input.inputMode = "decimal";
+      input.min = String(lo);
+      input.max = String(hi);
+      input.step = String(f.step);
+      input.setAttribute("aria-label", `${r.zh} ${f.zh}`);
+      const shown = sampling[r.id][k] ?? def;
+      input.value = shown == null ? "" : Number(shown).toFixed(f.digits);
+      if (def != null) input.placeholder = Number(def).toFixed(f.digits);
+      const mark = () => {
+        wrap.dataset.changed = sampling[r.id][k] != null ? "true" : "false";
+        wrap.title = def != null ? `預設 ${Number(def).toFixed(f.digits)}` : "";
+      };
+      mark();
+      input.addEventListener("change", () => {
+        const v = parseFloat(input.value);
+        if (!Number.isFinite(v)) delete sampling[r.id][k];
+        else {
+          const c = Math.min(hi, Math.max(lo, f.digits ? Math.round(v / f.step) * f.step : Math.round(v)));
+          const val = Number(c.toFixed(f.digits));
+          // 改回跟預設一樣：當作沒改（預設以後換了會跟著換）。
+          if (def != null && Math.abs(val - def) < 1e-9) delete sampling[r.id][k];
+          else sampling[r.id][k] = val;
+        }
+        const now = sampling[r.id][k] ?? def;
+        input.value = now == null ? "" : Number(now).toFixed(f.digits);
+        saveSampling();
+        mark();
+        reset.disabled = !SAMPLING_ROWS.some((x) => Object.keys(sampling[x.id]).length);
+      });
+      wrap.append(name, input);
+      row.append(wrap);
+    }
+    box.append(row);
+  }
+  const note = document.createElement("p");
+  note.className = "ckpt-cur-hint wf-samp-note";
+  box.append(note);
+  syncSamplingNote();
+}
+
+/** 換了工作流：說明跟著換（不重建欄位，打到一半的數字不會被洗掉）。 */
+function syncSamplingNote() {
+  const note = $("wf-sampling")?.querySelector(".wf-samp-note");
+  if (!note) return;
+  const custom = !!WORKFLOW_ID;
+  note.textContent = custom
+    ? "目前用的是自己的工作流：生圖照它圖裡的 steps／CFG，這裡的「生圖」那一行不套用。Hires 一律用這裡的。"
+    : "改過的會描一道底線；清空欄位或改回預設值就回到預設。";
+  $("wf-sampling").dataset.custom = custom ? "true" : "false";
+}
+
 function renderCurrent() {
+  syncSamplingNote();
   const box = $("wf-current");
   if (!box) return;
   box.replaceChildren();
@@ -507,6 +656,7 @@ function openModal() {
   $("wf-close")?.focus();
   say("");
   Promise.all([refreshList(), refreshComfy()]).catch((e) => say(String(e.message || e), "err"));
+  if (samplingOn) loadSamplingDefaults().then(renderSampling);
 }
 
 function closeModal() {
@@ -529,7 +679,8 @@ function closeModal() {
   );
 }
 
-export function initWorkflow() {
+export function initWorkflow({ sampling: withSampling = false } = {}) {
+  samplingOn = withSampling;
   ensureDom();
   renderPickBtn();
   $("wf-pick-btn")?.addEventListener("click", openModal);

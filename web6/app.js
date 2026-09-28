@@ -28,7 +28,7 @@ import { ratingBlocked, RATING_LABEL } from "./rules/rating.js";
 import { HEATS, toggleHeat } from "./heats.js";
 import { SCENE_MODES, SCENE_MODE_LABELS, heatBlockedByRating } from "./scene-policy.js";
 import { initLoraPicker, currentLorasPayload, currentTriggerText, currentCkpt, handleLoraKeys } from "./lora.js";
-import { initWorkflow, currentWorkflowId, wfHandleKeys } from "./workflow.js";
+import { initWorkflow, currentWorkflowId, currentSampling, wfHandleKeys } from "./workflow.js";
 import { HARD_BANNED, applyArtSources } from "./card-art.js";
 import { buildLibrary, createAssets, cardNode, setCardFlag, setEnterTarget, eagerArt, cardFacts, CARD_SUIT_INFO, CARD_SUITS, RATING_ZH } from "./cards.js";
 import { el, openSheet, anyOverlay, toast, ICONS } from "./ui.js";
@@ -118,7 +118,7 @@ async function boot() {
 
   buildHand();
   initLoraPicker();
-  initWorkflow();
+  initWorkflow({ sampling: true });
   pingLoop();
 
   renderRating();
@@ -1106,6 +1106,8 @@ const generator = createGenerator({
     ckpt: shot.ckpt,
     rating: shot.rating,
     workflowId: shot.workflowId,
+    // 工作流面板裡改過的 steps／CFG（沒改就不送，伺服器用預設）。
+    ...currentSampling(),
   }),
   update: (shot) => {
     tabNote.shot(shot, generator.pending);

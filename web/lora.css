@@ -2221,3 +2221,100 @@
     width: auto;
   }
 }
+
+/* 工作流面板的取樣參數（墨池、疊印台）：一行一種用途，欄位是小數字框；改過的描一道底線。 */
+.wf-sampling {
+  margin-top: 14px;
+  padding: 12px 0 4px;
+  border-top: 1px solid var(--line);
+}
+.wf-sampling[hidden] {
+  display: none;
+}
+.wf-samp-head {
+  display: flex;
+  align-items: baseline;
+  justify-content: space-between;
+  gap: 8px;
+}
+.wf-samp-head .lm-right-head {
+  margin-bottom: 8px;
+}
+.wf-samp-reset {
+  padding: 0;
+  border: 0;
+  background: none;
+  color: var(--dim);
+  font: inherit;
+  font-size: 12px;
+  text-decoration: underline;
+  text-underline-offset: 3px;
+  cursor: pointer;
+}
+.wf-samp-reset:disabled {
+  opacity: 0.4;
+  cursor: default;
+  text-decoration: none;
+}
+.wf-samp-reset:not(:disabled):hover {
+  color: var(--ink);
+}
+.wf-samp-row {
+  display: grid;
+  grid-template-columns: 5.5em repeat(3, minmax(0, 1fr));
+  align-items: end;
+  gap: 8px;
+  padding: 6px 0;
+}
+.wf-samp-label {
+  align-self: center;
+  font-size: 13px;
+  color: var(--ink);
+  white-space: nowrap;
+}
+.wf-samp-field {
+  display: grid;
+  gap: 3px;
+  min-width: 0;
+}
+.wf-samp-field > span {
+  font-size: 11px;
+  color: var(--faint);
+  font-family: var(--mono);
+}
+.wf-samp-field input {
+  width: 100%;
+  min-width: 0;
+  height: 32px;
+  padding: 0 8px;
+  border: 1px solid var(--line);
+  border-radius: 6px;
+  background: var(--sunk);
+  color: var(--ink);
+  font: inherit;
+  font-family: var(--mono);
+  font-size: 13px;
+  box-shadow: inset 0 -2px 0 transparent;
+  transition: box-shadow 0.12s ease-out, border-color 0.12s ease-out;
+}
+.wf-samp-field input:focus-visible {
+  outline: 2px solid var(--amber);
+  outline-offset: 1px;
+}
+.wf-samp-field[data-changed="true"] input {
+  box-shadow: inset 0 -2px 0 var(--amber);
+}
+.wf-sampling[data-custom="true"] .wf-samp-row[data-row="base"] {
+  opacity: 0.5;
+}
+@media (max-width: 34rem) {
+  .wf-samp-row {
+    grid-template-columns: repeat(3, minmax(0, 1fr));
+  }
+  .wf-samp-label {
+    grid-column: 1 / -1;
+  }
+  .wf-samp-field input {
+    font-size: 16px;
+  }
+}

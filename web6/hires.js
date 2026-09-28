@@ -12,6 +12,7 @@
  */
 import { el } from "./ui.js";
 import { createGenerator } from "./gen.js";
+import { currentHiresSampling } from "./workflow.js";
 import { seat, refuse, reducedMotion, DUR, CURVE, css } from "./motion.js";
 
 export const HIRES_MODES = {
@@ -89,7 +90,8 @@ export function createHires(hooks) {
         loras: t.loras,
         ckpt: t.ckpt,
         rating: t.rating,
-        hires: { mode: task.mode, scale: task.scale, image: t.baseImage || t.image },
+        // 工作流面板裡這一種 Hires 改過的 steps／CFG／denoise。
+        hires: { mode: task.mode, scale: task.scale, image: t.baseImage || t.image, ...currentHiresSampling(task.mode) },
       };
     },
     update: (task) => {

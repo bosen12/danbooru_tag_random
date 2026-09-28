@@ -30,7 +30,7 @@ import { ratingBlocked, RATING_LABEL } from "./rules/rating.js";
 import { HEATS, toggleHeat } from "./heats.js";
 import { heatBlockedByRating } from "./scene-policy.js";
 import { initLoraPicker, currentLorasPayload, currentTriggerText, currentCkpt, handleLoraKeys } from "./lora.js";
-import { initWorkflow, currentWorkflowId, wfHandleKeys } from "./workflow.js";
+import { initWorkflow, currentWorkflowId, currentSampling, wfHandleKeys } from "./workflow.js";
 import { HARD_BANNED, applyArtSources } from "./card-art.js";
 import { buildLibrary, createAssets, cardNode, cardFacts, setEnterTarget, eagerArt, CARD_SUIT_INFO, CARD_SUITS, RATING_ZH, ERA_ZH } from "./cards.js";
 import { el, openSheet, anyOverlay, toast } from "./ui.js";
@@ -234,7 +234,7 @@ async function boot() {
   prints = loadPrints();
 
   initLoraPicker();
-  initWorkflow();
+  initWorkflow({ sampling: true });
   pingLoop();
   wireChrome();
 
@@ -596,7 +596,7 @@ function reroll() {
 const tabNote = tabTitle();
 
 const generator = createGenerator({
-  payload: (p) => ({ width: p.width, height: p.height, loras: p.loras, ckpt: p.ckpt, rating: p.rating, workflowId: p.workflowId }),
+  payload: (p) => ({ width: p.width, height: p.height, loras: p.loras, ckpt: p.ckpt, rating: p.rating, workflowId: p.workflowId, ...currentSampling() }),
   update: (p) => {
     tabNote.shot(p, generator.pending);
     paintLineItem(p);
