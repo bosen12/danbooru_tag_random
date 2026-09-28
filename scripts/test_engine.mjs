@@ -5158,11 +5158,12 @@ function indoorOutdoorClash(have) {
   ok("pinned cooking can stand", cookStand > 0, `stand=${cookStand}/40`);
   const pinClean = applyPin(lex, new Set(), new Set(), "cleaning").pinned;
   let cleanStand = 0;
-  for (let i = 0; i < 40; i++) {
+  // 身體格降權後，釘打掃的站姿大約一成。seed 440760 起的 40 張剛好是 0，80 張裡看得到。
+  for (let i = 0; i < 80; i++) {
     const h = tagsOf(drawOne(lex, s, pinClean, new Set(), mulberry32(440760 + i), 440760 + i));
     if (h.has("standing")) cleanStand += 1;
   }
-  ok("pinned cleaning can stand", cleanStand > 0, `stand=${cleanStand}/40`);
+  ok("pinned cleaning can stand", cleanStand > 0, `stand=${cleanStand}/80`);
   const pinCarry = applyPin(lex, new Set(), new Set(), "carrying").pinned;
   let carryStand = 0;
   for (let i = 0; i < 40; i++) {
@@ -5562,7 +5563,9 @@ function indoorOutdoorClash(have) {
     // 第二十三次（2026-09-28）：loli 離開候選池。沒有水的濕、雪配泳衣、騎車配走跑跳、
     // 跳水配走跑劈腿、漂浮配走跑、被褥配直立、全身動作配半身構圖、沒有怪物的獠牙都不再成立。
     // 現代外套和聚光燈的權重也降了。牌序再位移一次。這張仍是 1girl solo，沒有男生。
-    "1girl, solo, very short hair, aqua eyes, blue hair, blunt bangs, large breasts, thighs, tanlines, collarbone, bathrobe, tiptoes, standing, worm's eye view, from below, looking around, dazed, masturbation, ofuro, bath, indoors, night, spotlight, curtains, nsfw, explicit, masterpiece, best quality, amazing quality");
+    // 第二十四次（2026-09-28）：站立劈腿、踮腳、走路、跑步、跳躍在身體格降權。
+    // 站立劈腿再按種子擋掉三成。牌序再位移一次。這張仍是 1girl solo，沒有男生。
+    "1girl, solo, very short hair, aqua eyes, blue hair, blunt bangs, large breasts, thighs, tanlines, collarbone, tears, competition swimsuit, one-piece swimsuit, swimsuit, torn thighhighs, thighhighs, sneakers, masturbation through clothes, standing, wide shot, looking back, crying, folded, locker room, indoors, evening, ceiling light, light particles, grass, nsfw, explicit, masterpiece, best quality, amazing quality");
   ok("drawOne exposes shadow diagnostics", Array.isArray(shadowIntegrationDraw.shadowViolations));
 
   const eatProneShadow = validateSupportShadow({

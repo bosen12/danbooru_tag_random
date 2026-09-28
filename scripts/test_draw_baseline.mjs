@@ -43,28 +43,30 @@ const GOLD = {
   // 全身動作配半身構圖、沒有怪物的獠牙，這些組合不再成立。現代外套不再吃時代加權，
   // 聚光燈不再吃打光的時代加權。基本負面詞多了 loli, child, aged down，drawOne 不回傳
   // negative，這五張的 POS 不含那一串。五張仍是 1girl solo，沒有男生。
+  // 2026-09-28 第六次：身體格不再均權。站立劈腿權重 1、踮腳 60、走跑跳各 50，其餘 300。
+  // 站立劈腿在唯一合法時權重救不了，再按種子擋掉三成。五張仍是 1girl solo，沒有男生。
   1: {
-    rng: 355,
-    pos: "1girl, solo, pixie cut, purple eyes, green hair, swept bangs, small breasts, arm under breasts, bruise, hanging breasts, school uniform, no bra, panties aside, white coat, coat, kneehighs, female masturbation, seiza, wide shot, looking up, seductive smile, deep penetration, bamboo forest, outdoors, sunset, spotlight, rubble, christmas, nsfw, explicit, masterpiece, best quality, amazing quality",
+    rng: 344,
+    pos: "1girl, solo, pixie cut, purple eyes, green hair, swept bangs, small breasts, arm under breasts, bruise, hanging breasts, school uniform, no bra, panties aside, white coat, coat, kneehighs, female masturbation, top-down bottom-up, over shoulder, looking up, scared, empty eyes, bamboo forest, outdoors, sunrise, shadow, bush, tree, nsfw, explicit, masterpiece, best quality, amazing quality",
   },
   42: {
-    rng: 348,
-    pos: "1girl, solo, very short hair, aqua eyes, blue hair, blunt bangs, large breasts, thighs, tanlines, collarbone, bathrobe, tiptoes, standing, worm's eye view, from below, looking around, dazed, masturbation, ofuro, bath, indoors, night, spotlight, curtains, nsfw, explicit, masterpiece, best quality, amazing quality",
+    rng: 335,
+    pos: "1girl, solo, very short hair, aqua eyes, blue hair, blunt bangs, large breasts, thighs, tanlines, collarbone, tears, competition swimsuit, one-piece swimsuit, swimsuit, torn thighhighs, thighhighs, sneakers, masturbation through clothes, standing, wide shot, looking back, crying, folded, locker room, indoors, evening, ceiling light, light particles, grass, nsfw, explicit, masterpiece, best quality, amazing quality",
   },
   100: {
     rng: 384,
-    pos: "1girl, solo, medium hair, purple eyes, red hair, side ponytail, ponytail, gigantic breasts, muscular, bruise, pink shirt, shirt, jeans, pants, table tennis, standing split, worm's eye view, from below, looking at viewer, exhausted, school gym, indoors, day, silhouette, bubble, table tennis paddle, table tennis ball, nsfw, explicit, masterpiece, best quality, amazing quality",
+    pos: "1girl, solo, medium hair, purple eyes, red hair, side ponytail, ponytail, gigantic breasts, muscular, bruise, pink shirt, shirt, jeans, pants, table tennis, squatting, bird's eye view, from above, looking around, drunk, sports court, outdoors, fog, day, shadow, petals, table tennis paddle, table tennis ball, nsfw, explicit, masterpiece, best quality, amazing quality",
   },
   999: {
-    rng: 366,
-    pos: "1girl, solo, long hair, grey eyes, orange hair, twin braids, braid, flat chest, saliva, tears, nude, earrings, female masturbation, lying, from above, looking to the side, seductive smile, one eye closed, bubble bath, bath, indoors, sunrise, sunbeam, silhouette, nsfw, explicit, masterpiece, best quality, amazing quality",
+    rng: 336,
+    pos: "1girl, solo, long hair, grey eyes, orange hair, twin braids, braid, flat chest, saliva, tears, nude, hairband, earrings, elbow gloves, gloves, veil, female masturbation, on stomach, from behind, looking outside, tearing up, bdsm, floral background, backlighting, arrow (projectile), depth of field, lens flare, nsfw, explicit, masterpiece, best quality, amazing quality",
   },
   // 2026-09-23：走光補抽改成「所有成立的走光動作同一池、衣服吻合的權重 10」之後，
   // 這張的走光動作從 exhibitionism 換成 cameltoe（她穿 thong，吻合），場景跟著換。
   // 見 test_clothing_reachability.mjs 的走光段落與討論區同日那輪。
   2026: {
-    rng: 400,
-    pos: "1girl, solo, bob cut, grey eyes, black hair, hair intakes, large breasts, underboob, lactation, midriff, black pants, pants, bra visible through clothes, sleeveless shirt, shirt, torn thighhighs, thighhighs, reading, on one knee, worm's eye view, from below, looking back, surprised, shirt pull, book, shrine, outdoors, night, lamppost, chinese new year, nsfw, explicit, masterpiece, best quality, amazing quality",
+    rng: 388,
+    pos: "1girl, solo, bob cut, grey eyes, black hair, hair intakes, large breasts, underboob, lactation, midriff, black pants, pants, bra visible through clothes, sleeveless shirt, shirt, torn thighhighs, thighhighs, reading, squatting, from behind, looking to the side, seductive smile, shirt lift, newspaper, train, indoors, sunset, sunlight, crystal ball, nsfw, explicit, masterpiece, best quality, amazing quality",
   },
 };
 
@@ -180,7 +182,10 @@ const MATRIX_SEEDS = 200;
 // 降到普通衣服的 4／2，聚光燈從打光時代階的 4 降到 1。基本負面詞加了
 // loli, child, aged down，drawOne 不回傳 negative，指紋不含那一串。
 // 指紋 fff3a5d4 → a188bd33。
-const MATRIX_GOLD = "a188bd33";
+// 2026-09-28 第六次：身體格的站立劈腿、踮腳、走路、跑步、跳躍降權。
+// 站立劈腿在它是唯一合法姿勢時還會被抽到，所以再按種子擋掉三成。
+// 指紋 a188bd33 → 0cd7db41。
+const MATRIX_GOLD = "0cd7db41";
 
 function matrixSettings(over) {
   const s = defaultSettings(data);

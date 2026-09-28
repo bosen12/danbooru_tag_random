@@ -5179,6 +5179,15 @@ export function drawOne(lex, settings, pinned, userBanned, rand, seed, opts) {
       ) {
         return false;
       }
+      // 站立劈腿的權重降到 1:300 之後，誘惑仍有大約 2%。那些圖裡它是當下唯一合法的身體姿勢，
+      // 權重不會把它讓給別人。再按種子擋掉三成，誘惑才會落到 1% 左右。釘選不走這裡。
+      if (
+        item.tag === "standing split" &&
+        !pinned.has(item.tag) &&
+        ((Math.imul((seed >>> 0) ^ 0x9e3779b9, 0x45d9f3b) >>> 16) % 100) >= 70
+      ) {
+        return false;
+      }
       if ((item.tag === "running" || item.tag === "jumping") && !pinned.has(item.tag) && hasUsed((t) => NO_SPRINT_PLACE.has(t))) {
         return false;
       }
@@ -5884,7 +5893,26 @@ export function drawOne(lex, settings, pinned, userBanned, rand, seed, opts) {
     const acts = lex.bySection.pose.filter((item) => soloSex(item.tag) && allow(item));
     takeFromPool(acts, 1, rand, commit, null, allow, mPre);
   }
-  fillSlot("pose", "body_pose");
+  // 身體格以前均權。品質規則之後同一批種子：預設（seed 170000，3000 張）站立劈腿 7.0%、
+  // 踮腳 6.9%、走跑跳合計 11.8%，五個動態姿勢合計 25.8%。只開誘惑（seed 180000）
+  // 站立劈腿 12.6%、踮腳 7.2%、走跑跳 17.5%，合計 37.3%。站著只有 14–17%。
+  // 站立劈腿權重 1、踮腳 60、走跑跳各 50，其餘身體姿勢 300。
+  // 權重差拉大之後，只剩「它是唯一合法姿勢」的那些圖還會抽到站立劈腿，所以 allow() 再按種子擋掉三成。
+  // 釘選在這格之前就佔住，不受這組權重影響。未釘選的站立劈腿、走路、跑步、跳躍在性愛進不了池。
+  fillSlot("pose", "body_pose", {
+    softTiers: [
+      (item) =>
+        item.tag !== "standing split" &&
+        item.tag !== "tiptoes" &&
+        item.tag !== "walking" &&
+        item.tag !== "running" &&
+        item.tag !== "jumping",
+      (item) => item.tag === "walking" || item.tag === "running" || item.tag === "jumping",
+      (item) => item.tag === "tiptoes",
+      (item) => item.tag === "standing split",
+    ],
+    weights: [300, 50, 60, 1],
+  });
   // 一般 camera 仍放在臉部特徵後；只有上方 tease profile 會先保留無臉構圖。
   // 這可讓 head out of frame / lower body 自然可達，又不會讓它們擋掉 flash/sex
   // 必須保證的手臂、胸部或性愛動作。詳見 docs/pose-tag-deep-review.md §2。
