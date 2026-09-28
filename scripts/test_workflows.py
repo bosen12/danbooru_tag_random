@@ -311,6 +311,23 @@ ok(
     workflows.combo_list(info, "LoraLoader", "lora_name") == ["style\\x.safetensors"],
 )
 ok("combo missing node empty", workflows.combo_list({}, "Nope", "x") == [])
+new_info = {
+    "UpscaleModelLoader": {
+        "input": {
+            "required": {
+                "model_name": [
+                    "COMBO",
+                    {"options": ["4x-UltraSharp.pth", "RealESRGAN_x4plus_anime_6B.pth"]},
+                ]
+            }
+        }
+    }
+}
+ok(
+    "combo new COMBO options",
+    workflows.combo_list(new_info, "UpscaleModelLoader", "model_name")
+    == ["4x-UltraSharp.pth", "RealESRGAN_x4plus_anime_6B.pth"],
+)
 
 
 # --- inspect / ckpt name ---------------------------------------------------

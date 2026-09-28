@@ -76,6 +76,9 @@ export function saveShots(shots) {
       ckpt: s.ckpt,
       workflowId: s.workflowId,
       image: s.image || null,
+      // Hires 過的：image 是大圖，baseImage 是原圖（再 Hires 從原圖放大、也可以還原）。
+      baseImage: s.baseImage || null,
+      hires: s.hires || null,
       // 伺服器那邊的出圖工作。畫到一半就重新整理的話，下次打開用它接回去（gen.js 的 resume）。
       job: s.job || null,
       live: !!s.job && (s.status === "running" || s.status === "queued"),

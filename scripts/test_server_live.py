@@ -78,6 +78,8 @@ class FakeComfy(threading.Thread):
         self.have_image = threading.Event()
         self.last_prompt = None
         self.queue_deleted = None
+        self.view_body = PNG
+        self.uploaded = False
 
     def run(self) -> None:
         while not self.stopping.is_set():
@@ -114,6 +116,10 @@ class FakeComfy(threading.Thread):
                 if not more:
                     break
                 raw += more
+            if method == "POST" and path.split("?", 1)[0] == "/upload/image":
+                self.uploaded = True
+                self._json(conn, {"name": "hires_test.png", "subfolder": "danbooru_hires", "type": "input"})
+                return
             if path.startswith("/interrupt"):
                 self.interrupted.set()
                 self._json(conn, {"ok": True})
@@ -172,7 +178,7 @@ class FakeComfy(threading.Thread):
                 )
                 return
             if path.startswith("/view"):
-                self._raw(conn, PNG, "image/png")
+                self._raw(conn, self.view_body, "image/png")
                 return
             self._json(conn, {})
         except OSError:
@@ -813,6 +819,236 @@ finally:
     log = proc.stdout.read() or ""
     comfy.close()
 ok("快取標頭：主控台沒有 traceback", "Traceback" not in log, log[-800:])
+
+
+def _ihdr_png(width: int, height: int) -> bytes:
+    return (
+        b"\x89PNG\r\n\x1a\n"
+        + struct.pack(">I", 13)
+        + b"IHDR"
+        + struct.pack(">IIBBBBB", width, height, 8, 2, 0, 0, 0)
+    )
+
+
+# === 10. Hires：假 Comfy 走完 quick，非數字是 400 =================================
+comfy = FakeComfy("happy", save_node="62")
+comfy.view_body = _ihdr_png(32, 48)
+comfy.start()
+proc, port = start_server(comfy.port, {"NO_UPSCALE_FETCH": "1"})
+try:
+    code, body = http_json(
+        port,
+        "POST",
+        "/api/gen",
+        {
+            "positive": "1girl",
+            "hires": {"mode": "quick", "scale": "nope", "image": "/api/image?filename=a.png"},
+        },
+    )
+    ok("hires 非數字是 400", code == 400 and "不是數字" in str(body.get("error")), str((code, body)))
+    bad_events = sse_events(
+        port,
+        timeout=20,
+        payload={
+            "positive": "1girl",
+            "hires": {"mode": "quick", "scale": 1.5, "image": "http://evil.example/a.png"},
+        },
+    )
+    ok(
+        "hires 非 /api/image 是 error 事件",
+        bool(bad_events) and bad_events[-1][0] == "error" and "/api/image" in str(bad_events[-1][1].get("error")),
+        str(bad_events),
+    )
+    events = sse_events(
+        port,
+        timeout=30,
+        payload={
+            "positive": "1girl",
+            "seed": 7,
+            "workflowId": "no-such",
+            "hires": {
+                "mode": "quick",
+                "scale": 1.25,
+                "image": "/api/image?filename=out.png&type=output&h=abcdabcdabcdabcd",
+            },
+        },
+    )
+    done = [data for ev, data in events if ev == "done"]
+    ok("hires fake 有 done", len(done) == 1, str(events))
+    if done:
+        ok("hires fake 尺寸", (done[0].get("width"), done[0].get("height")) == (40, 64), str(done[0]))
+        ok("hires fake 帶 mode/scale", done[0].get("hires") == {"mode": "quick", "scale": 1.25}, str(done[0].get("hires")))
+        ok("hires fake seed", done[0].get("seed") == 7, str(done[0].get("seed")))
+    posted = (comfy.last_prompt or {}).get("prompt") or {}
+    ok("hires 圖有 LatentUpscaleBy", posted.get("52", {}).get("class_type") == "LatentUpscaleBy", str(posted)[:500])
+    ok(
+        "LoadImage 用上傳後的檔名",
+        posted.get("50", {}).get("inputs", {}).get("image") == "danbooru_hires/hires_test.png",
+        str(posted.get("50")),
+    )
+    ok("原圖有先上傳", comfy.uploaded)
+finally:
+    proc.terminate()
+    try:
+        proc.wait(10)
+    except subprocess.TimeoutExpired:
+        proc.kill()
+    log = proc.stdout.read() or ""
+    comfy.close()
+ok("hires fake：主控台沒有 traceback", "Traceback" not in log, log[-800:])
+
+
+def _comfy_up(base: str) -> bool:
+    try:
+        with urllib.request.urlopen(base + "/system_stats", timeout=3) as resp:
+            return resp.status == 200
+    except (OSError, urllib.error.URLError, TimeoutError):
+        return False
+
+
+def _can_bind(bind_port: int) -> bool:
+    sock = socket.socket()
+    try:
+        sock.bind(("127.0.0.1", bind_port))
+        return True
+    except OSError:
+        return False
+    finally:
+        sock.close()
+
+
+def _start_real(bind_port: int, comfy_api: str):
+    env = dict(
+        os.environ,
+        PYTHONUTF8="1",
+        PORT=str(bind_port),
+        HOST="127.0.0.1",
+        COMFY_API=comfy_api,
+        WEB_DIR="web6",
+        NO_CARD_FETCH="1",
+        NO_UPSCALE_FETCH="1",
+        WORKFLOW_DATA_DIR=tempfile.mkdtemp(),
+        APP_SETTINGS=str(Path(tempfile.mkdtemp()) / "settings.json"),
+        WEBP_CACHE_DIR=tempfile.mkdtemp(),
+    )
+    proc = subprocess.Popen(
+        [sys.executable, str(ROOT / "server.py")],
+        cwd=str(ROOT),
+        env=env,
+        stdout=subprocess.PIPE,
+        stderr=subprocess.STDOUT,
+        text=True,
+        encoding="utf-8",
+        errors="replace",
+    )
+    for _ in range(150):
+        try:
+            socket.create_connection(("127.0.0.1", bind_port), 0.2).close()
+            return proc
+        except OSError:
+            if proc.poll() is not None:
+                log = proc.stdout.read() or ""
+                raise RuntimeError(f"server.py 退出（code={proc.returncode}）\n{log}")
+            time.sleep(0.1)
+    proc.terminate()
+    raise RuntimeError("server.py 沒有開始監聽")
+
+
+def _png_wh(blob: bytes):
+    if len(blob) < 24 or blob[:8] != b"\x89PNG\r\n\x1a\n" or blob[12:16] != b"IHDR":
+        return None
+    return struct.unpack(">II", blob[16:24])
+
+
+# === 11. 真 Comfy 才跑：quick ×1.25。HIRES_LIVE_DEEP=1 再跑一次深度。 ==========
+_REAL = os.environ.get("COMFY_API", "http://127.0.0.1:8188").rstrip("/")
+if not _comfy_up(_REAL):
+    print(f"skip real hires (Comfy not up at {_REAL})")
+else:
+    _port = 8897 if _can_bind(8897) else 0
+    if _port == 0:
+        _sock = socket.socket()
+        _sock.bind(("127.0.0.1", 0))
+        _port = _sock.getsockname()[1]
+        _sock.close()
+        print("note 8897 is busy; real hires is on another port")
+    else:
+        print("real hires server on 8897")
+    _proc = _start_real(_port, _REAL)
+    try:
+        # 這個檔在 scripts/ 裡。Windows Python 不會把專案根目錄放進 sys.path。
+        sys.path.insert(0, str(ROOT))
+        import server as _app
+
+        _base_events = sse_events(
+            _port,
+            timeout=600,
+            payload={"positive": "1girl, solo", "seed": 12345, "width": 512, "height": 512},
+        )
+        _base = [data for ev, data in _base_events if ev == "done"]
+        ok("real base image", len(_base) == 1, str(_base_events[-1] if _base_events else _base_events))
+        if _base:
+            _src = _base[0]["image"]
+            _expect = _app.hires_output_size(512, 512, 1.25, "quick")
+            _t0 = time.time()
+            _hi = sse_events(
+                _port,
+                timeout=600,
+                payload={
+                    "positive": "1girl, solo",
+                    "seed": 12345,
+                    "workflowId": "ignored",
+                    "hires": {"mode": "quick", "scale": 1.25, "image": _src},
+                },
+            )
+            _quick_s = time.time() - _t0
+            _done = [data for ev, data in _hi if ev == "done"]
+            ok("real quick done", len(_done) == 1, str(_hi[-1] if _hi else _hi))
+            if _done:
+                ok(
+                    "real quick size",
+                    (_done[0].get("width"), _done[0].get("height")) == _expect
+                    and _done[0].get("hires") == {"mode": "quick", "scale": 1.25},
+                    str(_done[0]),
+                )
+                with urllib.request.urlopen(f"http://127.0.0.1:{_port}{_done[0]['image']}", timeout=60) as _resp:
+                    _wh = _png_wh(_resp.read())
+                ok("real quick file matches done", _wh == _expect, str(_wh))
+                print(f"LIVE quick {_quick_s:.1f}s {_expect[0]}x{_expect[1]}")
+            if os.environ.get("HIRES_LIVE_DEEP") == "1" and _done:
+                _dexpect = _app.hires_output_size(512, 512, 1.5, "deep", 4)
+                _t1 = time.time()
+                _deep = sse_events(
+                    _port,
+                    timeout=900,
+                    payload={
+                        "positive": "1girl, solo",
+                        "seed": 12345,
+                        "hires": {"mode": "deep", "scale": 1.5, "image": _src},
+                    },
+                )
+                _deep_s = time.time() - _t1
+                _ddone = [data for ev, data in _deep if ev == "done"]
+                ok("real deep done", len(_ddone) == 1, str(_deep[-1] if _deep else _deep))
+                if _ddone:
+                    ok(
+                        "real deep size",
+                        (_ddone[0].get("width"), _ddone[0].get("height")) == _dexpect
+                        and _ddone[0].get("hires") == {"mode": "deep", "scale": 1.5},
+                        str(_ddone[0]),
+                    )
+                    with urllib.request.urlopen(f"http://127.0.0.1:{_port}{_ddone[0]['image']}", timeout=60) as _resp:
+                        _dwh = _png_wh(_resp.read())
+                    ok("real deep file matches done", _dwh == _dexpect, str(_dwh))
+                    print(f"LIVE deep {_deep_s:.1f}s {_dexpect[0]}x{_dexpect[1]}")
+    finally:
+        _proc.terminate()
+        try:
+            _proc.wait(10)
+        except subprocess.TimeoutExpired:
+            _proc.kill()
+        _rlog = _proc.stdout.read() or ""
+    ok("real hires：主控台沒有 traceback", "Traceback" not in _rlog, _rlog[-800:])
 
 
 if failed:

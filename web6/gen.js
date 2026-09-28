@@ -135,6 +135,7 @@ export function createGenerator(hooks) {
               shot.preview = null;
               shot.progress = 1;
               shot.note = "";
+              shot.result = data;
               if (data.seed !== undefined) shot.seed = data.seed;
               hooks.update(shot);
               return true;
@@ -250,6 +251,17 @@ export function createGenerator(hooks) {
     /** 成品牆裁掉的：還在排隊的就拿出來，不要替看不到的牌耗 ComfyUI。正在畫的那張照畫完。 */
     drop(ids) {
       for (let i = queue.length - 1; i >= 0; i--) if (ids.has(queue[i].id)) queue.splice(i, 1);
+    },
+    /** 只停這一張：還在排隊就拿出來，正在畫就砍（帶 prompt_id）。 */
+    cancelOne(shot) {
+      const at = queue.indexOf(shot);
+      if (at >= 0) queue.splice(at, 1);
+      shot.status = "cancelled";
+      shot.note = "取消了";
+      if (current && current.shot === shot) {
+        cancelJob(current.job, current.promptId);
+        current.ctrl.abort();
+      } else hooks.update(shot);
     },
     /** 停：正在畫的那張也一起砍（帶 prompt_id），排隊的全部取消。 */
     stop() {

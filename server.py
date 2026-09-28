@@ -550,6 +550,7 @@ def models_from_comfy(kind: str) -> list[str]:
         "checkpoints": ("CheckpointLoaderSimple", "ckpt_name"),
         "loras": ("LoraLoader", "lora_name"),
         "vae": ("VAELoader", "vae_name"),
+        "upscale": ("UpscaleModelLoader", "model_name"),
     }
     if kind not in table:
         return []
@@ -593,9 +594,376 @@ def checkpoints_for_ui() -> tuple[list[dict], str]:
     return items, "comfy"
 
 
+class HiresError(ValueError):
+    """Hires 參數不合法。SSE 走 error 事件；沒有 SSE 的 POST 回 400。"""
+
+
+# 放大倍率夾在這段。超過輸出上限就整次拒絕，不悄悄縮小。
+HIRES_SCALE_MIN = 1.25
+HIRES_SCALE_MAX = 3.0
+HIRES_SIDE_MAX = 4096
+HIRES_PIXEL_MAX = 4096 * 4096 // 2
+HIRES_UPSCALE_NAME = "RealESRGAN_x4plus_anime_6B.pth"
+
+
+def png_size(raw: bytes) -> tuple[int, int]:
+    """PNG IHDR 的寬高。不靠 PIL。不是 PNG 或讀不到就講清楚。"""
+    blob = bytes(raw or b"")
+    if len(blob) < 24 or blob[:8] != b"\x89PNG\r\n\x1a\n" or blob[12:16] != b"IHDR":
+        raise HiresError("讀不到原圖尺寸（要 PNG，而且檔頭要有 IHDR）")
+    width, height = struct.unpack(">II", blob[16:24])
+    if width <= 0 or height <= 0:
+        raise HiresError("讀不到原圖尺寸（IHDR 的寬高是 0）")
+    return int(width), int(height)
+
+
+def hires_json_float(value: float) -> float:
+    """工作流要先變成 JSON 才送進 Comfy，倍率用送出去的那個數，避免二進位小數對不上。"""
+    return float(json.loads(json.dumps(float(value))))
+
+
+def hires_deep_scale_by(scale: float, factor: int) -> float:
+    """深度：模型先放大 factor 倍，ImageScaleBy 再乘 scale/factor，回到使用者要的倍率。"""
+    factor = max(1, int(factor))
+    return hires_json_float(float(scale) / float(factor))
+
+
+def hires_output_size(width: int, height: int, scale: float, mode: str, factor: int = 4) -> tuple[int, int]:
+    """放大後、存檔前的像素。兩種圖進 VAE 的方式不同，所以取 8 的倍數的方式也不同。
+
+    quick：VAE 編碼後 latent 是寬高各 //8，LatentUpscaleBy 再 round(latent * scale)，解碼乘回 8。
+    deep：模型放大 factor 倍，lanczos 乘 scale/factor，VAE 再把像素裁成 8 的倍數（居中裁，輸出是 //8*8）。
+    """
+    width, height = int(width), int(height)
+    scale = float(scale)
+    if mode == "quick":
+        return (
+            max(8, round((width // 8) * scale) * 8),
+            max(8, round((height // 8) * scale) * 8),
+        )
+    by = hires_deep_scale_by(scale, factor)
+    factor = max(1, int(factor))
+
+    def side(n: int) -> int:
+        scaled = round((n * factor) * by)
+        return max(8, (scaled // 8) * 8)
+
+    return side(width), side(height)
+
+
+def hires_fits(width: int, height: int) -> bool:
+    return (
+        0 < width <= HIRES_SIDE_MAX
+        and 0 < height <= HIRES_SIDE_MAX
+        and width * height <= HIRES_PIXEL_MAX
+    )
+
+
+def format_scale(scale: float) -> str:
+    return f"{float(scale):.2f}".rstrip("0").rstrip(".")
+
+
+def max_hires_scale(width: int, height: int, mode: str, factor: int = 4) -> float | None:
+    """1.25–3.0 裡、輸出還放得下的最大倍率（0.01 一格）。放不下就 None。"""
+    best = None
+    step = 125
+    while step <= 300:
+        scale = step / 100
+        ow, oh = hires_output_size(width, height, scale, mode, factor)
+        if hires_fits(ow, oh):
+            best = scale
+        step += 1
+    return best
+
+
+def parse_hires(raw) -> dict:
+    """只檢查 payload。不連 Comfy、不讀圖。"""
+    if not isinstance(raw, dict):
+        raise HiresError("hires 要是物件")
+    mode = str(raw.get("mode") or "")
+    if mode not in ("quick", "deep"):
+        raise HiresError("hires.mode 只收 quick 或 deep")
+    try:
+        scale = float(raw.get("scale"))
+    except (TypeError, ValueError):
+        raise HiresError("hires.scale 不是數字")
+    if scale != scale:  # NaN
+        raise HiresError("hires.scale 不是數字")
+    scale = hires_json_float(min(HIRES_SCALE_MAX, max(HIRES_SCALE_MIN, scale)))
+    image = str(raw.get("image") or "")
+    if not image.startswith("/api/image?"):
+        raise HiresError("hires.image 只收 /api/image? 開頭")
+    query = urllib.parse.parse_qs(image.split("?", 1)[1], keep_blank_values=True)
+    filename = (query.get("filename") or [""])[0]
+    subfolder = (query.get("subfolder") or [""])[0]
+    type_ = (query.get("type") or ["output"])[0]
+    view = comfy_view_query(filename, subfolder, type_)
+    if not view:
+        raise HiresError("hires.image 路徑不合法")
+    return {"mode": mode, "scale": scale, "view": view}
+
+
+def upscale_factor(name: str) -> int:
+    low = str(name or "").lower().replace("\\", "/")
+    for n in (8, 6, 4, 3, 2):
+        if f"{n}x" in low or f"x{n}" in low:
+            return n
+    return 4
+
+
+def pick_upscale_model(names: list[str], configured: str = "") -> str:
+    """設定檔 → 指定的 6B → 檔名含 anime 的 4x → 任何 4x。都沒有就報深度做不了。"""
+    pool = [str(n) for n in names if str(n).strip()]
+    want = str(configured or "").strip().replace("\\", "/")
+    if want:
+        want_base = want.split("/")[-1]
+        for name in pool:
+            norm = name.replace("\\", "/")
+            base = norm.split("/")[-1]
+            if norm == want or base == want_base or norm.endswith("/" + want):
+                return name
+    for name in pool:
+        if name.replace("\\", "/").endswith(HIRES_UPSCALE_NAME):
+            return name
+    for name in pool:
+        low = name.lower()
+        if "anime" in low and "4x" in low:
+            return name
+    for name in pool:
+        if "4x" in name.lower():
+            return name
+    raise HiresError("Comfy 沒有放大模型，深度 Hires 做不了；快速 Hires 不需要")
+
+
+def hires_sampler(mode: str) -> tuple[int, float, float]:
+    """steps / cfg / denoise。沒設就用兩種圖各自的預設。"""
+    try:
+        steps = int(round(float(cfg("hires.steps", "", 20))))
+    except (TypeError, ValueError):
+        steps = 20
+    try:
+        cfg_v = float(cfg("hires.cfg", "", 5))
+    except (TypeError, ValueError):
+        cfg_v = 5.0
+    default_denoise = 0.5 if mode == "quick" else 0.4
+    raw = cfg("hires.denoise", "", None)
+    if raw is None or raw == "":
+        denoise = default_denoise
+    else:
+        try:
+            denoise = float(raw)
+        except (TypeError, ValueError):
+            denoise = default_denoise
+    return max(1, steps), cfg_v, denoise
+
+
+def build_hires_workflow(
+    positive: str,
+    seed: int,
+    mode: str,
+    scale: float,
+    image_name: str,
+    loras=None,
+    ckpt=None,
+    rating=None,
+    sfw: bool = False,
+    upscale_model: str = "",
+) -> dict:
+    """內建 Hires 圖。不管原來是不是 profile 工作流，放大一律走這張。"""
+    ckpt_name = resolve_ckpt(ckpt)
+    steps, cfg_v, denoise = hires_sampler(mode)
+    negative = negative_for(rating if rating is not None else sfw)
+    wf = {
+        "13": {
+            "class_type": "CheckpointLoaderSimple",
+            "inputs": {"ckpt_name": ckpt_name},
+        },
+        "36": {
+            "class_type": "CLIPTextEncode",
+            "inputs": {"text": positive, "clip": ["13", 1]},
+        },
+        "37": {
+            "class_type": "CLIPTextEncode",
+            "inputs": {"text": negative, "clip": ["13", 1]},
+        },
+        "50": {
+            "class_type": "LoadImage",
+            "inputs": {"image": image_name},
+        },
+    }
+    if mode == "quick":
+        wf["51"] = {
+            "class_type": "VAEEncode",
+            "inputs": {"pixels": ["50", 0], "vae": ["13", 2]},
+        }
+        wf["52"] = {
+            "class_type": "LatentUpscaleBy",
+            "inputs": {
+                "upscale_method": "nearest-exact",
+                "scale_by": hires_json_float(scale),
+                "samples": ["51", 0],
+            },
+        }
+        latent = "52"
+    else:
+        factor = upscale_factor(upscale_model)
+        wf["51"] = {
+            "class_type": "UpscaleModelLoader",
+            "inputs": {"model_name": upscale_model},
+        }
+        wf["52"] = {
+            "class_type": "ImageUpscaleWithModel",
+            "inputs": {"upscale_model": ["51", 0], "image": ["50", 0]},
+        }
+        wf["53"] = {
+            "class_type": "ImageScaleBy",
+            "inputs": {
+                "upscale_method": "lanczos",
+                "scale_by": hires_deep_scale_by(scale, factor),
+                "image": ["52", 0],
+            },
+        }
+        wf["54"] = {
+            "class_type": "VAEEncode",
+            "inputs": {"pixels": ["53", 0], "vae": ["13", 2]},
+        }
+        latent = "54"
+    sampler = "60"
+    decode = "61"
+    wf[sampler] = {
+        "class_type": "KSampler",
+        "inputs": {
+            "seed": int(seed),
+            "steps": steps,
+            "cfg": cfg_v,
+            "sampler_name": "euler_ancestral",
+            "scheduler": "normal",
+            "denoise": denoise,
+            "model": ["13", 0],
+            "positive": ["36", 0],
+            "negative": ["37", 0],
+            "latent_image": [latent, 0],
+        },
+    }
+    wf[decode] = {
+        "class_type": "VAEDecode",
+        "inputs": {"samples": [sampler, 0], "vae": ["13", 2]},
+    }
+    wf["62"] = {
+        "class_type": "SaveImage",
+        "inputs": {
+            "filename_prefix": "danbooru_case/hires",
+            "images": [decode, 0],
+        },
+    }
+    for lora_name, strength in convert_loras(loras):
+        inject_lora(wf, lora_name, strength)
+    return wf
+
+
+def comfy_upload_image(raw: bytes, filename: str) -> str:
+    """把原圖 POST 到 Comfy /upload/image，回 LoadImage 用的名字（含子資料夾）。"""
+    boundary = "----danbooruHires" + uuid.uuid4().hex
+    chunks = []
+
+    def add_field(name: str, value: str) -> None:
+        chunks.append(
+            f"--{boundary}\r\nContent-Disposition: form-data; name=\"{name}\"\r\n\r\n{value}\r\n".encode("utf-8")
+        )
+
+    add_field("subfolder", "danbooru_hires")
+    add_field("overwrite", "true")
+    chunks.append(
+        (
+            f"--{boundary}\r\n"
+            f"Content-Disposition: form-data; name=\"image\"; filename=\"{filename}\"\r\n"
+            f"Content-Type: image/png\r\n\r\n"
+        ).encode("utf-8")
+        + bytes(raw)
+        + b"\r\n"
+    )
+    chunks.append(f"--{boundary}--\r\n".encode("ascii"))
+    body = b"".join(chunks)
+    req = urllib.request.Request(
+        comfy_base() + "/upload/image",
+        data=body,
+        method="POST",
+        headers={"Content-Type": f"multipart/form-data; boundary={boundary}"},
+    )
+    with urllib.request.urlopen(req, timeout=120) as resp:
+        payload = json.loads(resp.read().decode("utf-8") or "{}")
+    name = str((payload or {}).get("name") or "")
+    sub = str((payload or {}).get("subfolder") or "").replace("\\", "/").strip("/")
+    if not name:
+        raise HiresError("Comfy 沒有收下要放大的圖")
+    return f"{sub}/{name}" if sub else name
+
+
+def prepare_hires(payload: dict) -> tuple[dict, dict]:
+    """有 hires 就走這裡：下載原圖、量尺寸、上傳、組內建圖。workflowId 不用。"""
+    spec = parse_hires(payload.get("hires"))
+    positive = str(payload.get("positive") or "").strip()
+    if not positive:
+        raise ValueError("missing positive")
+    seed = payload.get("seed")
+    if seed is None or seed == "":
+        seed = random.randint(0, SEED_MAX)
+    seed = int(seed) & SEED_MAX
+    raw = api("GET", "/view?" + spec["view"], timeout=120)
+    if not isinstance(raw, (bytes, bytearray)) or not raw:
+        raise HiresError("跟 Comfy 要原圖失敗")
+    width, height = png_size(raw)
+    mode = spec["mode"]
+    scale = spec["scale"]
+    # 深度的輸出尺寸跟模型倍率有關，要先選定模型再量放不放得下。
+    if mode == "deep":
+        try:
+            names = models_from_comfy("upscale")
+        except Exception as exc:
+            raise HiresError("跟 Comfy 要放大模型清單失敗：" + str(exc)) from exc
+        model = pick_upscale_model(names, str(cfg("hires.upscaleModel", "", "") or ""))
+        factor = upscale_factor(model)
+    else:
+        model = ""
+        factor = 4
+    out_w, out_h = hires_output_size(width, height, scale, mode, factor)
+    if not hires_fits(out_w, out_h):
+        cap = max_hires_scale(width, height, mode, factor)
+        if cap is None:
+            raise HiresError("這張原圖已經到放大上限，放不進 4096 的邊長或總像素")
+        raise HiresError(f"這張最多放大到 ×{format_scale(cap)}")
+    # 檔名照內容雜湊：同一張再做一次 Hires（換倍率、換方式）用的是同一個上傳檔，
+    # Comfy 的 input/danbooru_hires 不會每做一次就多一份原圖。
+    filename = "hires_" + image_digest(bytes(raw))[:20] + ".png"
+    image_name = comfy_upload_image(bytes(raw), filename)
+    wf = build_hires_workflow(
+        positive,
+        seed,
+        mode,
+        scale,
+        image_name,
+        payload.get("loras"),
+        payload.get("ckpt"),
+        payload.get("rating"),
+        sfw=bool(payload.get("sfw")),
+        upscale_model=model,
+    )
+    meta = {
+        "kind": "hires",
+        "seed": seed,
+        "width": out_w,
+        "height": out_h,
+        "positive": positive,
+        "hires": {"mode": mode, "scale": scale},
+    }
+    return wf, meta
+
+
 def prepare_workflow(payload: dict):
     """Builtin graph, or deepcopy of a stored API workflow with mapping applied."""
     payload = payload or {}
+    if payload.get("hires"):
+        return prepare_hires(payload)
     positive = str(payload.get("positive") or "").strip()
     if not positive:
         raise ValueError("missing positive")
@@ -979,8 +1347,16 @@ def ws_connect(http_base: str, client_id: str, timeout: float = 30) -> Ws:
     return Ws(sock, rest)
 
 
-def _job(seed: int, width: int, height: int, positive: str, image: str, ckpt: str | None = None) -> dict:
-    return {
+def _job(
+    seed: int,
+    width: int,
+    height: int,
+    positive: str,
+    image: str,
+    ckpt: str | None = None,
+    hires: dict | None = None,
+) -> dict:
+    out = {
         "ok": True,
         "image": with_content_hash(image),
         "seed": seed,
@@ -989,6 +1365,9 @@ def _job(seed: int, width: int, height: int, positive: str, image: str, ckpt: st
         "height": height,
         "positive": positive,
     }
+    if hires:
+        out["hires"] = {"mode": hires.get("mode"), "scale": hires.get("scale")}
+    return out
 
 
 # 單張圖的上限。超過就報錯收工，免得 Comfy 卡住的時候無限抽整晚空轉。
@@ -1011,7 +1390,7 @@ class WsUnavailable(Exception):
     pass
 
 
-def gen_via_ws(width: int, height: int, seed: int, positive: str, wf: dict):
+def gen_via_ws(width: int, height: int, seed: int, positive: str, wf: dict, hires: dict | None = None):
     cid = uuid.uuid4().hex
     ckpt = workflows.ckpt_name_of(wf) or CKPT
     save_ids = set(workflows.image_output_nodes(wf))
@@ -1040,7 +1419,7 @@ def gen_via_ws(width: int, height: int, seed: int, positive: str, wf: dict):
                 if hist and prompt_id in hist:
                     image = first_image_src(hist[prompt_id], save_ids)
                     if image:
-                        yield ("done", _job(seed, width, height, positive, image, ckpt))
+                        yield ("done", _job(seed, width, height, positive, image, ckpt, hires))
                         return
                 # 心跳：載模型的時候 Comfy 可以安靜一分鐘以上。沒有這一下，前端分不出
                 # 「還在載」和「伺服器這條執行緒卡死了」，寫也寫不出去的斷線也發現不了。
@@ -1054,7 +1433,7 @@ def gen_via_ws(width: int, height: int, seed: int, positive: str, wf: dict):
                 hist = api("GET", f"/history/{prompt_id}", timeout=20)
                 image = first_image_src(hist[prompt_id], save_ids) if hist and prompt_id in hist else None
                 if image:
-                    yield ("done", _job(seed, width, height, positive, image, ckpt))
+                    yield ("done", _job(seed, width, height, positive, image, ckpt, hires))
                     return
                 raise ConnectionError("Comfy 關掉了 websocket")
             if op == 9:
@@ -1101,7 +1480,7 @@ def gen_via_ws(width: int, height: int, seed: int, positive: str, wf: dict):
                 if hist and prompt_id in hist:
                     image = first_image_src(hist[prompt_id], save_ids)
                     if image:
-                        yield ("done", _job(seed, width, height, positive, image, ckpt))
+                        yield ("done", _job(seed, width, height, positive, image, ckpt, hires))
                         return
         raise TimeoutError(f"Comfy 超過 {GEN_TIMEOUT} 秒沒有產出（prompt {prompt_id}）")
     finally:
@@ -1236,7 +1615,7 @@ def gen_events(payload: dict):
     seed, width, height, positive = meta["seed"], meta["width"], meta["height"], meta["positive"]
     yield ("queued", {"seed": seed, "width": width, "height": height})
     try:
-        yield from gen_via_ws(width, height, seed, positive, wf)
+        yield from gen_via_ws(width, height, seed, positive, wf, hires=meta.get("hires"))
         return
     except WsUnavailable:
         pass
@@ -1257,7 +1636,7 @@ def gen(payload: dict) -> dict:
     image = first_image_src(hist)
     if not image:
         raise RuntimeError("Comfy 沒有產出圖片")
-    return {
+    out = {
         "ok": True,
         "image": image,
         "seed": seed,
@@ -1266,6 +1645,9 @@ def gen(payload: dict) -> dict:
         "height": height,
         "positive": positive,
     }
+    if meta.get("hires"):
+        out["hires"] = meta["hires"]
+    return out
 
 
 # --- Telegram: 把成圖投到頻道 ---------------------------------------------
@@ -2726,6 +3108,8 @@ class Handler(BaseHTTPRequestHandler):
                 return
             try:
                 self._json(200, gen(payload))
+            except HiresError as exc:
+                self._json(400, {"ok": False, "error": str(exc)})
             except Exception as exc:
                 self._json(500, {"ok": False, "error": str(exc)})
             return
@@ -2929,9 +3313,7 @@ def ckpt_preview_path(fn: str, root: Path | None = None) -> Path | None:
 
 def checkpoints() -> list[str]:
     info = api("GET", "/object_info/CheckpointLoaderSimple", timeout=15)
-    node = (info or {}).get("CheckpointLoaderSimple") or {}
-    names = ((node.get("input") or {}).get("required") or {}).get("ckpt_name") or []
-    return [str(n) for n in (names[0] if names and isinstance(names[0], list) else [])]
+    return workflows.combo_list(info, "CheckpointLoaderSimple", "ckpt_name")
 
 
 def check_ckpt() -> None:

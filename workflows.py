@@ -171,9 +171,16 @@ def normalize_comfy_url(raw: str | None) -> str:
 
 
 def combo_list(object_info: dict | None, class_type: str, field: str) -> list[str]:
+    """object_info 的下拉清單。舊版第一格就是檔名陣列；新版是 ["COMBO", {"options": [...]}]。"""
     node = (object_info or {}).get(class_type) or {}
     spec = ((node.get("input") or {}).get("required") or {}).get(field) or []
-    names = spec[0] if spec and isinstance(spec[0], list) else []
+    names: list = []
+    if spec and isinstance(spec[0], list):
+        names = spec[0]
+    elif len(spec) > 1 and isinstance(spec[1], dict):
+        options = spec[1].get("options")
+        if isinstance(options, list):
+            names = options
     return [str(n) for n in names if n]
 
 

@@ -23,7 +23,7 @@
   --rel-clash: var(--color-accent);
 
   /* 三欄都跟著視窗寬度走；卡池的牌寬由 fuse.js 照剩下的空間算好寫進 --pool-card，這裡只是算好之前的預設。 */
-  --case-w: clamp(19.5rem, 19vw, 28rem);
+  --case-w: clamp(19.5rem, 22vw, 28rem);
   --side-w: clamp(19.5rem, 22vw, 32rem);
   --pool-card: clamp(4.4rem, 5vw, 5.5rem);
 }
@@ -34,9 +34,6 @@ body.fuse {
 
 /* ---------- 桅杆 ---------- */
 
-#sound-btn[aria-pressed="false"] {
-  color: var(--color-muted);
-}
 
 /* ---------- 晾紙繩 ---------- */
 
@@ -2639,4 +2636,10 @@ body.fuse {
   .rel-tag {
     transition: none;
   }
+}
+
+/* Hires 進行中：停在付印那一排（鈕上走進度、旁邊一顆停），成品上只留掃描線和狀態，不再放第二顆停。
+ * 做壞了付印鈕回到「Hires」可以再試，成品上留一行原因和「知道了」。 */
+.pv-frame .hires-veil:not([data-status="failed"]) .hv-act {
+  display: none;
 }

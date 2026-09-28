@@ -991,6 +991,260 @@ _probe, _body = _json_via("gzip", {"ok": True})
 ok("小回應不壓", "Content-Encoding" not in _probe.sent and json.loads(_body) == {"ok": True})
 ok("JSON 仍然不准快取", _probe.sent.get("Cache-Control") == "no-store")
 
+
+def _ihdr(width: int, height: int) -> bytes:
+    return (
+        b"\x89PNG\r\n\x1a\n"
+        + struct.pack(">I", 13)
+        + b"IHDR"
+        + struct.pack(">IIBBBBB", width, height, 8, 2, 0, 0, 0)
+    )
+
+
+# === Hires：內建圖、倍率、上限、路徑、放大模型 =================================
+_q = server.build_hires_workflow("1girl", 7, "quick", 1.5, "danbooru_hires/a.png", rating="explicit")
+ok("quick LoadImage", _q["50"]["class_type"] == "LoadImage" and _q["50"]["inputs"]["image"] == "danbooru_hires/a.png")
+ok("quick VAEEncode then LatentUpscaleBy", _q["51"]["class_type"] == "VAEEncode" and _q["52"]["class_type"] == "LatentUpscaleBy")
+ok("quick nearest-exact", _q["52"]["inputs"]["upscale_method"] == "nearest-exact" and _q["52"]["inputs"]["scale_by"] == 1.5)
+ok("quick has no pixel upscale nodes", "53" not in _q and "54" not in _q)
+_ks = _q["60"]["inputs"]
+ok(
+    "quick sampler",
+    _q["60"]["class_type"] == "KSampler"
+    and _ks["steps"] == 20
+    and _ks["cfg"] == 5
+    and _ks["sampler_name"] == "euler_ancestral"
+    and _ks["scheduler"] == "normal"
+    and _ks["denoise"] == 0.5
+    and _ks["latent_image"] == ["52", 0]
+    and _ks["seed"] == 7,
+    str(_ks),
+)
+ok("quick decode and save", _q["61"]["class_type"] == "VAEDecode" and _q["62"]["inputs"]["filename_prefix"] == "danbooru_case/hires")
+ok("quick negative follows rating", _q["37"]["inputs"]["text"] == server.negative_for("explicit"))
+
+_d = server.build_hires_workflow(
+    "1girl",
+    9,
+    "deep",
+    2.0,
+    "danbooru_hires/b.png",
+    upscale_model="RealESRGAN_x4plus_anime_6B.pth",
+    loras=[{"file": "a.safetensors", "strength": 0.4}],
+)
+ok("deep loader", _d["51"]["class_type"] == "UpscaleModelLoader" and _d["51"]["inputs"]["model_name"].endswith("6B.pth"))
+ok("deep ImageUpscaleWithModel", _d["52"]["class_type"] == "ImageUpscaleWithModel")
+ok(
+    "deep lanczos scale/4",
+    _d["53"]["class_type"] == "ImageScaleBy"
+    and _d["53"]["inputs"]["upscale_method"] == "lanczos"
+    and _d["53"]["inputs"]["scale_by"] == 0.5,
+    str(_d["53"]["inputs"]),
+)
+ok("deep encode after the pixel scale", _d["54"]["class_type"] == "VAEEncode" and _d["60"]["inputs"]["latent_image"] == ["54", 0])
+ok("deep denoise 0.4", _d["60"]["inputs"]["denoise"] == 0.4 and _d["60"]["inputs"]["steps"] == 20 and _d["60"]["inputs"]["cfg"] == 5)
+ok("deep lora rewires model and clip, not vae", _d["201"]["class_type"] == "LoraLoader" and _d["60"]["inputs"]["model"] == ["201", 0])
+ok("deep clip goes through the lora", _d["36"]["inputs"]["clip"] == ["201", 1] and _d["54"]["inputs"]["vae"] == ["13", 2])
+
+_old_cfg = server.CONFIG
+server.CONFIG = {"hires": {"steps": 11, "cfg": 3, "denoise": 0.25}}
+try:
+    _over = server.build_hires_workflow("1girl", 1, "quick", 1.5, "danbooru_hires/a.png")
+    _ok = _over["60"]["inputs"]
+    ok("hires steps/cfg/denoise settings", _ok["steps"] == 11 and _ok["cfg"] == 3 and _ok["denoise"] == 0.25, str(_ok))
+finally:
+    server.CONFIG = _old_cfg
+
+_hi = server.parse_hires({"mode": "quick", "scale": 9, "image": "/api/image?filename=a.png&type=output&h=abc"})
+_lo = server.parse_hires({"mode": "deep", "scale": 0.2, "image": "/api/image?filename=a.png"})
+_mid = server.parse_hires({"mode": "quick", "scale": "1.5", "image": "/api/image?filename=a.png&subfolder=batch&type=output"})
+ok("scale clamps high", _hi["scale"] == 3.0, str(_hi))
+ok("scale clamps low", _lo["scale"] == 1.25, str(_lo))
+ok("scale keeps a number inside the range", _mid["scale"] == 1.5 and "subfolder=batch" in _mid["view"], str(_mid))
+for _bad, _label in (("nope", "text"), (None, "none"), (float("nan"), "nan")):
+    try:
+        server.parse_hires({"mode": "quick", "scale": _bad, "image": "/api/image?filename=a.png"})
+        ok(f"scale {_label} rejected", False)
+    except server.HiresError as exc:
+        ok(f"scale {_label} rejected", "不是數字" in str(exc), str(exc))
+try:
+    server.parse_hires({"mode": "fast", "scale": 1.5, "image": "/api/image?filename=a.png"})
+    ok("mode rejected", False)
+except server.HiresError as exc:
+    ok("mode rejected", "quick" in str(exc), str(exc))
+try:
+    server.parse_hires({"mode": "quick", "scale": 1.5, "image": "https://evil.example/a.png"})
+    ok("non /api/image rejected", False)
+except server.HiresError as exc:
+    ok("non /api/image rejected", "/api/image" in str(exc), str(exc))
+for _bad_image, _label in (
+    ("/api/image?filename=../a.png", "slash name"),
+    ("/api/image?filename=a.png&subfolder=../x", "dotdot subfolder"),
+    ("/api/image?filename=%2e%2e", "encoded dotdot"),
+    ("/api/image?filename=a%2Fb.png", "encoded slash"),
+):
+    try:
+        server.parse_hires({"mode": "quick", "scale": 1.5, "image": _bad_image})
+        ok(f"path {_label} rejected", False)
+    except server.HiresError as exc:
+        ok(f"path {_label} rejected", "不合法" in str(exc), str(exc))
+
+_pool = [
+    "4x-UltraSharp.pth",
+    "packs/4x-AnimeSharp.pth",
+    r"esrgan\RealESRGAN_x4plus_anime_6B.pth",
+]
+ok(
+    "model pick prefers the configured name",
+    server.pick_upscale_model(_pool, "4x-UltraSharp.pth") == "4x-UltraSharp.pth",
+)
+ok(
+    "model pick then the 6B file",
+    server.pick_upscale_model(_pool, "") == r"esrgan\RealESRGAN_x4plus_anime_6B.pth",
+)
+ok(
+    "model pick then an anime 4x",
+    server.pick_upscale_model(["4x-UltraSharp.pth", "packs/4x-AnimeSharp.pth"], "") == "packs/4x-AnimeSharp.pth",
+)
+ok(
+    "model pick then any 4x",
+    server.pick_upscale_model(["2x.pth", "foo/4x-UltraSharp.pth"], "") == "foo/4x-UltraSharp.pth",
+)
+try:
+    server.pick_upscale_model(["2x.pth"], "")
+    ok("model pick explains when nothing matches", False)
+except server.HiresError as exc:
+    ok(
+        "model pick explains when nothing matches",
+        str(exc) == "Comfy 沒有放大模型，深度 Hires 做不了；快速 Hires 不需要",
+        str(exc),
+    )
+
+for _w, _h, _scale, _mode in ((1024, 1024, 1.25, "quick"), (1000, 803, 1.37, "quick"), (832, 1216, 1.5, "deep"), (640, 480, 2.0, "deep")):
+    _ow, _oh = server.hires_output_size(_w, _h, _scale, _mode)
+    ok(f"output multiple of 8 {_mode} {_w}x{_h}", _ow % 8 == 0 and _oh % 8 == 0 and _ow >= 8 and _oh >= 8, f"{_ow}x{_oh}")
+
+_saved_api = server.api
+_saved_upload = server.comfy_upload_image
+_saved_models = server.models_from_comfy
+
+
+class _HiresHold:
+    png = _ihdr(64, 64)
+    uploads = 0
+    model_calls = 0
+
+
+def _hires_api(method, path, data=None, timeout=60):
+    if method == "GET" and str(path).startswith("/view?"):
+        return _HiresHold.png
+    raise AssertionError((method, path))
+
+
+def _hires_upload(raw, filename):
+    _HiresHold.uploads += 1
+    return "danbooru_hires/" + filename
+
+
+def _hires_models(kind):
+    # resolve_ckpt 也會來問 checkpoints。這裡只計深度放大要的那一份。
+    if kind != "upscale":
+        return ["fake.safetensors"]
+    _HiresHold.model_calls += 1
+    return [r"esrgan\RealESRGAN_x4plus_anime_6B.pth", "4x-UltraSharp.pth"]
+
+
+server.api = _hires_api
+server.comfy_upload_image = _hires_upload
+server.models_from_comfy = _hires_models
+try:
+    _HiresHold.png = _ihdr(32, 48)
+    _wf, _meta = server.prepare_workflow(
+        {
+            "positive": "1girl",
+            "seed": 4,
+            "workflowId": "no-such-profile",
+            "hires": {"mode": "quick", "scale": 1.25, "image": "/api/image?filename=out.png&type=output"},
+        }
+    )
+    ok("hires ignores workflowId", _meta.get("kind") == "hires" and _wf["50"]["class_type"] == "LoadImage", str(_meta))
+    ok("quick output size is the upscaled size", (_meta["width"], _meta["height"]) == (40, 64), str(_meta))
+    ok("quick meta hires", _meta.get("hires") == {"mode": "quick", "scale": 1.25}, str(_meta.get("hires")))
+    ok("quick does not ask for an upscale model", _HiresHold.model_calls == 0, str(_HiresHold.model_calls))
+    _uploads_before_limit = _HiresHold.uploads
+    _HiresHold.png = _ihdr(1024, 1024)
+    try:
+        server.prepare_workflow(
+            {
+                "positive": "1girl",
+                "seed": 1,
+                "hires": {"mode": "quick", "scale": 3, "image": "/api/image?filename=big.png"},
+            }
+        )
+        ok("over-limit quick says the max scale", False)
+    except server.HiresError as exc:
+        ok("over-limit quick says the max scale", str(exc).startswith("這張最多放大到 ×"), str(exc))
+    _HiresHold.png = _ihdr(4000, 4000)
+    try:
+        server.prepare_workflow(
+            {
+                "positive": "1girl",
+                "seed": 1,
+                "hires": {"mode": "quick", "scale": 1.25, "image": "/api/image?filename=huge.png"},
+            }
+        )
+        ok("already over the cap", False)
+    except server.HiresError as exc:
+        ok("already over the cap", "已經到放大上限" in str(exc), str(exc))
+    _before_uploads = _HiresHold.uploads
+    ok("limit errors do not upload", _before_uploads == _uploads_before_limit, str(_before_uploads))
+    _HiresHold.png = _ihdr(64, 64)
+    _wf, _meta = server.prepare_workflow(
+        {
+            "positive": "1girl",
+            "seed": 5,
+            "workflowId": "no-such-profile",
+            "rating": "general",
+            "hires": {"mode": "deep", "scale": 2, "image": "/api/image?filename=out.png"},
+        }
+    )
+    ok("deep uses the 6B model", _wf["51"]["inputs"]["model_name"].endswith("6B.pth"), str(_wf["51"]))
+    ok("deep meta size", (_meta["width"], _meta["height"]) == server.hires_output_size(64, 64, 2, "deep", 4), str(_meta))
+    ok("deep negative follows rating", _wf["37"]["inputs"]["text"] == server.negative_for("general"))
+    ok("deep uploads the source image", _HiresHold.uploads == _before_uploads + 1, str(_HiresHold.uploads))
+    server.models_from_comfy = lambda kind: ["2x.pth"]
+    try:
+        server.prepare_workflow(
+            {
+                "positive": "1girl",
+                "seed": 1,
+                "hires": {"mode": "deep", "scale": 1.5, "image": "/api/image?filename=out.png"},
+            }
+        )
+        ok("deep without a model", False)
+    except server.HiresError as exc:
+        ok(
+            "deep without a model",
+            str(exc) == "Comfy 沒有放大模型，深度 Hires 做不了；快速 Hires 不需要",
+            str(exc),
+        )
+    _HiresHold.png = b"GIF89a"
+    try:
+        server.prepare_workflow(
+            {
+                "positive": "1girl",
+                "seed": 1,
+                "hires": {"mode": "quick", "scale": 1.5, "image": "/api/image?filename=a.png"},
+            }
+        )
+        ok("non-png explains itself", False)
+    except server.HiresError as exc:
+        ok("non-png explains itself", "PNG" in str(exc) or "IHDR" in str(exc), str(exc))
+finally:
+    server.api = _saved_api
+    server.comfy_upload_image = _saved_upload
+    server.models_from_comfy = _saved_models
+
 if failed:
     print(f"\n{failed} failed")
     sys.exit(1)

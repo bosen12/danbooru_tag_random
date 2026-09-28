@@ -1816,6 +1816,20 @@ const ALBUM_FIXTURE = [
     const ui = ["web6/app.js", "web6/fuse.js", "web6/hand.js", "web6/motion.js", "web6/ui.js", "web/tab-progress.js", "web6/fuse.html", "web6/index.html"].map((f) => readFileSync(join(ROOT, f), "utf8")).join("\n");
     ok("墨池／疊印台畫面上不用表情符號或 ✓ ✕ 當標記", !/[\u{1F300}-\u{1FAFF}\u{2600}-\u{27BF}]/u.test(ui));
   }
+  {
+    const hires6 = readFileSync(join(ROOT, "web6/hires.js"), "utf8");
+    const app6h = readFileSync(join(ROOT, "web6/app.js"), "utf8");
+    const fuse6h = readFileSync(join(ROOT, "web6/fuse.js"), "utf8");
+    const store6h = readFileSync(join(ROOT, "web6/store.js"), "utf8");
+    const sfx6 = readFileSync(join(ROOT, "web6/sfx.js"), "utf8");
+    ok("Hires 永遠從原圖放大（baseImage），不會拿放大過的再放大", hires6.includes("image: t.baseImage || t.image"));
+    ok("Hires 快速預設 1.5、深度預設 2，倍率上限跟伺服器一樣（每邊 4096、總像素一半）", /quick: \{ zh: "快速", def: 1\.5/.test(hires6) && /deep: \{ zh: "深度", def: 2,/.test(hires6) && hires6.includes("const SIDE_MAX = 4096;") && hires6.includes("(4096 * 4096) / 2"));
+    ok("Hires 的大圖換在原本那張的位置、存檔帶原圖（墨池、疊印台）", store6h.includes("baseImage: s.baseImage || null") && fuse6h.includes("baseImage: p.baseImage || null"));
+    ok("同種子重印不帶 Hires 的結果", app6h.includes("hi: null, hires: null, baseImage: null"));
+    ok("墨池成品的「放大」鈕換成 Hires（點圖仍是放大）；疊印台印好的那張付印鈕變成 Hires", !app6h.includes('onclick: () => showShot(shot) }, "放大")') && app6h.includes("onclick: (e) => openHires(shot, e.currentTarget)") && fuse6h.includes("openHires(p, e.currentTarget)"));
+    ok("Hires 自己一條佇列，按停付印不會連 Hires 一起砍；單張可以停", hires6.includes("const gen = createGenerator(") && readFileSync(join(ROOT, "web6/gen.js"), "utf8").includes("cancelOne(shot)"));
+    ok("聲音：總線放大加壓縮器、兩頁共用一個引擎與開關，按鈕有敲擊聲", sfx6.includes("const MASTER = 1.6;") && sfx6.includes("createDynamicsCompressor") && app6h.includes('$("sound-btn")') && readFileSync(join(ROOT, "web6/motion.js"), "utf8").includes("getSfx().tap()"));
+  }
   ok("排字匣不送全域中斷（空的 {}）", !boot.includes('body: "{}"') && !boot.includes("prompt_id: jobPromptId } : {}"));
 }
 

@@ -168,6 +168,8 @@ export function showPeek(anchor, info) {
   peek.classList.toggle("is-gliding", wasShown);
   place(anchor);
   peek.dataset.show = "true";
+  pendingEl = null;
+  shownAt = anchor.getBoundingClientRect();
 }
 
 // 滑鼠停一下（120ms）才浮出放大卡：只是掃過字盒不要一路閃。已經開著的換牌不等。
@@ -177,10 +179,21 @@ const INTENT_MS = 120;
 // 到了隔壁就接著滑過去，真的離開了才收。
 let hideTimer = 0;
 const LEAVE_MS = 80;
+// 正在等 INTENT_MS 的那張：在同一張牌上移來移去（插畫、書脊、字名是不同的子元素）不重新計時 ——
+// 以前每跨過一個子元素就重數 120ms，慢慢移的時候放大卡一直出不來。
+let pendingEl = null;
+// 按過的那張：按下去收起放大卡，滑鼠沒離開那張之前不再自己冒出來。
+let pressedEl = null;
+// 放大卡開出來時那張牌在哪：頁面上任何一塊捲動都會收到 scroll，只有那張牌真的被捲走了才收。
+let shownAt = null;
+let lastX = -1;
+let lastY = -1;
 
 export function hidePeek(anchor) {
   if (anchor && current && anchor !== current) return;
   clearTimeout(intentTimer);
+  pendingEl = null;
+  shownAt = null;
   if (current?.getAttribute("aria-describedby") === "card-peek") current.removeAttribute("aria-describedby");
   current = null;
   if (peek) {
@@ -193,32 +206,52 @@ export function hidePeek(anchor) {
 export function attachPeek(root, selector, getInfo) {
   if (!root) return;
   if (FINE) {
-    root.addEventListener("pointerover", (e) => {
+    // 用 pointermove，不只 pointerover：牌在滑鼠底下被重畫（換成新的節點）、放大卡被捲動或按下收掉之後，
+    // 滑鼠只要動一下就接得回來，不必先移出去再移進來。
+    const track = (e) => {
       if (e.pointerType && e.pointerType !== "mouse") return;
+      lastX = e.clientX;
+      lastY = e.clientY;
       const el = e.target.closest(selector);
       if (!el || !root.contains(el)) return;
+      if (el === pressedEl) return;
       if (el === current) {
         clearTimeout(hideTimer);
         return;
       }
       if (peek && peek.dataset.show === "true") {
+        clearTimeout(hideTimer);
         showPeek(el, getInfo(el));
         return;
       }
+      if (el === pendingEl) return;
+      pendingEl = el;
       clearTimeout(intentTimer);
       intentTimer = setTimeout(() => {
-        if (el.matches(":hover")) showPeek(el, getInfo(el));
+        pendingEl = null;
+        // 看滑鼠「現在」指著哪一張：等的這 120ms 裡牌可能被重畫過，原本那個節點已經不在了。
+        const hit = document.elementFromPoint(lastX, lastY)?.closest(selector);
+        if (hit && root.contains(hit) && hit !== pressedEl) showPeek(hit, getInfo(hit));
       }, INTENT_MS);
-    });
+    };
+    root.addEventListener("pointerover", track);
+    root.addEventListener("pointermove", track, { passive: true });
     root.addEventListener("pointerout", (e) => {
       const el = e.target.closest(selector);
       if (!el) return;
       if (e.relatedTarget && el.contains(e.relatedTarget)) return;
-      clearTimeout(intentTimer);
+      if (el === pressedEl) pressedEl = null;
+      if (el === pendingEl) {
+        pendingEl = null;
+        clearTimeout(intentTimer);
+      }
       clearTimeout(hideTimer);
       hideTimer = setTimeout(() => hidePeek(el), LEAVE_MS);
     });
-    root.addEventListener("pointerdown", () => hidePeek());
+    root.addEventListener("pointerdown", (e) => {
+      pressedEl = e.target.closest?.(selector) || null;
+      hidePeek();
+    });
   }
   root.addEventListener("focusin", (e) => {
     const el = e.target.closest(selector);
@@ -228,5 +261,20 @@ export function attachPeek(root, selector, getInfo) {
     const el = e.target.closest(selector);
     if (el) hidePeek(el);
   });
-  window.addEventListener("scroll", () => hidePeek(), { passive: true, capture: true });
+  if (!scrollWired) {
+    scrollWired = true;
+    window.addEventListener(
+      "scroll",
+      () => {
+        // 還沒開出來的不管：等到時間到，看的是那時滑鼠底下是哪一張。
+        if (!current) return;
+        if (!shownAt) return hidePeek();
+        const r = current.getBoundingClientRect();
+        if (!current.isConnected || Math.abs(r.top - shownAt.top) > 2 || Math.abs(r.left - shownAt.left) > 2) hidePeek();
+      },
+      { passive: true, capture: true }
+    );
+  }
 }
+
+let scrollWired = false;

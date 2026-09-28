@@ -7,6 +7,8 @@
  * aria-label），新畫出來的那一組從舊位置滑過去。
  */
 
+import { getSfx } from "./sfx.js";
+
 export const reducedMotion = () => matchMedia("(prefers-reduced-motion: reduce)").matches;
 
 /* ---------- 動態詞彙：兩個房間的曲線與時間（跟 tokens.css 的 --ease-*／--dur-* 同一套） ---------- */
@@ -329,6 +331,7 @@ function wirePress() {
       const r = el.getBoundingClientRect();
       if (e.clientX < r.left || e.clientX > r.right || e.clientY < r.top || e.clientY > r.bottom) return;
       inkPress(el, e.clientX, e.clientY);
+      if (el.dataset.sfx !== "off") getSfx().tap();
     },
     { capture: true, passive: true }
   );
@@ -339,7 +342,10 @@ function wirePress() {
     (e) => {
       if ((e.key !== "Enter" && e.key !== " ") || e.repeat) return;
       const el = e.target.closest?.(PRESS);
-      if (el && el === e.target && !el.disabled) inkPress(el);
+      if (el && el === e.target && !el.disabled) {
+        inkPress(el);
+        if (el.dataset.sfx !== "off") getSfx().tap();
+      }
     },
     { capture: true }
   );

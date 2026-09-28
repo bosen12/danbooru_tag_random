@@ -39,6 +39,7 @@ import { createHand } from "./hand.js";
 import { createDrag, inkRing } from "./drag.js";
 import { createGenerator, comfyOnline, viewSrc, tabTitle, watchLink, LINK_LABEL } from "./gen.js";
 import { attachPeek, hidePeek } from "./card-peek.js";
+import { createHires, openHiresPicker, paintHiresVeil, hiresBusy } from "./hires.js";
 import * as S from "./store.js";
 import { REGISTERS, REGISTER_ROLE, emptyBed, sanitizeBed, placeCard, removeCard, relationsOf } from "./fuse-bed.js";
 import { createSfx } from "./fuse-sfx.js";
@@ -371,7 +372,7 @@ function place(tag, sourceEl, { viaDrag = false } = {}) {
   const stampDown = () => {
     inkRow(suitOf(tag));
     sfx.stamp();
-    if (carried.length) sfx.carry();
+    carried.forEach((_, i) => sfx.carry(i));
     haptic(8);
   };
   const settle = (lag) => {
@@ -507,7 +508,7 @@ function undo() {
     const delay = i < nHand ? i * 45 : 60 + nHand * 45 + (i - nHand) * 60;
     flyIn(l.t, l.rect, { delay, src: l.node, startRotate: l.rotate, startScale: l.scale || 1 });
   });
-  sfx.lift();
+  sfx.undo();
   if (returning.length) setTimeout(() => sfx.stamp(), 60);
   announce(`撤回：${h.label}`);
 }
@@ -637,6 +638,42 @@ const generator = createGenerator({
 });
 const NET_WAIT_TEXT = "連不到主機（網路斷了？），網路回來就接著印";
 
+// Hires：印好的那張放大、重畫細節，做好直接換掉（成品區、晾紙繩都是同一張，見 hires.js）。
+const hiresRun = createHires({
+  update: (p) => {
+    const t = trials[picked];
+    if (t && p.sig === sigOf(t)) {
+      const fresh = !p.hi && p._hiresFresh;
+      p._hiresFresh = false;
+      renderPreview({ develop: fresh });
+      renderPrintBar();
+    }
+    paintLineItem(p);
+    if (!p.hi) savePrints();
+  },
+  done: (p) => {
+    sfx.hiresDone();
+    haptic(14);
+    announce(`Hires 好了：${p.hires.width}×${p.hires.height}`);
+  },
+});
+
+function openHires(p, btn) {
+  if (!p || p.status !== "done" || !p.image) return refuse(btn);
+  if (hiresBusy(p)) return refuse(btn);
+  openHiresPicker(btn, p, {
+    onStart: (mode, scale) => {
+      p._hiresFresh = true;
+      if (!hiresRun.start(p, mode, scale)) return refuse(btn);
+      sfx.hiresStart();
+    },
+    onRestore: () => {
+      p._hiresFresh = true;
+      if (hiresRun.restore(p)) announce("換回原圖了");
+    },
+  });
+}
+
 function printNow() {
   const t = trials[picked];
   if (!t) return;
@@ -682,7 +719,7 @@ function printNow() {
   // 超過上限從最舊的收掉，但還在排隊、還在畫的不收：收掉了 ComfyUI 照樣畫，畫好卻沒地方看。
   // 它們畫完之後，下一次付印就會照常被收掉。
   for (let i = prints.length - 1; i >= 0 && prints.length > PRINT_MAX; i--) {
-    if (prints[i].status !== "queued" && prints[i].status !== "running") prints.splice(i, 1);
+    if (prints[i].status !== "queued" && prints[i].status !== "running" && !hiresBusy(prints[i])) prints.splice(i, 1);
   }
   // 先夾上繩子再交給佇列：enqueue 會馬上回報狀態，那時繩上要已經有這張，
   // 不然它會自己重畫一次繩子，這裡再畫一次就把「剛夾上去晃一晃」蓋掉了。
@@ -766,6 +803,8 @@ function savePrints() {
       era: p.era,
       status: p.status === "done" ? "done" : p.status === "failed" ? "failed" : "stopped",
       image: p.image || null,
+      baseImage: p.baseImage || null,
+      hires: p.hires || null,
       job: p.job || null,
       live: !!p.job && (p.status === "running" || p.status === "queued"),
       note: p.status === "done" ? "" : p.note || "",
@@ -945,6 +984,7 @@ function renderPreview({ develop = false } = {}) {
       p && p.status === "failed" && p.note ? el("span", { class: "pv-hint" }, p.note) : null
     );
   }
+  paintHiresVeil(pv.frame, p || {}, { onCancel: () => hiresRun.cancel(p), onDismiss: () => hiresRun.dismiss(p) });
   pv.roller.hidden = !(state === "running" || state === "queued" || state === "drawn");
   pv.roller.dataset.state = state;
   pv.roller.style.setProperty("--p", String(state === "running" ? p.progress || 0 : 0));
@@ -2077,8 +2117,9 @@ function renderPrintBar() {
     label = p.status === "queued" ? "排隊等印…" : `印製中 ${Math.round((p.progress || 0) * 100)}%`;
     disabled = true;
   } else if (p && p.status === "done") {
-    label = "這張印好了";
-    disabled = true;
+    // 印好了：這顆鈕換成下一步 —— Hires。做的時候鈕上走進度，跟付印一樣。
+    label = hiresBusy(p) ? (p.hi.status === "running" ? `Hires ${Math.round((p.hi.progress || 0) * 100)}%` : "Hires 排隊中…") : "Hires";
+    disabled = hiresBusy(p);
   } else if (p && p.status === "failed") label = "再印一次";
   const summary = [
     `你的 ${bed.pins.length} 張`,
@@ -2093,11 +2134,13 @@ function renderPrintBar() {
   // 不整排重畫 —— 以前「停」一秒換好幾次新的，滑鼠停在上面會閃、按下去常常按不到。
   const wasOffline = bar.dataset.offline === "1";
   bar.dataset.offline = offline ? "1" : "0";
-  const key = [t.letter, sigOf(t), p ? p.status : "", summary.join("・"), detail.join("・"), t.missing.join(","), offline, linkNow, p && p.status === "failed" ? p.note : "", !!bed.pins.length].join("|");
+  const hiBusy = !!p && p.status === "done" && hiresBusy(p);
+  const key = [t.letter, sigOf(t), p ? p.status : "", p?.hi?.status || "", p?.hires?.scale || "", summary.join("・"), detail.join("・"), t.missing.join(","), offline, linkNow, p && p.status === "failed" ? p.note : "", !!bed.pins.length].join("|");
   const go = bar.querySelector(".pb-go");
   if (bar.dataset.key === key && go) {
     if (go.textContent !== label) go.textContent = label;
     if (busy) go.style.setProperty("--p", String(p.status === "running" ? p.progress || 0 : 0));
+    if (hiBusy) go.style.setProperty("--p", String(p.hi.status === "running" ? p.hi.progress || 0 : 0));
     return;
   }
   const moreOpen = bar.querySelector(".pb-more")?.open;
@@ -2126,14 +2169,16 @@ function renderPrintBar() {
           class: "btn btn-primary pb-go",
           type: "button",
           disabled: disabled || undefined,
-          dataset: { wide: [...label].length <= 2 ? "true" : "false", busy: busy ? "true" : "false" },
-          style: busy ? `--p: ${p.status === "running" ? p.progress || 0 : 0}` : undefined,
-          onclick: () => (p && p.status === "failed" ? reprint(p) : printNow()),
-          title: "付印（P）",
+          dataset: { wide: [...label].length <= 2 ? "true" : "false", busy: busy || hiBusy ? "true" : "false" },
+          style: busy ? `--p: ${p.status === "running" ? p.progress || 0 : 0}` : hiBusy ? `--p: ${p.hi.status === "running" ? p.hi.progress || 0 : 0}` : undefined,
+          "aria-haspopup": p && p.status === "done" ? "dialog" : undefined,
+          onclick: (e) => (p && p.status === "done" ? openHires(p, e.currentTarget) : p && p.status === "failed" ? reprint(p) : printNow()),
+          title: p && p.status === "done" ? "放大並重畫細節（快速／深度）" : "付印（P）",
         },
         label
       ),
-      busy ? el("button", { class: "btn", type: "button", onclick: stopPrinting }, "停") : null
+      busy ? el("button", { class: "btn", type: "button", onclick: stopPrinting }, "停") : null,
+      hiBusy ? el("button", { class: "btn", type: "button", onclick: () => hiresRun.cancel(p) }, "停") : null
     ),
     offline
       ? el("p", { class: "pb-hint", dataset: { fresh: wasOffline ? "0" : "1" } }, linkNow === "net" ? "連不到主機（網路斷了？）。可以繼續疊版、挑試印，接上了再付印。" : "印刷機（ComfyUI）沒開。可以繼續疊版、挑試印，開了再付印。")
@@ -2318,6 +2363,7 @@ function hideLinePeek() {
 
 function openPrint(p) {
   hideLinePeek();
+  sfx.open();
   const src = viewSrc(p.image) || p.preview;
   const mine = (p.mine && p.mine.length ? p.mine : p.bed?.pins || []).filter((t) => lib.byTag.has(t));
   let sheet = null;
@@ -2344,7 +2390,7 @@ function openPrint(p) {
         class: "btn btn-small",
         type: "button",
         onclick: (e) => {
-          if (p.status === "queued" || p.status === "running") return refuse(e.currentTarget);
+          if (p.status === "queued" || p.status === "running" || hiresBusy(p)) return refuse(e.currentTarget);
           const at = prints.indexOf(p);
           prints = prints.filter((x) => x !== p);
           savePrints();
@@ -2393,7 +2439,7 @@ function openPrint(p) {
           "p",
           { class: "tag-en" },
           seedUseButton(p.seed),
-          "・" + [ERA_ZH[p.era] || "", `${p.width}×${p.height}`, RATING_ZH[p.rating] || ""].filter(Boolean).join("・")
+          "・" + [ERA_ZH[p.era] || "", p.hires ? `Hires ${p.hires.width}×${p.hires.height}（原圖 ${p.width}×${p.height}）` : `${p.width}×${p.height}`, RATING_ZH[p.rating] || ""].filter(Boolean).join("・")
         ),
         el("p", { class: "print-view-label" }, `這一版的牌（${mine.length}）`),
         el("div", { class: "print-view-cards" }, mine.map((t) => cardNode(cardOf(t), assets, { tagName: "div" }))),

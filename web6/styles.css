@@ -14,6 +14,10 @@
 html {
   /* 開彈窗鎖捲動時捲軸會消失：留著它的位置，版面才不會往右跳。 */
   scrollbar-gutter: stable;
+  /* 大螢幕整體放大一點：1440 寬以下維持 16px，往上慢慢長，到 1920（24 吋 1080p）是 18px。
+   * 字、間距、欄寬、牌都是 rem 或跟著欄寬走，會一起長。不用 CSS zoom：zoom 之後 JS 寫進去的
+   * 座標（拖曳、飛牌、浮空卡、FLIP）全部會被再放大一次，實測 100px 落在 115px。 */
+  font-size: clamp(1rem, 0.625rem + 0.4167vw, 1.125rem);
 }
 
 /* 捲軸平常隱形，滑鼠移到那一塊才浮出來（Mac 接滑鼠、Windows 的捲軸都是實心佔位的那種）。
@@ -36,7 +40,6 @@ body {
   background: var(--color-paper);
   color: var(--color-ink);
   font-family: var(--font-body);
-  font-size: 100%;
   line-height: 1.55;
   -webkit-text-size-adjust: 100%;
   text-size-adjust: 100%;
@@ -526,6 +529,11 @@ body #wf-pick-btn.has {
 
 .segmented button:active {
   transform: translateY(1px);
+}
+
+/* 聲音關著：圖示變淡（墨池、疊印台同一顆）。 */
+#sound-btn[aria-pressed="false"] {
+  color: var(--color-muted);
 }
 
 .mast-tools {
@@ -2491,8 +2499,13 @@ body:has(.fav-hand) .tray-bridge { display: none; }
 
   .mast { view-transition-name: mast; }
   .page-switch-ink { view-transition-name: page-switch-ink; }
-  .library, .case { view-transition-name: type-case; }
-  .work, .plate { view-transition-name: work-stage; }
+  /* 兩頁的字盒、工作區形狀不一樣（墨池工作區是整片，疊印台只有中間一欄）：配成一對的話瀏覽器會把
+   * 舊的快照拉伸變形成新的框，再加上裁切掃過去，逐格看是字被切一半、兩種牌格疊在一起。
+   * 所以各頁用自己的名字，不配對：舊的在原地退、新的在自己的位置進來，只有頂欄和分頁底線是同一個東西在動。 */
+  .library { view-transition-name: case-m; }
+  .case { view-transition-name: case-f; }
+  .work { view-transition-name: stage-m; }
+  .plate { view-transition-name: stage-f; }
   .side { view-transition-name: proof-side; }
   .line { view-transition-name: drying-line; }
   .fav-hand { view-transition-name: favorite-tray; }
@@ -2514,76 +2527,282 @@ body:has(.fav-hand) .tray-bridge { display: none; }
     animation-timing-function: var(--ease-travel);
   }
 
-  ::view-transition-group(type-case) {
-    animation-duration: var(--dur-xl);
-    animation-timing-function: var(--ease-travel);
-  }
-
-  /* 字盒：外框變形；裡面的牌先讓舊的很快淡掉，新的晚一拍才浮上來。兩層同時半透明、又被拉成不同比例，
-   * 逐格看是一團糊掉的牌。快照照原比例裁，不拉伸。 */
-  ::view-transition-old(type-case),
-  ::view-transition-new(type-case) {
-    height: 100%;
-    object-fit: cover;
-    object-position: top left;
-  }
-  ::view-transition-old(type-case) {
-    animation: type-case-out var(--dur-micro) var(--ease-out) both;
-  }
-
-  ::view-transition-new(type-case) {
-    animation: type-case-in var(--dur-short) var(--ease-out) calc(var(--dur-micro) / 2) both;
-  }
-
   ::view-transition-old(favorite-tray),
   ::view-transition-new(favorite-tray) {
     animation-duration: var(--dur-long);
     animation-timing-function: var(--ease-travel);
   }
 
-  /* 分頁由左到右是墨池、疊印台；紙張沿同一方向換版。舊的那張先很快抽走（一開始就走得快的 out），
-   * 新的晚半拍（micro 的一半）從另一側鋪上來：只重疊一點點，不會疊成一團，也不會中間整頁空掉一下。整段約 480ms。 */
-  html:has(body.fuse)::view-transition-old(work-stage),
-  html:has(body.fuse)::view-transition-old(drying-line),
-  html:has(body.fuse)::view-transition-old(proof-side) {
-    animation: paper-exit-left var(--dur-short) var(--ease-out) both;
+  /* 字盒在兩頁都在左邊同一個位置：不移動。兩頁的牌格不一樣，疊在一起是一片重影：
+   * 舊的一開始就走得快（out），新的等舊的走完（micro）才浮上來。 */
+  ::view-transition-old(case-m),
+  ::view-transition-old(case-f) {
+    animation: vt-fade-out var(--dur-micro) var(--ease-out) both;
   }
-  html:has(body.fuse)::view-transition-new(work-stage),
-  html:has(body.fuse)::view-transition-new(drying-line),
-  html:has(body.fuse)::view-transition-new(proof-side) {
-    animation: paper-enter-right var(--dur-long) var(--ease-out) calc(var(--dur-micro) / 2) both;
+  ::view-transition-new(case-m),
+  ::view-transition-new(case-f) {
+    animation: vt-fade-in var(--dur-short) var(--ease-out) var(--dur-micro) both;
   }
-  html:not(:has(body.fuse))::view-transition-old(work-stage),
-  html:not(:has(body.fuse))::view-transition-old(drying-line),
-  html:not(:has(body.fuse))::view-transition-old(proof-side) {
-    animation: paper-exit-right var(--dur-short) var(--ease-out) both;
+
+  /* 工作區：分頁由左到右是墨池、疊印台，紙沿同一個方向換版。往疊印台：舊的往左退、新的從右邊滑進來；
+   * 回墨池反過來。只位移一小段（不是整頁飛）。舊的用 out（一開始就走得快，半拍時已經淡了大半），
+   * 新的晚半拍進來，重疊的那一下只剩淡淡一層，約 480ms 收完。 */
+  ::view-transition-old(stage-m) {
+    animation: vt-out-left var(--dur-short) var(--ease-out) both;
   }
-  html:not(:has(body.fuse))::view-transition-new(work-stage),
-  html:not(:has(body.fuse))::view-transition-new(drying-line),
-  html:not(:has(body.fuse))::view-transition-new(proof-side) {
-    animation: paper-enter-left var(--dur-long) var(--ease-out) calc(var(--dur-micro) / 2) both;
+  ::view-transition-new(stage-f),
+  ::view-transition-new(proof-side),
+  ::view-transition-new(drying-line) {
+    animation: vt-in-right var(--dur-long) var(--ease-out) calc(var(--dur-micro) / 2) both;
+  }
+  ::view-transition-old(stage-f),
+  ::view-transition-old(proof-side),
+  ::view-transition-old(drying-line) {
+    animation: vt-out-right var(--dur-short) var(--ease-out) both;
+  }
+  ::view-transition-new(stage-m) {
+    animation: vt-in-left var(--dur-long) var(--ease-out) calc(var(--dur-micro) / 2) both;
   }
 }
 
-@keyframes type-case-out {
+@keyframes vt-fade-out {
   to { opacity: 0; }
 }
-@keyframes type-case-in {
+@keyframes vt-fade-in {
   from { opacity: 0; }
 }
-@keyframes paper-exit-left {
-  from { opacity: 1; transform: translateX(0); clip-path: inset(0 0 0 0); }
-  to { opacity: 0; transform: translateX(-3vw); clip-path: inset(0 100% 0 0); }
+@keyframes vt-out-left {
+  to { opacity: 0; transform: translateX(-1.5rem); }
 }
-@keyframes paper-enter-right {
-  from { opacity: 0; transform: translateX(3vw); clip-path: inset(0 0 0 100%); }
-  to { opacity: 1; transform: translateX(0); clip-path: inset(0 0 0 0); }
+@keyframes vt-in-right {
+  from { opacity: 0; transform: translateX(2rem); }
 }
-@keyframes paper-exit-right {
-  from { opacity: 1; transform: translateX(0); clip-path: inset(0 0 0 0); }
-  to { opacity: 0; transform: translateX(3vw); clip-path: inset(0 0 0 100%); }
+@keyframes vt-out-right {
+  to { opacity: 0; transform: translateX(1.5rem); }
 }
-@keyframes paper-enter-left {
-  from { opacity: 0; transform: translateX(-3vw); clip-path: inset(0 100% 0 0); }
-  to { opacity: 1; transform: translateX(0); clip-path: inset(0 0 0 0); }
+@keyframes vt-in-left {
+  from { opacity: 0; transform: translateX(-2rem); }
+}
+
+/* ================= Hires（墨池成品、疊印台成品共用；見 hires.js） ================= */
+
+/* 選單：一張小校樣單。上緣跟成品同一條裁切線（兩端加粗），不是浮起來的圓角卡。 */
+.hires-pop {
+  position: fixed;
+  z-index: 70;
+  width: min(19rem, calc(100vw - 16px));
+  display: grid;
+  gap: var(--space-sm);
+  padding: var(--space-md) var(--space-md) var(--space-sm);
+  background:
+    linear-gradient(var(--color-ink-2), var(--color-ink-2)) top left / 14px 2px no-repeat,
+    linear-gradient(var(--color-ink-2), var(--color-ink-2)) top right / 14px 2px no-repeat,
+    var(--color-paper-2);
+  border: 1px solid var(--color-rule);
+  border-radius: var(--radius-xs);
+  box-shadow: 0 16px 40px var(--color-shade);
+}
+
+.hp-head {
+  display: flex;
+  align-items: baseline;
+  justify-content: space-between;
+  gap: var(--space-sm);
+}
+
+.hp-head b {
+  font-family: var(--font-display);
+  font-size: var(--text-lg);
+  letter-spacing: 0.02em;
+}
+
+.hp-size {
+  font-family: var(--font-mono);
+  font-size: var(--text-xs);
+  color: var(--color-muted);
+  white-space: nowrap;
+}
+
+.hp-modes {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+}
+
+.hp-modes button {
+  min-height: 36px;
+}
+
+.hp-row {
+  display: flex;
+  align-items: center;
+}
+
+.hp-scale output {
+  min-width: 3.4em;
+}
+
+.hp-note {
+  font-size: var(--text-xs);
+  line-height: 1.6;
+  color: var(--color-ink-2);
+}
+
+.hp-note[data-kind="err"] {
+  color: var(--color-warn);
+}
+
+.hp-was {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: baseline;
+  justify-content: space-between;
+  gap: var(--space-2xs) var(--space-sm);
+  padding-top: var(--space-xs);
+  border-top: 1px solid var(--color-rule-2);
+  font-size: var(--text-xs);
+  color: var(--color-muted);
+}
+
+.hp-restore {
+  padding: 0;
+  border: 0;
+  background: none;
+  color: var(--color-ink);
+  font-size: var(--text-xs);
+  text-decoration: underline;
+  text-decoration-color: var(--color-rule);
+  text-underline-offset: 3px;
+  white-space: nowrap;
+  cursor: pointer;
+  transition: text-decoration-color var(--dur-micro) var(--ease-out);
+}
+
+.hp-restore:hover,
+.hp-restore:focus-visible {
+  text-decoration-color: var(--color-ink);
+}
+
+.hp-acts {
+  display: flex;
+  justify-content: flex-end;
+}
+
+.hp-go {
+  min-height: 36px;
+  padding: 0 var(--space-md);
+}
+
+/* 成品底下那顆 Hires：正在做的時候字變淡，按下去會搖頭（圖上有停）。 */
+.shot-hires[data-busy="true"] {
+  color: var(--color-muted);
+}
+
+/* 圖上的進度：一條朱色套準線照步數由上往下掃，線下還沒重畫的那一段壓暗。
+ * 做好時新圖一樣由上往下顯影（shot-develop），掃描和顯影是同一個方向、同一件事。 */
+.hires-veil {
+  position: absolute;
+  inset: 0;
+  z-index: 3;
+  pointer-events: none;
+  --y: calc(var(--p, 0) * 100%);
+}
+
+.hv-dim {
+  position: absolute;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  top: var(--y);
+  background: var(--color-shade);
+  transition: top var(--dur-long) var(--ease-out);
+}
+
+.hv-rule {
+  position: absolute;
+  left: 0;
+  right: 0;
+  top: var(--y);
+  height: 2px;
+  margin-top: -1px;
+  background:
+    linear-gradient(var(--color-ink), var(--color-ink)) left / 10px 100% no-repeat,
+    linear-gradient(var(--color-ink), var(--color-ink)) right / 10px 100% no-repeat,
+    var(--color-accent);
+  box-shadow: 0 0 12px var(--color-accent);
+  transition: top var(--dur-long) var(--ease-out);
+}
+
+/* 還在排隊（前面有圖在印）：線停在頂端呼吸，整張壓暗一層。 */
+.hires-veil[data-status="queued"] .hv-rule {
+  animation: hv-breathe var(--dur-breath) var(--ease-in-out) infinite alternate;
+}
+
+.hires-veil[data-status="failed"] .hv-dim,
+.hires-veil[data-status="failed"] .hv-rule {
+  display: none;
+}
+
+@keyframes hv-breathe {
+  from {
+    opacity: 0.35;
+  }
+  to {
+    opacity: 1;
+  }
+}
+
+.hv-bar {
+  position: absolute;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  display: flex;
+  align-items: center;
+  gap: var(--space-xs);
+  padding: var(--space-lg) var(--space-sm) var(--space-xs);
+  background: linear-gradient(transparent, var(--color-scrim));
+  pointer-events: auto;
+}
+
+.hv-text {
+  flex: 1;
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  font-size: var(--text-xs);
+  color: var(--color-ink);
+}
+
+.hires-veil[data-status="failed"] .hv-text {
+  white-space: normal;
+  color: var(--color-warn);
+}
+
+.hv-act {
+  flex: none;
+  min-height: 28px;
+  padding: 0 var(--space-sm);
+  border: 1px solid var(--color-rule);
+  border-radius: var(--radius-xs);
+  background: var(--color-paper-2);
+  color: var(--color-ink);
+  font-size: var(--text-xs);
+  cursor: pointer;
+}
+
+@media (hover: hover) and (pointer: fine) {
+  .hv-act:hover {
+    border-color: var(--color-ink-2);
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .hv-dim,
+  .hv-rule {
+    transition: none;
+  }
+  .hires-veil[data-status="queued"] .hv-rule {
+    animation: none;
+  }
 }

@@ -38,7 +38,17 @@ import { createHand } from "./hand.js";
 import { createGenerator, comfyOnline, viewSrc, tabTitle, watchLink, LINK_LABEL } from "./gen.js";
 import { genSeed, mountSeedControl, seedUseButton } from "./seed-control.js";
 import { attachPeek } from "./card-peek.js";
+import { createHires, openHiresPicker, paintHiresVeil, hiresBusy, HIRES_MODES } from "./hires.js";
 import * as S from "./store.js";
+import { getSfx } from "./sfx.js";
+
+const sfx = getSfx();
+// 聲音引擎第一次建立要幾十毫秒：第一個手勢時先在下一輪建好，等真的要出聲時已經在了。
+for (const type of ["pointerdown", "keydown"]) {
+  addEventListener(type, () => setTimeout(() => sfx.warm(), 0), { once: true, capture: true, passive: true });
+}
+// 放牌的聲音等牌落定才響（點字盒的牌會先飛一段、拖曳放開也要落一下）。
+const LAND_SFX_MS = DUR.long;
 
 const HEAT_ZH = { activity: "活動", tease: "誘惑", flash: "走光", sex: "性愛" };
 const SIZES = [
@@ -626,6 +636,11 @@ function pin(tag) {
   const leaving = gone.map(poolNode).filter(Boolean).map((n) => ({ node: n, rect: n.getBoundingClientRect() }));
   // 後果寫在池子底下，不是右下角的提示：發生在哪裡就說在哪裡，旁邊給「換回」。
   poolNote = gone.length ? replaceNote(tag, gone) : null;
+  const carriedIn = [...pool].filter((t) => t !== tag && !before.has(t));
+  setTimeout(() => sfx.stamp(), LAND_SFX_MS);
+  // 附帶的牌 200ms 起一張張跳出來（見下面 popCarried）：一張一個音，照音階往上。
+  carriedIn.forEach((_, i) => setTimeout(() => sfx.carry(0), 200 + i * 90));
+  if (gone.length) setTimeout(() => sfx.lift(), 90);
   commitPins(tag);
   leaving.forEach((l, i) => liftOut(l, i * 60));
   // 跟著進來的牌（implies）不是憑空出現：放的那張落定之後，一張接一張從底下彈上來。
@@ -762,6 +777,7 @@ function unpin(tag, { viaDrag = false } = {}) {
   // 以前按 × 牌就不見了：現在先記下位置，重畫之後從原地飛回字盒。
   // 影子跟重畫在同一個 task 裡做好（不用 setTimeout）：中間不會有一格牌不見了的空白。
   const leaving = gone.map(poolNode).filter(Boolean).map((n) => ({ node: n, rect: n.getBoundingClientRect() }));
+  if (before.size !== pool.size) sfx.lift();
   commitPins();
   leaving.forEach((l, i) => liftOut(l, i * 60));
 }
@@ -776,6 +792,8 @@ function ban(tag, { viaDrag = false, from = null } = {}) {
     else if (src) flyToTrash({ node: src, rect: src.getBoundingClientRect() });
   }
   if (hand?.has(tag)) hand.remove(tag, { quiet: true });
+  // 揉紙聲在牌被吸進簍子的那一刻（拖的在放開後落進去，按的要先飛過去）。
+  setTimeout(() => sfx.trash(), viaDrag ? DUR.short : DUR.long);
   const next = applyBan(lex, pool, bans, tag);
   pool = next.pinned;
   bans = next.userBanned;
@@ -1091,6 +1109,11 @@ const generator = createGenerator({
   }),
   update: (shot) => {
     tabNote.shot(shot, generator.pending);
+    if (shot._heard !== shot.status) {
+      if (shot.status === "done" && shot._heard) sfx.done();
+      else if (shot.status === "failed") sfx.fail();
+      shot._heard = shot.status;
+    }
     updateShot(shot);
     // 拿到伺服器的工作編號就先存一次：畫到一半重新整理也接得回來。
     const newJob = shot.job && shot._savedJob !== shot.job;
@@ -1116,6 +1139,39 @@ const generator = createGenerator({
   // 網路斷了：佇列停在原地等，回來就接著印（見 gen.js waitOnline）。
   waiting: (on) => toast(on ? "連不到主機，網路回來就接著印…" : "網路回來了，接著印"),
 });
+
+// Hires：印好的那張放大、重畫細節，做好直接換掉牆上那張（見 hires.js）。
+const hiresRun = createHires({
+  update: (shot) => {
+    updateShot(shot);
+    if (!shot.hi) S.saveShots(shots);
+  },
+  done: (shot) => {
+    sfx.hiresDone();
+    toast(`Hires 好了：${shot.hires.width}×${shot.hires.height}`);
+  },
+});
+
+function openHires(shot, btn) {
+  if (!shot.image || shot.status !== "done") return refuse(btn);
+  if (hiresBusy(shot)) {
+    toast("這張正在 Hires，圖上可以停");
+    return refuse(btn);
+  }
+  openHiresPicker(btn, shot, {
+    onStart: (mode, scale) => {
+      if (!hiresRun.start(shot, mode, scale)) return refuse(btn);
+      sfx.hiresStart();
+    },
+    onRestore: () => {
+      if (hiresRun.restore(shot)) {
+        shot._hiresFresh = true;
+        updateShot(shot);
+        toast("換回原圖了");
+      }
+    },
+  });
+}
 
 // 生圖種子那一組只建一次，每次重畫合成池底下那排時把同一個節點搬回去（輸入到一半不會被洗掉）。
 let seedNode = null;
@@ -1240,6 +1296,8 @@ function drawBatch(gen) {
     toast("這一輪抽不出東西：合成池的字可能互相卡住，換一兩張試試");
     return;
   }
+  sfx.deal(made.length > 1 ? made.length + 3 : 5);
+  if (gen) setTimeout(() => sfx.roll(), 160);
   const wall = $("wall");
   for (const shot of made.slice().reverse()) {
     const node = shotNode(shot, true);
@@ -1298,6 +1356,7 @@ function makeShot(drawn, seed, poolAtDraw) {
 function trimWall() {
   if (shots.length <= S.SHOT_MAX) return;
   const drop = shots.splice(S.SHOT_MAX);
+  for (const s of drop) hiresRun.cancel(s);
   for (const s of drop) document.querySelector(`.shot[data-id="${s.id}"]`)?.remove();
   generator.drop(new Set(drop.map((s) => s.id)));
 }
@@ -1417,7 +1476,18 @@ function shotNode(shot, deal) {
       "div",
       { class: "shot-actions" },
       toggle,
-      el("button", { class: "btn btn-small btn-ghost", type: "button", onclick: () => showShot(shot) }, "放大"),
+      el(
+        "button",
+        {
+          class: "btn btn-small btn-ghost shot-hires",
+          type: "button",
+          "aria-haspopup": "dialog",
+          "aria-expanded": "false",
+          title: "放大並重畫細節（快速／深度）",
+          onclick: (e) => openHires(shot, e.currentTarget),
+        },
+        "Hires"
+      ),
       el("button", { class: "btn btn-small btn-ghost", type: "button", onclick: (e) => copyPos(shot, e.currentTarget) }, "複製 POS"),
       el("button", { class: "btn btn-small btn-ghost", type: "button", onclick: () => reprint(shot), title: "同樣的 POS、同一顆種子再送一次" }, "同種子重印"),
       el("button", { class: "btn btn-small btn-ghost", type: "button", onclick: () => removeShot(shot) }, "撤下")
@@ -1503,7 +1573,9 @@ function paintShot(node, shot) {
     }
     if (img.getAttribute("src") !== src) {
       // 剛印好（上一幀還是預覽或空的）：像相紙泡進顯影液，由上往下浮出來。
-      const developing = shot.status === "done" && node.dataset.shown !== "done" && node.dataset.shown !== undefined;
+      // Hires 換上來的大圖也一樣顯影：跟圖上那條由上往下掃的進度線接起來。
+      const developing = shot.status === "done" && ((node.dataset.shown !== "done" && node.dataset.shown !== undefined) || shot._hiresFresh);
+      shot._hiresFresh = false;
       const motion = !matchMedia("(prefers-reduced-motion: reduce)").matches;
       const prevSrc = img.getAttribute("src");
       // 上一幀墊在底下（.shot-under，排在主圖後面，querySelector("img") 拿到的還是主圖）。
@@ -1560,6 +1632,12 @@ function paintShot(node, shot) {
       empty.replaceChildren(...draftFace(shot, words[shot.status] || ""));
     }
   } else if (empty) empty.remove();
+  paintHiresVeil(frame, shot, { onCancel: () => hiresRun.cancel(shot), onDismiss: () => hiresRun.dismiss(shot) });
+  const hiBtn = node.querySelector(".shot-hires");
+  if (hiBtn) {
+    hiBtn.hidden = !(shot.status === "done" && shot.image);
+    hiBtn.dataset.busy = hiresBusy(shot) ? "true" : "false";
+  }
   let bar = frame.querySelector(".shot-progress");
   if (shot.status === "running") {
     if (!bar) {
@@ -1571,7 +1649,7 @@ function paintShot(node, shot) {
   const status = node.querySelector(".shot-meta .status");
   status.dataset.kind = shot.status === "failed" ? "err" : "";
   settleText(status,
-    shot.status === "done" ? "印好了" : shot.status === "running" ? shot.note || "印製中" : shot.status === "drawn" ? "只抽牌" : words[shot.status] || "");
+    shot.status === "done" ? (shot.hires ? `Hires ${HIRES_MODES[shot.hires.mode]?.zh || ""} ${shot.hires.width}×${shot.hires.height}` : "印好了") : shot.status === "running" ? shot.note || "印製中" : shot.status === "drawn" ? "只抽牌" : words[shot.status] || "");
 }
 
 const REPRINTABLE = new Set(["drawn", "failed", "cancelled", "stopped"]);
@@ -1651,12 +1729,13 @@ async function copyPos(shot, btn) {
     else toast("POS 複製好了");
   } catch {
     refuse(btn);
-    toast("複製不了，請到「放大」裡手動選取");
+    toast("複製不了，請點圖打開後手動選取");
   }
 }
 
 function reprint(shot) {
-  const copy = { ...shot, id: "s" + shotSeq++, status: "drawn", image: null, preview: null, note: "", at: new Date().toISOString() };
+  // 重印的是原本的尺寸、原本的圖；Hires 的結果不跟著過去。
+  const copy = { ...shot, id: "s" + shotSeq++, status: "drawn", image: null, preview: null, note: "", hi: null, hires: null, baseImage: null, at: new Date().toISOString() };
   shots.unshift(copy);
   const node = shotNode(copy, true);
   flip($("wall"), () => $("wall").prepend(node));
@@ -1673,6 +1752,10 @@ function reprint(shot) {
 function removeShot(shot) {
   if (shot.status === "running" || shot.status === "queued") {
     toast("這張還在印，先按「停」");
+    return;
+  }
+  if (hiresBusy(shot)) {
+    toast("這張正在 Hires，先在圖上按「停」");
     return;
   }
   const at = shots.findIndex((s) => s.id === shot.id);
@@ -1702,6 +1785,7 @@ function restoreShot(shot, at) {
 }
 
 function showShot(shot) {
+  sfx.open();
   const src = viewSrc(shot.image) || shot.preview;
   openSheet(
     `seed ${shot.seed}`,
@@ -1712,7 +1796,7 @@ function showShot(shot) {
       el(
         "div",
         {},
-        el("p", { class: "tag-en" }, [shot.width + "×" + shot.height, RATING_ZH[shot.rating], ERA_LABELS[shot.era]].filter(Boolean).join("・")),
+        el("p", { class: "tag-en" }, [shot.hires ? `Hires ${shot.hires.width}×${shot.hires.height}（原圖 ${shot.width}×${shot.height}）` : shot.width + "×" + shot.height, RATING_ZH[shot.rating], ERA_LABELS[shot.era]].filter(Boolean).join("・")),
         el("pre", { class: "pos-text" }, shot.positive)
       )
     ),
@@ -1959,6 +2043,25 @@ function onKey(e) {
 }
 
 watchGoBar();
+// 聲音開關（跟疊印台同一個設定）。
+{
+  const snd = $("sound-btn");
+  const syncSound = () => {
+    snd.setAttribute("aria-pressed", sfx.on ? "true" : "false");
+    const label = sfx.on ? "聲音：開（點一下關掉）" : "聲音：關（點一下打開）";
+    snd.setAttribute("aria-label", label);
+    snd.title = label;
+    snd.innerHTML = sfx.on
+      ? `<svg viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M4 9h4l5-4v14l-5-4H4z"/><path d="M16.5 8.5a5 5 0 0 1 0 7M19 6a8.5 8.5 0 0 1 0 12"/></svg>`
+      : `<svg viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M4 9h4l5-4v14l-5-4H4z"/><path d="M17 9.5l5 5M22 9.5l-5 5"/></svg>`;
+  };
+  syncSound();
+  snd.addEventListener("click", () => {
+    sfx.on = !sfx.on;
+    syncSound();
+    if (sfx.on) sfx.deal(3);
+  });
+}
 $("trash").addEventListener("click", showBans);
 $("trash").innerHTML = ICONS.trash + "<b>0</b><span>廢字簍</span>";
 $("pool-clear").addEventListener("click", () => {

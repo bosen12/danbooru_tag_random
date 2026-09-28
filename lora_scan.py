@@ -109,10 +109,8 @@ def lora_names_from_comfy() -> list:
     req = urllib.request.Request(base + "/object_info/LoraLoader", method="GET")
     with urllib.request.urlopen(req, timeout=10) as r:
         info = json.loads(r.read().decode("utf-8"))
-    node = info.get("LoraLoader") or {}
-    spec = ((node.get("input") or {}).get("required") or {}).get("lora_name") or []
-    names = spec[0] if spec and isinstance(spec[0], list) else []
-    return [n for n in names if isinstance(n, str) and n.endswith(".safetensors")]
+    names = workflows.combo_list(info, "LoraLoader", "lora_name")
+    return [n for n in names if n.endswith(".safetensors")]
 
 
 def build_from_comfy() -> dict:

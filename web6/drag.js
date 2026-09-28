@@ -19,6 +19,7 @@
  * 可能永遠不 resolve。減量動態時全部直接到位。
  */
 
+import { getSfx } from "./sfx.js";
 import { CURVE, DUR, css } from "./motion.js";
 
 const MOUSE_SLOP = 5;
@@ -136,6 +137,7 @@ export function createDrag({ zones, onDrop, onOver, onMove }) {
     state.dragging = true;
     state.node.dataset.dragging = "true";
     document.body.dataset.dragging = "true";
+    getSfx().pick();
     move(state, x, y);
     // 下一個 task 再加上「浮起」：先讓影子在原位畫出來，放大、陰影才有過渡。
     if (!reduced()) setTimeout(() => ghost.classList.add("is-lifted"), 0);
