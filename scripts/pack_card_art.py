@@ -27,7 +27,16 @@ def hard_banned() -> set[str]:
     """web/card-art.js 的 HARD_BANNED（看起來未成年的字）。讀不到就不打包，不猜。"""
     import re
 
-    src = (ROOT / "web" / "card-art.js").read_text(encoding="utf-8")
+    # 公開包照「已經 commit 的規則」打：工作區裡還沒 commit 的改動不算數。
+    # 讀不到 git（不是從 repo 跑）才退回工作區那份。
+    import subprocess
+
+    try:
+        src = subprocess.run(
+            ["git", "show", "HEAD:web/card-art.js"], cwd=ROOT, capture_output=True, check=True
+        ).stdout.decode("utf-8")
+    except (OSError, subprocess.CalledProcessError):
+        src = (ROOT / "web" / "card-art.js").read_text(encoding="utf-8")
     m = re.search(r"HARD_BANNED\s*=\s*Object\.freeze\(\[([^\]]*)\]\)", src)
     if not m:
         raise SystemExit("找不到 web/card-art.js 的 HARD_BANNED，不打包")

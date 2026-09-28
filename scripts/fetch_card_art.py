@@ -33,14 +33,14 @@ from pathlib import Path
 ROOT = Path(__file__).resolve().parent.parent
 CARDS = ROOT / "web" / "cards"
 # 換版時標記跟著換：有 v1 標記、沒有 v2 標記的人，下次啟動會去補 v2 多的那些。
-MARKER = CARDS / ".card-art-v2"
+MARKER = CARDS / ".card-art-v3"
 
-# v2（2026-09-28）：1161 張，比 v1 多 49 張新卡，另外 crowd、witch 兩張重畫。v1 留在 GitHub 給舊版本用。
+# v3（2026-09-28）：1160 張。跟 v2 只差拿掉 cel shading（Danbooru 停用、意思含糊）。v1、v2 留在 GitHub 給舊版本用。
 # CARD_ART_URL 可以換來源（測試時指向本機的 file:// 包）；大小、雜湊照樣要對。
-URL = os.environ.get("CARD_ART_URL") or "https://github.com/bosen12/danbooru_tag_random/releases/download/card-art-v2/card-art-general.zip"
-SIZE = 55230586
-SHA256 = "27dd32e4844719822a0c00c210a14a87abcb821b1597a59d2a100c82d2681f2c"
-EXPECTED = 1161  # 這一包裡全年齡的張數
+URL = os.environ.get("CARD_ART_URL") or "https://github.com/bosen12/danbooru_tag_random/releases/download/card-art-v3/card-art-general.zip"
+SIZE = 55194051
+SHA256 = "ff2dacb2985f85f6ab93a7f2a4e8a5625656da41e04bcd443b27742c445bcdea"
+EXPECTED = 1160  # 這一包裡全年齡的張數
 
 
 JOBS = ROOT / "scripts" / "card_jobs.json"
