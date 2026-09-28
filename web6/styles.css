@@ -837,12 +837,12 @@ body #wf-pick-btn.has {
   transform: translateY(1px);
 }
 
+/* 小分類：跟疊印台一樣換行排開，一眼看完，不必左右捲（以前一排擠不下，後面幾個要往右捲才找得到）。 */
 .group-chips {
   display: flex;
+  flex-wrap: wrap;
   gap: var(--space-2xs);
   padding: var(--space-xs) var(--space-md) var(--space-xs);
-  overflow-x: auto;
-  scrollbar-width: thin;
 }
 
 .group-chip {
