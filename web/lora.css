@@ -189,6 +189,29 @@
   font: inherit;
   font-size: 13px;
 }
+/* 「存位址」：排字匣的 .ghost 樣式在 web/styles.css，墨池、疊印台沒有載那份，
+ * 這顆鈕在那兩頁就變成瀏覽器預設的白底、配上淺色字幾乎看不見。跟旁邊的輸入框同一套暗房配色。 */
+.wf-url-row .ghost {
+  flex: none;
+  height: 36px;
+  padding: 0 14px;
+  border: 1px solid var(--line);
+  border-radius: 8px;
+  background: var(--panel);
+  color: var(--ink);
+  font: inherit;
+  font-size: 13px;
+  font-weight: 600;
+  cursor: pointer;
+  transition: border-color var(--d-micro) var(--ease-out), background var(--d-micro) var(--ease-out);
+}
+.wf-url-row .ghost:hover {
+  border-color: var(--amber-d);
+}
+.wf-url-row .ghost:focus-visible {
+  outline: 2px solid var(--amber);
+  outline-offset: 2px;
+}
 .ckpt-head {
   padding: 16px 16px 8px;
   padding-right: 48px;
