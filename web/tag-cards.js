@@ -18,7 +18,6 @@ const STYLES = ["card", "chip"];
 const HARD = new Set(HARD_BANNED);
 const SEC_ZH = { quality: "畫質與風格", subject: "人數", feature: "長相", pose: "姿勢", clothing: "服裝", env: "場景" };
 const RATING_ZH = { sensitive: "敏感", explicit: "限制級" };
-const RATING_RANK = { general: 0, sensitive: 1, explicit: 2 };
 const root = document.documentElement;
 
 let byTag = new Map();
@@ -49,25 +48,8 @@ function saveStyle(v) {
 let style = readStyle();
 root.dataset.tagStyle = style;
 
-// 插畫跟著左欄的尺度分級走：選了全年齡，色情字的牌就蓋起來只露字形，圖連抓都不抓。
-// 字盒本來就會列出（淡掉）超過尺度的字，字條只是字，換成插畫就不一樣了。
-// 還沒讀到分級之前先當全年齡，寧可先蓋著。
-root.dataset.cardRating = "general";
-
-function currentRating() {
-  const on = document.querySelector('#rating .segmented-btn[data-rating][aria-current="true"]');
-  return on && RATING_RANK[on.dataset.rating] !== undefined ? on.dataset.rating : null;
-}
-
-function syncRating() {
-  const r = currentRating();
-  if (r) root.dataset.cardRating = r;
-}
-
-function veiled(tag) {
-  const r = manifest[tag]?.rating || "general";
-  return (RATING_RANK[r] || 0) > (RATING_RANK[root.dataset.cardRating] || 0);
-}
+// 有插畫的牌一律露出插畫，不管左欄的尺度分級（專案主要求：有的都要顯示）。
+// 分級只影響抽不抽得到；牌角的「敏／色」小標照樣標著。
 
 function suitColor(suit) {
   return suit ? `var(--tc-${suit})` : "var(--color-neutral)";
@@ -98,7 +80,6 @@ function decorate(btn) {
     return g;
   };
   const rating = manifest[tag]?.rating;
-  if (rating && rating !== "general") btn.dataset.artR = rating;
   if (src) {
     const img = document.createElement("img");
     img.alt = "";
@@ -108,12 +89,6 @@ function decorate(btn) {
     applyArtSources(img, artSources(manifest[tag]) || { src });
     img.addEventListener("error", () => img.replaceWith(glyph()), { once: true });
     art.append(img);
-    // 超過目前尺度時蓋上的那面（CSS 決定哪一面露出來）。
-    if (btn.dataset.artR) {
-      const veil = glyph();
-      veil.classList.add("tc-veil");
-      art.append(veil);
-    }
   } else {
     art.append(glyph());
   }
@@ -209,7 +184,7 @@ function peekInfo(btn) {
     tag,
     glyph: suit ? CARD_SUIT_INFO[suit].glyph : "",
     suitColor: suit ? getComputedStyle(root).getPropertyValue(`--tc-${suit}`).trim() : "",
-    art: veiled(tag) ? "" : artSrc(tag),
+    art: artSrc(tag),
     rating,
     seal: groupSeal(item),
     sealTitle: item && item.group ? groupZh[item.group] : "",
@@ -274,11 +249,6 @@ async function loadJson(url) {
 
 async function init() {
   mountSwitch();
-  syncRating();
-  const ratingEl = document.getElementById("rating");
-  if (ratingEl) {
-    new MutationObserver(syncRating).observe(ratingEl, { subtree: true, childList: true, attributes: true, attributeFilter: ["aria-current"] });
-  }
   const [lexData, man] = await Promise.all([loadLexicon().catch(() => null), loadJson("cards/manifest.json")]);
   if (lexData && Array.isArray(lexData.tags)) {
     byTag = new Map(lexData.tags.map((t) => [t.tag, t]));

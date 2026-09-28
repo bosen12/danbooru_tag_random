@@ -119,22 +119,6 @@
   color: color-mix(in oklab, var(--tc-suit) 55%, var(--tc-face-ink));
 }
 
-/* 超過目前尺度的牌蓋起來：圖 display:none（lazy 的圖因此根本不會抓），露出字形那面。
-   html[data-card-rating] 由 tag-cards.js 跟著左欄的尺度分級同步。 */
-.tc-veil {
-  display: none;
-}
-
-[data-card-rating="general"] #cats .tag[data-art-r] .tc-art img,
-[data-card-rating="sensitive"] #cats .tag[data-art-r="explicit"] .tc-art img {
-  display: none;
-}
-
-[data-card-rating="general"] #cats .tag[data-art-r] .tc-veil,
-[data-card-rating="sensitive"] #cats .tag[data-art-r="explicit"] .tc-veil {
-  display: block;
-}
-
 .tc-suit {
   position: absolute;
   top: 4px;
