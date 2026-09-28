@@ -21,6 +21,7 @@ from __future__ import annotations
 import hashlib
 import json
 import os
+import shutil
 import sys
 import tempfile
 import time
@@ -58,11 +59,97 @@ def have_enough() -> bool:
     return ready >= EXPECTED
 
 
-def download(dest: Path) -> None:
-    last: Exception | None = None
+# GitHub 放 release 檔的伺服器到台灣很慢（實測單一連線約 0.17 MB/s，55 MB 要 5 分多）。
+# 切成幾段同時抓大約快一倍；每一段抓到哪裡都留在 PARTS 裡，斷線或下次啟動從斷的地方接著抓，不從頭來。
+PARTS = CARDS / ".card-art-download"
+# 切細一點（16 段）、同時跑 6 條：先抓完的連線接著抓下一段，最後不會只剩一兩條在慢慢收尾。
+SEGMENTS = 16
+WORKERS = 6
+UA = {"User-Agent": "danbooru-tag-random/card-art"}
+
+
+def _ranges_ok() -> bool:
+    """伺服器肯不肯分段給（file:// 測試包、某些代理不給）：要一個位元組，回 206 才算。"""
+    try:
+        req = urllib.request.Request(URL, headers={**UA, "Range": "bytes=0-0"})
+        with urllib.request.urlopen(req, timeout=30) as r:
+            return r.status == 206
+    except Exception:  # noqa: BLE001
+        return False
+
+
+def _fetch_segment(i: int, start: int, end: int, progress: list) -> None:
+    """抓 start..end（含）這一段到 PARTS/part-i；已經有的部分跳過，從斷的地方接著要。"""
+    part = PARTS / f"part-{i}"
+    want = end - start + 1
+    for attempt in range(4):
+        have = part.stat().st_size if part.exists() else 0
+        if have > want:
+            part.unlink()
+            have = 0
+        progress[i] = have
+        if have == want:
+            return
+        try:
+            req = urllib.request.Request(URL, headers={**UA, "Range": f"bytes={start + have}-{end}"})
+            with urllib.request.urlopen(req, timeout=60) as r, part.open("ab") as f:
+                if r.status != 206:
+                    raise OSError(f"segment {i}: server ignored the range (HTTP {r.status})")
+                while True:
+                    chunk = r.read(1 << 16)
+                    if not chunk:
+                        break
+                    f.write(chunk)
+                    progress[i] += len(chunk)
+            if part.stat().st_size == want:
+                return
+            raise OSError(f"segment {i} ended early")
+        except (urllib.error.URLError, OSError, TimeoutError) as err:
+            if attempt == 3:
+                raise OSError(f"segment {i}: {err}") from err
+            time.sleep(2 + attempt * 3)
+
+
+def _download_parallel(dest: Path) -> None:
+    import threading
+    from concurrent.futures import ThreadPoolExecutor
+
+    PARTS.mkdir(parents=True, exist_ok=True)
+    (PARTS / "for").write_text(f"{URL} {SEGMENTS}\n", encoding="utf-8")
+    step = -(-SIZE // SEGMENTS)
+    spans = [(i, i * step, min(SIZE, (i + 1) * step) - 1) for i in range(SEGMENTS)]
+    progress = [0] * SEGMENTS
+    done = threading.Event()
+
+    def report() -> None:
+        t0 = time.time()
+        base = None
+        while not done.wait(3):
+            got = sum(progress)
+            if base is None:
+                base = got
+            speed = (got - base) / max(0.1, time.time() - t0) / 1e6
+            print(f"  {got * 100 // SIZE:3d}%  {got / 1e6:5.1f}/{SIZE / 1e6:.1f} MB  {speed:.2f} MB/s", flush=True)
+
+    threading.Thread(target=report, daemon=True).start()
+    try:
+        with ThreadPoolExecutor(WORKERS) as pool:
+            for fut in [pool.submit(_fetch_segment, i, a, b, progress) for i, a, b in spans]:
+                fut.result()
+    finally:
+        done.set()
+    with dest.open("wb") as out:
+        for i, _, _ in spans:
+            out.write((PARTS / f"part-{i}").read_bytes())
+    if dest.stat().st_size != SIZE:
+        raise OSError(f"incomplete download ({dest.stat().st_size} bytes, want {SIZE})")
+
+
+def _download_single(dest: Path) -> None:
+    last = None
     for attempt in range(3):
         try:
-            req = urllib.request.Request(URL, headers={"User-Agent": "danbooru-tag-random/card-art"})
+            req = urllib.request.Request(URL, headers=UA)
             with urllib.request.urlopen(req, timeout=60) as r, dest.open("wb") as f:
                 total = int(r.headers.get("Content-Length") or SIZE)
                 got = 0
@@ -89,6 +176,20 @@ def download(dest: Path) -> None:
             print(f"  download failed ({err}); retrying...", flush=True)
             time.sleep(2 + attempt * 3)
     raise last or RuntimeError("download failed")
+
+
+def download(dest: Path) -> None:
+    # 上一次沒抓完、而且是別的網址（換版了）留下的片段不能接：清掉重來。
+    try:
+        # 換版（網址不同）或分段方式不同，留下的片段都對不上：清掉重來。
+        if (PARTS / "for").read_text(encoding="utf-8").strip() != f"{URL} {SEGMENTS}":
+            shutil.rmtree(PARTS, ignore_errors=True)
+    except OSError:
+        pass
+    if _ranges_ok():
+        _download_parallel(dest)
+    else:
+        _download_single(dest)
 
 
 def verify(path: Path) -> bool:
@@ -177,9 +278,12 @@ def main() -> int:
             print(f"Could not download card art ({err}). Cards show a placeholder glyph for now.")
             return 1
         if not verify(zpath):
+            # 片段本身壞了（雜湊對不上）：下次從頭抓，不要接著壞的片段。
+            shutil.rmtree(PARTS, ignore_errors=True)
             print("The downloaded file does not match. Not unpacking it; cards show a placeholder glyph for now.")
             return 2
         added, entries = unpack(zpath)
+    shutil.rmtree(PARTS, ignore_errors=True)
     MARKER.write_text(URL + "\n", encoding="utf-8")
     print(f"Card art ready: {added} images added, {entries} manifest entries added (existing files kept).")
     return 0
