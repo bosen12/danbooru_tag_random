@@ -843,8 +843,8 @@ function renderPool(fresh) {
         "div",
         { class: "pool-empty" },
         el("b", {}, "把字拖進來"),
-        el("span", {}, "放進合成池的字，每一張圖都一定有。其他格子由引擎照規則抽牌補齊。"),
-        el("span", {}, "字盒裡點一下也能放進來；池裡的字拖回字盒或點 × 就拿出來。")
+        // 一行就好：兩句操作說明（點字盒也能放、點 × 拿出來）做了就會發現，寫在這裡只是把合成池撐高。
+        el("span", {}, "放進來的字，每一張圖都一定有；其他格子引擎補。")
       )
     );
     return;
@@ -1157,7 +1157,7 @@ function renderGoBar() {
         html: `<svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linejoin="round" aria-hidden="true"><rect x="3" y="7" width="8" height="12" rx="1.5" transform="rotate(-14 7 13)"/><rect x="8" y="5" width="8" height="12" rx="1.5"/><rect x="13" y="7" width="8" height="12" rx="1.5" transform="rotate(14 17 13)"/></svg><span>偏好卡牌</span><b>${hand ? hand.count : 0}/${hand ? hand.max : 10}</b>`,
       }
     ),
-    el("button", { class: "btn btn-pool", type: "button", onclick: () => drawBatch(false), title: "只抽牌，不送 Comfy（P）" }, "只抽牌"),
+    el("button", { class: "btn btn-ghost", type: "button", onclick: () => drawBatch(false), title: "只抽牌，不送 Comfy（P）" }, "只抽牌"),
     el("button", { class: "btn btn-primary", type: "button", onclick: () => drawBatch(true), title: "抽並生圖（G）" }, "抽並生圖", el("span", { class: "count" }, `×${n}`)),
     // 自己一行，放在按鈕底下：不要把「抽並生圖」擠到下一行去。
     seedNode || (seedNode = mountSeedControl(null, { compact: true })),
@@ -1185,7 +1185,7 @@ function renderGoFloat() {
     ...[
       el("span", { class: "go-float-state" }, busy ? (generator.pending ? `印製中・還有 ${generator.pending} 張` : "無限抽・下一輪…") : pool.size ? `池裡 ${pool.size} 張` : "池子是空的，全靠抽"),
       busy ? el("button", { class: "btn btn-small", type: "button", onclick: stopAll }, "停") : null,
-      el("button", { class: "btn btn-small btn-pool", type: "button", onclick: () => drawBatch(false), title: "只抽牌（P）" }, "只抽牌"),
+      el("button", { class: "btn btn-small btn-ghost", type: "button", onclick: () => drawBatch(false), title: "只抽牌（P）" }, "只抽牌"),
       el("button", { class: "btn btn-small btn-primary", type: "button", onclick: () => drawBatch(true), title: "抽並生圖（G）" }, "抽並生圖", el("span", { class: "count" }, `×${settings.n}`)),
     ].filter(Boolean)
   );

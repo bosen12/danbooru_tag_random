@@ -306,6 +306,13 @@ body :is(.lora-modal, .lora-preview-tip, .tw-tip, .lora-toast, .lora-tarot, .sho
   --d-pop: var(--dur-medium);
 }
 
+/* 模型、workflow 選好了不用強調色描邊（web/lora.css 給三個版本共用，這裡只蓋 web6）：
+ * 桅杆上最亮的東西應該是「現在要做的事」，強調色留給付印／抽並生圖。 */
+body #ckpt-pick-btn.has,
+body #wf-pick-btn.has {
+  border-color: var(--color-rule);
+}
+
 /* ---------- 桅杆 ---------- */
 
 .mast {
@@ -685,10 +692,25 @@ body :is(.lora-modal, .lora-preview-tip, .tw-tip, .lora-toast, .lora-tarot, .sho
   }
 }
 
+/* 字盒、合成池是排版桌上的兩塊區域，不是兩張浮起來的卡片：不包圓角框、不墊底，
+ * 跟疊印台一樣用細線分區（區塊頂上一條、桌機的字盒右邊一條）。 */
 .panel {
-  border: 1px solid var(--color-rule-2);
-  border-radius: var(--radius-md);
-  background: color-mix(in oklch, var(--color-paper-2) 88%, transparent);
+  border: 0;
+  border-top: 1px solid var(--color-rule-2);
+  border-radius: 0;
+  background: transparent;
+}
+
+@media (min-width: 64rem) {
+  .layout > .library.panel {
+    border-top: 0;
+    border-right: 1px solid var(--color-rule-2);
+    padding-right: var(--space-sm);
+  }
+  .layout > .work.panel,
+  .layout > main .work.panel {
+    border-top: 0;
+  }
 }
 
 .panel-head {
@@ -920,24 +942,38 @@ body :is(.lora-modal, .lora-preview-tip, .tw-tip, .lora-toast, .lora-tarot, .sho
   overflow: hidden;
 }
 
+/* 合成池是一塊排版臺，不是上傳框：不畫整圈虛線，只在四角放套準角線（印刷品裁切邊那種 L 形記號）。
+ * 牌放進來就排在臺上；拖過來時角線變亮、臺面微微染上池水的顏色。 */
 .pool-well {
+  --reg: color-mix(in oklch, var(--color-pool) 62%, transparent);
+  --reg-len: 18px;
+  --reg-w: 1.5px;
   position: relative;
   margin: var(--space-sm) var(--space-md);
   min-height: 150px;
-  padding: var(--space-md);
-  border-radius: var(--radius-lg);
-  border: 1px dashed color-mix(in oklch, var(--color-pool) 55%, transparent);
+  padding: var(--space-md) var(--space-lg);
+  border-radius: var(--radius-xs);
   background:
-    radial-gradient(ellipse 70% 90% at 50% 100%, var(--color-pool-soft), transparent 70%),
-    color-mix(in oklch, var(--color-paper) 70%, transparent);
+    linear-gradient(var(--reg), var(--reg)) top left / var(--reg-len) var(--reg-w) no-repeat,
+    linear-gradient(var(--reg), var(--reg)) top left / var(--reg-w) var(--reg-len) no-repeat,
+    linear-gradient(var(--reg), var(--reg)) top right / var(--reg-len) var(--reg-w) no-repeat,
+    linear-gradient(var(--reg), var(--reg)) top right / var(--reg-w) var(--reg-len) no-repeat,
+    linear-gradient(var(--reg), var(--reg)) bottom left / var(--reg-len) var(--reg-w) no-repeat,
+    linear-gradient(var(--reg), var(--reg)) bottom left / var(--reg-w) var(--reg-len) no-repeat,
+    linear-gradient(var(--reg), var(--reg)) bottom right / var(--reg-len) var(--reg-w) no-repeat,
+    linear-gradient(var(--reg), var(--reg)) bottom right / var(--reg-w) var(--reg-len) no-repeat,
+    color-mix(in oklch, var(--color-paper) 55%, transparent);
   display: flex;
   flex-wrap: wrap;
   align-content: center;
   justify-content: center;
   gap: var(--space-sm);
-  transition:
-    border-color var(--dur-short) var(--ease-out),
-    background-color var(--dur-short) var(--ease-out);
+  transition: background-color var(--dur-short) var(--ease-out);
+}
+
+/* 空的時候說明靠左、像版面上的圖說，不是置中的召喚區。 */
+.pool-well:has(> .pool-empty) {
+  justify-content: flex-start;
 }
 
 .pool-well .card {
@@ -945,9 +981,9 @@ body :is(.lora-modal, .lora-preview-tip, .tw-tip, .lora-toast, .lora-tarot, .sho
 }
 
 .pool-well[data-over="true"] {
-  border-style: solid;
-  border-color: var(--color-pool);
-  background-color: color-mix(in oklch, var(--color-pool-2) 30%, var(--color-paper));
+  --reg: var(--color-pool);
+  --reg-len: 26px;
+  background-color: color-mix(in oklch, var(--color-pool-2) 26%, var(--color-paper));
 }
 
 /* 放進池子造成的後果（誰被換下來、為什麼），寫在池子正下方，旁邊給「換回」。 */
@@ -1063,8 +1099,8 @@ body :is(.lora-modal, .lora-preview-tip, .tw-tip, .lora-toast, .lora-tarot, .sho
 .pool-empty {
   display: grid;
   gap: var(--space-2xs);
-  justify-items: center;
-  text-align: center;
+  justify-items: start;
+  text-align: left;
   color: var(--color-muted);
   font-size: var(--text-sm);
   max-width: 32em;
@@ -1395,14 +1431,23 @@ body :is(.lora-modal, .lora-preview-tip, .tw-tip, .lora-toast, .lora-tarot, .sho
   align-items: start;
 }
 
+/* 一張成品是一張印張，不是面板裡的卡片：不包外框、不墊底色，
+ * 上緣一條細裁切線（兩端各一小段加粗，像裁紙刀的對位記號）把一張張分開。 */
 .shot {
   display: grid;
   gap: var(--space-xs);
-  padding: var(--space-sm);
-  border-radius: var(--radius-md);
-  border: 1px solid var(--color-rule-2);
-  background: var(--color-paper-2);
+  padding: var(--space-sm) 0 var(--space-xs);
+  background:
+    linear-gradient(var(--color-ink-2), var(--color-ink-2)) top left / 14px 2px no-repeat,
+    linear-gradient(var(--color-ink-2), var(--color-ink-2)) top right / 14px 2px no-repeat,
+    linear-gradient(var(--color-rule), var(--color-rule)) top / 100% 1px no-repeat;
   min-width: 0;
+}
+
+/* 只抽了牌、還沒送印：不需要留一整張直式畫框的空白，扇形牌夠放就好。送印之後照圖的比例長回來。 */
+.shot[data-status="drawn"] .shot-frame {
+  aspect-ratio: auto !important;
+  min-height: calc(var(--space-2xl) * 5);
 }
 
 /* 剛印好：由上往下顯影，亮一下再沉回正常。 */
@@ -2185,17 +2230,16 @@ body:has(.go-float[data-show="true"]) .toast {
   }
 }
 
+/* 還沒有成品：一行版位說明壓在一條待印的細線上，靠左。主要的「抽並生圖」在合成池那一排，這裡是次要入口。 */
 .wall-empty {
-  display: grid;
-  align-content: center;
-  justify-items: center;
-  gap: var(--space-sm);
-  min-height: min(34dvh, calc(var(--space-2xl) * 6));
-  margin-block: var(--space-md);
-  padding: var(--space-lg);
-  border: 1px dashed var(--color-rule-2);
-  border-radius: var(--radius-md);
-  text-align: center;
+  display: flex;
+  flex-wrap: wrap;
+  align-items: baseline;
+  gap: var(--space-xs) var(--space-md);
+  margin-block: var(--space-sm) var(--space-lg);
+  padding: var(--space-md) 0 var(--space-sm);
+  border-bottom: 1px solid var(--color-rule-2);
+  text-align: left;
 }
 
 .wall-empty[hidden] {
@@ -2204,14 +2248,23 @@ body:has(.go-float[data-show="true"]) .toast {
 
 .wall-empty h3 {
   font-family: var(--font-display);
-  font-size: var(--text-lg);
+  font-size: var(--text-md);
   color: var(--color-ink);
+}
+
+.wall-empty .btn {
+  margin-left: auto;
 }
 
 .wall-empty p {
   max-width: 26em;
   color: var(--color-ink-2);
   font-size: var(--text-sm);
+}
+
+/* 右下角浮著的廢字簍（64–72px）不能壓住成品牆最後一排：牆底留出它的高度。 */
+.wall:not(:empty) {
+  padding-bottom: calc(var(--space-2xl) * 1.5);
 }
 
 @media (max-width: 40rem) {

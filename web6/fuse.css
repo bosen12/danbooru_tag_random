@@ -117,6 +117,13 @@ body.fuse {
   color: var(--color-muted);
 }
 
+/* 空的時候畫面上只有那條繩子，不再配一句說明（像區塊說明，不像繩子）。
+ * 字留給螢幕閱讀器；高度照留，第一張夾上去時整頁不跳。 */
+.line-empty {
+  color: transparent;
+  user-select: none;
+}
+
 .line-empty[hidden] {
   display: none;
 }
@@ -1252,11 +1259,13 @@ body.fuse {
   color: var(--color-ink-2);
 }
 
+/* 起手式像一頁排字樣本：一行一組、行間一條細線，不是三張等寬的選項卡。 */
 .starters {
   display: grid;
-  grid-template-columns: repeat(auto-fill, minmax(12.5rem, 1fr));
-  gap: var(--space-xs);
+  grid-template-columns: minmax(0, 1fr);
+  gap: 0;
   width: 100%;
+  max-width: 36rem;
   margin-top: var(--space-xs);
 }
 
@@ -1273,13 +1282,18 @@ body.fuse {
   align-items: center;
   column-gap: var(--space-sm);
   min-height: 48px;
-  padding: 6px var(--space-sm) 6px 6px;
-  border: 1px solid var(--color-rule-2);
-  border-radius: var(--radius-sm);
-  background: var(--color-paper-2);
+  padding: 7px var(--space-xs) 7px 2px;
+  border: 0;
+  border-top: 1px solid var(--color-rule-2);
+  border-radius: 0;
+  background: transparent;
   color: var(--color-ink);
   text-align: left;
-  transition: border-color var(--dur-micro) var(--ease-out), translate var(--dur-micro) var(--ease-out);
+  transition: background-color var(--dur-micro) var(--ease-out), padding-left var(--dur-short) var(--ease-out);
+}
+
+.starter:last-of-type {
+  border-bottom: 1px solid var(--color-rule-2);
 }
 
 .starter-arts {
@@ -1313,9 +1327,10 @@ body.fuse {
 }
 
 @media (hover: hover) and (pointer: fine) {
+  /* 指著哪一行，那一行往右推一點點、墊上淡淡的紙色，像排字時用手指按住那一行。 */
   .starter:hover {
-    border-color: var(--color-ink-2);
-    translate: 0 -2px;
+    background: color-mix(in oklch, var(--color-paper-2) 70%, transparent);
+    padding-left: var(--space-xs);
   }
 }
 
@@ -1433,11 +1448,24 @@ body.fuse {
   display: none;
 }
 
+/* 還沒付印：一張還沒上墨的紙，四角是套準角線（跟墨池的合成池同一種記號），不畫整圈虛線。 */
 .preview[data-empty="true"] .pv-sheet {
+  --reg: var(--color-rule);
+  --reg-len: 16px;
+  --reg-w: 1.5px;
   aspect-ratio: auto;
   min-height: calc(var(--space-xl) * 4);
-  border: 1px dashed var(--color-rule);
-  background: var(--press-bed);
+  border: 0;
+  background:
+    linear-gradient(var(--reg), var(--reg)) top left / var(--reg-len) var(--reg-w) no-repeat,
+    linear-gradient(var(--reg), var(--reg)) top left / var(--reg-w) var(--reg-len) no-repeat,
+    linear-gradient(var(--reg), var(--reg)) top right / var(--reg-len) var(--reg-w) no-repeat,
+    linear-gradient(var(--reg), var(--reg)) top right / var(--reg-w) var(--reg-len) no-repeat,
+    linear-gradient(var(--reg), var(--reg)) bottom left / var(--reg-len) var(--reg-w) no-repeat,
+    linear-gradient(var(--reg), var(--reg)) bottom left / var(--reg-w) var(--reg-len) no-repeat,
+    linear-gradient(var(--reg), var(--reg)) bottom right / var(--reg-len) var(--reg-w) no-repeat,
+    linear-gradient(var(--reg), var(--reg)) bottom right / var(--reg-w) var(--reg-len) no-repeat,
+    var(--press-bed);
   color: var(--color-ink-2);
   box-shadow: none;
 }
@@ -1796,9 +1824,11 @@ body.fuse {
   align-items: center;
   min-height: 3.75rem;
   padding: 5px 8px 5px 5px;
-  border: 1px solid var(--color-rule-2);
-  border-radius: var(--radius-sm);
-  background: var(--color-paper-2);
+  /* 四張試印是四條校樣，不是四張設定卡：不包框、不墊底，只在下面一條細線。選中的那條才墊紙色、左端蓋一小段朱。 */
+  border: 0;
+  border-bottom: 1px solid var(--color-rule-2);
+  border-radius: 0;
+  background: transparent;
   color: var(--color-ink-2);
   text-align: left;
   transition: border-color var(--dur-micro) var(--ease-out), translate var(--dur-short) var(--ease-out), background-color var(--dur-micro) var(--ease-out), outline-color var(--dur-short) var(--ease-out);
@@ -1915,8 +1945,9 @@ body.fuse {
 }
 
 .trial[aria-checked="true"] {
-  border-color: var(--color-accent);
-  background: color-mix(in oklch, var(--color-accent) 10%, var(--color-paper-2));
+  border-bottom-color: color-mix(in oklch, var(--color-accent) 60%, var(--color-rule-2));
+  background: color-mix(in oklch, var(--color-accent) 8%, var(--color-paper-2));
+  box-shadow: inset 3px 0 0 var(--color-accent);
 }
 
 .trial[aria-checked="true"] .trial-letter {
@@ -1925,8 +1956,7 @@ body.fuse {
 
 @media (hover: hover) and (pointer: fine) {
   .trial:hover:not([aria-checked="true"]) {
-    border-color: var(--color-ink-2);
-    translate: 0 -2px;
+    background: color-mix(in oklch, var(--color-paper-2) 70%, transparent);
   }
 }
 
@@ -1939,22 +1969,23 @@ body.fuse {
   outline-offset: 2px;
 }
 
-/* 換一批：四張像一疊樣張被翻過。 */
+/* 換一批：四張像一疊樣張被翻過。以前每張 540ms 再錯開 120ms，連按幾次會覺得慢；
+ * 現在 320ms、錯開縮到 micro 的四分之一，翻的幅度也收小，手感跟點牌那種短回饋一致。 */
 .trials.is-shuffling .trial {
-  animation: shuffle var(--dur-xl) var(--ease-out) both;
+  animation: shuffle var(--dur-medium) var(--ease-out) both;
 }
 
-.trials.is-shuffling .trial:nth-child(2) { animation-delay: 40ms; }
-.trials.is-shuffling .trial:nth-child(3) { animation-delay: 80ms; }
-.trials.is-shuffling .trial:nth-child(4) { animation-delay: 120ms; }
+.trials.is-shuffling .trial:nth-child(2) { animation-delay: calc(var(--dur-micro) / 4); }
+.trials.is-shuffling .trial:nth-child(3) { animation-delay: calc(var(--dur-micro) / 2); }
+.trials.is-shuffling .trial:nth-child(4) { animation-delay: calc(var(--dur-micro) * 3 / 4); }
 
 @keyframes shuffle {
   0% {
     transform: none;
   }
   35% {
-    transform: translateY(-6px) rotate(-2deg);
-    opacity: 0.6;
+    transform: translateY(-4px) rotate(-1deg);
+    opacity: 0.7;
   }
   100% {
     transform: none;
