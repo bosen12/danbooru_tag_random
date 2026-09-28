@@ -43,10 +43,27 @@ SHA256 = "27dd32e4844719822a0c00c210a14a87abcb821b1597a59d2a100c82d2681f2c"
 EXPECTED = 1161  # 這一包裡全年齡的張數
 
 
+JOBS = ROOT / "scripts" / "card_jobs.json"
+
+
 def have_enough() -> bool:
-    """這一包已經解過，或 manifest 裡全年齡、圖也在的已經夠了（自己烘好的也算）。"""
+    """要不要下載：這一包解過了，或「現在詞庫裡每一張全年齡卡都已經有圖」（自己烘的也算）。
+
+    以前是數 manifest 裡全年齡的圖有沒有到 EXPECTED 張。詞庫一刪字（例如拿掉停用的 cel shading），
+    本機就少一張、永遠到不了那個數字，於是每次啟動都整包 55 MB 重抓，還把刪掉的那張加回來。
+    現在照 scripts/card_jobs.json（跟著詞庫產生的卡面清單）一張一張看檔案在不在。
+    """
     if MARKER.exists():
         return True
+    try:
+        jobs = json.loads(JOBS.read_text(encoding="utf-8"))
+        jobs = jobs if isinstance(jobs, list) else jobs.get("jobs", [])
+    except (OSError, ValueError):
+        jobs = None
+    if jobs:
+        wanted = [j for j in jobs if isinstance(j, dict) and j.get("rating", "general") == "general" and j.get("file")]
+        return bool(wanted) and all((CARDS / str(j["file"])).exists() for j in wanted)
+    # 讀不到卡面清單（檔案被刪了）：退回舊的數張數。
     try:
         manifest = json.loads((CARDS / "manifest.json").read_text(encoding="utf-8"))
     except (OSError, ValueError):
