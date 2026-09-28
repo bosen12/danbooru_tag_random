@@ -248,6 +248,7 @@ async function boot() {
   renderCase();
   renderLine();
   for (const p of prints) if (p.status === "queued" && p.live && p.job) generator.resume(p);
+  for (const p of prints) if (p.status === "done" && p.hiresJob) hiresRun.resume(p, p.hiresJob);
   attachPeek($("case-grid"), ".card[data-tag]", peekInfo);
   // 生圖種子一換，同一張試印對應的成品就不一樣了：成品、付印那條、試印上的小圖都要重畫。
   onSeedChange(() => {
@@ -649,8 +650,10 @@ const hiresRun = createHires({
       renderPrintBar();
     }
     paintLineItem(p);
-    if (!p.hi) savePrints();
+    // 做完、停掉、做壞了都存一次（做壞的那筆工作編號要從存檔拿掉，不然每次重新整理都再接一次）。
+    if (!p.hi || p.hi.status === "failed") savePrints();
   },
+  save: () => savePrints(),
   done: (p) => {
     sfx.hiresDone();
     haptic(14);
@@ -805,6 +808,7 @@ function savePrints() {
       image: p.image || null,
       baseImage: p.baseImage || null,
       hires: p.hires || null,
+      hiresJob: S.hiresJobOf(p),
       job: p.job || null,
       live: !!p.job && (p.status === "running" || p.status === "queued"),
       note: p.status === "done" ? "" : p.note || "",

@@ -97,6 +97,11 @@ export function createHires(hooks) {
     update: (task) => {
       const t = task.target;
       if (t.hi?.task !== task.id) return; // 已經被取消或換成新的一次
+      // 拿到伺服器的工作編號就先存一次：做到一半重新整理頁面，用它接回去（跟付印一樣）。
+      if (task.job && t.hi.job !== task.job) {
+        t.hi = { ...t.hi, job: task.job };
+        hooks.save && hooks.save(t);
+      }
       if (task.status === "done") {
         tasks.delete(task.id);
         if (!t.baseImage) t.baseImage = t.image;
@@ -145,6 +150,24 @@ export function createHires(hooks) {
       t.hi = { task: task.id, mode, scale, status: "queued", progress: 0, note: "" };
       hooks.update(t);
       gen.enqueue(task);
+      return true;
+    },
+    /** 重新整理之前做到一半的那張（存檔裡有 hiresJob）：用工作編號接回去，從頭重播進度。 */
+    resume(t, saved) {
+      if (!saved || !saved.job || !HIRES_MODES[saved.mode] || hiresBusy(t)) return false;
+      const task = {
+        id: "h" + Date.now().toString(36) + Math.random().toString(36).slice(2, 5),
+        target: t,
+        mode: saved.mode,
+        scale: saved.scale,
+        positive: t.positive,
+        seed: 0,
+        job: saved.job,
+      };
+      tasks.set(task.id, task);
+      t.hi = { task: task.id, mode: saved.mode, scale: saved.scale, status: "queued", progress: 0, note: "接回剛才那張…", job: saved.job };
+      hooks.update(t);
+      gen.resume(task);
       return true;
     },
     /** 停這一張的 Hires。 */

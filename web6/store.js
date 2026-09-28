@@ -57,6 +57,12 @@ export const loadUi = () => read(KEY.ui, {});
 export const saveUi = (u) => write(KEY.ui, u);
 
 /** 成品只存得下的欄位：預覽幀（base64）很大，不存。 */
+/** 做到一半的 Hires 要存的那一點（墨池、疊印台共用）。 */
+export function hiresJobOf(t) {
+  const hi = t && t.hi;
+  return hi && hi.job && (hi.status === "queued" || hi.status === "running") ? { job: hi.job, mode: hi.mode, scale: hi.scale } : null;
+}
+
 export function saveShots(shots) {
   write(
     KEY.shots,
@@ -79,6 +85,8 @@ export function saveShots(shots) {
       // Hires 過的：image 是大圖，baseImage 是原圖（再 Hires 從原圖放大、也可以還原）。
       baseImage: s.baseImage || null,
       hires: s.hires || null,
+      // Hires 做到一半：伺服器那邊的工作編號，重新整理之後接回去。
+      hiresJob: hiresJobOf(s),
       // 伺服器那邊的出圖工作。畫到一半就重新整理的話，下次打開用它接回去（gen.js 的 resume）。
       job: s.job || null,
       live: !!s.job && (s.status === "running" || s.status === "queued"),

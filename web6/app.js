@@ -131,6 +131,8 @@ async function boot() {
   $("wall-start").addEventListener("click", () => $("go-bar").querySelector(".btn-primary")?.click());
   renderTrash();
   for (const s of resumable) generator.resume(s);
+  // Hires 做到一半就重新整理的：接回去。
+  for (const s of shots) if (s.status === "done" && s.hiresJob) hiresRun.resume(s, s.hiresJob);
   for (const root of [$("lib-grid"), $("pool-well"), $("wall"), hand?.fan]) attachPeek(root, ".card[data-tag]", peekInfo);
   document.addEventListener("keydown", onKey);
   window.addEventListener("resize", () => {
@@ -1146,8 +1148,10 @@ const generator = createGenerator({
 const hiresRun = createHires({
   update: (shot) => {
     updateShot(shot);
-    if (!shot.hi) S.saveShots(shots);
+    // 做完、停掉、做壞了都存一次（做壞的那筆工作編號要從存檔拿掉，不然每次重新整理都再接一次）。
+    if (!shot.hi || shot.hi.status === "failed") S.saveShots(shots);
   },
+  save: () => S.saveShots(shots),
   done: (shot) => {
     sfx.hiresDone();
     toast(`Hires 好了：${shot.hires.width}×${shot.hires.height}`);
