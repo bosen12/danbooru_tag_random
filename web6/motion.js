@@ -351,6 +351,13 @@ function wirePress() {
 
 export function initMotion() {
   wirePress();
+  // 發牌（.dealt）的動畫是 fill: both，播完如果 class 還掛著，那個「已結束」的動畫就一直留著：
+  // 墨池抽 50 次牌留下 1350 個，而且它的 transform: none 壓過牌 hover 時的抬起。
+  // 播完就拿掉 class，最後一格本來就等於牌的原樣，看不出差別。
+  document.addEventListener("animationend", (e) => {
+    const t = e.target;
+    if ((e.animationName === "deal" || e.animationName === "fade-in") && t.classList?.contains("dealt")) t.classList.remove("dealt");
+  });
   new MutationObserver(schedule).observe(document.body, {
     subtree: true,
     childList: true,
