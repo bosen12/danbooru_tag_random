@@ -1921,13 +1921,18 @@ function flyToDetail(src, sheetEl) {
   for (const a of anims) a.currentTime = 0;
   if (!to.width) return;
   const f = (src.querySelector(".card-art") || src).cloneNode(true);
-  Object.assign(f.style, { position: "fixed", left: from.left + "px", top: from.top + "px", width: from.width + "px", height: from.height + "px", margin: "0", zIndex: "200", pointerEvents: "none", overflow: "hidden", borderRadius: "6px" });
+  // 複製品直接放在落點、用落點的大小，從起點「縮放＋位移」過去（FLIP）。以前動的是
+  // left／top／width／height，每一格都要排版，生圖時主執行緒一忙就掉格；transform 交給合成器。
+  // 用大的尺寸往小的縮，圖不會在放大途中糊掉。
+  Object.assign(f.style, { position: "fixed", left: to.left + "px", top: to.top + "px", width: to.width + "px", height: to.height + "px", margin: "0", zIndex: "200", pointerEvents: "none", overflow: "hidden", borderRadius: "6px", transformOrigin: "0 0", willChange: "transform" });
   document.body.append(f);
   dst.style.visibility = "hidden";
+  const sx = from.width / to.width;
+  const sy = from.height / to.height;
   const anim = f.animate(
     [
-      { left: from.left + "px", top: from.top + "px", width: from.width + "px", height: from.height + "px" },
-      { left: to.left + "px", top: to.top + "px", width: to.width + "px", height: to.height + "px" },
+      { transform: `translate(${(from.left - to.left).toFixed(1)}px, ${(from.top - to.top).toFixed(1)}px) scale(${sx.toFixed(4)}, ${sy.toFixed(4)})` },
+      { transform: "none" },
     ],
     { duration: DUR.long, easing: css(CURVE.out), fill: "forwards" }
   );

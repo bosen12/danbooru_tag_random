@@ -333,10 +333,10 @@ body #wf-pick-btn.has {
   align-items: center;
   gap: var(--space-xs) var(--space-md);
   padding: var(--space-xs) var(--space-md);
-  /* 半透明會讓底下捲過去的按鈕字透上來跟字標疊在一起（手機上最明顯），加一層霧。 */
-  background: color-mix(in oklch, var(--color-paper) 88%, transparent);
-  -webkit-backdrop-filter: blur(12px) saturate(1.1);
-  backdrop-filter: blur(12px) saturate(1.1);
+  /* 半透明會讓底下捲過去的按鈕字透上來跟字標疊在一起（手機上最明顯）。以前靠 88% 底色加一層
+   * 毛玻璃擋；但它黏在頂端，每捲一格都要重算背後的模糊，生圖時跟 ComfyUI 搶顯示卡。
+   * 改成 96% 的底色，字一樣透不上來，捲動不必再算模糊。 */
+  background: color-mix(in oklch, var(--color-paper) 96%, transparent);
   border-bottom: 1px solid var(--color-rule-2);
 }
 
@@ -3211,32 +3211,41 @@ body:has(.fav-hand) .tray-bridge { display: none; }
   inset: 0;
   z-index: 3;
   pointer-events: none;
+  /* 壓暗和套準線是整張高、往下推的：推出畫框的那一截要切掉。 */
+  overflow: hidden;
   --y: calc(var(--p, 0) * 100%);
 }
 
+/* 進度每更新一次就滑一段。以前動的是 top：每一格都要排版，而這正好發生在生圖的時候，
+ * 主執行緒一忙就掉格。改成整張高的一層用 translateY 往下推（百分比是自己的高＝畫框的高），
+ * 交給合成器。 */
 .hv-dim {
   position: absolute;
-  left: 0;
-  right: 0;
-  bottom: 0;
-  top: var(--y);
+  inset: 0;
   background: var(--color-shade);
-  transition: top var(--dur-long) var(--ease-out);
+  transform: translateY(var(--y));
+  transition: transform var(--dur-long) var(--ease-out);
 }
 
 .hv-rule {
   position: absolute;
+  inset: 0;
+  transform: translateY(var(--y));
+  transition: transform var(--dur-long) var(--ease-out);
+}
+
+.hv-rule::before {
+  content: "";
+  position: absolute;
   left: 0;
   right: 0;
-  top: var(--y);
+  top: -1px;
   height: 2px;
-  margin-top: -1px;
   background:
     linear-gradient(var(--color-ink), var(--color-ink)) left / 10px 100% no-repeat,
     linear-gradient(var(--color-ink), var(--color-ink)) right / 10px 100% no-repeat,
     var(--color-accent);
   box-shadow: 0 0 12px var(--color-accent);
-  transition: top var(--dur-long) var(--ease-out);
 }
 
 /* 預覽幀：蓋滿整張，跟付印時一樣看得到它一步步重畫。有預覽了就不再壓暗，掃描線照走。 */

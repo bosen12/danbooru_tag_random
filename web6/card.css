@@ -454,11 +454,21 @@ button.card:active {
     border-color var(--dur-micro) var(--ease-out),
     box-shadow var(--dur-micro) var(--ease-out),
     scale var(--dur-short) var(--ease-out),
-    bottom var(--dur-short) var(--ease-out);
+    translate var(--dur-short) var(--ease-out);
 }
 
 .fav-hand[data-hidden="true"] {
   display: none;
+}
+
+/* 打開／收起那一下（hand.js morphTo）：外框靠 clip-path 裁，不動寬高。
+   - width 的轉場先關掉，不然它會在底下另外跑一段每格排版的動畫。
+   - 毛玻璃先關掉、底色加深一點：裁切範圍每格在變，模糊要一直重算，生圖時跟 ComfyUI 搶顯示卡。 */
+.fav-hand.is-morphing {
+  transition-property: border-color, box-shadow, scale, translate;
+  -webkit-backdrop-filter: none;
+  backdrop-filter: none;
+  background: color-mix(in oklch, var(--color-paper) 97%, transparent);
 }
 
 /* 收起來的那 300ms：外框在縮，裡面的東西還要看得到（被外框切掉、牌一張張沉下去）。 */
@@ -486,9 +496,10 @@ button.card:active {
   display: none;
 }
 
-/* 墨池底下的浮動按鈕列出現時，托盤讓到它上面。 */
+/* 墨池底下的浮動按鈕列出現時，托盤讓到它上面。以前改 bottom（10px → 72px）：托盤帶毛玻璃，
+ * 每一格都要排版、重算模糊，而捲到成品牆看圖正是生圖的時候。改用 translate 往上推 62px。 */
 body:has(.go-float[data-show="true"]) .fav-hand {
-  bottom: 72px;
+  translate: -50% -62px;
 }
 
 /* 拖牌經過：托盤描一圈（可以放），壓在上面亮起來。 */

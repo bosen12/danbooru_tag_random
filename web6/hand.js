@@ -116,7 +116,7 @@ export function createHand({
   ro?.observe(el);
   // 量的是托盤頂端到視窗底邊（墨池的浮動按鈕列出來時托盤會墊高）：角落的按鈕要讓到這麼高。
   el.addEventListener("transitionend", (e) => {
-    if (e.target === el && e.propertyName === "bottom") syncSpace();
+    if (e.target === el && e.propertyName === "translate") syncSpace();
   });
   function syncSpace() {
     const cur = document.documentElement.style.getPropertyValue("--fav-h");
@@ -500,37 +500,79 @@ export function createHand({
    * 牌跟著浮上來（沉下去）。收起來的時候牌還要看得到一下，所以先留著 .is-collapsing。
    * 從完全藏著（沒有牌）變出來：整個托盤從底下浮上來。
    */
+  // 生圖時會卡：以前動的是外框的 width／height／border-radius —— 每一格都要在主執行緒排版，
+  // 托盤的 ResizeObserver 跟著每格量一次、寫 --fav-h 讓整頁再排；外框還帶毛玻璃，尺寸一變
+  // 就得重算背後那塊模糊，跟 ComfyUI 搶顯示卡。主執行緒一被生圖的進度事件佔住，整段就掉格。
+  // 現在盒子只在開頭變一次大小，動畫只改 clip-path 的裁切範圍（不排版、不觸發 ResizeObserver），
+  // 變形那一下關掉毛玻璃。收起時先把盒子釘在原來的大小，裁完才放回去。
+  let morphEnd = null;
   function morphTo(change, changed) {
+    // 上一段還沒播完就又按：先收尾（放開釘住的大小），再量「變之前」。
+    if (morphEnd) morphEnd();
     const wasHidden = el.dataset.hidden === "true";
     const before = !wasHidden ? el.getBoundingClientRect() : null;
+    if (!changed || reduced()) {
+      change();
+      return;
+    }
+    const cs = before ? getComputedStyle(el) : null;
+    const pinned = cs ? { padding: cs.padding, radius: cs.borderRadius } : null;
+    el.classList.add("is-morphing");
     change();
-    if (!changed || reduced()) return;
     const after = el.dataset.hidden === "true" ? null : el.getBoundingClientRect();
-    for (const a of el.getAnimations()) if (a.id === "fav-morph") a.cancel();
-    if (!after) return;
+    if (!after) {
+      el.classList.remove("is-morphing");
+      return;
+    }
     if (!before) {
-      el.animate([{ opacity: 0, translate: "-50% 16px" }, { opacity: 1, translate: "-50% 0" }], { duration: DUR.medium, easing: css(CURVE.out), id: "fav-morph" });
+      const a = el.animate([{ opacity: 0, transform: "translateY(16px)" }, { opacity: 1, transform: "none" }], { duration: DUR.medium, easing: css(CURVE.out), id: "fav-morph" });
+      const done = () => {
+        if (morphEnd !== done) return;
+        morphEnd = null;
+        el.classList.remove("is-morphing");
+      };
+      morphEnd = done;
+      a.onfinish = done;
+      a.oncancel = done;
       riseCards(80);
       return;
     }
     const closing = !open;
-    if (closing) el.classList.add("is-collapsing");
+    // 裁切框用「大的那個盒子」當座標：打開時盒子已經是大的；收起時把盒子釘在原來的大小。
+    const box = closing ? before : after;
+    const small = closing ? after : before;
+    const inset = `${(small.top - box.top).toFixed(1)}px ${(box.right - small.right).toFixed(1)}px ${(box.bottom - small.bottom).toFixed(1)}px ${(small.left - box.left).toFixed(1)}px`;
+    // 圓角只到標籤自己的圓（高度的一半），不要用 999px：一路插值過去，托盤中途會變成膠囊把牌切成橢圓。
+    const pill = `inset(${inset} round ${(small.height / 2).toFixed(1)}px)`;
+    const full = "inset(0px 0px 0px 0px round 16px)";
+    if (closing) {
+      el.classList.add("is-collapsing");
+      el.style.width = before.width + "px";
+      el.style.height = before.height + "px";
+      el.style.padding = pinned.padding;
+      el.style.borderRadius = pinned.radius;
+    }
     el.style.overflow = "hidden";
-    const a = el.animate(
-      [
-        // 圓角只到標籤自己的圓（高度的一半），不要用 999px：一路插值過去，托盤中途會變成膠囊把牌切成橢圓。
-        { width: before.width + "px", height: before.height + "px", borderRadius: (closing ? 16 : before.height / 2) + "px" },
-        { width: after.width + "px", height: after.height + "px", borderRadius: (closing ? after.height / 2 : 16) + "px" },
-      ],
-      { duration: closing ? 300 : 360, easing: css(closing ? CURVE.inOut : CURVE.out), id: "fav-morph" }
-    );
+    const a = el.animate([{ clipPath: closing ? full : pill }, { clipPath: closing ? pill : full }], {
+      duration: closing ? 300 : 360,
+      easing: css(closing ? CURVE.inOut : CURVE.out),
+      id: "fav-morph",
+    });
     // 沉下去的牌停在看不見的地方，等外框縮完、托盤真的收起來才一起復原（不然會閃回來一下）。
     const sunk = [];
     const done = () => {
-      el.classList.remove("is-collapsing");
+      if (morphEnd !== done) return;
+      morphEnd = null;
+      a.cancel();
+      el.classList.remove("is-collapsing", "is-morphing");
       el.style.overflow = "";
+      el.style.width = "";
+      el.style.height = "";
+      el.style.padding = "";
+      el.style.borderRadius = "";
       for (const s of sunk) s.cancel();
     };
+    morphEnd = done;
     a.onfinish = done;
     a.oncancel = done;
     if (closing) {
