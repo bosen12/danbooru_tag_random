@@ -1859,6 +1859,160 @@ body #wf-pick-btn.has {
   transform: scale(0.96);
 }
 
+/* 廢字簍開著（trash-panel.js）：簍子本身描實線；旁邊浮出的面板不擋字盒。 */
+.trash[data-open="true"] {
+  border-style: solid;
+  border-color: var(--color-accent);
+  color: var(--color-accent-ink);
+  background: var(--color-accent-3);
+}
+
+.trash-panel {
+  position: fixed;
+  right: var(--space-md);
+  bottom: calc(var(--space-md) + 76px + var(--space-sm) + env(safe-area-inset-bottom));
+  z-index: 27;
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-xs);
+  width: min(24rem, calc(100vw - 2 * var(--space-md)));
+  /* 上面留給桅杆（約 5rem），下面是廢字簍：面板再高也不會頂出畫面。 */
+  max-height: min(36rem, calc(100dvh - 76px - var(--space-md) - var(--space-sm) - 5rem - env(safe-area-inset-bottom)));
+  padding: var(--space-sm) var(--space-md) var(--space-md);
+  border-radius: var(--radius-md);
+  border: 1px solid var(--color-rule);
+  background: color-mix(in oklch, var(--color-paper-2) 96%, transparent);
+  box-shadow: 0 24px 60px var(--color-shade);
+  transform-origin: 100% 100%;
+}
+
+.trash-panel[hidden] {
+  display: none;
+}
+
+/* 面板底下那個小尖角，指著廢字簍。 */
+.trash-panel::after {
+  content: "";
+  position: absolute;
+  right: 30px;
+  bottom: -7px;
+  width: 14px;
+  height: 14px;
+  rotate: 45deg;
+  background: inherit;
+  border-right: 1px solid var(--color-rule);
+  border-bottom: 1px solid var(--color-rule);
+}
+
+.tp-head {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: var(--space-sm);
+}
+
+.tp-title {
+  font-size: var(--text-lg);
+}
+
+.tp-title b {
+  margin-left: var(--space-xs);
+  font-family: var(--font-mono);
+  font-weight: 500;
+  font-size: var(--text-sm);
+  color: var(--color-muted);
+}
+
+.tp-hint,
+.tp-empty {
+  font-size: var(--text-xs);
+  color: var(--color-muted);
+}
+
+.tp-empty[hidden] {
+  display: none;
+}
+
+.tp-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(64px, 1fr));
+  gap: var(--space-xs);
+  grid-auto-rows: max-content;
+  min-height: 0;
+  overflow-y: auto;
+  overscroll-behavior: contain;
+  padding: 4px 2px;
+}
+
+.tp-grid .card {
+  --card-w: 100%;
+  width: 100%;
+  font-size: 9.5px;
+  cursor: pointer;
+}
+
+.tp-grid .card .card-art {
+  filter: grayscale(0.85);
+  transition: filter var(--dur-short) var(--ease-out);
+}
+
+@media (hover: hover) and (pointer: fine) {
+  .tp-grid .card:hover .card-art {
+    filter: none;
+  }
+}
+
+.tp-acts {
+  display: flex;
+  gap: var(--space-2xs);
+}
+
+/* 手機：面板縮成一條（一排、左右捲），把畫面留給字盒；說明字收起來。 */
+@media (max-width: 40rem) {
+  .trash-panel {
+    left: var(--space-sm);
+    right: var(--space-sm);
+    width: auto;
+    gap: var(--space-2xs);
+    padding: var(--space-xs) var(--space-sm) var(--space-sm);
+  }
+
+  .trash-panel::after {
+    right: 42px;
+  }
+
+  .tp-hint {
+    display: none;
+  }
+
+  .tp-grid {
+    grid-auto-flow: column;
+    grid-template-columns: none;
+    grid-auto-columns: 52px;
+    overflow-x: auto;
+    overflow-y: hidden;
+  }
+}
+
+/* 面板開著：字盒整欄描一圈紅色虛線，牌的游標是「丟掉」；已經封鎖的點一下是撿回來。 */
+body[data-trash-edit="true"] #lib-grid {
+  outline: 2px dashed color-mix(in oklch, var(--color-accent) 70%, transparent);
+  outline-offset: 4px;
+  border-radius: 8px;
+}
+
+body[data-trash-edit="true"] #lib-grid .card[data-state="banned"] {
+  cursor: pointer;
+  opacity: 0.6;
+}
+
+@media (max-width: 68.74rem) {
+  .trash-panel {
+    translate: 0 calc(-1 * var(--fav-h, 0px));
+    max-height: min(36rem, calc(100dvh - 76px - var(--space-md) - var(--space-sm) - 5rem - var(--fav-h, 0px) - env(safe-area-inset-bottom)));
+  }
+}
+
 /* ---------- 拖曳 ---------- */
 
 body[data-dragging="true"] {

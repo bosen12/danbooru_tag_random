@@ -35,6 +35,7 @@ import { el, openSheet, anyOverlay, toast, runToastAction, ICONS } from "./ui.js
 import { createDrag, inkRing } from "./drag.js";
 import { initMotion, settleMotion, flip, flipBy, leave, enter, confirmButton, gatherHome, flight, seat, refuse, reducedMotion, CURVE, DUR, css } from "./motion.js";
 import { createHand } from "./hand.js";
+import { createTrashPanel } from "./trash-panel.js";
 import { createGenerator, comfyOnline, viewSrc, tabTitle, watchLink, LINK_LABEL } from "./gen.js";
 import { genSeed, mountSeedControl, seedUseButton } from "./seed-control.js";
 import { attachPeek } from "./card-peek.js";
@@ -117,6 +118,7 @@ async function boot() {
   for (const s of resumable) s.status = "queued";
 
   buildHand();
+  buildTrashPanel();
   initLoraPicker();
   initWorkflow({ sampling: true });
   pingLoop();
@@ -454,6 +456,8 @@ function buildHand() {
       if (r) flyInto(t, r);
     },
     onChange: () => {
+      // 挑偏好卡牌跟丟廢字簍都是「點字盒的牌」：同時只能開一個。
+      if (hand.editing && trashPanel?.isOpen) trashPanel.close();
       renderGoBar();
       hand.mark($("lib-grid"));
     },
@@ -469,6 +473,12 @@ function libCard(card) {
   if (hand?.has(card.tag)) node.dataset.inHand = "true";
   node.addEventListener("click", () => {
     if (hand?.editing) return void hand.toggle(card.tag, node.getBoundingClientRect());
+    // 廢字簍開著：點一下丟進去，再點一次撿回來（可以一直點，不用開關）。
+    if (trashPanel?.isOpen) {
+      if (bans.has(card.tag)) unban(card.tag);
+      else ban(card.tag);
+      return;
+    }
     if (pool.has(card.tag)) unpin(card.tag);
     else if (bans.has(card.tag)) showCard(card.tag, "library");
     else {
@@ -786,11 +796,10 @@ function unpin(tag, { viaDrag = false } = {}) {
 function ban(tag, { viaDrag = false, from = null } = {}) {
   if (!lib.byTag.has(tag)) return;
   // 用按鈕或 Delete 封鎖的：牌從它現在的位置（池裡或字盒裡；從詳情按的就從那張大圖）轉著縮進廢字簍。
-  if (!viaDrag) {
-    const src = poolNode(tag) || libCardNode(tag);
-    if (from) flyToTrash(from);
-    else if (src) flyToTrash({ node: src, rect: src.getBoundingClientRect() });
-  }
+  const src = viaDrag ? null : from || ((n) => n && { node: n, rect: n.getBoundingClientRect() })(poolNode(tag) || libCardNode(tag));
+  // 面板開著：牌飛進面板裡（落在它的位置、原尺寸），不是縮進右下角的簍子。
+  const intoPanel = !!(trashPanel?.isOpen && src && src.rect.width && !reducedMotion());
+  if (src && !intoPanel) flyToTrash(src);
   if (hand?.has(tag)) hand.remove(tag, { quiet: true });
   // 揉紙聲在牌被吸進簍子的那一刻（拖的在放開後落進去，按的要先飛過去）。
   setTimeout(() => sfx.trash(), viaDrag ? DUR.short : DUR.long);
@@ -798,7 +807,13 @@ function ban(tag, { viaDrag = false, from = null } = {}) {
   pool = next.pinned;
   bans = next.userBanned;
   commitPins();
-  renderTrash(true);
+  renderTrash(true, { arriving: intoPanel ? tag : null });
+  if (intoPanel) {
+    const ghost = src.node.cloneNode(true);
+    ghost.classList.remove("dropped", "is-related", "is-clashing", "fav-card");
+    ghost.style.visibility = "";
+    flight(ghost, src.rect, () => trashPanel.nodeOf(tag), { endOpacity: 1, onLand: () => trashPanel.land(tag) });
+  }
 }
 
 /** 牌轉著縮進右下角的廢字簍（跟拖進去的吸入同一個樣子）。 */
@@ -824,9 +839,14 @@ function flyToTrash({ node, rect }) {
 }
 
 function unban(tag) {
-  bans.delete(tag);
+  if (!bans.delete(tag)) return;
   commitPins();
   renderTrash();
+  sfx.lift();
+  // 字盒那張撿回來的輕輕跳一下（看得出是哪張回來了）。
+  const n = libCardNode(tag);
+  if (n && !reducedMotion()) n.animate([{ transform: "translateY(-8px) scale(1.06)" }, { transform: "none" }], { duration: DUR.medium, easing: css(CURVE.out) });
+  announce(`「${zh(tag)}」撿回來了，之後又可能抽到`);
 }
 
 function commitPins(fresh) {
@@ -1900,80 +1920,48 @@ function flyToDetail(src, sheetEl) {
 
 /* ================= 廢字簍 ================= */
 
-function renderTrash(bump) {
+function renderTrash(bump, { arriving = null } = {}) {
   const t = $("trash");
   t.querySelector("b").textContent = bans.size;
-  t.setAttribute("aria-label", `廢字簍：封鎖了 ${bans.size} 個字，點開可以撿回來`);
+  t.setAttribute("aria-label", `廢字簍：封鎖了 ${bans.size} 個字，點開可以一直點字盒的牌丟進來`);
+  trashPanel?.sync([...bans].filter((x) => lib.byTag.has(x)), { arriving });
   if (bump && !matchMedia("(prefers-reduced-motion: reduce)").matches) {
     t.animate([{ transform: "scale(1)" }, { transform: "scale(1.15)" }, { transform: "scale(1)" }], { duration: DUR.short, easing: css(CURVE.out) });
   }
 }
 
-function showBans() {
-  const list = [...bans].filter((t) => lib.byTag.has(t));
-  const grid = list.length
-    ? el(
-        "div",
-        { class: "ban-grid" },
-        list.map((t) => {
-          const node = cardNode(lib.byTag.get(t), assets);
-          node.addEventListener("click", () => {
-            unban(t);
-            rescue(node);
-          });
-          return node;
-        })
-      )
-    : el("p", { class: "pool-empty" }, "廢字簍是空的。把不想再看到的字拖進來，以後就不會抽到。");
-  // 撿回來的那張往上浮起來淡掉（從簍子裡拿出來），旁邊的滑過來補位；標題的數字跟著少一個。
-  const rescue = (node, delay = 0) => {
-    const box = node.parentNode;
-    const done = () => {
-      flip(box, () => node.remove());
-      const left = box ? box.querySelectorAll(".card").length : 0;
-      const h = sheet.sheet.querySelector("h2");
-      if (h) h.textContent = `廢字簍・${left} 個字`;
-      if (!left && box) box.replaceWith(el("p", { class: "pool-empty" }, "都撿回來了。"));
-    };
-    if (matchMedia("(prefers-reduced-motion: reduce)").matches) return done();
-    node.animate(
-      [
-        { transform: "none", opacity: 1, filter: "grayscale(1)" },
-        { transform: "translateY(-6px) scale(1.05)", opacity: 1, filter: "none", offset: 0.35 },
-        { transform: "translateY(-26px) scale(0.9)", opacity: 0, filter: "none" },
-      ],
-      { duration: DUR.medium, delay, easing: css(CURVE.inOut), fill: "forwards" }
-    ).onfinish = done;
-  };
-  const sheet = openSheet(`廢字簍・${list.length} 個字`, el("div", {}, list.length ? el("p", { class: "tag-en", style: "margin-bottom:0.75rem" }, "點一張就撿回來（之後又可能抽到）。") : null, grid), {
-    wide: true,
-    foot: list.length
-      ? [
-          el("button", {
-            class: "btn",
-            type: "button",
-            onclick: () => {
-              bans = new Set();
-              commitPins();
-              renderTrash();
-              // 一張接一張浮起來，都起來了才關（最多等半秒多，牌再多也不拖）。
-              const cards = [...sheet.sheet.querySelectorAll(".ban-grid .card")];
-              if (matchMedia("(prefers-reduced-motion: reduce)").matches || !cards.length) return sheet.close();
-              const step = Math.min(40, 360 / cards.length);
-              cards.forEach((c, i) =>
-                c.animate(
-                  [
-                    { transform: "none", opacity: 1 },
-                    { transform: "translateY(-26px) scale(0.9)", opacity: 0 },
-                  ],
-                  { duration: DUR.medium, delay: i * step, easing: css(CURVE.inOut), fill: "forwards" }
-                )
-              );
-              setTimeout(() => sheet.close(), 320 + cards.length * step);
-            },
-          }, "全部撿回來"),
-        ]
-      : null,
+let trashPanel = null;
+
+/** 廢字簍的面板（trash-panel.js）：不擋畫面，開著的時候點字盒的牌就丟進來。 */
+function buildTrashPanel() {
+  trashPanel = createTrashPanel({
+    anchor: $("trash"),
+    makeNode: (t) => cardNode(lib.byTag.get(t), assets),
+    onRescue: (t) => unban(t),
+    onRescueAll: () => {
+      if (!bans.size) return;
+      const was = [...bans];
+      bans = new Set();
+      commitPins();
+      renderTrash();
+      sfx.lift();
+      toast(`${was.length} 個字都撿回來了`, {
+        action: {
+          label: "復原",
+          key: "Z",
+          run: () => {
+            bans = new Set([...was.filter((x) => lib.byTag.has(x)), ...bans]);
+            commitPins();
+            renderTrash(true);
+          },
+        },
+      });
+    },
+    onToggle: (open) => {
+      if (open && hand?.editing) hand.toggleEdit(false);
+      if (open) sfx.lift();
+    },
+    decorate: (node, t) => drag.attach(node, { tag: t, from: "trash" }),
   });
 }
 
@@ -1985,11 +1973,13 @@ const drag = createDrag({
   zones: () => [
     // 偏好卡牌：字盒、合成池的牌都可以拖進來（托盤浮在卡池上面，所以排第一個先認；池裡的等於收回手牌）。
     // 托盤上的牌拖一拖又放回托盤：當作沒拖（不能穿過托盤掉到底下的卡池）。
-    { id: "hand", el: hand?.el, accepts: () => !!hand },
+    { id: "hand", el: hand?.el, accepts: (p) => !!hand && p.from !== "trash" },
+    // 面板開著：拖進面板也是丟進廢字簍（落在面板裡那一格）。
+    { id: "trash-panel", el: trashPanel?.el, accepts: (p) => !!trashPanel?.isOpen && p.from !== "trash" },
     { id: "pool", el: $("pool-well"), accepts: (p) => p.from !== "pool" },
     // 丟進廢字簍：影子縮小、轉著被吸進去（drag.js 的 sink）。
-    { id: "trash", el: $("trash"), accepts: () => true, sink: true },
-    { id: "library", el: $("library"), accepts: (p) => p.from === "pool" || p.from === "hand" },
+    { id: "trash", el: $("trash"), accepts: (p) => p.from !== "trash", sink: true },
+    { id: "library", el: $("library"), accepts: (p) => p.from === "pool" || p.from === "hand" || p.from === "trash" },
   ],
   // 拖著經過托盤：要插進去的那一格先空出來。
   onMove: (zone, p, x) => hand?.hover(zone === "hand" ? x : null, p.tag),
@@ -2012,6 +2002,15 @@ const drag = createDrag({
       if (bans.has(p.tag)) bans.delete(p.tag);
       pin(p.tag);
       return poolNode(p.tag);
+    }
+    if (zone === "trash-panel") {
+      ban(p.tag, { viaDrag: true });
+      announce(`「${zh(p.tag)}」丟進廢字簍了，之後不會抽到`);
+      return trashPanel.nodeOf(p.tag);
+    }
+    if (zone === "library" && p.from === "trash") {
+      unban(p.tag);
+      return libCardNode(p.tag);
     }
     if (zone === "trash") {
       // 廢字簍自己會跳一下、數字加一；畫面上不用再多一個提示。
@@ -2040,6 +2039,9 @@ function onKey(e) {
   } else if (e.key === "p" || e.key === "P") {
     e.preventDefault();
     drawBatch(false);
+  } else if (e.key === "Escape" && trashPanel?.isOpen) {
+    trashPanel.close();
+    $("trash").focus({ preventScroll: true });
   } else if (e.key === "Escape" && generator.busy) {
     stopAll();
   } else if ((e.key === "z" || e.key === "Z") && runToastAction("Z")) {
@@ -2071,7 +2073,9 @@ watchGoBar();
     if (sfx.on) sfx.deal(3);
   });
 }
-$("trash").addEventListener("click", showBans);
+$("trash").addEventListener("click", () => trashPanel?.toggle());
+$("trash").setAttribute("aria-controls", "trash-panel");
+$("trash").setAttribute("aria-expanded", "false");
 $("trash").innerHTML = ICONS.trash + "<b>0</b><span>廢字簍</span>";
 $("pool-clear").addEventListener("click", () => {
   const before = [...pool];

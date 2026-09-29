@@ -1695,7 +1695,11 @@ const ALBUM_FIXTURE = [
   ok("清版／清空／一次撤回四張以上：先掃成一疊再整疊收回字盒（不各飛各的）", motion6.includes("export function gatherHome(") && fuse6.includes("sweepHome(toCase, toCase.map((s) => s.node.dataset.tag)") && fuse6.includes("if (leaveCase.length >= 4) sweepHome(") && app6.includes("gatherHome(toLib,"));
   const peekSrc = readFileSync(join(ROOT, "web/card-peek.js"), "utf8");
   ok("放大卡：停一下才出現、從牌那一側長出來、換到隔壁那張滑過去（離開延遲一下才收）", peekSrc.includes("const INTENT_MS = 120;") && peekSrc.includes("const LEAVE_MS = 80;") && peekSrc.includes('peek.classList.toggle("is-gliding", wasShown);') && peekSrc.includes('p.dataset.side = side;'));
-  ok("墨池廢字簍：撿回來的浮起來、旁邊補位、標題數字跟著變；全部撿回來一張張起來", app6.includes("const rescue = (node, delay = 0) =>") && app6.includes("廢字簍・${left} 個字") && app6.includes("都撿回來了。"));
+  {
+    const tp6 = readFileSync(join(ROOT, "web6/trash-panel.js"), "utf8");
+    ok("墨池廢字簍：開著的面板不擋畫面，點字盒的牌一直丟進去、再點一次撿回來；牌飛進面板；撿回來的浮起來、旁邊補位", !tp6.includes("openSheet") && tp6.includes("document.body.dataset.trashEdit") && app6.includes("if (trashPanel?.isOpen) {") && app6.includes("if (bans.has(card.tag)) unban(card.tag);") && app6.includes("flight(ghost, src.rect, () => trashPanel.nodeOf(tag)") && tp6.includes("flip(grid, mutate)") && tp6.includes('translateY(-30px) scale(0.9)'));
+    ok("墨池廢字簍：跟挑偏好卡牌同時只開一個；Esc 收起；全部撿回來可以 Z 復原；可以拖進面板、從面板拖回字盒", app6.includes("if (open && hand?.editing) hand.toggleEdit(false);") && app6.includes("if (hand.editing && trashPanel?.isOpen) trashPanel.close();") && app6.includes('e.key === "Escape" && trashPanel?.isOpen') && app6.includes('key: "Z"') && app6.includes('{ id: "trash-panel", el: trashPanel?.el') && app6.includes('zone === "library" && p.from === "trash"'));
+  }
   ok("疊印台的小選單：從那張牌長出來、尖角指著它、那張牌亮著，關的時候收回去", fuse6.includes('pop.dataset.side = fitsRight ? "right" : "left";') && fuse6.includes('anchor.classList.add("is-popped")') && fuse6.includes('gone.classList.add("is-closing")') && readFileSync(join(ROOT, "web6/fuse.css"), "utf8").includes(".pop::before"));
   ok("墨池的詳情：圖從點的那張牌飛進去；放進合成池／丟進廢字簍從那張大圖飛出去", app6.includes("function flyToDetail(src, sheetEl)") && app6.includes("pin(tag); if (a) flyInto(tag, a.rect);") && app6.includes("ban(tag, { from: a })"));
   ok("印製中的進度不整排重畫按鈕（「停」不閃、一按就停）", app6.includes('if (bar.dataset.key === key && bar.childElementCount) return renderGoFloat();') && app6.includes('if (float.dataset.key === key && float.childElementCount) return;') && fuse6.includes('if (bar.dataset.key === key && go) {'));
