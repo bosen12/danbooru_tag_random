@@ -1400,22 +1400,72 @@ body #wf-pick-btn.has {
   display: none;
 }
 
+/* 箭頭：一個 ▸ 轉 90° 變 ▾，不換字。 */
 .more-rules summary::before {
-  content: "▸ ";
+  content: "▸";
+  display: inline-block;
+  width: 1em;
+  transition: rotate var(--dur-short) var(--ease-out);
 }
 
 .more-rules[open] summary::before {
-  content: "▾ ";
+  rotate: 90deg;
 }
 
 .more-rules summary:hover {
   color: var(--color-ink);
 }
 
+/* 開合：高度從 0 滑到 auto（interpolate-size），裡面那層同時淡入、往下落一點；
+ * 收起時一按就開始縮、內容先淡掉，不再一格就消失。content-visibility 用 allow-discrete
+ * 撐到收完才藏。不支援 ::details-content 的瀏覽器照舊瞬間開合。
+ * overflow-clip-margin：開到一半時裁切邊，但別把步進器、選單的焦點框切掉。 */
+.more-rules {
+  interpolate-size: allow-keywords;
+}
+
+.more-rules::details-content {
+  height: 0;
+  overflow: clip;
+  overflow-clip-margin: 4px;
+  transition:
+    height var(--dur-short) var(--ease-out),
+    content-visibility var(--dur-short) allow-discrete;
+}
+
+.more-rules[open]::details-content {
+  height: auto;
+  transition:
+    height var(--dur-medium) var(--ease-out),
+    content-visibility var(--dur-medium) allow-discrete;
+}
+
 .more-rules > div {
   display: grid;
   gap: var(--space-sm);
-  margin-top: var(--space-sm);
+  /* padding 不用 margin：margin 會穿過高度 0 的外框露在外面，收完那一格才一次跳掉 12px。 */
+  padding-top: var(--space-sm);
+  opacity: 0;
+  translate: 0 calc(var(--space-sm) * -1);
+  transition:
+    opacity var(--dur-micro) var(--ease-out),
+    translate var(--dur-short) var(--ease-out);
+}
+
+.more-rules[open] > div {
+  opacity: 1;
+  translate: 0;
+  transition:
+    opacity var(--dur-medium) var(--ease-out) calc(var(--dur-micro) * 0.5),
+    translate var(--dur-medium) var(--ease-out);
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .more-rules summary::before,
+  .more-rules::details-content,
+  .more-rules > div {
+    transition: none;
+  }
 }
 
 /* 選格（skeleton-picker.js）：數字比骨架少時，那一段在步進器底下展開。
