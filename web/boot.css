@@ -467,6 +467,176 @@ input[type="number"] {
   font-size: var(--text-sm);
 }
 
+/* 選格（boot.js renderSkeleton）：數字比骨架少時，那一段在目標數底下展開。
+   外框常駐，開合用 grid-template-rows 0fr ↔ 1fr 撐高度，下面的內容跟著滑。 */
+.skel-picker {
+  display: grid;
+  min-width: 0;
+}
+
+.skel-row {
+  display: grid;
+  grid-template-rows: 0fr;
+  min-width: 0;
+  opacity: 0;
+  transition:
+    grid-template-rows var(--dur-move) var(--ease-out),
+    opacity var(--dur-ui) var(--ease-out);
+}
+
+.skel-row[data-open="true"] {
+  grid-template-rows: 1fr;
+  opacity: 1;
+}
+
+.skel-inner {
+  min-height: 0;
+  overflow: hidden;
+}
+
+.skel-body {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 4px var(--space-2);
+  margin-top: var(--space-2);
+  padding: var(--space-2) var(--space-2) var(--space-2) var(--space-3);
+  border-left: 2px solid var(--color-accent);
+  background: var(--color-paper-2);
+}
+
+.skel-name {
+  font-size: var(--text-xs);
+  color: var(--color-muted);
+}
+
+.skel-chips {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 4px;
+  min-width: 0;
+}
+
+.skel-note {
+  flex-basis: 100%;
+  font-size: var(--text-xs);
+  color: var(--color-neutral);
+}
+
+.skel-chip {
+  display: inline-flex;
+  align-items: center;
+  min-height: 28px;
+  padding: 0 8px;
+  border: var(--rule) solid var(--color-rule);
+  border-radius: var(--radius);
+  background: transparent;
+  color: var(--color-neutral);
+  font: inherit;
+  font-size: var(--text-xs);
+  cursor: pointer;
+  transition:
+    background var(--dur-ui) var(--ease-out),
+    color var(--dur-ui) var(--ease-out),
+    border-color var(--dur-ui) var(--ease-out),
+    transform var(--dur-micro) var(--ease-out);
+}
+
+.skel-chip[aria-pressed="true"] {
+  background: var(--color-chip);
+  border-color: var(--color-accent-2);
+  color: var(--color-ink);
+}
+
+.skel-chip[aria-pressed="false"]:hover {
+  border-color: var(--color-ink);
+  color: var(--color-ink);
+}
+
+.skel-chip:active {
+  transform: translateY(1px);
+}
+
+.skel-chip:focus-visible {
+  outline: 2px solid var(--color-focus);
+  outline-offset: 2px;
+}
+
+/* 暗掉的格子：一筆紅線從左劃過；換回來時從右收掉。 */
+.skel-chip-name {
+  position: relative;
+}
+
+.skel-chip-name::after {
+  content: "";
+  position: absolute;
+  left: -2px;
+  right: -2px;
+  top: 52%;
+  height: 1.5px;
+  background: var(--color-accent);
+  transform: scaleX(1);
+  transform-origin: left center;
+  transition: transform var(--dur-move) var(--ease-out);
+}
+
+.skel-chip[aria-pressed="true"] .skel-chip-name::after {
+  transform: scaleX(0);
+  transform-origin: right center;
+  transition-duration: var(--dur-ui);
+}
+
+.skel-chip.is-seated {
+  animation: skel-seat var(--dur-move) cubic-bezier(0.2, 0.9, 0.3, 1.2);
+}
+
+.skel-chip.is-refused {
+  animation: skel-refuse var(--dur-move) var(--ease-out);
+}
+
+.skel-row.is-opening .skel-chip {
+  animation: skel-chip-in 420ms var(--ease-out) backwards;
+  animation-delay: calc(var(--dur-micro) + var(--i, 0) * 40ms);
+}
+
+@keyframes skel-seat {
+  0% {
+    transform: scale(0.94);
+  }
+}
+
+@keyframes skel-refuse {
+  25% {
+    translate: -3px;
+  }
+  55% {
+    translate: 2px;
+  }
+  80% {
+    translate: -1px;
+  }
+}
+
+@keyframes skel-chip-in {
+  from {
+    opacity: 0;
+    transform: translateY(-6px);
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .skel-row,
+  .skel-chip,
+  .skel-chip-name::after {
+    transition: none;
+  }
+  .skel-chip.is-seated,
+  .skel-chip.is-refused,
+  .skel-row.is-opening .skel-chip {
+    animation: none;
+  }
+}
+
 .tags {
   display: flex;
   flex-wrap: wrap;

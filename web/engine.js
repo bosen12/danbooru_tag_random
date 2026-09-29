@@ -3888,10 +3888,38 @@ export function drawOne(lex, settings, pinned, userBanned, rand, seed, opts) {
   // 釘選走 forcePin 不經過這裡；釘選 implies／bind 帶上來的、必抽、人物（subject 不在
   // QUOTA_SECTIONS）、畫質字都照舊。
   const zeroSections = new Set(QUOTA_SECTIONS.filter((s) => settings.counts && Number(settings.counts[s]) === 0));
+  // 骨架格的開關（2026-09-29 專案主決定）：同一道閘門細到「段:小分類」。
+  // 骨架格不看數字，以前「姿勢 1」照樣補五格；現在數字比骨架少時，只補 skeletonLit()
+  // 選中的那幾格，其他的在這裡擋掉。
+  // 數字比骨架少時，那一段的「擲骰格」（天氣、坐臥面、背景、人種…）也一起停：
+  // 使用者說的是「只要 N 個」。背景是地點的替代品，跟著地點那格走。
+  // 不擋的：性愛／走光動作（尺度管）、職業（「抽職業」開關管）、場景的「其他」
+  // （多半是活動附帶的道具，釣魚要有釣竿）。
+  const offGroups = new Set();
+  const groupsBySection = lex._groupsBySection || (lex._groupsBySection = (() => {
+    const m = {};
+    for (const it of lex.data.tags || []) (m[it.section] ||= new Set()).add(it.group);
+    return m;
+  })());
+  for (const section of Object.keys(SKELETON)) {
+    if (zeroSections.has(section)) continue;
+    const keys = skeletonKeys(section);
+    const lit = new Set(skeletonLit(settings, section));
+    if (lit.size >= keys.length) continue;
+    if (lit.has("env:place")) lit.add("env:background");
+    for (const g of groupsBySection[section] || []) {
+      const k = section + ":" + g;
+      if (!lit.has(k) && !SKELETON_KEEP.has(k)) offGroups.add(k);
+    }
+  }
   const ENGINE_FILL = new Set([SOURCES.random, SOURCES.era_anchor, SOURCES.repair]);
-  const innerCommit = zeroSections.size
+  const innerCommit = zeroSections.size || offGroups.size
     ? (tag) => {
-        if (ENGINE_FILL.has(commitMeta.source) && zeroSections.has(lex.byTag.get(tag)?.section)) return false;
+        if (ENGINE_FILL.has(commitMeta.source)) {
+          const it = lex.byTag.get(tag);
+          if (zeroSections.has(it?.section)) return false;
+          if (it && offGroups.has(it.section + ":" + it.group)) return false;
+        }
         return rawCommit(tag);
       }
     : rawCommit;
@@ -5897,6 +5925,28 @@ export function drawOne(lex, settings, pinned, userBanned, rand, seed, opts) {
     }
   }
 
+  // 釘選、必抽（和它們帶上來的字）先佔骨架格，跟 fill() 的「數字 − 已有」同一個意思：
+  // 姿勢 1 又釘了視線，就只有那個視線，不會再補一個身體姿勢。只在數字比骨架少時動。
+  for (const section of Object.keys(SKELETON)) {
+    if (zeroSections.has(section)) continue;
+    const keys = skeletonKeys(section);
+    const lit = skeletonLit(settings, section);
+    if (lit.length >= keys.length) continue;
+    const taken = new Set();
+    for (const t of used) {
+      const it = lex.byTag.get(t);
+      if (it && it.section === section) taken.add(section + ":" + it.group);
+    }
+    const already = keys.filter((k) => taken.has(k));
+    if (!already.length) continue;
+    const room = Math.max(0, lit.length - already.length);
+    const keep = new Set([...already, ...lit.filter((k) => !taken.has(k)).slice(0, room)]);
+    for (const k of keys) {
+      if (keep.has(k)) offGroups.delete(k);
+      else offGroups.add(k);
+    }
+  }
+
   fillSlot("feature", "hair_length");
   fillSlot("feature", "eye_color");
   if (!used.has("bald")) {
@@ -7183,6 +7233,91 @@ export const QUOTA_SECTIONS = ["feature", "pose", "clothing", "env"];
 
 export const MUST_MAX = 20;
 
+// 骨架格：每張各補一個、不看 counts 的那幾格（fillSlot／fillGroup）。排列順序就是
+// 「保留的優先序」—— 數字設得比骨架少時，從最後面開始不補。三個介面都從這裡讀。
+// 服裝刻意不列：它的骨架是「最低限度要穿衣服」，拆不成固定的小分類。
+// 性愛動作、走光動作不是骨架格，由尺度那一排管（沒勾那個尺度就根本不會出現）。
+export const SKELETON = {
+  feature: [
+    ["hair_len", "髮長"],
+    ["eyes", "眼睛"],
+    ["hair_color", "髮色"],
+    ["hair_style", "髮型"],
+    ["body_f", "身材（女）"],
+  ],
+  pose: [
+    ["body", "身體姿勢"],
+    ["face", "表情"],
+    ["camera", "鏡頭"],
+    ["gaze", "視線"],
+    ["activity", "活動"],
+  ],
+  env: [
+    ["place", "地點"],
+    ["inout", "室內外"],
+    ["time", "晝夜"],
+    ["light", "光線"],
+  ],
+};
+
+// 數字比骨架少時也不擋的小分類（理由見 drawOne 的 offGroups）。
+const SKELETON_KEEP = new Set(["pose:sex", "pose:flash", "feature:job", "env:other"]);
+
+const skeletonKeys = (section) => (SKELETON[section] || []).map(([g]) => section + ":" + g);
+
+/**
+ * 這一段實際會補哪幾格骨架（依優先序）。數字 ≥ 骨架格數：全補。
+ * 數字比骨架少：只補沒被關掉的，而且最多補「數字」那麼多格 —— 所以舊存檔裡
+ * 「姿勢 1」這種設定也會照數字走，不必先去點過開關。數字 0 由 zeroSections 處理。
+ */
+export function skeletonLit(settings, section) {
+  const keys = skeletonKeys(section);
+  // 沒給這一段的數字（沒經過 sanitizeSettings 的呼叫端）：跟以前一樣全補。
+  // 不能當成 0 —— zeroSections 只認明寫的 0，兩邊對不上會把整段骨架擋光。
+  const raw = settings?.counts?.[section];
+  if (raw === undefined || raw === null || !Number.isFinite(Number(raw))) return keys;
+  const n = Math.max(0, Math.min(10, Number(raw)));
+  if (!keys.length || n === 0) return [];
+  if (n >= keys.length) return keys;
+  const off = new Set(settings.offGroups || []);
+  return keys.filter((k) => !off.has(k)).slice(0, n);
+}
+
+/** 改數字：回傳 { counts, offGroups }。往下按從優先序最後面開始熄，往上按依序亮回來。 */
+export function stepSkeleton(settings, section, next) {
+  const v = Math.max(0, Math.min(10, Math.round(Number(next)) || 0));
+  const counts = { ...settings.counts, [section]: v };
+  const keys = skeletonKeys(section);
+  const others = (settings.offGroups || []).filter((k) => !keys.includes(k));
+  if (!keys.length || v >= keys.length) return { counts, offGroups: others };
+  if (v === 0) return { counts, offGroups: [...(settings.offGroups || [])] };
+  const lit = skeletonLit(settings, section);
+  for (const k of keys) {
+    if (lit.length >= v) break;
+    if (!lit.includes(k)) lit.push(k);
+  }
+  const keep = new Set(lit.slice(0, v));
+  return { counts, offGroups: sanitizeOffGroups([...others, ...keys.filter((k) => !keep.has(k))]) };
+}
+
+/** 數字不變，換一格：key 亮起來，victim（沒給就是優先序最後那一格）熄掉。 */
+export function swapSkeleton(settings, section, key, victim) {
+  const keys = skeletonKeys(section);
+  const lit = skeletonLit(settings, section);
+  if (!keys.includes(key) || lit.includes(key) || !lit.length) return null;
+  const out = lit.includes(victim) ? victim : lit[lit.length - 1];
+  const keep = new Set([...lit.filter((k) => k !== out), key]);
+  const others = (settings.offGroups || []).filter((k) => !keys.includes(k));
+  return { offGroups: sanitizeOffGroups([...others, ...keys.filter((k) => !keep.has(k))]) };
+}
+
+// settings.offGroups：["section:group", …]，引擎不自己補的骨架格。釘選、必抽、相依字照舊。
+export function sanitizeOffGroups(raw) {
+  if (!Array.isArray(raw)) return [];
+  const all = new Set(Object.keys(SKELETON).flatMap(skeletonKeys));
+  return [...new Set(raw.filter((k) => typeof k === "string" && all.has(k)))].sort();
+}
+
 // settings.mustDraw is keyed "section:group" -> how many that group must contribute.
 export function sanitizeMustDraw(raw) {
   const out = {};
@@ -7218,6 +7353,7 @@ export function defaultSettings(data) {
     lockScene: true,
     sceneMode: "normal",
     mustDraw: {},
+    offGroups: [],
   };
 }
 
@@ -7268,6 +7404,7 @@ export function sanitizeSettings(raw, data) {
     sceneMode,
     lockScene: sceneMode !== "weird",
     mustDraw: sanitizeMustDraw(raw.mustDraw),
+    offGroups: sanitizeOffGroups(raw.offGroups),
   };
 }
 

@@ -36,6 +36,10 @@ import {
   indexLexicon,
   mulberry32,
   sanitizeSettings,
+  skeletonLit,
+  stepSkeleton,
+  swapSkeleton,
+  SKELETON,
   weightsForHeats,
 } from "../web/engine.js";
 
@@ -517,6 +521,92 @@ const WATER_SRC = [
 
   // 預設值每段都大於 0，閘門不會打開：一般抽牌逐字不受影響（金標另外守）。
   ok("不補：預設 counts 沒有任何一段是 0", ["feature", "pose", "clothing", "env"].every((k) => Number(base.counts[k]) > 0), JSON.stringify(base.counts));
+}
+
+// --- 骨架格跟著數字走（2026-09-29 專案主決定） -----------------------------------
+// 骨架格以前不看數字：「姿勢 1」照樣補五格。現在數字比骨架少時只補選中的那幾格，
+// 預設依優先序（姿勢：身體 → 表情 → 鏡頭 → 視線 → 活動），可以換成別格。
+// 釘選、必抽照舊；性愛、走光動作不是骨架，由尺度管。
+{
+  const sectionGroup = (t) => {
+    const it = lex.byTag.get(t);
+    return it ? it.section + ":" + it.group : "";
+  };
+  const draw = (s, pins, i) => drawOne(lex, s, new Set(pins), new Set(), mulberry32(93000 + i), 93000 + i, { trace: true });
+  const selfAdded = (d, keys) =>
+    (d.trace?.kept || []).filter((k) => keys.includes(sectionGroup(k.tag)) && !["pin", "preset", "implies", "bind", "must_draw"].includes(k.source));
+  const POSE = ["pose:body", "pose:face", "pose:camera", "pose:gaze", "pose:activity"];
+  const mk = (patch) => sanitizeSettings({ ...base, rating: "explicit", heats: ["tease"], ...patch }, data);
+
+  ok("骨架：sanitize 只留骨架格", JSON.stringify(mk({ offGroups: ["pose:camera", "pose:sex", "bogus", 3] }).offGroups) === '["pose:camera"]', JSON.stringify(mk({ offGroups: ["pose:camera", "pose:sex"] }).offGroups));
+
+  // 舊存檔：只有數字、沒有開關 —— 也要照數字走。
+  const one = mk({ counts: { ...base.counts, pose: 1 } });
+  ok("骨架：姿勢 1 沒開關時只亮身體姿勢", JSON.stringify(skeletonLit(one, "pose")) === '["pose:body"]', JSON.stringify(skeletonLit(one, "pose")));
+  let leak = null;
+  let body = 0;
+  for (let i = 0; i < 150 && !leak; i++) {
+    const d = draw(one, [], i);
+    const bad = selfAdded(d, POSE.slice(1));
+    if (bad.length) leak = `seed ${93000 + i}：${bad.map((k) => `${k.tag}（${k.source}）`).join("、")}`;
+    if (String(d.positive).split(", ").some((t) => sectionGroup(t) === "pose:body")) body += 1;
+  }
+  ok("骨架：姿勢 1 → 引擎只自己補身體姿勢", !leak, leak || "");
+  ok("骨架：選中的那一格照補", body / 150 > 0.9, `身體姿勢 ${body}/150`);
+
+  // 換格：數字 1，換成鏡頭。
+  const cam = mk({ ...one, ...swapSkeleton(one, "pose", "pose:camera") });
+  ok("骨架：換格後只亮鏡頭", JSON.stringify(skeletonLit(cam, "pose")) === '["pose:camera"]', JSON.stringify(skeletonLit(cam, "pose")));
+  let camLeak = null;
+  for (let i = 0; i < 100 && !camLeak; i++) {
+    const bad = selfAdded(draw(cam, [], i), POSE.filter((k) => k !== "pose:camera"));
+    if (bad.length) camLeak = `seed ${93000 + i}：${bad.map((k) => k.tag).join("、")}`;
+  }
+  ok("骨架：換成鏡頭之後身體姿勢不再補", !camLeak, camLeak || "");
+
+  // 步進：往上按依序亮回，按到骨架數就全亮、開關清掉；往下從最後面熄。
+  const two = mk({ ...cam, ...stepSkeleton(cam, "pose", 2) });
+  ok("骨架：1 → 2 保留鏡頭、再亮優先序第一格", JSON.stringify(skeletonLit(two, "pose")) === '["pose:body","pose:camera"]', JSON.stringify(skeletonLit(two, "pose")));
+  const full = mk({ ...two, ...stepSkeleton(two, "pose", 5) });
+  ok("骨架：按到 5 全亮、姿勢的開關清掉", skeletonLit(full, "pose").length === 5 && !full.offGroups.some((k) => k.startsWith("pose:")), JSON.stringify(full.offGroups));
+  const down = mk({ ...full, ...stepSkeleton(full, "pose", 3) });
+  ok("骨架：5 → 3 從最後面熄（視線、活動）", JSON.stringify(skeletonLit(down, "pose")) === '["pose:body","pose:face","pose:camera"]', JSON.stringify(skeletonLit(down, "pose")));
+
+  const pinned = draw(one, ["looking at viewer", "smile"], 0);
+  ok("骨架：釘選照樣留著", ["looking at viewer", "smile"].every((t) => String(pinned.positive).split(", ").includes(t)), pinned.positive);
+  // 釘選先佔格：姿勢 1 釘了視線，就不再補身體姿勢；姿勢 2 才再補一格。
+  const poseOf = (d) => String(d.positive).split(", ").filter((t) => POSE.includes(sectionGroup(t)));
+  let over = null;
+  for (let i = 0; i < 80 && !over; i++) {
+    const got = poseOf(draw(one, ["looking at viewer"], i));
+    if (got.length !== 1) over = `seed ${93000 + i}：${got.join("、")}`;
+  }
+  ok("骨架：姿勢 1 釘了視線 → 只有那個視線", !over, over || "");
+  const twoPin = mk({ counts: { ...base.counts, pose: 2 } });
+  let bodyToo = 0;
+  for (let i = 0; i < 80; i++) if (poseOf(draw(twoPin, ["looking at viewer"], i)).some((t) => sectionGroup(t) === "pose:body")) bodyToo += 1;
+  ok("骨架：姿勢 2 釘了視線 → 再補身體姿勢", bodyToo / 80 > 0.9, `${bodyToo}/80`);
+  const noCounts = { ...base, counts: { feature: 8, clothing: 5, env: 6 } };
+  const d0 = draw(noCounts, [], 0);
+  ok("骨架：設定沒給姿勢的數字 → 跟以前一樣全補", poseOf(d0).length >= 4, d0.positive);
+
+  const must = mk({ ...one, mustDraw: { "pose:gaze": 1 } });
+  let mustHit = 0;
+  for (let i = 0; i < 50; i++) {
+    if (String(draw(must, [], i).positive).split(", ").some((t) => sectionGroup(t) === "pose:gaze")) mustHit += 1;
+  }
+  ok("骨架：必抽照樣抽得到", mustHit === 50, `視線 ${mustHit}/50`);
+
+  // 性愛：姿勢 1 也照樣有性愛動作（尺度管，不是骨架）。
+  const sex = mk({ heats: ["sex"], counts: { ...base.counts, pose: 1 } });
+  let sexHit = 0;
+  for (let i = 0; i < 60; i++) {
+    if (String(draw(sex, [], i).positive).split(", ").some((t) => sectionGroup(t) === "pose:sex")) sexHit += 1;
+  }
+  ok("骨架：性愛尺度姿勢 1 仍有性愛動作", sexHit / 60 > 0.9, `${sexHit}/60`);
+
+  // 預設數字都不低於骨架：一般抽牌逐字不受影響（金標另外守）。
+  ok("骨架：預設 counts 都不低於骨架格數", ["feature", "pose", "env"].every((k) => skeletonLit(base, k).length === SKELETON[k].length), JSON.stringify(base.counts));
 }
 
 if (failed) {

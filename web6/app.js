@@ -21,7 +21,9 @@ import {
   ERA_LABELS,
   contradictions,
   ACT_PLACE,
+  stepSkeleton,
 } from "./engine.js";
+import { skeletonPicker } from "./skeleton-picker.js";
 import { relationsOf } from "./fuse-bed.js";
 import { drawWithSeed } from "./draw-with-seed.js";
 import { ratingBlocked, RATING_LABEL } from "./rules/rating.js";
@@ -1048,10 +1050,13 @@ function renderRules() {
       ["env", "場景"],
     ].map(([k, label]) =>
       stepper(label, settings.counts[k], 0, 10, (v) => {
-        setSettings({ counts: { ...settings.counts, [k]: v } });
+        setSettings(stepSkeleton(settings, k, v));
+        picker.update(k);
       })
     )
   );
+  // 數字比骨架少時，那一段在這裡展開選格（skeleton-picker.js）。
+  const picker = skeletonPicker({ settings: () => settings, save: (patch) => setSettings(patch) });
   const sizeSel = el("select", { class: "select", "aria-label": "尺寸" }, SIZES.map((s) => el("option", { value: s.id }, s.zh)));
   sizeSel.value = (SIZES.find((s) => s.w === settings.width && s.h === settings.height) || SIZES[0]).id;
   sizeSel.onchange = () => {
@@ -1079,6 +1084,7 @@ function renderRules() {
         "div",
         {},
         el("div", { class: "rule-row" }, el("span", { class: "rule-label" }, "每段抽幾個"), counts),
+        picker.node,
         el("div", { class: "rule-row" }, el("span", { class: "rule-label" }, "尺寸"), sizeSel, el("span", { class: "rule-label" }, "場景"), sceneSel, job, eraOnly)
       )
     )

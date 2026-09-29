@@ -19,6 +19,10 @@ import {
   identityBans,
   isIdentityItem,
   QUOTA_SECTIONS,
+  SKELETON,
+  skeletonLit,
+  stepSkeleton,
+  swapSkeleton,
   sanitizeSettings,
   HEATS,
   MIXED_HEATS,
@@ -348,10 +352,11 @@ function renderCounts() {
     // 旁邊的字是 <span>，沒接到框上；不給名字的話螢幕閱讀器念出來是四個一樣的「數字欄位」。
     input.setAttribute("aria-label", `${label}目標數（0–10）`);
     input.addEventListener("change", () => {
-      settings.counts[key] = Math.max(0, Math.min(10, Math.round(Number(input.value)) || 0));
+      Object.assign(settings, stepSkeleton(settings, key, input.value));
       // 打 99 存成 10：框裡也要寫 10，不然畫面跟實際抽牌用的數字不一樣。
       input.value = String(settings.counts[key]);
       saveStore();
+      syncSkeleton(key);
     });
     const off = document.createElement("button");
     off.type = "button";
@@ -360,11 +365,119 @@ function renderCounts() {
     off.title = `${label}整段不補：只留你釘的和它帶上來的`;
     off.setAttribute("aria-label", `${label}整段不補`);
     off.addEventListener("click", () => {
-      settings.counts[key] = 0;
+      Object.assign(settings, stepSkeleton(settings, key, 0));
       input.value = "0";
       saveStore();
+      syncSkeleton(key);
     });
     box.append(lab, input, off);
+  }
+}
+
+// 選格：數字比骨架少時，那一段在目標數底下展開，列出它的骨架格（engine.js 的 SKELETON），
+// 亮著的格數＝數字。點暗的換過去（數字不變）；多要少改數字。服裝沒有骨架格，不展開。
+// 外框常駐，開合靠 CSS 撐高度；換格只改那一顆，劃線和蓋章才播得出來。
+const SKEL_SECTIONS = ["feature", "pose", "env"];
+const skelRecent = {};
+
+function skelPulse(el, cls, ms = 460) {
+  if (reduceMotion()) return;
+  el.classList.remove(cls);
+  void el.offsetWidth;
+  el.classList.add(cls);
+  window.setTimeout(() => el.classList.remove(cls), ms);
+}
+
+function renderSkeleton() {
+  const box = $("skel-picker");
+  if (!box) return;
+  box.replaceChildren();
+  for (const section of SKEL_SECTIONS) {
+    const row = document.createElement("div");
+    row.className = "skel-row";
+    row.dataset.section = section;
+    row.dataset.open = "false";
+    const inner = document.createElement("div");
+    inner.className = "skel-inner";
+    const body = document.createElement("div");
+    body.className = "skel-body";
+    body.setAttribute("role", "group");
+    body.setAttribute("aria-label", `${COUNT_LABELS[section]}補哪幾格`);
+    const name = document.createElement("span");
+    name.className = "skel-name";
+    name.textContent = COUNT_LABELS[section];
+    const chips = document.createElement("div");
+    chips.className = "skel-chips";
+    SKELETON[section].forEach(([group, zh], i) => {
+      const btn = document.createElement("button");
+      btn.type = "button";
+      btn.className = "skel-chip";
+      btn.style.setProperty("--i", String(i));
+      btn.dataset.key = `${section}:${group}`;
+      btn.dataset.zh = zh;
+      const label = document.createElement("span");
+      label.className = "skel-chip-name";
+      label.textContent = zh;
+      btn.append(label);
+      btn.addEventListener("click", () => {
+        const key = btn.dataset.key;
+        if (skeletonLit(settings, section).includes(key)) {
+          skelPulse(btn, "is-refused");
+          return;
+        }
+        const victim = (skelRecent[section] || [])[0];
+        const patch = swapSkeleton(settings, section, key, victim);
+        if (!patch) {
+          skelPulse(btn, "is-refused");
+          return;
+        }
+        Object.assign(settings, patch);
+        saveStore();
+        skelRecent[section] = [...(skelRecent[section] || []).filter((k) => k !== victim), key];
+        syncSkeleton(section, true);
+      });
+      chips.append(btn);
+    });
+    const note = document.createElement("span");
+    note.className = "skel-note";
+    note.setAttribute("aria-live", "polite");
+    body.append(name, chips, note);
+    inner.append(body);
+    row.append(inner);
+    box.append(row);
+  }
+  for (const s of SKEL_SECTIONS) syncSkeleton(s, false, true);
+}
+
+function syncSkeleton(section, stamp = true, first = false) {
+  const row = document.querySelector(`#skel-picker .skel-row[data-section="${section}"]`);
+  if (!row) return;
+  const n = Number(settings.counts?.[section]) || 0;
+  const now = n > 0 && n < SKELETON[section].length;
+  const was = row.dataset.open === "true";
+  row.dataset.open = now ? "true" : "false";
+  row.setAttribute("aria-hidden", now ? "false" : "true");
+  row.inert = !now;
+  if (now && !was && !first) skelPulse(row, "is-opening", 900);
+  row.querySelector(".skel-note").textContent = !now
+    ? ""
+    : n === 1
+      ? "只補 1 格，點一顆換過去；釘的會先佔格"
+      : `只補 ${n} 格，點暗的會換掉最早選的；釘的會先佔格`;
+  const lit = skeletonLit(settings, section);
+  // 一開始：優先序越後面的越「舊」，先被換掉。之後新亮起來的算最新。
+  if (!skelRecent[section]) skelRecent[section] = [...lit].reverse();
+  else {
+    const keep = skelRecent[section].filter((k) => lit.includes(k));
+    for (const k of lit) if (!keep.includes(k)) keep.push(k);
+    skelRecent[section] = keep;
+  }
+  for (const btn of row.querySelectorAll(".skel-chip")) {
+    const on = lit.includes(btn.dataset.key);
+    const before = btn.getAttribute("aria-pressed") === "true";
+    btn.setAttribute("aria-pressed", on ? "true" : "false");
+    btn.title = on ? `會補「${btn.dataset.zh}」` : `換成「${btn.dataset.zh}」`;
+    if (stamp && on && !before) skelPulse(btn, "is-seated");
   }
 }
 
@@ -1788,6 +1901,7 @@ function recipeFromDraw(drawn, sent, seedNum) {
     sceneMode: sceneModeOf(settings),
     counts: { ...(settings.counts || {}) },
     mustDraw: { ...(settings.mustDraw || {}) },
+    offGroups: [...(settings.offGroups || [])],
     pinned: [...pinned],
     userBanned: [...userBanned],
     presetOwned: snapshotPresetOwned(presetOwned),
@@ -1808,6 +1922,7 @@ async function applyRecipeToBench(recipe) {
       sceneMode: recipe.sceneMode,
       counts: recipe.counts,
       mustDraw: recipe.mustDraw,
+      offGroups: recipe.offGroups,
       width: recipe.width,
       height: recipe.height,
       eras: recipe.era ? [recipe.era] : settings.eras,
@@ -1822,6 +1937,7 @@ async function applyRecipeToBench(recipe) {
   syncHeat();
   syncSceneMode();
   renderCounts();
+  renderSkeleton();
   renderEras();
   syncSizeButtons();
   syncMustDraw();
@@ -3219,6 +3335,7 @@ function freezeIntentSnap(settingsObj, pinnedSet, bannedSet) {
       drawJob: !!settingsObj.drawJob,
       counts: { ...(settingsObj.counts || {}) },
       mustDraw: { ...(settingsObj.mustDraw || {}) },
+      offGroups: [...(settingsObj.offGroups || [])],
       lockScene: settingsObj.lockScene !== false,
       sceneMode: sceneModeOf(settingsObj),
     },
@@ -4178,6 +4295,7 @@ async function main() {
   syncSamePerson();
   syncCast();
   renderCounts();
+  renderSkeleton();
   syncSizeButtons();
   syncHeat();
   syncDrawJob();

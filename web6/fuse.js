@@ -24,8 +24,10 @@ import {
   ACT_PLACE,
   ERAS,
   ERA_LABELS,
+  stepSkeleton,
 } from "./engine.js";
 import { drawWithSeed } from "./draw-with-seed.js";
+import { skeletonPicker } from "./skeleton-picker.js";
 import { ratingBlocked, RATING_LABEL } from "./rules/rating.js";
 import { HEATS, toggleHeat } from "./heats.js";
 import { heatBlockedByRating } from "./scene-policy.js";
@@ -3030,6 +3032,8 @@ function openRules() {
     })
   );
   const row = (label, control) => el("div", { class: "rule-row" }, el("span", { class: "rule-label" }, label), control);
+  // 數字比骨架少時，那一段在步進器底下展開選格（skeleton-picker.js）。
+  const picker = skeletonPicker({ settings: () => settings, save: (patch) => setSettings(patch) });
   let sheet = null;
   sheet = openSheet(
     "規則",
@@ -3074,9 +3078,15 @@ function openRules() {
             ["clothing", "服裝"],
             ["pose", "姿勢"],
             ["env", "場景"],
-          ].map(([k, label]) => stepper(label, settings.counts[k], 0, 10, (v) => setSettings({ counts: { ...settings.counts, [k]: v } })))
+          ].map(([k, label]) =>
+            stepper(label, settings.counts[k], 0, 10, (v) => {
+              setSettings(stepSkeleton(settings, k, v));
+              picker.update(k);
+            })
+          )
         )
-      )
+      ),
+      picker.node
     ),
     { foot: [el("button", { class: "btn btn-primary", type: "button", onclick: () => sheet && sheet.close() }, "好了")] }
   );
