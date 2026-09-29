@@ -3338,3 +3338,29 @@ body:has(.fav-hand) .tray-bridge { display: none; }
     animation: none;
   }
 }
+
+/* ---------- 觸控：可點的範圍至少 24px，常用的做到 32px ----------
+ * 只放大感應區，不改外觀。手機實測（390 寬）小於 24px 的：「更多規則」19px 高、
+ * 開關的標籤 20px、頂端「介紹影片／教學」19px、「seed …」17px、「換一組」19px。 */
+@media (pointer: coarse), (max-width: 40rem) {
+  .more-rules summary {
+    display: flex;
+    align-items: center;
+    min-height: 32px;
+  }
+  .switch {
+    min-height: 32px;
+  }
+  .mast-extra,
+  .seed-use,
+  .link-btn {
+    position: relative;
+  }
+  .mast-extra::after,
+  .seed-use::after,
+  .link-btn::after {
+    content: "";
+    position: absolute;
+    inset: -8px -6px;
+  }
+}
