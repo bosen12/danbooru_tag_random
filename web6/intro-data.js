@@ -1,5 +1,5 @@
 /**
- * 介紹影片（intro.js）和它的成品圖（scripts/render_intro_art.mjs）共用的資料：
+ * 介紹影片（film.js）和它的成品圖（scripts/render_intro_art.mjs）共用的資料：
  * 同一組釘選、同一套挑種子的規則 —— 影片上寫的種子、提示詞，就是 ComfyUI 真的畫出那張圖用的。
  */
 // 引擎的函式由呼叫的人傳進來（eng＝{ drawOne, mulberry32, applyPin, emptyBed, placeCard }）：

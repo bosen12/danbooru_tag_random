@@ -411,6 +411,10 @@ body #wf-pick-btn.has {
   white-space: nowrap;
 }
 
+.mast-extra + .mast-extra {
+  margin-left: var(--space-xs);
+}
+
 .wordmark small {
   font-family: var(--font-body);
   font-weight: 400;

@@ -4,7 +4,7 @@
  *   疊印台的層、附帶是 fuse-bed.js 真的算的，時代、分級的數字直接從詞庫算。
  *   開場、結尾的星河是 three.js（film-gl.js）：整本詞庫的牌，六種花色是六條旋臂。
  *
- * 做法跟兩分鐘版（intro.js）一樣：每個東西都有 update(t)，只看時間 t —— 可以任意快轉、倒轉、一格一格輸出。
+ * 每個東西都有 update(t)，只看時間 t —— 可以任意快轉、倒轉、一格一格輸出。
  * 播放時 t 取自配樂的時鐘（film-score.js，128 BPM，一小節 1.875 秒）。
  *
  * 片子是一串「段落」（SEGS）：每段把影片的時間 T 對到某一幕自己的時間 t。
@@ -28,16 +28,8 @@ import { indexLexicon, defaultSettings, sanitizeSettings, drawOne, mulberry32, a
 import { emptyBed, placeCard, REGISTERS, REGISTER_ROLE } from "./fuse-bed.js";
 import { EZ, seg, lerp, quad, spring, esc, mk, track, put, setHTML, rng } from "./film-kit.js";
 import { createGL } from "./film-gl.js";
+import { makeText } from "./film-text.js";
 import * as idata from "./intro-data.js";
-
-// 舊版要從 ?cut=cards 進來的：那一版還在 intro-cards.html。
-{
-  const q = new URLSearchParams(location.search);
-  if (q.get("cut") === "cards") {
-    q.delete("cut");
-    location.replace("intro-cards.html" + (q.toString() ? "?" + q : ""));
-  }
-}
 
 const $ = (id) => document.getElementById(id);
 /** 兩分鐘版的小節（96 BPM）。搬過來的場景裡的時間都是用它算的。 */
@@ -126,108 +118,8 @@ const gact = (win, update, el = null) => gacts.push({ win, update, el });
 
 /* ================= 字幕、標題（不跟鏡頭轉） ================= */
 
-/**
- * 會動的字：中文一個字一個字從下面翻上來（帶一點模糊），英文從左邊拉開；離場往上、淡掉。
- * zh 裡用 *…* 包起來的字是重點色。
- */
-function kinetic({ cls, zh, en = "", x, y, align = "left", inAt, outAt, st = 0.03, rule = false, drift = 0, on = gact, parent = hudEl }) {
-  const box = mk("div", "k " + cls, parent);
-  box.style.left = x + "px";
-  box.style.top = y + "px";
-  const ruleEl = rule ? mk("span", "rule", box) : null;
-  const zhEl = mk("span", "zh", box);
-  const chars = [];
-  let hl = false;
-  for (const c of [...zh]) {
-    if (c === "*") {
-      hl = !hl;
-      continue;
-    }
-    chars.push(mk("span", "ch" + (hl ? " hl" : ""), zhEl, c === " " ? "&nbsp;" : esc(c)));
-  }
-  const enEl = en ? mk("span", "en", box, esc(en)) : null;
-  const anchor = align === "center" ? "translate(-50%, -50%)" : align === "right" ? "translate(-100%, -50%)" : "translate(0, -50%)";
-  const n = chars.length;
-  const end = outAt + n * st * 0.5 + 0.5;
-  on([inAt - 0.1, end], (t) => {
-    box.style.transform = `${anchor} translateX(${((t - inAt) * drift).toFixed(1)}px)`;
-    chars.forEach((c, i) => {
-      const pin = EZ.out(seg(t, inAt + i * st, inAt + i * st + 0.5));
-      const pout = EZ.exit(seg(t, outAt + i * st * 0.5, outAt + i * st * 0.5 + 0.32));
-      const o = pin * (1 - pout);
-      c.style.opacity = o.toFixed(3);
-      c.style.transform = `translateY(${((1 - pin) * 52 - pout * 34).toFixed(1)}px) rotateX(${((1 - pin) * -55).toFixed(1)}deg)`;
-      const b = (1 - pin) * 12 + pout * 10;
-      c.style.filter = b > 0.1 ? `blur(${b.toFixed(1)}px)` : "";
-    });
-    if (enEl) {
-      const p = EZ.out(seg(t, inAt + 0.18, inAt + 0.9));
-      const q = EZ.exit(seg(t, outAt, outAt + 0.3));
-      enEl.style.opacity = (p * (1 - q)).toFixed(3);
-      enEl.style.clipPath = `inset(0 ${((1 - p) * 100).toFixed(1)}% 0 0)`;
-      enEl.style.transform = `translateX(${((1 - p) * -24).toFixed(1)}px)`;
-    }
-    if (ruleEl) {
-      const p = EZ.out(seg(t, inAt, inAt + 0.6));
-      const q = EZ.exit(seg(t, outAt, outAt + 0.3));
-      ruleEl.style.transform = `scaleX(${(p * (1 - q)).toFixed(3)})`;
-    }
-  }, box);
-  return box;
-}
-
-/** 一句話（重點用 *…*）：預設在畫面下方正中。 */
-const say = (zh, en, inAt, outAt, o = {}) => kinetic({ cls: "k-say", zh, en, x: 960, y: 952, align: "center", inAt, outAt, st: 0.022, ...o });
-
-/** 砸下來的大字：從很大、很糊一下子落定，帶一點回彈；離場放大淡掉。 */
-function slam({ zh, en = "", sub = "", x = 960, y = 500, inAt, outAt, align = "center", cls = "" }) {
-  const box = mk("div", "k k-slam " + cls, hudEl);
-  box.style.left = x + "px";
-  box.style.top = y + "px";
-  const zhEl = mk("span", "zh", box, esc(zh));
-  const enEl = en ? mk("span", "en", box, esc(en)) : null;
-  const subEl = sub ? mk("span", "sub", box) : null;
-  if (subEl) {
-    let hl = false;
-    subEl.innerHTML = [...sub].map((c) => (c === "*" ? ((hl = !hl), hl ? "<b>" : "</b>") : esc(c))).join("");
-  }
-  const anchor = align === "center" ? "translate(-50%, -50%)" : align === "right" ? "translate(-100%, -50%)" : "translate(0, -50%)";
-  gact([inAt - 0.05, outAt + 0.5], (t) => {
-    const p = seg(t, inAt, inAt + 0.26);
-    const e = EZ.out(p);
-    const q = EZ.in(seg(t, outAt, outAt + 0.32));
-    const s = lerp(2.4, 1, e) * (1 + q * 0.35) + spring(t - inAt - 0.26, 0.025, 8, 24);
-    box.style.opacity = (Math.min(1, p * 4) * (1 - q)).toFixed(3);
-    box.style.transform = `${anchor} scale(${s.toFixed(4)})`;
-    const b = (1 - e) * 16 + q * 14;
-    zhEl.style.filter = b > 0.1 ? `blur(${b.toFixed(1)}px)` : "";
-    if (enEl) {
-      const pe = EZ.out(seg(t, inAt + 0.15, inAt + 0.8));
-      enEl.style.opacity = pe.toFixed(3);
-      enEl.style.letterSpacing = `${lerp(1.1, 0.5, pe).toFixed(3)}em`;
-    }
-    if (subEl) {
-      const ps = EZ.out(seg(t, inAt + 0.35, inAt + 0.95));
-      subEl.style.opacity = ps.toFixed(3);
-      subEl.style.transform = `translateY(${((1 - ps) * 16).toFixed(1)}px)`;
-    }
-  }, box);
-  return box;
-}
-
-/** 章節記號：左上角一個很大的空心數字＋名稱，出來一下就走（不常駐）。 */
-function chapter(num, zh, en, inAt, outAt) {
-  const box = mk("div", "k k-chap", hudEl, `<b>${esc(num)}</b><span>${esc(zh)}<small>${esc(en)}</small></span>`);
-  box.style.left = "96px";
-  box.style.top = "118px";
-  gact([inAt - 0.1, outAt + 0.5], (t) => {
-    const p = EZ.out(seg(t, inAt, inAt + 0.6));
-    const q = EZ.exit(seg(t, outAt, outAt + 0.35));
-    box.style.opacity = (p * (1 - q)).toFixed(3);
-    box.style.clipPath = `inset(0 ${((1 - p) * 100).toFixed(1)}% 0 0)`;
-    box.style.transform = `translate(0, -50%) translateX(${((1 - p) * -40 - q * 30).toFixed(1)}px)`;
-  }, box);
-}
+// 逐字翻出的字、砸下來的大字、章節記號：跟教學影片共用（film-text.js），這裡登記在影片時間上。
+const { kinetic, say, slam, chapter } = makeText({ hud: hudEl, on: gact });
 
 /* ================= 牌、成品 ================= */
 
@@ -2313,7 +2205,7 @@ function wake() {
   }, 2200);
 }
 
-/** 閘門上的版本選擇：三分鐘完整版在這一頁；墨池・疊印台（兩分鐘）在 intro-cards.html。 */
+/** 閘門上的版本選擇：三分鐘完整版在這一頁；使用教學（墨池・疊印台）在 tutorial.html。 */
 function wireCuts() {
   const box = $("cuts");
   if (!box) return;
@@ -2321,7 +2213,7 @@ function wireCuts() {
     b.setAttribute("aria-checked", b.dataset.cut === "full" ? "true" : "false");
     b.addEventListener("click", () => {
       if (b.dataset.cut === "full") return $("play").focus();
-      location.href = new URL("intro-cards.html", location.href).href;
+      location.href = new URL("tutorial.html", location.href).href;
     });
   }
 }
