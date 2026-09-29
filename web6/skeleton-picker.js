@@ -4,16 +4,17 @@
  * 每段有幾格骨架是每張都會補的（姿勢：身體／表情／鏡頭／視線／活動）。以前數字設得比
  * 骨架少時等於沒作用；現在數字就是格數，按到骨架以下，這一段就在步進器底下展開，
  * 列出它的骨架格，亮著的格數＝數字。點一顆暗的就換過去（數字不變），要多要少按 ＋／−。
- * 數字 ≥ 骨架格數、或設 0（整段不補）時收起來。服裝沒有骨架格，不展開。
+ * 數字 ≥ 骨架格數、或設 0（整段不補）時收起來。服裝的門檻是 5（預設值）：
+ * 設 1～4 才展開，列 8 種，只補亮著的、每種一件。
  *
  * 切換只改那一顆的狀態、不重畫：劃線、蓋章、展開的動效才播得出來。
  */
 import { el } from "./ui.js";
 import { seat, refuse } from "./motion.js";
-import { SKELETON, skeletonLit, swapSkeleton } from "./engine.js";
+import { SKELETON, skeletonCap, skeletonLit, swapSkeleton } from "./engine.js";
 
 const SECTION_ZH = { feature: "長相", clothing: "服裝", pose: "姿勢", env: "場景" };
-const ORDER = ["feature", "pose", "env"];
+const ORDER = ["feature", "clothing", "pose", "env"];
 
 export function skeletonPicker({ settings, save }) {
   // 每段記住「亮起來的先後」：換格時熄掉最早亮的那一顆（數字 1 就是單選）。
@@ -22,11 +23,12 @@ export function skeletonPicker({ settings, save }) {
 
   const litOf = (section) => skeletonLit(settings(), section);
   const count = (section) => Number(settings().counts?.[section]) || 0;
-  const open = (section) => count(section) > 0 && count(section) < SKELETON[section].length;
+  const open = (section) => count(section) > 0 && count(section) < skeletonCap(section);
 
   const noteOf = (section) => {
     const n = count(section);
-    return n === 1 ? `只補 1 格，點一顆換過去；釘的會先佔格` : `只補 ${n} 格，點暗的會換掉最早選的；釘的會先佔格`;
+    const unit = section === "clothing" ? "種、每種一件" : "格";
+    return n === 1 ? `只補 1 ${unit}，點一顆換過去；釘的會先佔格` : `只補 ${n} ${unit}，點暗的會換掉最早選的；釘的會先佔格`;
   };
 
   const syncRow = (section, { stamp = false } = {}) => {

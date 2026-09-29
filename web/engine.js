@@ -3068,16 +3068,20 @@ function jobHasSleepPlace(job, era, lex) {
 // 活動在這個時代有沒有室內／室外場地。釘了室內物件之後 outdoors 被擋，
 // 只剩室外場地的活動（騎馬、足球、游泳）會把場地格抽空；釘了雨之後
 // 室內房間被擋，只剩室內場地的活動（煮飯、打掃、洗澡）同一種空場。
+// 詞庫裡 implies 了哪一邊，commit 時就一定帶那一邊進來 —— BOTH_IO 說泳池室內外都行，
+// 但 pool implies outdoors，跟床頭櫃的 indoors 永遠放不在一起。可行性判斷要照詞庫。
 function placeCountsIndoor(place, lex) {
+  const it = lex.byTag.get(place);
+  if (it && (it.implies || []).includes("outdoors")) return false;
   if (BOTH_IO.has(place)) return true;
   if (INDOOR_ROOM.has(place)) return true;
-  const it = lex.byTag.get(place);
   return !!(it && (it.implies || []).includes("indoors"));
 }
 
 function placeCountsOutdoor(place, lex) {
-  if (BOTH_IO.has(place)) return true;
   const it = lex.byTag.get(place);
+  if (it && (it.implies || []).includes("indoors")) return false;
+  if (BOTH_IO.has(place)) return true;
   if (!it) return false;
   if ((it.implies || []).includes("outdoors")) return true;
   if (INDOOR_ROOM.has(place) || (it.implies || []).includes("indoors")) return false;
@@ -3912,13 +3916,15 @@ export function drawOne(lex, settings, pinned, userBanned, rand, seed, opts) {
       if (!lit.has(k) && !SKELETON_KEEP.has(k)) offGroups.add(k);
     }
   }
+  const offKeysOf = (it) =>
+    it.section === "clothing" ? clothingKindKeys(it) : [it.section + ":" + it.group];
   const ENGINE_FILL = new Set([SOURCES.random, SOURCES.era_anchor, SOURCES.repair]);
   const innerCommit = zeroSections.size || offGroups.size
     ? (tag) => {
         if (ENGINE_FILL.has(commitMeta.source)) {
           const it = lex.byTag.get(tag);
           if (zeroSections.has(it?.section)) return false;
-          if (it && offGroups.has(it.section + ":" + it.group)) return false;
+          if (it && offKeysOf(it).some((k) => offGroups.has(k))) return false;
         }
         return rawCommit(tag);
       }
@@ -5453,8 +5459,9 @@ export function drawOne(lex, settings, pinned, userBanned, rand, seed, opts) {
       }
       if (item.mutex === "activity" && !pinned.has(item.tag)) {
         const indoorFix = hasUsed((t) => INDOOR_PROP.has(t) || INDOOR_FURN.has(t));
-        const outdoorWx =
-          hasUsed((t) => OUTDOOR_WEATHER.has(t)) && !used.has("outdoors");
+        // 以前多一句 !used.has("outdoors")；雨後來 implies outdoors，這條就永遠不成立，
+        // 釘雨照樣抽到煮飯、洗澡這種只在室內做的活動，場地格因此空著。
+        const outdoorWx = hasUsed((t) => OUTDOOR_WEATHER.has(t));
         if (indoorFix || outdoorWx) {
           if (!ACT_PLACE[item.tag]) return false;
           if (indoorFix && !actHasIndoorPlace(item.tag, era, lex)) return false;
@@ -5935,7 +5942,7 @@ export function drawOne(lex, settings, pinned, userBanned, rand, seed, opts) {
     const taken = new Set();
     for (const t of used) {
       const it = lex.byTag.get(t);
-      if (it && it.section === section) taken.add(section + ":" + it.group);
+      if (it && it.section === section) for (const k of offKeysOf(it)) taken.add(k);
     }
     const already = keys.filter((k) => taken.has(k));
     if (!already.length) continue;
@@ -6237,7 +6244,18 @@ export function drawOne(lex, settings, pinned, userBanned, rand, seed, opts) {
   // 性愛的場地跟誘惑用同一池，權重拉平。否則公園、巷弄是時代專屬（14），
   // 海邊、街道、海洋是任何時代（1），開了白名單也幾乎抽不到。
   // 釘了室內或室外時本來就是 1:1。誘惑、走光、活動仍是 14:1。
-  const evenPlace = sidePinned || heat === "sex";
+  // 拉平只在現代。歷史時代的時代感有一大半靠場地扛，性愛圖人又常常脫光：
+  // 全拉平時古中國「只靠衣服」33.9%（audit_draw_invariants 上限 30%）。
+  // 歷史時代的性愛改成 3:1，而且招牌場地（城堡、東亞建築）不吃這個加權 ——
+  // 它們已經先擲過 PLACE_ANCHOR_CHANCE，再加權就超過 test_engine 的「單一場地 ≤35%」。
+  // 量過（各 400／3000 張）：3:1 只靠衣服 29.0%、沒有場地過 35%、大街海邊都抽得到；
+  // 4:1 東亞建築 36%，5:1 中世紀大街、維多利亞海邊抽不到。兩份規格在這裡互相拉扯，
+  // 3 是唯一兩邊都過的整數，緩衝很薄（29.0% 對 30%）。
+  const evenPlace = sidePinned || (heat === "sex" && (!era || era === "modern"));
+  const sexEra = heat === "sex" && !evenPlace;
+  const anchorPlaces = sexEra
+    ? new Set((lex.data.eraAnchors?.[era] || []).flatMap((t) => lex.data.eraAnchorAlts?.[t] || [t]))
+    : null;
   fillSlot(
     "env",
     "place",
@@ -6248,8 +6266,8 @@ export function drawOne(lex, settings, pinned, userBanned, rand, seed, opts) {
           ...(relaxesPrivateSex() ? { capShare: 0.4 } : {}),
         }
       : {
-          softTiers: [(item) => eraSpecific(item, era)],
-          weights: [14, 1],
+          softTiers: [(item) => eraSpecific(item, era) && !(sexEra && anchorPlaces.has(item.tag))],
+          weights: [sexEra ? 3 : 14, 1],
           ...(relaxesPrivateSex() ? { capShare: 0.4 } : {}),
         },
   );
@@ -7258,10 +7276,47 @@ export const SKELETON = {
     ["time", "晝夜"],
     ["light", "光線"],
   ],
+  // 服裝沒有每張必補的固定格，數字本來就接近「幾件」。所以門檻是預設值 5 而不是 8：
+  // 設 5 以上照舊自由補；1～4 只補亮著的那幾種、每種一件（2026-09-29 專案主：衣服有時候
+  // 不需要穿完整，要跟姿勢、場景一樣能選）。預設順序每一級都是完整的一套：
+  // 1 連身、2 ＋腿襪、3 ＋飾品、4 ＋鞋履；想要不完整的就把連身換成上衣。
+  clothing: [
+    ["onepiece", "連身／套裝"],
+    ["legs", "腿襪"],
+    ["acc", "飾品"],
+    ["feet", "鞋履"],
+    ["top", "上衣"],
+    ["bottom", "下身"],
+    ["outer", "外套"],
+    ["underwear", "內衣"],
+  ],
 };
 
+// 數字低於這個才展開選格。沒寫的就是骨架格數。
+const SKELETON_CAP = { clothing: 5 };
+
+/** 這一段數字低於多少時要選格。 */
+export function skeletonCap(section) {
+  return SKELETON_CAP[section] ?? (SKELETON[section] || []).length;
+}
+
+// 時代服裝同時佔著一般的格子（和服佔連身、羽織佔外套）：關掉「連身」，和服也不補。
+const ERA_CLOTH_KIND = {
+  top: "top", bottom: "bottom", onepiece: "onepiece", outer: "outer", feet: "feet",
+  underwear_top: "underwear", underwear_bottom: "underwear",
+};
+
+/** 這件衣服歸哪幾個種類開關管（"clothing:top" 這種 key）。 */
+export function clothingKindKeys(item) {
+  if (!item || item.section !== "clothing") return [];
+  const out = ["clothing:" + item.group];
+  if (item.group === "era" && ERA_CLOTH_KIND[item.mutex]) out.push("clothing:" + ERA_CLOTH_KIND[item.mutex]);
+  return out;
+}
+
 // 數字比骨架少時也不擋的小分類（理由見 drawOne 的 offGroups）。
-const SKELETON_KEEP = new Set(["pose:sex", "pose:flash", "feature:job", "env:other"]);
+// 服裝：日式服裝這種時代總稱字、裸身不佔格（佔格子的時代服裝由 clothingKindKeys 對到那一格）。
+const SKELETON_KEEP = new Set(["pose:sex", "pose:flash", "feature:job", "env:other", "clothing:era", "clothing:nude"]);
 
 const skeletonKeys = (section) => (SKELETON[section] || []).map(([g]) => section + ":" + g);
 
@@ -7278,7 +7333,7 @@ export function skeletonLit(settings, section) {
   if (raw === undefined || raw === null || !Number.isFinite(Number(raw))) return keys;
   const n = Math.max(0, Math.min(10, Number(raw)));
   if (!keys.length || n === 0) return [];
-  if (n >= keys.length) return keys;
+  if (n >= skeletonCap(section)) return keys;
   const off = new Set(settings.offGroups || []);
   return keys.filter((k) => !off.has(k)).slice(0, n);
 }
@@ -7289,7 +7344,7 @@ export function stepSkeleton(settings, section, next) {
   const counts = { ...settings.counts, [section]: v };
   const keys = skeletonKeys(section);
   const others = (settings.offGroups || []).filter((k) => !keys.includes(k));
-  if (!keys.length || v >= keys.length) return { counts, offGroups: others };
+  if (!keys.length || v >= skeletonCap(section)) return { counts, offGroups: others };
   if (v === 0) return { counts, offGroups: [...(settings.offGroups || [])] };
   const lit = skeletonLit(settings, section);
   for (const k of keys) {

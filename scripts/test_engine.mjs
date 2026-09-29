@@ -7246,25 +7246,27 @@ function indoorOutdoorClash(have) {
 }
 
 {
-  // coat 可能只到腰部，不能拿它替 white shirt 充當下著。clothing=1：兩張釘選已經超過目標，
-  // 一般 filler 不會補，專門驗證最後的 lower-body repair 是否真的補出 bottom。
-  // （以前用 clothing=0 排除 filler；2026-09-25 起 0＝整段不補，連修復也不補，見 討論區.md。）
+  // coat 可能只到腰部，不能拿它替 white shirt 充當下著。
+  // 以前用 clothing=1 讓 filler 不補、單獨驗 lower-body repair。2026-09-29 起服裝 1～4
+  // 是選格（每種一件、釘選先佔格）：釘了兩件就已經超過 1，引擎不再補任何衣服 ——
+  // 那是專案主要的「衣服可以不穿完整」。所以修復保證改在預設數字（5，不選格）驗，
+  // 另外守一條「服裝 1 釘兩件就不補」。
   const s = defaultSettings(data);
   s.girl = true;
   s.boy = false;
   s.eras = ["modern"];
   s.heats = ["tease"];
-  s.counts = { ...s.counts, clothing: 1 };
-  const h = tagsOf(
-    drawOne(lex, s, new Set(["white shirt", "coat"]), new Set(), mulberry32(63001), 63001)
-  );
-  const lower = [...h].some((t) => {
+  const isBottom = (t) => {
     const it = lex.byTag.get(t);
     if (!it || it.section !== "clothing" || it.layer !== "garment") return false;
-    const slot = it.mutex || it.group;
-    return slot === "bottom";
-  });
-  ok("外套不能冒充下著：上衣＋coat 會補 bottom，不疊穿 onepiece", lower, [...h].join(", "));
+    return (it.mutex || it.group) === "bottom";
+  };
+  const isOnepiece = (t) => lex.byTag.get(t)?.mutex === "onepiece";
+  const h = tagsOf(drawOne(lex, s, new Set(["white shirt", "coat"]), new Set(), mulberry32(63001), 63001));
+  ok("外套不能冒充下著：上衣＋coat 會補 bottom，不疊穿 onepiece", [...h].some(isBottom) && ![...h].some(isOnepiece), [...h].join(", "));
+  const s1 = { ...s, counts: { ...s.counts, clothing: 1 } };
+  const h1 = tagsOf(drawOne(lex, s1, new Set(["white shirt", "coat"]), new Set(), mulberry32(63001), 63001));
+  ok("服裝 1、釘了上衣＋coat：釘選已佔滿，不再補下身", ![...h1].some(isBottom), [...h1].join(", "));
 }
 
 {

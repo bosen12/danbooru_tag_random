@@ -97,9 +97,11 @@ for (const crowdTag of ["crowd", "people"]) {
   let hits = 0;
   for (let i = 1; i <= 400; i++) {
     const t = split(drawOne(lex, base, new Set(), new Set(), mulberry32(3900 + i), 3900 + i).positive);
-    if (t.includes("no humans") || t.includes("scenery") || t.includes("people")) hits++;
+    if (t.includes("no humans") || t.includes("scenery")) hits++;
   }
-  ok("no humans／scenery／people 只能釘，隨機不會抽到", hits === 0, `${hits}/400`);
+  // people（路人）後來改成跟 crowd 一樣可以隨機抽到（437d9fc，engine.js 那行的註解），
+  // 私人場地、solo 的限制照舊由上面幾條守。
+  ok("no humans／scenery 只能釘，隨機不會抽到", hits === 0, `${hits}/400`);
 }
 
 if (failed) {

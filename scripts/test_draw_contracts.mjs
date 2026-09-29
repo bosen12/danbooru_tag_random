@@ -40,6 +40,7 @@ import {
   stepSkeleton,
   swapSkeleton,
   SKELETON,
+  clothingKindKeys,
   weightsForHeats,
 } from "../web/engine.js";
 
@@ -605,8 +606,51 @@ const WATER_SRC = [
   }
   ok("骨架：性愛尺度姿勢 1 仍有性愛動作", sexHit / 60 > 0.9, `${sexHit}/60`);
 
+  // 服裝：門檻 5（預設值）。設 1～4 只補亮著的種類、每種一件；5 以上照舊自由補。
+  // 預設順序每一級都是完整的一套（連身 → 腿襪 → 飾品 → 鞋履），換成上衣就是不完整的穿法。
+  const engineCloth = (d) =>
+    (d.trace?.kept || []).filter(
+      (k) =>
+        String(d.positive).split(", ").includes(k.tag) &&
+        ["random", "era_anchor", "repair"].includes(k.source) &&
+        lex.byTag.get(k.tag)?.section === "clothing"
+    );
+  const KEEP_CLOTH = ["clothing:era", "clothing:nude"];
+  const outside = (d, lit) =>
+    engineCloth(d).filter((k) => {
+      const keys = clothingKindKeys(lex.byTag.get(k.tag));
+      return !keys.some((x) => lit.includes(x)) && !(keys.length === 1 && KEEP_CLOTH.includes(keys[0]));
+    });
+  const c1 = mk({ counts: { ...base.counts, clothing: 1 } });
+  ok("服裝：設 1 預設亮連身", JSON.stringify(skeletonLit(c1, "clothing")) === '["clothing:onepiece"]', JSON.stringify(skeletonLit(c1, "clothing")));
+  const cTop = mk({ ...c1, ...swapSkeleton(c1, "clothing", "clothing:top") });
+  for (const [name, cs] of [["設 1（連身）", c1], ["設 1 換上衣", cTop]]) {
+    const lit = skeletonLit(cs, "clothing");
+    let bad = null;
+    let picked = 0;
+    for (let i = 0; i < 120 && !bad; i++) {
+      const d = draw(cs, [], i);
+      const out = outside(d, lit);
+      if (out.length) bad = `seed ${93000 + i}：${out.map((k) => k.tag).join("、")}`;
+      picked += engineCloth(d).length;
+    }
+    ok(`服裝：${name} → 引擎只補亮著的種類`, !bad, bad || "");
+    ok(`服裝：${name} → 引擎自己補的大約一件`, picked / 120 <= 1.3, `平均 ${(picked / 120).toFixed(2)}`);
+  }
+  const edo1 = mk({ eras: ["edo"], counts: { ...base.counts, clothing: 1 } });
+  let edoBad = null;
+  for (let i = 0; i < 80 && !edoBad; i++) {
+    const out = outside(draw(edo1, [], i), skeletonLit(edo1, "clothing"));
+    if (out.length) edoBad = `seed ${93000 + i}：${out.map((k) => k.tag).join("、")}`;
+  }
+  ok("服裝：江戶設 1 → 佔別格的時代服裝（羽織、木屐）不補", !edoBad, edoBad || "");
+  ok("服裝：設 5 以上照舊自由補（全亮）", skeletonLit(base, "clothing").length === SKELETON.clothing.length, JSON.stringify(base.counts));
+  const c5to2 = stepSkeleton(base, "clothing", 2);
+  ok("服裝：5 → 2 亮連身＋腿襪", JSON.stringify(skeletonLit(mk({ ...base, ...c5to2 }), "clothing")) === '["clothing:onepiece","clothing:legs"]', JSON.stringify(c5to2));
+  ok("服裝：釘的裙子照樣留著", String(draw(c1, ["pleated skirt"], 0).positive).split(", ").includes("pleated skirt"));
+
   // 預設數字都不低於骨架：一般抽牌逐字不受影響（金標另外守）。
-  ok("骨架：預設 counts 都不低於骨架格數", ["feature", "pose", "env"].every((k) => skeletonLit(base, k).length === SKELETON[k].length), JSON.stringify(base.counts));
+  ok("骨架：預設 counts 都不低於門檻（全亮）", ["feature", "clothing", "pose", "env"].every((k) => skeletonLit(base, k).length === SKELETON[k].length), JSON.stringify(base.counts));
 }
 
 if (failed) {

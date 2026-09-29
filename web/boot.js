@@ -20,6 +20,7 @@ import {
   isIdentityItem,
   QUOTA_SECTIONS,
   SKELETON,
+  skeletonCap,
   skeletonLit,
   stepSkeleton,
   swapSkeleton,
@@ -375,9 +376,10 @@ function renderCounts() {
 }
 
 // 選格：數字比骨架少時，那一段在目標數底下展開，列出它的骨架格（engine.js 的 SKELETON），
-// 亮著的格數＝數字。點暗的換過去（數字不變）；多要少改數字。服裝沒有骨架格，不展開。
+// 亮著的格數＝數字。點暗的換過去（數字不變）；多要少改數字。服裝的門檻是 5（預設值），
+// 設 1～4 才展開、每種一件。
 // 外框常駐，開合靠 CSS 撐高度；換格只改那一顆，劃線和蓋章才播得出來。
-const SKEL_SECTIONS = ["feature", "pose", "env"];
+const SKEL_SECTIONS = ["feature", "clothing", "pose", "env"];
 const skelRecent = {};
 
 function skelPulse(el, cls, ms = 460) {
@@ -453,17 +455,18 @@ function syncSkeleton(section, stamp = true, first = false) {
   const row = document.querySelector(`#skel-picker .skel-row[data-section="${section}"]`);
   if (!row) return;
   const n = Number(settings.counts?.[section]) || 0;
-  const now = n > 0 && n < SKELETON[section].length;
+  const now = n > 0 && n < skeletonCap(section);
   const was = row.dataset.open === "true";
   row.dataset.open = now ? "true" : "false";
   row.setAttribute("aria-hidden", now ? "false" : "true");
   row.inert = !now;
   if (now && !was && !first) skelPulse(row, "is-opening", 900);
+  const unit = section === "clothing" ? "種、每種一件" : "格";
   row.querySelector(".skel-note").textContent = !now
     ? ""
     : n === 1
-      ? "只補 1 格，點一顆換過去；釘的會先佔格"
-      : `只補 ${n} 格，點暗的會換掉最早選的；釘的會先佔格`;
+      ? `只補 1 ${unit}，點一顆換過去；釘的會先佔格`
+      : `只補 ${n} ${unit}，點暗的會換掉最早選的；釘的會先佔格`;
   const lit = skeletonLit(settings, section);
   // 一開始：優先序越後面的越「舊」，先被換掉。之後新亮起來的算最新。
   if (!skelRecent[section]) skelRecent[section] = [...lit].reverse();

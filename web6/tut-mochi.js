@@ -169,7 +169,7 @@ export function buildMochiScreen(S, ctx) {
   label(M, "tlab", 190, -96, "人物");
   m.ui.who = segmented(M, 232, -109, ["女", "男", "不限"], 46, 40);
   m.ui.who.set(0);
-  label(M, "tlab", -333, -56, "▸ 更多規則：每段張數、尺寸、場景、職業");
+  label(M, "tlab", -333, -56, "▸ 更多規則：每段張數與選格、尺寸、場景、職業");
   m.ui.moreBtn = { x: -240, y: -48 };
   box(M, "tb", -350, -21, 1107, 1).style.background = "var(--color-rule-2)";
   // 抽牌列

@@ -21,6 +21,8 @@ import {
   ERA_LABELS,
   contradictions,
   ACT_PLACE,
+  SKELETON,
+  skeletonCap,
   stepSkeleton,
 } from "./engine.js";
 import { skeletonPicker } from "./skeleton-picker.js";
@@ -971,7 +973,13 @@ function renderPoolClash(pairs) {
 
 function renderRules() {
   const box = $("rules");
-  const moreOpen = box.querySelector(".more-rules")?.open || false;
+  // 第一次畫：改過骨架格或服裝種類的話直接展開，不然設定藏在收起來的摺疊裡，
+  // 看起來像不見了（專案主在手機上就找不到）。之後照使用者自己開關的狀態。
+  const prev = box.querySelector(".more-rules");
+  const customised =
+    (settings.offGroups || []).length > 0 ||
+    Object.keys(SKELETON).some((k) => Number(settings.counts?.[k]) > 0 && Number(settings.counts[k]) < skeletonCap(k));
+  const moreOpen = prev ? prev.open : customised;
   const heatRow = el(
     "div",
     { class: "rule-field", role: "group", "aria-label": "尺度" },
@@ -1079,7 +1087,7 @@ function renderRules() {
     el(
       "details",
       { class: "more-rules", open: moreOpen },
-      el("summary", { class: "pressable" }, "更多規則：每段張數、尺寸、場景、職業"),
+      el("summary", { class: "pressable" }, "更多規則：每段張數與選格、尺寸、場景、職業"),
       el(
         "div",
         {},
