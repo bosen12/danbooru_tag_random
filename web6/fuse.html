@@ -2,6 +2,38 @@
 <html lang="zh-Hant">
   <head>
     <meta charset="utf-8" />
+    <!-- 墨池 ⇄ 疊印台 換版（styles.css 的 @view-transition）：判斷方向（滾筒光、分頁底線用），從別頁過來就不播。
+         要在第一次畫面之前掛上，所以放在 head 最前面。 -->
+    <script>
+      addEventListener("pagereveal", (e) => {
+        const vt = e.viewTransition;
+        if (!vt) return;
+        const room = (u) => (/fuse\.html$/.test(u) ? 1 : /\/(index\.html)?$/.test(u) ? 0 : -1);
+        let from = "";
+        try {
+          from = new URL(navigation?.activation?.from?.url || document.referrer || "", location.href).pathname;
+        } catch {}
+        const was = room(from);
+        const here = room(location.pathname);
+        if (was < 0 || here < 0 || was === here) return vt.skipTransition();
+        document.documentElement.dataset.vt = here > was ? "fwd" : "back";
+        vt.finished.finally(() => delete document.documentElement.dataset.vt);
+        // 導覽的墨底從剛才那個標籤滑過來。
+        const ink = document.querySelector(".page-switch-ink");
+        const a = ink?.parentElement;
+        const other = a && [...a.parentElement.querySelectorAll("a")].find((x) => x !== a);
+        if (ink && other) {
+          const ra = a.getBoundingClientRect();
+          const ro = other.getBoundingClientRect();
+          if (ra.width) {
+            ink.style.setProperty("--ink-dx", ro.left - ra.left + "px");
+            ink.style.setProperty("--ink-sx", String(ro.width / ra.width));
+            ink.classList.add("is-arriving");
+            ink.addEventListener("animationend", () => ink.classList.remove("is-arriving"), { once: true });
+          }
+        }
+      });
+    </script>
     <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover" />
     <meta name="theme-color" content="#0f1217" />
     <title>墨池 · 疊印台</title>
@@ -36,8 +68,8 @@
       <div class="mast-primary">
         <h1 class="wordmark">墨池</h1>
         <nav class="page-switch" aria-label="墨池頁面">
-          <a href="./">墨池</a>
-          <a href="fuse.html" aria-current="page"><span class="page-switch-ink" aria-hidden="true"></span>疊印台</a>
+          <a href="./"><span class="page-switch-label">墨池</span></a>
+          <a href="fuse.html" aria-current="page"><span class="page-switch-ink" aria-hidden="true"></span><span class="page-switch-label">疊印台</span></a>
         </nav>
         <a class="mast-extra" href="intro.html" title="三分鐘的介紹影片（畫面、配樂即時產生）· Intro film">介紹影片</a>
         <a class="mast-extra" href="tutorial.html" title="墨池與疊印台的使用教學影片 · How-to film">教學</a>
@@ -123,5 +155,6 @@
       } catch { /* 儲存空間不可用時，照常載入頁面。 */ }
     </script>
     <script type="module" src="fuse.js"></script>
+      <div class="vt-sweep" aria-hidden="true"></div>
   </body>
 </html>

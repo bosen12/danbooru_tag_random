@@ -1316,7 +1316,12 @@ body.fuse {
   background: transparent;
   color: var(--color-ink);
   text-align: left;
-  transition: background-color var(--dur-micro) var(--ease-out), padding-left var(--dur-short) var(--ease-out);
+  transition: background-color var(--dur-micro) var(--ease-out);
+}
+
+/* 往右推的是這一行裡的東西（translate），不是 padding：推 padding 每一格都要排版。 */
+.starter > * {
+  transition: translate var(--dur-short) var(--ease-out);
 }
 
 .starter:last-of-type {
@@ -1357,8 +1362,15 @@ body.fuse {
   /* 指著哪一行，那一行往右推一點點、墊上淡淡的紙色，像排字時用手指按住那一行。 */
   .starter:hover {
     background: color-mix(in oklch, var(--color-paper-2) 70%, transparent);
-    padding-left: var(--space-xs);
   }
+  .starter:hover > * {
+    translate: calc(var(--space-xs) - 2px) 0;
+  }
+}
+
+/* 鍵盤走到這一行：跟滑鼠指著一樣往右推，兩種操作看到同一個回饋。 */
+.starter:focus-visible > * {
+  translate: calc(var(--space-xs) - 2px) 0;
 }
 
 .starter:active {
@@ -1676,12 +1688,15 @@ body.fuse {
   animation: queued var(--dur-breath) var(--ease-in-out) infinite alternate;
 }
 
+/* 排隊等印：一小段在軌道上來回。以前動 margin-left（0 → 78%）—— 無限循環，排隊多久就每格
+ * 排版多久，而排隊正好是生圖的時候。改成 translateX：百分比是自己的寬（22%），
+ * 78% ÷ 22% ≈ 354.5%，走到同一個終點。 */
 @keyframes queued {
   from {
-    margin-left: 0;
+    transform: translateX(0);
   }
   to {
-    margin-left: 78%;
+    transform: translateX(354.5%);
   }
 }
 
@@ -2095,18 +2110,32 @@ body.fuse {
   min-height: 48px;
   font-size: var(--text-md);
   letter-spacing: 0.04em;
+  /* 進度填色（::before）壓在底色之上、字之下。 */
+  isolation: isolate;
+  overflow: hidden;
 }
 
-/* 印製中：按鈕本身就是進度條，從左往右填滿。 */
+/* 印製中：按鈕本身就是進度條，從左往右填滿。
+ * 以前是漸層色標 calc(var(--p) * 100%)，配 background-size 的轉場 —— 色標位置不能插值，
+ * 那條轉場從來沒生效，進度一格一格跳。改成跟預覽底下、試印卡上的進度條同一套：
+ * 一層 scaleX(var(--p))，交給合成器，每格之間滑過去。 */
 .pb-go[data-busy="true"] {
   opacity: 1;
   cursor: progress;
   color: var(--color-ink);
-  background:
-    linear-gradient(90deg, color-mix(in oklch, var(--color-accent) 70%, transparent) calc(var(--p, 0) * 100%), transparent 0),
-    color-mix(in oklch, var(--color-accent) 16%, var(--color-paper-2));
+  background: color-mix(in oklch, var(--color-accent) 16%, var(--color-paper-2));
   border-color: color-mix(in oklch, var(--color-accent) 60%, transparent);
-  transition: background-size var(--dur-short) linear;
+}
+
+.pb-go[data-busy="true"]::before {
+  content: "";
+  position: absolute;
+  inset: 0;
+  z-index: -1;
+  background: color-mix(in oklch, var(--color-accent) 70%, transparent);
+  transform-origin: left center;
+  transform: scaleX(var(--p, 0));
+  transition: transform var(--dur-short) linear;
 }
 
 /* 「付印」兩個字像印章一樣拉開；「印製中 40%」這種長的照正常字距，數字才不會散掉。 */
@@ -2627,6 +2656,10 @@ body.fuse {
 }
 
 @media (prefers-reduced-motion: reduce) {
+  .starter > *,
+  .pb-go[data-busy="true"]::before {
+    transition: none;
+  }
   .press-roll,
   .card.is-stamped,
   .card.is-carried,

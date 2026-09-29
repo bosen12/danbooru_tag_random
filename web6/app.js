@@ -26,6 +26,7 @@ import {
   stepSkeleton,
 } from "./engine.js";
 import { skeletonPicker } from "./skeleton-picker.js";
+import { compareThumb } from "./compare.js";
 import { relationsOf } from "./fuse-bed.js";
 import { drawWithSeed } from "./draw-with-seed.js";
 import { ratingBlocked, RATING_LABEL } from "./rules/rating.js";
@@ -1844,7 +1845,9 @@ function showShot(shot) {
         "div",
         {},
         el("p", { class: "tag-en" }, [shot.hires ? `Hires ${shot.hires.width}×${shot.hires.height}（原圖 ${shot.width}×${shot.height}）` : shot.width + "×" + shot.height, RATING_ZH[shot.rating], ERA_LABELS[shot.era]].filter(Boolean).join("・")),
-        el("pre", { class: "pos-text" }, shot.positive)
+        el("pre", { class: "pos-text" }, shot.positive),
+        // 做過 Hires：提示詞底下一張示意圖，點開左右拉動比較（compare.js）。
+        compareThumb(shot)
       )
     ),
     {

@@ -28,6 +28,7 @@ import {
 } from "./engine.js";
 import { drawWithSeed } from "./draw-with-seed.js";
 import { skeletonPicker } from "./skeleton-picker.js";
+import { compareThumb } from "./compare.js";
 import { ratingBlocked, RATING_LABEL } from "./rules/rating.js";
 import { HEATS, toggleHeat } from "./heats.js";
 import { heatBlockedByRating } from "./scene-policy.js";
@@ -2409,6 +2410,43 @@ function lineItem(p) {
 
 const STATUS_ZH = { drawn: "排隊", queued: "排隊", running: "印製中", done: "印好了", failed: "印壞了", cancelled: "取消了", stopped: "停了" };
 
+// 晾紙繩的小縮圖存在本機。繩上一張只有指甲大，拿的卻是整張成品的 webp（約 100KB）；
+// 切頁面回來時要是快取不在（舊作品網址沒帶指紋、快取被清、遠端連線），十幾張就排在
+// 字盒幾十張插圖後面慢慢下載 —— 專案主看到的「有些晾紙要等」。
+// 第一次載好原圖就用 canvas 縮成 144px 高的 webp（幾 KB）存起來，之後繩子直接用它，
+// 不發請求。記著是從哪個網址縮的：Hires 換了圖，網址變了，就重縮一次。
+// 滑過浮出的大圖、點開的大圖照舊讀原圖。
+const THUMB_KEY = "mochi.fuse.thumbs.v1";
+const THUMB_H = 144;
+let lineThumbs = readJ(THUMB_KEY, {});
+if (!lineThumbs || typeof lineThumbs !== "object" || Array.isArray(lineThumbs)) lineThumbs = {};
+
+function lineThumbOf(p, src) {
+  const t = lineThumbs[p.id];
+  return p.status === "done" && t && t.s === src && typeof t.d === "string" ? t.d : null;
+}
+
+function keepLineThumb(p, src, img) {
+  if (p.status !== "done" || !img.naturalWidth || !img.naturalHeight || img.getAttribute("src") !== src) return;
+  try {
+    const h = Math.min(THUMB_H, img.naturalHeight);
+    const w = Math.max(1, Math.round((img.naturalWidth * h) / img.naturalHeight));
+    const c = document.createElement("canvas");
+    c.width = w;
+    c.height = h;
+    c.getContext("2d").drawImage(img, 0, 0, w, h);
+    const d = c.toDataURL("image/webp", 0.82);
+    if (!d.startsWith("data:image/webp")) return;
+    lineThumbs[p.id] = { s: src, d };
+    // 只留繩上還在的。
+    const live = new Set(prints.map((x) => x.id));
+    for (const id of Object.keys(lineThumbs)) if (!live.has(id)) delete lineThumbs[id];
+    writeJ(THUMB_KEY, lineThumbs);
+  } catch {
+    /* 縮不了（圖壞了、畫布被擋）就算了：下次照樣讀原圖 */
+  }
+}
+
 function paintLineNode(node, p) {
   // 剛印好：紙抖一下（每張只抖一次）。
   if (p.status === "done" && node.dataset.status && node.dataset.status !== "done" && !reduced()) {
@@ -2421,10 +2459,18 @@ function paintLineNode(node, p) {
   const src = viewSrc(p.image) || p.preview;
   const img = face.querySelector("img");
   if (src) {
-    // loading 要排在 src 前面：先設 src 的話圖已經開始下載，lazy 就沒用了。
-    // 繩子捲不到的作品等捲過去才下載。
-    if (!img) face.replaceChildren(el("img", { loading: "lazy", src, alt: "", decoding: "async", draggable: "false" }));
-    else if (img.getAttribute("src") !== src) img.src = src;
+    const thumb = lineThumbOf(p, src);
+    const use = thumb || src;
+    let target = img;
+    if (!img) {
+      // loading 要排在 src 前面：先設 src 的話圖已經開始下載，lazy 就沒用了。
+      // 繩子捲不到的作品等捲過去才下載。存好的小縮圖是本機的，不必 lazy。
+      // 還沒有縮圖的那幾張在頁面最上面：優先序拉高，不要排在字盒幾十張插圖後面。
+      target = el("img", thumb ? { src: use, alt: "", decoding: "async", draggable: "false" } : { loading: "lazy", fetchpriority: "high", src: use, alt: "", decoding: "async", draggable: "false" });
+      face.replaceChildren(target);
+    } else if (img.getAttribute("src") !== use) img.src = use;
+    else target = null;
+    if (target && !thumb && p.status === "done") target.addEventListener("load", () => keepLineThumb(p, src, target), { once: true });
   } else face.replaceChildren(el("span", { class: "print-state" }, STATUS_ZH[p.status] || ""));
   node.style.setProperty("--p", String(p.status === "running" ? p.progress || 0 : p.status === "done" ? 1 : 0));
   node.setAttribute("aria-label", `試印 ${p.letter || ""}・${STATUS_ZH[p.status] || ""}・你的 ${p.mine?.length || 0} 張牌。點開看，或回到這一版`);
@@ -2553,7 +2599,9 @@ function openPrint(p) {
         ),
         el("p", { class: "print-view-label" }, `這一版的牌（${mine.length}）`),
         el("div", { class: "print-view-cards" }, mine.map((t) => cardNode(cardOf(t), assets, { tagName: "div" }))),
-        el("details", { class: "print-view-pos" }, el("summary", {}, "POS"), el("pre", { class: "pos-text" }, p.positive))
+        el("details", { class: "print-view-pos" }, el("summary", {}, "POS"), el("pre", { class: "pos-text" }, p.positive)),
+        // 做過 Hires：提示詞底下一張示意圖，點開左右拉動比較（compare.js）。
+        compareThumb(p)
       )
     ),
     { wide: true, foot }

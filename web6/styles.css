@@ -369,11 +369,12 @@ body #wf-pick-btn.has {
   border-radius: var(--radius-sm);
   background: var(--color-paper-2);
   white-space: nowrap;
+  /* 整個導覽一個堆疊層：墨底（z 0）滑過另一個標籤時，所有的字（z 1）都在它上面。 */
+  isolation: isolate;
 }
 
 .page-switch a {
   position: relative;
-  isolation: isolate;
   display: inline-flex;
   align-items: center;
   min-height: 30px;
@@ -390,9 +391,16 @@ body #wf-pick-btn.has {
   color: var(--color-ink);
 }
 
+/* 字自己一層、排在墨底上面。不靠墨底的 z-index: -1：換版時墨底在動畫裡會被提升成獨立的
+ * 合成層，擷取桅杆的即時畫面時它跑到字上面，「疊印台」三個字整段被蓋住。 */
+.page-switch-label {
+  position: relative;
+  z-index: 1;
+}
+
 .page-switch-ink {
   position: absolute;
-  z-index: -1;
+  z-index: 0;
   inset: 0;
   border-radius: inherit;
   background: var(--color-paper-4);
@@ -3005,7 +3013,27 @@ body:has(.fav-hand) .tray-bridge { display: none; }
   }
 
   .mast { view-transition-name: mast; }
-  .page-switch-ink { view-transition-name: page-switch-ink; }
+  /* 分頁底線不再單獨拍成一層：單獨一層會疊在頂欄最上面，換版那半秒把「疊印台」三個字蓋掉。
+   * 頂欄在轉場裡是活的畫面，底線用自己的動畫從另一個分頁滑過來（起點由 <head> 的
+   * pagereveal 量好寫進 --ink-dx／--ink-sx），字（.page-switch-label）始終在它上面。 */
+  .page-switch-ink.is-arriving {
+    transform-origin: left center;
+    animation: tab-ink-arrive var(--dur-long) var(--ease-settle) both;
+  }
+
+  /* 滾筒光：一條朱線拖著淡淡的紙面反光，沿換版的方向掃過整個畫面，跟新的一版落下同步 ——
+   * 像滾筒把新的一版壓上紙。它只在換版時出現（html[data-vt]，pagereveal 寫的），
+   * 單獨一層、只動 transform，換頁時主執行緒再忙也跑得動。放在 body 最後，疊在最上面。 */
+  html[data-vt] .vt-sweep {
+    display: block;
+    view-transition-name: vt-sweep;
+  }
+  ::view-transition-new(vt-sweep) {
+    animation: vt-sweep-fwd var(--dur-long) var(--ease-in-out) both;
+  }
+  html[data-vt="back"]::view-transition-new(vt-sweep) {
+    animation-name: vt-sweep-back;
+  }
   /* 兩頁的字盒、工作區形狀不一樣（墨池工作區是整片，疊印台只有中間一欄）：配成一對的話瀏覽器會把
    * 舊的快照拉伸變形成新的框，再加上裁切掃過去，逐格看是字被切一半、兩種牌格疊在一起。
    * 所以各頁用自己的名字，不配對：舊的在原地退、新的在自己的位置進來，只有頂欄和分頁底線是同一個東西在動。 */
@@ -3028,11 +3056,6 @@ body:has(.fav-hand) .tray-bridge { display: none; }
     animation: none;
   }
   ::view-transition-old(mast) { opacity: 0; }
-
-  ::view-transition-group(page-switch-ink) {
-    animation-duration: var(--dur-long);
-    animation-timing-function: var(--ease-travel);
-  }
 
   ::view-transition-old(favorite-tray),
   ::view-transition-new(favorite-tray) {
@@ -3072,6 +3095,42 @@ body:has(.fav-hand) .tray-bridge { display: none; }
   }
 }
 
+.vt-sweep {
+  display: none;
+  position: fixed;
+  top: 0;
+  bottom: 0;
+  left: 0;
+  width: 16rem;
+  pointer-events: none;
+  /* 往疊印台：新的一版從右邊進來，滾筒由右往左壓，亮邊在左、反光拖在右。 */
+  background:
+    linear-gradient(to right, var(--color-accent) 0 2px, color-mix(in oklch, var(--color-stock) 16%, transparent) 2px, transparent 100%);
+}
+
+html[data-vt="back"] .vt-sweep {
+  background:
+    linear-gradient(to left, var(--color-accent) 0 2px, color-mix(in oklch, var(--color-stock) 16%, transparent) 2px, transparent 100%);
+}
+
+@keyframes vt-sweep-fwd {
+  from { transform: translateX(100vw); opacity: 0.2; }
+  15% { opacity: 1; }
+  85% { opacity: 1; }
+  to { transform: translateX(-16rem); opacity: 0; }
+}
+@keyframes vt-sweep-back {
+  from { transform: translateX(-16rem); opacity: 0.2; }
+  15% { opacity: 1; }
+  85% { opacity: 1; }
+  to { transform: translateX(100vw); opacity: 0; }
+}
+@keyframes tab-ink-arrive {
+  from {
+    translate: var(--ink-dx, 0) 0;
+    scale: var(--ink-sx, 1) 1;
+  }
+}
 @keyframes vt-fade-out {
   to { opacity: 0; }
 }
@@ -3371,5 +3430,510 @@ body:has(.fav-hand) .tray-bridge { display: none; }
     content: "";
     position: absolute;
     inset: -8px -6px;
+  }
+}
+
+/* ---------- Hires 對比（compare.js）----------
+ * 詳情右邊的示意圖：左半原圖、右半 Hires、中間一條線。滑鼠移上去線掃一下，看得出它能比較。 */
+.cmp-thumb {
+  display: grid;
+  grid-template-columns: minmax(0, 7.5rem) minmax(0, 1fr);
+  align-items: center;
+  gap: var(--space-sm);
+  width: 100%;
+  margin-top: var(--space-sm);
+  padding: var(--space-xs);
+  border: 1px solid var(--color-rule);
+  border-radius: var(--radius-md);
+  background: var(--color-paper-2);
+  color: var(--color-ink);
+  text-align: left;
+  cursor: zoom-in;
+  transition:
+    border-color var(--dur-short) var(--ease-out),
+    background-color var(--dur-short) var(--ease-out),
+    translate var(--dur-short) var(--ease-out);
+}
+
+@media (hover: hover) and (pointer: fine) {
+  .cmp-thumb:hover {
+    border-color: var(--color-accent);
+    background: var(--color-paper-3);
+    translate: 0 -1px;
+  }
+}
+
+.cmp-thumb:active {
+  translate: 0 1px;
+}
+
+.cmp-thumb-frame {
+  position: relative;
+  display: block;
+  overflow: hidden;
+  border-radius: var(--radius-sm);
+  background: var(--color-paper);
+  box-shadow: var(--shadow-card);
+}
+
+.cmp-thumb-frame img {
+  display: block;
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+}
+
+/* 右半、分隔線都是整框寬的一層，靠 transform 推：百分比是自己的寬＝整框的寬。
+ * 外框推 50%、超出切掉，裡面的圖推回 -50%；滑過時三層一起動，合成器跑、不重畫。 */
+.cmp-thumb-cut,
+.cmp-thumb-inner,
+.cmp-thumb-line {
+  position: absolute;
+  inset: 0;
+}
+
+.cmp-thumb-cut {
+  overflow: hidden;
+  transform: translateX(50%);
+}
+
+.cmp-thumb-inner {
+  transform: translateX(-50%);
+}
+
+.cmp-thumb-line {
+  transform: translateX(50%);
+}
+
+.cmp-thumb-line::before {
+  content: "";
+  position: absolute;
+  top: 0;
+  bottom: 0;
+  left: -1px;
+  width: 2px;
+  background: var(--color-stock);
+  box-shadow: 0 0 8px var(--color-shade);
+}
+
+.cmp-thumb-line i {
+  position: absolute;
+  top: 50%;
+  left: 0;
+  width: 14px;
+  height: 14px;
+  translate: -50% -50%;
+  border-radius: 50%;
+  background: var(--color-stock);
+  box-shadow: 0 0 0 2px var(--color-accent);
+}
+
+.cmp-thumb-tag {
+  position: absolute;
+  top: 4px;
+  padding: 0 4px;
+  border-radius: var(--radius-xs);
+  background: color-mix(in oklch, var(--color-paper) 70%, transparent);
+  color: var(--color-ink);
+  font: 700 10px/1.5 var(--font-mono);
+}
+
+.cmp-thumb-a {
+  left: 4px;
+}
+
+.cmp-thumb-b {
+  right: 4px;
+}
+
+.cmp-thumb-cap {
+  display: grid;
+  gap: 2px;
+}
+
+.cmp-thumb-cap b {
+  font-family: var(--font-display);
+  font-size: var(--text-md);
+}
+
+.cmp-thumb-cap small {
+  color: var(--color-muted);
+  font-size: var(--text-xs);
+  line-height: 1.5;
+}
+
+@keyframes cmp-peek {
+  35% {
+    transform: translateX(72%);
+  }
+  70% {
+    transform: translateX(30%);
+  }
+}
+
+@keyframes cmp-peek-back {
+  35% {
+    transform: translateX(-72%);
+  }
+  70% {
+    transform: translateX(-30%);
+  }
+}
+
+@media (hover: hover) and (pointer: fine) {
+  .cmp-thumb:hover :is(.cmp-thumb-cut, .cmp-thumb-line) {
+    animation: cmp-peek var(--dur-develop) var(--ease-in-out);
+  }
+  .cmp-thumb:hover .cmp-thumb-inner {
+    animation: cmp-peek-back var(--dur-develop) var(--ease-in-out);
+  }
+}
+
+.cmp-thumb:focus-visible :is(.cmp-thumb-cut, .cmp-thumb-line) {
+  animation: cmp-peek var(--dur-develop) var(--ease-in-out);
+}
+
+.cmp-thumb:focus-visible .cmp-thumb-inner {
+  animation: cmp-peek-back var(--dur-develop) var(--ease-in-out);
+}
+
+/* 全螢幕對比：一間暗房，圖是唯一亮的東西。 */
+.cmp:focus {
+  outline: none;
+}
+
+.cmp {
+  position: fixed;
+  inset: 0;
+  z-index: 300;
+  display: grid;
+  background:
+    radial-gradient(120% 90% at 50% 45%, transparent 55%, oklch(4% 0.01 250 / 0.7)),
+    oklch(8% 0.01 250);
+  animation: cmp-in var(--dur-medium) var(--ease-out);
+  user-select: none;
+  -webkit-user-select: none;
+}
+
+@keyframes cmp-in {
+  from {
+    opacity: 0;
+  }
+}
+
+.cmp-stage {
+  position: relative;
+  overflow: hidden;
+  touch-action: none;
+  cursor: grab;
+}
+
+.cmp[data-drag="pan"] .cmp-stage {
+  cursor: grabbing;
+}
+
+.cmp[data-drag="line"] .cmp-stage {
+  cursor: ew-resize;
+}
+
+.cmp-world {
+  position: absolute;
+  inset: 0;
+}
+
+.cmp-layer {
+  position: absolute;
+  left: 0;
+  top: 0;
+  transform-origin: 0 0;
+}
+
+.cmp-layer img {
+  display: block;
+  width: 100%;
+  height: 100%;
+  pointer-events: none;
+}
+
+/* 右半 Hires：外框 translateX(d)、超出切掉，裡面 translateX(-d) 抵回來 —— 拖線只是兩層位移，
+ * 不像 clip-path 那樣每動一下就重畫整片。寬高由 compare.js 設成舞台大小。 */
+.cmp-cut {
+  position: absolute;
+  top: 0;
+  left: 0;
+  overflow: hidden;
+}
+
+.cmp-cut-inner {
+  position: absolute;
+  top: 0;
+  left: 0;
+}
+
+/* 動的時候才掛 will-change；停下來拿掉，瀏覽器才會用新的倍率重畫（放大後不糊）。 */
+.cmp[data-moving="true"] :is(.cmp-layer, .cmp-cut, .cmp-cut-inner) {
+  will-change: transform;
+}
+
+/* 關的時候：標籤、提示、倍率、分隔線先淡掉，只留圖飛回示意圖。 */
+.cmp[data-state="out"] :is(.cmp-tag, .cmp-hint, .cmp-zoom, .cmp-close, .cmp-line) {
+  opacity: 0;
+  transition: opacity var(--dur-micro) var(--ease-out);
+  animation: none;
+}
+
+.cmp[data-state="out"] {
+  pointer-events: none;
+}
+
+.cmp-line {
+  position: absolute;
+  top: 0;
+  bottom: 0;
+  left: 0;
+  width: 0;
+  cursor: ew-resize;
+  outline: none;
+}
+
+.cmp-line::before {
+  content: "";
+  position: absolute;
+  top: 0;
+  bottom: 0;
+  left: -1px;
+  width: 2px;
+  background: var(--color-stock);
+  box-shadow: 0 0 0 1px oklch(0% 0 0 / 0.25), 0 0 18px oklch(0% 0 0 / 0.5);
+  transition: box-shadow var(--dur-short) var(--ease-out);
+}
+
+/* 線本身只有 2px：左右各墊 14px 的感應區，好抓。 */
+.cmp-line::after {
+  content: "";
+  position: absolute;
+  top: 0;
+  bottom: 0;
+  left: -14px;
+  width: 28px;
+}
+
+.cmp-knob {
+  position: absolute;
+  top: 50%;
+  left: 0;
+  z-index: 1;
+  display: grid;
+  place-items: center;
+  width: 44px;
+  height: 44px;
+  translate: -50% -50%;
+  border-radius: 50%;
+  background: var(--color-stock);
+  color: var(--color-stock-ink);
+  box-shadow: 0 0 0 2px var(--color-accent), 0 10px 24px oklch(0% 0 0 / 0.5);
+  transition: scale var(--dur-short) var(--ease-settle), box-shadow var(--dur-short) var(--ease-out);
+}
+
+.cmp-knob svg {
+  width: 22px;
+  height: 22px;
+}
+
+/* 圖飛到定位之後圓鈕才彈出來：視線被帶到「可以拖的地方」。 */
+.cmp[data-state="in"] .cmp-knob {
+  animation: cmp-knob-in var(--dur-medium) var(--ease-settle) var(--dur-long) backwards;
+}
+
+@keyframes cmp-knob-in {
+  from {
+    opacity: 0;
+    scale: 0.5;
+  }
+}
+
+@media (hover: hover) and (pointer: fine) {
+  .cmp-line:hover .cmp-knob {
+    scale: 1.08;
+  }
+}
+
+/* 抓著線：線的光暈亮一點，手感明確。 */
+.cmp[data-drag="line"] .cmp-line::before {
+  box-shadow: 0 0 0 1px oklch(0% 0 0 / 0.25), 0 0 26px color-mix(in oklch, var(--color-accent) 55%, transparent);
+}
+
+.cmp[data-drag="line"] .cmp-knob {
+  scale: 1.14;
+  box-shadow: 0 0 0 3px var(--color-accent), 0 14px 30px oklch(0% 0 0 / 0.55);
+}
+
+.cmp-line:focus-visible .cmp-knob {
+  box-shadow: 0 0 0 2px var(--color-accent), 0 0 0 5px var(--color-focus);
+}
+
+.cmp-tag {
+  position: absolute;
+  top: var(--space-md);
+  display: flex;
+  align-items: baseline;
+  gap: var(--space-xs);
+  padding: var(--space-2xs) var(--space-sm);
+  border-radius: var(--radius-sm);
+  background: color-mix(in oklch, var(--color-paper) 78%, transparent);
+  color: var(--color-ink);
+  font-size: var(--text-sm);
+  pointer-events: none;
+  animation: cmp-tag-in var(--dur-long) var(--ease-out) var(--dur-short) backwards;
+}
+
+.cmp-tag b {
+  font-family: var(--font-display);
+  font-size: var(--text-md);
+}
+
+.cmp-tag small {
+  font-family: var(--font-mono);
+  font-size: var(--text-2xs);
+  color: var(--color-muted);
+}
+
+.cmp-tag-a {
+  left: var(--space-md);
+  --from: -8px;
+}
+
+.cmp-tag-b {
+  right: calc(var(--space-md) + 52px);
+  --from: 8px;
+}
+
+@keyframes cmp-tag-in {
+  from {
+    opacity: 0;
+    translate: var(--from, 0) 0;
+  }
+}
+
+.cmp-hint {
+  position: absolute;
+  left: 50%;
+  bottom: var(--space-lg);
+  translate: -50% 0;
+  margin: 0;
+  padding: var(--space-2xs) var(--space-md);
+  border-radius: 999px;
+  background: color-mix(in oklch, var(--color-paper) 80%, transparent);
+  color: var(--color-ink-2);
+  font-size: var(--text-xs);
+  white-space: nowrap;
+  pointer-events: none;
+  transition: opacity var(--dur-long) var(--ease-out), translate var(--dur-long) var(--ease-out);
+  animation: cmp-hint-in var(--dur-long) var(--ease-out) var(--dur-story) backwards;
+}
+
+@keyframes cmp-hint-in {
+  from {
+    opacity: 0;
+    translate: -50% 8px;
+  }
+}
+
+.cmp[data-touched="true"] .cmp-hint {
+  opacity: 0;
+  translate: -50% 8px;
+}
+
+.cmp-zoom {
+  position: absolute;
+  right: var(--space-md);
+  bottom: var(--space-lg);
+  min-width: 4.2em;
+  min-height: 32px;
+  padding: 0 var(--space-sm);
+  border: 1px solid var(--color-rule);
+  border-radius: 999px;
+  background: color-mix(in oklch, var(--color-paper) 80%, transparent);
+  color: var(--color-ink);
+  font: 600 var(--text-xs) / 1 var(--font-mono);
+  cursor: pointer;
+  transition: border-color var(--dur-short) var(--ease-out), color var(--dur-short) var(--ease-out);
+}
+
+.cmp-zoom[data-native="true"] {
+  border-color: var(--color-accent);
+  color: var(--color-accent);
+}
+
+@media (hover: hover) and (pointer: fine) {
+  .cmp-zoom:hover {
+    border-color: var(--color-ink-2);
+  }
+}
+
+.cmp-close {
+  position: fixed;
+  top: var(--space-md);
+  right: var(--space-md);
+  z-index: 1;
+  display: grid;
+  place-items: center;
+  width: 40px;
+  height: 40px;
+  padding: 0;
+  border: 1px solid var(--color-rule);
+  border-radius: 50%;
+  background: color-mix(in oklch, var(--color-paper) 80%, transparent);
+  color: var(--color-ink);
+  cursor: pointer;
+  transition: rotate var(--dur-short) var(--ease-out), border-color var(--dur-short) var(--ease-out);
+}
+
+.cmp-close svg {
+  width: 18px;
+  height: 18px;
+}
+
+@media (hover: hover) and (pointer: fine) {
+  .cmp-close:hover {
+    rotate: 90deg;
+    border-color: var(--color-ink-2);
+  }
+}
+
+@media (max-width: 40rem) {
+  .cmp-tag {
+    top: calc(var(--space-md) + 44px);
+    font-size: var(--text-xs);
+  }
+  .cmp-tag-b {
+    right: var(--space-md);
+  }
+  .cmp-hint {
+    left: var(--space-md);
+    max-width: calc(100vw - 8rem);
+    translate: 0 0;
+    white-space: normal;
+    animation-name: cmp-tag-in;
+  }
+  .cmp[data-touched="true"] .cmp-hint {
+    translate: 0 8px;
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .cmp,
+  .cmp-tag,
+  .cmp-hint,
+  .cmp[data-state="in"] .cmp-knob,
+  .cmp-thumb:hover :is(.cmp-thumb-cut, .cmp-thumb-inner, .cmp-thumb-line),
+  .cmp-thumb:focus-visible :is(.cmp-thumb-cut, .cmp-thumb-inner, .cmp-thumb-line) {
+    animation: none;
+  }
+  .cmp-knob,
+  .cmp-close,
+  .cmp-thumb,
+  .cmp-line::before {
+    transition: none;
   }
 }
