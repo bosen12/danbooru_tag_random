@@ -125,6 +125,30 @@ body.fuse {
   display: none;
 }
 
+/* 空的繩子：夾著三個空夾子、底下一張虛線的紙。不用字就看得出「作品會夾在這裡」，
+   越往右越淡，像繩子還長。形狀用 mask 畫，顏色吃 --string，亮暗兩套主題都對。 */
+.line[data-empty="true"] .line-empty {
+  position: relative;
+}
+
+.line[data-empty="true"] .line-empty::before {
+  content: "";
+  position: absolute;
+  left: 0.4rem;
+  top: 0.2rem;
+  width: 12rem;
+  height: 4.2rem;
+  background: var(--string);
+  opacity: 0.55;
+  -webkit-mask: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='64' height='67' viewBox='0 0 64 67'%3E%3Crect x='28.5' y='0.5' width='5' height='10' rx='1.2' fill='black'/%3E%3Crect x='14.5' y='8.5' width='33' height='50' rx='1.5' fill='none' stroke='black' stroke-width='1' stroke-dasharray='3 3'/%3E%3C/svg%3E") 0 0 / 4rem 4.2rem repeat-x,
+    linear-gradient(to right, black, transparent);
+  -webkit-mask-composite: source-in;
+  mask: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='64' height='67' viewBox='0 0 64 67'%3E%3Crect x='28.5' y='0.5' width='5' height='10' rx='1.2' fill='black'/%3E%3Crect x='14.5' y='8.5' width='33' height='50' rx='1.5' fill='none' stroke='black' stroke-width='1' stroke-dasharray='3 3'/%3E%3C/svg%3E") 0 0 / 4rem 4.2rem repeat-x,
+    linear-gradient(to right, black, transparent);
+  mask-composite: intersect;
+  pointer-events: none;
+}
+
 .print {
   position: relative;
   display: block;
@@ -1242,7 +1266,8 @@ body.fuse {
   display: grid;
   gap: var(--space-sm);
   justify-items: start;
-  max-width: 44rem;
+  /* 起手式就在 .registers 裡，右緣自然跟下面的分類對齊。以前限寬 44rem／36rem，
+     清單停在半路、分類一路到底，兩塊右緣各停一處。 */
   padding: var(--space-md) 0 var(--space-lg);
 }
 
@@ -1268,7 +1293,6 @@ body.fuse {
   grid-template-columns: minmax(0, 1fr);
   gap: 0;
   width: 100%;
-  max-width: 36rem;
   margin-top: var(--space-xs);
 }
 
@@ -1475,6 +1499,12 @@ body.fuse {
 
 .preview[data-empty="true"] .pv-cap-seed {
   display: none;
+}
+
+/* 還沒付印：框裡已經寫了「選試印後付印」，底下那行「預覽 還沒付印」是同一句話再說一次。
+   用 visibility 留住高度，開始印的時候整欄不跳。 */
+.preview[data-empty="true"] .pv-cap {
+  visibility: hidden;
 }
 
 .pv-frame {

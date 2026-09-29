@@ -1183,6 +1183,15 @@ body #wf-pick-btn.has {
   white-space: nowrap;
 }
 
+/* 標籤＋控制項一組：換行只發生在組與組之間。 */
+.rule-pair {
+  display: inline-flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: var(--space-xs);
+  min-width: 0;
+}
+
 .rule-field {
   display: inline-flex;
   flex-wrap: wrap;
@@ -1576,14 +1585,56 @@ body #wf-pick-btn.has {
   min-width: 0;
 }
 
+/* 手機：兩欄排好 —— 張數一行、兩個開關並排、兩個次要動作並排、「抽並生圖」撐滿自己一行。
+   flex 換行時「同一個人」會跟「偏好卡牌」擠一行、「只抽牌」又落單，主次看不出來。 */
+@media (max-width: 40rem) {
+  .go-bar {
+    display: grid;
+    grid-template-columns: minmax(0, 1fr) minmax(0, 1fr);
+    align-items: center;
+  }
+  .go-bar > .stepper,
+  .go-bar > .go-status,
+  .go-bar > .btn-primary,
+  .go-bar > .seed-ctl {
+    grid-column: 1 / -1;
+  }
+  .go-bar > .stepper {
+    justify-self: start;
+  }
+  .go-bar .spacer,
+  .go-bar .go-status:empty {
+    display: none;
+  }
+  .go-bar > .btn {
+    justify-content: center;
+  }
+  /* 生圖中多一顆「停」：跟「抽並生圖」一樣撐滿，放在它上面，一眼找得到。 */
+  .go-bar > .btn:not(.btn-ghost):not(.btn-primary) {
+    grid-column: 1 / -1;
+  }
+}
+
 /* ---------- 成品牆 ---------- */
 
 .wall-head {
   display: flex;
   flex-wrap: wrap;
   align-items: baseline;
-  justify-content: space-between;
+  gap: var(--space-xs) var(--space-md);
+}
+
+/* 說明緊跟標題，工具靠右 —— 以前 space-between 讓說明浮在整列正中間，對不到任何東西。 */
+.wall-tools {
+  display: flex;
   gap: var(--space-xs);
+  margin-left: auto;
+}
+
+/* 還沒有成品：「全部展開／收起」沒有東西可開，描述牌組的那句也還沒有對象，先收起來。 */
+section:has(> .wall-empty:not([hidden])) .wall-tools,
+section:has(> .wall-empty:not([hidden])) .wall-head p {
+  display: none;
 }
 
 .wall-head h2 {
@@ -1886,6 +1937,20 @@ body #wf-pick-btn.has {
   display: flex;
   flex-wrap: wrap;
   gap: var(--space-2xs);
+}
+
+/* 撤下是這排唯一會拿掉東西的：推到最右、字色放淡，跟其他動作分開。
+   五顆放不下一行時，它自己靠右落在第二行，看起來是分組，不是被擠下去。 */
+.shot-actions .shot-remove {
+  margin-left: auto;
+  color: var(--color-muted);
+}
+
+@media (hover: hover) and (pointer: fine) {
+  .shot-actions .shot-remove:hover {
+    color: var(--color-accent);
+    border-color: color-mix(in oklch, var(--color-accent) 50%, transparent);
+  }
 }
 
 .shot-cards {

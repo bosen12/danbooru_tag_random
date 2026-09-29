@@ -1083,7 +1083,8 @@ function renderRules() {
   });
 
   box.replaceChildren(
-    el("div", { class: "rule-row" }, el("span", { class: "rule-label" }, "尺度"), heatRow, el("span", { class: "rule-label" }, "時代"), eraSel, el("span", { class: "rule-label" }, "人物"), whoRow),
+    // 標籤跟它的控制項包成一組：窄畫面換行時整組一起走，不會出現「時代」掛在上一行尾、選單在下一行。
+    el("div", { class: "rule-row" }, rulePair("尺度", heatRow), rulePair("時代", eraSel), rulePair("人物", whoRow)),
     el(
       "details",
       { class: "more-rules", open: moreOpen },
@@ -1093,10 +1094,14 @@ function renderRules() {
         {},
         el("div", { class: "rule-row" }, el("span", { class: "rule-label" }, "每段抽幾個"), counts),
         picker.node,
-        el("div", { class: "rule-row" }, el("span", { class: "rule-label" }, "尺寸"), sizeSel, el("span", { class: "rule-label" }, "場景"), sceneSel, job, eraOnly)
+        el("div", { class: "rule-row" }, rulePair("尺寸", sizeSel), rulePair("場景", sceneSel), job, eraOnly)
       )
     )
   );
+}
+
+function rulePair(label, control) {
+  return el("span", { class: "rule-pair" }, el("span", { class: "rule-label" }, label), control);
 }
 
 function stepper(label, value, min, max, onChange) {
@@ -1523,7 +1528,7 @@ function shotNode(shot, deal) {
       ),
       el("button", { class: "btn btn-small btn-ghost", type: "button", onclick: (e) => copyPos(shot, e.currentTarget) }, "複製 POS"),
       el("button", { class: "btn btn-small btn-ghost", type: "button", onclick: () => reprint(shot), title: "同樣的 POS、同一顆種子再送一次" }, "同種子重印"),
-      el("button", { class: "btn btn-small btn-ghost", type: "button", onclick: () => removeShot(shot) }, "撤下")
+      el("button", { class: "btn btn-small btn-ghost shot-remove", type: "button", onclick: () => removeShot(shot) }, "撤下")
     )
   );
   node._setOpen = setOpen;
