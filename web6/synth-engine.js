@@ -16,6 +16,16 @@ export const hzOf = (s) => hz(s.slice(0, -1), +s.slice(-1));
 /** 音名往上（或下）幾個八度："A4" + 1 → "A5"。 */
 export const up = (s, n) => s.slice(0, -1) + (+s.slice(-1) + n);
 
+/** 從 from 秒起整段移調 semis 個半音（有音高的事件：f 乘上去、和弦記在 tr）。在加畫面音效之前呼叫。 */
+export function transpose(events, from, semis) {
+  const r = Math.pow(2, semis / 12);
+  for (const e of events) {
+    if (e.t < from) continue;
+    if (e.f) e.f *= r;
+    if (e.notes) e.tr = (e.tr || 0) + semis;
+  }
+}
+
 export function createEngine({ events, length, beat, vol: VOL = 0.85 }) {
   const kicks = events.filter((e) => e.kind === "kick").map((e) => e.t);
   let ctx = null;
@@ -149,15 +159,52 @@ export function createEngine({ events, length, beat, vol: VOL = 0.85 }) {
       env(g, at, Math.min(0.6, dur * 0.25), e.gain, Math.max(0, dur - 1.1), 0.5);
       f.connect(g);
       out(g, { send: 0.8, duck: e.duck });
+      // wide：兩把走音的鋸齒波一左一右（寬一點）；預設疊在中間。
+      const sides = e.wide ? [-0.5, 0.5].map((pv) => {
+        const pn = ctx.createStereoPanner();
+        pn.pan.value = pv;
+        pn.connect(f);
+        return pn;
+      }) : [f, f];
       for (const [n, o] of e.notes) {
-        for (const det of [-9, 8]) {
+        [-9, 8].forEach((det, k) => {
           const v = osc("sawtooth", hz(n, o), at);
-          v.detune.value = det;
+          v.detune.value = det + (e.tr || 0) * 100;
           const og = ctx.createGain();
           og.gain.value = 0.16;
-          v.connect(og).connect(f);
+          v.connect(og).connect(sides[k]);
           track(v, at + dur + 0.1);
-        }
+        });
+      }
+    },
+    /** 電鋼琴：正弦波＋同頻率的 FM，敲下去亮、很快變圓（和弦的切分、斷奏）。notes 跟 pad 一樣。 */
+    keys(e, at, off) {
+      const dur = e.dur - off;
+      if (dur < 0.05) return;
+      const g = ctx.createGain();
+      const rel = e.rel ?? 0.35;
+      g.gain.setValueAtTime(0.0001, at);
+      g.gain.exponentialRampToValueAtTime(e.gain, at + 0.006);
+      g.gain.exponentialRampToValueAtTime(e.gain * 0.45, at + 0.25);
+      g.gain.setValueAtTime(e.gain * 0.45, at + Math.max(0.26, dur));
+      g.gain.exponentialRampToValueAtTime(0.0001, at + Math.max(0.26, dur) + rel);
+      const lp = filter("lowpass", 3200, 0.5);
+      lp.connect(g);
+      out(g, { send: 0.45, duck: e.duck, pan: e.pan || 0, delay: e.delay || 0 });
+      const end = at + Math.max(0.26, dur) + rel + 0.05;
+      for (const [n, o] of e.notes) {
+        const fr = hz(n, o) * Math.pow(2, (e.tr || 0) / 12);
+        const c = osc("sine", fr, at);
+        const m = osc("sine", fr, at);
+        const mi = ctx.createGain();
+        mi.gain.setValueAtTime(fr * 1.6, at);
+        mi.gain.exponentialRampToValueAtTime(fr * 0.15, at + 0.3);
+        m.connect(mi).connect(c.frequency);
+        const cg = ctx.createGain();
+        cg.gain.value = 0.28;
+        c.connect(cg).connect(lp);
+        track(c, end);
+        track(m, end);
       }
     },
     sub(e, at, off) {
@@ -575,7 +622,7 @@ export function createEngine({ events, length, beat, vol: VOL = 0.85 }) {
     },
   };
 
-  const LONG = new Set(["pad", "sub", "bell", "riser", "lead", "soft", "crash", "subdrop", "down", "swell", "unwind"]);
+  const LONG = new Set(["pad", "keys", "sub", "bell", "riser", "lead", "soft", "crash", "subdrop", "down", "swell", "unwind"]);
 
   function pump() {
     if (!playing) return;

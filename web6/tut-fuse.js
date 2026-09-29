@@ -5,7 +5,7 @@
  *   影子＝引擎用四個種子照現在的版抽出來補的牌（idata.drawAt）。
  */
 import { EZ, seg, lerp, spring, mk, put, setHTML, esc, V, env, makeScene, makeScreen, box, label, makeCursor, cardEl, addFlag, stampFlag, suitOf, zhOf, hasCard, arc, K, pressScale } from "./tut-kit.js";
-import { track } from "./film-kit.js";
+import { calmTrack } from "./tut-kit.js";
 import { contradictions, ACT_PLACE, applyPin } from "./engine.js";
 import { REGISTERS, REGISTER_ROLE, emptyBed, placeCard, removeCard, relationsOf } from "./fuse-bed.js";
 import { CARD_SUIT_INFO } from "./cards.js";
@@ -761,7 +761,7 @@ export function buildFuseScene(ctx) {
       let op = 1;
       let z = 5;
       let lifted = false;
-      if (t < s.tin) {
+      if (t < s.tin && s.enter.mode === "fly") {
         const e = s.enter;
         const p = EZ.travel(seg(t, e.tClick, e.tLand));
         const a = arc(e.from, slot, p, e.lift ?? 120);
@@ -972,7 +972,7 @@ export function buildFuseScene(ctx) {
   postList.forEach((f) => f());
 
   /* ---------- 鏡頭 ---------- */
-  const cam = track(
+  const cam = calmTrack(
     [
       [T0 - 0.1, V(0, 0, -300, 14, -30, 0)],
       [b(66, 3), V(0, 0, 200, 8, -22, 0), EZ.inOut],
@@ -1004,7 +1004,7 @@ export function buildFuseScene(ctx) {
       [b(111, 2), focus(-40, 10, 1.0), EZ.inOut],
       [b(113, 0), focus(0, 0, 0.8, { rx: 6, ry: -10 }), EZ.inOut],
     ],
-    EZ.inOut
+    { until: b(71, 3) }
   );
   S.cam = cam;
   return { S };

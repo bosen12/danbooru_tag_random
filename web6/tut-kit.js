@@ -318,9 +318,6 @@ export function makeCursor(screen, { color = "#fff" } = {}) {
       return;
     }
     const p = c.at(t);
-    // 人手不是機器：極小的抖動。
-    const jx = Math.sin(t * 7.3) * 0.7;
-    const jy = Math.cos(t * 6.1) * 0.7;
     let s = 1;
     for (const tc of c.clicks) s *= 1 - 0.16 * (t > tc && t < tc + 0.1 ? 1 : 0) + (t >= tc + 0.1 ? spring(t - tc - 0.1, 0.05, 9, 26) : 0);
     const held = c.holds.some(([a, b]) => t >= a && t <= b);
@@ -328,7 +325,7 @@ export function makeCursor(screen, { color = "#fff" } = {}) {
     const fade = c.shows.reduce((m, [a, b]) => Math.max(m, EZ.out(seg(t, a, a + 0.25)) * (1 - EZ.exit(seg(t, b - 0.25, b)))), 0);
     el.style.visibility = "visible";
     el.style.opacity = fade.toFixed(3);
-    el.style.transform = `translate(${(p.x + jx).toFixed(1)}px, ${(p.y + jy).toFixed(1)}px) scale(${s.toFixed(3)}) rotate(${held ? -8 : 0}deg)`;
+    el.style.transform = `translate(${p.x.toFixed(1)}px, ${p.y.toFixed(1)}px) scale(${s.toFixed(3)}) rotate(${held ? -8 : 0}deg)`;
     c.tip = p;
   };
   // 點擊：按下去縮一下，游標尖端散一圈（畫在畫布上）。
@@ -376,6 +373,52 @@ export function keycaps(parent, on, keys, { x = 1750, y = 962 } = {}) {
     }, el);
     void i;
   });
+}
+
+/* ================= 鏡頭 ================= */
+
+const zoomOf = (z) => 1500 / (1500 - z);
+
+/**
+ * 教學用的鏡頭：到了關鍵點就停住，不要一直漂（一直推拉看起來像在抖）。
+ * keys：[[時間, V, ease?], …]，時間＝鏡頭「到位」的時刻；每一段只在到位前 move 秒內移動（依距離 0.8–1.4 秒），其他時間不動。
+ * 跟前一個停點差不多的（平移不到 minDist、縮放差不到 minZoom、轉角差不到 2°）直接略過，免得鏡頭碎動。
+ * until 之前的關鍵點照舊整段慢慢滑（開場那種運鏡）。
+ */
+export function calmTrack(keys, { until = -Infinity, minDist = 90, minZoom = 0.15 } = {}) {
+  const ks = [keys[0]];
+  for (const k of keys.slice(1)) {
+    const a = ks[ks.length - 1][1];
+    const v = k[1];
+    const small =
+      k[0] > until &&
+      Math.hypot(v.x - a.x, v.y - a.y) < minDist &&
+      Math.abs(zoomOf(v.z) - zoomOf(a.z)) < minZoom &&
+      Math.abs(v.rx - a.rx) + Math.abs(v.ry - a.ry) + Math.abs(v.rz - a.rz) < 2;
+    if (!small) ks.push(k);
+  }
+  const moves = ks.map((k, i) => {
+    if (!i) return 0;
+    const a = ks[i - 1][1];
+    const v = k[1];
+    const d = Math.hypot(v.x - a.x, v.y - a.y) + Math.abs(zoomOf(v.z) - zoomOf(a.z)) * 500;
+    return Math.min(1.4, Math.max(0.8, 0.7 + d / 900));
+  });
+  return (t) => {
+    if (t <= ks[0][0]) return ks[0][1];
+    for (let i = 1; i < ks.length; i++) {
+      const [t1, v1] = ks[i];
+      if (t <= t1) {
+        const [t0, v0] = ks[i - 1];
+        const start = t1 <= until ? t0 : Math.max(t0, t1 - moves[i]);
+        const p = EZ.inOut(seg(t, start, t1));
+        const o = {};
+        for (const k in v1) o[k] = lerp(v0[k] ?? v1[k], v1[k], p);
+        return o;
+      }
+    }
+    return ks[ks.length - 1][1];
+  };
 }
 
 /* ================= 動作的小函式 ================= */

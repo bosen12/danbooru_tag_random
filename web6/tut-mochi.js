@@ -460,7 +460,7 @@ export function buildPool(m, lib, cfg = { ...POOL, parent: null, main: true }) {
       let x, y, sc = 1, rz = 0, op = 1, z = 5, lifted = false;
       const slot = tl.slotPos(s, t);
       const baseRz = slot.rz || 0;
-      if (t < s.tin) {
+      if (t < s.tin && (s.enter.mode === "fly" || s.enter.mode === "drag")) {
         // 還沒落定：飛過來、或拖著走。
         const e = s.enter;
         if (e.mode === "fly") {

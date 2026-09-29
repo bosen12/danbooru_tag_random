@@ -5,7 +5,7 @@
  * 「放一張牌會發生什麼」（誰被帶上來、誰被擠掉）不是手寫的：sim.pin() 呼叫真的 applyPin，畫面照它的結果演。
  */
 import { EZ, seg, lerp, spring, mk, put, setHTML, esc, V, env, makeScene, K, arc, box, label, suitOf, zhOf, cardEl } from "./tut-kit.js";
-import { track } from "./film-kit.js";
+import { calmTrack } from "./tut-kit.js";
 import { applyPin, contradictions, ACT_PLACE } from "./engine.js";
 import { relationsOf } from "./fuse-bed.js";
 import { CH } from "./tut-chapters.js";
@@ -491,7 +491,7 @@ export function buildMochiScene(ctx) {
   });
 
   /* ---------- 鏡頭 ---------- */
-  const cam = track(
+  const cam = calmTrack(
     [
       [T0 - 0.1, V(0, -60, zoomZ(0.5), 22, -34, -3)],
       [b(7, 0), focus(0, 0, 0.84, { rx: 4, ry: -7 }), EZ.out],
@@ -515,7 +515,7 @@ export function buildMochiScene(ctx) {
       [b(30, 3.9), focus(120, -190, 1.55)],
       ...camMore,
     ],
-    EZ.inOut
+    { until: b(10, 1) }
   );
   S.cam = cam;
   S.tint = [0.62, 0.1, 200];

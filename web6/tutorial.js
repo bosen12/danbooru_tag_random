@@ -42,8 +42,28 @@ const gcues = []; // 影片時間 T 的音效
 const gact = (win, update, el = null) => gacts.push({ win, update, el });
 const text = makeText({ hud: hudEl, on: gact });
 
+/**
+ * 畫面下方的字幕（step、say）都先排隊，全部場景建好之後照時間排序才做出來（flushCaptions）：
+ * 下一句要進來之前，上一句一定已經離場 —— 不會兩句疊在一起。
+ */
+const captionQueue = [];
+const queueStep = (n, zh, en, inAt, outAt, o = {}) => captionQueue.push({ kind: "step", args: [n, zh, en], inAt, outAt, o });
+const queueSay = (zh, en, inAt, outAt, o = {}) => captionQueue.push({ kind: "say", args: [zh, en], inAt, outAt, o });
+function flushCaptions() {
+  captionQueue.sort((a, b) => a.inAt - b.inAt);
+  captionQueue.forEach((c, i) => {
+    const next = captionQueue[i + 1];
+    // 離場要 0.3 秒多（一個字一個字走）：下一句進來前 0.45 秒就開始走。
+    const outAt = next ? Math.max(c.inAt + 0.8, Math.min(c.outAt, next.inAt - 0.45)) : c.outAt;
+    if (c.kind === "step") makeStep(...c.args, c.inAt, outAt, c.o);
+    else sayNow(...c.args, c.inAt, outAt, c.o);
+  });
+  captionQueue.length = 0;
+}
+const sayNow = text.say;
+
 /** 這一步做什麼：左邊一個數字徽章，右邊一句話（重點用 *…* 上色），英文小字在下面。 */
-function step(n, zh, en, inAt, outAt, o = {}) {
+function makeStep(n, zh, en, inAt, outAt, o = {}) {
   const box = text.kinetic({ cls: "k-step", zh, en, x: 960, y: 946, align: "center", inAt, outAt, st: 0.022, ...o });
   const w = box.offsetWidth || 900;
   const badge = mk("div", "tbadge", hudEl, String(n));
@@ -155,15 +175,13 @@ function kickPulse(T) {
 /* ================= 撞擊時的鏡頭晃動 ================= */
 
 function shakeOf(list, t) {
-  let x = 0;
   let y = 0;
   for (const [at, amp] of list) {
     const d = t - at;
-    if (d < 0 || d > 0.8) continue;
-    x += spring(d, amp, 6, 47);
-    y += spring(d, amp * 0.7, 6, 39);
+    if (d < 0 || d > 0.9) continue;
+    y += amp * 0.35 * Math.sin(Math.min(1, d / 0.5) * Math.PI) * Math.exp(-d * 3);
   }
-  return { x, y };
+  return { x: 0, y };
 }
 
 /* ================= 畫一格 ================= */
@@ -218,8 +236,6 @@ function render(T) {
   const c = S.cam(T);
   const sh = shakeOf(S.shakes, T);
   world.style.transform = `translate3d(${sh.x.toFixed(2)}px, ${sh.y.toFixed(2)}px, ${c.z.toFixed(1)}px) rotateX(${c.rx.toFixed(2)}deg) rotateY(${c.ry.toFixed(2)}deg) rotateZ(${c.rz.toFixed(2)}deg) translate3d(${(-c.x).toFixed(1)}px, ${(-c.y).toFixed(1)}px, 0)`;
-  const punch = 1 + pulse * 0.006;
-  worldBox.style.transform = punch !== 1 ? `scale(${punch.toFixed(4)})` : "";
   const fx = cutFx(T);
   if (fx.blur > 0.3) {
     blurEl.style.display = "";
@@ -261,11 +277,12 @@ async function boot() {
   const prints = idata.filmPrints(ENG, env.lex, env.settings);
   const shared = { art, prints, ENG, idata, data };
 
-  const ctx = { world, hud: hudEl, gact, gcues, text, step, keycaps: (keys, o) => keycaps(hudEl, gact, keys, o), cut, shared, SCENES };
+  const ctx = { world, hud: hudEl, gact, gcues, text: { ...text, say: queueSay }, step: queueStep, keycaps: (keys, o) => keycaps(hudEl, gact, keys, o), cut, shared, SCENES };
   buildOpen(ctx);
   buildMochiScene(ctx);
   buildFuseScene(ctx);
   buildOutro(ctx);
+  flushCaptions();
   buildRail();
 
   // 等圖都載好（最多十五秒）
