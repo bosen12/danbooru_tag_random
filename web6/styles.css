@@ -1999,11 +1999,81 @@ body[data-trash-edit="true"] #lib-grid {
   outline: 2px dashed color-mix(in oklch, var(--color-accent) 70%, transparent);
   outline-offset: 4px;
   border-radius: 8px;
+  animation: trash-edit-in var(--dur-long) var(--ease-out);
+}
+
+/* 面板打開那一下：虛線框從外面收進來，看得出「現在點字盒是丟牌」。 */
+@keyframes trash-edit-in {
+  from {
+    outline-offset: 14px;
+    outline-color: transparent;
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  body[data-trash-edit="true"] #lib-grid {
+    animation: none;
+  }
+}
+
+/* 游標告訴你點下去會怎樣：一般的牌是垃圾桶（丟進去），已經封鎖的是往回的箭頭（撿回來）。 */
+body[data-trash-edit="true"] #lib-grid .card {
+  cursor: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='26' height='26' viewBox='0 0 24 24' fill='none' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpath d='M4 7h16M9 7V4h6v3M6 7l1 13h10l1-13' stroke='%23000' stroke-width='4.5'/%3E%3Cpath d='M4 7h16M9 7V4h6v3M6 7l1 13h10l1-13' stroke='%23f06a4a' stroke-width='2'/%3E%3C/svg%3E") 12 12, pointer;
+  transition:
+    transform var(--dur-short) var(--ease-out),
+    rotate var(--dur-short) var(--ease-settle),
+    scale var(--dur-short) var(--ease-settle),
+    box-shadow var(--dur-short) var(--ease-out),
+    opacity var(--dur-short) var(--ease-out);
+}
+
+body[data-trash-edit="true"] #lib-grid .card[data-state="banned"],
+.tp-grid .card {
+  cursor: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='26' height='26' viewBox='0 0 24 24' fill='none' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpath d='M9 14L4 9l5-5M4 9h10a6 6 0 0 1 0 12h-3' stroke='%23000' stroke-width='4.5'/%3E%3Cpath d='M9 14L4 9l5-5M4 9h10a6 6 0 0 1 0 12h-3' stroke='%23f06a4a' stroke-width='2'/%3E%3C/svg%3E") 12 12, pointer;
 }
 
 body[data-trash-edit="true"] #lib-grid .card[data-state="banned"] {
-  cursor: pointer;
   opacity: 0.6;
+}
+
+/* 滑鼠停著就先預演：要丟的牌先褪一點色、歪一點；要撿回的牌顏色先回來一點。 */
+body[data-trash-edit="true"] #lib-grid .card .card-art {
+  transition: filter var(--dur-short) var(--ease-out);
+}
+
+@media (hover: hover) and (pointer: fine) {
+  body[data-trash-edit="true"] #lib-grid .card:not([data-state="banned"]):hover {
+    rotate: -2deg;
+    box-shadow: 0 0 0 2px color-mix(in oklch, var(--color-accent) 70%, transparent), var(--shadow-lift);
+  }
+
+  body[data-trash-edit="true"] #lib-grid .card:not([data-state="banned"]):hover .card-art {
+    filter: grayscale(0.55);
+  }
+
+  body[data-trash-edit="true"] #lib-grid .card[data-state="banned"]:hover {
+    opacity: 0.9;
+  }
+
+  body[data-trash-edit="true"] #lib-grid .card[data-state="banned"]:hover .card-art {
+    filter: grayscale(0.2);
+  }
+
+  .tp-grid .card:hover {
+    --lift: -4px;
+    box-shadow: var(--shadow-lift);
+  }
+}
+
+/* 簍子開著：蓋子掀開一點。 */
+.trash svg {
+  transform-origin: 20% 30%;
+  transition: rotate var(--dur-medium) var(--ease-settle), translate var(--dur-medium) var(--ease-settle);
+}
+
+.trash[data-open="true"] svg {
+  rotate: -12deg;
+  translate: 0 -2px;
 }
 
 @media (max-width: 68.74rem) {

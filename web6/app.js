@@ -800,6 +800,8 @@ function ban(tag, { viaDrag = false, from = null } = {}) {
   // 面板開著：牌飛進面板裡（落在它的位置、原尺寸），不是縮進右下角的簍子。
   const intoPanel = !!(trashPanel?.isOpen && src && src.rect.width && !reducedMotion());
   if (src && !intoPanel) flyToTrash(src);
+  // 影子在蓋章之前複製（彩色的那張），路上才慢慢褪成灰。
+  const ghost = intoPanel ? src.node.cloneNode(true) : null;
   if (hand?.has(tag)) hand.remove(tag, { quiet: true });
   // 揉紙聲在牌被吸進簍子的那一刻（拖的在放開後落進去，按的要先飛過去）。
   setTimeout(() => sfx.trash(), viaDrag ? DUR.short : DUR.long);
@@ -809,10 +811,10 @@ function ban(tag, { viaDrag = false, from = null } = {}) {
   commitPins();
   renderTrash(true, { arriving: intoPanel ? tag : null });
   if (intoPanel) {
-    const ghost = src.node.cloneNode(true);
     ghost.classList.remove("dropped", "is-related", "is-clashing", "fav-card");
     ghost.style.visibility = "";
-    flight(ghost, src.rect, () => trashPanel.nodeOf(tag), { endOpacity: 1, onLand: () => trashPanel.land(tag) });
+    const { duration } = flight(ghost, src.rect, () => trashPanel.nodeOf(tag), { arc: 70, tilt: -8, onLand: () => trashPanel.land(tag) });
+    trashPanel.fade(ghost, duration);
   }
 }
 
@@ -843,9 +845,9 @@ function unban(tag) {
   commitPins();
   renderTrash();
   sfx.lift();
-  // 字盒那張撿回來的輕輕跳一下（看得出是哪張回來了）。
+  // 字盒那張撿回來的輕輕跳一下（看得出是哪張回來了）。面板開著的話由面板演：牌從面板飛回這一格。
   const n = libCardNode(tag);
-  if (n && !reducedMotion()) n.animate([{ transform: "translateY(-8px) scale(1.06)" }, { transform: "none" }], { duration: DUR.medium, easing: css(CURVE.out) });
+  if (n && !trashPanel?.isOpen && !reducedMotion()) n.animate([{ scale: "1.08" }, { scale: "1" }], { duration: DUR.medium, easing: css(CURVE.settle) });
   announce(`「${zh(tag)}」撿回來了，之後又可能抽到`);
 }
 
@@ -1938,6 +1940,7 @@ function buildTrashPanel() {
     anchor: $("trash"),
     makeNode: (t) => cardNode(lib.byTag.get(t), assets),
     onRescue: (t) => unban(t),
+    homeOf: (t) => libCardNode(t),
     onRescueAll: () => {
       if (!bans.size) return;
       const was = [...bans];
