@@ -739,8 +739,12 @@ body .toast {
   bottom: calc(var(--fav-h, 0px) + var(--space-lg) + env(safe-area-inset-bottom));
 }
 
+/* 「卡池」（疊印台左下）跟中間那顆托盤膠囊左右會撞，一律讓。
+   廢字簍在右下：托盤收成中間的小膠囊時左右碰不到，不必讓 —— 以前照讓，它就浮在內容中間
+   一路壓著右半邊。托盤打開（佔滿底邊）才讓。 */
 @media (max-width: 68.74rem) {
-  :is(.trash, .pool-pill) {
+  .pool-pill,
+  body:has(.fav-hand[data-open="true"]:not([data-hidden="true"])) .trash {
     translate: 0 calc(-1 * var(--fav-h, 0px));
   }
 }

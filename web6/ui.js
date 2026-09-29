@@ -1,5 +1,6 @@
 /** 墨池的畫面零件：建元素、遮罩、提示、滑鼠停留說明。只產生 DOM，不管流程。 */
 import { lockScroll, unlockScroll } from "./scroll-lock.js";
+import { DUR, CURVE, css, reducedMotion } from "./motion.js";
 
 export function el(tag, props = {}, ...children) {
   const node = document.createElement(tag);
@@ -33,9 +34,12 @@ export function openSheet(title, body, { wide = false, onClose, foot } = {}) {
   const lastFocus = document.activeElement;
   const titleId = "sheet-" + Math.random().toString(36).slice(2, 8);
   const closeBtn = el("button", { class: "sheet-close", type: "button", "aria-label": "關閉", html: ICONS.close });
+  // 手機上彈窗是一張從底部拉上來的紙：上緣一條握把，往下拉就收起來（見 swipeToClose）。
+  const grip = el("div", { class: "sheet-grip", "aria-hidden": "true" });
   const sheet = el(
     "div",
     { class: wide ? "sheet sheet-wide" : "sheet", role: "dialog", "aria-modal": "true", "aria-labelledby": titleId },
+    grip,
     el("h2", { id: titleId }, title),
     closeBtn,
     body,
@@ -56,6 +60,7 @@ export function openSheet(title, body, { wide = false, onClose, foot } = {}) {
     onClose && onClose();
   };
   closeBtn.addEventListener("click", close);
+  swipeToClose(sheet, close);
   overlay.addEventListener("click", (e) => {
     if (e.target === overlay) close();
   });
@@ -82,6 +87,57 @@ export function openSheet(title, body, { wide = false, onClose, foot } = {}) {
   lockScroll(overlayId);
   (sheet.querySelector(".sheet-foot .btn-primary") || closeBtn).focus({ preventScroll: true });
   return { close, sheet };
+}
+
+/**
+ * 手機：按住抽屜頂端（握把或標題）往下拉，紙跟著手指走；拉超過 90px 或往下甩就收起來，
+ * 不到就彈回去。只認觸控、只在內容捲在最上面時 —— 不跟捲動內文搶。
+ * 握把和標題設了 touch-action: none（styles.css），瀏覽器才不會把這一下當成捲動拿走。
+ */
+function swipeToClose(sheet, close) {
+  if (!matchMedia("(max-width: 40rem)").matches) return;
+  let drag = null;
+  sheet.addEventListener("pointerdown", (e) => {
+    if (e.pointerType === "mouse" || sheet.scrollTop > 0) return;
+    if (!e.target.closest(".sheet-grip, h2") || e.target.closest("button, a")) return;
+    drag = { id: e.pointerId, y: e.clientY, t: performance.now(), dy: 0 };
+    try {
+      sheet.setPointerCapture(e.pointerId);
+    } catch {
+      /* 指標已經不在：照樣處理 */
+    }
+  });
+  sheet.addEventListener("pointermove", (e) => {
+    if (!drag || e.pointerId !== drag.id) return;
+    // 往上拉只給一點點阻力，不讓紙離開底邊。
+    const raw = e.clientY - drag.y;
+    drag.dy = raw > 0 ? raw : raw / 6;
+    sheet.style.animation = "none";
+    sheet.style.transform = `translateY(${drag.dy.toFixed(1)}px)`;
+  });
+  const end = (e) => {
+    if (!drag || e.pointerId !== drag.id) return;
+    const { dy, t } = drag;
+    drag = null;
+    const speed = dy / Math.max(1, performance.now() - t);
+    if (dy > 90 || (dy > 24 && speed > 0.6)) {
+      if (!reducedMotion()) {
+        sheet.animate([{ transform: `translateY(${dy}px)` }, { transform: "translateY(100%)" }], {
+          duration: DUR.short,
+          easing: css(CURVE.exit),
+          fill: "forwards",
+        });
+      }
+      close();
+      return;
+    }
+    if (dy && !reducedMotion()) {
+      sheet.animate([{ transform: `translateY(${dy}px)` }, { transform: "none" }], { duration: DUR.medium, easing: css(CURVE.settle) });
+    }
+    sheet.style.transform = "";
+  };
+  sheet.addEventListener("pointerup", end);
+  sheet.addEventListener("pointercancel", end);
 }
 
 export function anyOverlay() {

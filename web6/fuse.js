@@ -3342,19 +3342,29 @@ function renderPill() {
   pill.setAttribute("aria-label", `回到卡池（${bed.pins.length} 張）`);
 }
 
+// 另一個方向：人在上面看卡池、字盒還在很下面的時候，同一個角落換成「字盒 ↓」。
+// 窄螢幕上字盒排在卡池、試印、付印之後，要加一張牌得捲過一整頁；兩顆輪流出現、不會同時在。
 function watchPoolPill() {
   const pill = $("pool-pill");
+  const jump = $("case-jump");
   if (typeof IntersectionObserver !== "function") return;
   const narrow = matchMedia("(max-width: 68.74rem)");
   let poolVisible = true;
+  let caseVisible = false;
   const sync = () => {
     pill.hidden = !(narrow.matches && !poolVisible);
+    jump.hidden = !(narrow.matches && poolVisible && !caseVisible);
   };
   new IntersectionObserver((entries) => {
     poolVisible = entries.some((e) => e.isIntersecting);
     sync();
   }, { threshold: 0.04 }).observe($("plate"));
+  new IntersectionObserver((entries) => {
+    caseVisible = entries.some((e) => e.isIntersecting);
+    sync();
+  }, { threshold: 0 }).observe($("case"));
   narrow.addEventListener("change", sync);
+  jump.addEventListener("click", () => $("case").scrollIntoView({ behavior: reduced() ? "auto" : "smooth", block: "start" }));
 }
 
 boot();

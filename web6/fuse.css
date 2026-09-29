@@ -1483,6 +1483,32 @@ body.fuse {
   margin: 0;
 }
 
+/* 手機還沒付印：預覽框只是一句「選試印後付印」，不值得佔掉快兩百像素 —— 收成一條，
+   字盒早一截出現在畫面上。印了之後照舊是大圖。用 #preview 提高權重：底下那條
+   .preview[data-empty] .pv-sheet 的保底高度排在後面，同權重會蓋掉這裡。 */
+@media (max-width: 40rem) {
+  #preview[data-empty="true"] {
+    padding-block: var(--space-xs);
+  }
+  #preview[data-empty="true"] .pv-frame {
+    width: 100%;
+    margin: var(--space-xs) 0;
+  }
+  /* 空的紙本來就不照長寬比（上面那條），但保底 min-height 四格 xl：手機上放掉，
+     字那一層回到正常排版，高度就是那兩行字。 */
+  #preview[data-empty="true"] .pv-sheet {
+    min-height: 0;
+  }
+  #preview[data-empty="true"] .pv-blank {
+    position: static;
+    padding: var(--space-sm) var(--space-md);
+  }
+  /* 底下那行本來就藏著（留高度給寬螢幕，開印時不跳）；手機上一印就換成大圖，不必留。 */
+  #preview[data-empty="true"] .pv-cap {
+    display: none;
+  }
+}
+
 .preview[data-empty="true"] .crop {
   display: none;
 }
@@ -2467,6 +2493,22 @@ body.fuse {
   .rule-row {
     grid-template-columns: minmax(0, 1fr);
   }
+  /* 尺寸那一排（「方 1024×1024」三個）在手機上一行擺不下，最右那個被切掉。
+     三等分、字小一號、按鈕裡可以斷行 —— 還是單排，底下那塊會滑的底照樣對得上。 */
+  .rules-sheet .segmented {
+    display: grid;
+    grid-auto-flow: column;
+    grid-auto-columns: minmax(0, 1fr);
+    width: 100%;
+  }
+  .rules-sheet .segmented button {
+    min-width: 0;
+    padding-inline: var(--space-2xs);
+    font-size: var(--text-xs);
+    line-height: 1.3;
+    white-space: normal;
+    text-wrap: balance;
+  }
 }
 
 .boot-fail {
@@ -2497,6 +2539,39 @@ body.fuse {
 
 .pool-pill[hidden] {
   display: none;
+}
+
+/* 「字盒 ↓」跟「卡池」同一個角落、同一個樣子，輪流出現。箭頭輕輕往下點一下，看得出是往下走。 */
+.case-jump {
+  padding: 6px 14px;
+  animation: case-jump-in var(--dur-medium) var(--ease-out);
+}
+
+.case-jump-arrow {
+  display: inline-block;
+  color: var(--color-accent);
+  font-weight: 700;
+  animation: case-jump-nudge var(--dur-breath) var(--ease-in-out) var(--dur-long) 2;
+}
+
+@keyframes case-jump-in {
+  from {
+    opacity: 0;
+    translate: 0 8px;
+  }
+}
+
+@keyframes case-jump-nudge {
+  50% {
+    transform: translateY(3px);
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .case-jump,
+  .case-jump-arrow {
+    animation: none;
+  }
 }
 
 .pill-arts {

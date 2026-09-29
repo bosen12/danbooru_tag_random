@@ -1729,7 +1729,9 @@ const ALBUM_FIXTURE = [
       ok("托盤鍵盤：只有一張在 Tab 順序裡，方向鍵移動、Shift＋方向鍵排順序，出牌／拿掉後焦點留在托盤", hand6.includes("function focusCard(card)") && hand6.includes("e.shiftKey && (e.key === \"ArrowLeft\" || e.key === \"ArrowRight\")") && hand6.includes("if (i >= 0) refocus(i);") && hand6.includes("x.tabIndex = -1;"));
       ok("托盤的牌也有放大卡，開在牌的正上方", hand6.includes('fan.dataset.peek = "above"') && peek.includes(`anchor.closest("[data-peek='above']")`) && fuse6.includes("attachPeek(hand.fan") && app6.includes("hand?.fan]) attachPeek("));
     }
-    ok("窄螢幕角落的廢字簍、「卡池」標籤讓到托盤上面；寬螢幕托盤兩旁留位置；提示浮在托盤上面", css6.includes(":is(.trash, .pool-pill) {\n    translate: 0 calc(-1 * var(--fav-h, 0px));") && css6.includes("width: min(calc(100vw - 200px)") && hand6.includes("innerWidth >= 1100 ? 200 : 20") && css6.includes("body .toast {\n  bottom: calc(var(--fav-h, 0px)") && hand6.includes("Math.ceil(innerHeight - r.top) + 12"));
+    // 2026-09-30：托盤收成中間的小膠囊時，右下角的廢字簍跟它碰不到，不必讓（以前照讓，浮在內容中間）；
+    // 左下的「卡池」跟膠囊會撞，一律讓。托盤打開（佔滿底邊）時兩個都讓。
+    ok("窄螢幕角落的「卡池」標籤一律讓到托盤上面、廢字簍在托盤打開時讓；寬螢幕托盤兩旁留位置；提示浮在托盤上面", css6.includes('.pool-pill,\n  body:has(.fav-hand[data-open="true"]:not([data-hidden="true"])) .trash {\n    translate: 0 calc(-1 * var(--fav-h, 0px));') && css6.includes("width: min(calc(100vw - 200px)") && hand6.includes("innerWidth >= 1100 ? 200 : 20") && css6.includes("body .toast {\n  bottom: calc(var(--fav-h, 0px)") && hand6.includes("Math.ceil(innerHeight - r.top) + 12"));
     ok("疊印台字盒：在池又在手牌的牌，「手」排在「在池」下面", css6.includes('.case-grid .card[data-state="pinned"][data-in-hand="true"]::before {\n  top: 22px;'));
     ok("從托盤拿掉一張：提示帶「復原」，放回原位（挑牌模式不問）；滿了兩房間都有看得到的提示", hand6.includes("if (!quiet && !editing) onRemoved(tag, () => restore(tag, was));") && hand6.includes("function restore(tag, at)") && fuse6.includes('onRemoved: (t, undo) => toast(') && app6.includes('onRemoved: (t, undo) => toast(') && fuse6.includes("onFull: () => toast("));
     ok("墨池：合成池捲出畫面時，牌往合成池的方向收進去＋「看合成池」，不飛出螢幕", app6.includes("function tuckAway(tag, from, dir)") && app6.includes("return from ? tuckAway(tag, from, to.top < 0 ? -1 : 1) : undefined;") && app6.includes('label: "看合成池"'));

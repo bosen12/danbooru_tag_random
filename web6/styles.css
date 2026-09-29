@@ -2360,6 +2360,10 @@ body[data-dragging="true"] .library[data-over="true"] {
   width: min(100%, 64rem);
 }
 
+.sheet-grip {
+  display: none;
+}
+
 .sheet h2 {
   font-size: var(--text-xl);
   margin-bottom: var(--space-md);
@@ -2743,6 +2747,9 @@ body:has(.go-float[data-show="true"]) .toast {
   }
   .library[data-collapsed="true"] .lib-grid {
     max-height: calc(var(--space-2xl) * 4);
+    /* 收著的時候第二排只露出上緣：往下淡出，看得出是「還有」，不像版面被切壞。 */
+    -webkit-mask-image: linear-gradient(to bottom, #000 calc(100% - var(--space-2xl)), transparent);
+    mask-image: linear-gradient(to bottom, #000 calc(100% - var(--space-2xl)), transparent);
   }
   .library {
     overflow: visible;
@@ -2750,6 +2757,14 @@ body:has(.go-float[data-show="true"]) .toast {
   .trash {
     width: 64px;
     height: 64px;
+  }
+}
+
+/* 手機：空的合成池不必 150px 高 —— 一行說明配四角的套準線就夠，首屏多留給字盒和按鈕。 */
+@media (max-width: 40rem) {
+  .pool-well:has(> .pool-empty) {
+    min-height: 0;
+    padding-block: var(--space-md);
   }
 }
 
@@ -3935,5 +3950,93 @@ html[data-vt="back"] .vt-sweep {
   .cmp-thumb,
   .cmp-line::before {
     transition: none;
+  }
+}
+
+/* ================= 手機（墨池、疊印台共用） ================= */
+
+/* 點下去不要閃一塊灰底：每顆按鈕自己有按下的樣子（墨暈、下沉），灰底會把它蓋掉。
+ * touch-action: manipulation —— 手機不必等「是不是要雙擊放大」的判斷，點下去立刻有反應。 */
+html {
+  -webkit-tap-highlight-color: transparent;
+}
+
+:where(button, a, summary, label, select, [role="button"], [role="switch"], [role="radio"], .card) {
+  touch-action: manipulation;
+}
+
+/* iPhone 的 Safari：點到字級小於 16px 的輸入框或下拉選單會把整頁放大，而且不縮回來。 */
+@media (pointer: coarse) {
+  :where(input:not([type="checkbox"]):not([type="radio"]):not([type="range"]), select, textarea) {
+    font-size: max(1rem, 16px);
+  }
+}
+
+/* 詳情、規則這些彈窗：手機上從底部滑上來，寬度佔滿，只有上緣是圓的。
+ * 底部那排按鈕本來就黏在最下面；這裡再讓出 iPhone 底部橫條的高度。 */
+@media (max-width: 40rem) {
+  .overlay {
+    align-items: end;
+    justify-items: stretch;
+    padding: var(--space-lg) 0 0;
+  }
+  .sheet,
+  .sheet-wide {
+    width: 100%;
+    max-height: 100%;
+    padding: var(--space-md) var(--space-md) calc(var(--space-md) + env(safe-area-inset-bottom));
+    border-bottom: 0;
+    border-radius: var(--radius-lg) var(--radius-lg) 0 0;
+    animation: sheet-up var(--dur-long) var(--ease-out);
+  }
+  /* 上緣一條握把：看得出這是一張從下面拉上來的紙，也是往下拉收起的把手（ui.js swipeToClose）。
+   * 握把和標題不讓瀏覽器拿去捲動，手指按住往下拉才會是「拉紙」。 */
+  .sheet-grip {
+    display: block;
+    height: var(--space-md);
+    margin: calc(var(--space-md) * -1) calc(var(--space-md) * -1) var(--space-2xs);
+    touch-action: none;
+  }
+  .sheet-grip::before {
+    content: "";
+    display: block;
+    width: 36px;
+    height: 4px;
+    margin: var(--space-xs) auto 0;
+    border-radius: 2px;
+    background: var(--color-rule);
+  }
+  .sheet h2 {
+    touch-action: none;
+  }
+  .sheet h2 {
+    font-size: var(--text-lg);
+  }
+  .sheet-foot {
+    bottom: calc((var(--space-md) + env(safe-area-inset-bottom)) * -1);
+    margin: var(--space-md) calc(var(--space-md) * -1) calc((var(--space-md) + env(safe-area-inset-bottom)) * -1);
+    padding: var(--space-sm) var(--space-md) calc(var(--space-md) + env(safe-area-inset-bottom));
+  }
+  .overlay[data-closing="true"] .sheet {
+    animation: sheet-down calc(var(--dur-short) * 0.75) var(--ease-in) forwards;
+  }
+}
+
+@keyframes sheet-up {
+  from {
+    transform: translateY(100%);
+  }
+}
+
+@keyframes sheet-down {
+  to {
+    transform: translateY(100%);
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .sheet,
+  .overlay[data-closing="true"] .sheet {
+    animation: none;
   }
 }
