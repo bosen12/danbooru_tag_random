@@ -47,24 +47,29 @@ const GOLD = {
   // 站立劈腿在唯一合法時權重救不了，再按種子擋掉三成。五張仍是 1girl solo，沒有男生。
   // 2026-09-28 第七次：立乳、穴口滴精離開候選池。抓手腕改成 holding another's wrist，
   // 要一男一女，不進這五張。池子變小，牌序位移。五張仍是 1girl solo，沒有男生。seed 100 沒變。
+  // 2026-09-29 第三次：沒釘場所的性愛不再只用私密場地，場地權重改成 1:1。
+  // 這張是性愛，浴室換成咖啡廳，後面的傢俱和光線跟著換。仍是 1girl solo。
   1: {
-    rng: 342,
-    pos: "1girl, solo, pixie cut, purple eyes, green hair, swept bangs, small breasts, female pubic hair, freckles, bride, santa costume, thong, thighhighs, sports bra, knee boots, fingering, on stomach, bird's eye view, from above, looking to the side, expressionless, bathroom, indoors, steam, dusk, sidelighting, confetti, nsfw, explicit, masterpiece, best quality, amazing quality",
+    rng: 347,
+    pos: "1girl, solo, pixie cut, purple eyes, green hair, swept bangs, small breasts, female pubic hair, freckles, bride, santa costume, thong, thighhighs, sports bra, knee boots, fingering, on stomach, bird's eye view, from above, looking to the side, expressionless, cafe, indoors, on couch, night, railing, nsfw, explicit, masterpiece, best quality, amazing quality",
   },
   // 2026-09-29：路人進了環境池，同一顆亂數落到別的環境字，後面的姿勢跟著換。
   // seed 42 少了束縛和手銬（手銬是束縛之後才拉的），多了咬唇。seed 100 花瓣換成剪影。
   // seed 1、999、2026 的落點沒變。百合、多女、多男、乳貼、運動服不消耗主亂數。
+  // 2026-09-29 第二次：浴場在收尾多擲一次毛巾。包、瓶底眼鏡、保險套、玩具、獠牙走另一條亂數。
+  // 2026-09-29 第三次：這張是性愛。場地從道場換成巴士車廂，後面的字跟著換。仍是 1girl solo。
   42: {
-    rng: 333,
-    pos: "1girl, solo, very short hair, aqua eyes, blue hair, blunt bangs, large breasts, nipple piercing, narrow waist, half updo, underwear only, black bra, bra, torn thighhighs, thighhighs, blue panties, panties, fingering, kneeling, pov, looking at viewer, drunk, biting own lip, dojo, indoors, night, depth of field, nsfw, explicit, masterpiece, best quality, amazing quality",
+    rng: 330,
+    pos: "1girl, solo, very short hair, aqua eyes, blue hair, blunt bangs, large breasts, nipple piercing, narrow waist, half updo, underwear only, black bra, bra, torn thighhighs, thighhighs, blue panties, panties, fingering, kneeling, pov, looking at viewer, drunk, covering privates, bus interior, indoors, night, chromatic aberration, chinese new year, nsfw, explicit, masterpiece, best quality, amazing quality",
   },
   100: {
     rng: 385,
     pos: "1girl, solo, medium hair, purple eyes, red hair, side ponytail, ponytail, gigantic breasts, muscular, bruise, pink shirt, shirt, jeans, pants, table tennis, squatting, bird's eye view, from above, looking around, drunk, sports court, outdoors, fog, day, shadow, silhouette, table tennis paddle, table tennis ball, nsfw, explicit, masterpiece, best quality, amazing quality",
   },
+  // 2026-09-29 第三次：這張是性愛。淋浴間換成海邊，衣服和光線跟著換。仍是 1girl solo。
   999: {
-    rng: 343,
-    pos: "1girl, solo, long hair, grey eyes, orange hair, twin braids, braid, flat chest, gyaru, body blush, bodypaint, fingering, on side, pov, looking at viewer, smug, against wall, shower (place), indoors, dusk, city lights, nsfw, explicit, masterpiece, best quality, amazing quality",
+    rng: 348,
+    pos: "1girl, solo, long hair, grey eyes, orange hair, twin braids, braid, flat chest, gyaru, body blush, bra visible through clothes, no panties, garter belt, knee boots, bag, fingering, on side, pov, looking at viewer, smug, moaning, ocean, outdoors, sunset, dappled sunlight, motion blur, orange sky, nsfw, explicit, masterpiece, best quality, amazing quality",
   },
   // 2026-09-23：走光補抽改成「所有成立的走光動作同一池、衣服吻合的權重 10」之後，
   // 這張的走光動作從 exhibitionism 換成 cameltoe（她穿 thong，吻合），場景跟著換。
@@ -198,7 +203,16 @@ const MATRIX_SEEDS = 200;
 // 另開亂數補的字（百合、多女、多男、露胸時的乳貼、有運動場合的運動服）
 // 只在補中的那張多一個字。2400 張沒有矛盾，也沒有藏在衣服裡的乳貼、
 // 沒有運動場合的運動服、帶男生的百合。指紋 aa8c9d3f → 276690ea。
-const MATRIX_GOLD = "276690ea";
+// 2026-09-29 第二次：包、手提包、瓶底眼鏡、保險套、性玩具、浴場毛巾、
+// 露肩裝的裸肩、連帽的戴上兜帽、怪物的獠牙。另開亂數的沒中不改牌；
+// 浴場多擲的毛巾、以及露肩／連帽那幾條，中了才多一個字。
+// 2400 張矛盾 0。沒有男生的圖沒有保險套，日常沒有玩具，
+// 用過的保險套不跟沒拆的疊，獠牙不長在普通人臉上。指紋 276690ea → 5421d490。
+// 2026-09-29 第三次：沒釘場所的性愛改走跟誘惑同一池場地，權重 1:1。
+// 變的是性愛那 200 張，加上預設路徑裡抽到性愛的種子。
+// 誘惑的 seed 100、走光的 seed 2026 逐字沒變。2400 張矛盾 0。
+// 指紋 5421d490 → fc11fc00。
+const MATRIX_GOLD = "fc11fc00";
 
 function matrixSettings(over) {
   const s = defaultSettings(data);

@@ -70,8 +70,12 @@ function samples({ pin, heat, era = "modern", seed, count = 40 }) {
 
 {
   const rows = samples({ pin: "cooking", heat: "sex", era: "edo", seed: 910000, count: 80 });
-  const bad = rows.filter((tags) => !tags.has("cooking") || placeOf(tags) !== "ryokan").length;
-  ok("edo sex cooking always lands at the era-valid private cook place", bad === 0, `bad=${bad}/80`);
+  const cookOk = new Set(["kitchen", "castle", "palace", "courtyard", "ryokan"]);
+  const bad = rows.filter((tags) => !tags.has("cooking") || !cookOk.has(placeOf(tags))).length;
+  const ryokan = rows.filter((tags) => placeOf(tags) === "ryokan").length;
+  const castle = rows.filter((tags) => placeOf(tags) === "castle").length;
+  ok("edo sex cooking stays on a cook place", bad === 0, `bad=${bad}/80`);
+  ok("edo sex cooking is not only one cook place", ryokan > 0 && castle > 0, `ryokan=${ryokan} castle=${castle}`);
 }
 
 for (const [activity, era, seed] of [
@@ -89,9 +93,14 @@ for (const [activity, era, seed] of [
 }
 
 {
-  const rows = samples({ pin: "shopping", heat: "sex", seed: 920000 });
-  const wrong = rows.filter((tags) => placeOf(tags) !== "changing room").length;
-  ok("sex + pinned shopping uses the existing private changing room", wrong === 0, `wrong=${wrong}/40`);
+  const rows = samples({ pin: "shopping", heat: "sex", seed: 920000, count: 80 });
+  const shop = rows.filter((tags) => ACT_PLACE.shopping.has(placeOf(tags))).length;
+  const changing = rows.filter((tags) => placeOf(tags) === "changing room").length;
+  const streetish = rows.filter((tags) =>
+    ["street", "city", "cityscape", "market", "convenience store", "supermarket"].includes(placeOf(tags))
+  ).length;
+  ok("sex + pinned shopping stays on a shop place", shop === 80, `shop=${shop}/80`);
+  ok("sex + pinned shopping is not only the changing room", changing < 40 && streetish > 0, `changing=${changing} streetish=${streetish}`);
 }
 
 {
@@ -112,7 +121,9 @@ for (const [activity, era, seed] of [
 {
   const rows = samples({ heat: "sex", seed: 930160, count: 80 });
   const publicRows = rows.filter((tags) => PUBLIC_SEX_PLACE.has(placeOf(tags))).length;
-  ok("unpinned modern sex never leaks onto a public place", publicRows === 0, `bad=${publicRows}/80`);
+  const both = rows.filter((tags) => tags.has("indoors") && tags.has("outdoors")).length;
+  ok("unpinned modern sex can land on a public place", publicRows > 0, `public=${publicRows}/80`);
+  ok("unpinned modern sex does not stack indoors and outdoors", both === 0, `both=${both}/80`);
 }
 
 for (const [job, seed] of [

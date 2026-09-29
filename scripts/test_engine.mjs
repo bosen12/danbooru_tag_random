@@ -4329,11 +4329,8 @@ function indoorOutdoorClash(have) {
       if (h.has("cooking") && !COOK_OK.some((t) => h.has(t))) cookOut += 1;
     }
     eq("medieval cooking always has a cook place", cookOut, 0);
-    // 江戶 + 性愛 + 煮飯：COOK_PLACE ∩ PRIVATE_SEX_PLACE ∩ edo 曾經是空集合。
-    // castle 是江戶唯一的煮飯場地，但不在私密性愛場地裡；kitchen 在私密清單
-    // 但 era 只有 modern/victorian。預設混合尺度 40% 抽到性愛，釘煮飯就會
-    // 畫出沒有場地的圖（實測 200/200）。ryokan 是江戶旅館、已在私密清單、
-    // 也會開飯，補進去之後這條才有地方可去。
+    // 江戶 + 性愛 + 煮飯：場地必須煮得了飯。旅館和城堡都在煮飯清單裡。
+    // 私密白名單拿掉之前，城堡被擋在外面，只剩旅館。
     const COOK_OK_EDO = ["kitchen", "castle", "palace", "courtyard", "ryokan"];
     const pinCookEdo = applyPin(lex, new Set(), new Set(), "cooking").pinned;
     const edoSexCook = {
@@ -4427,11 +4424,14 @@ function indoorOutdoorClash(have) {
         weights: { activity: 0, tease: 0, flash: 0, sex: 1 },
       };
       let pub = 0;
+      let both = 0;
       for (let i = 0; i < 80; i++) {
         const h = tagsOf(drawOne(lex, st, new Set(), new Set(), mulberry32(930160 + i), 930160 + i));
         if (["street", "city", "cityscape", "alley", "park", "beach", "ocean", "rooftop"].some((t) => h.has(t))) pub += 1;
+        if (h.has("indoors") && h.has("outdoors")) both += 1;
       }
-      eq("unpinned modern sex never auto public sex place", pub, 0);
+      ok("unpinned modern sex can use a public place", pub > 0, `public=${pub}/80`);
+      eq("unpinned modern sex never stacks indoors and outdoors", both, 0);
     }
     // 職業場地若「有一個室內」就擋 outdoors，偵探／女警這種室內外都有的職業
     // 會 100% 抽不到大街：抽菸／騎車／開車的場地只剩街上，街上又 implies
@@ -5570,7 +5570,9 @@ function indoorOutdoorClash(have) {
     // 第二十六次（2026-09-29）：路人不再跟「無人類」寫在同一行硬擋，環境池多了一個字。
     // 這張的環境落點換了，後面的束縛沒抽到，手銬也就沒被拉進來，換成咬自己的嘴唇。
     // 仍是單人女性、道場、室內、夜。乳貼和運動服這張都沒補。
-    "1girl, solo, very short hair, aqua eyes, blue hair, blunt bangs, large breasts, nipple piercing, narrow waist, half updo, underwear only, black bra, bra, torn thighhighs, thighhighs, blue panties, panties, fingering, kneeling, pov, looking at viewer, drunk, biting own lip, dojo, indoors, night, depth of field, nsfw, explicit, masterpiece, best quality, amazing quality");
+    // 第二十七次（2026-09-29）：沒釘場所的性愛不再只用私密場地，場地權重改成平的。
+    // 這張是性愛，場地從道場換成巴士車廂，後面的表情和畫面字跟著換。仍是單人女性、室內。
+    "1girl, solo, very short hair, aqua eyes, blue hair, blunt bangs, large breasts, nipple piercing, narrow waist, half updo, underwear only, black bra, bra, torn thighhighs, thighhighs, blue panties, panties, fingering, kneeling, pov, looking at viewer, drunk, covering privates, bus interior, indoors, night, chromatic aberration, chinese new year, nsfw, explicit, masterpiece, best quality, amazing quality");
   ok("drawOne exposes shadow diagnostics", Array.isArray(shadowIntegrationDraw.shadowViolations));
 
   const eatProneShadow = validateSupportShadow({
@@ -7467,16 +7469,24 @@ function indoorOutdoorClash(have) {
 }
 
 {
-  // 性愛模式的場地白名單。PRIVATE_SEX_PLACE 是照現代想像手寫的 16 個詞，其中
-  // 12 個是浴室或臥室的變體，一個歷史時代的場地都沒有。於是一進 sex heat，
-  // 每個時代只剩下剛好通過時代篩選的那兩三個 —— 江戶就是 onsen + open-air
-  // bath 各一半，古中國／古希臘／中世紀是 bedroom + bath 各一半。
-  // 其他三種 heat 每個時代都抽得到 14~26 種場地，差別全在這一條分支。
+  // 沒釘場所的性愛跟其他熱度用同一池場地，權重拉平。
+  // 公園、大街、沙灘、神社、教室這組以前被私密白名單擋掉，現在每個時代裡
+  // 說得通的那些都要抽得到。中世紀的城堡、古中國的東亞建築仍先擲一次招牌
+  // （約 35%），所以那兩個時代的第一名可以接近三分之一，但不能再更高。
   const s = defaultSettings(data);
   s.girl = true;
   s.heats = ["sex"];
   const thin = [];
   const hot = [];
+  const missed = [];
+  const open = {
+    modern: ["street", "city", "cityscape", "alley", "park", "beach", "ocean", "rooftop", "shrine", "classroom", "cafe", "poolside", "church"],
+    victorian: ["street", "alley", "park", "beach", "ocean", "market"],
+    edo: ["street", "beach", "ocean", "shrine", "temple", "market"],
+    medieval: ["street", "beach", "ocean", "market"],
+    ancient_china: ["street", "beach", "ocean", "temple", "market"],
+    ancient_greece: ["street", "beach", "ocean"],
+  };
   for (const era of ERAS) {
     s.eras = [era];
     const m = new Map();
@@ -7494,16 +7504,21 @@ function indoorOutdoorClash(have) {
       const pct = Math.round((100 * sorted[0][1]) / N);
       if (pct > 35) hot.push(`${era} ${sorted[0][0]} ${pct}%`);
     }
+    for (const tag of open[era] || []) {
+      if (!m.get(tag)) missed.push(`${era} ${tag}`);
+    }
   }
   eq("性愛模式下每個時代都抽得到至少 6 種場地", thin.length, 0);
   if (thin.length) console.error(`      ${thin.join("  ")}`);
   eq("性愛模式下沒有單一場地佔掉三分之一以上", hot.length, 0);
   if (hot.length) console.error(`      ${hot.join("  ")}`);
+  eq("沒釘的性愛抽得到公園、大街、沙灘和同組場地", missed.length, 0);
+  if (missed.length) console.error(`      ${missed.join("  ")}`);
 }
 
 {
-  // 釘了活動或室外之後，私密清單會把場地收到一個時代字（竹林、道場、試衣間）。
-  // 沒釘的性愛仍由上面那條守著。身份鎖（滑雪=山、煮飯=廚房、OL=辦公室）不動。
+  // 釘了活動之後，場地收到那個活動自己的清單。沒釘的性愛用整池、權重拉平，
+  // 由上面那條守「公園和大街真的抽得到」。身份鎖（滑雪=山、煮飯=廚房、OL=辦公室）不動。
   // 歷史時代沒有淋浴間、網球場時，場地格不該整格空白。
   const s = defaultSettings(data);
   s.girl = true;
@@ -7784,6 +7799,164 @@ function indoorOutdoorClash(have) {
     if (h.has("sportswear")) sportHit += 1;
   }
   ok("釘運動抽得到運動服", sportHit > 0, `sportswear=${sportHit}`);
+}
+
+{
+  // 沒有互斥格、正常模式衣服補牌不收的字。另開亂數，而且只在說得通的時候補。
+  // 性玩具的熱度鎖著只有性愛，假陽具 implies 它，所以誘惑和走光補不進去。
+  // 包不進浴場和游泳：白名單已經掃過，事後補會把脫掉的包戴回去。
+  const freshCondom = ["holding condom", "condom wrapper", "condom box", "condom in mouth", "condom on penis"];
+  const anyCondom = [...freshCondom, "used condom", "condom"];
+  const anyToy = ["dildo", "vibrator", "egg vibrator", "sex toy"];
+  const publicSex = new Set(["street", "city", "cityscape", "alley", "park", "beach", "ocean", "rooftop"]);
+  const hoodCtx = new Set(["hoodie", "hood", "hooded cloak"]);
+  const bathCtx = new Set([
+    "onsen", "bath", "bathtub", "shower (place)", "bathhouse", "ofuro", "bubble bath", "sauna",
+    "bathing", "showering", "shared bathing",
+  ]);
+  const monsterish = (h) => {
+    for (const t of h) {
+      if (t === "monster boy" || t === "vampire" || t === "dragon boy") return true;
+      if ((lex.byTag.get(t)?.implies || []).includes("monster boy")) return true;
+    }
+    return false;
+  };
+  const hasAny = (h, names) => names.some((t) => h.has(t));
+  const sex = defaultSettings(data);
+  sex.girl = true;
+  sex.boy = true;
+  sex.heats = ["sex"];
+  sex.weights = { activity: 0, tease: 0, flash: 0, sex: 1 };
+  sex.eras = ["modern"];
+  let toys = 0;
+  let condoms = 0;
+  let freshUsed = 0;
+  let publicPlace = 0;
+  let stackedBag = 0;
+  let clash = 0;
+  for (let i = 0; i < 240; i += 1) {
+    const drawn = drawOne(lex, sex, new Set(), new Set(), mulberry32(150000 + i), 150000 + i);
+    const h = tagsOf(drawn);
+    if (hasAny(h, anyToy)) toys += 1;
+    if (hasAny(h, anyCondom)) condoms += 1;
+    if (h.has("used condom") && hasAny(h, freshCondom)) freshUsed += 1;
+    if ([...h].some((t) => publicSex.has(t))) publicPlace += 1;
+    if ((h.has("bag") || h.has("handbag")) && h.has("backpack")) stackedBag += 1;
+    if (contradictions(lex, [...h]).length) clash += 1;
+  }
+  ok("男女性愛抽得到性玩具", toys > 0, `toys=${toys}`);
+  ok("男女性愛抽得到保險套", condoms > 0, `condoms=${condoms}`);
+  eq("沒拆的保險套不會跟用過的疊在一起", freshUsed, 0);
+  ok("沒釘場所的性愛也能到大街、公園、沙灘", publicPlace > 0, `public=${publicPlace}`);
+  eq("包不會跟背包疊在同一格", stackedBag, 0);
+  eq("這些補牌沒有製造矛盾", clash, 0);
+
+  const girlSex = { ...sex, boy: false };
+  let girlToys = 0;
+  let girlCondom = 0;
+  for (let i = 0; i < 160; i += 1) {
+    const h = tagsOf(drawOne(lex, girlSex, new Set(), new Set(), mulberry32(151000 + i), 151000 + i));
+    if (hasAny(h, anyToy)) girlToys += 1;
+    if (hasAny(h, anyCondom)) girlCondom += 1;
+  }
+  ok("女生性愛抽得到性玩具", girlToys > 0, `toys=${girlToys}`);
+  eq("沒有男生就不補保險套", girlCondom, 0);
+
+  const tease = defaultSettings(data);
+  tease.girl = true;
+  tease.boy = false;
+  tease.heats = ["tease"];
+  tease.weights = { activity: 0, tease: 1, flash: 0, sex: 0 };
+  tease.eras = ["modern"];
+  let bags = 0;
+  let teaseToy = 0;
+  let bareOrphan = 0;
+  let hoodOrphan = 0;
+  let dryTowel = 0;
+  for (let i = 0; i < 240; i += 1) {
+    const h = tagsOf(drawOne(lex, tease, new Set(), new Set(), mulberry32(152000 + i), 152000 + i));
+    if (h.has("bag") || h.has("handbag")) bags += 1;
+    if (hasAny(h, anyToy)) teaseToy += 1;
+    if (h.has("bare shoulders") && !h.has("off shoulder")) bareOrphan += 1;
+    if (h.has("hood up") && ![...hoodCtx].some((t) => h.has(t))) hoodOrphan += 1;
+    if (h.has("towel") && ![...bathCtx].some((t) => h.has(t))) dryTowel += 1;
+  }
+  ok("誘惑抽得到包", bags > 0, `bags=${bags}`);
+  eq("誘惑不抽性玩具", teaseToy, 0);
+  eq("裸肩只跟著露肩裝", bareOrphan, 0);
+  eq("戴上兜帽要先有帽子", hoodOrphan, 0);
+  eq("毛巾只出現在浴場", dryTowel, 0);
+
+  const boy = { ...tease, girl: false, boy: true };
+  let coke = 0;
+  let cokeBare = 0;
+  let cokeSun = 0;
+  for (let i = 0; i < 200; i += 1) {
+    const h = tagsOf(drawOne(lex, boy, new Set(), new Set(), mulberry32(153000 + i), 153000 + i));
+    if (h.has("coke-bottle glasses")) {
+      coke += 1;
+      if (!h.has("glasses")) cokeBare += 1;
+      if (h.has("sunglasses")) cokeSun += 1;
+    }
+  }
+  ok("男生抽得到瓶底眼鏡", coke > 0, `coke=${coke}`);
+  eq("瓶底眼鏡會帶上眼鏡", cokeBare, 0);
+  eq("瓶底眼鏡不跟太陽眼鏡疊", cokeSun, 0);
+
+  let bare = 0;
+  for (let i = 0; i < 60; i += 1) {
+    const h = tagsOf(drawOne(lex, tease, new Set(["off shoulder"]), new Set(), mulberry32(154000 + i), 154000 + i));
+    if (h.has("bare shoulders") && h.has("off shoulder")) bare += 1;
+  }
+  ok("釘露肩裝抽得到裸肩", bare > 0, `bare=${bare}`);
+
+  let hoodUp = 0;
+  for (let i = 0; i < 60; i += 1) {
+    const h = tagsOf(drawOne(lex, tease, new Set(["hoodie"]), new Set(), mulberry32(155000 + i), 155000 + i));
+    if (h.has("hood up") && h.has("hoodie")) hoodUp += 1;
+  }
+  ok("釘連帽衫抽得到戴上兜帽", hoodUp > 0, `hoodUp=${hoodUp}`);
+
+  let towel = 0;
+  let bathBag = 0;
+  for (let i = 0; i < 60; i += 1) {
+    const h = tagsOf(drawOne(lex, tease, new Set(["bathing"]), new Set(), mulberry32(156000 + i), 156000 + i));
+    if (h.has("towel")) towel += 1;
+    if (h.has("bag") || h.has("handbag")) bathBag += 1;
+  }
+  ok("釘洗澡抽得到毛巾", towel > 0, `towel=${towel}`);
+  eq("洗澡不補包", bathBag, 0);
+
+  const diverse = { ...boy, sceneMode: "diverse" };
+  let tusks = 0;
+  let humanTusks = 0;
+  for (let i = 0; i < 180; i += 1) {
+    const h = tagsOf(drawOne(lex, diverse, new Set(), new Set(), mulberry32(157000 + i), 157000 + i));
+    if (h.has("tusks")) {
+      tusks += 1;
+      if (!monsterish(h)) humanTusks += 1;
+    }
+  }
+  ok("多樣模式抽得到獠牙", tusks > 0, `tusks=${tusks}`);
+  eq("獠牙不會長在普通人臉上", humanTusks, 0);
+
+  let normalTusks = 0;
+  for (let i = 0; i < 80; i += 1) {
+    const h = tagsOf(drawOne(lex, boy, new Set(), new Set(), mulberry32(158000 + i), 158000 + i));
+    if (h.has("tusks")) normalTusks += 1;
+  }
+  eq("正常模式不抽獠牙", normalTusks, 0);
+
+  const act = { ...sex, heats: ["activity"], weights: { activity: 1, tease: 0, flash: 0, sex: 0 } };
+  let actToy = 0;
+  let actCondom = 0;
+  for (let i = 0; i < 80; i += 1) {
+    const h = tagsOf(drawOne(lex, act, new Set(), new Set(), mulberry32(159000 + i), 159000 + i));
+    if (hasAny(h, anyToy)) actToy += 1;
+    if (hasAny(h, anyCondom)) actCondom += 1;
+  }
+  eq("日常活動不抽性玩具", actToy, 0);
+  eq("日常活動不抽保險套", actCondom, 0);
 }
 
 {

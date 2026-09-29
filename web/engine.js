@@ -1482,57 +1482,9 @@ function keepPlaceSide(tag, dep, otherIsIn) {
   return !!other && BOTH_IO.has(tag) && otherIsIn(other);
 }
 
-const PRIVATE_SEX_PLACE = new Set([
-  // 廁所隔間沒有對應的活動，所以在一般的場地那一格永遠排不進去（實測 0/4800）。
-  // 它的天然用途本來就是私密場景，放這裡才是它該在的地方。
-  "toilet stall",
-  "bedroom",
-  "hotel room",
-  "love hotel",
-  "bath",
-  "bathroom",
-  "bathtub",
-  "shower (place)",
-  "ofuro",
-  "onsen",
-  "bathhouse",
-  "bubble bath",
-  "changing room",
-  "locker room",
-  "living room",
-  "kitchen",
-  // 上面十六個是照現代想像寫的，十二個是浴室或臥室的變體，一個歷史時代的
-  // 場地都沒有 —— 於是 sex heat 一開，古中國／古希臘／中世紀只剩 bedroom
-  // 和 bath 各一半，江戶只剩 onsen 和 open-air bath。其他三種 heat 這些時代
-  // 都抽得到十四到二十六種場地，落差全出在這張表。
-  // east asian architecture 也不收：它是建築外觀的泛稱，不是「能不被打擾」的地方。
-  // 試著收過，結果古中國的性愛場地有 44% 都是它（既有測試「沒有單一場地佔掉
-  // 三分之一以上」直接紅）—— 這個時代的私密場地本來就少，補一個泛稱就會蓋掉其他的。
-  // 收錄標準是「能不被打擾」，所以 market / festival / street / shrine /
-  // temple 這類公共場所仍然不在裡面。
-  "bed",
-  "futon",
-  "ryokan",
-  "balcony",
-  "library",
-  "garden",
-  "forest",
-  "bamboo forest",
-  "courtyard",
-  "pavilion",
-  "ruins",
-  "colonnade",
-  "pillar",
-  "fountain",
-  "palace",
-  "throne",
-  "tavern",
-  "dojo",
-  "mansion",
-  "carriage",
-  "greenhouse",
-  "ballroom",
-]);
+// 以前沒釘場所的性愛只准一份私密白名單，公園、沙灘、大街、神社整組進不來。
+// 那張表已拿掉：性愛跟其他熱度用同一池場地，再由活動和職業把自己的場地收窄。
+// 職業這條仍避開公開場所，除非這個職業的場地全是公開的（消防員只有大街）。
 const PUBLIC_SEX_PLACE = new Set(["street", "city", "cityscape", "alley", "park", "beach", "ocean", "rooftop"]);
 
 // sceneMode / lockScene / realistic — single source: ./scene-policy.js
@@ -2060,6 +2012,12 @@ export const CTX_PULLS_ACC = [
   // Danbooru 實測：標了 rain 的圖有 31.9% 同時有 umbrella（15,598／48,876），
   // 跟 knee pads 0.25、bicycle helmet 0.45 同一個量級，照量到的數字給 0.3。
   ["rain", "umbrella", 0.3],
+  // 露肩裝本身就是肩膀露出來。連帽衫、兜帽、兜帽斗篷同理，沒有這條的話
+  // hood up 先被抽走、衣服還沒填，收尾的場合檢查會把它刪光。
+  ["off shoulder", "bare shoulders", 0.75],
+  ["hoodie", "hood up", 0.45],
+  ["hood", "hood up", 0.5],
+  ["hooded cloak", "hood up", 0.4],
 ];
 
 // 運動的器材。跟 CTX_PULLS_ACC 同一件事，但**不能**放進那張表 —— 那個迴圈外面
@@ -2380,6 +2338,10 @@ function extraMutex(item) {
   if (item.tag === "nipples" || item.tag === "covered nipples") groups.push("nipple_show");
   if (/\b(necktie|bowtie)\b/.test(item.tag)) groups.push("neckwear");
   if (item.mutex === "held_prop" || item.mutex === "sport_prop") groups.push("held");
+  // 這兩個字和瓶底眼鏡沒有互斥格，正常模式的衣服補牌不會選它們。
+  // 補牌時仍要佔住背包格、眼鏡格，才不會跟背包或普通眼鏡疊在一起。
+  if ((item.tag === "bag" || item.tag === "handbag") && !groups.includes("bag")) groups.push("bag");
+  if (item.tag === "coke-bottle glasses" && !groups.includes("eyewear")) groups.push("eyewear");
   item._mx = groups;
   return groups;
 }
@@ -3041,20 +3003,6 @@ function eraOk(item, era) {
     return true;
   }
   return eras.includes(era);
-}
-
-// 這個活動在這個時代有沒有「私密又合時代」的場地。性愛熱度平常只准
-// PRIVATE_SEX_PLACE；交集為空時（購物的場館全是大街、網球只有球場）
-// 釘住該活動會 100% 沒場地。allow() 那一關拿這個判斷要不要放行 ACT_PLACE。
-function actHasPrivatePlace(act, era, lex) {
-  const set = ACT_PLACE[act];
-  if (!set) return false;
-  for (const p of set) {
-    if (!PRIVATE_SEX_PLACE.has(p)) continue;
-    const it = lex.byTag.get(p);
-    if (it && eraOk(it, era)) return true;
-  }
-  return false;
 }
 
 // 這個職業在這個時代的場地是不是「有地方可去、而且全是公開性愛場地」。
@@ -4188,8 +4136,8 @@ export function drawOne(lex, settings, pinned, userBanned, rand, seed, opts) {
     return allowSlow(item);
   };
 
-  // 釘了「比私密清單更具體」的關係時，性愛不再硬套 PRIVATE_SEX_PLACE。
-  // 沒釘的性愛不進這裡，場地仍是臥室／溫泉那一組。
+  // 釘了室內外、天氣、傢俱或自帶場地的活動時，場地池會被收到很少幾個字。
+  // 那時候才封頂，避免竹林或道場吃掉整格。沒釘的性愛不再另走私密白名單。
   let sexPlaceRelax = null;
   const relaxesPrivateSex = () => {
     if (sexPlaceRelax !== null) return sexPlaceRelax;
@@ -5632,22 +5580,7 @@ export function drawOne(lex, settings, pinned, userBanned, rand, seed, opts) {
         const water = [...acts].some((a) => WATER_ACT.has(a) || BATH_ACT.has(a));
         if (water) {
           if (!WATER_PLACE.has(item.tag) && !BATH_PLACE.has(item.tag)) return false;
-        } else if (!jobs.size) {
-          if (!PRIVATE_SEX_PLACE.has(item.tag)) {
-            // 自動抽的性愛仍進臥室／溫泉。活動在這個時代一個私密場地都沒有時照舊放行，
-            // 否則釘購物／開車／網球會 100% 沒場地。釘了活動或室內外則改走對方的清單。
-            const listed = [...acts].filter(
-              (a) => ACT_PLACE[a] && !WATER_ACT.has(a) && !BATH_ACT.has(a)
-            );
-            const noPrivateVenue =
-              listed.length > 0 && listed.every((a) => !actHasPrivatePlace(a, era, lex));
-            // 釘了活動，或釘了會決定室內外的字（室外、雨、篝火、路燈）時，
-            // 私密清單會把對方的場地收到只剩一個時代字：現代室外性愛是竹林，
-            // 釘運動是道場，釘購物是試衣間。活動自己的場地規則在上面。
-            // 沒有這些釘選的性愛仍只進臥室／溫泉。
-            if (!noPrivateVenue && !relaxesPrivateSex()) return false;
-          }
-        } else if (PUBLIC_SEX_PLACE.has(item.tag)) {
+        } else if (jobs.size && PUBLIC_SEX_PLACE.has(item.tag)) {
           // 自動抽的有職業性愛仍避開大街。只有「場上已有職業、且那些職業在這個
           // 時代的場地全是公開場所」才放行 —— 否則釘消防員開著性愛會 100% 沒場地
           // （實測 40/40）。偵探的辦公室不在公開清單，繼續走室內。
@@ -6251,11 +6184,19 @@ export function drawOne(lex, settings, pinned, userBanned, rand, seed, opts) {
   // 使用者已經釘了室內或室外時，時代權重不再加在場地上：海邊、森林、山、街道
   // 和竹林、公園都是這一側的場景，權重一樣。時代錨（城堡、東亞建築）仍在上面擲過。
   const sidePinned = pinned.has("outdoors") || pinned.has("indoors");
+  // 性愛的場地跟誘惑用同一池，權重拉平。否則公園、巷弄是時代專屬（14），
+  // 海邊、街道、海洋是任何時代（1），開了白名單也幾乎抽不到。
+  // 釘了室內或室外時本來就是 1:1。誘惑、走光、活動仍是 14:1。
+  const evenPlace = sidePinned || heat === "sex";
   fillSlot(
     "env",
     "place",
-    sidePinned
-      ? { softTiers: [() => false], weights: [1, 1] }
+    evenPlace
+      ? {
+          softTiers: [() => false],
+          weights: [1, 1],
+          ...(relaxesPrivateSex() ? { capShare: 0.4 } : {}),
+        }
       : {
           softTiers: [(item) => eraSpecific(item, era)],
           weights: [14, 1],
@@ -6853,6 +6794,46 @@ export function drawOne(lex, settings, pinned, userBanned, rand, seed, opts) {
       commit("sportswear");
     }
   }
+  // 沒有互斥格的包、瓶底眼鏡、保險套、玩具。放進衣服池會跟時代衣服搶同一階。
+  // 另開亂數；沒中的種子，主亂數和前面的衣服姿勢都不動。
+  // 寫字夾板、陽傘、O 環不在這裡：那些場合並不代表一定有那個東西。
+  if (Number.isFinite(seed) && Math.max(0, Number(counts.clothing) || 0) > 0) {
+    const r = mulberry32(((seed >>> 0) ^ 0x61636373) >>> 0);
+    const pick = (names) => {
+      const opts = [];
+      for (const t of names) {
+        const item = lex.byTag.get(t);
+        if (item && !used.has(t) && !banned.has(t) && allow(item)) opts.push(item);
+      }
+      if (!opts.length) return;
+      commit(opts[Math.floor(r() * opts.length)].tag);
+    };
+    // 包和瓶底眼鏡是這一段才補的，浴場白名單已經掃過了。
+    // 不擋的話，溫泉和游泳會重新戴上剛被脫掉的包。眼鏡可以下水，瓶底眼鏡不行。
+    const clothKind = sceneClothLocked(used, mustPins(), lex, era, lockOn);
+    const inWater = clothKind === "bath" || clothKind === "swim";
+    if (!mutexTaken.has("bag") && !inWater && r() < 0.12) pick(["bag", "handbag"]);
+    if (male && !mutexTaken.has("eyewear") && !inWater && r() < 0.1) {
+      pick(["coke-bottle glasses"]);
+    }
+    if (heat === "sex" && male && r() < 0.2) {
+      pick(["holding condom", "condom wrapper", "condom box", "condom in mouth"]);
+    }
+    if (heat === "sex" && male && [...used].some((t) => SEX_PHASE_AFTER.has(t)) && r() < 0.35) {
+      pick(["used condom"]);
+    }
+    // 假陽具的熱度寫了誘惑和走光，但它 implies 的「性玩具」被鎖成只有性愛。
+    // commit 會把父字一起放進來，父字過不了熱度，整筆就失敗。震動棒本來也只有性愛。
+    // 所以玩具只在性愛補，不在誘惑和走光空轉一顆骰子。
+    if (heat === "sex" && r() < 0.16) pick(["dildo", "vibrator", "egg vibrator"]);
+  }
+  {
+    const tusks = lex.byTag.get("tusks");
+    if (Number.isFinite(seed) && tusks && !used.has("tusks") && !banned.has("tusks") && allow(tusks)) {
+      const r = mulberry32(((seed >>> 0) ^ 0x7475736b) >>> 0);
+      if (r() < 0.45) commit("tusks");
+    }
+  }
 
   // 四人、五人在性愛時直接補上人數標籤。五人幾乎不會從姿勢池自己抽到
   // （要 people>=5，而權重表沒有五人），所以升級或釘選之後在這裡蓋章。
@@ -6888,6 +6869,12 @@ export function drawOne(lex, settings, pinned, userBanned, rand, seed, opts) {
         if (!allow(item)) continue;
         if (rand() < chance) commit(acc);
       }
+    }
+    // 毛巾在浴場白名單裡，但上面那段刻意跳過浴場，所以自然抽到浴場時毛巾仍是 0。
+    // 只裹毛巾是衣服，跟這條配件不是同一個字。
+    if (clothBudget > 0 && kind === "bath" && !used.has("towel") && !banned.has("towel")) {
+      const towel = lex.byTag.get("towel");
+      if (towel && allow(towel) && rand() < 0.4) commit("towel");
     }
   }
 
