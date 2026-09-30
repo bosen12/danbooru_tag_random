@@ -17,6 +17,10 @@
         const here = room(location.pathname);
         if (was < 0 || here < 0 || was === here) return vt.skipTransition();
         document.documentElement.dataset.vt = here > was ? "fwd" : "back";
+        // 進場的錯開動畫（styles.css 的 html[data-vt-in]）比轉場本身長一點，牌也可能晚一步才發進來：
+        // 另外掛一個標記，一秒後才拿掉。
+        document.documentElement.dataset.vtIn = document.documentElement.dataset.vt;
+        setTimeout(() => delete document.documentElement.dataset.vtIn, 1100);
         vt.finished.finally(() => delete document.documentElement.dataset.vt);
         // 導覽的墨底從剛才那個標籤滑過來。
         const ink = document.querySelector(".page-switch-ink");
@@ -159,6 +163,5 @@
     </script>
     <script type="module" src="fuse.js"></script>
       <div class="vt-sweep" aria-hidden="true"></div>
-      <div class="vt-stamp" aria-hidden="true"><b>疊印台</b><small>換版・OVERPRINT</small></div>
   </body>
 </html>
