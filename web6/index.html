@@ -85,9 +85,10 @@
       <aside class="library panel" id="library" aria-label="字盒">
         <div class="panel-head">
           <h2>字盒</h2>
-          <p><span class="lib-count" id="lib-count"></span></p>
+          <p><button class="lib-count why-count" id="lib-count" type="button" aria-controls="lib-why"><span class="why-num"></span><span class="why-chev" aria-hidden="true"></span></button></p>
           <button class="btn btn-small btn-ghost lib-toggle" id="lib-toggle" type="button" aria-controls="lib-grid">收起字盒</button>
         </div>
+        <div class="why" id="lib-why" aria-label="字盒裡少掉的牌"><div class="why-inner"></div></div>
         <div class="lib-search">
           <input id="lib-q" type="search" placeholder="搜尋：紅髮、kimono…（按 / 跳到這裡）" aria-label="搜尋字盒" autocomplete="off" />
         </div>
