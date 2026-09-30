@@ -2880,3 +2880,14 @@ body.fuse {
     animation: none;
   }
 }
+
+/* 晾紙繩上原檔被刪的那張：一小張斜線底紋的空白，寫「原檔已刪」。 */
+.print[data-gone="true"] .print-face {
+  background:
+    repeating-linear-gradient(135deg, transparent 0 6px, color-mix(in oklch, var(--color-rule) 55%, transparent) 6px 7px),
+    var(--color-paper-2);
+}
+
+.print[data-gone="true"] .print-state {
+  color: var(--color-accent);
+}

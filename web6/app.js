@@ -27,6 +27,7 @@ import {
 } from "./engine.js";
 import { skeletonPicker } from "./skeleton-picker.js";
 import { compareThumb } from "./compare.js";
+import { watchGone, sweepGone } from "./gone.js";
 import { relationsOf } from "./fuse-bed.js";
 import { drawWithSeed } from "./draw-with-seed.js";
 import { ratingBlocked, RATING_LABEL } from "./rules/rating.js";
@@ -135,6 +136,7 @@ async function boot() {
   renderRules();
   renderGoBar();
   renderWall();
+  setTimeout(sweepShots, 1500);
   $("wall-start").addEventListener("click", () => $("go-bar").querySelector(".btn-primary")?.click());
   renderTrash();
   for (const s of resumable) generator.resume(s);
@@ -1614,12 +1616,18 @@ function paintShot(node, shot) {
   if (previousStatus && previousStatus !== shot.status && (shot.status === "done" || shot.status === "failed")) seat(node);
   const frame = node.querySelector(".shot-frame");
   const src = viewSrc(shot.image) || shot.preview;
+  if (shot._goneSrc && shot._goneSrc !== viewSrc(shot.image)) clearShotGone(shot, node);
   let img = frame.querySelector("img");
   if (src) {
     if (!img) {
       img = el("img", { alt: "成品", decoding: "async" });
       frame.prepend(img);
     }
+    watchGone(img, (s) => {
+      if (s === viewSrc(shot.image)) markShotGone(shot, node);
+    });
+    // 開頁面的檢查比這張畫框早問完（牆上的畫框捲到附近才建）：建出來時補上。
+    if (shot._goneSrc && !node.dataset.gone) markShotGone(shot, node);
     if (img.getAttribute("src") !== src) {
       // 剛印好（上一幀還是預覽或空的）：像相紙泡進顯影液，由上往下浮出來。
       // Hires 換上來的大圖也一樣顯影：跟圖上那條由上往下掃的進度線接起來。
@@ -1754,6 +1762,100 @@ function draftHand(shot) {
   );
 }
 
+/* ================= 原檔不在了（gone.js） ================= */
+// 專案主會手動刪 ComfyUI 輸出資料夾裡的圖。刪掉的那張不再是破圖：畫框換成一張說明，
+// 給「照原樣再印」（同一格、同樣的牌與種子重新送印）跟「撤下」。暫時連不上 ComfyUI 不算。
+
+function goneNote() {
+  return el(
+    "div",
+    { class: "gone-note" },
+    el("b", {}, "原檔不在了"),
+    el("p", {}, "ComfyUI 的輸出資料夾裡找不到這張，可能被刪掉了。")
+  );
+}
+
+function detailImg(shot, src) {
+  const img = el("img", { src, alt: "成品" });
+  watchGone(img, (s) => {
+    if (s !== viewSrc(shot.image)) return;
+    img.replaceWith(goneNote());
+    const node = document.querySelector(`.shot[data-id="${shot.id}"]`);
+    if (node) markShotGone(shot, node);
+  });
+  return img;
+}
+
+function markShotGone(shot, node) {
+  if (shot.status !== "done" || !shot.image) return;
+  shot._goneSrc = viewSrc(shot.image);
+  node.dataset.gone = "true";
+  const frame = node.querySelector(".shot-frame");
+  if (!frame.querySelector(".shot-gone")) {
+    const box = el(
+      "div",
+      { class: "shot-gone" },
+      goneNote(),
+      el(
+        "div",
+        { class: "shot-gone-acts" },
+        el("button", { class: "btn btn-small btn-primary", type: "button", onclick: () => printAgain(shot) }, "照原樣再印"),
+        el("button", { class: "btn btn-small btn-ghost", type: "button", onclick: () => removeShot(shot) }, "撤下")
+      )
+    );
+    frame.append(box);
+    enter(box);
+  }
+  noteGone();
+}
+
+function clearShotGone(shot, node) {
+  shot._goneSrc = null;
+  delete node.dataset.gone;
+  node.querySelector(".shot-gone")?.remove();
+}
+
+/** 原檔不在的那張：同一格、同樣的牌與種子重新送印（Hires 的結果不跟著）。 */
+function printAgain(shot) {
+  const node = document.querySelector(`.shot[data-id="${shot.id}"]`);
+  if (node) clearShotGone(shot, node);
+  Object.assign(shot, { status: "drawn", image: null, preview: null, note: "", hi: null, hires: null, baseImage: null });
+  printInPlace(shot);
+}
+
+// 一次刪了好幾張：不要每張各跳一次提示，攢半秒說一次總數，給「全部撤下」。
+let goneToast = 0;
+function noteGone() {
+  clearTimeout(goneToast);
+  goneToast = setTimeout(() => {
+    const gone = shots.filter((s) => s._goneSrc);
+    if (!gone.length) return;
+    toast(`有 ${gone.length} 張成品的原檔被刪了`, {
+      action: {
+        label: "全部撤下",
+        run: () => {
+          for (const s of shots.filter((x) => x._goneSrc)) removeShot(s);
+        },
+      },
+    });
+  }, 500);
+}
+
+/** 開頁面時把牆上印好的每一張問一遍：有快取的圖畫面看起來正常，但原檔可能早就刪了。 */
+function sweepShots() {
+  sweepGone(
+    shots.filter((s) => s.status === "done" && s.image).map((s) => viewSrc(s.image)),
+    (src) => {
+      for (const s of shots) {
+        if (s.status !== "done" || viewSrc(s.image) !== src) continue;
+        const node = document.querySelector(`.shot[data-id="${s.id}"]`);
+        if (node) markShotGone(s, node);
+        else s._goneSrc = src;
+      }
+    }
+  );
+}
+
 /** 同一張就地送去印（只抽牌的、印壞的、被停掉的），不另開一張新的。 */
 function printInPlace(shot) {
   if (!REPRINTABLE.has(shot.status)) return;
@@ -1840,7 +1942,7 @@ function showShot(shot) {
     el(
       "div",
       { class: "lightbox" },
-      src ? el("img", { src, alt: "成品" }) : el("p", { class: "pool-empty" }, "這張還沒有圖。"),
+      shot._goneSrc ? goneNote() : src ? detailImg(shot, src) : el("p", { class: "pool-empty" }, "這張還沒有圖。"),
       el(
         "div",
         {},

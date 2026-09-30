@@ -30,6 +30,7 @@ import { drawWithSeed } from "./draw-with-seed.js";
 import { skeletonPicker } from "./skeleton-picker.js";
 import { compareThumb } from "./compare.js";
 import { ratingBlocked, RATING_LABEL } from "./rules/rating.js";
+import { watchGone, sweepGone } from "./gone.js";
 import { HEATS, toggleHeat } from "./heats.js";
 import { heatBlockedByRating } from "./scene-policy.js";
 import { initLoraPicker, currentLorasPayload, currentTriggerText, currentCkpt, handleLoraKeys } from "./lora.js";
@@ -273,6 +274,7 @@ async function boot() {
   if (hand) attachPeek(hand.fan, ".card[data-tag]", peekInfo);
   watchPoolPill();
   watchPrintBar();
+  setTimeout(sweepPrints, 1500);
   settleMotion();
 
   if (new URLSearchParams(location.search).has("debug")) {
@@ -808,6 +810,10 @@ function printNow() {
 
 function reprint(p) {
   if (p.status === "queued" || p.status === "running") return refuse($("print-bar").querySelector(".pb-go"));
+  if (p._gone) {
+    // 原檔被刪的那張：照原樣重印，Hires 的結果不跟著。
+    Object.assign(p, { _gone: false, image: null, hi: null, hires: null, baseImage: null });
+  }
   p.note = "";
   p.preview = null;
   generator.enqueue(p);
@@ -973,6 +979,7 @@ function otherPrinting() {
 
 function previewState(p) {
   if (!p) return "還沒付印";
+  if (p._gone) return "原檔不在了";
   if (p.status === "running") return `印製中 ${Math.round((p.progress || 0) * 100)}%`;
   if (p.status === "queued" || p.status === "drawn") return "排隊等印…";
   return STATUS_ZH[p.status] || "";
@@ -989,12 +996,13 @@ function renderPreview({ develop = false } = {}) {
   const state = p ? p.status : "none";
   $("preview").dataset.empty = p ? "false" : "true";
   pv.sheet.dataset.state = state;
-  const src = p ? viewSrc(p.image) || p.preview : null;
+  const src = printSrc(p);
   let img = pv.sheet.querySelector("img");
   if (src) {
     if (!img) {
       img = el("img", { alt: "", decoding: "async", draggable: "false" });
       pv.sheet.prepend(img);
+      watchGone(img, goneAt);
     }
     if (img.getAttribute("src") !== src) {
       // 上一幀墊在底下（.pv-under），新的一幀載好了才淡進來／顯影 —— 解碼的那一下不會空掉。
@@ -1052,7 +1060,8 @@ function renderPreview({ develop = false } = {}) {
       p ? el("b", { class: "pv-letter", "aria-hidden": "true" }, t.letter) : null,
       el("span", { class: "pv-state" }, p ? previewState(p) : "選試印後付印"),
       !p ? el("span", { class: "pv-hint" }, otherPrinting() ? "晾紙繩上還有一張在印；這一版也可以先付印。" : "從下方選一張試印，再付印成圖。") : null,
-      p && p.status === "failed" && p.note ? el("span", { class: "pv-hint" }, p.note) : null
+      p && p.status === "failed" && p.note ? el("span", { class: "pv-hint" }, p.note) : null,
+      p && p._gone ? el("span", { class: "pv-hint" }, "ComfyUI 的輸出資料夾裡找不到這張，可能被刪掉了。按「再印一次」照原樣重印。") : null
     );
   }
   paintHiresVeil(pv.frame, p || {}, { onCancel: () => hiresRun.cancel(p), onDismiss: () => hiresRun.dismiss(p) });
@@ -1166,11 +1175,14 @@ function renderTrials() {
 function paintTrialFace(i, p = printFor(sigOf(trials[i]))) {
   const n = trialNodes[i];
   if (!n) return;
-  const src = p ? viewSrc(p.image) || p.preview : null;
+  const src = printSrc(p);
   n.node.dataset.printed = p ? p.status : "none";
   let img = n.face.querySelector("img");
   if (src) {
-    if (!img) n.face.prepend((img = el("img", { alt: "", decoding: "async", draggable: "false" })));
+    if (!img) {
+      n.face.prepend((img = el("img", { alt: "", decoding: "async", draggable: "false" })));
+      watchGone(img, goneAt);
+    }
     if (img.getAttribute("src") !== src) img.src = src;
   } else img?.remove();
   n.face.style.setProperty("--p", String(p && p.status === "running" ? p.progress || 0 : 0));
@@ -2213,11 +2225,66 @@ function liftAway(snap, dir) {
 
 let seedNode = null;
 
+/* ================= 原檔不在了（gone.js） ================= */
+// 專案主會手動刪 ComfyUI 輸出資料夾裡的圖。刪掉的那張當成「沒有圖」：繩上寫「原檔已刪」、
+// 預覽說明原因、付印鈕變成「再印一次」。ComfyUI 暫時連不上不算（gone.js 只認 404／410）。
+
+/** 這張要顯示的圖：原檔不在了就沒有。 */
+function printSrc(p) {
+  return p && !p._gone ? viewSrc(p.image) || p.preview : null;
+}
+
+function goneAt(src) {
+  for (const p of prints) if (p.status === "done" && !p._gone && viewSrc(p.image) === src) markPrintGone(p);
+}
+
+function markPrintGone(p) {
+  p._gone = true;
+  if (lineThumbs[p.id]) {
+    delete lineThumbs[p.id];
+    writeJ(THUMB_KEY, lineThumbs);
+  }
+  paintLineItem(p);
+  renderPreview();
+  renderPrintBar();
+  trials.forEach((t, i) => {
+    if (printFor(sigOf(t)) === p) paintTrialFace(i);
+  });
+  noteGone();
+}
+
+// 一次刪了好幾張：攢半秒說一次總數，給「全部撤下」。
+let goneToast = 0;
+function noteGone() {
+  clearTimeout(goneToast);
+  goneToast = setTimeout(() => {
+    const n = prints.filter((p) => p._gone).length;
+    if (!n) return;
+    toast(`晾紙繩上有 ${n} 張的原檔被刪了`, {
+      action: {
+        label: "全部撤下",
+        run: () => {
+          prints = prints.filter((p) => !p._gone);
+          savePrints();
+          renderLine();
+          renderAll([]);
+        },
+      },
+    });
+  }, 500);
+}
+
+/** 開頁面時把繩上印好的每一張問一遍：繩上用的是存在本機的小縮圖，原檔刪了也看不出來。 */
+function sweepPrints() {
+  sweepGone(prints.filter((p) => p.status === "done" && p.image).map((p) => viewSrc(p.image)), goneAt);
+}
+
 /** 付印鈕的那個動作（付印／再印一次／Hires）。btn 是 Hires 選單要貼著彈出的那顆。 */
 function printAction(btn) {
   const t = trials[picked];
   if (!t) return;
   const p = printFor(sigOf(t));
+  if (p && p._gone) return reprint(p);
   if (p && p.status === "done") return openHires(p, btn);
   if (p && p.status === "failed") return reprint(p);
   return printNow();
@@ -2276,7 +2343,8 @@ function renderPrintBar() {
   if (busy) {
     label = p.status === "queued" ? "排隊等印…" : `印製中 ${Math.round((p.progress || 0) * 100)}%`;
     disabled = true;
-  } else if (p && p.status === "done") {
+  } else if (p && p._gone) label = "再印一次";
+  else if (p && p.status === "done") {
     // 印好了：這顆鈕換成下一步 —— Hires。做的時候鈕上走進度，跟付印一樣。
     label = hiresBusy(p) ? (p.hi.status === "running" ? `Hires ${Math.round((p.hi.progress || 0) * 100)}%` : "Hires 排隊中…") : "Hires";
     disabled = hiresBusy(p);
@@ -2295,7 +2363,7 @@ function renderPrintBar() {
   const wasOffline = bar.dataset.offline === "1";
   bar.dataset.offline = offline ? "1" : "0";
   const hiBusy = !!p && p.status === "done" && hiresBusy(p);
-  const key = [t.letter, sigOf(t), p ? p.status : "", p?.hi?.status || "", p?.hires?.scale || "", summary.join("・"), detail.join("・"), t.missing.join(","), offline, linkNow, p && p.status === "failed" ? p.note : "", !!bed.pins.length].join("|");
+  const key = [t.letter, sigOf(t), p ? p.status : "", p?._gone ? "gone" : "", p?.hi?.status || "", p?.hires?.scale || "", summary.join("・"), detail.join("・"), t.missing.join(","), offline, linkNow, p && p.status === "failed" ? p.note : "", !!bed.pins.length].join("|");
   const go = bar.querySelector(".pb-go");
   if (bar.dataset.key === key && go) {
     if (go.textContent !== label) go.textContent = label;
@@ -2331,9 +2399,9 @@ function renderPrintBar() {
           disabled: disabled || undefined,
           dataset: { wide: [...label].length <= 2 ? "true" : "false", busy: busy || hiBusy ? "true" : "false" },
           style: busy ? `--p: ${p.status === "running" ? p.progress || 0 : 0}` : hiBusy ? `--p: ${p.hi.status === "running" ? p.hi.progress || 0 : 0}` : undefined,
-          "aria-haspopup": p && p.status === "done" ? "dialog" : undefined,
+          "aria-haspopup": p && p.status === "done" && !p._gone ? "dialog" : undefined,
           onclick: (e) => printAction(e.currentTarget),
-          title: p && p.status === "done" ? "放大並重畫細節（快速／深度）" : "付印（P）",
+          title: p && p.status === "done" && !p._gone ? "放大並重畫細節（快速／深度）" : "付印（P）",
         },
         label
       ),
@@ -2506,7 +2574,8 @@ function paintLineNode(node, p) {
   }
   node.dataset.status = p.status;
   const face = node.querySelector(".print-face");
-  const src = viewSrc(p.image) || p.preview;
+  const src = printSrc(p);
+  node.dataset.gone = p._gone ? "true" : "false";
   const img = face.querySelector("img");
   if (src) {
     const thumb = lineThumbOf(p, src);
@@ -2518,10 +2587,11 @@ function paintLineNode(node, p) {
       // 還沒有縮圖的那幾張在頁面最上面：優先序拉高，不要排在字盒幾十張插圖後面。
       target = el("img", thumb ? { src: use, alt: "", decoding: "async", draggable: "false" } : { loading: "lazy", fetchpriority: "high", src: use, alt: "", decoding: "async", draggable: "false" });
       face.replaceChildren(target);
+      watchGone(target, goneAt);
     } else if (img.getAttribute("src") !== use) img.src = use;
     else target = null;
     if (target && !thumb && p.status === "done") target.addEventListener("load", () => keepLineThumb(p, src, target), { once: true });
-  } else face.replaceChildren(el("span", { class: "print-state" }, STATUS_ZH[p.status] || ""));
+  } else face.replaceChildren(el("span", { class: "print-state" }, p._gone ? "原檔已刪" : STATUS_ZH[p.status] || ""));
   node.style.setProperty("--p", String(p.status === "running" ? p.progress || 0 : p.status === "done" ? 1 : 0));
   node.setAttribute("aria-label", `試印 ${p.letter || ""}・${STATUS_ZH[p.status] || ""}・你的 ${p.mine?.length || 0} 張牌。點開看，或回到這一版`);
 }
@@ -2538,11 +2608,15 @@ let linePeekTimer = 0;
 
 function showLinePeek(node) {
   const p = prints.find((x) => x.id === node.dataset.id);
-  const src = p && (viewSrc(p.image) || p.preview);
+  const src = printSrc(p);
   if (!src || !node.isConnected) return hideLinePeek();
   if (!linePeek) {
     linePeek = el("div", { class: "print-peek", "aria-hidden": "true", hidden: true }, el("img", { alt: "", decoding: "async" }), el("p", { class: "print-peek-cap" }));
     document.body.append(linePeek);
+    watchGone(linePeek.querySelector("img"), (src) => {
+      hideLinePeek();
+      goneAt(src);
+    });
   }
   const img = linePeek.querySelector("img");
   if (img.getAttribute("src") !== src) img.src = src;
@@ -2570,7 +2644,7 @@ function hideLinePeek() {
 function openPrint(p) {
   hideLinePeek();
   sfx.open();
-  const src = viewSrc(p.image) || p.preview;
+  const src = printSrc(p);
   const mine = (p.mine && p.mine.length ? p.mine : p.bed?.pins || []).filter((t) => lib.byTag.has(t));
   let sheet = null;
   const foot = [
@@ -2589,7 +2663,7 @@ function openPrint(p) {
     p.status === "failed" || p.status === "stopped" || p.status === "cancelled"
       ? el("button", { class: "btn btn-small", type: "button", onclick: () => (sheet.close(), reprint(p)) }, "再印一次")
       : null,
-    p.image ? el("a", { class: "btn btn-small", href: p.image, target: "_blank", rel: "noopener" }, "開原圖") : null,
+    p.image && !p._gone ? el("a", { class: "btn btn-small", href: p.image, target: "_blank", rel: "noopener" }, "開原圖") : null,
     el(
       "button",
       {

@@ -4209,3 +4209,54 @@ html {
     animation: none;
   }
 }
+
+/* ---------- 原檔不在了（gone.js）----------
+ * ComfyUI 輸出資料夾裡的圖被手動刪掉：畫框不再是一張破圖，換成一張斜線底紋的空白樣張，
+ * 說明原因、給「照原樣再印」和「撤下」。Hires 沒有原圖可放大，收起來。 */
+.shot[data-gone="true"] .shot-frame img {
+  visibility: hidden;
+}
+
+.shot[data-gone="true"] .shot-hires {
+  display: none;
+}
+
+.shot-gone {
+  position: absolute;
+  inset: 0;
+  z-index: 2;
+  display: grid;
+  place-content: center;
+  justify-items: center;
+  gap: var(--space-sm);
+  padding: var(--space-lg);
+  text-align: center;
+  background:
+    repeating-linear-gradient(135deg, transparent 0 10px, color-mix(in oklch, var(--color-rule) 45%, transparent) 10px 11px),
+    var(--color-paper-2);
+}
+
+.gone-note b {
+  font-family: var(--font-display);
+  font-size: var(--text-lg);
+  color: var(--color-ink);
+}
+
+.gone-note p {
+  max-width: 22em;
+  margin-top: var(--space-2xs);
+  font-size: var(--text-xs);
+  color: var(--color-muted);
+}
+
+.lightbox .gone-note {
+  padding: var(--space-2xl) var(--space-lg);
+  text-align: center;
+}
+
+.shot-gone-acts {
+  display: flex;
+  flex-wrap: wrap;
+  justify-content: center;
+  gap: var(--space-xs);
+}
