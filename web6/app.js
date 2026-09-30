@@ -27,7 +27,6 @@ import {
 } from "./engine.js";
 import { skeletonPicker } from "./skeleton-picker.js";
 import { compareThumb } from "./compare.js";
-import { mountWhy } from "./hidden-why.js";
 import { relationsOf } from "./fuse-bed.js";
 import { drawWithSeed } from "./draw-with-seed.js";
 import { ratingBlocked, RATING_LABEL } from "./rules/rating.js";
@@ -273,62 +272,24 @@ function visible(card) {
   return true;
 }
 
-// 「920 / 1572」單看數字不知道在數什麼：字面寫「張」，點一下展開少掉的去哪了（hidden-why.js）。
-// 以前寫在 title 裡，手機沒有滑鼠根本看不到。
-let libWhy = null;
-
+// 「1328 / 1504」單看數字不知道在數什麼：字面寫「張」，滑過去說清楚少掉的去哪了。
 function countLine(shown) {
   const total = lib.cards.length;
-  const hid = { rating: 0, male: 0, female: 0, era: 0 };
+  const hid = { rating: 0, gender: 0, era: 0 };
   for (const c of lib.cards) {
     if (pool.has(c.tag)) continue;
     if (ratingBlocked(c.item, settings.rating)) hid.rating += 1;
-    else if (c.gate === "male" && !settings.boy) hid.male += 1;
-    else if (c.gate === "female" && !settings.girl) hid.female += 1;
+    else if ((c.gate === "male" && !settings.boy) || (c.gate === "female" && !settings.girl)) hid.gender += 1;
     else if (!visible(c)) hid.era += 1;
   }
-  const filtered = total - shown - hid.rating - hid.male - hid.female - hid.era;
-  const era = settings.eras.length === 1 ? ERA_LABELS[settings.eras[0]] : "";
-  const who = { label: "人物改成不限", run: () => pickWho({ girl: true, boy: true }) };
-  libWhy ||= mountWhy($("lib-count"), $("lib-why"));
-  libWhy.update(shown, total, [
-    { n: hid.rating, text: `張${RATING_LABEL[settings.rating]}抽不到（分級在最上面那排）` },
-    { n: hid.male, text: "張是男生的牌，人物沒開男", action: who },
-    { n: hid.female, text: "張是女生的牌，人物沒開女", action: who },
-    {
-      n: hid.era,
-      text: `張不屬於${era || "這個時代"}`,
-      action: {
-        label: "全部時代都顯示",
-        run: () => {
-          ui.eraOnly = false;
-          saveUi();
-          renderRules();
-          renderLibrary();
-        },
-      },
-    },
-    { n: filtered, text: "張被花色、小分類或搜尋篩掉", action: { label: "看全部", run: showWholeLibrary } },
-  ]);
-}
-
-/** 人物那一排改了：規則重畫、字盒跟著換。 */
-function pickWho(patch) {
-  setSettings(patch);
-  renderRules();
-  renderLibrary();
-}
-
-/** 清掉花色、小分類、搜尋，字盒回到全部。 */
-function showWholeLibrary() {
-  ui.suit = "all";
-  ui.group = "";
-  ui.query = "";
-  saveUi();
-  renderLibraryChrome();
-  $("lib-q").closest(".lib-search").dataset.typing = "false";
-  dealLibrary = true;
-  renderLibrary();
+  const why = [
+    hid.rating && `${hid.rating} 張被分級收起來`,
+    hid.gender && `${hid.gender} 張是${settings.boy ? "女生" : "男生"}專用（${settings.boy ? "女生" : "男生"}沒開）`,
+    hid.era && `${hid.era} 張不屬於這個時代`,
+  ].filter(Boolean);
+  const box = $("lib-count");
+  settleText(box, `${shown} / ${total} 張`);
+  box.title = `字盒共 ${total} 張，這裡顯示 ${shown} 張` + (why.length ? `。${why.join("、")}` : "") + (shown < total - hid.rating - hid.gender - hid.era ? "。其餘被花色、分類或搜尋篩掉" : "");
 }
 
 function renderLibrary() {

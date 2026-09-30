@@ -29,7 +29,6 @@ import {
 import { drawWithSeed } from "./draw-with-seed.js";
 import { skeletonPicker } from "./skeleton-picker.js";
 import { compareThumb } from "./compare.js";
-import { mountWhy } from "./hidden-why.js";
 import { ratingBlocked, RATING_LABEL } from "./rules/rating.js";
 import { HEATS, toggleHeat } from "./heats.js";
 import { heatBlockedByRating } from "./scene-policy.js";
@@ -2752,42 +2751,6 @@ function renderCaseGroups(inSuit) {
   box.replaceChildren(chip("", "全部", null), ...groups.map(([g, [zh, seal]]) => chip(g, zh, seal)));
 }
 
-// 「1092 / 1572 張」：點一下展開少掉的去哪了（hidden-why.js）。跟墨池的字盒同一套。
-let caseWhy = null;
-
-function caseCountLine(shown) {
-  const total = lib.cards.length;
-  const hid = { rating: 0, ban: 0, male: 0, female: 0 };
-  for (const c of lib.cards) {
-    if (!rankOk(c)) hid.rating += 1;
-    else if (bans.has(c.tag)) hid.ban += 1;
-    else if (c.gate === "male" && !settings.boy) hid.male += 1;
-    else if (c.gate === "female" && !settings.girl) hid.female += 1;
-  }
-  const filtered = total - shown - hid.rating - hid.ban - hid.male - hid.female;
-  const who = { label: "人物改成不限", run: () => setSettings({ girl: true, boy: true }) };
-  caseWhy ||= mountWhy($("case-count"), $("case-why"));
-  caseWhy.update(shown, total, [
-    { n: hid.rating, text: `張${RATING_LABEL[settings.rating]}抽不到（分級在最上面那排）` },
-    { n: hid.ban, text: "張在廢字簍裡（到墨池的廢字簍撿回來）" },
-    { n: hid.male, text: "張是男生的牌，人物沒開男", action: who },
-    { n: hid.female, text: "張是女生的牌，人物沒開女", action: who },
-    { n: filtered, text: caseTab === "match" ? "張跟卡池不相配，或被小分類、搜尋篩掉" : "張被花色、小分類或搜尋篩掉", action: { label: "看全部", run: showWholeCase } },
-  ]);
-}
-
-/** 清掉花色、相配、小分類、搜尋，字盒回到全部。 */
-function showWholeCase() {
-  caseTab = "all";
-  caseGroup = "";
-  caseQuery = "";
-  $("case-q").value = "";
-  writeJ(FK.tab, "all");
-  renderCaseTabs();
-  dealCase = true;
-  renderCase();
-}
-
 function renderCase() {
   const deal = dealCase;
   dealCase = false;
@@ -2809,7 +2772,8 @@ function renderCase() {
   const grid = $("case-grid");
   grid.replaceChildren();
   grid._reasons = reasons;
-  caseCountLine(list.length);
+  $("case-count").textContent = `${list.length} 張`;
+  tickIfChanged($("case-count"), "case-count");
   const qEl = $("case-q");
   const miss = !!q && !list.length;
   if (miss && qEl.dataset.miss !== "1") {

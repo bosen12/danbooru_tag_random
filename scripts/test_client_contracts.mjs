@@ -1745,8 +1745,7 @@ const ALBUM_FIXTURE = [
       const fuseCss6 = readFileSync(join(ROOT, "web6/fuse.css"), "utf8").replace(/\r\n/g, "\n");
       ok("疊印台牌的選單：主要動作排第一、拿到焦點，加入偏好卡牌排後面", fuse6.includes('el("div", { class: "pop-acts" }, [...acts, handAct(tag, anchor)])'));
       ok("疊印台牌的選單：兩邊都放不下（手機）就開在牌的下面／上面，不蓋住那張牌", fuse6.includes('pop.dataset.side = below ? "below" : "above";') && fuseCss6.includes("@keyframes pop-in-below") && fuseCss6.includes('.pop:is([data-side="below"], [data-side="above"])::before'));
-      ok("疊印台字盒換花色、換小分類、按「看全部」：捲回最上面、前二十張依序發進來；放牌、打字重畫不發", fuse6.includes("let dealCase = false;") && fuse6.includes("const deal = dealCase;") && (fuse6.match(/dealCase = true;/g) || []).length === 3 && fuse6.includes("function showWholeCase() {"));
-      ok("字盒張數是一顆鈕：點開說少掉的牌被誰收起來（分級、性別、時代／廢字簍、篩選），能放回來的附鈕；兩個房間同一套", readFileSync(join(ROOT, "web6/hidden-why.js"), "utf8").includes("export function mountWhy(button, panel)") && fuse6.includes('caseWhy ||= mountWhy($("case-count"), $("case-why"));') && readFileSync(join(ROOT, "web6/app.js"), "utf8").includes('libWhy ||= mountWhy($("lib-count"), $("lib-why"));') && readFileSync(join(ROOT, "web6/index.html"), "utf8").includes('id="lib-why"') && readFileSync(join(ROOT, "web6/fuse.html"), "utf8").includes('id="case-why"'));
+      ok("疊印台字盒換花色、換小分類：捲回最上面、前二十張依序發進來；放牌、打字重畫不發", fuse6.includes("let dealCase = false;") && fuse6.includes("const deal = dealCase;") && (fuse6.match(/dealCase = true;/g) || []).length === 2);
       ok("手機上卡池的說明自己一行，不被按鈕擠成好幾行", /@media \(max-width: 40rem\) \{\n  \.plate-sub \{\n    grid-row: 2;/.test(fuseCss6));
     }
     {
