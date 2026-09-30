@@ -272,6 +272,7 @@ async function boot() {
   attachPeek($("registers"), ".card[data-tag]", peekInfo);
   if (hand) attachPeek(hand.fan, ".card[data-tag]", peekInfo);
   watchPoolPill();
+  watchPrintBar();
   settleMotion();
 
   if (new URLSearchParams(location.search).has("debug")) {
@@ -2212,12 +2213,60 @@ function liftAway(snap, dir) {
 
 let seedNode = null;
 
+/** 付印鈕的那個動作（付印／再印一次／Hires）。btn 是 Hires 選單要貼著彈出的那顆。 */
+function printAction(btn) {
+  const t = trials[picked];
+  if (!t) return;
+  const p = printFor(sigOf(t));
+  if (p && p.status === "done") return openHires(p, btn);
+  if (p && p.status === "failed") return reprint(p);
+  return printNow();
+}
+
+// 手機：付印那一排捲出畫面時（人在下面的字盒挑牌），右下角留一顆一樣的付印鈕，
+// 跟左下的「卡池」一左一右。字、能不能按、印製進度都照抄付印那一顆。
+let printBarSeen = true;
+const narrowFuse = matchMedia("(max-width: 68.74rem)");
+
+function syncPrintFloat() {
+  const float = $("print-float");
+  if (!float) return;
+  const go = $("print-bar").querySelector(".pb-go");
+  const t = trials[picked];
+  const show = narrowFuse.matches && !printBarSeen && !!go && !!t;
+  float.hidden = !show;
+  if (!show) return;
+  float.querySelector(".pf-letter").textContent = t.letter;
+  const label = float.querySelector(".pf-label");
+  if (label.textContent !== go.textContent) label.textContent = go.textContent;
+  float.disabled = go.disabled;
+  float.dataset.busy = go.dataset.busy || "false";
+  float.dataset.wide = go.dataset.wide || "false";
+  const pct = go.style.getPropertyValue("--p");
+  if (pct) float.style.setProperty("--p", pct);
+  else float.style.removeProperty("--p");
+  float.title = go.title;
+  float.setAttribute("aria-label", `試印 ${t.letter}：${go.textContent}`);
+}
+
+function watchPrintBar() {
+  const float = $("print-float");
+  if (!float || typeof IntersectionObserver !== "function") return;
+  new IntersectionObserver((entries) => {
+    printBarSeen = entries.some((e) => e.isIntersecting);
+    syncPrintFloat();
+  }, { threshold: 0.5 }).observe($("print-bar"));
+  narrowFuse.addEventListener("change", syncPrintFloat);
+  float.addEventListener("click", (e) => printAction(e.currentTarget));
+}
+
 function renderPrintBar() {
   const bar = $("print-bar");
   const t = trials[picked];
   if (!t) {
     delete bar.dataset.key;
-    return bar.replaceChildren();
+    bar.replaceChildren();
+    return syncPrintFloat();
   }
   const p = printFor(sigOf(t));
   const busy = p && (p.status === "queued" || p.status === "running");
@@ -2252,7 +2301,7 @@ function renderPrintBar() {
     if (go.textContent !== label) go.textContent = label;
     if (busy) go.style.setProperty("--p", String(p.status === "running" ? p.progress || 0 : 0));
     if (hiBusy) go.style.setProperty("--p", String(p.hi.status === "running" ? p.hi.progress || 0 : 0));
-    return;
+    return syncPrintFloat();
   }
   const moreOpen = bar.querySelector(".pb-more")?.open;
   bar.dataset.key = key;
@@ -2283,7 +2332,7 @@ function renderPrintBar() {
           dataset: { wide: [...label].length <= 2 ? "true" : "false", busy: busy || hiBusy ? "true" : "false" },
           style: busy ? `--p: ${p.status === "running" ? p.progress || 0 : 0}` : hiBusy ? `--p: ${p.hi.status === "running" ? p.hi.progress || 0 : 0}` : undefined,
           "aria-haspopup": p && p.status === "done" ? "dialog" : undefined,
-          onclick: (e) => (p && p.status === "done" ? openHires(p, e.currentTarget) : p && p.status === "failed" ? reprint(p) : printNow()),
+          onclick: (e) => printAction(e.currentTarget),
           title: p && p.status === "done" ? "放大並重畫細節（快速／深度）" : "付印（P）",
         },
         label
@@ -2311,6 +2360,7 @@ function renderPrintBar() {
   if (moreOpen) bar.querySelector(".pb-more").open = true;
   const hint = bar.querySelector('.pb-hint[data-fresh="1"]');
   if (hint) enter(hint);
+  syncPrintFloat();
 }
 
 function showPos() {

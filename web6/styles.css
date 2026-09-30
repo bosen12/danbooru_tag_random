@@ -4090,3 +4090,122 @@ html {
     animation: none;
   }
 }
+
+/* ---------- 墨池手機：底部操作列 ----------
+ * 捲到成品牆時浮出來的「只抽牌／抽並生圖」跟右下的廢字簍，本來一個 44px 靠左、一個 64px 圓鈕靠右，
+ * 底線不齊、中間空一段。手機上併成一條：同一個高度、同一條底線，按鈕撐滿拇指搆得到的那一段。
+ * 浮出來用 settle 曲線（到位時微微過衝一下），兩顆按鈕跟在後面錯開半拍落定。 */
+@media (max-width: 40rem) {
+  .trash {
+    --dock-h: 52px;
+    width: var(--dock-h);
+    height: var(--dock-h);
+    gap: 0;
+  }
+  .trash svg {
+    width: 20px;
+    height: 20px;
+  }
+  /* 字太小在 52px 裡擠不下：只留數字，「廢字簍」交給 aria-label。 */
+  .trash span {
+    display: none;
+  }
+  /* 操作列浮出來時，偏好卡牌托盤本來就讓到操作列上面了（card.css 的 -62px），簍子留在列裡，
+   * 不必跟著托盤往上讓 —— 不然它孤零零懸在畫面中間。選擇器要比 card.css 那條讓位的重。 */
+  body:has(.go-float[data-show="true"]:not([inert]):not([hidden])) .trash {
+    translate: none;
+  }
+  /* 點開的面板跟著貼到 52px 的簍子上面，指向簍子的小尖角對準它的中線。 */
+  .trash-panel {
+    bottom: calc(var(--space-md) + 52px + var(--space-sm) + env(safe-area-inset-bottom));
+  }
+  .trash-panel::after {
+    right: calc(var(--space-md) + 26px - var(--space-sm) - 7px);
+  }
+  .go-float {
+    left: var(--space-md);
+    right: calc(var(--space-md) + 52px + var(--space-xs));
+    max-width: none;
+    height: 52px;
+    padding: var(--space-2xs);
+    gap: var(--space-2xs);
+    transform: translateY(calc(100% + var(--space-lg)));
+    transition:
+      transform var(--dur-medium) var(--ease-settle),
+      opacity var(--dur-short) var(--ease-out);
+  }
+  .go-float[data-show="true"] {
+    transform: none;
+  }
+  .go-float .btn {
+    flex: 1 1 0;
+    min-width: 0;
+    height: 100%;
+    font-size: var(--text-sm);
+    opacity: 0;
+    translate: 0 var(--space-sm);
+    transition:
+      opacity var(--dur-short) var(--ease-out),
+      translate var(--dur-medium) var(--ease-settle);
+  }
+  .go-float .btn-primary {
+    flex-grow: 1.6;
+  }
+  .go-float[data-show="true"] .btn {
+    opacity: 1;
+    translate: 0;
+    transition-delay: calc(var(--dur-micro) * 0.4);
+  }
+  .go-float[data-show="true"] .btn + .btn {
+    transition-delay: calc(var(--dur-micro) * 0.8);
+  }
+  .go-float[data-show="true"] .btn + .btn + .btn {
+    transition-delay: var(--dur-micro);
+  }
+  /* 收回去時一起走，不必等。 */
+  .go-float[data-show="false"] .btn {
+    transition-duration: var(--dur-micro);
+  }
+}
+
+/* 成品的一排動作：手機上差 10–40px 就能排成一行，「撤下」不必自己掉到第二行。
+ * 內距跟著螢幕寬縮（360 寬約 7.5px、390 寬約 8px）；再更窄放不下時照舊換行、撤下靠右。 */
+@media (max-width: 40rem) {
+  .shot-actions .btn-small,
+  .shot-actions .shot-toggle {
+    padding-inline: clamp(6px, 2.1vw, 12px);
+  }
+}
+
+/* 成品牆往下捲：每張圖從下面浮上來、由淡轉實，像一張張翻過去的印張。
+ * 綁在捲動上（animation-timeline: view()），不是計時器 —— 捲多快就走多快，停下來就停，
+ * 往回捲會倒著走。只動 opacity 和 transform，合成器自己處理，捲動時不排版。 */
+@supports (animation-timeline: view()) {
+  @media (max-width: 40rem) {
+    .shot-frame {
+      animation: shot-rise var(--ease-out) both;
+      animation-timeline: view();
+      animation-range: entry 0% entry 70%;
+    }
+  }
+}
+
+@keyframes shot-rise {
+  from {
+    opacity: 0.25;
+    transform: translateY(var(--space-lg)) scale(0.96);
+  }
+  to {
+    opacity: 1;
+    transform: none;
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .go-float .btn {
+    transition: none;
+  }
+  .shot-frame {
+    animation: none;
+  }
+}

@@ -2787,3 +2787,96 @@ body.fuse {
 .pv-frame .hires-veil:not([data-status="failed"]) .hv-act {
   display: none;
 }
+
+/* ---------- 手機：付印那排捲走時，右下角的付印鈕 ----------
+ * 左下是「卡池」、右下是付印：在字盒挑完牌，拇指直接按，不必捲回中段。
+ * 跟付印那一顆同一個樣子（朱色、印製中本身就是進度條），左邊一枚試印字母章。
+ * 出場從右下角彈上來、到位時微微過衝；收回去往下沉。 */
+.print-float {
+  position: fixed;
+  right: var(--space-md);
+  bottom: calc(var(--space-md) + env(safe-area-inset-bottom));
+  z-index: 30;
+  display: inline-flex;
+  align-items: center;
+  gap: var(--space-xs);
+  min-height: 48px;
+  padding: 6px 18px 6px 6px;
+  border: 1px solid var(--color-accent);
+  border-radius: 999px;
+  background: var(--color-accent);
+  color: var(--color-accent-ink);
+  box-shadow: 0 12px 26px var(--color-shade);
+  font-family: var(--font-display);
+  font-size: var(--text-md);
+  font-weight: 700;
+  isolation: isolate;
+  overflow: hidden;
+  animation: print-float-in var(--dur-medium) var(--ease-settle);
+  transition: translate var(--dur-medium) var(--ease-out), background-color var(--dur-short) var(--ease-out);
+}
+
+.print-float[hidden] {
+  display: none;
+}
+
+.pf-letter {
+  display: grid;
+  place-items: center;
+  /* 34 + 上下 6 + 邊框 = 48，跟左下的「卡池」同高、同一條底線。 */
+  width: 34px;
+  height: 34px;
+  border: 1.5px solid currentColor;
+  border-radius: var(--radius-xs);
+  font-size: var(--text-md);
+  line-height: 1;
+  rotate: -4deg;
+}
+
+.print-float[data-wide="true"] .pf-label {
+  letter-spacing: 0.3em;
+  margin-right: -0.3em;
+}
+
+.print-float[data-busy="true"] {
+  cursor: progress;
+  color: var(--color-ink);
+  background: color-mix(in oklch, var(--color-accent) 16%, var(--color-paper-2));
+  border-color: color-mix(in oklch, var(--color-accent) 60%, transparent);
+  font-size: var(--text-sm);
+}
+
+.print-float[data-busy="true"]::before {
+  content: "";
+  position: absolute;
+  inset: 0;
+  z-index: -1;
+  background: color-mix(in oklch, var(--color-accent) 70%, transparent);
+  transform-origin: left center;
+  transform: scaleX(var(--p, 0));
+  transition: transform var(--dur-short) linear;
+}
+
+.print-float:disabled:not([data-busy="true"]) {
+  opacity: 0.55;
+}
+
+/* 偏好卡牌托盤打開（佔滿底邊）時，跟「卡池」一樣讓到托盤上面。 */
+@media (max-width: 68.74rem) {
+  body:has(.fav-hand[data-open="true"]:not([data-hidden="true"])) .print-float {
+    translate: 0 calc(-1 * var(--fav-h, 0px));
+  }
+}
+
+@keyframes print-float-in {
+  from {
+    opacity: 0;
+    transform: translateY(calc(100% + var(--space-md))) scale(0.9);
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .print-float {
+    animation: none;
+  }
+}

@@ -1832,7 +1832,8 @@ const ALBUM_FIXTURE = [
     ok("Hires 快速預設 1.5、深度預設 2，倍率上限跟伺服器一樣（每邊 4096、總像素一半）", /quick: \{ zh: "快速", def: 1\.5/.test(hires6) && /deep: \{ zh: "深度", def: 2,/.test(hires6) && hires6.includes("const SIDE_MAX = 4096;") && hires6.includes("(4096 * 4096) / 2"));
     ok("Hires 的大圖換在原本那張的位置、存檔帶原圖（墨池、疊印台）", store6h.includes("baseImage: s.baseImage || null") && fuse6h.includes("baseImage: p.baseImage || null"));
     ok("同種子重印不帶 Hires 的結果", app6h.includes("hi: null, hires: null, baseImage: null"));
-    ok("墨池成品的「放大」鈕換成 Hires（點圖仍是放大）；疊印台印好的那張付印鈕變成 Hires", !app6h.includes('onclick: () => showShot(shot) }, "放大")') && app6h.includes("onclick: (e) => openHires(shot, e.currentTarget)") && fuse6h.includes("openHires(p, e.currentTarget)"));
+    ok("墨池成品的「放大」鈕換成 Hires（點圖仍是放大）；疊印台印好的那張付印鈕變成 Hires", !app6h.includes('onclick: () => showShot(shot) }, "放大")') && app6h.includes("onclick: (e) => openHires(shot, e.currentTarget)") && fuse6h.includes('if (p && p.status === "done") return openHires(p, btn);') && fuse6h.includes("onclick: (e) => printAction(e.currentTarget)"));
+    ok("手機：付印那排捲走時右下角留一顆付印鈕（跟付印同一個動作、Hires 選單貼著它彈出），托盤打開時讓到上面", fuse6h.includes('float.addEventListener("click", (e) => printAction(e.currentTarget));') && fuse6h.includes("const show = narrowFuse.matches && !printBarSeen && !!go && !!t;") && readFileSync(join(ROOT, "web6/fuse.html"), "utf8").includes('id="print-float"') && readFileSync(join(ROOT, "web6/fuse.css"), "utf8").includes('body:has(.fav-hand[data-open="true"]:not([data-hidden="true"])) .print-float'));
     ok("Hires 自己一條佇列，按停付印不會連 Hires 一起砍；單張可以停", hires6.includes("const gen = createGenerator(") && readFileSync(join(ROOT, "web6/gen.js"), "utf8").includes("cancelOne(shot)"));
     ok("聲音：總線放大加壓縮器、兩頁共用一個引擎與開關，按鈕有敲擊聲", sfx6.includes("const MASTER = 1.6;") && sfx6.includes("createDynamicsCompressor") && app6h.includes('$("sound-btn")') && readFileSync(join(ROOT, "web6/motion.js"), "utf8").includes("getSfx().tap()"));
   }
