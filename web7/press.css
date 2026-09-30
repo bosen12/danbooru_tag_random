@@ -1,0 +1,256 @@
+/* web7・活版印刷所 —— 疊在 styles.css／fuse.css 之後，只換外觀，不動版面邏輯。
+ *
+ * 一個概念貫穿全站：這是一間印刷所。
+ *   紙：暖墨黑的工作臺上鋪一層很淡的紙纖維顆粒；成品是一張張米色紙邊的樣張。
+ *   字：標題用明體（鉛字），數字與種子用等寬（印刷機刻度），說明用黑體。
+ *   色：朱紅只給「會蓋下去的」—— 抽並生圖、付印、印章；黃銅給對位線與刻度。
+ *   招牌：成品印好時，先以印刷網點從預覽上長出來，一道滾筒從上往下掃過，網點收成完整的圖。
+ */
+
+@property --dot {
+  syntax: "<length>";
+  inherits: false;
+  initial-value: 0px;
+}
+
+/* ---------- 紙纖維 ---------- */
+/* 固定在最上層的一張靜態雜訊，不吃指標、不隨捲動重繪。 */
+html::after {
+  content: "";
+  position: fixed;
+  inset: 0;
+  z-index: 2147483000;
+  pointer-events: none;
+  opacity: 0.06;
+  background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='240' height='240'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='.85' numOctaves='3' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23n)'/%3E%3C/svg%3E");
+}
+
+/* ---------- 字 ---------- */
+h1,
+h2,
+h3 {
+  font-weight: 900;
+  letter-spacing: 0.06em;
+}
+
+.wordmark {
+  font-size: 1.85rem;
+  font-weight: 900;
+  letter-spacing: 0.1em;
+}
+
+/* 字標旁一行刻度小字：MOCHI·PRESS */
+.wordmark::after {
+  content: "MOCHI·PRESS";
+  align-self: center;
+  font-family: var(--font-mono);
+  font-size: 0.625rem;
+  font-weight: 400;
+  letter-spacing: 0.22em;
+  color: var(--color-pool);
+}
+
+.wordmark {
+  white-space: nowrap;
+}
+
+/* 手機：字標小一號、刻度字收起來，不然「墨池」會被擠成直的兩行。 */
+@media (max-width: 40rem) {
+  .wordmark {
+    font-size: 1.5rem;
+  }
+  .wordmark::after {
+    content: none;
+  }
+}
+
+.page-switch-label {
+  font-family: var(--font-display);
+  font-weight: 700;
+  letter-spacing: 0.08em;
+}
+
+/* 區塊標題：大一號的明體，底下一小段黃銅刻線，像鉛字盒的格標。 */
+.panel-head h2,
+.wall-head h2,
+.case-head h2,
+.plate-head h2,
+.side h2 {
+  position: relative;
+  font-size: 1.5rem;
+  letter-spacing: 0.24em;
+  padding-bottom: 0.35rem;
+}
+
+.panel-head h2::after,
+.wall-head h2::after,
+.case-head h2::after,
+.plate-head h2::after {
+  content: "";
+  position: absolute;
+  left: 0;
+  bottom: 0;
+  width: 1.4em;
+  height: 2px;
+  background: var(--color-pool);
+}
+
+/* ---------- 按鈕 ---------- */
+.btn {
+  border-radius: 2px;
+}
+
+/* 主要動作像一枚要蓋下去的朱印：明體、拉開字距、左邊一枚「印」字章。 */
+.go-bar .btn-primary,
+.pb-go,
+.wall-empty .btn {
+  font-family: var(--font-display);
+  font-weight: 900;
+  letter-spacing: 0.24em;
+  box-shadow: 0 14px 28px -16px var(--color-accent);
+}
+
+.go-bar .btn-primary::before {
+  content: "印";
+  display: inline-grid;
+  place-items: center;
+  width: 1.9em;
+  height: 1.9em;
+  margin-right: 0.7em;
+  border: 1.5px solid currentColor;
+  border-radius: 2px;
+  font-size: 0.8em;
+  letter-spacing: 0;
+  rotate: -6deg;
+  transition: rotate var(--dur-short) var(--ease-settle);
+}
+
+@media (hover: hover) and (pointer: fine) {
+  .go-bar .btn-primary:hover::before {
+    rotate: 0deg;
+  }
+}
+
+/* 花色標籤：拿掉一圈圈的外框，只留字；選中的那個前面一顆朱點。 */
+.suit-tab,
+.case-tab {
+  border-color: transparent;
+  background: transparent;
+  font-family: var(--font-display);
+  font-weight: 700;
+}
+
+.suit-tab[aria-pressed="true"],
+.case-tab[aria-pressed="true"] {
+  border-color: transparent;
+  background: transparent;
+  color: var(--color-ink);
+  box-shadow: inset 0 -2px var(--color-accent);
+  border-radius: 0;
+}
+
+/* 搜尋框：一條底線，像在排版稿上寫字。 */
+.lib-search input,
+.case-q {
+  border-width: 0 0 1px;
+  border-radius: 0;
+  background: transparent;
+  font-family: var(--font-display);
+}
+
+/* 頂欄工具：框線放淡，讓字標和分級當主角。 */
+.mast-tools .ghost {
+  border-color: var(--color-rule-2);
+}
+
+/* ---------- 合成池：排版臺 ---------- */
+.pool-well {
+  --reg-len: 22px;
+  --reg-w: 2px;
+}
+
+.pool-empty b {
+  font-size: 1.9rem;
+  font-weight: 900;
+  letter-spacing: 0.04em;
+  color: var(--color-ink);
+}
+
+/* ---------- 成品：一張張樣張 ---------- */
+/* 圖外一圈米色紙邊、底下一條紙的陰影；裁切線照舊在上面。 */
+/* 紙邊畫在框外（box-shadow 的 spread），不改圖框的比例 —— 用 padding 會讓圖上下多出黑邊。 */
+.shot-frame {
+  border-radius: 1px;
+  box-shadow: 0 0 0 7px var(--color-stock), 0 0 0 8px var(--color-stock-3), 0 30px 44px -22px #000;
+  margin: 8px 8px 12px;
+}
+
+/* 圖跟框比例不合時留下的空白也是紙面，不是黑邊。 */
+.shot-frame img {
+  border-radius: 0;
+  background: var(--color-stock);
+}
+
+.shot-meta .status {
+  font-family: var(--font-display);
+  font-weight: 700;
+  letter-spacing: 0.08em;
+}
+
+/* ---------- 招牌：網點顯影 ---------- */
+/* 一格 7px 的圓點從 0 長到蓋滿整格：先是一片印刷網點浮在預覽上，最後收成完整的圖。
+ * 只在 is-developing 那 1.2 秒（app.js／fuse.js 加上、1.3 秒後拿掉），不佔生圖時的效能。 */
+.shot-frame.is-developing img:not(.shot-under),
+.pv-sheet.is-developing img:not(.pv-under) {
+  -webkit-mask: radial-gradient(circle, #000 var(--dot), transparent calc(var(--dot) + 0.6px)) 0 0 / 7px 7px;
+  mask: radial-gradient(circle, #000 var(--dot), transparent calc(var(--dot) + 0.6px)) 0 0 / 7px 7px;
+  animation: press-halftone var(--dur-develop) var(--ease-out) both;
+}
+
+/* 滾筒：一道紙面反光帶著一絲朱色，從上往下掃過。 */
+.shot-frame.is-developing::after,
+.pv-sheet.is-developing::after {
+  content: "";
+  position: absolute;
+  inset: 0 0 auto;
+  z-index: 3;
+  height: 28%;
+  pointer-events: none;
+  background: linear-gradient(transparent, oklch(96% 0.03 85 / 0.5) 62%, oklch(58% 0.19 32 / 0.4) 64%, transparent 67%);
+  mix-blend-mode: screen;
+  animation: press-roller var(--dur-develop) var(--ease-in-out) both;
+}
+
+@keyframes press-halftone {
+  0% {
+    --dot: 0px;
+  }
+  55% {
+    --dot: 2.4px;
+  }
+  100% {
+    --dot: 6px;
+  }
+}
+
+@keyframes press-roller {
+  from {
+    transform: translateY(-100%);
+  }
+  to {
+    transform: translateY(460%);
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .shot-frame.is-developing img:not(.shot-under),
+  .pv-sheet.is-developing img:not(.pv-under) {
+    animation: none;
+    -webkit-mask: none;
+    mask: none;
+  }
+  .shot-frame.is-developing::after,
+  .pv-sheet.is-developing::after {
+    content: none;
+  }
+}

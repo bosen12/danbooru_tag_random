@@ -1,0 +1,101 @@
+/* web7・活版印刷所 —— 從 web6 分出來，程式一樣，只換外觀。
+ * paper: 暖墨黑 oklch(15% 0.012 65) · accent: 朱印 oklch(58% 0.19 32) · pool→brass: oklch(70% 0.085 78)
+ * display: Noto Serif TC 900（明體，鉛字的味道）· body: Noto Sans TC · mono: IBM Plex Mono
+ * 招牌：成品以印刷網點顯影、滾筒掃過；區塊用直排格標與四角對位線，不靠外框。
+ */
+:root {
+  /* 墨：偏冷的黑，像剛磨好的墨 */
+  --color-paper: oklch(15.2% 0.011 65);
+  --color-paper-2: oklch(18.6% 0.013 65);
+  --color-paper-3: oklch(23% 0.015 65);
+  --color-paper-4: oklch(27.5% 0.017 65);
+  --color-scrim: oklch(8.5% 0.01 60 / 0.82);
+
+  --color-ink: oklch(92% 0.028 85);
+  --color-ink-2: oklch(80% 0.026 80);
+  --color-muted: oklch(67% 0.03 78);
+  --color-rule: oklch(33% 0.02 70);
+  --color-rule-2: oklch(25.5% 0.017 68);
+
+  /* 卡紙：跟字鋪同一種紙 */
+  --color-stock: oklch(93.5% 0.024 86);
+  --color-stock-2: oklch(88.5% 0.028 84);
+  --color-stock-3: oklch(82% 0.03 80);
+  --color-stock-ink: oklch(24% 0.02 50);
+  --color-stock-muted: oklch(46% 0.022 60);
+
+  /* 朱：印章、主按鈕、封鎖；池：墨池的水光 */
+  --color-accent: oklch(58% 0.19 32);
+  --color-accent-2: oklch(52% 0.17 32);
+  --color-accent-3: oklch(46% 0.16 31);
+  --color-accent-ink: oklch(97% 0.012 80);
+  --color-pool: oklch(70% 0.085 78);
+  --color-pool-2: oklch(48% 0.07 72);
+  --color-pool-soft: oklch(70% 0.085 78 / 0.14);
+  --color-good: oklch(74% 0.13 150);
+  --color-warn: oklch(80% 0.13 80);
+  --color-focus: oklch(82% 0.11 80);
+  --color-shine: oklch(99% 0.012 85 / 0.35);
+  --color-shade: oklch(5% 0.01 60 / 0.62);
+
+  --suit-cast: oklch(72% 0.07 250);
+  --suit-look: oklch(68% 0.11 8);
+  --suit-wear: oklch(66% 0.1 305);
+  --suit-pose: oklch(68% 0.09 165);
+  --suit-scene: oklch(72% 0.1 72);
+  --suit-style: oklch(74% 0.09 115);
+
+  --font-display: "Noto Serif TC", "Songti TC", "PMingLiU", serif;
+  --font-body: "Noto Sans TC", "PingFang TC", "Microsoft JhengHei", sans-serif;
+  --font-mono: "IBM Plex Mono", ui-monospace, "Cascadia Mono", monospace;
+
+  --space-3xs: 0.125rem;
+  --space-2xs: 0.25rem;
+  --space-xs: 0.5rem;
+  --space-sm: 0.75rem;
+  --space-md: 1rem;
+  --space-lg: 1.5rem;
+  --space-xl: 2rem;
+  --space-2xl: 3rem;
+
+  --text-2xs: 0.6875rem;
+  --text-xs: 0.75rem;
+  --text-sm: 0.875rem;
+  --text-md: 1rem;
+  --text-lg: 1.25rem;
+  --text-xl: 1.5rem;
+  --text-2xl: 2rem;
+
+  --radius-xs: 3px;
+  --radius-sm: 3px;
+  --radius-md: 4px;
+  --radius-lg: 6px;
+
+  /* 動態詞彙（跟 motion.js 的 CURVE／DUR 同一套，改一邊要改另一邊）。
+     out     進場、落定：一開始就快、長長地停下來。
+     in      長的離場（≥ 300ms）：慢慢起步、越走越快。
+     exit    短的離場（< 250ms）：in 太陡，短時間裡前半段幾乎不動；這條一開始就在走。
+     in-out  原地的狀態轉換（展開、收合、來回的呼吸）。
+     travel  東西飛越畫面：從靜止加速、大半段在減速落下。
+     settle  壓印、彈一下：略過頭再回來。 */
+  --ease-out: cubic-bezier(0.16, 1, 0.3, 1);
+  --ease-in: cubic-bezier(0.7, 0, 0.84, 0);
+  --ease-exit: cubic-bezier(0.4, 0, 1, 1);
+  --ease-in-out: cubic-bezier(0.65, 0, 0.35, 1);
+  --ease-travel: cubic-bezier(0.22, 0.06, 0.08, 1);
+  --ease-settle: cubic-bezier(0.2, 0.9, 0.3, 1.2);
+  /* 時間：micro 指到、按下的回饋；short 小東西進出；medium 面板、選單、托盤；long 牌的落定、抖一下；
+     xl 一整段編排（墨圈散開、洗牌、清版）；story 敘事性的慢動作（晾上繩子、墨暈開、骰種子）；
+     develop 成品顯影；breath 排隊中那種來回的呼吸（無限循環）。 */
+  --dur-micro: 120ms;
+  --dur-short: 220ms;
+  --dur-medium: 320ms;
+  --dur-long: 420ms;
+  --dur-xl: 540ms;
+  --dur-story: 800ms;
+  --dur-develop: 1200ms;
+  --dur-breath: 1400ms;
+
+  --shadow-card: 0 1px 0 var(--color-shine) inset, 0 6px 14px var(--color-shade);
+  --shadow-lift: 0 1px 0 var(--color-shine) inset, 0 18px 30px var(--color-shade);
+}

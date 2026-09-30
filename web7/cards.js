@@ -1,0 +1,183 @@
+/**
+ * 墨池的卡牌：整本詞庫 → 卡牌資料，以及卡面 DOM。
+ * 花色、分級、插畫檔名都來自 web/card-art.js（字鋪、烘焙腳本共用同一份）。
+ */
+import { isCard, cardSuit, ratingTier, artFile, artSources, artUrl, applyArtSources, groupSeal, CARD_SUIT_INFO, CARD_SUITS } from "./card-art.js";
+import { el } from "./ui.js";
+import { DUR, CURVE, css, reducedMotion } from "./motion.js";
+
+export { CARD_SUIT_INFO, CARD_SUITS };
+
+export const ERA_ZH = {
+  any: "不限時代",
+  modern: "現代",
+  ancient_china: "古中國",
+  ancient_greece: "古希臘",
+  medieval: "中世紀",
+  edo: "江戶",
+  victorian: "維多利亞",
+};
+
+export const RATING_ZH = { general: "全年齡", sensitive: "敏感", explicit: "色情" };
+
+/** 詞庫 → 卡牌。順序照詞庫，所以同一類的字會排在一起。 */
+export function buildLibrary(data, { ratingBlocked }) {
+  const cards = [];
+  const byTag = new Map();
+  for (const item of data.tags) {
+    if (!isCard(item)) continue;
+    const card = {
+      tag: item.tag,
+      zh: item.zh || item.tag,
+      suit: cardSuit(item),
+      group: item.group,
+      groupZh: (data.groupZh && data.groupZh[item.group]) || item.group,
+      seal: groupSeal(item),
+      rating: ratingTier(item, ratingBlocked),
+      gate: item.gate,
+      eras: item.era || ["any"],
+      item,
+    };
+    cards.push(card);
+    byTag.set(card.tag, card);
+  }
+  return { cards, byTag };
+}
+
+export function createAssets(manifest) {
+  const have = new Set(Object.keys(manifest || {}));
+  return {
+    /** 原圖：放大牌、校樣、詳情用。 */
+    art(tag) {
+      return have.has(tag) ? artUrl({ ...manifest[tag], file: artFile(tag) }) : null;
+    },
+    /** 格子用：有縮圖就給 srcset，讓瀏覽器照畫出來的大小挑。 */
+    sources(tag) {
+      return have.has(tag) ? artSources({ ...manifest[tag], file: artFile(tag) }) : null;
+    },
+    count() {
+      return have.size;
+    },
+  };
+}
+
+/** 一張牌。左邊是直排書脊（花色、字名、分級），疊起來也讀得到。 */
+export function cardNode(card, assets, { tagName = "button", flag, src } = {}) {
+  const len = [...card.zh].length;
+  const art = assets.art(card.tag);
+  const suit = CARD_SUIT_INFO[card.suit];
+  const node = el(
+    tagName,
+    {
+      class: "card",
+      type: tagName === "button" ? "button" : undefined,
+      dataset: { suit: card.suit, tag: card.tag },
+      "aria-label": `${card.zh}（${card.tag}）・${suit.zh}${card.seal ? "・" + card.groupZh : ""}${card.rating !== "general" ? "・" + RATING_ZH[card.rating] : ""}`,
+      role: tagName === "button" ? undefined : "img",
+    },
+    el(
+      "span",
+      { class: "card-spine", "aria-hidden": "true" },
+      el("span", { class: "card-suit" }, suit.glyph),
+      el("span", { class: "card-name", dataset: { len: String(Math.min(len, 8)) } }, card.zh),
+      card.rating !== "general" ? el("span", { class: "card-rate", dataset: { r: card.rating } }, card.rating === "explicit" ? "色" : "敏") : null,
+      card.seal ? el("span", { class: "card-seal", title: card.groupZh }, card.seal) : null
+    ),
+    el(
+      "span",
+      { class: "card-art", "aria-hidden": "true" },
+      art ? artImg(assets.sources ? assets.sources(card.tag) : { src: art }) : el("span", { class: "card-glyph" }, [...card.zh][0]),
+      flag ? el("span", { class: "card-flag", dataset: { kind: flag.kind } }, flag.text) : null,
+      src ? el("span", { class: "card-flag", dataset: { kind: "src" } }, src) : null
+    )
+  );
+  return node;
+}
+
+function artImg(sources) {
+  const i = applyArtSources(el("img", { alt: "", decoding: "async", draggable: "false" }), sources);
+  i.addEventListener("error", () => i.remove(), { once: true });
+  // 圖晚到的（新換上來的影子、捲進來的字盒、連線慢的時候）：淡進來，不要啪一下蓋上去。
+  // 本來就在快取裡的（60ms 內就到）直接出現 —— 不能一律先藏起來等 load，那會讓每次重畫都閃一格空白。
+  const born = performance.now();
+  i.addEventListener(
+    "load",
+    () => {
+      if (performance.now() - born > 60 && !reducedMotion()) i.animate([{ opacity: 0 }, { opacity: 1 }], { duration: DUR.short, easing: css(CURVE.out) });
+    },
+    { once: true }
+  );
+  return i;
+}
+
+/**
+ * 會整塊重畫、又一直在畫面上的牌（卡池、合成池）：圖立刻載、同步解碼。
+ * 預設的 lazy＋async 是給上千張的字盒用的；這些牌每放一張、換一張試印就重畫一次，
+ * lazy 的新 <img> 要等版面排好才開始載，重畫後第一格畫面圖是空的 —— 整排牌閃一下。
+ */
+export function eagerArt(node) {
+  for (const img of node.querySelectorAll("img")) {
+    img.loading = "eager";
+    img.decoding = "sync";
+  }
+  return node;
+}
+
+/**
+ * 找牌框裡打了字：grid 裡第一張牌標成「按 Enter 就是它」—— 浮起一點、描一圈、右下角一顆 Enter 鍵。
+ * on=false 把標記拿掉。兩個房間的字盒共用。
+ */
+export function setEnterTarget(grid, on) {
+  if (!grid) return;
+  for (const n of grid.querySelectorAll(".card.is-enter-target")) {
+    n.classList.remove("is-enter-target");
+    n.querySelector(".enter-chip")?.remove();
+  }
+  if (!on) return;
+  const first = grid.querySelector(".card[data-tag]");
+  if (!first) return;
+  first.classList.add("is-enter-target");
+  const chip = document.createElement("span");
+  chip.className = "enter-chip";
+  chip.setAttribute("aria-hidden", "true");
+  chip.textContent = "Enter";
+  first.append(chip);
+}
+
+export function setCardFlag(node, flag) {
+  const old = node.querySelector(".card-flag:not([data-kind='src'])");
+  // 沒變就不動：字盒每動一次整排重新上標，不這樣的話每個章都會重蓋一次。
+  if (old && flag && old.dataset.kind === flag.kind && old.textContent === flag.text) return;
+  old?.remove();
+  if (!flag) return;
+  const stampNow = !!node.isConnected;
+  const f = el("span", { class: "card-flag", dataset: { kind: flag.kind } }, flag.text);
+  node.querySelector(".card-art").append(f);
+  // 新蓋上去的章（放進池子、丟進廢字簍）：像橡皮章一樣從上面壓下來。第一次畫出來的不蓋。
+  if (stampNow && !matchMedia("(prefers-reduced-motion: reduce)").matches) {
+    f.classList.add("is-stamping");
+    setTimeout(() => f.classList.remove("is-stamping"), 420);
+  }
+}
+
+/** 卡牌的說明（提示框、詳情共用）。 */
+export function cardFacts(card, lex, data) {
+  const facts = [];
+  facts.push(["花色", `${CARD_SUIT_INFO[card.suit].zh}・${card.groupZh}`]);
+  facts.push(["分級", RATING_ZH[card.rating]]);
+  facts.push(["時代", card.eras.map((e) => ERA_ZH[e] || e).join("、")]);
+  if (card.gate === "female") facts.push(["人物", "只在有女性時"]);
+  if (card.gate === "male") facts.push(["人物", "只在有男性時"]);
+  const item = card.item;
+  if (item.mutex) {
+    // mutex 是內部代號（hair_length、female_count…），大半沒有中文名；
+    // 舉兩個同格的字當例子，比露出代號好懂。
+    const sibs = (lex.siblings && lex.siblings.get(card.tag)) || [];
+    const eg = sibs.slice(0, 2).map((t) => lex.byTag.get(t)?.zh || t).join("、");
+    facts.push(["同一格", sibs.length ? `一張圖只留一個：跟${eg}${sibs.length > 2 ? ` 等 ${sibs.length} 個` : ""}互斥` : "一張圖只留一個"]);
+  }
+  const rel = [...(item.implies || []), ...(item.bind || [])];
+  if (rel.length) facts.push(["附帶", rel.map((t) => lex.byTag.get(t)?.zh || t).join("、")]);
+  void data;
+  return facts;
+}
