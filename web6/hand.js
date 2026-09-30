@@ -36,6 +36,11 @@ const noSample = () => null;
 
 const TRAY_SCALE = 1.15;
 
+// 視窗寬度：只在 resize 時讀一次。以前每次重擺托盤都讀 innerWidth —— 版面剛被改過時，
+// 瀏覽器要先把整頁排版一次才答得出來（手機上疊印台放一張牌，光這一下 30ms）。
+let vw = innerWidth;
+addEventListener("resize", () => (vw = innerWidth), { passive: true });
+
 export function createHand({
   key,
   max = 10,
@@ -339,11 +344,11 @@ export function createHand({
   function trayWidth(m) {
     const w = size.shown || size.w;
     // 跟 CSS 一樣：手機兩邊各 8、寬螢幕兩邊各留 100 給角落的廢字簍。
-    const edge = innerWidth < 640 ? 16 : innerWidth >= 1100 ? 200 : 20;
-    return Math.min(innerWidth - edge, Math.max(Math.max(m, 1) * (w + GAP) - GAP + 40, 360));
+    const edge = vw < 640 ? 16 : vw >= 1100 ? 200 : 20;
+    return Math.min(vw - edge, Math.max(Math.max(m, 1) * (w + GAP) - GAP + 40, 360));
   }
   function roomFor(m) {
-    const pad = innerWidth < 640 ? 16 : 20;
+    const pad = vw < 640 ? 16 : 20;
     return Math.max(size.shown || size.w, trayWidth(m) - pad - 2 - 8);
   }
   function setWant(m) {
@@ -435,7 +440,7 @@ export function createHand({
     const m = measure();
     // 手機上字盒的牌很大（一排三張），托盤照原樣會吃掉半個螢幕：整張等比例縮到 76px，長相不變。
     // 桌機上比字盒的牌大 15%：托盤浮在畫面最下面、離眼睛最遠，跟字盒一樣大看起來反而偏小。
-    const k = innerWidth < 640 ? Math.min(1, 76 / m.w) : TRAY_SCALE;
+    const k = vw < 640 ? Math.min(1, 76 / m.w) : TRAY_SCALE;
     const w = Math.round(m.w * k * 10) / 10;
     const fs = Math.round(m.fs * k * 100) / 100;
     size.shown = w;

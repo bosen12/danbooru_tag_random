@@ -2891,3 +2891,20 @@ body.fuse {
 .print[data-gone="true"] .print-state {
   color: var(--color-accent);
 }
+
+/* 窄螢幕：字盒排在卡池、試印底下，一路往下好幾百張。捲出畫面的牌不排版、不繪製 ——
+ * 放一張牌、換一張試印時，上面的卡池變高變矮，底下這一大片不必每次都重算。
+ * auto：記得它上一次真正排出來的大小，捲回來不會跳。 */
+@media (max-width: 68.74rem) {
+  .case-grid > .card {
+    content-visibility: auto;
+    contain-intrinsic-size: auto 5.2rem auto 9.4rem;
+  }
+}
+
+/* 預覽圖左右滑換試印（fuse.js 的 swipeTrials）：瀏覽器只管上下捲，左右交給我們。 */
+@media (pointer: coarse) {
+  .pv-frame {
+    touch-action: pan-y;
+  }
+}

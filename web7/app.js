@@ -642,8 +642,19 @@ function repaintLibrary() {
 
 /* ================= 釘選與封鎖（全部走 engine） ================= */
 
+// 觸控時輕震一下（跟疊印台一樣）：放牌、抽牌。滑鼠不震；不支援的（iPhone）什麼都不做。
+// 只在手指剛按下去的那一刻震（userActivation.isActive）：無限抽自己接著抽的那幾輪不震。
+let lastPointer = "mouse";
+document.addEventListener("pointerdown", (e) => (lastPointer = e.pointerType || "mouse"), true);
+function haptic(ms) {
+  if (lastPointer !== "touch" || !navigator.vibrate) return;
+  if (navigator.userActivation && !navigator.userActivation.isActive) return;
+  navigator.vibrate(ms);
+}
+
 function pin(tag) {
   if (HARD_BANNED.includes(tag)) return;
+  haptic(8);
   const before = new Set(pool);
   const next = applyPin(lex, pool, bans, tag);
   pool = next.pinned;
@@ -1320,6 +1331,7 @@ let shotSeq = Date.now();
 /** 抽一輪。合成池的字一定進；同一個人時，第二張起鎖住第一張的長相。 */
 function drawBatch(gen) {
   stopAsked = false;
+  haptic(gen ? 18 : 12);
   const n = settings.n;
   let first = null;
   const made = [];

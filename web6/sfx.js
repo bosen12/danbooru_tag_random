@@ -70,6 +70,17 @@ function build() {
     return ctx;
   }
 
+  // 第一次點下去才建音效引擎要 10～50ms，剛好卡在「點牌 → 畫面動」中間。手指一按下就在背景先建好：
+  // 觸控的 pointerdown 還不算使用者手勢，這時建出來的是暫停的，真正要響的那一下 ac() 會叫 resume()，幾乎不花時間。
+  addEventListener(
+    "pointerdown",
+    () =>
+      setTimeout(() => {
+        if (on) ac();
+      }, 0),
+    { once: true, capture: true, passive: true }
+  );
+
   let noiseBuf = null;
   function noise(a, dur) {
     // 一段兩秒的白噪音重複用，每次從隨機位置開始播：不用每一聲都重新產生一大段亂數。

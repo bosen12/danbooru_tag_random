@@ -1681,7 +1681,7 @@ const ALBUM_FIXTURE = [
   }
   ok("重新整理清掉沒印出來的（墨池、疊印台）；疊印台取消的不掛上繩子", app6.includes('s.status === "done" || s.status === "drawn" || (s.live && s.job)') && fuse6.includes('.filter((p) => p.status === "done" || (p.live && p.job))') && fuse6.includes('else if (p.status === "cancelled") dropCancelled(p);'));
   const drag6 = readFileSync(join(ROOT, "web6/drag.js"), "utf8");
-  ok("整塊重畫也讓位（flipBy 用牌名認人）：墨池合成池、疊印台卡池；影子收下從影子的位置滑進去", motion6.includes("export function flipBy(") && app6.includes('flipBy($("pool-well"), ".pool-slot"') && fuse6.includes('flipBy(box, ".plate-card, .ghost-card", cardKey') && fuse6.includes('alias: (k) => (k.startsWith("p:") ? "g:" + k.slice(2) : null)'));
+  ok("整塊重畫也讓位（flipBy 用牌名認人）：墨池合成池、疊印台卡池（卡池捲出畫面時不量）；影子收下從影子的位置滑進去", motion6.includes("export function flipBy(") && app6.includes('flipBy($("pool-well"), ".pool-slot"') && fuse6.includes('(plateSeen ? flipBy : (_box, _sel, _key, mutate) => mutate())(box, ".plate-card, .ghost-card", cardKey') && fuse6.includes('alias: (k) => (k.startsWith("p:") ? "g:" + k.slice(2) : null)'));
   ok("首屏兩包 JSON：fetch 跟 preload 用同一個（帶版本的）網址，不會下載兩次", app6.includes(`fetch(document.querySelector('link[rel="preload"][href^="lexicon.json"]')?.href || "lexicon.json")`) && fuse6.includes(`fetch(document.querySelector('link[rel="preload"][href^="cards/manifest.json"]')?.href || "cards/manifest.json")`));
   {
     const loraSrc = readFileSync(join(ROOT, "web", "lora.js"), "utf8");
@@ -1731,7 +1731,7 @@ const ALBUM_FIXTURE = [
     }
     // 2026-09-30：托盤收成中間的小膠囊時，右下角的廢字簍跟它碰不到，不必讓（以前照讓，浮在內容中間）；
     // 左下的「卡池」跟膠囊會撞，一律讓。托盤打開（佔滿底邊）時兩個都讓。
-    ok("窄螢幕角落的「卡池」標籤一律讓到托盤上面、廢字簍在托盤打開時讓；寬螢幕托盤兩旁留位置；提示浮在托盤上面", css6.includes('.pool-pill,\n  body:has(.fav-hand[data-open="true"]:not([data-hidden="true"])) .trash {\n    translate: 0 calc(-1 * var(--fav-h, 0px));') && css6.includes("width: min(calc(100vw - 200px)") && hand6.includes("innerWidth >= 1100 ? 200 : 20") && css6.includes("body .toast {\n  bottom: calc(var(--fav-h, 0px)") && hand6.includes("Math.ceil(innerHeight - r.top) + 12"));
+    ok("窄螢幕角落的「卡池」標籤一律讓到托盤上面、廢字簍在托盤打開時讓；寬螢幕托盤兩旁留位置；提示浮在托盤上面", css6.includes('.pool-pill,\n  body:has(.fav-hand[data-open="true"]:not([data-hidden="true"])) .trash {\n    translate: 0 calc(-1 * var(--fav-h, 0px));') && css6.includes("width: min(calc(100vw - 200px)") && hand6.includes("vw >= 1100 ? 200 : 20") && css6.includes("body .toast {\n  bottom: calc(var(--fav-h, 0px)") && hand6.includes("Math.ceil(innerHeight - r.top) + 12"));
     ok("疊印台字盒：在池又在手牌的牌，「手」排在「在池」下面", css6.includes('.case-grid .card[data-state="pinned"][data-in-hand="true"]::before {\n  top: 22px;'));
     ok("從托盤拿掉一張：提示帶「復原」，放回原位（挑牌模式不問）；滿了兩房間都有看得到的提示", hand6.includes("if (!quiet && !editing) onRemoved(tag, () => restore(tag, was));") && hand6.includes("function restore(tag, at)") && fuse6.includes('onRemoved: (t, undo) => toast(') && app6.includes('onRemoved: (t, undo) => toast(') && fuse6.includes("onFull: () => toast("));
     ok("墨池：合成池捲出畫面時，牌往合成池的方向收進去＋「看合成池」，不飛出螢幕", app6.includes("function tuckAway(tag, from, dir)") && app6.includes("return from ? tuckAway(tag, from, to.top < 0 ? -1 : 1) : undefined;") && app6.includes('label: "看合成池"'));

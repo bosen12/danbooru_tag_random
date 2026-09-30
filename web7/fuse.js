@@ -970,6 +970,87 @@ function buildPreview() {
   const cap = el("p", { class: "pv-cap" });
   $("preview").replaceChildren(frame, cap);
   pv = { frame, sheet, blank, roller, cap };
+  swipeTrials(frame, sheet);
+}
+
+/*
+ * 手機：預覽圖左右一滑就換試印（A ↔ B ↔ C ↔ D），不必往下捲到試印那一排點。
+ * 圖跟著手指走；放開時滑得夠遠（1/4 寬）或夠快，舊的往那邊滑出、新的從另一邊滑進來、輕震一下；
+ * 第一張再往右、最後一張再往左：橡皮筋拉不動、彈回來。只接左右 —— 上下照樣捲頁面（touch-action: pan-y）。
+ * 滑過之後的那一下 click 不算「點開大圖」。
+ */
+function swipeTrials(frame, sheet) {
+  let start = null;
+  let dx = 0;
+  let horizontal = null;
+  let swallowClick = false;
+  const width = () => sheet.getBoundingClientRect().width || 1;
+  const move = (x) => {
+    sheet.style.translate = `${x}px 0`;
+    sheet.style.rotate = `${(x / width()) * 3}deg`;
+  };
+  const reset = () => {
+    sheet.style.translate = "";
+    sheet.style.rotate = "";
+  };
+  frame.addEventListener("pointerdown", (e) => {
+    if (e.pointerType !== "touch" || trials.length < 2) return;
+    start = { x: e.clientX, y: e.clientY, t: performance.now() };
+    dx = 0;
+    horizontal = null;
+  });
+  frame.addEventListener("pointermove", (e) => {
+    if (!start) return;
+    const mx = e.clientX - start.x;
+    const my = e.clientY - start.y;
+    if (horizontal === null && Math.hypot(mx, my) > 8) horizontal = Math.abs(mx) > Math.abs(my) * 1.2;
+    if (!horizontal) return;
+    const edge = (mx > 0 && picked === 0) || (mx < 0 && picked === trials.length - 1);
+    dx = edge ? mx * 0.25 : mx;
+    move(dx);
+  });
+  const end = (e) => {
+    if (!start) return;
+    const s0 = start;
+    start = null;
+    if (!horizontal) return reset();
+    swallowClick = true;
+    setTimeout(() => (swallowClick = false), 400);
+    const w = width();
+    const speed = Math.abs(dx) / Math.max(1, performance.now() - s0.t);
+    const dir = dx < 0 ? 1 : -1;
+    const next = picked + dir;
+    const go = e.type === "pointerup" && next >= 0 && next < trials.length && (Math.abs(dx) > w / 4 || speed > 0.5);
+    if (!go || reduced()) {
+      if (!go && !reduced()) {
+        sheet.animate([{ translate: `${dx}px 0`, rotate: `${(dx / w) * 3}deg` }, { translate: "0 0", rotate: "0deg" }], { duration: DUR.medium, easing: css(CURVE.settle) });
+      }
+      reset();
+      if (go) pick(next);
+      return;
+    }
+    haptic(10);
+    const out = sheet.animate([{ translate: `${dx}px 0`, rotate: `${(dx / w) * 3}deg`, opacity: 1 }, { translate: `${-dir * w * 0.9}px 0`, rotate: `${-dir * 4}deg`, opacity: 0 }], { duration: DUR.short, easing: css(CURVE.exit), fill: "forwards" });
+    out.onfinish = () => {
+      reset();
+      out.cancel();
+      pick(next);
+      sheet.animate([{ translate: `${dir * w * 0.6}px 0`, rotate: `${dir * 3}deg`, opacity: 0 }, { translate: "0 0", rotate: "0deg", opacity: 1 }], { duration: DUR.medium, easing: css(CURVE.out) });
+    };
+  };
+  frame.addEventListener("pointerup", end);
+  frame.addEventListener("pointercancel", end);
+  // 滑動結束的那一下 click 不開大圖（捕獲階段先攔下來）。
+  frame.addEventListener(
+    "click",
+    (e) => {
+      if (!swallowClick) return;
+      swallowClick = false;
+      e.stopPropagation();
+      e.preventDefault();
+    },
+    true
+  );
 }
 
 /** 別張（不是選中這張試印的）還在印或排隊：改了卡池之後，成品區換成新的試印，但舊的那張還在跑。 */
@@ -1329,12 +1410,24 @@ function applyFit(plan) {
     return;
   }
   box.style.setProperty("--pool-card", w + "px");
+  if (!wideLayout.matches) {
+    // 窄螢幕：卡池排在字盒上面、整頁一起捲，牌寬只看欄寬（planPool 的 else）。
+    // 以前這裡當場讀列頭高度、欄寬 —— 手機上一讀就要把整頁（連底下一大片字盒）排一次，
+    // 放一張牌光這裡 60ms（CPU 降速 4 倍時 240ms）。列頭高度窄螢幕用不到；
+    // 欄寬等下一格畫面再讀，那時版面已經排好，讀起來不花錢。
+    poolFit.w = w;
+    requestAnimationFrame(() => {
+      const real = box.querySelector(".reg-cards")?.clientWidth;
+      if (real && Math.abs(real - poolFit.cardsW) > 2) scheduleFit();
+    });
+    return;
+  }
   const head = box.querySelector(".reg-head");
   if (head && head.offsetHeight) poolFit.headH = head.offsetHeight;
   // 算的跟畫出來的對不上（第一次畫、欄寬剛變）：等一下照實際的寬再排一次。
   const real = box.querySelector(".reg-cards")?.clientWidth;
   if (real && Math.abs(real - plan.cardsW) > 2) scheduleFit();
-  if (wideLayout.matches && !expanded.size) {
+  if (!expanded.size) {
     // 算的還是放不下（第一次放牌時列頭高度、欄寬都還是猜的）：找放得下的最大牌寬。
     // 用二分搜尋：每試一次都要整個卡池排版一次，以前一次縮 2px、最多試 16 次，第一次放牌光這裡 45ms。
     const sc = $("plate-scroll");
@@ -1475,7 +1568,9 @@ function renderPlate(events = []) {
     for (const c of g.querySelectorAll(".plate-card")) c.style.visibility = "hidden";
     sheet = { node: g, rect: r };
   }
-  flipBy(box, ".plate-card, .ghost-card", cardKey, () => {
+  // 卡池捲出畫面（手機上在底下的字盒挑牌）：看不到的滑動不必演，也就不用量每張牌的位置
+  // （量一次要把整頁排版一次，CPU 慢的手機上 30ms 以上）。
+  (plateSeen ? flipBy : (_box, _sel, _key, mutate) => mutate())(box, ".plate-card, .ghost-card", cardKey, () => {
     put(box, empty ? startBlock() : null, rows);
     box.dataset.empty = empty ? "true" : "false";
     if (plan.w) box.style.setProperty("--pool-card", plan.w + "px");
@@ -1605,10 +1700,12 @@ function inkRow(suit) {
   if (!suit || reduced()) return;
   const row = $("registers").querySelector(`.register[data-suit="${suit}"]`);
   if (!row) return;
+  // 重播動畫：拿掉、下一格畫面再加回去。以前用 void offsetWidth 逼一次同步排版，手機上要 20ms 以上。
   row.classList.remove("is-inked");
-  void row.offsetWidth;
-  row.classList.add("is-inked");
-  setTimeout(() => row.classList.remove("is-inked"), 900);
+  requestAnimationFrame(() => {
+    row.classList.add("is-inked");
+    setTimeout(() => row.classList.remove("is-inked"), 900);
+  });
 }
 
 /** 換一張試印：影子那幾張換成那一張補的，淡入一下讓人看得出換了。 */
@@ -1616,9 +1713,10 @@ function swapGhosts() {
   if (reduced()) return;
   const box = $("registers");
   box.classList.remove("ghosts-in");
-  void box.offsetWidth;
-  box.classList.add("ghosts-in");
-  setTimeout(() => box.classList.remove("ghosts-in"), 420);
+  requestAnimationFrame(() => {
+    box.classList.add("ghosts-in");
+    setTimeout(() => box.classList.remove("ghosts-in"), 420);
+  });
 }
 
 /** 牌底下四個小點：四張試印各一個，這張牌有進那一張就上墨。 */
@@ -2365,6 +2463,22 @@ function renderPrintBar() {
   const hiBusy = !!p && p.status === "done" && hiresBusy(p);
   const key = [t.letter, sigOf(t), p ? p.status : "", p?._gone ? "gone" : "", p?.hi?.status || "", p?.hires?.scale || "", summary.join("・"), detail.join("・"), t.missing.join(","), offline, linkNow, p && p.status === "failed" ? p.note : "", !!bed.pins.length].join("|");
   const go = bar.querySelector(".pb-go");
+  // 放一張牌、換一張試印時，常常只有「試印 A／你的 N 張・引擎補 N 張／時代・分級・尺寸」幾個字變了：
+  // 只改字，不把整排（連同收著的種子設定）拆掉重建 —— 手機上每放一張牌都在重建它。
+  const shape = key.replace(summary.join("・"), "").replace(detail.join("・"), "").replace(t.letter + "|" + sigOf(t) + "|", "");
+  if (bar.dataset.shape === shape && bar.dataset.key !== key && go && !busy && !hiBusy) {
+    bar.dataset.key = key;
+    const setText = (sel, text) => {
+      const n = bar.querySelector(sel);
+      if (n && n.textContent !== text) n.textContent = text;
+    };
+    setText(".pb-letter", t.letter);
+    setText(".pb-title", `試印 ${t.letter}`);
+    setText(".pb-sum", summary.join("・"));
+    setText(".pb-detail", detail.join("・"));
+    if (go.textContent !== label) go.textContent = label;
+    return syncPrintFloat();
+  }
   if (bar.dataset.key === key && go) {
     if (go.textContent !== label) go.textContent = label;
     if (busy) go.style.setProperty("--p", String(p.status === "running" ? p.progress || 0 : 0));
@@ -2373,6 +2487,7 @@ function renderPrintBar() {
   }
   const moreOpen = bar.querySelector(".pb-more")?.open;
   bar.dataset.key = key;
+  bar.dataset.shape = shape;
   put(
     bar,
     el(
@@ -3468,12 +3583,16 @@ function renderPill() {
 
 // 另一個方向：人在上面看卡池、字盒還在很下面的時候，同一個角落換成「字盒 ↓」。
 // 窄螢幕上字盒排在卡池、試印、付印之後，要加一張牌得捲過一整頁；兩顆輪流出現、不會同時在。
+// 卡池（#plate）現在看不看得到。手機上字盒排在卡池底下，挑牌時卡池常常捲出畫面。
+let plateSeen = true;
+
 function watchPoolPill() {
   const pill = $("pool-pill");
   const jump = $("case-jump");
   if (typeof IntersectionObserver !== "function") return;
   const narrow = matchMedia("(max-width: 68.74rem)");
   let poolVisible = true;
+  plateSeen = true;
   let caseVisible = false;
   const sync = () => {
     pill.hidden = !(narrow.matches && !poolVisible);
@@ -3481,6 +3600,7 @@ function watchPoolPill() {
   };
   new IntersectionObserver((entries) => {
     poolVisible = entries.some((e) => e.isIntersecting);
+    plateSeen = poolVisible;
     sync();
   }, { threshold: 0.04 }).observe($("plate"));
   new IntersectionObserver((entries) => {
