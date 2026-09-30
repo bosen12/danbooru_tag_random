@@ -4260,3 +4260,185 @@ html {
   justify-content: center;
   gap: var(--space-xs);
 }
+
+/* ---------- 換版：墨池 ↔ 疊印台（蓋印＋滾筒） ----------
+ * 以前只有工作區淡出、滑一小段，加一條細朱線掃過 —— 太安靜，看不出是換了一間房。
+ * 現在：目的地的名字化成一枚朱印壓下來（略過頭、回彈，舊的一版被壓得沉一下）；
+ * 一根鋼色滾筒沿換版方向滾過整個畫面，滾到哪、新的一版就印到哪。約 0.8 秒。
+ * 頂欄是自己一層不動，分頁底線照舊從另一個標籤滑過來。
+ * 工作區各自的轉場名字拿掉：整頁當一張紙一起被壓過去，滾筒線才對得齊。
+ * （web7 是同一套，換成黃銅滾筒、明體印章。） */
+@media (prefers-reduced-motion: no-preference) {
+  .library,
+  .case,
+  .work,
+  .plate,
+  .side,
+  .line {
+    view-transition-name: none;
+  }
+
+  html[data-vt] .vt-stamp {
+    display: grid;
+    view-transition-name: vt-stamp;
+  }
+
+  ::view-transition-old(root) {
+    animation: press-old var(--dur-xl) var(--ease-out) both;
+  }
+  ::view-transition-new(root) {
+    animation: press-wipe-fwd var(--dur-xl) var(--ease-in-out) var(--dur-micro) both;
+  }
+  html[data-vt="back"]::view-transition-new(root) {
+    animation-name: press-wipe-back;
+  }
+
+  ::view-transition-new(vt-sweep) {
+    animation: press-roller-fwd var(--dur-xl) var(--ease-in-out) var(--dur-micro) both;
+  }
+  html[data-vt="back"]::view-transition-new(vt-sweep) {
+    animation-name: press-roller-back;
+  }
+
+  ::view-transition-new(vt-stamp) {
+    animation: press-stamp var(--dur-story) var(--ease-out) both;
+  }
+}
+
+/* 滾筒：一根鋼色圓柱（中間一道高光），前緣一條朱色油墨，後面在新的一版上拖一點陰影。 */
+.vt-sweep {
+  width: 40px;
+  background:
+    linear-gradient(to right,
+      transparent 0,
+      oklch(20% 0.02 250 / 0.6) 8%,
+      oklch(42% 0.04 245) 22%,
+      oklch(74% 0.04 235) 44%,
+      oklch(95% 0.015 230) 52%,
+      oklch(58% 0.04 240) 66%,
+      oklch(30% 0.03 248) 84%,
+      transparent 100%);
+  box-shadow: -2px 0 0 var(--color-accent), 18px 0 36px -8px var(--color-shade);
+}
+
+html[data-vt="back"] .vt-sweep {
+  background:
+    linear-gradient(to left,
+      transparent 0,
+      oklch(20% 0.02 250 / 0.6) 8%,
+      oklch(42% 0.04 245) 22%,
+      oklch(74% 0.04 235) 44%,
+      oklch(95% 0.015 230) 52%,
+      oklch(58% 0.04 240) 66%,
+      oklch(30% 0.03 248) 84%,
+      transparent 100%);
+  box-shadow: 2px 0 0 var(--color-accent), -18px 0 36px -8px var(--color-shade);
+}
+
+/* 朱印：雙框、粗黑體、油墨沒吃滿的斑駁（雜訊遮罩）。 */
+.vt-stamp {
+  display: none;
+  position: fixed;
+  inset: 0;
+  z-index: 90;
+  place-content: center;
+  justify-items: center;
+  gap: var(--space-sm);
+  pointer-events: none;
+  color: var(--color-accent);
+}
+
+.vt-stamp b {
+  padding: 0.16em 0.42em 0.22em;
+  border: 0.07em solid currentColor;
+  outline: 0.025em solid currentColor;
+  outline-offset: 0.06em;
+  border-radius: 0.08em;
+  font-family: var(--font-display);
+  font-size: clamp(4.5rem, 16vw, 10rem);
+  font-weight: 800;
+  line-height: 1;
+  letter-spacing: 0.08em;
+  rotate: -5deg;
+  -webkit-mask: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='260' height='260'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='.9' numOctaves='2'/%3E%3CfeColorMatrix values='0 0 0 0 0  0 0 0 0 0  0 0 0 0 0  0 0 0 -2.2 1.9'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23n)'/%3E%3C/svg%3E");
+  mask: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='260' height='260'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='.9' numOctaves='2'/%3E%3CfeColorMatrix values='0 0 0 0 0  0 0 0 0 0  0 0 0 0 0  0 0 0 -2.2 1.9'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23n)'/%3E%3C/svg%3E");
+}
+
+.vt-stamp small {
+  font-family: var(--font-mono);
+  font-size: var(--text-xs);
+  letter-spacing: 0.4em;
+  color: var(--color-pool);
+}
+
+/* 舊的一版：印章壓下那一下被壓得沉一點，然後退後、變暗。 */
+@keyframes press-old {
+  18% {
+    transform: scale(0.965);
+  }
+  30% {
+    transform: scale(0.978);
+  }
+  to {
+    opacity: 0.45;
+    transform: scale(0.975);
+  }
+}
+
+@keyframes press-wipe-fwd {
+  from {
+    clip-path: inset(0 0 0 100%);
+  }
+  to {
+    clip-path: inset(0);
+  }
+}
+
+@keyframes press-wipe-back {
+  from {
+    clip-path: inset(0 100% 0 0);
+  }
+  to {
+    clip-path: inset(0);
+  }
+}
+
+/* 滾筒中線跟著剪裁的邊走：同一條曲線、同一段時間。 */
+@keyframes press-roller-fwd {
+  from {
+    transform: translateX(calc(100vw - 20px));
+  }
+  to {
+    transform: translateX(-20px);
+  }
+}
+
+@keyframes press-roller-back {
+  from {
+    transform: translateX(-20px);
+  }
+  to {
+    transform: translateX(calc(100vw - 20px));
+  }
+}
+
+@keyframes press-stamp {
+  0% {
+    opacity: 0;
+    transform: scale(1.7);
+  }
+  20% {
+    opacity: 1;
+    transform: scale(0.95);
+  }
+  28% {
+    transform: scale(1);
+  }
+  70% {
+    opacity: 0.95;
+  }
+  100% {
+    opacity: 0;
+    transform: scale(1.03);
+  }
+}
