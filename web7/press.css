@@ -254,3 +254,183 @@ h3 {
     content: none;
   }
 }
+
+/* ---------- 換版：墨池 ↔ 疊印台 ----------
+ * 一按分頁：目的地的名字化成一枚大朱印壓下來（略過頭、回彈）；一根黃銅滾筒沿換版方向
+ * 滾過整個畫面，滾到哪、新的一版就印到哪；舊的一版在底下微微退後、變暗。約 0.8 秒。
+ * 頂欄（mast）是自己一層、不動，分頁底線照舊從另一個標籤滑過來。
+ * 工作區各自的轉場名字在這裡拿掉：整頁當一張紙一起被壓過去，滾筒線才對得齊。 */
+@media (prefers-reduced-motion: no-preference) {
+  .library,
+  .case,
+  .work,
+  .plate,
+  .side,
+  .line {
+    view-transition-name: none;
+  }
+
+  html[data-vt] .vt-stamp {
+    display: grid;
+    view-transition-name: vt-stamp;
+  }
+
+  ::view-transition-old(root) {
+    animation: press-old var(--dur-xl) var(--ease-out) both;
+  }
+  ::view-transition-new(root) {
+    animation: press-wipe-fwd var(--dur-xl) var(--ease-in-out) var(--dur-micro) both;
+  }
+  html[data-vt="back"]::view-transition-new(root) {
+    animation-name: press-wipe-back;
+  }
+
+  ::view-transition-new(vt-sweep) {
+    animation: press-roller-fwd var(--dur-xl) var(--ease-in-out) var(--dur-micro) both;
+  }
+  html[data-vt="back"]::view-transition-new(vt-sweep) {
+    animation-name: press-roller-back;
+  }
+
+  ::view-transition-new(vt-stamp) {
+    animation: press-stamp var(--dur-story) var(--ease-out) both;
+  }
+}
+
+/* 滾筒：一根黃銅圓柱（中間一道高光），前緣一條朱色油墨，後面在新的一版上拖一點陰影。 */
+.vt-sweep {
+  width: 40px;
+  background:
+    linear-gradient(to right,
+      transparent 0,
+      oklch(30% 0.04 60 / 0.55) 8%,
+      oklch(52% 0.07 72) 22%,
+      oklch(80% 0.08 82) 44%,
+      oklch(95% 0.035 88) 52%,
+      oklch(66% 0.08 76) 66%,
+      oklch(40% 0.05 64) 84%,
+      transparent 100%);
+  box-shadow: -2px 0 0 var(--color-accent), 18px 0 36px -8px oklch(5% 0.01 60 / 0.7);
+}
+
+html[data-vt="back"] .vt-sweep {
+  background:
+    linear-gradient(to left,
+      transparent 0,
+      oklch(30% 0.04 60 / 0.55) 8%,
+      oklch(52% 0.07 72) 22%,
+      oklch(80% 0.08 82) 44%,
+      oklch(95% 0.035 88) 52%,
+      oklch(66% 0.08 76) 66%,
+      oklch(40% 0.05 64) 84%,
+      transparent 100%);
+  box-shadow: 2px 0 0 var(--color-accent), -18px 0 36px -8px oklch(5% 0.01 60 / 0.7);
+}
+
+/* 朱印：雙框、明體、油墨沒吃滿的斑駁（雜訊遮罩）。 */
+.vt-stamp {
+  display: none;
+  position: fixed;
+  inset: 0;
+  z-index: 90;
+  place-content: center;
+  justify-items: center;
+  gap: var(--space-sm);
+  pointer-events: none;
+  color: var(--color-accent);
+}
+
+.vt-stamp b {
+  padding: 0.18em 0.42em 0.24em;
+  border: 0.07em solid currentColor;
+  outline: 0.025em solid currentColor;
+  outline-offset: 0.06em;
+  border-radius: 0.06em;
+  font-family: var(--font-display);
+  font-size: clamp(4.5rem, 16vw, 10rem);
+  font-weight: 900;
+  line-height: 1;
+  letter-spacing: 0.08em;
+  rotate: -5deg;
+  -webkit-mask: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='260' height='260'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='.9' numOctaves='2'/%3E%3CfeColorMatrix values='0 0 0 0 0  0 0 0 0 0  0 0 0 0 0  0 0 0 -2.2 1.9'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23n)'/%3E%3C/svg%3E");
+  mask: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='260' height='260'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='.9' numOctaves='2'/%3E%3CfeColorMatrix values='0 0 0 0 0  0 0 0 0 0  0 0 0 0 0  0 0 0 -2.2 1.9'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23n)'/%3E%3C/svg%3E");
+}
+
+.vt-stamp small {
+  font-family: var(--font-mono);
+  font-size: var(--text-xs);
+  letter-spacing: 0.4em;
+  color: var(--color-pool);
+}
+
+/* 舊的一版：印章壓下那一下被壓得沉一點（18%），然後退後、變暗，讓滾筒把新的一版壓上來。 */
+@keyframes press-old {
+  18% {
+    transform: scale(0.965);
+  }
+  30% {
+    transform: scale(0.978);
+  }
+  to {
+    opacity: 0.45;
+    transform: scale(0.975);
+  }
+}
+
+@keyframes press-wipe-fwd {
+  from {
+    clip-path: inset(0 0 0 100%);
+  }
+  to {
+    clip-path: inset(0);
+  }
+}
+
+@keyframes press-wipe-back {
+  from {
+    clip-path: inset(0 100% 0 0);
+  }
+  to {
+    clip-path: inset(0);
+  }
+}
+
+/* 滾筒中線跟著剪裁的邊走：同一條曲線、同一段時間。 */
+@keyframes press-roller-fwd {
+  from {
+    transform: translateX(calc(100vw - 20px));
+  }
+  to {
+    transform: translateX(-20px);
+  }
+}
+
+@keyframes press-roller-back {
+  from {
+    transform: translateX(-20px);
+  }
+  to {
+    transform: translateX(calc(100vw - 20px));
+  }
+}
+
+@keyframes press-stamp {
+  0% {
+    opacity: 0;
+    transform: scale(1.7);
+  }
+  20% {
+    opacity: 1;
+    transform: scale(0.95);
+  }
+  28% {
+    transform: scale(1);
+  }
+  70% {
+    opacity: 0.95;
+  }
+  100% {
+    opacity: 0;
+    transform: scale(1.03);
+  }
+}
