@@ -67,9 +67,11 @@ const GOLD = {
     pos: "1girl, solo, medium hair, purple eyes, red hair, side ponytail, ponytail, gigantic breasts, muscular, bruise, pink shirt, shirt, jeans, pants, table tennis, squatting, bird's eye view, from above, looking around, drunk, sports court, outdoors, fog, day, shadow, silhouette, table tennis paddle, table tennis ball, nsfw, explicit, masterpiece, best quality, amazing quality",
   },
   // 2026-09-29 第三次：這張是性愛。淋浴間換成海邊，衣服和光線跟著換。仍是 1girl solo。
+  // 2026-10-04（9a087a5）：帶衣物名的姿勢（hand in panties 這類）在候選階段就要先有對的衣服，
+  // 性愛的姿勢池變小，同一顆亂數落點挪一格：moaning 換成 clenched teeth，RNG 次數不變。
   999: {
     rng: 348,
-    pos: "1girl, solo, long hair, grey eyes, orange hair, twin braids, braid, flat chest, gyaru, body blush, bra visible through clothes, no panties, garter belt, knee boots, bag, fingering, on side, pov, looking at viewer, smug, moaning, ocean, outdoors, sunset, dappled sunlight, motion blur, orange sky, nsfw, explicit, masterpiece, best quality, amazing quality",
+    pos: "1girl, solo, long hair, grey eyes, orange hair, twin braids, braid, flat chest, gyaru, body blush, bra visible through clothes, no panties, garter belt, knee boots, bag, fingering, on side, pov, looking at viewer, smug, clenched teeth, ocean, outdoors, sunset, dappled sunlight, motion blur, orange sky, nsfw, explicit, masterpiece, best quality, amazing quality",
   },
   // 2026-09-23：走光補抽改成「所有成立的走光動作同一池、衣服吻合的權重 10」之後，
   // 這張的走光動作從 exhibitionism 換成 cameltoe（她穿 thong，吻合），場景跟著換。
@@ -212,7 +214,12 @@ const MATRIX_SEEDS = 200;
 // 變的是性愛那 200 張，加上預設路徑裡抽到性愛的種子。
 // 誘惑的 seed 100、走光的 seed 2026 逐字沒變。2400 張矛盾 0。
 // 指紋 5421d490 → fc11fc00。
-const MATRIX_GOLD = "fc11fc00";
+// 2026-10-04（9a087a5）：needsClothingDependency —— 帶衣物名的姿勢（hand in panties）和
+// adjusting clothes／clothes tug／clothed sex 這類在 allow() 就要求身上有對的衣服，
+// 不再等事後清理。逐張比過 2400 張：只有性愛那 200 張裡的 74 張不同，其他 11 種情境
+// 2200 張逐字相同。改前 6 張是「沒穿內褲卻 hand in panties」，改後 0 張；其餘是姿勢池
+// 變小、同一顆亂數落到別的字。釘選這 6 個字照舊保留（各 400 次全在）。指紋 fc11fc00 → 8f0538b7。
+const MATRIX_GOLD = "8f0538b7";
 
 function matrixSettings(over) {
   const s = defaultSettings(data);
