@@ -15,6 +15,20 @@ const pixelmatch = pixelmatchModule.default || pixelmatchModule;
 const root = resolve(import.meta.dirname, '..');
 const baselineRef = '8a6a7da';
 const baseline = new Map(['card.css','styles.css','fuse.css','hand.js'].map(name => [name, execFileSync('git',['show',`${baselineRef}:web6/${name}`],{cwd:root,maxBuffer:2**22})]));
+// Apply only the intentional mobile toast placement to the historical fixture;
+// all other visual/motion declarations must still match. Actual toast/tray gaps,
+// safe areas, hidden trays and action clicks are checked by test_hand_dock_browser.
+const mobileToastPlacement = `@media (max-width: 640px) {
+  body .toast {
+    bottom: max(var(--fav-h, 0px), calc(var(--space-lg) + env(safe-area-inset-bottom)));
+  }
+  .go-float[data-show="true"] ~ .toast {
+    bottom: max(var(--fav-h, 0px), calc(var(--space-md) + 3.25rem + var(--space-xs) + env(safe-area-inset-bottom)));
+  }
+}
+
+`;
+baseline.set('styles.css', Buffer.from(baseline.get('styles.css').toString().replace('/* 帶「復原」鈕的提示要點得到。 */', mobileToastPlacement + '/* 帶「復原」鈕的提示要點得到。 */')));
 const out = resolve(root,'.planning/style-browser-results');
 await mkdir(out,{recursive:true});
 const server = createServer(async(req,res)=>{

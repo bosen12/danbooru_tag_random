@@ -2600,6 +2600,17 @@ body[data-dragging="true"] .library[data-over="true"] {
   bottom: calc(var(--fav-h, 0px) + var(--space-md) + 3.25rem + var(--space-xs) + env(safe-area-inset-bottom));
 }
 
+/* 手機的 --fav-h 已含托盤到視窗底邊的距離與 12px 間距，直接貼在托盤上方。
+ * 托盤沒顯示時才用底部安全區／抽牌列作為下限，避免把同一段高度算兩次。 */
+@media (max-width: 640px) {
+  body .toast {
+    bottom: max(var(--fav-h, 0px), calc(var(--space-lg) + env(safe-area-inset-bottom)));
+  }
+  .go-float[data-show="true"] ~ .toast {
+    bottom: max(var(--fav-h, 0px), calc(var(--space-md) + 3.25rem + var(--space-xs) + env(safe-area-inset-bottom)));
+  }
+}
+
 /* 帶「復原」鈕的提示要點得到。 */
 .toast[data-show="true"][data-action="true"] {
   pointer-events: auto;
