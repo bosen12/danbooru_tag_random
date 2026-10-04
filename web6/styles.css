@@ -1690,8 +1690,8 @@ body #wf-pick-btn.has {
 }
 
 /* 還沒有成品：「全部展開／收起」沒有東西可開，描述牌組的那句也還沒有對象，先收起來。 */
-section:has(> .wall-empty:not([hidden])) .wall-tools,
-section:has(> .wall-empty:not([hidden])) .wall-head p {
+.wall-head:not([data-has-shots="true"]) .wall-tools,
+.wall-head:not([data-has-shots="true"]) p {
   display: none;
 }
 
@@ -2596,7 +2596,7 @@ body[data-dragging="true"] .library[data-over="true"] {
 }
 
 /* 底部那條「只抽牌／抽並生圖」浮出來時，提示浮在它上面，不要蓋住按鈕（手機上最明顯）。 */
-body:has(.go-float[data-show="true"]) .toast {
+.go-float[data-show="true"] ~ .toast {
   bottom: calc(var(--fav-h, 0px) + var(--space-md) + 3.25rem + var(--space-xs) + env(safe-area-inset-bottom));
 }
 
@@ -3065,7 +3065,7 @@ body .lora-modal .lm-none {
   font-size: var(--text-xs);
 }
 .tray-bridge[hidden],
-body:has(.fav-hand) .tray-bridge { display: none; }
+body[data-fav-hand="true"] .tray-bridge { display: none; }
 .tray-bridge[data-open="false"] {
   width: max-content;
   height: auto;
@@ -4112,7 +4112,7 @@ html {
   }
   /* 操作列浮出來時，偏好卡牌托盤本來就讓到操作列上面了（card.css 的 -62px），簍子留在列裡，
    * 不必跟著托盤往上讓 —— 不然它孤零零懸在畫面中間。選擇器要比 card.css 那條讓位的重。 */
-  body:has(.go-float[data-show="true"]:not([inert]):not([hidden])) .trash {
+  .go-float[data-show="true"]:not([inert]):not([hidden]) ~ .trash {
     translate: none;
   }
   /* 點開的面板跟著貼到 52px 的簍子上面，指向簍子的小尖角對準它的中線。 */

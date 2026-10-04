@@ -11,6 +11,7 @@ function harness() {
   const declarations = text.slice(text.lastIndexOf("let shotSeq", begin), begin);
   const frames = new Map(), timers = new Map(), records = [], nodes = [], sent = [], wall = { prepend(n) { nodes.unshift(n); } };
   const bar = { dataset: {}, children: [], get childElementCount() { return this.children.length; }, replaceChildren(...children) { this.children = children; } };
+  const wallHead = { dataset: {} }, wallEmpty = { hidden: false };
   let clock = 0, seed = 0, sequence = 0;
   const ctx = {
     console, Date, Math, Promise, Set, Map, structuredClone,
@@ -31,7 +32,7 @@ function harness() {
     },
     makeShot(drawn, seed, pins, snapshot) { return { id: "s" + seed, positive: drawn.positive, seed, width: snapshot?.width ?? ctx.settings.width, pins: [...pins] }; },
     currentTriggerText: () => "trigger", currentLorasPayload: () => [], currentCkpt: () => "model", currentWorkflowId: () => "wf", currentSampling: () => ({ steps: 19, cfg: 4 }),
-    $: id => id === "wall" ? wall : id === "go-bar" ? bar : {},
+    $: id => id === "wall" ? wall : id === "go-bar" ? bar : id === "wall-head" ? wallHead : id === "wall-empty" ? wallEmpty : {},
     refuse() {}, toast() {}, sfx: { deal() {}, roll() {} },
     shotNode: shot => ({ id: shot.id }), enter() {}, trimWall() {},
     S: { saveShots() {} }, generator: { busy: false, pending: 0, enqueue: shot => sent.push(shot.id), stop() {} }, renderGoBar() {}, reducedMotion: () => false, DUR: { micro: 120 },
@@ -41,6 +42,8 @@ function harness() {
     handleLoraKeys: () => false, wfHandleKeys: () => false, anyOverlay: () => false, trashPanel: null,
   };
   vm.createContext(ctx);
+  const syncStart = text.indexOf("function syncWallEmpty(");
+  vm.runInContext(text.slice(syncStart, text.indexOf("\n}", syncStart) + 2), ctx);
   vm.runInContext(declarations + text.slice(begin, end) + "\nthis.drawBatch = drawBatch", ctx);
   return {
     ctx, records, frames, timers, sent, nodes, bar,

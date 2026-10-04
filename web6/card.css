@@ -497,9 +497,10 @@ button.card:active {
 }
 
 /* 墨池底下的浮動按鈕列出現時，托盤讓到它上面。以前改 bottom（10px → 72px）：托盤帶毛玻璃，
- * 每一格都要排版、重算模糊，而捲到成品牆看圖正是生圖的時候。改用 translate 往上推 62px。 */
-body:has(.go-float[data-show="true"]) .fav-hand {
-  translate: -50% -62px;
+ * 每一格都要排版、重算模糊，而捲到成品牆看圖正是生圖的時候。改用 translate，
+ * 讓位距離也算進操作列的手機安全區，才不會蓋住「只抽牌／抽並生圖」。 */
+.go-float[data-show="true"] ~ .fav-hand {
+  translate: -50% calc(-62px - env(safe-area-inset-bottom));
 }
 
 /* 拖牌經過：托盤描一圈（可以放），壓在上面亮起來。 */
@@ -744,7 +745,7 @@ body .toast {
    一路壓著右半邊。托盤打開（佔滿底邊）才讓。 */
 @media (max-width: 68.74rem) {
   .pool-pill,
-  body:has(.fav-hand[data-open="true"]:not([data-hidden="true"])) .trash {
+  body[data-fav-hand-open="true"] .trash {
     translate: 0 calc(-1 * var(--fav-h, 0px));
   }
 }

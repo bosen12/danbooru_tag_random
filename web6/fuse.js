@@ -339,21 +339,47 @@ function retrial(start = 0, end = seeds.length) {
 let trialsPending = null;
 let trialsTimer = 0;
 let trialsFrame = 0;
+let trialsWork = 0;
 
 function retrialPicked() {
   retrial(picked, picked + 1);
   trialsPending = new Set(seeds.map((_, i) => i).filter((i) => i !== picked));
+  deferTrials();
+}
+
+function deferTrials() {
+  const work = ++trialsWork;
   clearTimeout(trialsTimer);
   cancelAnimationFrame(trialsFrame);
+  const next = () => {
+    // 放下一張、重抽或當場讀完四張之後，舊任務即使已排進佇列也不能再動新版。
+    if (work !== trialsWork || !trialsPending) return;
+    clearTimeout(trialsTimer);
+    cancelAnimationFrame(trialsFrame);
+    // 飛行中的影子已有標記，不讀尺寸：前景先讓牌落地，再做剩下的抽牌。
+    // hand.receive 的影子由共用 flight 標 aria-hidden；拖放的影子用 drag-ghost。
+    // 背景不等畫面，照保底任務抽完（flight 自己也有背景落地保底）。
+    if (!document.hidden && document.querySelector('.flying, .drag-ghost, body > .card[aria-hidden="true"]')) {
+      deferTrials();
+      return;
+    }
+    const i = trialsPending.values().next().value;
+    if (i !== undefined) retrial(i, i + 1);
+    // 一個任務只抽一張，中間留畫面給正在飛的牌；小點仍整批抽完才補上。
+    if (trialsPending.size) deferTrials();
+    else finishTrials();
+  };
   // 下一格畫面之後的第一個任務；分頁在背景（不畫畫面）時也保證會抽完。
   trialsFrame = requestAnimationFrame(() => {
+    if (work !== trialsWork || !trialsPending) return;
     clearTimeout(trialsTimer);
-    trialsTimer = setTimeout(finishTrials, 0);
+    trialsTimer = setTimeout(next, 0);
   });
-  trialsTimer = setTimeout(finishTrials, 250);
+  trialsTimer = setTimeout(next, 250);
 }
 
 function settleTrials() {
+  trialsWork++;
   trialsPending = null;
   clearTimeout(trialsTimer);
   cancelAnimationFrame(trialsFrame);

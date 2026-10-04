@@ -500,7 +500,7 @@ _img_joined = chr(10).join(_img_headers)
 ok("handler 裡不另寫 max-age：快取規則只走 image_cache_policy()", "max-age" not in _img_joined, _img_joined)
 ok("有回 ETag", "ETag" in _img_joined)
 ok("有處理 If-None-Match", "If-None-Match" in _img_src)
-ok("ETag 算在內容上而不是檔名上", "image_digest(raw)" in _img_src and "image_cache_policy(want, digest)" in _img_src)
+ok("ETag 算在內容上而不是檔名上", "image_digest(raw)" in inspect.getsource(server.comfy_image) and "image_cache_policy(want, digest)" in _img_src)
 
 _d = server.image_digest(b"same bytes")
 ok("沒帶指紋的舊網址：每次回來驗證", server.image_cache_policy("", _d) == (200, "private, no-cache"))

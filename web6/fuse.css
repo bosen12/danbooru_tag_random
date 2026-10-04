@@ -339,8 +339,9 @@ body.fuse {
 }
 
 @media (min-width: 68.75rem) {
-  /* 寬螢幕上整頁不捲（三欄各自捲）：不用替整頁的捲軸留一條空白。 */
-  html:has(body.fuse) {
+  /* 寬螢幕上整頁不捲（三欄各自捲）：不用替整頁的捲軸留一條空白。
+   * fuse.css 只由 fuse.html 載入，無須從根節點查 body 的後代狀態。 */
+  html {
     scrollbar-gutter: auto;
     overflow: hidden;
   }
@@ -2863,7 +2864,7 @@ body.fuse {
 
 /* 偏好卡牌托盤打開（佔滿底邊）時，跟「卡池」一樣讓到托盤上面。 */
 @media (max-width: 68.74rem) {
-  body:has(.fav-hand[data-open="true"]:not([data-hidden="true"])) .print-float {
+  body[data-fav-hand-open="true"] .print-float {
     translate: 0 calc(-1 * var(--fav-h, 0px));
   }
 }

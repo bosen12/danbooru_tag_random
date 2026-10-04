@@ -1262,6 +1262,58 @@ def image_digest(raw: bytes) -> str:
     return hashlib.sha1(bytes(raw)).hexdigest()
 
 
+# 上游 ETag 只用來確認檔案未變；對客戶端仍公開原圖內容雜湊。
+# 不存 PNG，避免牆上數百張圖佔滿記憶體；換 Comfy 位址也不能沿用舊身分。
+_IMAGE_VALIDATORS: dict[tuple[str, str], tuple[str, str]] = {}
+_IMAGE_VALIDATORS_MAX = 1024
+_IMAGE_VALIDATORS_LOCK = threading.Lock()
+
+
+def comfy_image(q: str, *, require_body: bool = False, timeout: float = 60) -> tuple[bytes | None, str]:
+    """每次確認上游；已知 ETag 未變時只回內容雜湊，需原檔時回完整 bytes。"""
+    base = comfy_base()
+    key = (base, q)
+    with _IMAGE_VALIDATORS_LOCK:
+        known = _IMAGE_VALIDATORS.get(key)
+    for attempt in range(2):
+        headers = {"Accept-Encoding": "identity"}
+        if known and not require_body and attempt == 0:
+            headers["If-None-Match"] = known[0]
+        request = urllib.request.Request(base + "/view?" + q, headers=headers)
+        try:
+            with urllib.request.urlopen(request, timeout=timeout) as response:
+                raw = response.read()
+                upstream_tag = response.headers.get("ETag", "")
+                content_type = response.headers.get("Content-Type", "")
+        except urllib.error.HTTPError as exc:
+            if exc.code == 304:
+                returned_tag = exc.headers.get("ETag", "")
+                exc.close()
+                if "If-None-Match" in headers and (not returned_tag or returned_tag == known[0]):
+                    return None, known[1]
+                # 非預期的 304 不足以證明身分；再問一次完整檔案。
+                with _IMAGE_VALIDATORS_LOCK:
+                    _IMAGE_VALIDATORS.pop(key, None)
+                known = None
+                continue
+            if exc.code == 404:
+                with _IMAGE_VALIDATORS_LOCK:
+                    _IMAGE_VALIDATORS.pop(key, None)
+            raise
+        if not raw or "json" in content_type or raw[:1] in (b"{", b"["):
+            raise ValueError("not an image")
+        digest = image_digest(raw)
+        with _IMAGE_VALIDATORS_LOCK:
+            _IMAGE_VALIDATORS.pop(key, None)
+            # 弱 ETag 只能保證語意相同，不能代替原檔 bytes 的內容指紋。
+            if re.fullmatch(r'"[^"\r\n]*"', upstream_tag):
+                _IMAGE_VALIDATORS[key] = (upstream_tag, digest)
+                while len(_IMAGE_VALIDATORS) > _IMAGE_VALIDATORS_MAX:
+                    _IMAGE_VALIDATORS.pop(next(iter(_IMAGE_VALIDATORS)))
+        return raw, digest
+    raise ValueError("unexpected upstream 304")
+
+
 def valid_image_hash(h: str) -> bool:
     return 8 <= len(h) <= 40 and all(c in "0123456789abcdef" for c in h)
 
@@ -3006,12 +3058,9 @@ class Handler(BaseHTTPRequestHandler):
             self._json(400, {"ok": False, "error": "bad image query"})
             return
         try:
-            raw = api("GET", f"/view?{q}", timeout=60)
+            raw, digest = comfy_image(q, require_body=not self.headers.get("If-None-Match") and one("fmt") != "webp")
         except Exception as exc:
             self._json(image_error_code(exc), {"ok": False, "error": str(exc)})
-            return
-        if not isinstance(raw, (bytes, bytearray)):
-            self._json(502, {"ok": False, "error": "not an image"})
             return
         # 快取要用內容當鑰匙，不能用檔名。
         #
@@ -3022,7 +3071,6 @@ class Handler(BaseHTTPRequestHandler):
         #
         # 所以 ETag 一律是內容雜湊；整年快取只給網址上帶著內容指紋（h=）、而且對得上的，
         # 規則在 image_cache_policy()。
-        digest = image_digest(raw)
         status, cache = image_cache_policy(want, digest)
         if status != 200:
             self._json(status, {"ok": False, "error": "這張圖在 ComfyUI 的輸出資料夾裡已經不在了（檔名被別張圖用掉）"})
@@ -3036,6 +3084,24 @@ class Handler(BaseHTTPRequestHandler):
             self.send_header("Cache-Control", cache)
             self.end_headers()
             return
+        if not webp and raw is None:
+            # 瀏覽器沒有這份 body（或 webp 失敗），仍須拿原檔；第二次讀取也要重驗身分。
+            try:
+                raw, digest = comfy_image(q, require_body=True)
+            except Exception as exc:
+                self._json(image_error_code(exc), {"ok": False, "error": str(exc)})
+                return
+            status, cache = image_cache_policy(want, digest)
+            if status != 200:
+                self._json(status, {"ok": False, "error": "這張圖在 ComfyUI 的輸出資料夾裡已經不在了（檔名被別張圖用掉）"})
+                return
+            etag = '"' + digest + '"'
+            if self.headers.get("If-None-Match") == etag:
+                self.send_response(304)
+                self.send_header("ETag", etag)
+                self.send_header("Cache-Control", cache)
+                self.end_headers()
+                return
         body = webp or raw
         mime = "image/png"
         if body[:3] == b"\xff\xd8\xff":

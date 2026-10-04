@@ -1423,7 +1423,7 @@ async function drawBatchNow(gen, intent, epoch) {
     const v = made.indexOf(shot);
     enter(node, { delay: Math.min(v, 8) * (DUR.micro / 3) });
   }
-  $("wall-empty").hidden = true;
+  syncWallEmpty(true);
   trimWall();
   S.saveShots(shots);
   // 一次抽超過 80 張時，最舊的幾張剛做好就被 trimWall 裁掉了：只送還在牆上的。
@@ -1483,6 +1483,13 @@ function setAllOpen(open) {
   for (const node of $("wall").children) node._setOpen && node._setOpen(open);
 }
 
+function syncWallEmpty(hasShots) {
+  $("wall-empty").hidden = hasShots;
+  const state = hasShots ? "true" : "false";
+  const head = $("wall-head");
+  if (head.dataset.hasShots !== state) head.dataset.hasShots = state;
+}
+
 function renderWall() {
   const tools = $("wall-tools");
   tools.replaceChildren(
@@ -1491,7 +1498,7 @@ function renderWall() {
   );
   const wall = $("wall");
   wall.replaceChildren(...shots.map((s) => shotNode(s, false)));
-  $("wall-empty").hidden = shots.length > 0;
+  syncWallEmpty(shots.length > 0);
 }
 
 /**
@@ -1985,7 +1992,7 @@ function removeShot(shot) {
   const node = document.querySelector(`.shot[data-id="${shot.id}"]`);
   // 縮掉、旁邊的滑過來補位（以前是整排一格一格跳過去），而且可以反悔：五秒內按「復原」放回原位。
   leave(node, () => flip($("wall"), () => node?.remove()));
-  $("wall-empty").hidden = shots.length > 0;
+  syncWallEmpty(shots.length > 0);
   S.saveShots(shots);
   renderGoFloat();
   toast("撤下了一張", { action: { label: "復原", key: "Z", run: () => restoreShot(shot, at) } });
@@ -2000,7 +2007,7 @@ function restoreShot(shot, at) {
   const next = shots[i + 1] && wall.querySelector(`.shot[data-id="${shots[i + 1].id}"]`);
   flip(wall, () => (next ? next.before(node) : wall.append(node)));
   enter(node);
-  $("wall-empty").hidden = true;
+  syncWallEmpty(true);
   S.saveShots(shots);
   renderGoFloat();
 }

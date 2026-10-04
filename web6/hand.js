@@ -97,6 +97,8 @@ export function createHand({
   body.append(fan);
   el.append(head, body);
   document.body.append(el);
+  // The tray's owner publishes page state once; card mutations need no body :has lookup.
+  document.body.dataset.favHand = "true";
 
   tab.addEventListener("click", () => setOpen(!open));
   pick.addEventListener("click", () => toggleEdit());
@@ -481,6 +483,8 @@ export function createHand({
     el.dataset.editing = editing ? "true" : "false";
     el.dataset.count = String(n);
     el.dataset.hidden = !tags.length && !editing && !open ? "true" : "false";
+    const visibleOpen = open && el.dataset.hidden !== "true" ? "true" : "false";
+    if (document.body.dataset.favHandOpen !== visibleOpen) document.body.dataset.favHandOpen = visibleOpen;
     paintHead();
     placeAll(animate);
     // 托盤佔多高：下一格畫面開頭再量（那時本來就要排版），不在這裡逼一次同步排版。
@@ -511,9 +515,27 @@ export function createHand({
   // 現在盒子只在開頭變一次大小，動畫只改 clip-path 的裁切範圍（不排版、不觸發 ResizeObserver），
   // 變形那一下關掉毛玻璃。收起時先把盒子釘在原來的大小，裁完才放回去。
   let morphEnd = null;
+  let morphBlurFrame = 0;
+  function restoreMorphBlur() {
+    cancelAnimationFrame(morphBlurFrame);
+    morphBlurFrame = 0;
+    el.classList.remove("is-morphing");
+  }
+  function settleMorphBlur() {
+    if (document.hidden || reduced()) return restoreMorphBlur();
+    // 尺寸／裁切先回到靜態並畫過一格，再恢復毛玻璃，讓 backdrop-filter
+    // 用收尾後的盒子重建，降低 iPhone 沿用舊裁切圖層的風險。
+    morphBlurFrame = requestAnimationFrame(() => {
+      morphBlurFrame = requestAnimationFrame(restoreMorphBlur);
+    });
+  }
+  document.addEventListener("visibilitychange", () => {
+    if (document.hidden && morphBlurFrame) restoreMorphBlur();
+  });
   function morphTo(change, changed) {
     // 上一段還沒播完就又按：先收尾（放開釘住的大小），再量「變之前」。
     if (morphEnd) morphEnd();
+    restoreMorphBlur();
     const wasHidden = el.dataset.hidden === "true";
     const before = !wasHidden ? el.getBoundingClientRect() : null;
     if (!changed || reduced()) {
@@ -534,7 +556,8 @@ export function createHand({
       const done = () => {
         if (morphEnd !== done) return;
         morphEnd = null;
-        el.classList.remove("is-morphing");
+        a.cancel();
+        settleMorphBlur();
       };
       morphEnd = done;
       a.onfinish = done;
@@ -569,13 +592,14 @@ export function createHand({
       if (morphEnd !== done) return;
       morphEnd = null;
       a.cancel();
-      el.classList.remove("is-collapsing", "is-morphing");
+      el.classList.remove("is-collapsing");
       el.style.overflow = "";
       el.style.width = "";
       el.style.height = "";
       el.style.padding = "";
       el.style.borderRadius = "";
       for (const s of sunk) s.cancel();
+      settleMorphBlur();
     };
     morphEnd = done;
     a.onfinish = done;
