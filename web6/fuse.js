@@ -1296,7 +1296,8 @@ function trialHighlights(t) {
 const plateNode = (tag) => $("registers").querySelector(`.plate-card[data-tag="${cssEsc(tag)}"]`);
 
 /* ---------- 卡池跟著視窗大小：牌多大、每列放幾張影子 ----------
- * 寬螢幕上卡池有固定的高度：挑一個最大的牌寬，讓六列剛好一次放進去不用捲（放不下才捲）。
+ * 寬螢幕上卡池有固定的高度：挑一個最大的牌寬，讓六列剛好一次放進去不用捲；
+ * 但不小於字盒牌寬的 1.1 倍（wideFloor），牌多到那樣也放不下就捲，不把牌縮到比字盒還小。
  * 每一列的影子排到那一排放滿就停，放不完的收成「+N」—— 視窗越寬，看得到的影子越多。
  * 窄螢幕整頁往下捲，牌寬只看寬度：一排大約四張。
  * 先用算的（牌的比例、間距都是 CSS 裡的固定值），畫上去之後再量一次，真的溢出就再縮一點。 */
@@ -1307,6 +1308,11 @@ const GAP_X = 10;
 const GAP_Y = 12;
 const FIT_MIN = 56;
 const FIT_MAX = 176;
+// 寬螢幕卡池牌寬的下限（見 planPool）：比左邊字盒的牌大一點（1.1 倍）；字盒還沒有牌就照卡池寬估（一排約九張）。
+const wideFloor = (cardsW) => {
+  const caseW = $("case-grid")?.querySelector(".card")?.offsetWidth || cardsW / 9;
+  return Math.min(FIT_MAX, Math.max(FIT_MIN, Math.round((caseW * 1.1) / 2) * 2));
+};
 const wideLayout = typeof matchMedia === "function" ? matchMedia("(min-width: 68.75rem)") : { matches: true };
 let poolFit = { w: 0, planW: 0, caps: {}, cardsW: 0, headH: 0 };
 
@@ -1394,6 +1400,8 @@ function planPool(t, empty) {
         break;
       }
     }
+    // 卡池本來就能捲：塞不下時不要一路縮小，牌寬最小到比字盒的牌大一點（1080p 約 96px），多的往下捲。
+    w = Math.max(w, wideFloor(cardsW));
   } else {
     w = Math.round(Math.max(60, Math.min(96, (cardsW - 3 * GAP_X) / 4)));
   }
@@ -1438,10 +1446,12 @@ function applyFit(plan) {
       box.style.setProperty("--pool-card", x + "px");
       return sc.scrollHeight <= sc.clientHeight + 1;
     };
-    if (!fits(w)) {
-      let lo = FIT_MIN;
+    // 縮也只縮到下限（planPool 的 wideFloor），再放不下就讓卡池捲。
+    const floor = Math.min(w, wideFloor(plan.cardsW));
+    if (w > floor && !fits(w)) {
+      let lo = floor;
       let hi = w - 2;
-      let best = FIT_MIN;
+      let best = floor;
       while (lo <= hi) {
         const mid = lo + Math.floor((hi - lo) / 4) * 2;
         if (fits(mid)) {
