@@ -306,6 +306,7 @@ function schedule() {
 
 /** 開機的 DOM 都放好了：下一格排完版、畫上去之後再量滑塊。 */
 export function settleMotion() {
+  playPageEntrance();
   if (document.hidden) {
     ready = true;
     schedule();
@@ -315,6 +316,87 @@ export function settleMotion() {
     ready = true;
     schedule();
   }, 0));
+}
+
+/* ---------- 開版：直接開啟／重新整理，從頁首到首屏的牌依序落定 ---------- */
+
+let pageEntered = false;
+export function playPageEntrance() {
+  if (pageEntered) return;
+  pageEntered = true;
+  const media = matchMedia("(prefers-reduced-motion: reduce)");
+  const skip = () => media.matches || document.hidden || window.scrollY > 24 ||
+    performance.getEntriesByType("navigation")[0]?.type === "back_forward" ||
+    document.documentElement.dataset.vt || document.documentElement.dataset.vtIn || document.documentElement.dataset.vtPlayed;
+  if (skip()) return;
+
+  let frame = 0;
+  let stopped = false;
+  const animations = new Set();
+  // 先落定再讓點擊／拖曳讀尺寸；不攔截事件、不鎖操作。固定的托盤與操作列不參與。
+  const inputs = ["pointerdown", "keydown", "wheel", "touchstart", "scroll", "pagehide"];
+  const stop = () => {
+    if (stopped) return;
+    stopped = true;
+    cancelAnimationFrame(frame);
+    for (const animation of animations) animation.cancel();
+    animations.clear();
+    for (const event of inputs) window.removeEventListener(event, stop, true);
+    document.removeEventListener("visibilitychange", visibility);
+    media.removeEventListener?.("change", preference);
+  };
+  const preference = () => { if (media.matches) stop(); };
+  const visibility = () => { if (document.hidden) stop(); };
+  for (const event of inputs) window.addEventListener(event, stop, { capture: true, passive: true });
+  document.addEventListener("visibilitychange", visibility, { passive: true });
+  media.addEventListener?.("change", preference);
+
+  frame = requestAnimationFrame(() => {
+    if (stopped || skip()) return stop();
+    const groups = [
+      [".mast", 0, 6],
+      [".library .panel-head, .case-head", 40, 8],
+      [".lib-search, #case-q", 65, 8],
+      [".suit-tabs, .case-tabs", 85, 8],
+      ["#pool > .panel-head, .plate-head", 60, 10],
+      [".pool-well, .register", 100, 14],
+      [".rules, .trials-head, .preview", 140, 10],
+      [".go-bar, .trials, .print-bar", 170, 10],
+      [".wall-head, .wall-empty, .line-title, .line-empty", 190, 8],
+    ];
+    const candidates = [];
+    const seen = new Set();
+    for (const [selector, delay, rise] of groups) {
+      for (const node of document.querySelectorAll(selector)) {
+        if (seen.has(node) || candidates.length >= 20) continue;
+        seen.add(node);
+        candidates.push({ node, delay, rise, card: false });
+      }
+    }
+    const cards = document.querySelectorAll(".lib-grid > .card:nth-child(-n+18), .case-grid > .card:nth-child(-n+18)");
+    [...cards].slice(0, 18).forEach((node, i) => candidates.push({ node, delay: 100 + i * 12, rise: 14, card: true }));
+    // 首屏之外不量更多牌；所有幾何讀取先一起做完，才開始寫入動畫。
+    const visible = candidates.filter(({ node }) => {
+      const r = node.getBoundingClientRect();
+      return r.width && r.height && r.bottom > 0 && r.top < innerHeight && r.right > 0 && r.left < innerWidth;
+    });
+    for (const { node, delay, rise, card } of visible) {
+      if (typeof node.animate !== "function") continue;
+      const animation = node.animate(
+        [{ opacity: 0, translate: `0 ${rise}px`, ...(card ? { scale: "0.985" } : {}) },
+          { opacity: 1, translate: "0 0", ...(card ? { scale: "1" } : {}) }],
+        { id: "web6-page-enter", duration: card ? DUR.medium : DUR.long, delay, easing: css(CURVE.out), fill: "both" }
+      );
+      animations.add(animation);
+      const release = () => {
+        animation.cancel();
+        animations.delete(animation);
+        if (!animations.size) stop();
+      };
+      animation.finished.then(release, release);
+    }
+    if (!animations.size) stop();
+  });
 }
 
 /** 重播整把牌原有的 deal：一次重設、一次排版，保留各張的 --i 錯開。 */
