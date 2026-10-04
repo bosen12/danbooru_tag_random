@@ -25,6 +25,7 @@ import hashlib
 import json
 import os
 import re
+import shutil
 import subprocess
 import sys
 import time
@@ -34,6 +35,8 @@ from pathlib import Path
 ROOT = Path(__file__).resolve().parent.parent
 sys.path.insert(0, str(ROOT))
 import server  # noqa: E402
+sys.path.insert(0, str(ROOT / "scripts"))
+import card_thumbnails  # noqa: E402
 
 CARD_DIR = ROOT / "web" / "cards"
 ART_DIR = ROOT / "zipu" / "art"
@@ -43,6 +46,7 @@ THUMB_W, THUMB_H = 480, 702
 # 格子用的小圖（字盒、牌堆）：一格約 90px，雙倍像素 180px。網頁用 srcset 自己挑。
 THUMB_DIR_NAME = "thumb"
 THUMB_SMALL_W, THUMB_SMALL_H = 200, 292
+FFMPEG, FFPROBE = shutil.which("ffmpeg"), shutil.which("ffprobe")
 EXTRA_TAIL = "sfw, general, masterpiece, best quality, amazing quality"
 
 
@@ -324,12 +328,22 @@ def bake(jobs, out_dir, manifest_path, manifest, t_all) -> int:
                     entry["thumb"] = True
                 except Exception:  # noqa: BLE001 —— 縮圖沒拿到就用原圖，不算這張失敗
                     pass
+            # 墨池的細縮圖（card_thumbnails.py）：有 ffmpeg 才做，沒做成照樣用上面的縮圖／原圖。
+            if FFMPEG and FFPROBE:
+                try:
+                    mini = card_thumbnails.build_entry(FFMPEG, FFPROBE, out_dir, entry)
+                    if mini and mini["src"] == entry["v"]:
+                        entry["mini"] = mini
+                except Exception:  # noqa: BLE001
+                    pass
             manifest[job["key"]] = entry
             save_manifest(manifest_path, manifest)
             print(f"[{i}/{len(jobs)}] ok   {job['key']}  {time.time() - t0:.1f}s", flush=True)
         except Exception as exc:  # 一張失敗不擋整批，跑完再重跑就會補上
             failed += 1
             print(f"[{i}/{len(jobs)}] FAIL {job['key']}  {exc}", flush=True)
+    if FFMPEG and FFPROBE:
+        card_thumbnails.prune(out_dir, manifest)  # 重烤掉的那幾張舊細縮圖
     print(f"done {len(jobs) - failed}/{len(jobs)} in {time.time() - t_all:.0f}s", flush=True)
     return 1 if failed else 0
 

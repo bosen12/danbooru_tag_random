@@ -264,7 +264,12 @@ manifest 裡還記了內容雜湊 `v`，網址接上 `?v=` 之後伺服器就整
 對到同一個網址（`server.py` 的 `versioned_html`）。重新整理時瀏覽器直接用快取、不必一支一支回來問，走 Tailscale 時差最多；
 檔案一改雜湊就換，HTML 本身每次都會回來問，不會拿到舊程式。第三方的 `vendor/`（three.js）不動。
 新烤的卡兩樣都會有；**縮圖出現之前就烤好的卡**跑一次 `python scripts/make_card_thumbs.py` 補上（縮圖要 ffmpeg，雜湊不用），
-沒補也能用，只是小格子拿原圖。每張照自己的分級送負面詞；
+沒補也能用，只是小格子拿原圖。
+墨池（web6）的牌面另外用一排細縮圖（`web/cards/mini/160|240|320/`，`scripts/card_thumbnails.py`）：照牌實際畫出來的寬 × DPR
+挑來源寬約 1.2～2 倍的那張（`web6/card-images.js`）——Chromium 縮小超過 2 倍時線條會出鋸齒，桌機 91px 的牌拿 200px 縮圖、
+合成池拿 480px 原圖都是這樣。新烤的卡有 ffmpeg 就會一起做；舊卡跑 `python scripts/make_card_thumbs.py --mini-only` 補，
+沒有或過期（原圖重烤過）就照舊用上面的縮圖／原圖。`python scripts/test_card_thumbnails.py`、`node scripts/test_web6_card_images.mjs` 守著。
+每張照自己的分級送負面詞；
 loli、shota 永遠不畫（`web/card-art.js` 的 `HARD_BANNED`）。有人的牌都標 adult，負面詞另外擋 loli／child／aged down；兩個人以上的牌（2girls、kabedon…）底模很愛把其中一個畫成小孩，所以再補 mature female／male、負面擋 family／height difference。`node scripts/test_card_art.mjs` 守著這些規則。
 
 設計與平衡的細節在 [`zipu/DESIGN.md`](zipu/DESIGN.md)。`node scripts/test_zipu.mjs` 驗規則，
