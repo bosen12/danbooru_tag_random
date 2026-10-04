@@ -147,7 +147,6 @@ export function createDrag({ zones, onDrop, onOver, onMove }) {
   function move(state, x, y) {
     state.px = x;
     state.py = y;
-    state.ghost.style.transform = `translate3d(${x - state.dx}px, ${y - state.dy}px, 0)`;
     if (!reduced()) {
       // 左右甩的速度 → 傾斜。平滑一下，停下來 90ms 就回正。
       const now = performance.now();
@@ -156,9 +155,12 @@ export function createDrag({ zones, onDrop, onOver, onMove }) {
       state.lx = x;
       state.lt = now;
       const tilt = Math.max(-14, Math.min(14, BASE_TILT + state.vx * 18));
-      state.card.style.setProperty("--g-tilt", `${tilt.toFixed(1)}deg`);
+      state.paintTilt = `${tilt.toFixed(1)}deg`;
       clearTimeout(state.settle);
-      state.settle = setTimeout(() => state.card && state.card.style.setProperty("--g-tilt", `${BASE_TILT}deg`), 90);
+      state.settle = setTimeout(() => {
+        state.paintTilt = `${BASE_TILT}deg`;
+        if (state.card) state.card.style.setProperty("--g-tilt", state.paintTilt);
+      }, 90);
     }
     const over = zoneAt(x, y, state.payload);
     // 區域的標記只在換區域時寫（以前每動一下就把每個區域的 data-* 重寫一次，每一格都要重算樣式）。
@@ -171,7 +173,21 @@ export function createDrag({ zones, onDrop, onOver, onMove }) {
       markZones(state.payload, state.over);
     }
     if (onMove) onMove(state.over ? state.over.id : null, state.payload, x, y);
+    // 速度與區域回報仍逐次處理；同一格只把最新的位置、傾斜畫一次。
+    // 先讀投放區再寫影子，避免 pointermove 裡重複寫樣式後立刻量版面。
+    if (!state.moveRaf) state.moveRaf = requestAnimationFrame(() => {
+      state.moveRaf = 0;
+      if (active === state && state.dragging) paintMove(state);
+    });
     edgeScroll(state);
+  }
+
+  function paintMove(state) {
+    cancelAnimationFrame(state.moveRaf);
+    state.moveRaf = 0;
+    const transform = `translate3d(${state.px - state.dx}px, ${state.py - state.dy}px, 0)`;
+    if (state.ghost.style.transform !== transform) state.ghost.style.transform = transform;
+    if (state.paintTilt !== undefined) state.card.style.setProperty("--g-tilt", state.paintTilt);
   }
 
   /*
@@ -231,6 +247,8 @@ export function createDrag({ zones, onDrop, onOver, onMove }) {
       // 捲動之後指標底下換了東西：重新認一次區域（位置沒變，不算甩動）。move 會排下一格。
       state.lx = state.px;
       move(state, state.px, state.py);
+      // 自動捲動已在 rAF 裡：沿用原本這一格的回正時機，不多延後一格。
+      paintMove(state);
     });
   }
 
@@ -378,12 +396,16 @@ export function createDrag({ zones, onDrop, onOver, onMove }) {
     clearTimeout(state.hold);
     clearTimeout(state.settle);
     cancelAnimationFrame(state.edgeRaf);
+    cancelAnimationFrame(state.moveRaf);
+    state.moveRaf = 0;
     state.node.classList.remove("is-pressing");
     window.removeEventListener("pointermove", state.onMove);
     window.removeEventListener("pointerup", state.onUp);
     window.removeEventListener("pointercancel", state.onCancel);
     window.removeEventListener("keydown", state.onKey, true);
     if (state.dragging) {
+      // 放開／Esc 可能早於下一格：落地與回彈從最後收到的位置開始。
+      paintMove(state);
       document.body.dataset.dragging = "false";
       clearZones();
       if (onOver && state.over) onOver(null, state.payload);

@@ -91,7 +91,7 @@ export function createHires(hooks) {
         ckpt: t.ckpt,
         rating: t.rating,
         // 工作流面板裡這一種 Hires 改過的 steps／CFG／denoise。
-        hires: { mode: task.mode, scale: task.scale, image: t.baseImage || t.image, ...currentHiresSampling(task.mode) },
+        hires: { mode: task.mode, scale: task.scale, image: t.baseImage || t.image, ...(task.sampling || {}) },
       };
     },
     update: (task) => {
@@ -110,7 +110,7 @@ export function createHires(hooks) {
         // 最後一幀預覽墊在底下，新圖從它上面由上往下顯影（不會先跳回舊圖再顯影）。
         t._hiresUnder = t.hi?.preview || null;
         t.image = task.image;
-        t.hires = { mode: task.mode, scale: task.scale, width: r.width || W, height: r.height || H, seed: task.seed };
+        t.hires = { mode: task.mode, scale: task.scale, width: r.width || W, height: r.height || H, seed: task.seed, sampling: task.sampling || {} };
         t.hi = null;
         hooks.update(t);
         hooks.done && hooks.done(t);
@@ -143,11 +143,12 @@ export function createHires(hooks) {
         target: t,
         mode,
         scale,
+        sampling: currentHiresSampling(mode),
         positive: t.positive,
         seed: Math.floor(Math.random() * 2 ** 32),
       };
       tasks.set(task.id, task);
-      t.hi = { task: task.id, mode, scale, status: "queued", progress: 0, note: "" };
+      t.hi = { task: task.id, mode, scale, sampling: task.sampling, status: "queued", progress: 0, note: "" };
       hooks.update(t);
       gen.enqueue(task);
       return true;
@@ -160,12 +161,13 @@ export function createHires(hooks) {
         target: t,
         mode: saved.mode,
         scale: saved.scale,
+        sampling: saved.sampling || {},
         positive: t.positive,
         seed: 0,
         job: saved.job,
       };
       tasks.set(task.id, task);
-      t.hi = { task: task.id, mode: saved.mode, scale: saved.scale, status: "queued", progress: 0, note: "接回剛才那張…", job: saved.job };
+      t.hi = { task: task.id, mode: saved.mode, scale: saved.scale, sampling: task.sampling, status: "queued", progress: 0, note: "接回剛才那張…", job: saved.job };
       hooks.update(t);
       gen.resume(task);
       return true;

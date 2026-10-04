@@ -73,6 +73,21 @@ export function travelTime(dist) {
   return Math.round(Math.max(320, Math.min(540, 280 + dist * 0.22)));
 }
 
+// 同一格先量完所有落點再畫影子；每張仍逐格追落點、沿用原本的時間與阻尼。
+// 多張追同一個元素時只量一次，避免影子的樣式寫入夾在別張的量測之間。
+const flightFrames = new Set();
+let flightRaf = 0;
+function scheduleFlights() {
+  if (flightRaf || !flightFrames.size) return;
+  flightRaf = requestAnimationFrame((now) => {
+    flightRaf = 0;
+    const cache = new Map();
+    const measured = [...flightFrames].map((frame) => [frame, frame.measure(cache)]);
+    for (const [frame, rect] of measured) if (flightFrames.has(frame)) frame.paint(now, rect);
+    scheduleFlights();
+  });
+}
+
 /**
  * 牌飛過去（會追落點）：影子 ghost 從 from 飛到 target() 「現在」的位置。
  * 每一格重量一次落點，所以路上版面動了（整列重排、托盤變寬、捲動）也剛好落在牌上，
@@ -106,15 +121,20 @@ export function flight(ghost, from, target, opts = {}) {
   ghost.style.setProperty("--card-w", from.width + "px");
   ghost.setAttribute("aria-hidden", "true");
   let last = null;
-  const resolve = () => {
+  const resolve = (cache = null) => {
     const n = typeof target === "function" ? target() : target;
     if (n && typeof n.getBoundingClientRect === "function") {
       if (!n.isConnected) return last;
       // 落點是元素：中心用外框的中心，大小用它自己的寬高（托盤的牌是轉過的，外框比牌大一圈）。
-      const r = n.getBoundingClientRect();
-      const w = n.offsetWidth || r.width;
-      const h = n.offsetHeight || r.height;
-      if (w) last = { left: r.left + r.width / 2 - w / 2, top: r.top + r.height / 2 - h / 2, width: w, height: h };
+      let rect = cache?.get(n);
+      if (!rect) {
+        const r = n.getBoundingClientRect();
+        const w = n.offsetWidth || r.width;
+        const h = n.offsetHeight || r.height;
+        rect = w ? { left: r.left + r.width / 2 - w / 2, top: r.top + r.height / 2 - h / 2, width: w, height: h } : null;
+        if (cache) cache.set(n, rect);
+      }
+      if (rect) last = rect;
       return last;
     }
     if (n && n.width) last = { left: n.left, top: n.top, width: n.width, height: n.height || n.width * 1.4625 };
@@ -126,7 +146,7 @@ export function flight(ghost, from, target, opts = {}) {
   const duration = opts.duration || travelTime(Math.hypot(first.left + first.width / 2 - fcx, first.top + first.height / 2 - fcy));
   const ease = bezier(curve);
   let done = false;
-  let raf = 0;
+  let fallback = 0;
   let t0 = null;
   // 瞄準點：跟著落點走但有阻尼（落點突然跳一大段，影子不會跟著瞬移），最後一段完全換成真的落點，
   // 所以一定剛好落在牌上。
@@ -135,13 +155,17 @@ export function flight(ghost, from, target, opts = {}) {
   const finish = () => {
     if (done) return;
     done = true;
-    cancelAnimationFrame(raf);
+    clearTimeout(fallback);
+    flightFrames.delete(frame);
+    if (!flightFrames.size) {
+      cancelAnimationFrame(flightRaf);
+      flightRaf = 0;
+    }
     ghost.remove();
     if (onLand) onLand();
   };
-  const paint = (p, dt = 16) => {
+  const paint = (p, dt = 16, raw = resolve() || first) => {
     const e = ease(p);
-    const raw = resolve() || first;
     const k = 1 - Math.exp(-dt / 70);
     for (const key of ["left", "top", "width", "height"]) aim[key] += (raw[key] - aim[key]) * k;
     const w = e * e * e * e;
@@ -166,18 +190,21 @@ export function flight(ghost, from, target, opts = {}) {
   };
   paint(0);
   document.body.append(ghost);
-  const frame = (now) => {
-    if (done) return;
-    if (t0 === null) t0 = now + delay;
-    const p = Math.max(0, Math.min(1, (now - t0) / duration));
-    paint(p, lastNow === null ? 16 : Math.max(1, now - lastNow));
-    lastNow = now;
-    if (p >= 1) return finish();
-    raf = requestAnimationFrame(frame);
+  const frame = {
+    measure: (cache) => resolve(cache) || first,
+    paint(now, raw) {
+      if (done) return;
+      if (t0 === null) t0 = now + delay;
+      const p = Math.max(0, Math.min(1, (now - t0) / duration));
+      paint(p, lastNow === null ? 16 : Math.max(1, now - lastNow), raw);
+      lastNow = now;
+      if (p >= 1) finish();
+    },
   };
-  raf = requestAnimationFrame(frame);
+  flightFrames.add(frame);
+  scheduleFlights();
   // 分頁在背景時 rAF 不跑：時間到了直接落地，不會卡一張影子在畫面上。
-  setTimeout(finish, delay + duration + 300);
+  fallback = setTimeout(finish, delay + duration + 300);
   return { cancel: finish, duration };
 }
 
@@ -288,6 +315,18 @@ export function settleMotion() {
     ready = true;
     schedule();
   }, 0));
+}
+
+/** 重播整把牌原有的 deal：一次重設、一次排版，保留各張的 --i 錯開。 */
+export function replayDeal(container) {
+  const cards = [...container.querySelectorAll(".card")];
+  if (!cards.length) return;
+  cards.forEach((card, i) => {
+    card.classList.remove("dealt");
+    card.style.setProperty("--i", String(i));
+  });
+  void container.offsetWidth;
+  for (const card of cards) card.classList.add("dealt");
 }
 
 /* ---------- 按下去的手感：墨暈、蓋章、搖頭 ---------- */
@@ -441,10 +480,10 @@ export function flip(container, mutate, { duration = DUR.medium } = {}) {
   const before = new Map();
   for (const n of container.children) before.set(n, n.getBoundingClientRect());
   mutate();
-  for (const n of container.children) {
+  const after = [...container.children].filter((n) => before.has(n)).map((n) => [n, n.getBoundingClientRect()]);
+  for (const [n, b] of after) {
     const a = before.get(n);
     if (!a) continue;
-    const b = n.getBoundingClientRect();
     const dx = a.left - b.left;
     const dy = a.top - b.top;
     if (Math.abs(dx) < 1 && Math.abs(dy) < 1) continue;
@@ -470,11 +509,14 @@ export function flipBy(container, selector, key, mutate, { duration = DUR.medium
   }
   mutate();
   if (!before.size) return;
+  const after = [];
   for (const n of container.querySelectorAll(selector)) {
     const k = key(n);
     const a = before.get(k) || (alias && before.get(alias(k)));
     if (!a) continue;
-    const b = n.getBoundingClientRect();
+    after.push([n, a, n.getBoundingClientRect()]);
+  }
+  for (const [n, a, b] of after) {
     const dx = a.left - b.left;
     const dy = a.top - b.top;
     if (Math.abs(dx) < 1 && Math.abs(dy) < 1) continue;

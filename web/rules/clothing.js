@@ -130,6 +130,15 @@ export function actionFitsClothes(actionTag, clothingTags) {
   return keys.some((k) => worn.some((c) => clothingWearsKey(c, k))) ? 2 : 0;
 }
 
+/** Garment-named pose actions also need a fit check outside the flash group. */
+export function needsClothingDependency(item) {
+  return !!item && (
+    item.mutex === "clothes_action" || item.group === "flash" ||
+    needsBodyClothes(item.tag) ||
+    (item.section === "pose" && actionGarmentKeys(item.tag).length > 0)
+  );
+}
+
 
 export { wornBodyGarments };
 

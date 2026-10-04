@@ -233,6 +233,8 @@ export function createGenerator(hooks) {
 
   return {
     enqueue(shot) {
+      // Fresh retry/reprint creates a server job; only resume() retains one.
+      Object.assign(shot, { job: null, live: false, _savedJob: null, progress: 0, preview: null, result: null, netFail: false });
       shot.status = "queued";
       shot.note = "等前面的印完";
       queue.push(shot);

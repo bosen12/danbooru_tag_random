@@ -60,7 +60,7 @@ export const saveUi = (u) => write(KEY.ui, u);
 /** 做到一半的 Hires 要存的那一點（墨池、疊印台共用）。 */
 export function hiresJobOf(t) {
   const hi = t && t.hi;
-  return hi && hi.job && (hi.status === "queued" || hi.status === "running") ? { job: hi.job, mode: hi.mode, scale: hi.scale } : null;
+  return hi && hi.job && (hi.status === "queued" || hi.status === "running") ? { job: hi.job, mode: hi.mode, scale: hi.scale, sampling: hi.sampling || {} } : null;
 }
 
 export function saveShots(shots) {
@@ -81,6 +81,7 @@ export function saveShots(shots) {
       loras: s.loras,
       ckpt: s.ckpt,
       workflowId: s.workflowId,
+      sampling: s.sampling || {},
       image: s.image || null,
       // Hires 過的：image 是大圖，baseImage 是原圖（再 Hires 從原圖放大、也可以還原）。
       baseImage: s.baseImage || null,

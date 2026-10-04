@@ -578,10 +578,10 @@ function ok(name, cond, detail) {
     "抽圖把 presetOwned 交給 ownedTagSet，不當 Set 展開物件",
     src.includes("ownedTagSet(") && !src.includes("new Set(presetOwned || [])"),
   );
+  const applyRecipeBody = src.match(/async function applyRecipeToBench\b[\s\S]*?\n}/)?.[0] || "";
   ok(
     "套用配方會重畫時代與尺寸按鈕",
-    /async function applyRecipeToBench[\s\S]{0,900}renderEras\(\)/.test(src) &&
-      /async function applyRecipeToBench[\s\S]{0,900}syncSizeButtons\(\)/.test(src),
+    applyRecipeBody.includes("renderEras()") && applyRecipeBody.includes("syncSizeButtons()"),
   );
   ok(
     "卡片取消收藏要確認",
@@ -1810,7 +1810,7 @@ const ALBUM_FIXTURE = [
       ok("晚到的圖淡進來（快取裡的直接出現，不先藏起來等 load）", cards6b.includes("if (performance.now() - born > 60 && !reducedMotion())"));
       ok("剛加進手牌的那張，字盒上的「手」像橡皮章壓下來；本來就有的不重蓋", hand6.includes('n.classList.add("is-hand-stamp")') && hand6.includes('if (n.dataset.inHand !== "true" && !reduced())') && css6.includes("@keyframes hand-stamp"));
     }
-    ok("托盤上現在的分級出不了的牌：蓋「分級擋掉」、變淡；分級一換（兩個房間）就重新蓋／拿掉", hand6.includes("const why = blocked(t);") && fuse6.includes('blocked: (t) => (cardOf(t) && !rankOk(cardOf(t)) ? "分級擋掉" : null)') && app6.includes("ratingBlocked(lib.byTag.get(t).item, settings.rating)") && /function setSettings\(patch\) \{[\s\S]{0,200}hand\?\.update\(\);/.test(app6) && css6.includes(".fav-slot.is-blocked .fav-card"));
+    ok("托盤上現在的分級出不了的牌：蓋「分級擋掉」、變淡；分級一換（兩個房間）就重新蓋／拿掉", hand6.includes("const why = blocked(t);") && fuse6.includes('blocked: (t) => (cardOf(t) && !rankOk(cardOf(t)) ? "分級擋掉" : null)') && app6.includes("ratingBlocked(lib.byTag.get(t).item, settings.rating)") && /hand\?\.update\(\);/.test(app6.match(/^function setSettings\(patch\) \{[\s\S]*?^\}/m)?.[0] || "") && css6.includes(".fav-slot.is-blocked .fav-card"));
     ok("效能：托盤量過之後不再每次重擺都逼整頁排版（字盒真的變寬才量），托盤高度下一格畫面才量", hand6.includes("if (measured && watched && !force) return size;") && hand6.includes("measure(true);") && hand6.includes("spaceRaf = requestAnimationFrame(syncSpace);"));
     ok("效能＋動態：新的牌寬跟新的牌在同一次變動裡套上（FLIP 量到的就是最後的位置），卡池先畫、托盤後動", fuse6.includes('if (plan.w) box.style.setProperty("--pool-card", plan.w + "px");') && /function renderAll\(events = \[\]\) \{[\s\S]{0,300}renderPlate\(events\);\s*hand\?\.update\(\);/.test(fuse6));
     ok("工具列鈕：沒牌直接進挑牌，有牌打開／收起托盤；選單和詳情也能加", hand6.includes("function fromButton()") && fuse6.includes("hand?.fromButton()") && app6.includes("hand?.fromButton()") && fuse6.includes('"加入偏好卡牌"') && app6.includes('"加入偏好卡牌"'));

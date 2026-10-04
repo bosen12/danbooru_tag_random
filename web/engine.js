@@ -60,6 +60,7 @@ import {
 import {
   actionGarmentKeys,
   needsBodyClothes,
+  needsClothingDependency,
   clothingWearsKey,
   actionFitsClothes,
   evaluateClothingLayer,
@@ -4297,7 +4298,7 @@ export function drawOne(lex, settings, pinned, userBanned, rand, seed, opts) {
       return false;
     }
     if (
-      (item.mutex === "clothes_action" || item.group === "flash") &&
+      needsClothingDependency(item) && item.section !== "clothing" &&
       actionFitsWorn(item) === 0
     ) {
       return false;
@@ -6572,7 +6573,7 @@ export function drawOne(lex, settings, pinned, userBanned, rand, seed, opts) {
           if (lex.byTag.get(x)?.section === "clothing") cloth.push(x);
         }
         const badAction =
-          (it.mutex === "clothes_action" || it.group === "flash" || needsBodyClothes(t)) &&
+          needsClothingDependency(it) &&
           actionFitsClothes(t, cloth) === 0;
         if (!badAction) continue;
         used.delete(t);

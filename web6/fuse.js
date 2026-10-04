@@ -287,7 +287,8 @@ function freshSeeds() {
 }
 
 function setSettings(patch) {
-  settings = sanitizeSettings({ ...settings, ...patch }, data);
+  // Heat selection has automatic weights; inherited weights belong to the old selection.
+  settings = sanitizeSettings({ ...settings, ...(patch.heats ? { weights: undefined } : {}), ...patch }, data);
   writeJ(FK.settings, settings);
   retrial();
   renderAll();
@@ -665,7 +666,7 @@ function reroll() {
 const tabNote = tabTitle();
 
 const generator = createGenerator({
-  payload: (p) => ({ width: p.width, height: p.height, loras: p.loras, ckpt: p.ckpt, rating: p.rating, workflowId: p.workflowId, ...currentSampling() }),
+  payload: (p) => ({ width: p.width, height: p.height, loras: p.loras, ckpt: p.ckpt, rating: p.rating, workflowId: p.workflowId, ...(p.sampling || {}) }),
   update: (p) => {
     tabNote.shot(p, generator.pending);
     paintLineItem(p);
@@ -775,6 +776,7 @@ function printNow() {
     loras: currentLorasPayload(),
     ckpt: currentCkpt(),
     workflowId: currentWorkflowId(),
+    sampling: currentSampling(),
     bed: { pins: [...bed.pins], carried: { ...bed.carried } },
     seeds: [...seeds],
     picked,
@@ -869,6 +871,7 @@ function savePrints() {
       loras: p.loras,
       ckpt: p.ckpt,
       workflowId: p.workflowId,
+      sampling: p.sampling || {},
       bed: p.bed,
       fixedSeed: !!p.fixedSeed,
       seeds: p.seeds,

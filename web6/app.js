@@ -39,7 +39,7 @@ import { HARD_BANNED, applyArtSources } from "./card-art.js";
 import { buildLibrary, createAssets, cardNode, setCardFlag, setEnterTarget, eagerArt, cardFacts, CARD_SUIT_INFO, CARD_SUITS, RATING_ZH } from "./cards.js";
 import { el, openSheet, anyOverlay, toast, runToastAction, ICONS } from "./ui.js";
 import { createDrag, inkRing } from "./drag.js";
-import { initMotion, settleMotion, flip, flipBy, leave, enter, confirmButton, gatherHome, flight, seat, refuse, reducedMotion, CURVE, DUR, css } from "./motion.js";
+import { initMotion, settleMotion, replayDeal, flip, flipBy, leave, enter, confirmButton, gatherHome, flight, seat, refuse, reducedMotion, CURVE, DUR, css } from "./motion.js";
 import { createHand } from "./hand.js";
 import { createTrashPanel } from "./trash-panel.js";
 import { createGenerator, comfyOnline, viewSrc, tabTitle, watchLink, LINK_LABEL } from "./gen.js";
@@ -152,7 +152,8 @@ function saveSettings() {
 }
 
 function setSettings(patch) {
-  settings = sanitizeSettings({ ...settings, ...patch }, data);
+  // Heat selection has automatic weights; inherited weights belong to the old selection.
+  settings = sanitizeSettings({ ...settings, ...(patch.heats ? { weights: undefined } : {}), ...patch }, data);
   saveSettings();
   // 規則換了（分級…）：托盤上出不了的牌要重新蓋章／拿掉章。
   hand?.update();
@@ -1162,7 +1163,7 @@ const generator = createGenerator({
     rating: shot.rating,
     workflowId: shot.workflowId,
     // 工作流面板裡改過的 steps／CFG（沒改就不送，伺服器用預設）。
-    ...currentSampling(),
+    ...(shot.sampling || {}),
   }),
   update: (shot) => {
     tabNote.shot(shot, generator.pending);
@@ -1237,7 +1238,7 @@ let seedNode = null;
 
 function renderGoBar() {
   const bar = $("go-bar");
-  const busy = generator.busy || looping;
+  const busy = generator.busy || looping || drawingRounds > 0;
   const n = settings.n;
   // 狀態沒變就不重畫。生圖時每個進度事件都會叫到這裡，以前整排按鈕一秒換好幾次新的：
   // 滑鼠停在「停」上看起來在閃，按下去的那一瞬間按鈕剛好被換掉，按下跟放開落在兩個不同的
@@ -1288,7 +1289,7 @@ function renderGoFloat() {
   const float = $("go-float");
   // IntersectionObserver 第一次回報可能比 boot() 讀完設定還早。
   if (!float || !settings) return;
-  const busy = generator.busy || looping;
+  const busy = generator.busy || looping || drawingRounds > 0;
   const show = !goBarVisible && (shots.length > 0 || pool.size > 0);
   float.dataset.show = show ? "true" : "false";
   float.inert = !show;
@@ -1319,6 +1320,7 @@ function watchGoBar() {
 }
 
 function stopAll() {
+  drawEpoch++;
   infinite = false;
   stopAsked = true;
   looping = false;
@@ -1327,37 +1329,90 @@ function stopAll() {
 }
 
 let shotSeq = Date.now();
+let drawQueue = Promise.resolve();
+let drawEpoch = 0;
+let drawingRounds = 0;
 
 /** 抽一輪。合成池的字一定進；同一個人時，第二張起鎖住第一張的長相。 */
 function drawBatch(gen) {
+  // 原本整輪同步完成，途中設定不會被改。讓出畫面後仍用點下去那刻的同一份意圖。
+  const intent = {
+    settings: structuredClone(settings),
+    pool: new Set(pool),
+    bans: new Set([...bans, ...HARD_BANNED]),
+    imageSeed: genSeed(null),
+    shot: {
+      width: settings.width, height: settings.height, rating: settings.rating,
+      loras: structuredClone(currentLorasPayload()), ckpt: currentCkpt(), workflowId: currentWorkflowId(),
+      sampling: currentSampling(), trigger: currentTriggerText(),
+    },
+  };
+  const epoch = drawEpoch;
+  // 連按仍各抽一輪，依序做；不能讓兩輪的同一個人、亂數與成品順序交錯。
+  drawingRounds++;
+  renderGoBar();
+  const pending = drawQueue
+    .then(() => epoch === drawEpoch ? drawBatchNow(gen, intent, epoch) : undefined)
+    .finally(() => {
+      drawingRounds--;
+      renderGoBar();
+    });
+  drawQueue = pending.catch((err) => {
+    console.error(err);
+    toast("這一輪抽牌失敗，請再試一次");
+  });
+  return pending;
+}
+
+async function drawBatchNow(gen, intent, epoch) {
   stopAsked = false;
   haptic(gen ? 18 : 12);
-  const n = settings.n;
+  const n = intent.settings.n;
   let first = null;
   const made = [];
+  let workStart = performance.now();
   for (let i = 0; i < n; i++) {
-    const pins = new Set(pool);
-    const banned = new Set([...bans, ...HARD_BANNED]);
-    if (settings.samePerson && first) {
+    if (epoch !== drawEpoch) break;
+    const pins = new Set(intent.pool);
+    const banned = new Set(intent.bans);
+    if (intent.settings.samePerson && first) {
       for (const t of identityPins(lex, first)) pins.add(t);
       for (const t of identityBans(lex, first)) if (!pins.has(t)) banned.add(t);
     }
     const seed = randomSeed();
-    const drawn = drawWithSeed(lex, settings, pins, banned, seed, { trace: true });
-    if (!drawn.positive || !String(drawn.positive).trim()) continue;
-    if (!first) first = drawn.positive;
-    // 抽牌種子每張隨機；送 ComfyUI 的種子看「生圖種子」設定（固定就整批同一顆）。
-    const shot = makeShot(drawn, genSeed(seed), new Set(pool));
-    shots.unshift(shot);
-    made.push(shot);
+    const drawn = drawWithSeed(lex, intent.settings, pins, banned, seed, { trace: true });
+    if (drawn.positive && String(drawn.positive).trim()) {
+      if (!first) first = drawn.positive;
+      // 抽牌種子每張隨機；固定的生圖種子跟這輪其他設定一起保存。
+      made.push(makeShot(drawn, intent.imageSeed ?? seed, intent.pool, intent.shot));
+    }
+    if (i + 1 < n && performance.now() - workStart >= 8) {
+      // 前景等一格，背景用 task；等的途中切到背景也有保底，不掛在 rAF 上。
+      await new Promise((resolve) => {
+        if (document.hidden) return setTimeout(resolve, 0);
+        let finished = false, frame = 0, fallback = 0;
+        const done = () => {
+          if (finished) return;
+          finished = true;
+          cancelAnimationFrame(frame);
+          clearTimeout(fallback);
+          resolve();
+        };
+        frame = requestAnimationFrame(done);
+        fallback = setTimeout(done, 50);
+      });
+      workStart = performance.now();
+    }
   }
+  shots.unshift(...made.slice().reverse());
   if (!made.length) {
+    if (epoch !== drawEpoch) return;
     refuse(document.activeElement?.closest?.("button") || $("go-bar"));
     toast("這一輪抽不出東西：合成池的字可能互相卡住，換一兩張試試");
     return;
   }
   sfx.deal(made.length > 1 ? made.length + 3 : 5);
-  if (gen) setTimeout(() => sfx.roll(), 160);
+  if (gen && epoch === drawEpoch) setTimeout(() => sfx.roll(), 160);
   const wall = $("wall");
   for (const shot of made.slice().reverse()) {
     const node = shotNode(shot, true);
@@ -1371,12 +1426,12 @@ function drawBatch(gen) {
   trimWall();
   S.saveShots(shots);
   // 一次抽超過 80 張時，最舊的幾張剛做好就被 trimWall 裁掉了：只送還在牆上的。
-  if (gen) for (const shot of made) if (shots.includes(shot)) generator.enqueue(shot);
+  if (gen && epoch === drawEpoch) for (const shot of made) if (shots.includes(shot)) generator.enqueue(shot);
   renderGoBar();
   document.getElementById("wall-head").scrollIntoView({ block: "nearest", behavior: reducedMotion() ? "instant" : "smooth" });
 }
 
-function makeShot(drawn, seed, poolAtDraw) {
+function makeShot(drawn, seed, poolAtDraw, snapshot = null) {
   const source = new Map(((drawn.trace && drawn.trace.kept) || []).map((k) => [k.tag, k.source]));
   const inPos = new Set(String(drawn.positive).split(",").map((s) => s.trim()));
   const mine = [];
@@ -1389,7 +1444,7 @@ function makeShot(drawn, seed, poolAtDraw) {
     }
   }
   const missing = [...poolAtDraw].filter((t) => !inPos.has(t));
-  const trigger = currentTriggerText();
+  const trigger = snapshot?.trigger ?? currentTriggerText();
   return {
     id: "s" + shotSeq++,
     seed,
@@ -1399,12 +1454,13 @@ function makeShot(drawn, seed, poolAtDraw) {
     missing,
     era: drawn.era,
     heat: drawn.heat,
-    width: settings.width,
-    height: settings.height,
-    rating: settings.rating,
-    loras: currentLorasPayload(),
-    ckpt: currentCkpt(),
-    workflowId: currentWorkflowId(),
+    width: snapshot?.width ?? settings.width,
+    height: snapshot?.height ?? settings.height,
+    rating: snapshot?.rating ?? settings.rating,
+    loras: snapshot?.loras ?? currentLorasPayload(),
+    ckpt: snapshot?.ckpt ?? currentCkpt(),
+    workflowId: snapshot?.workflowId ?? currentWorkflowId(),
+    sampling: snapshot?.sampling ?? currentSampling(),
     status: "drawn",
     note: "",
     image: null,
@@ -1499,12 +1555,7 @@ function shotNode(shot, deal) {
     if (now) {
       if (!dealtOnce) {
         dealtOnce = true;
-        [...cards.querySelectorAll(".card")].forEach((c, i) => {
-          c.classList.remove("dealt");
-          void c.offsetWidth;
-          c.style.setProperty("--i", String(i));
-          c.classList.add("dealt");
-        });
+        replayDeal(cards);
       }
     }
   };
@@ -2186,7 +2237,7 @@ function onKey(e) {
   } else if (e.key === "Escape" && trashPanel?.isOpen) {
     trashPanel.close();
     $("trash").focus({ preventScroll: true });
-  } else if (e.key === "Escape" && generator.busy) {
+  } else if (e.key === "Escape" && (generator.busy || looping || drawingRounds > 0)) {
     stopAll();
   } else if ((e.key === "z" || e.key === "Z") && runToastAction("Z")) {
     // 提示上有「復原」（清空合成池、撤下成品、拿出偏好卡牌）：Z 就是按它。
