@@ -575,14 +575,14 @@ const WATER_SRC = [
 
   const pinned = draw(one, ["looking at viewer", "smile"], 0);
   ok("骨架：釘選照樣留著", ["looking at viewer", "smile"].every((t) => String(pinned.positive).split(", ").includes(t)), pinned.positive);
-  // 釘選先佔格：姿勢 1 釘了視線，就不再補身體姿勢；姿勢 2 才再補一格。
+  // 釘選只佔同類格：姿勢 1 選身體姿勢，釘視線仍應補身體姿勢。
   const poseOf = (d) => String(d.positive).split(", ").filter((t) => POSE.includes(sectionGroup(t)));
   let over = null;
   for (let i = 0; i < 80 && !over; i++) {
     const got = poseOf(draw(one, ["looking at viewer"], i));
-    if (got.length !== 1) over = `seed ${93000 + i}：${got.join("、")}`;
+    if (!got.includes("looking at viewer") || !got.some((t) => sectionGroup(t) === "pose:body")) over = `seed ${93000 + i}：${got.join("、")}`;
   }
-  ok("骨架：姿勢 1 釘了視線 → 只有那個視線", !over, over || "");
+  ok("骨架：姿勢 1 釘了視線 → 仍補選中的身體姿勢", !over, over || "");
   const twoPin = mk({ counts: { ...base.counts, pose: 2 } });
   let bodyToo = 0;
   for (let i = 0; i < 80; i++) if (poseOf(draw(twoPin, ["looking at viewer"], i)).some((t) => sectionGroup(t) === "pose:body")) bodyToo += 1;

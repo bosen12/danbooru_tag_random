@@ -28,7 +28,7 @@ export function skeletonPicker({ settings, save }) {
   const noteOf = (section) => {
     const n = count(section);
     const unit = section === "clothing" ? "種、每種一件" : "格";
-    return n === 1 ? `只補 1 ${unit}，點一顆換過去；釘的會先佔格` : `只補 ${n} ${unit}，點暗的會換掉最早選的；釘的會先佔格`;
+    return n === 1 ? `只補 1 ${unit}，點一顆換過去；釘選只佔同類格` : `只補 ${n} ${unit}，點暗的會換掉最早選的；釘選只佔同類格`;
   };
 
   const syncRow = (section, { stamp = false } = {}) => {

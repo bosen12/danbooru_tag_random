@@ -465,8 +465,8 @@ function syncSkeleton(section, stamp = true, first = false) {
   row.querySelector(".skel-note").textContent = !now
     ? ""
     : n === 1
-      ? `只補 1 ${unit}，點一顆換過去；釘的會先佔格`
-      : `只補 ${n} ${unit}，點暗的會換掉最早選的；釘的會先佔格`;
+      ? `只補 1 ${unit}，點一顆換過去；釘選只佔同類格`
+      : `只補 ${n} ${unit}，點暗的會換掉最早選的；釘選只佔同類格`;
   const lit = skeletonLit(settings, section);
   // 一開始：優先序越後面的越「舊」，先被換掉。之後新亮起來的算最新。
   if (!skelRecent[section]) skelRecent[section] = [...lit].reverse();

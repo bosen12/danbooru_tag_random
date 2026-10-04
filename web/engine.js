@@ -5705,7 +5705,21 @@ export function drawOne(lex, settings, pinned, userBanned, rand, seed, opts) {
     ],
     weights: [8, 8, 10, 10, 10, 3],
   };
+  // 選格模式按已滿足的分類計數；不同分類的釘選、同義父字不吃掉其他格。
+  // 全開模式沿用原來的段落張數，保持既有抽牌結果。
+  const selectedSlots = new Map(Object.keys(SKELETON)
+    .filter((section) => Number(counts[section]) < skeletonCap(section))
+    .map((section) => [section, new Set(skeletonLit(settings, section))]));
   const countSection = (section) => {
+    const selected = selectedSlots.get(section);
+    if (selected) {
+      const filled = new Set();
+      for (const t of used) {
+        const it = lex.byTag.get(t);
+        if (it?.section === section) for (const k of offKeysOf(it)) if (selected.has(k)) filled.add(k);
+      }
+      return filled.size;
+    }
     let n = 0;
     for (const t of used) {
       if (lex.byTag.get(t)?.section === section) n += 1;
@@ -5741,10 +5755,16 @@ export function drawOne(lex, settings, pinned, userBanned, rand, seed, opts) {
     if (section === "clothing") want = clothingWant(want);
     const need = want - countSection(section);
     if (need <= 0) return;
-    const pool = mPool(lex.bySection[section]).filter((item) => {
-      if (extraFilter && !extraFilter(item)) return false;
+    const selected = selectedSlots.get(section);
+    const fillAllowed = selected ? (item) => {
+      if (!offKeysOf(item).some((key) => selected.has(key) && !someUsed(
+        (it) => it.section === section && offKeysOf(it).includes(key)
+      ))) return false;
       return allow(item);
-    });
+    } : allow;
+    const pool = mPool(lex.bySection[section]).filter((item) =>
+      (!extraFilter || extraFilter(item)) && fillAllowed(item)
+    );
     let prefer = null;
     if (section === "clothing") prefer = clothingPrefer;
     else if (section === "pose") prefer = posePrefer;
@@ -5753,7 +5773,7 @@ export function drawOne(lex, settings, pinned, userBanned, rand, seed, opts) {
     // 拿走，light 群裡 10 個 era:["any"] 的字機率恆為 0。era:["any"] 的意思是每個
     // 時代都能用，不是次等候選；真正不屬於當代的字 eraOk() 已經擋掉了。
     // 年代骨架與主場地由 stampAnchors("env") 和 fillSlot("env", "place") 負責。
-    takeFromPool(pool, need, rand, commit, prefer, allow, mPre);
+    takeFromPool(pool, need, rand, commit, prefer, fillAllowed, mPre);
   };
 
   // 佔住 place 這一格的時代錨，改成「偏好」而不是「無條件蓋章」。
@@ -5933,27 +5953,8 @@ export function drawOne(lex, settings, pinned, userBanned, rand, seed, opts) {
     }
   }
 
-  // 釘選、必抽（和它們帶上來的字）先佔骨架格，跟 fill() 的「數字 − 已有」同一個意思：
-  // 姿勢 1 又釘了視線，就只有那個視線，不會再補一個身體姿勢。只在數字比骨架少時動。
-  for (const section of Object.keys(SKELETON)) {
-    if (zeroSections.has(section)) continue;
-    const keys = skeletonKeys(section);
-    const lit = skeletonLit(settings, section);
-    if (lit.length >= keys.length) continue;
-    const taken = new Set();
-    for (const t of used) {
-      const it = lex.byTag.get(t);
-      if (it && it.section === section) for (const k of offKeysOf(it)) taken.add(k);
-    }
-    const already = keys.filter((k) => taken.has(k));
-    if (!already.length) continue;
-    const room = Math.max(0, lit.length - already.length);
-    const keep = new Set([...already, ...lit.filter((k) => !taken.has(k)).slice(0, room)]);
-    for (const k of keys) {
-      if (keep.has(k)) offGroups.delete(k);
-      else offGroups.add(k);
-    }
-  }
+  // 釘選／必抽額外保留，不覆蓋使用者選中的分類。
+  // 同類已存在時 fillSlot 的 mutex／fillGroup 的 group 檢查會避免重複補牌。
 
   fillSlot("feature", "hair_length");
   fillSlot("feature", "eye_color");
