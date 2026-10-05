@@ -87,6 +87,24 @@ const SFW_EXTRA = new Set([
   "fishnet pantyhose",
   "torn pantyhose",
   "negligee",
+  "micro shorts",
+  "latex legwear",
+  "skin tight",
+  "hidden camera",
+  "highleg leotard",
+  "backless dress",
+  "strapless dress",
+  "bikini armor",
+  "catsuit",
+  "latex bodysuit",
+  "underbust",
+  "legs over head",
+  "pole dancing",
+  "ass tattoo",
+  "tramp stamp",
+  // 破襯衫、破裙子跟破衣一樣，三檔都進，全年齡不行。
+  "torn shirt",
+  "torn skirt",
 ]);
 
 // 三段分級，對齊 Danbooru 自己的 rating 階梯。
@@ -188,6 +206,21 @@ const EXPLICIT_ONLY_EXTRA = new Set([
   "stocks",
   "restraints",
   "whip marks",
+  "rope",
+  "cuffs",
+  "shackles",
+  "tape gag",
+  "bit gag",
+  "ring gag",
+  "strap-on",
+  "nose hook",
+  "speculum",
+  "chain leash",
+  "straitjacket",
+  "bikini top only",
+  "uncensored",
+  "branded",
+  "rape face",
 ]);
 
 // 只有 explicit 能出現：真正的性、裸露、脫衣走光、內衣當外衣。

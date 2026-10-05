@@ -108,12 +108,14 @@ const ACTS = [
 const SOLO_ACTS = ["sex machine", "large insertion", "urethral insertion", "egg laying", "nipple penetration", "fisting"];
 const MALE_FACE = ["facial hair", "stubble", "beard", "goatee", "mustache"];
 const PRIVATE = ["bedroom", "hotel room", "love hotel", "bathroom", "shower", "bathtub", "on bed", "bed"];
-const ORAL = ["fellatio", "deepthroat", "irrumatio", "cunnilingus", "anilingus", "kiss", "french kiss", "kissing neck", "licking penis", "imminent fellatio"];
-const LIMB = ["handjob", "walking", "running", "jumping", "tiptoes", "footjob", "thigh sex", "leg lock"];
+const ORAL = ["fellatio", "deepthroat", "irrumatio", "cunnilingus", "anilingus", "kiss", "french kiss", "kissing neck", "licking penis", "imminent fellatio", "reverse fellatio", "throat bulge"];
+const LIMB = ["handjob", "walking", "running", "jumping", "tiptoes", "footjob", "thigh sex", "leg lock", "hugging own legs", "fetal position", "curled up"];
 const AMPUTEE_WORN = [
   "wide sleeves", "long sleeves", "short sleeves", "sleeves rolled up",
   "detached sleeves", "puffy sleeves", "wrist cuffs", "spreader bar",
   "pillory", "stocks",
+  "cuffs", "straitjacket", "bound ankles", "frogtie", "hogtie",
+  "bandaged arm", "bandaged leg",
 ];
 const BELT_OK = new Set([
   "paizuri", "paizuri under clothes", "perpendicular paizuri", "straddling paizuri",
@@ -121,6 +123,8 @@ const BELT_OK = new Set([
   "handjob", "double handjob", "two-handed handjob", "cooperative handjob", "nursing handjob",
   "footjob", "armpit sex", "nipple penetration", "69", "vore",
   "male masturbation", "testicle sucking", "testicle grab",
+  // 帶子在她身上。髮交、平胸摩擦、女攻、前列腺按摩都不開她的帶子。
+  "hairjob", "naizuri", "pegging", "prostate milking", "reverse fellatio",
 ]);
 const BELT_CROTCH = new Set([
   "masturbation", "female masturbation", "fingering", "anal fingering",
@@ -131,6 +135,9 @@ const BELT_CROTCH = new Set([
   "prolapse", "anal prolapse", "butt plug", "anal beads", "crotch rope", "stomach bulge",
   "pussy peek", "penetration through clothes", "knotting", "peeing", "excessive pussy juice",
   "bestiality", "necrophilia", "scat", "unbirthing",
+  "interspecies", "gaping", "speculum", "pussy piercing",
+  "public use", "crotch grab", "crotch kick", "underwater sex",
+  "bandaid on pussy",
 ]);
 function beltClash(tag, have) {
   if (BELT_OK.has(tag)) return false;
@@ -379,7 +386,8 @@ eq("explicit does not block guro", blocked("guro", "explicit"), false);
   const HANDLESS = [
     "object insertion", "tentacle sex", "sex machine", "large insertion",
     "urethral insertion", "egg laying", "nipple penetration",
-    "enema", "egg implantation",
+    // 灌腸、植卵、騎假陽具不用她的手。補牌清單不自動塞這些，通用姿勢抽到了也算。
+    "enema", "egg implantation", "dildo riding",
   ];
   let ampNoAct = 0;
   for (const d of sweep(sex, pinsOf("quadruple amputee"), 40, 8100)) {

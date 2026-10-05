@@ -71,6 +71,8 @@ export function needsBodyClothes(actionTag) {
     t === "clothes pull" ||
     t === "clothing aside" ||
     t === "undressing" ||
+    t === "undressing another" ||
+    t === "clothes grab" ||
     t === "upskirt" ||
     t === "cameltoe" ||
     t === "wedgie" ||
@@ -89,6 +91,8 @@ export function needsBodyClothes(actionTag) {
 export function clothingWearsKey(clothingTag, key) {
   const tag = String(clothingTag || "").toLowerCase();
   if (!tag || tag.startsWith("no ")) return false;
+  // 泳裝在衣服底下。這句自己不是那件泳裝，也不能拿來證明身上有衣服。
+  if (tag === "swimsuit under clothes") return false;
   const aliases = KEY_WEAR[key] || [key];
   const toks = new Set(tagTokens(tag));
   return aliases.some((w) => {

@@ -50,9 +50,11 @@ const GOLD = {
   // 2026-09-29 第三次：沒釘場所的性愛不再只用私密場地，場地權重改成 1:1。
   // 這張是性愛，浴室換成咖啡廳，後面的傢俱和光線跟著換。仍是 1girl solo。
   // 2026-10-05 第四次：CSV 缺的現役詞進池。這張仍是 1girl solo，沒有男生或人類陰莖。
+  // 2026-10-05 第五次：第二輪 149 個現役詞進池。這張抽到海豚短褲、換裝，仍是 1girl solo。
+  // 2026-10-05 第六次：第三輪 104 個現役詞進池。這張抽到卷髮、腕銬、筆電，仍是 1girl solo。
   1: {
-    rng: 400,
-    pos: "1girl, solo, pixie cut, purple eyes, green hair, swept bangs, small breasts, bride, plump, long eyelashes, blouse, garter straps, buruma, crotchless, tiara, sportswear, fingering, crawling, portrait, looking to the side, pout, tongue out, fitness gym, indoors, night, dim lighting, grass, petals, nsfw, explicit, masterpiece, best quality, amazing quality",
+    rng: 432,
+    pos: "1girl, solo, pixie cut, purple eyes, green hair, curly hair, huge breasts, bags under eyes, dark-skinned female, dark skin, puffy nipples, completely nude, wrist cuffs, hat, stiletto heels, high heels, necktie, fingering, squatting, pov hands, pov, looking at viewer, torogao, ryokan, indoors, twilight, ceiling light, laptop, computer, nsfw, explicit, masterpiece, best quality, amazing quality",
   },
   // 2026-09-29：路人進了環境池，同一顆亂數落到別的環境字，後面的姿勢跟著換。
   // seed 42 少了束縛和手銬（手銬是束縛之後才拉的），多了咬唇。seed 100 花瓣換成剪影。
@@ -60,13 +62,17 @@ const GOLD = {
   // 2026-09-29 第二次：浴場在收尾多擲一次毛巾。包、瓶底眼鏡、保險套、玩具、獠牙走另一條亂數。
   // 2026-09-29 第三次：這張是性愛。場地從道場換成巴士車廂，後面的字跟著換。仍是 1girl solo。
   // 2026-10-05 第四次：布料和領口進了衣服池。仍是 1girl solo，沒有男生。
+  // 2026-10-05 第五次：全身塗裝、澡堂。仍是 1girl solo，沒有男生或人類陰莖。
+  // 2026-10-05 第六次：單眼眼罩、肚臍穿環、性愛機器。仍是 1girl solo，沒有男生或人類陰莖。
   42: {
-    rng: 396,
-    pos: "1girl, solo, very short hair, aqua eyes, blue hair, blunt bangs, large breasts, long nipples, nose blush, dress, no panties, denim, halterneck, handcuffs, fingering, reclining, multiple views, looking down, exhausted, bondage, golf course, outdoors, day, backlighting, sparkle, blue sky, nsfw, explicit, masterpiece, best quality, amazing quality",
+    rng: 438,
+    pos: "1girl, solo, very short hair, aqua eyes, blue hair, hair intakes, gigantic breasts, clitoris, tongue, quadruple amputee, completely nude, navel piercing, eyepatch, collar, sun hat, hat, sitting, pov hands, pov, looking at viewer, pout, ovum, sex machine, mountain, outdoors, twilight, lamppost, lens flare, full-length mirror, mirror, nsfw, explicit, masterpiece, best quality, amazing quality",
   },
+  // 2026-10-05 第五次：女僕圍裙是布料疊層，不占連身裙。仍是 1girl solo。
+  // 2026-10-05 第六次：爆炸頭跟長裙、探頭偷看。仍是 1girl solo。
   100: {
-    rng: 412,
-    pos: "1girl, solo, medium hair, purple eyes, red hair, side ponytail, ponytail, gigantic breasts, makeup, closed eyes, red sweater, sweater, denim, skirt, kneehighs, table tennis, standing, worm's eye view, from below, exhausted, bouncing, school gym, indoors, sunset, window light, rubble, neon lights, table tennis paddle, table tennis ball, nsfw, explicit, masterpiece, best quality, amazing quality",
+    rng: 460,
+    pos: "1girl, solo, medium hair, purple eyes, red hair, afro, flat chest, ahoge, saliva, belly, long skirt, skirt, crop top, writing, sitting, bird's eye view, from above, peeking out, peeking, flustered, pencil, tent, outdoors, evening, lamppost, chair, nsfw, explicit, masterpiece, best quality, amazing quality",
   },
   // 2026-09-29 第三次：這張是性愛。淋浴間換成海邊，衣服和光線跟著換。仍是 1girl solo。
   // 2026-10-04（9a087a5）：帶衣物名的姿勢（hand in panties 這類）在候選階段就要先有對的衣服，
@@ -75,17 +81,21 @@ const GOLD = {
   // 地牢和牢房這類；要男生或只在多元模式抽的種族不進這五張。五張仍是 1girl solo，
   // 沒有男生或陰莖。seed 999 抽到地牢。
   // 2026-10-05 第四次：獸莖不拉男生、也不暗示人類陰莖。這張仍是 1girl solo。
+  // 2026-10-05 第五次：乳環帶出穿洞，異種族不拉獸姦、也不拉男生。產卵不用手。仍是 1girl solo。
+  // 2026-10-05 第六次：油頭後梳佔髮型格，咬痕、褲裝、計程車。仍是 1girl solo。
   999: {
-    rng: 407,
-    pos: "1girl, solo, long hair, grey eyes, orange hair, twin braids, braid, flat chest, bags under eyes, animal penis, open bodysuit, bodysuit, strapless bra, bra, black panties, panties, kneehighs, bag, masturbation through clothes, on one knee, from behind, looking down, embarrassed, sperm cell, internet cafe, indoors, night, city lights, wedding, nsfw, explicit, masterpiece, best quality, amazing quality",
+    rng: 456,
+    pos: "1girl, solo, long hair, grey eyes, orange hair, hair slicked back, gigantic breasts, bite mark, sideboob, tareme, pant suit, blue panties, panties, navel piercing, garter belt, veil, bag, nipple rings, piercing, female masturbation, face down, on stomach, full body, looking to the side, smile, taxi, car, outdoors, twilight, dim lighting, bulletin board, nsfw, explicit, masterpiece, best quality, amazing quality",
   },
   // 2026-09-23：走光補抽改成「所有成立的走光動作同一池、衣服吻合的權重 10」之後，
   // 這張的走光動作從 exhibitionism 換成 cameltoe（她穿 thong，吻合），場景跟著換。
   // 見 test_clothing_reachability.mjs 的走光段落與討論區同日那輪。
   // 2026-10-05 第四次：looking away 不收回。視線格抽到的是 averting eyes。仍是 1girl solo。
+  // 2026-10-05 第五次：萬聖節服裝、迷你女孩。仍是 1girl solo，沒有男生或人類陰莖。
+  // 2026-10-05 第六次：裸外套、滑落肩帶。仍是 1girl solo，沒有男生或人類陰莖。
   2026: {
-    rng: 426,
-    pos: "1girl, solo, bob cut, grey eyes, black hair, hair intakes, large breasts, nose blush, cleavage, dark-skinned female, dark skin, nightgown, satin, thighhighs, red panties, panties, sleeves rolled up, reading, kneeling, full body, averting eyes, frown, hand on own crotch, newspaper, park bench, outdoors, dusk, lamppost, blurry background, nsfw, explicit, masterpiece, best quality, amazing quality",
+    rng: 456,
+    pos: "1girl, solo, bob cut, grey eyes, black hair, swept bangs, huge breasts, backboob, closed eyes, arm under breasts, naked jacket, jacket, white socks, socks, halterneck, maid apron, playing guitar, reclining, feet out of frame, smug, strap slip, lifting own clothes, guitar, rooftop, outdoors, dusk, dappled sunlight, chinese new year, nsfw, explicit, masterpiece, best quality, amazing quality",
   },
 };
 
@@ -239,7 +249,16 @@ const MATRIX_SEEDS = 200;
 // 不收回，視線仍用 averting eyes。毛皮大衣不帶出只有現代的 coat，維多利亞才抽得到。
 // 獸莖、馬屌不拉男生，也不暗示人類陰莖。五張預設金標都換了，仍是 1girl solo，
 // 沒有男生，也沒有人類陰莖。指紋 8a80bf64 → ddd31d28。
-const MATRIX_GOLD = "ddd31d28";
+// 2026-10-05 第五次：第二輪 149 個現役詞進池。衣服、布料疊層、性愛配件和主題
+// 會挪動各情境的牌序。五張預設金標仍是 1girl solo，沒有男生，也沒有人類陰莖。
+// 指紋 ddd31d28 → 45e1207f。
+// 同一次再收緊：衣服裡的泳裝不是那件泳裝，吊襪帶也不算蓋住它的外衣，
+// 而且它跟只穿內衣互斥。五張預設金標逐字沒變。指紋 45e1207f → bc2a1e0e。
+// 2026-10-05 第六次：第三輪 104 個現役詞進池。手勢、場所、髮型細節和性愛結果
+// 會挪動各情境的牌序。運動服蓋住下半身，不再跟只穿內衣同時成立。
+// 五張預設金標仍是 1girl solo，沒有男生，也沒有人類陰莖。
+// 指紋 bc2a1e0e → 6b4fe788。
+const MATRIX_GOLD = "6b4fe788";
 
 function matrixSettings(over) {
   const s = defaultSettings(data);

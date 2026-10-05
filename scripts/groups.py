@@ -137,6 +137,26 @@ FABRIC = {
     "satin",
     "sailor collar",
     "halterneck",
+    # 疊在衣服上的說法或配件，不佔上衣／整套。沒有這組的話正常模式抽不到。
+    "skin tight",
+    "suspenders",
+    "maid apron",
+    "waist apron",
+    "frilled apron",
+    "oversized clothes",
+    "cosplay",
+    "casual",
+    "lolita fashion",
+    "gothic lolita",
+    "halloween costume",
+    "animal costume",
+    "costume switch",
+    "reverse outfit",
+    "swimsuit under clothes",
+    # 拉鍊和衣服上的血疊在衣服上。破襯衫、破裙子自己佔上衣和下身，不進這組。
+    "unzipped",
+    "zipper pull tab",
+    "blood on clothes",
 }
 
 MAKEUP = {
@@ -206,6 +226,16 @@ HAIR_STYLE = {
     "hair over one eye",
     "hair between eyes",
     "hair over shoulder",
+    # 細節跟主髮型疊。往後梳、莫霍克、臟辮、爆炸頭另外佔 hair_style 格。
+    "antenna hair",
+    "hair flaps",
+    "bangs pinned back",
+    "undercut",
+    "glowing hair",
+    "hair slicked back",
+    "mohawk",
+    "dreadlocks",
+    "afro",
 }
 
 HAIR_COLOR_LOOK = {
@@ -273,6 +303,7 @@ FACE = {
     "crazy smile",
     "annoyed",
     "jitome",
+    "crazy eyes",
 }
 
 SKIN = {
@@ -305,6 +336,15 @@ SKIN = {
     "wet hair",
     "injury",
     "whip marks",
+    "sun tattoo",
+    "ass tattoo",
+    "tramp stamp",
+    "branded",
+    "blood on face",
+    "blood from mouth",
+    "bite mark",
+    "lipstick mark",
+    "lipstick mark on neck",
 }
 
 SEX = {
@@ -522,6 +562,38 @@ SEX = {
     "animal penis",
     "horse penis",
     "pussy peek",
+    "interspecies",
+    "femdom",
+    "spread anus",
+    "food on body",
+    "gaping",
+    "bound ankles",
+    "frogtie",
+    "whipped cream",
+    "sleep molestation",
+    "molestation",
+    "chocolate on body",
+    "buttjob",
+    "dildo riding",
+    "leash pull",
+    "cum in container",
+    "hairjob",
+    "public use",
+    "hogtie",
+    "tape bondage",
+    "crotch grab",
+    "foot worship",
+    "naizuri",
+    "trampling",
+    "pegging",
+    "prostate milking",
+    "mounting",
+    "netorase",
+    "crotch kick",
+    "kneepit sex",
+    "cum on food",
+    "nyotaimori",
+    "underwater sex",
 }
 
 
@@ -575,7 +647,7 @@ def assign_group(item: dict) -> str:
             return "hair_color"
         if mx == "eye_color" or "eye" in tag or tag in {
             "eyelashes", "eyeshadow", "heterochromia", "tareme", "tsurime",
-            "symbol-shaped pupils", "slit pupils",
+            "symbol-shaped pupils", "slit pupils", "dilated pupils",
         }:
             return "eyes"
         if tag in BODY_HAIR:
@@ -625,11 +697,14 @@ def assign_group(item: dict) -> str:
             "testicles",
         }:
             return "body_m"
-        if tag in {"futanari", "quadruple amputee", "minigirl", "giantess"}:
+        if tag in {"futanari", "quadruple amputee", "minigirl", "giantess", "uterus", "cervix"}:
             return "body_f"
         return "other"
 
     if sec == "pose":
+        # 前景模糊是景深，不佔鏡頭格，也不能掉進誘惑。
+        if tag == "blurry foreground":
+            return "camera"
         if mx == "body_pose":
             return "body"
         if mx in ("camera", "perspective"):

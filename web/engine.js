@@ -172,6 +172,7 @@ const NO_SPRINT_PLACE = new Set([
 // outer —— 外套格當然擋不住洋裝。這是語意問題，不是格子問題，所以要一條規則。
 const NAKED_ONLY = new Set([
   "naked sweater", "naked shirt", "naked apron", "naked towel", "naked coat", "naked jacket",
+  "naked ribbon", "naked bandage", "painted clothes",
 ]);
 // 會被「只穿一件」排除的：身上的主要衣物與內衣。外套不算（naked coat 自己就是外套），
 // 襪子鞋子也不算（光腳穿大衣跟穿著襪子穿大衣都成立）。
@@ -197,7 +198,12 @@ const SLEEVE_WORD = new Set([
 const underwearOnlyClash = (item) =>
   !!item &&
   item.section === "clothing" &&
-  (UNDERWEAR_ONLY_BAD.has(item.group) || SLEEVE_WORD.has(item.tag));
+  (UNDERWEAR_ONLY_BAD.has(item.group) ||
+    SLEEVE_WORD.has(item.tag) ||
+    // 泳裝在別的衣服底下，就不是只穿內衣。
+    item.tag === "swimsuit under clothes" ||
+    // 運動服蓋住下半身，但沒有上衣或下身格，群組擋不到。
+    item.tag === "sportswear");
 
 // 泳衣底下不穿內衣。比基尼配運動內褲是穿兩層。
 const isSwimGarment = (item) =>
@@ -349,7 +355,7 @@ const ROUGH_DURING = new Set([
 const PENIS_STATE = new Set(["erection", "half-erect", "flaccid"]);
 const PRECUM_TAGS = new Set(["precum", "precum drip", "precum string"]);
 const FULL_NUDE = new Set(["nude", "completely nude"]);
-const CLOTHED_ONLY = new Set(["cum on clothes", "penis peek", "erection under clothes", "covered testicles"]);
+const CLOTHED_ONLY = new Set(["cum on clothes", "penis peek", "erection under clothes", "covered testicles", "blood on clothes"]);
 const PENIS_ON_HEAD = new Set(["penis over eyes", "penis on face"]);
 const EJACULATION_ACT = new Set(["ejaculation", "projectile cum", "handsfree ejaculation"]);
 
@@ -529,7 +535,7 @@ const SLEEP_BAD_EXPR = new Set([
   "embarrassed",
   "nervous",
 ]);
-const EYE_EXTRA = new Set(["one eye closed", "empty eyes", "sparkling eyes", "half-closed eyes", "rolling eyes"]);
+const EYE_EXTRA = new Set(["one eye closed", "empty eyes", "sparkling eyes", "half-closed eyes", "rolling eyes", "crazy eyes"]);
 const MOUTH_EXTRA = new Set([
   "open mouth",
   "clenched teeth",
@@ -540,6 +546,7 @@ const MOUTH_EXTRA = new Set([
   "drooling",
   "moaning",
   "condom in mouth",
+  "blowing kiss",
 ]);
 const OUTDOOR_LEFTOVER = new Set([
   "tree",
@@ -1104,6 +1111,7 @@ export const ACT_PLACE = {
   bathing: new Set([...BATH_PLACE]),
   showering: new Set(["bathroom", "shower (place)"]),
   swimming: new Set(["pool", "ocean", "beach", "underwater"]),
+  "pole dancing": new Set(["stage"]),
   wading: new Set(["beach", "ocean", "pool", "poolside"]),
   floating: new Set(["pool", "ocean", "bathtub", "ofuro", "onsen", "bubble bath"]),
   "shared bathing": new Set(["onsen", "bathhouse", "ofuro", "bath"]),
@@ -1359,6 +1367,19 @@ const JOB_PLACE = {
   soldier: new Set(["ruins", "street", "city", "forest"]),
   butler: new Set(["mansion", "living room", "hallway", "ballroom", "palace"]),
   detective: new Set(["office", "street", "city", "cityscape", "alley", "library"]),
+  ballerina: new Set(["stage"]),
+  dominatrix: new Set(["dungeon", "bedroom"]),
+  astronaut: new Set(["space"]),
+  bartender: new Set(["bar (place)"]),
+  wizard: new Set(["library", "mansion"]),
+  lifeguard: new Set(["beach", "pool", "poolside"]),
+  // 西部牛仔女。不要寫成 cowgirl，那是騎乘位。
+  "cowgirl (western)": new Set(["farm", "barn", "street"]),
+  stripper: new Set(["stage"]),
+  // 沒有攝影棚。模特兒不硬綁舞台。
+  cashier: new Set(["convenience store", "supermarket"]),
+  coach: new Set(["school gym", "fitness gym"]),
+  queen: new Set(["palace"]),
 };
 const RAPE_BAD_PLACE = new Set(["classroom", "bedroom", "living room", "kitchen", "bed", "futon"]);
 // 運動互斥全部從 web/sports.js 那份單一資料來源算出來。以前這裡自己列球、球拍、
@@ -2299,6 +2320,8 @@ const BOTH_ARMS = new Set([
   "breast hold",
   "arms under breasts",
   "v arms",
+  "double v",
+  "w arms",
 ]);
 const HAND_GESTURE = new Set([
   "finger to mouth",
@@ -2322,24 +2345,40 @@ const HAND_GESTURE = new Set([
   "panty pull",
   "bra pull",
   "wedgie",
+  "salute",
+  "outstretched hand",
+  "hand on own cheek",
+  "hand on own chin",
+  "thumbs up",
+  "finger gun",
+  "ok sign",
+  "covering own eyes",
+  "finger heart",
 ]);
 const MALE_FACE = new Set(["facial hair", "stubble", "beard", "goatee", "mustache"]);
 const GAG_BLOCKS = new Set([
   "fellatio", "deepthroat", "irrumatio", "cunnilingus", "anilingus",
   "kiss", "french kiss", "kissing neck", "licking penis", "imminent fellatio",
+  "reverse fellatio", "throat bulge",
 ]);
+// 同一張嘴只能有一種口塞。變體 implies gag，父子不算兩種。
+const GAG_KIND = new Set(["gag", "tape gag", "bit gag", "ring gag", "ball gag"]);
+// 膠帶和咬棒把嘴封住。開口器是撐開，不在這組。
+const CLOSED_GAG = new Set(["tape gag", "bit gag"]);
 const NOT_PUBLIC_SCENE = new Set([
   "bedroom", "hotel room", "love hotel", "bathroom", "shower", "bathtub", "on bed", "bed",
 ]);
-const AMPUTEE_MOVE = new Set(["walking", "running", "jumping", "tiptoes", "footjob", "thigh sex", "leg lock"]);
+const AMPUTEE_MOVE = new Set(["walking", "running", "jumping", "tiptoes", "footjob", "thigh sex", "leg lock", "hugging own legs", "fetal position", "curled up"]);
 // 穿在手上、臂上、或綁在兩腿之間的東西。無袖上衣不算。
 const AMPUTEE_WORN = new Set([
   "wide sleeves", "long sleeves", "short sleeves", "sleeves rolled up",
   "detached sleeves", "puffy sleeves", "wrist cuffs", "spreader bar",
   "pillory", "stocks",
+  "cuffs", "straitjacket", "bound ankles", "frogtie", "hogtie",
+  "bandaged arm", "bandaged leg",
 ]);
 // 這些手是對方的。單人又四肢截斷時沒有手；有第二個人就可以。
-const PARTNER_HAND = new Set(["fisting", "anal fisting", "urethral fingering", "slapping", "nipple pull"]);
+const PARTNER_HAND = new Set(["fisting", "anal fisting", "urethral fingering", "slapping", "nipple pull", "crotch grab"]);
 // 沒有手時才補的體位。不要把「所有單人 sex_act」都算進來。
 const AMPUTEE_HANDLESS = new Set([
   "object insertion", "tentacle sex", "sex machine", "large insertion",
@@ -2355,6 +2394,8 @@ const CHASTITY_OK = new Set([
   "handjob", "double handjob", "two-handed handjob", "cooperative handjob", "nursing handjob",
   "footjob", "armpit sex", "nipple penetration", "69", "vore",
   "male masturbation", "testicle sucking", "testicle grab",
+  // 帶子在她身上。髮交、平胸摩擦、女攻、前列腺按摩都不開她的帶子。
+  "hairjob", "naizuri", "pegging", "prostate milking", "reverse fellatio",
 ]);
 // 沒有佔住性愛動作格、但一樣要打開帶子的字。隔著衣服自慰留著：那是頂著帶子磨。
 const CHASTITY_CROTCH = new Set([
@@ -2367,6 +2408,9 @@ const CHASTITY_CROTCH = new Set([
   "pussy peek", "penetration through clothes", "knotting", "peeing", "excessive pussy juice",
   // 獸姦、獵奇性交、排泄、把人吞回體內，都要打開帶子才做得到。
   "bestiality", "necrophilia", "scat", "unbirthing",
+  "interspecies", "gaping", "speculum", "pussy piercing",
+  "public use", "crotch grab", "crotch kick", "underwater sex",
+  "bandaid on pussy",
 ]);
 
 function needsLimbs(item) {
@@ -4485,11 +4529,17 @@ export function drawOne(lex, settings, pinned, userBanned, rand, seed, opts) {
     if (EYE_EXTRA.has(item.tag) && hasUsed((t) => EYE_EXTRA.has(t))) return false;
     if (MOUTH_EXTRA.has(item.tag) && hasUsed((t) => MOUTH_EXTRA.has(t))) return false;
     if (used.has("sleeping") && (EYE_EXTRA.has(item.tag) || MOUTH_EXTRA.has(item.tag))) return false;
-    if (used.has("closed eyes")) {
+    if (used.has("closed eyes") || used.has("covering own eyes")) {
       if (EYE_EXTRA.has(item.tag) || item.mutex === "gaze" || /^looking /.test(item.tag)) return false;
       for (const d of item.implies || []) {
         if (lex.byTag.get(d)?.mutex === "gaze") return false;
       }
+    }
+    if (
+      item.tag === "covering own eyes" &&
+      hasUsed((t) => EYE_EXTRA.has(t) || lex.byTag.get(t)?.mutex === "gaze" || /^looking /.test(t))
+    ) {
+      return false;
     }
     if (
       (used.has("closed mouth") || used.has("covering own mouth")) &&
@@ -4514,8 +4564,35 @@ export function drawOne(lex, settings, pinned, userBanned, rand, seed, opts) {
       return false;
     }
     // 口塞佔住嘴。口交、接吻進不來；反過來也一樣。
+    // 膠帶和咬棒把嘴封住，不能再張嘴。開口器是撐開，要帶著張嘴，所以不在 CLOSED_GAG。
     if (item.tag === "gag" && hasUsed((t) => GAG_BLOCKS.has(t))) return false;
-    if (GAG_BLOCKS.has(item.tag) && used.has("gag")) return false;
+    if (GAG_BLOCKS.has(item.tag) && hasUsed((t) => GAG_KIND.has(t))) return false;
+    if (CLOSED_GAG.has(item.tag) && hasUsed((t) => MOUTH_EXTRA.has(t))) return false;
+    if (MOUTH_EXTRA.has(item.tag) && hasUsed((t) => CLOSED_GAG.has(t))) return false;
+    if (
+      GAG_KIND.has(item.tag) &&
+      hasUsed((t) => GAG_KIND.has(t) && t !== item.tag && !parentChild(lex, item.tag, t))
+    ) {
+      return false;
+    }
+    // 只穿比基尼上衣就是下身沒穿。下身裸是它自己帶進來的。
+    if (
+      item.tag === "bikini top only" &&
+      hasUsed((t) => {
+        const it = lex.byTag.get(t);
+        return it && (it.mutex === "bottom" || it.mutex === "underwear_bottom" || it.mutex === "onepiece") &&
+          !parentChild(lex, item.tag, t);
+      })
+    ) {
+      return false;
+    }
+    if (
+      used.has("bikini top only") &&
+      (item.mutex === "bottom" || item.mutex === "underwear_bottom" || item.mutex === "onepiece") &&
+      !parentChild(lex, "bikini top only", item.tag)
+    ) {
+      return false;
+    }
     // 無臉男沒有鬍子。不把它算進無臉構圖，女生的表情還在。
     if (item.tag === "faceless male" && hasUsed((t) => MALE_FACE.has(t))) return false;
     if (MALE_FACE.has(item.tag) && used.has("faceless male")) return false;
@@ -5054,9 +5131,17 @@ export function drawOne(lex, settings, pinned, userBanned, rand, seed, opts) {
     }
     if (item.mutex === "held_prop") {
       const acts = usedActs(used, lex);
-      // 電話不是拍照或直播的道具，活動清單裡沒有它。這道閘會讓它永遠抽不到。
-      // 它仍佔手持格，所以跟手機二選一。
-      if (item.tag !== "phone" && ![...acts].some((a) => (ACT_PROP[a] || []).includes(item.tag))) return false;
+      // 電話、智慧型手機、布偶、自拍棒不是拍照清單裡的道具。不豁免就永遠抽不到。
+      // 它們仍佔手持格。手機不在這組：只有拍照、直播、講電話才進。
+      // 智慧型手機帶出來的手機是 implies，手持物的依賴不走這道閘。
+      if (
+        item.tag !== "phone" &&
+        item.tag !== "smartphone" &&
+        item.tag !== "stuffed toy" &&
+        item.tag !== "teddy bear" &&
+        item.tag !== "selfie stick" &&
+        ![...acts].some((a) => (ACT_PROP[a] || []).includes(item.tag))
+      ) return false;
     }
     // 這兩個是 env prop，而且 mustDraw 跑在一般場景 fill 之前。只靠最後的
     // NEEDS_CONTEXT cleanup 不夠：mustDraw 會把抽中的字鎖住，錯場也不能刪。
@@ -5274,8 +5359,14 @@ export function drawOne(lex, settings, pinned, userBanned, rand, seed, opts) {
         return false;
       }
     }
-    if (used.has("closed eyes") && item.tag === "glowing eyes") return false;
-    if (item.tag === "closed eyes" && used.has("glowing eyes")) return false;
+    if (
+      (used.has("closed eyes") || used.has("covering own eyes")) &&
+      (item.tag === "glowing eyes" || item.tag === "glowing eye" || item.tag === "dilated pupils")
+    ) return false;
+    if (
+      (item.tag === "closed eyes" || item.tag === "covering own eyes") &&
+      (used.has("glowing eyes") || used.has("glowing eye") || used.has("dilated pupils"))
+    ) return false;
     if (
       item.tag === "after bathing" &&
       hasUsed(
@@ -6998,9 +7089,13 @@ export function drawOne(lex, settings, pinned, userBanned, rand, seed, opts) {
       }
     }
     const r = mulberry32(((seed >>> 0) ^ 0x70617374) >>> 0);
-    if (!chestCovered || chestOpen) {
-      const item = lex.byTag.get("pasties");
-      if (item && !used.has("pasties") && !banned.has("pasties") && r() < 0.22 && allow(item)) commit("pasties");
+    if ((!chestCovered || chestOpen) && r() < 0.22) {
+      const opts = [];
+      for (const t of ["pasties", "cross pasties"]) {
+        const item = lex.byTag.get(t);
+        if (item && !used.has(t) && !banned.has(t) && allow(item)) opts.push(item);
+      }
+      if (opts.length) commit(opts[Math.floor(r() * opts.length)].tag);
     }
     if (!chestCovered || chestOpen) {
       const tasselRand = mulberry32(((seed >>> 0) ^ 0x74617373) >>> 0);
@@ -7052,14 +7147,16 @@ export function drawOne(lex, settings, pinned, userBanned, rand, seed, opts) {
     // 假陽具的熱度寫了誘惑和走光，但它 implies 的「性玩具」被鎖成只有性愛。
     // commit 會把父字一起放進來，父字過不了熱度，整筆就失敗。震動棒本來也只有性愛。
     // 所以玩具只在性愛補，不在誘惑和走光空轉一顆骰子。
-    if (heat === "sex" && r() < 0.16) pick(["dildo", "vibrator", "egg vibrator"]);
+    if (heat === "sex" && r() < 0.16) {
+      pick(["dildo", "vibrator", "egg vibrator", "strap-on", "vibrator cord", "vibrator in thighhighs", "vibrator on nipple"]);
+    }
   }
   // 口塞、分腿棍、公共跳蛋沒有衣服白名單上的互斥格。另開亂數，不挪動上面那條玩具骰子。
   if (Number.isFinite(seed) && heat === "sex" && Math.max(0, Number(counts.clothing) || 0) > 0) {
     const gearRand = mulberry32(((seed >>> 0) ^ 0x6b696e6b) >>> 0);
     if (gearRand() < 0.1) {
       const opts = [];
-      for (const t of ["gag", "spreader bar", "public vibrator"]) {
+      for (const t of ["gag", "tape gag", "bit gag", "ring gag", "spreader bar", "public vibrator"]) {
         const item = lex.byTag.get(t);
         if (item && !used.has(t) && !banned.has(t) && allow(item)) opts.push(item);
       }
@@ -7078,6 +7175,18 @@ export function drawOne(lex, settings, pinned, userBanned, rand, seed, opts) {
       if (opts.length) commit(opts[Math.floor(lockRand() * opts.length)].tag);
     }
   }
+  // 繩子比枷鎖常見。不塞進上面那個池，枷鎖的比例才不會被繩子吃掉。
+  if (Number.isFinite(seed) && heat === "sex" && Math.max(0, Number(counts.clothing) || 0) > 0) {
+    const ropeRand = mulberry32(((seed >>> 0) ^ 0x726f7065) >>> 0);
+    if (ropeRand() < 0.1) {
+      const opts = [];
+      for (const t of ["rope", "shackles", "chain leash", "nipple rings", "nipple bar", "speculum", "nose hook"]) {
+        const item = lex.byTag.get(t);
+        if (item && !used.has(t) && !banned.has(t) && allow(item)) opts.push(item);
+      }
+      if (opts.length) commit(opts[Math.floor(ropeRand() * opts.length)].tag);
+    }
+  }
   // 光環、穿孔、OK繃、臂章、針沒有互斥格。放進衣服池會跟時代衣服同一階，幾乎每張都中。
   // 另開亂數，大約一成的圖補一件。浴場不補，免得剛脫掉又戴回去。
   if (Number.isFinite(seed) && Math.max(0, Number(counts.clothing) || 0) > 0) {
@@ -7085,11 +7194,28 @@ export function drawOne(lex, settings, pinned, userBanned, rand, seed, opts) {
     const accKind = sceneClothLocked(used, mustPins(), lex, era, lockOn);
     if (accKind !== "bath" && accKind !== "swim" && accRand() < 0.1) {
       const opts = [];
-      for (const t of ["halo", "piercing", "ear piercing", "tongue piercing", "bandaid", "armband", "needle"]) {
+      for (const t of ["halo", "piercing", "ear piercing", "tongue piercing", "bandaid", "armband", "needle", "belly chain", "nose ring"]) {
         const item = lex.byTag.get(t);
         if (item && !used.has(t) && !banned.has(t) && allow(item)) opts.push(item);
       }
       if (opts.length) commit(opts[Math.floor(accRand() * opts.length)].tag);
+    }
+  }
+  // 假獸耳很常見，但不佔帽子格，也不暗示真的獸耳。另開一顆骰子。
+  if (Number.isFinite(seed) && Math.max(0, Number(counts.clothing) || 0) > 0) {
+    const earRand = mulberry32(((seed >>> 0) ^ 0x65617273) >>> 0);
+    const earKind = sceneClothLocked(used, mustPins(), lex, era, lockOn);
+    const ears = lex.byTag.get("fake animal ears");
+    if (
+      ears &&
+      earKind !== "bath" &&
+      earKind !== "swim" &&
+      !used.has("fake animal ears") &&
+      !banned.has("fake animal ears") &&
+      earRand() < 0.18 &&
+      allow(ears)
+    ) {
+      commit("fake animal ears");
     }
   }
   {
@@ -7315,6 +7441,15 @@ export function drawOne(lex, settings, pinned, userBanned, rand, seed, opts) {
   if (kept.has("underwear only")) {
     const stillUnderwear = [...kept].some((t) => lex.byTag.get(t)?.group === "underwear");
     if (!stillUnderwear) kept.delete("underwear only");
+  }
+  // 衣服底下的泳裝自己不是那件衣服。吊襪帶和過膝襪有互斥格，但不是蓋住它的外衣。
+  if (kept.has("swimsuit under clothes")) {
+    const outer = [...kept].some((t) => {
+      if (t === "swimsuit under clothes") return false;
+      const it = lex.byTag.get(t);
+      return it && it.section === "clothing" && it.layer === "garment" && UNDERWEAR_ONLY_BAD.has(it.group);
+    });
+    if (!outer) kept.delete("swimsuit under clothes");
   }
 
   const quality = lex.data.quality.slice();

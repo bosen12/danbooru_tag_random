@@ -5197,11 +5197,12 @@ function indoorOutdoorClash(have) {
   eq("normal eating never auto classroom", normClass, 0);
   const pinFit = applyPin(lex, new Set(), new Set(), "fitting room").pinned;
   let fitSwim = 0;
-  for (let i = 0; i < 40; i++) {
+  // 第三輪衣服進池之後，釘試衣間的泳裝大約百分之六。seed 441040 起的 40 張剛好是 0，80 張裡看得到。
+  for (let i = 0; i < 80; i++) {
     const h = tagsOf(drawOne(lex, s, pinFit, new Set(), mulberry32(441040 + i), 441040 + i));
     if ([...h].some((t) => /\b(bikini|swimsuit)\b/.test(t))) fitSwim += 1;
   }
-  ok("fitting room can draw swimsuit", fitSwim > 0, `swim=${fitSwim}/40`);
+  ok("fitting room can draw swimsuit", fitSwim > 0, `swim=${fitSwim}/80`);
   const pinUw = applyPin(lex, new Set(), new Set(), "underwater").pinned;
   let uwSwim = 0;
   let uwStreet = 0;
@@ -5582,7 +5583,11 @@ function indoorOutdoorClash(have) {
     // 水手服、隔著衣服自慰、車廂，沒有男生、陰莖或精液。
     // 第二十九次（2026-10-05）：CSV 缺的現役詞進池。looking away 不收回。
     // 牌序再位移一次。這張仍是 1girl solo，沒有男生，也沒有人類陰莖。
-    "1girl, solo, very short hair, aqua eyes, blue hair, blunt bangs, large breasts, long nipples, nose blush, dress, no panties, denim, halterneck, handcuffs, fingering, reclining, multiple views, looking down, exhausted, bondage, golf course, outdoors, day, backlighting, sparkle, blue sky, nsfw, explicit, masterpiece, best quality, amazing quality");
+    // 第三十次（2026-10-05）：第二輪 149 個現役詞進池。這張換成澡堂、全身塗裝、指交。
+    // 仍是 1girl solo，沒有男生，也沒有人類陰莖。
+    // 第三十一次（2026-10-05）：第三輪 104 個現役詞進池。這張換成山、單眼眼罩、
+    // 肚臍穿環、性愛機器。仍是 1girl solo，沒有男生，也沒有人類陰莖。
+    "1girl, solo, very short hair, aqua eyes, blue hair, hair intakes, gigantic breasts, clitoris, tongue, quadruple amputee, completely nude, navel piercing, eyepatch, collar, sun hat, hat, sitting, pov hands, pov, looking at viewer, pout, ovum, sex machine, mountain, outdoors, twilight, lamppost, lens flare, full-length mirror, mirror, nsfw, explicit, masterpiece, best quality, amazing quality");
   ok("drawOne exposes shadow diagnostics", Array.isArray(shadowIntegrationDraw.shadowViolations));
 
   const eatProneShadow = validateSupportShadow({
