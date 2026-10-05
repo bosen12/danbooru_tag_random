@@ -1213,6 +1213,7 @@ const hiresRun = createHires({
   },
   save: () => S.saveShots(shots),
   done: (shot) => {
+    discord?.hires(shot);
     sfx.hiresDone();
     toast(`Hires 好了：${shot.hires.width}×${shot.hires.height}`);
   },

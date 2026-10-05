@@ -756,6 +756,7 @@ const hiresRun = createHires({
   },
   save: () => savePrints(),
   done: (p) => {
+    discord?.hires(p);
     sfx.hiresDone();
     haptic(14);
     announce(`Hires 好了：${p.hires.width}×${p.hires.height}`);
