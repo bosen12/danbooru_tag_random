@@ -157,6 +157,15 @@ FABRIC = {
     "unzipped",
     "zipper pull tab",
     "blood on clothes",
+    "patterned clothing",
+    # 鈕扣、口袋、花紋疊在衣服上，不佔上衣或下身。
+    "buttons",
+    "animal print",
+    "polka dot",
+    "pocket",
+    "zipper",
+    "breast pocket",
+    "cow print",
 }
 
 MAKEUP = {
@@ -191,8 +200,13 @@ SKY = {
     "blue sky",
     "orange sky",
     "starry sky",
+    "cloudy sky",
+    "starry sky background",
     "cloud",
     "aurora",
+    "moon",
+    "milky way",
+    "clear sky",
 }
 
 HAIR_STYLE = {
@@ -236,6 +250,7 @@ HAIR_STYLE = {
     "mohawk",
     "dreadlocks",
     "afro",
+    "cornrows",
 }
 
 HAIR_COLOR_LOOK = {
@@ -304,6 +319,12 @@ FACE = {
     "annoyed",
     "jitome",
     "crazy eyes",
+    "bored",
+    "confident",
+    "wide-eyed",
+    "laughing",
+    "yawning",
+    "raised eyebrow",
 }
 
 SKIN = {
@@ -345,6 +366,21 @@ SKIN = {
     "bite mark",
     "lipstick mark",
     "lipstick mark on neck",
+    "black skin",
+    "facial mark",
+    "forehead mark",
+    "bindi",
+    "tribal tattoo",
+    "scar on face",
+    "mole on cheek",
+    "blush stickers",
+    "veins",
+    "arm tattoo",
+    "leg tattoo",
+    "neck tattoo",
+    "scar on cheek",
+    "nervous sweating",
+    "nosebleed",
 }
 
 SEX = {
@@ -648,6 +684,7 @@ def assign_group(item: dict) -> str:
         if mx == "eye_color" or "eye" in tag or tag in {
             "eyelashes", "eyeshadow", "heterochromia", "tareme", "tsurime",
             "symbol-shaped pupils", "slit pupils", "dilated pupils",
+            "star-shaped pupils",
         }:
             return "eyes"
         if tag in BODY_HAIR:
@@ -684,6 +721,23 @@ def assign_group(item: dict) -> str:
             return "body_f"
         if tag in BODY_ANY:
             return "body_f" if gate != "male" else "body_m"
+        # 關係詞不是體型。男同性戀題材和兄弟的 gate 是男生，不能掉進體型。
+        if tag in {
+            "yaoi",
+            "brothers",
+            "siblings",
+            "sisters",
+            "couple",
+            "age difference",
+            "twins",
+            "mother and daughter",
+            "husband and wife",
+            "father and daughter",
+            "family",
+            "mother and son",
+            "group picture",
+        }:
+            return "other"
         if gate == "male" or tag in {
             "muscular",
             "abs",
@@ -697,13 +751,14 @@ def assign_group(item: dict) -> str:
             "testicles",
         }:
             return "body_m"
-        if tag in {"futanari", "quadruple amputee", "minigirl", "giantess", "uterus", "cervix"}:
+        if tag in {"futanari", "quadruple amputee", "minigirl", "giantess", "uterus", "cervix", "old woman", "tomboy"}:
             return "body_f"
         return "other"
 
     if sec == "pose":
-        # 前景模糊是景深，不佔鏡頭格，也不能掉進誘惑。
-        if tag == "blurry foreground":
+        # 前景模糊、黑邊、透視、對稱是畫面處理，不佔鏡頭格，也不能掉進誘惑。
+        # foreshortening 的互斥名也叫 perspective，那是另一個字，不要混在一起。
+        if tag in {"blurry foreground", "letterboxed", "perspective", "symmetry"}:
             return "camera"
         if mx == "body_pose":
             return "body"
@@ -761,6 +816,9 @@ def assign_group(item: dict) -> str:
             return "feet"
         if mx == "outer":
             return "outer"
+        # 韓服、奧黛、傳統裙的類別。時代含現代，不能靠「沒有現代」掉進時代組。
+        if tag in {"korean clothes", "vietnamese clothes", "german clothes"}:
+            return "era"
         if layer == "accessory" or mx in {
             "jewelry",
             "neckwear",

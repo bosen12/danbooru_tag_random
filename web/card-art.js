@@ -466,6 +466,15 @@ function castFor(item) {
 function castOf(item) {
   const needs = new Set(item.needs || []);
   const tag = item.tag;
+  // 人數牌。4boys 會被下面的數字規則接住。6+ 有加號，要先寫。
+  if (tag === "6+girls") return ["6+girls", "adult"];
+  if (tag === "6+boys") return ["6+boys", "adult male"];
+  // 男同性戀題材和兄弟不要走「兩個男生再加一個女生」那條。
+  if (tag === "yaoi" || needs.has("yaoi")) return ["2boys", "yaoi", "adult male"];
+  if (tag === "brothers") return ["2boys", "brothers", "adult male"];
+  // 姊妹、母女是兩個成年女性，不是百合。
+  if (tag === "sisters" || tag === "mother and daughter") return ["2girls", tag, "mature female", "adult"];
+  if (tag === "family") return ["1girl", "1boy", "family", "adult"];
   if (item.section === "subject") {
     if (/^\d(girls?|boys?)$/.test(tag)) return [tag, tag.includes("boy") ? "adult male" : "adult"];
     if (tag === "solo") return ["1girl", "solo", "adult"];

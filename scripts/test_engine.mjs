@@ -1842,12 +1842,21 @@ function indoorOutdoorClash(have) {
 }
 
 {
+  // 自慰是單人的預設。四肢截斷不能用手，植卵、機械、觸手這些不用手的單人體位也算。
+  // 要第二個人的體位不在這份清單裡。
   const SOLO_SEX = new Set([
     "masturbation",
     "female masturbation",
     "male masturbation",
     "fingering",
     "masturbation through clothes",
+    "object insertion",
+    "tentacle sex",
+    "sex machine",
+    "large insertion",
+    "urethral insertion",
+    "egg laying",
+    "nipple penetration",
   ]);
   const s = settings();
   s.girl = true;
@@ -3890,6 +3899,8 @@ function indoorOutdoorClash(have) {
     "living room",
     "cafe",
     "classroom",
+    "clubroom",
+    "maid cafe",
     "park bench",
     "garden",
     "shrine",
@@ -3906,6 +3917,7 @@ function indoorOutdoorClash(have) {
     "mansion",
     "palace",
     "throne",
+    "throne room",
     "ryokan",
     "balcony",
     "courtyard",
@@ -4113,6 +4125,7 @@ function indoorOutdoorClash(have) {
     const MAID_OK = [
       "mansion", "kitchen", "living room", "bedroom", "hotel room", "palace",
       "hallway", "balcony", "greenhouse", "library", "garden",
+      "cafe", "maid cafe",
     ];
     for (let i = 0; i < 40; i++) {
       const h = tagsOf(drawOne(lex, s, pinMaid, new Set(), mulberry32(225000 + i), 225000 + i));
@@ -5587,7 +5600,9 @@ function indoorOutdoorClash(have) {
     // 仍是 1girl solo，沒有男生，也沒有人類陰莖。
     // 第三十一次（2026-10-05）：第三輪 104 個現役詞進池。這張換成山、單眼眼罩、
     // 肚臍穿環、性愛機器。仍是 1girl solo，沒有男生，也沒有人類陰莖。
-    "1girl, solo, very short hair, aqua eyes, blue hair, hair intakes, gigantic breasts, clitoris, tongue, quadruple amputee, completely nude, navel piercing, eyepatch, collar, sun hat, hat, sitting, pov hands, pov, looking at viewer, pout, ovum, sex machine, mountain, outdoors, twilight, lamppost, lens flare, full-length mirror, mirror, nsfw, explicit, masterpiece, best quality, amazing quality");
+    // 第三十二次（2026-10-06）：第四輪 157 個、地點與第五輪 247 個現役詞進池。
+    // 這張換成自由女神、超級英雄裝、拉鍊。仍是 1girl solo，沒有男生，也沒有人類陰莖。
+    "1girl, solo, very short hair, aqua eyes, blue hair, bangs pinned back, small breasts, nipple stimulation, pussy piercing, androgynous, piercing, superhero costume, g-string, thong, torn pantyhose, pantyhose, zipper, masturbation, squatting, portrait, looking down, sad, ok sign, statue of liberty, outdoors, overcast, dusk, city lights, falling petals, petals, nsfw, explicit, masterpiece, best quality, amazing quality");
   ok("drawOne exposes shadow diagnostics", Array.isArray(shadowIntegrationDraw.shadowViolations));
 
   const eatProneShadow = validateSupportShadow({
@@ -5795,12 +5810,23 @@ function indoorOutdoorClash(have) {
   eq("must beats era", eraGot, eraEligible);
 
   // 對照組：沒設必抽時，現代場不該冒出古裝。
+  // 韓服、德式服裝、越南服裝是現代也穿的文化總稱，hanbok／dirndl／ao dai 會把它們帶出來。
+  // 分組放在時代服，是為了跟和服、漢服放在一起，不是因為它們不該出現在現代。
   let eraLeak = 0;
   for (let i = 0; i < 40; i++) {
     const d = draw((s) => {
       s.eras = ["modern"];
     }, 90300 + i);
-    if (groupCount(d, "clothing", "era") > 0) eraLeak += 1;
+    let historical = false;
+    for (const t of d.positive.split(", ")) {
+      const it = lex.byTag.get(t.trim());
+      if (!it || it.section !== "clothing" || it.group !== "era") continue;
+      const eras = it.era || [];
+      if (!eras.length || eras.includes("any") || eras.includes("modern")) continue;
+      historical = true;
+      break;
+    }
+    if (historical) eraLeak += 1;
   }
   eq("era still walls off without must", eraLeak, 0);
 
@@ -6740,8 +6766,12 @@ function indoorOutdoorClash(have) {
     ["running track", "bicycle"],
     ["tennis court", "tennis racket"],
   ]) {
-    const n = hits("normal", [place], gear);
-    ok(`gear/place 共享相容：釘「${place}」抽得到「${gear}」`, n > 0, `${n}/200`);
+    // 排球沒有自己的活動字，活動格常常先抽成網球、羽球、桌球，球就進不了場。
+    // 剩下的窗口裡它跟兩百多個環境字搶名額。400 張只中 2 次，200 張會空過。
+    // 斷言仍是「至少一次」：學校體育館沒有把排球誤殺。
+    const nDraw = gear === "volleyball (object)" ? 1000 : 200;
+    const n = hits("normal", [place], gear, nDraw);
+    ok(`gear/place 共享相容：釘「${place}」抽得到「${gear}」`, n > 0, `${n}/${nDraw}`);
   }
   ok(
     "gear/place：中性運動服不限制場地（釘 sneakers 仍抽得到 living room）",
@@ -7239,7 +7269,9 @@ function indoorOutdoorClash(have) {
     for (const heat of HEATS) {
       s.eras = [era];
       s.heats = [heat];
-      for (let i = 1; i <= 200; i++) {
+      // 這版詞庫 6 時代 × 4 尺度 × 200 張只看到 173 張浴場，低於「至少 200」。
+      // 身體交代那條在這 173 張裡是過的。門檻不降，每格改抽 320，把樣本補過 200。
+      for (let i = 1; i <= 320; i++) {
         const h = tagsOf(drawOne(lex, s, new Set(), new Set(), mulberry32(i), i));
         if (![...h].some((t) => BATH.has(t))) continue;
         bathSeen += 1;

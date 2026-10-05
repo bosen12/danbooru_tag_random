@@ -150,8 +150,11 @@ const WATER_SRC = [
     }
   }
   // 定向掃：把每條規則的前提釘起來，保證那條規則真的被跑到。
-  for (const [, , trigger] of NEEDS) {
-    for (const mode of ["normal", "diverse"]) sweep(mk({ sceneMode: mode }), trigger, 80, 500000);
+  for (const [prop, , trigger] of NEEDS) {
+    // 牌桌只在賭場、夜店、酒吧才合法，又跟兩百多個環境字搶剩下的名額。
+    // 80 張現在只看得到三次，低於「至少看過 5 次」。規則還在，樣本不夠。
+    const n = prop === "poker table" ? 400 : 80;
+    for (const mode of ["normal", "diverse"]) sweep(mk({ sceneMode: mode }), trigger, n, 500000);
   }
 
   if (!orphans.size) {

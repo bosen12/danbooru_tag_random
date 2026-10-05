@@ -790,6 +790,12 @@ EXPRESSION = {
     "come hither",
     "furrowed brow",
     "dazed",
+    "bored",
+    "confident",
+    "wide-eyed",
+    "laughing",
+    "yawning",
+    "raised eyebrow",
 }
 
 HAIR_STYLE_MUTEX = {
@@ -810,6 +816,7 @@ HAIR_STYLE_MUTEX = {
     "mohawk",
     "dreadlocks",
     "afro",
+    "cornrows",
 }
 
 # Engine reads stamped needs / mutex. Add new sex acts here, not in engine.js.
@@ -1330,7 +1337,7 @@ NEEDS_FIVE = {
     "fivesome",
 }
 
-NEED_KEYS = {"female", "male", "pair", "yuri", "group", "crowd", "2male", "2female", "five"}
+NEED_KEYS = {"female", "male", "pair", "yuri", "yaoi", "group", "crowd", "2male", "2female", "five"}
 
 YURI_ONLY = {
     "tribadism",
@@ -1380,6 +1387,20 @@ def apply_relations(tag: str, implies: list[str], bind: list[str], mutex, sectio
             im.append("yukata")
         if "japanese clothes" not in bind:
             bind = list(bind) + ["japanese clothes"]
+    # 具體民族服裝把類別帶出來。旗袍、唐裝是現代單品，不帶只有古代的中式服裝。
+    culture_parent = {
+        "hanbok": "korean clothes",
+        "ao dai": "vietnamese clothes",
+        "dirndl": "german clothes",
+        "toga": "roman clothes",
+        "peplos": "ancient greek clothes",
+        "hanfu": "chinese clothes",
+    }.get(tag)
+    if culture_parent and culture_parent not in im:
+        im.append(culture_parent)
+    # 彈吉他是演奏的一種。不改舊的那一列，只在這裡補上。
+    if tag == "playing guitar" and "playing instrument" not in im:
+        im.append("playing instrument")
     if section == "clothing" and "one-piece swimsuit" in tag and tag != "one-piece swimsuit":
         if "one-piece swimsuit" not in im:
             im.append("one-piece swimsuit")
@@ -3942,6 +3963,522 @@ def extra_csv_round3() -> list[dict]:
     ]
 
 
+def extra_csv_round4() -> list[dict]:
+    """多元文化與姿勢／風格／場景兩份 CSV。不開新互斥格，也不另開永遠補的格。
+
+    素描、寫實照片風留在共同負面，不收。收進來會跟每一張的負面詞打架。
+    6人以上、4個男生只給釘選，不進人數權重。男生自動補人仍停在 3boys。
+    民族類別跟具體衣服疊，不佔同一格。花田、向日葵田不暗示田野。
+    電扶梯那種不是場地的字，室內外暗示會被拿掉。
+    關係詞不帶 loli、shota、child。母女是兩個成年女性。
+    """
+    all_h = list(HEATS)
+    modern = ["modern"]
+    edo = ["edo"]
+    vic = ["modern", "victorian"]
+    china = ["ancient_china"]
+    china_m = ["ancient_china", "modern"]
+    edo_m = ["edo", "modern"]
+    greece = ["ancient_greece"]
+    cosplay_era = ["modern", "victorian"]
+    arch_era = ["modern", "victorian", "medieval"]
+    wine_era = ["modern", "victorian", "medieval", "ancient_greece"]
+    cloth = "clothing"
+    feat = "feature"
+    pose = "pose"
+    env = "env"
+    qual = "quality"
+    g = "garment"
+    acc = "accessory"
+    pair = ["pair"]
+    girl = ["female"]
+    boy = ["male"]
+    two_f = ["female", "2female", "pair"]
+    two_m = ["male", "2male", "pair"]
+    yaoi_needs = ["yaoi", "male", "2male", "pair"]
+    hetero = ["female", "male", "pair"]
+    group = ["group"]
+
+    def row(tag, section, zh, mutex=None, heat=None, gate="any", layer="normal",
+            implies=None, needs=None, era=None, bind=None):
+        return {
+            "tag": tag,
+            "section": section,
+            "gate": gate,
+            "heat": list(heat or all_h),
+            "mutex": mutex,
+            "bind": bind or [],
+            "implies": implies or [],
+            "layer": layer,
+            "era": era or ["any"],
+            "needs": needs or [],
+            "zh": zh,
+        }
+
+    return [
+        # ---- 配件與手持物。不佔電話那一格。油紙傘帶出雨傘，沒下雨時雨傘會被收掉。
+        row("chopsticks", env, "筷子", era=china_m + ["edo"]),
+        row("oil-paper umbrella", cloth, "油紙傘", layer=acc, era=china + edo, implies=["umbrella"]),
+        row("chinese knot", cloth, "中國結", layer=acc, era=china_m),
+        row("uchiwa", env, "團扇", era=edo),
+        row("turban", cloth, "頭巾", mutex="headwear", layer=acc),
+        row("sparkler", env, "仙女棒", mutex="effect", era=modern, implies=["fireworks"]),
+        row("flower necklace", cloth, "花項鍊", mutex="jewelry", layer=acc, implies=["necklace"]),
+        row("bindi", feat, "眉心點", gate="female", implies=["forehead mark"], needs=girl),
+        row("masquerade mask", cloth, "假面舞會面具", mutex="headwear", layer=acc, era=vic, implies=["mask"]),
+        row("lei", cloth, "花環", layer=acc),
+        row("hijab", cloth, "伊斯蘭頭巾", mutex="headwear", layer=acc, gate="female", era=modern, needs=girl),
+        row("sombrero", cloth, "寬邊帽", mutex="headwear", layer=acc, era=modern, implies=["hat"]),
+        row("celtic knot", cloth, "凱爾特結", layer=acc, era=["medieval", "modern"]),
+        row("kokoshnik", cloth, "俄羅斯頭冠", mutex="headwear", layer=acc, gate="female", era=vic, needs=girl),
+        # ---- 食物是場景裡的東西，不佔活動格，也不暗示吃或喝。
+        row("wine", env, "葡萄酒", era=wine_era),
+        row("sake", env, "清酒", era=edo_m),
+        row("pizza", env, "披薩", era=modern),
+        row("sushi", env, "壽司", era=edo_m),
+        row("ramen", env, "拉麵", era=edo_m),
+        row("curry", env, "咖哩", era=modern),
+        row("pasta", env, "義大利麵", era=modern),
+        row("champagne", env, "香檳", era=modern),
+        row("mooncake", env, "月餅", era=china_m),
+        row("lion dance", pose, "舞獅", mutex="activity", era=china_m),
+        row("taco", env, "塔克", era=modern),
+        row("goldfish scooping", pose, "撈金魚", mutex="activity", era=edo_m),
+        row("sunflower", env, "向日葵"),
+        row("autumn leaves", env, "秋葉", mutex="weather"),
+        row("fireworks", env, "煙火", mutex="effect", era=modern),
+        row("maple leaf", env, "楓葉", mutex="weather", implies=["autumn leaves"]),
+        row("plum blossoms", env, "梅花", mutex="weather"),
+        # ---- 衣服。印花和服走和服後綴，帶出和服與日式服裝。花紋款再直接帶出印花款。
+        row("print kimono", cloth, "印花和服", layer=g, era=edo),
+        row("floral print kimono", cloth, "花紋和服", layer=g, era=edo, implies=["print kimono"]),
+        row("ancient egyptian clothes", cloth, "古埃及服裝", mutex="onepiece", layer=g, era=cosplay_era),
+        row("korean clothes", cloth, "韓式服裝", layer=g, era=modern),
+        row("german clothes", cloth, "德式服裝", layer=g, era=vic),
+        row("vietnamese clothes", cloth, "越南服裝", layer=g, era=modern),
+        row("roman clothes", cloth, "古羅馬服裝", mutex="onepiece", layer=g, era=greece),
+        row("mexican clothes", cloth, "墨西哥服裝", mutex="onepiece", layer=g, era=modern),
+        row("russian clothes", cloth, "俄式服裝", mutex="onepiece", layer=g, era=vic),
+        row("flamenco dress", cloth, "佛朗明哥裙", mutex="onepiece", layer=g, gate="female", era=modern, needs=girl),
+        row("sari", cloth, "莎麗", mutex="onepiece", layer=g, gate="female", era=modern, needs=girl),
+        row("hawaiian clothes", cloth, "夏威夷服裝", mutex="onepiece", layer=g, era=modern),
+        row("tabi", cloth, "足袋", mutex="feet", layer=g, era=edo),
+        row("okobo", cloth, "女用木屐", mutex="feet", layer=g, gate="female", era=edo, implies=["geta"], needs=girl),
+        row("cornrows", feat, "玉米辮", mutex="hair_style"),
+        row("facial mark", feat, "臉部標記"),
+        row("forehead mark", feat, "額頭印記", implies=["facial mark"]),
+        row("american flag", env, "美國國旗", era=modern),
+        row("rice bowl", env, "飯碗", era=china_m + ["edo"]),
+        row("japanese flag", env, "日本國旗", era=edo_m),
+        row("brazilian flag", env, "巴西國旗", era=modern),
+        row("german flag", env, "德國國旗", era=modern),
+        row("tribal tattoo", feat, "部落刺青", implies=["tattoo"]),
+        row("french flag", env, "法國國旗", era=modern),
+        row("russian flag", env, "俄國國旗", era=modern),
+        row("subway", env, "地鐵", mutex="place", era=modern, implies=["indoors"]),
+        row("native american clothes", cloth, "美洲原住民服裝", mutex="onepiece", layer=g, era=modern),
+        row("gondola", env, "貢多拉", era=vic),
+        row("mexican flag", env, "墨西哥國旗", era=modern),
+        row("rickshaw", env, "人力車", era=edo_m),
+        row("poncho", cloth, "墨西哥披肩", mutex="outer", layer=g, era=modern),
+        # ---- 節日跟氣候不是場地。向日葵田、稀樹草原不帶出只有古代的田野。
+        row("halloween", env, "萬聖節", era=modern),
+        row("new year", env, "新年", era=modern),
+        row("desert", env, "沙漠", mutex="place", implies=["outdoors"]),
+        row("skyline", env, "天際線", mutex="place", era=modern, implies=["outdoors"]),
+        row("sunflower field", env, "向日葵田", mutex="place", implies=["outdoors", "sunflower"]),
+        row("summer festival", env, "夏日祭典", era=edo_m),
+        row("easter", env, "復活節", era=modern),
+        row("european architecture", env, "歐式建築", era=arch_era),
+        row("canal", env, "運河", mutex="place", era=vic, implies=["outdoors"]),
+        row("tropical", env, "熱帶"),
+        row("lantern festival", env, "元宵節", era=china_m),
+        row("eiffel tower", env, "艾菲爾鐵塔", mutex="place", era=modern, implies=["outdoors"]),
+        row("sphinx", env, "獅身人面", mutex="place", implies=["outdoors"]),
+        row("savannah", env, "稀樹草原", mutex="place", implies=["outdoors"]),
+        row("mid-autumn festival", env, "中秋節", era=china_m),
+        row("oktoberfest", env, "啤酒節", era=modern),
+        row("colosseum", env, "競技場", mutex="place", era=["modern", "ancient_greece"], implies=["outdoors"]),
+        row("statue of liberty", env, "自由女神", mutex="place", era=modern, implies=["outdoors"]),
+        row("igloo", env, "冰屋", mutex="place", implies=["outdoors", "snow"]),
+        row("oasis", env, "綠洲", mutex="place", implies=["outdoors", "desert"]),
+        row("black skin", feat, "黑膚", implies=["dark skin"]),
+        row("patterned clothing", cloth, "花紋衣服", layer=g),
+        row("ink wash painting", qual, "水墨畫", mutex="coloring"),
+        # ---- 姿勢。單手跟雙手不佔同一格。背對走遠就是走路的一種。
+        row("flying", pose, "飛行", mutex="activity"),
+        row("adjusting eyewear", pose, "調整眼鏡"),
+        row("praying", pose, "祈禱", mutex="activity"),
+        row("adjusting gloves", pose, "調整手套"),
+        row("spinning", pose, "旋轉"),
+        row("walking away", pose, "背對走遠", mutex="body_pose", implies=["walking"]),
+        row("horizon", env, "地平線"),
+        row("landscape", env, "地景"),
+        row("colorful background", env, "色彩繽紛背景", mutex="background"),
+        row("arm up", pose, "單手上舉"),
+        row("arm support", pose, "手臂撐著"),
+        row("hand on own face", pose, "手摸自己臉"),
+        row("hand in own hair", pose, "手插自己頭髮"),
+        row("arms at sides", pose, "雙手垂在身側"),
+        row("hands in pockets", pose, "雙手插口袋"),
+        row("back-to-back", pose, "背靠背", needs=pair),
+        row("hand on own thigh", pose, "單手摸大腿"),
+        row("hand on own knee", pose, "手放膝蓋"),
+        row("leaning to the side", pose, "向旁傾"),
+        row("leaning on object", pose, "靠在物體上"),
+        row("sitting on stairs", pose, "坐在階梯上", mutex="body_pose", implies=["sitting"]),
+        row("hand on own neck", pose, "手摸自己脖子"),
+        row("sitting on object", pose, "坐在物體上", mutex="body_pose", implies=["sitting"]),
+        row("balancing", pose, "保持平衡"),
+        row("handstand", pose, "倒立", mutex="body_pose"),
+        row("holding own wrist", pose, "握住自己手腕"),
+        row("androgynous", feat, "中性長相"),
+        row("old woman", feat, "老婦人", gate="female", needs=girl),
+        row("trap", feat, "男扮女相", gate="male", needs=boy),
+        row("isometric", pose, "等角視圖", mutex="camera"),
+        row("6+girls", "subject", "6人以上女性", mutex="female_count", gate="female"),
+        row("4boys", "subject", "4個男性", mutex="male_count", gate="male"),
+        row("6+boys", "subject", "6人以上男性", mutex="male_count", gate="male"),
+        row("siblings", feat, "兄弟姊妹", needs=pair),
+        row("sisters", feat, "姊妹", needs=two_f),
+        row("yaoi", feat, "男同性戀題材", gate="male", needs=yaoi_needs),
+        row("couple", feat, "情侶", needs=pair),
+        row("age difference", feat, "年齡差", needs=pair),
+        row("twins", feat, "雙胞胎", needs=pair),
+        row("mother and daughter", feat, "母女", needs=two_f),
+        row("brothers", feat, "兄弟", gate="male", needs=two_m),
+        row("husband and wife", feat, "夫妻", needs=hetero),
+        row("father and daughter", feat, "父女", needs=hetero),
+        row("family", feat, "家人", needs=group),
+        row("mother and son", feat, "母子", needs=hetero),
+        row("group picture", feat, "團體照", needs=group),
+        row("paw pose", pose, "貓爪手勢"),
+        row("shushing", pose, "食指噓聲", implies=["finger to mouth"]),
+        row("bored", pose, "無聊", mutex="expression"),
+        row("confident", pose, "自信", mutex="expression"),
+        row("facing viewer", pose, "面向觀眾"),
+        row("tomboy", feat, "假小子", gate="female", needs=girl),
+        row("planet", env, "行星", mutex="place", era=modern, implies=["space"]),
+        row("lake", env, "湖", mutex="place", implies=["outdoors"]),
+        row("earth (planet)", env, "地球", mutex="place", era=modern, implies=["planet", "space"]),
+        row("lava", env, "熔岩", mutex="place", implies=["outdoors"]),
+        row("island", env, "島", mutex="place", implies=["outdoors"]),
+        row("carousel", env, "旋轉木馬", mutex="place", era=modern, implies=["outdoors"]),
+        row("abandoned", env, "廢棄"),
+        row("dock", env, "船塢", mutex="place", implies=["outdoors"]),
+        row("volcano", env, "火山", mutex="place", implies=["outdoors"]),
+        row("asteroid", env, "小行星", mutex="place", era=modern, implies=["space"]),
+        row("scar on face", feat, "臉上疤痕", implies=["scar"]),
+        row("mole on cheek", feat, "臉頰痣", implies=["mole"]),
+        row("cloudy sky", env, "多雲天空"),
+        row("starry sky background", env, "星空背景", implies=["starry sky"]),
+        row("comic", qual, "漫畫分格"),
+        row("painterly", qual, "油畫感", mutex="coloring"),
+        row("cyberpunk", qual, "賽博龐克", era=modern),
+        row("steampunk", qual, "蒸汽龐克", era=vic),
+        row("art nouveau", qual, "新藝術風格", era=vic),
+        row("neon palette", qual, "霓虹色調", era=modern),
+    ]
+
+
+def extra_csv_round5() -> list[dict]:
+    """地點與第五輪缺字。不開新互斥格，也不另開永遠補的格。
+
+    房間、店、地標、船和車站佔場地格。樓梯、圍欄、月亮、道路、科幻是疊加，
+    不跟街道搶唯一的場地。食物和武器不佔手持格，也不帶出吃或喝。
+    持劍才把劍和持武器帶出來。親子同格要直接寫上，中間那層不會代傳。
+    太空船內部不寫室內：太空和室內外互斥，寫了兩邊會一起被拒。
+    """
+    modern = ["modern"]
+    vic = ["modern", "victorian"]
+    edo_m = ["edo", "modern"]
+    pirate = ["modern", "victorian", "medieval"]
+    throne_era = ["victorian", "medieval", "ancient_china"]
+    cloth = "clothing"
+    feat = "feature"
+    pose = "pose"
+    env = "env"
+    g = "garment"
+    acc = "accessory"
+    pair = ["pair"]
+    girl = ["female"]
+
+    def row(tag, section, zh, mutex=None, heat=None, gate="any", layer="normal",
+            implies=None, needs=None, era=None, bind=None):
+        return {
+            "tag": tag,
+            "section": section,
+            "gate": gate,
+            "heat": list(heat or HEATS),
+            "mutex": mutex,
+            "bind": bind or [],
+            "implies": implies or [],
+            "layer": layer,
+            "era": era or ["any"],
+            "needs": needs or [],
+            "zh": zh,
+        }
+
+    return [
+        # 室內場地。衣櫥、凌亂房間是一間房，不是傢俱。
+        row("messy room", env, "凌亂房間", mutex="place", era=modern, implies=["indoors"]),
+        row("infirmary", env, "保健室", mutex="place", era=modern, implies=["indoors"]),
+        row("public restroom", env, "公共廁所", mutex="place", era=modern, implies=["indoors"]),
+        row("vehicle interior", env, "載具內部", mutex="place", era=modern, implies=["indoors"]),
+        row("closet", env, "衣櫥", mutex="place", era=modern, implies=["indoors"]),
+        row("spacecraft interior", env, "太空船內部", mutex="place", era=modern, implies=["spacecraft", "space"]),
+        row("washitsu", env, "和室", mutex="place", era=edo_m, implies=["indoors"]),
+        row("otaku room", env, "宅宅房間", mutex="place", era=modern, implies=["indoors"]),
+        row("clubroom", env, "社團教室", mutex="place", era=modern, implies=["indoors"]),
+        row("garage", env, "車庫", mutex="place", era=modern, implies=["indoors"]),
+        row("dressing room", env, "後台化妝室", mutex="place", era=modern, implies=["indoors"]),
+        row("genkan", env, "玄關", mutex="place", era=edo_m, implies=["indoors"]),
+        row("dining room", env, "家中飯廳", mutex="place", era=modern, implies=["indoors"]),
+        row("warehouse", env, "倉庫", mutex="place", era=modern, implies=["indoors"]),
+        row("backstage", env, "後台", mutex="place", era=modern, implies=["indoors"]),
+        row("cafeteria", env, "學生餐廳", mutex="place", era=modern, implies=["indoors"]),
+        row("throne room", env, "王座廳", mutex="place", era=throne_era, implies=["indoors", "throne"]),
+        row("concert", env, "演唱會", mutex="place", era=modern, implies=["indoors", "stage"]),
+        row("theater", env, "劇院", mutex="place", era=modern, implies=["indoors"]),
+        row("museum", env, "博物館", mutex="place", era=modern, implies=["indoors"]),
+        row("planetarium", env, "天象儀館", mutex="place", era=modern, implies=["indoors"]),
+        row("shop", env, "商店", mutex="place", era=modern, implies=["indoors"]),
+        row("bakery", env, "麵包店", mutex="place", era=modern, implies=["indoors", "shop"]),
+        row("laundromat", env, "自助洗衣店", mutex="place", era=modern, implies=["indoors"]),
+        row("maid cafe", env, "女僕咖啡廳", mutex="place", era=modern, implies=["indoors", "cafe"]),
+        row("clothes shop", env, "服飾店", mutex="place", era=modern, implies=["indoors", "shop"]),
+        row("flower shop", env, "花店", mutex="place", era=modern, implies=["indoors", "shop"]),
+        row("bookstore", env, "書店", mutex="place", era=modern, implies=["indoors", "shop"]),
+        row("conveyor belt sushi", env, "迴轉壽司", mutex="place", era=modern, implies=["indoors"]),
+        row("skating rink", env, "溜冰場", mutex="place", era=modern, implies=["indoors"]),
+        row("sewer", env, "下水道", mutex="place", era=modern, implies=["indoors"]),
+        # 室外場地、交通工具、地標。行人天橋不帶出古代的橋。屋台不帶出市集。
+        row("water slide", env, "滑水道", mutex="place", era=modern, implies=["outdoors", "pool"]),
+        row("roller coaster", env, "雲霄飛車", mutex="place", era=modern, implies=["outdoors", "amusement park"]),
+        row("empty pool", env, "空泳池", mutex="place", era=modern, implies=["outdoors", "pool"]),
+        row("yatai", env, "屋台", mutex="place", era=edo_m, implies=["outdoors"]),
+        row("gas station", env, "加油站", mutex="place", era=modern, implies=["outdoors"]),
+        row("porch", env, "門廊", mutex="place", era=vic, implies=["outdoors"]),
+        row("railroad tracks", env, "鐵軌", mutex="place", era=modern, implies=["outdoors"]),
+        row("railroad crossing", env, "平交道", mutex="place", era=modern, implies=["outdoors", "railroad tracks"]),
+        row("tunnel", env, "隧道", mutex="place"),
+        row("industrial", env, "工業區", mutex="place", era=modern, implies=["outdoors"]),
+        row("gazebo", env, "涼亭", mutex="place", era=vic, implies=["outdoors"]),
+        row("pedestrian bridge", env, "行人天橋", mutex="place", era=modern, implies=["outdoors"]),
+        row("clock tower", env, "鐘樓", mutex="place", era=vic, implies=["outdoors"]),
+        row("lighthouse", env, "燈塔", mutex="place", era=vic, implies=["outdoors"]),
+        row("treehouse", env, "樹屋", mutex="place", era=modern, implies=["outdoors"]),
+        row("shore", env, "海岸", mutex="place", implies=["outdoors"]),
+        row("hill", env, "山丘", mutex="place", implies=["outdoors"]),
+        row("stream", env, "小溪", mutex="place", implies=["outdoors"]),
+        row("floating island", env, "浮空島", mutex="place", implies=["outdoors", "island"]),
+        row("riverbank", env, "河岸", mutex="place", implies=["outdoors"]),
+        row("wetland", env, "濕地", mutex="place", implies=["outdoors"]),
+        row("coral reef", env, "珊瑚礁", mutex="place", implies=["underwater"]),
+        row("canyon", env, "峽谷", mutex="place", implies=["outdoors"]),
+        row("valley", env, "山谷", mutex="place", implies=["outdoors"]),
+        row("seafloor", env, "海底", mutex="place", implies=["underwater"]),
+        row("glacier", env, "冰河", mutex="place", implies=["outdoors"]),
+        row("sand dune", env, "沙丘", mutex="place", implies=["outdoors"]),
+        row("boat", env, "小船", mutex="place", implies=["outdoors"]),
+        row("ship", env, "船", mutex="place", implies=["outdoors"]),
+        row("spacecraft", env, "太空船", mutex="place", era=modern, implies=["space"]),
+        row("bus", env, "公車", mutex="place", era=modern, implies=["outdoors"]),
+        row("airship", env, "飛行船", mutex="place", era=vic, implies=["outdoors"]),
+        row("train station platform", env, "車站月台", mutex="place", era=modern, implies=["outdoors", "train station"]),
+        row("steam locomotive", env, "蒸汽火車", mutex="place", era=vic, implies=["outdoors"]),
+        row("rowboat", env, "划艇", mutex="place", implies=["outdoors", "boat"]),
+        row("submarine", env, "潛水艇", mutex="place", era=modern, implies=["underwater"]),
+        row("pirate ship", env, "海盜船", mutex="place", era=pirate, implies=["outdoors", "ship"]),
+        row("streetcar", env, "路面電車", mutex="place", era=vic, implies=["outdoors"]),
+        row("shipwreck", env, "沉船", mutex="place", implies=["outdoors", "ship"]),
+        row("subway station", env, "地鐵站", mutex="place", era=modern, implies=["indoors", "subway"]),
+        row("hell", env, "地獄", mutex="place"),
+        row("floating city", env, "浮空城市", mutex="place", implies=["outdoors"]),
+        row("heaven", env, "天堂", mutex="place"),
+        row("underwater city", env, "海底城市", mutex="place", implies=["underwater"]),
+        row("tokyo", env, "東京", mutex="place", era=modern, implies=["outdoors", "city"]),
+        row("mount fuji", env, "富士山", mutex="place", era=edo_m, implies=["outdoors", "mountain"]),
+        row("pyramid (structure)", env, "金字塔", mutex="place", implies=["outdoors"]),
+        row("tokyo tower", env, "東京鐵塔", mutex="place", era=modern, implies=["outdoors", "tokyo"]),
+        row("shibuya (tokyo)", env, "澀谷", mutex="place", era=modern, implies=["outdoors", "tokyo"]),
+        row("kyoto (city)", env, "京都", mutex="place", era=edo_m, implies=["outdoors"]),
+        row("elizabeth tower", env, "大笨鐘", mutex="place", era=vic, implies=["outdoors"]),
+        row("new york city", env, "紐約", mutex="place", era=modern, implies=["outdoors", "city"]),
+        row("tokyo skytree", env, "東京晴空塔", mutex="place", era=modern, implies=["outdoors", "tokyo"]),
+        row("taipei 101", env, "台北101", mutex="place", era=modern, implies=["outdoors"]),
+        # 不是場地。跟已經抽到的街道、房間疊在一起。
+        row("bookshelf", env, "書架"),
+        row("kotatsu", env, "暖桌", era=edo_m),
+        row("spiral staircase", env, "螺旋樓梯", implies=["stairs"]),
+        row("crane game", env, "夾娃娃機", era=modern),
+        row("arcade cabinet", env, "大型電玩機台", era=modern),
+        row("purikura", env, "拍貼機", era=modern),
+        row("road", env, "道路"),
+        row("path", env, "小徑"),
+        row("town", env, "城鎮"),
+        row("crosswalk", env, "斑馬線", era=modern),
+        row("sidewalk", env, "人行道", era=modern),
+        row("urban", env, "都市感", era=modern),
+        row("dirt road", env, "泥土路", implies=["road"]),
+        row("hedge", env, "樹籬"),
+        row("fence", env, "圍欄"),
+        row("brick wall", env, "磚牆"),
+        row("power lines", env, "電線", era=modern),
+        row("utility pole", env, "電線桿", era=modern),
+        row("chain-link fence", env, "鐵絲網圍欄", era=modern, implies=["fence"]),
+        row("graffiti", env, "塗鴉", era=modern),
+        row("vending machine", env, "自動販賣機", era=modern),
+        row("traffic light", env, "紅綠燈", era=modern),
+        row("billboard", env, "廣告看板", era=modern),
+        row("phone booth", env, "電話亭", era=modern),
+        row("building", env, "建築物"),
+        row("stairs", env, "樓梯"),
+        row("architecture", env, "建築"),
+        row("stone stairs", env, "石階", implies=["stairs"]),
+        row("komainu", env, "狛犬", era=edo_m, implies=["shrine"]),
+        row("jizou", env, "地藏", era=edo_m),
+        row("rock", env, "岩石"),
+        row("palm tree", env, "棕櫚樹"),
+        row("mountainous horizon", env, "山巒地平線"),
+        row("puddle", env, "水窪"),
+        row("overgrown", env, "雜草叢生"),
+        row("stalactite", env, "鐘乳石"),
+        row("moon", env, "月亮"),
+        row("milky way", env, "銀河", implies=["starry sky"]),
+        row("science fiction", env, "科幻", era=modern),
+        row("post-apocalypse", env, "末日廢土", era=modern),
+        # 手。雙手合十可以是自己的手，不要求兩人。手搭在對方身上才要。
+        row("holding weapon", pose, "持武器"),
+        row("holding sword", pose, "持劍", implies=["sword", "holding weapon"]),
+        row("holding gun", pose, "持槍", era=modern, implies=["gun", "holding weapon"]),
+        row("holding knife", pose, "持刀", implies=["knife", "holding weapon"]),
+        row("holding staff", pose, "持杖", implies=["staff", "holding weapon"]),
+        row("pointing", pose, "指向"),
+        row("index finger raised", pose, "豎食指"),
+        row("reaching", pose, "伸手"),
+        row("waving", pose, "揮手"),
+        row("punching", pose, "出拳"),
+        row("hand on another's shoulder", pose, "手搭對方肩", needs=pair),
+        row("hand on another's face", pose, "手撫對方臉", needs=pair),
+        row("hand on another's cheek", pose, "手撫對方頰", needs=pair),
+        row("feeding", pose, "餵食", needs=pair),
+        row("between fingers", pose, "指縫之間"),
+        row("own hands together", pose, "雙手合十"),
+        row("interlocked fingers", pose, "十指交扣"),
+        row("dual wielding", pose, "雙持", implies=["holding weapon"]),
+        row("aiming", pose, "瞄準"),
+        row("tying hair", pose, "綁頭髮"),
+        row("licking", pose, "舔"),
+        row("kicking", pose, "踢", mutex="body_pose"),
+        row("falling", pose, "跌倒", mutex="body_pose"),
+        row("playing instrument", pose, "演奏樂器", mutex="activity"),
+        row("wide-eyed", pose, "睜大眼", mutex="expression"),
+        row("laughing", pose, "大笑", mutex="expression"),
+        row("yawning", pose, "打哈欠", mutex="expression"),
+        row("raised eyebrow", pose, "挑眉", mutex="expression"),
+        row("letterboxed", pose, "上下黑邊"),
+        row("perspective", pose, "透視"),
+        row("symmetry", pose, "對稱構圖"),
+        # 臉和身體。緊張冒汗要能跟「緊張」疊，不佔表情格。眯眼也不佔。
+        row("blush stickers", feat, "腮紅貼"),
+        row("veins", feat, "血管"),
+        row("arm tattoo", feat, "手臂刺青", implies=["tattoo"]),
+        row("leg tattoo", feat, "腿部刺青", implies=["tattoo"]),
+        row("neck tattoo", feat, "頸部刺青", implies=["tattoo"]),
+        row("scar on cheek", feat, "頰疤", implies=["scar"]),
+        row("nervous sweating", feat, "緊張冒汗", implies=["sweat"]),
+        row("nosebleed", feat, "流鼻血"),
+        row("eyes visible through hair", feat, "髮間露眼"),
+        row("colored eyelashes", feat, "彩色睫毛", implies=["eyelashes"]),
+        row("star-shaped pupils", feat, "星形瞳"),
+        row("narrowed eyes", feat, "眯眼"),
+        row("biceps", feat, "二頭肌"),
+        row("ribs", feat, "肋骨"),
+        row("shoulder blades", feat, "肩胛骨"),
+        # 衣服。皇冠不帶出帽子。腳鍊佔飾品格，不佔鞋子。拉鍊不帶出拉開。
+        row("buttons", cloth, "鈕扣", layer=g),
+        row("animal print", cloth, "動物紋", layer=g, era=modern),
+        row("polka dot", cloth, "圓點", layer=g, era=vic),
+        row("pocket", cloth, "口袋", layer=g),
+        row("zipper", cloth, "拉鍊", layer=g, era=modern),
+        row("breast pocket", cloth, "胸袋", layer=g, implies=["pocket"]),
+        row("cow print", cloth, "乳牛紋", layer=g, era=modern),
+        row("bandages", cloth, "繃帶", layer=acc),
+        row("crown", cloth, "皇冠", mutex="headwear", layer=acc),
+        row("brooch", cloth, "胸針", mutex="jewelry", layer=acc),
+        row("anklet", cloth, "腳鍊", mutex="jewelry", layer=acc),
+        row("pendant", cloth, "墜飾", mutex="jewelry", layer=acc, implies=["necklace"]),
+        row("gem", cloth, "寶石", layer=acc),
+        row("buckle", cloth, "帶扣", layer=acc),
+        row("belt buckle", cloth, "皮帶扣", layer=acc, implies=["belt"]),
+        row("name tag", cloth, "名牌", layer=acc, era=modern),
+        row("lace-up boots", cloth, "綁帶靴", mutex="feet", layer=g, era=modern, implies=["boots"]),
+        row("suspender skirt", cloth, "吊帶裙", mutex="bottom", layer=g, gate="female", needs=girl, era=modern, implies=["skirt", "suspenders"]),
+        row("shoulder bag", cloth, "肩背包", layer=acc, implies=["bag"]),
+        row("pouch", cloth, "小袋", layer=acc, implies=["bag"]),
+        row("suitcase", cloth, "行李箱", layer=acc, era=modern),
+        # 武器和食物是場景裡的東西。吃和喝另算，這裡不帶出來。
+        row("sword", env, "劍"),
+        row("katana", env, "日本刀", era=edo_m, implies=["sword"]),
+        row("knife", env, "刀"),
+        row("staff", env, "杖"),
+        row("gun", env, "槍", era=modern),
+        row("rifle", env, "步槍", era=modern, implies=["gun"]),
+        row("handgun", env, "手槍", era=modern, implies=["gun"]),
+        row("cup", env, "杯子"),
+        row("mug", env, "馬克杯"),
+        row("bottle", env, "瓶子"),
+        row("bell", env, "鈴鐺"),
+        row("candy", env, "糖果", era=modern),
+        row("cake", env, "蛋糕", era=modern),
+        row("lollipop", env, "棒棒糖", era=modern),
+        row("popsicle", env, "冰棒", era=modern),
+        row("strawberry", env, "草莓", era=modern),
+        row("ice cream", env, "冰淇淋", era=modern),
+        row("chocolate", env, "巧克力", era=modern),
+        row("apple", env, "蘋果", era=modern),
+        row("bread", env, "麵包", era=modern),
+        row("donut", env, "甜甜圈", era=modern),
+        row("cookie", env, "餅乾", era=modern),
+        row("coffee", env, "咖啡", era=modern),
+        row("beer", env, "啤酒", era=vic),
+        row("onigiri", env, "飯糰", era=edo_m),
+        row("bubble tea", env, "珍珠奶茶", era=modern),
+        row("balloon", env, "氣球"),
+        row("basket", env, "籃子"),
+        row("key", env, "鑰匙"),
+        row("playing card", env, "撲克牌"),
+        row("scissors", env, "剪刀"),
+        row("surfboard", env, "衝浪板", era=modern),
+        row("skateboard", env, "滑板", era=modern),
+        row("dumbbell", env, "啞鈴", era=modern),
+        row("blanket", env, "毯子"),
+        # 效果佔同一個效果格，只有直接的親子（閃電和電光）可以疊。
+        row("glowing", env, "發光", mutex="effect"),
+        row("electricity", env, "電光", mutex="effect"),
+        row("lightning", env, "閃電", mutex="effect", implies=["electricity"]),
+        row("aura", env, "氣場", mutex="effect"),
+        row("snowflakes", env, "雪花", mutex="effect", implies=["snow"]),
+        row("ripples", env, "波紋", mutex="effect"),
+        row("rainbow", env, "彩虹", mutex="effect"),
+        row("magic circle", env, "魔法陣", mutex="effect"),
+        row("sparks", env, "火花", mutex="effect"),
+        row("embers", env, "餘燼", mutex="effect"),
+        row("blue fire", env, "藍火", mutex="effect"),
+        row("glitch", env, "故障藝術", mutex="effect", era=modern),
+        row("shooting star", env, "流星", mutex="effect", implies=["starry sky"]),
+        row("glowstick", env, "螢光棒", mutex="effect", era=modern),
+        row("diffraction spikes", env, "星芒", mutex="effect"),
+        row("caustics", env, "水面光斑", mutex="effect"),
+        row("floating clothes", env, "衣袂飄揚", mutex="effect"),
+        row("anger vein", env, "怒筋", mutex="effect"),
+        row("clear sky", env, "晴空", implies=["blue sky"]),
+        row("underlighting", env, "底光", mutex="lighting"),
+    ]
+
+
+
 def main() -> None:
     rows: list[dict] = []
     for path in sorted(PARTS.glob("*.json")):
@@ -3967,6 +4504,8 @@ def main() -> None:
     rows.extend(extra_csv_tags())
     rows.extend(extra_csv_round2())
     rows.extend(extra_csv_round3())
+    rows.extend(extra_csv_round4())
+    rows.extend(extra_csv_round5())
     rows.extend(extra_loli_tags())
     rows.extend(extra_shota_tags())
     rows.extend(extra_style_tags())

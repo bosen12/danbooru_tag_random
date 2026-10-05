@@ -1098,6 +1098,7 @@
     ],
     "layer": "normal",
     "era": [
+      "victorian",
       "medieval",
       "ancient_china"
     ]
@@ -1906,7 +1907,7 @@
       "edo"
     ],
     "group": "other",
-    "zh": "團扇"
+    "zh": "扇子"
   },
   {
     "tag": "scroll",

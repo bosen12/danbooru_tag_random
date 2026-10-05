@@ -37,7 +37,7 @@ const tagsOf = (positive) => positive.split(",").map((s) => s.trim());
 
 /* ---------- 畫人一定畫成年人 ---------- */
 {
-  const PEOPLE = /^(\d(girls?|boys?)|multiple (girls|boys)|solo)$/;
+  const PEOPLE = /^(\d\+?(girls?|boys?)|multiple (girls|boys)|solo)$/;
   const bad = jobs.filter((j) => {
     const t = tagsOf(j.positive);
     const person = t.some((x) => PEOPLE.test(x));
@@ -69,7 +69,7 @@ const tagsOf = (positive) => positive.split(",").map((s) => s.trim());
   const guard = ["loli", "shota", "child", "aged down"];
   const unguarded = jobs.filter((j) => !tagsOf(j.positive).includes("no humans") && !guard.every((g) => tagsOf(j.negative || "").includes(g)));
   ok("有人的插畫負面詞都擋 loli、shota、child、aged down", !unguarded.length, unguarded.slice(0, 4).map((j) => j.tag).join(", "));
-  const groupNoFamily = [...pairs, ...jobs.filter((j) => tagsOf(j.positive).some((x) => MULTI.test(x)))].filter((j) => !tagsOf(j.negative || "").includes("family"));
+  const groupNoFamily = [...pairs, ...jobs.filter((j) => tagsOf(j.positive).some((x) => MULTI.test(x)))].filter((j) => j.tag !== "family" && !tagsOf(j.negative || "").includes("family"));
   ok("多人的插畫負面詞都擋 family（全家福構圖）", !groupNoFamily.length, groupNoFamily.slice(0, 4).map((j) => j.tag).join(", "));
   const selfFight = jobs.filter((j) => tagsOf(j.negative || "").some((n) => n && tagsOf(j.positive).includes(n)));
   ok("負面詞不會跟正面詞打架", !selfFight.length, selfFight.slice(0, 4).map((j) => j.tag).join(", "));

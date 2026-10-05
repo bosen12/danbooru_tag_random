@@ -143,12 +143,13 @@ const GROUND_BODY = new Set(["all fours", "crawling", "top-down bottom-up"]);
 // 站著、走著、跑著的人不會同時「在沙發上」。on bed／on chair 這幾個字原本是
 // body_pose，被改成 env/furniture 之後就脫離了姿勢相容那一整套檢查，於是
 // 「standing + on couch」這種組合一直畫得出來（基準線 4/24，六分之一）。
-const UPRIGHT_BODY = new Set(["standing", "walking", "running", "jumping", "standing split", "tiptoes"]);
+const UPRIGHT_BODY = new Set(["standing", "walking", "walking away", "running", "jumping", "standing split", "tiptoes"]);
 // 騎車是坐著。跳水、漂浮跟走跑不能同時成立。全身動作不配半身鏡頭。
-const BIKE_BLOCK_BODY = new Set(["walking", "running", "jumping"]);
-const DIVE_BLOCK_BODY = new Set(["walking", "running", "standing split"]);
-const FLOAT_BLOCK_BODY = new Set(["walking", "running"]);
-const FULL_SHOT_BODY = new Set(["walking", "running", "jumping", "standing split", "tiptoes", "leg up"]);
+// 背對走遠就是走路，同一組限制。
+const BIKE_BLOCK_BODY = new Set(["walking", "walking away", "running", "jumping"]);
+const DIVE_BLOCK_BODY = new Set(["walking", "walking away", "running", "standing split"]);
+const FLOAT_BLOCK_BODY = new Set(["walking", "walking away", "running"]);
+const FULL_SHOT_BODY = new Set(["walking", "walking away", "running", "jumping", "standing split", "tiptoes", "leg up"]);
 const HALF_SHOT = new Set(["portrait", "upper body", "close-up", "face", "head out of frame"]);
 // 跑步、跳躍進不了的小室內。沒有衣櫃這個字，試衣間和更衣室是現成的小隔間。
 const NO_SPRINT_PLACE = new Set([
@@ -543,6 +544,7 @@ const MOUTH_EXTRA = new Set([
   "tongue out",
   "parted lips",
   "licking lips",
+  "licking",
   "drooling",
   "moaning",
   "condom in mouth",
@@ -581,7 +583,7 @@ function activityFitsBody(act, body) {
   // 跑步、跳躍是移動本身，不跟讀書、吃飯這類靜態活動疊。走路可以逛街、慢跑。
   if ((body.has("running") || body.has("jumping")) && !MOVE_ACT.has(act)) return false;
   if (
-    body.has("walking") &&
+    (body.has("walking") || body.has("walking away")) &&
     (BATH_ACT.has(act) ||
       act === "reading" ||
       act === "studying" ||
@@ -959,7 +961,8 @@ const SPORT_PLACE = new Set([
   "stadium",
   "dojo",
 ]);
-const DRIVE_PLACE = new Set(["car", "car interior", "street", "city", "cityscape", "alley"]);
+// 加油站是現代的戶外。不在這份清單時，釘了開車就永遠不停在那裡。
+const DRIVE_PLACE = new Set(["car", "car interior", "street", "city", "cityscape", "alley", "gas station"]);
 
 // drawOne 會在 used 上掛 _rev，每次真正新增或刪除才加一。allow() 在兩次變更之間
 // 會被呼叫上千次，場地／活動／職業都是把整份 used 掃過再做成小集合。
@@ -1080,22 +1083,30 @@ const DRY_NO_WATER = new Set([
 // 結果是 130 個場地裡有 39 個只配得到一個活動（carrying），73 個配不到 4 個：
 // 釘「宮殿」的人有 52% 會拿到平底鍋，因為煮飯是少數列了 palace 的活動。
 const DESK_PLACE = new Set([
-  "library", "bedroom", "living room", "cafe", "classroom", "office",
+  "library", "bedroom", "living room", "cafe", "maid cafe", "classroom", "clubroom", "office",
   "park bench", "garden", "shrine", "pavilion", "east asian architecture",
   // 住得下人、坐得下來的地方，古今都有
   // 補的是「坐得下來看書寫字的地方」。城堡、大廳、酒館、舞廳、神殿刻意不補 ——
   // 既有測試 "normal studying never castle/beach/onsen" 明講不要在城堡唸書，
   // 那是有意的內容契約，我一開始把 castle 加進來就是把它撞掉了。
-  "apartment", "hotel room", "mansion", "palace", "throne",
+  // 社團教室是同一類。王座廳 implies 王座，王座已經在裡面，廳本身沒有的話
+  // 讀書時 commit 驗父字過不了，廳就永遠不出現。
+  "apartment", "hotel room", "mansion", "palace", "throne", "throne room",
   "ryokan", "balcony", "courtyard", "futon", "tent",
 ]);
 const HOME_PLACE = new Set([
   "bedroom", "living room", "hotel room", "futon",
   "apartment", "mansion", "palace", "ryokan", "castle",
 ]);
+// 第五輪這些房間就是吃飯的地方，清單卻沒跟上。placeFitsActs 只認字面，
+// 不跟著 implies 走：女僕咖啡廳 implies cafe，cafe 在清單裡，廳自己仍被拒。
+// 釘吃飯 120 張，cafe 和餐廳有抽到，飯廳、食堂、迴轉壽司、屋台、女僕咖啡廳是 0。
+// 子字要過關，它帶出來的場地父字也得在同一份清單上，否則 commit 整筆退回。
+// 煮飯仍只用下面的 COOK_PLACE，飯廳不進廚房。
 const MEAL_PLACE = new Set([
-  "restaurant", "cafe", "kitchen", "living room", "park", "garden", "beach", "courtyard",
-  "apartment", "hotel room", "mansion", "palace", "throne",
+  "restaurant", "cafe", "maid cafe", "kitchen", "dining room", "cafeteria",
+  "conveyor belt sushi", "yatai", "living room", "park", "garden", "beach", "courtyard",
+  "apartment", "hotel room", "mansion", "palace", "throne", "throne room",
   "balcony", "pavilion", "east asian architecture", "rooftop", "tent", "field", "izakaya",
   "castle", "tavern", "ryokan", "ballroom",
 ]);
@@ -1116,9 +1127,12 @@ export const ACT_PLACE = {
   floating: new Set(["pool", "ocean", "bathtub", "ofuro", "onsen", "bubble bath"]),
   "shared bathing": new Set(["onsen", "bathhouse", "ofuro", "bath"]),
   eating: new Set([...MEAL_PLACE, "movie theater", "airplane interior", "convenience store", "izakaya", "festival", "market", "ryokan", "tavern"]),
-  drinking: new Set(["cafe", "bar (place)", "restaurant", "kitchen", "living room", "movie theater", "airplane interior", "izakaya", "festival", "market", "ryokan", "tavern", "ballroom", "courtyard", "garden", "balcony", "colonnade", "village"]),
+  drinking: new Set(["cafe", "maid cafe", "bar (place)", "restaurant", "kitchen", "dining room", "cafeteria", "conveyor belt sushi", "yatai", "living room", "movie theater", "airplane interior", "izakaya", "festival", "market", "ryokan", "tavern", "ballroom", "courtyard", "garden", "balcony", "colonnade", "village"]),
   reading: new Set([...DESK_PLACE, "train", "train interior"]),
   cooking: COOK_PLACE,
+  // 店和四家子店。子店 implies shop，只加子店時 commit 會因為 shop 不在
+  // 這份清單上而整筆失敗。釘購物 120 張只有超商和超市，這五個是 0。
+  // 洗衣店不是在購物，不收。
   shopping: new Set([
     "street",
     "city",
@@ -1131,6 +1145,11 @@ export const ACT_PLACE = {
     "market",
     "festival",
     "village",
+    "shop",
+    "bakery",
+    "clothes shop",
+    "flower shop",
+    "bookstore",
   ]),
   singing: new Set(["living room", "bar (place)", "park", "rooftop", "karaoke box", "church", "shrine", "festival", "ballroom", "ryokan", "colonnade", "tavern", "market", "courtyard", "castle"]),
   karaoke: new Set(["bar (place)", "living room", "karaoke box"]),
@@ -1140,7 +1159,7 @@ export const ACT_PLACE = {
   "playing sports": SPORT_PLACE,
   studying: DESK_PLACE,
   writing: DESK_PLACE,
-  "drawing (action)": new Set(["bedroom", "living room", "classroom", "cafe", "park", "garden"]),
+  "drawing (action)": new Set(["bedroom", "living room", "classroom", "cafe", "maid cafe", "park", "garden"]),
   "painting (action)": new Set(["bedroom", "living room", "garden", "park", "courtyard", "pavilion", "east asian architecture"]),
   dancing: new Set(["living room", "park", "rooftop", "school gym", "bar (place)", "fitness gym", "ballroom", "palace", "colonnade", "ryokan", "festival"]),
   stretching: new Set(["bedroom", "living room", "fitness gym", "park", "rooftop", "beach"]),
@@ -1172,20 +1191,22 @@ export const ACT_PLACE = {
     "airplane interior",
     "canopy bed",
   ]),
-  smoking: new Set(["balcony", "rooftop", "street", "alley", "bar (place)", "cafe", "izakaya", "bridge", "courtyard"]),
-  cleaning: new Set(["living room", "kitchen", "bedroom", "bathroom", "hallway", "office", "classroom", "church", "hospital", "prison"]),
+  smoking: new Set(["balcony", "rooftop", "street", "alley", "bar (place)", "cafe", "maid cafe", "izakaya", "bridge", "courtyard"]),
+  cleaning: new Set(["living room", "kitchen", "bedroom", "bathroom", "hallway", "office", "classroom", "church", "hospital", "infirmary", "prison"]),
   "talking on phone": new Set([
     "living room",
     "bedroom",
     "street",
     "office",
     "cafe",
+    "maid cafe",
     "balcony",
     "airplane interior",
     "airport",
     "cockpit",
     "hospital",
     "clinic",
+    "infirmary",
     "church",
     "prison",
     "construction site",
@@ -1199,6 +1220,7 @@ export const ACT_PLACE = {
     "park",
     "beach",
     "cafe",
+    "maid cafe",
     "rooftop",
     "church",
     "shrine",
@@ -1206,6 +1228,7 @@ export const ACT_PLACE = {
     "office",
     "hospital",
     "clinic",
+    "infirmary",
     "prison",
     "dojo",
     "movie theater",
@@ -1213,7 +1236,7 @@ export const ACT_PLACE = {
     "construction site",
     "car interior",
   ]),
-  "taking picture": new Set(["park", "garden", "beach", "street", "shrine", "cafe", "church", "dojo"]),
+  "taking picture": new Set(["park", "garden", "beach", "street", "shrine", "cafe", "maid cafe", "church", "dojo"]),
   driving: DRIVE_PLACE,
   "horseback riding": new Set(["forest", "park", "garden", "courtyard", "ruins"]),
   "riding bicycle": new Set(["street", "park", "city", "alley"]),
@@ -1324,10 +1347,13 @@ const ACT_PROP = {
 const JOB_PLACE = {
   "office lady": new Set(["office"]),
   salaryman: new Set(["office"]),
-  nurse: new Set(["clinic", "hospital"]),
-  doctor: new Set(["clinic", "hospital"]),
+  // 保健室跟診所、醫院是同一類房間。釘護士 80 張原本全落在後兩個。
+  // 保健室不在 SPORT_PLACE，加進來不會多放行任何活動。
+  nurse: new Set(["clinic", "hospital", "infirmary"]),
+  doctor: new Set(["clinic", "hospital", "infirmary"]),
   teacher: new Set(["classroom", "library", "school gym"]),
-  waitress: new Set(["restaurant", "cafe", "bar (place)", "izakaya"]),
+  // 女僕咖啡廳 implies cafe，cafe 已在清單上。沒有廳本身的話服務員到不了那家店。
+  waitress: new Set(["restaurant", "cafe", "maid cafe", "bar (place)", "izakaya"]),
   barista: new Set(["cafe", "restaurant"]),
   chef: new Set(["kitchen", "restaurant"]),
   policewoman: new Set(["street", "city", "cityscape", "alley", "office", "prison"]),
@@ -1353,9 +1379,15 @@ const JOB_PLACE = {
   //
   // 實測：補 courtyard 之後釘 maid 的 3000 張裡冒出 178 張運動圖，而且**每一張都
   // 沒有場地**（0 -> 178）。少補這一個就完全沒有這條路。
+  //
+  // 咖啡廳要補，跟中庭是相反的情況。釘女僕再釘吃飯，80 張裡 cafe 是 0：
+  // 吃飯清單裡有 cafe，女僕清單沒有，placeFitsJob 先拒了。女僕咖啡廳 implies
+  // cafe，只加子字的話 commit 同樣退回。兩個都是現代、都不在 SPORT_PLACE。
+  // 對過活動表：加進去之後，現代沒有任何原本排不進女僕場地的活動因此過關。
   maid: new Set([
     "mansion", "kitchen", "living room", "bedroom", "hotel room", "palace",
     "hallway", "balcony", "greenhouse", "library", "garden",
+    "cafe", "maid cafe",
   ]),
   "flight attendant": new Set(["airplane interior", "airport", "cockpit"]),
   firefighter: new Set(["street", "city", "cityscape"]),
@@ -1831,6 +1863,11 @@ const ERA_OUTFIT_ERA = new Map([
   ["ancient greek clothes", "ancient_greece"],
 ]);
 
+// 足袋、女用木屐是江戶鞋子，但不是主軸。跟木屐、草履同一階（時代加權 30）時，
+// 900 張裡木屐＋草履只剩 43%。不吃時代加權；在非現代還跟其他「不是這個時代的鞋子」
+// 一起放到更低的衣服階。女用木屐仍帶出木屐，足袋仍佔鞋子格。
+const EDO_SIDE_FEET = new Set(["tabi", "okobo"]);
+
 const BODY_GARMENT_SLOTS = new Set(["onepiece", "top", "bottom"]);
 
 function bodyGarmentSlot(item) {
@@ -1952,7 +1989,7 @@ export const NEEDS_CONTEXT = {
   nightstand: new Set(["bedroom", "hotel room", "love hotel", "bed", "on bed"]),
   "poker table": new Set(["casino", "nightclub", "bar (place)"]),
   sink: new Set(["bathroom", "kitchen", "clinic", "hospital"]),
-  counter: new Set(["kitchen", "cafe", "bar (place)", "restaurant", "convenience store", "supermarket", "izakaya"]),
+  counter: new Set(["kitchen", "cafe", "maid cafe", "bar (place)", "restaurant", "convenience store", "supermarket", "izakaya"]),
   "steering wheel": new Set(["car", "car interior", "driving", "cockpit", "airplane interior", "racing suit"]),
   "shopping cart": new Set(["supermarket", "convenience store", "shopping", "market"]),
   "microphone stand": new Set(["singing", "karaoke", "karaoke box", "bar (place)", "livestream"]),
@@ -2008,6 +2045,9 @@ export const NEEDS_CONTEXT = {
   umbrella: new Set(["rain", "overcast"]),
   parasol: new Set(["beach", "garden", "park", "poolside"]),
   "beach umbrella": new Set(["beach", "poolside", "ocean"]),
+  // 調整眼鏡、調整手套是姿勢，不佔活動格。沒有那件東西就拿掉，也不從有眼鏡就必定拉。
+  "adjusting eyewear": new Set(["glasses", "coke-bottle glasses", "goggles", "sunglasses"]),
+  "adjusting gloves": new Set(["gloves", "elbow gloves", "black gloves", "fingerless gloves", "latex gloves"]),
 };
 
 // 上面那張表只做了負向的一半：沒有場合就刪掉。
@@ -2227,7 +2267,7 @@ function erasIntersect(a, b) {
   return a.some((x) => b.includes(x));
 }
 
-const LEAN_POSE = new Set(["leaning forward", "leaning back"]);
+const LEAN_POSE = new Set(["leaning forward", "leaning back", "leaning to the side", "leaning on object"]);
 const ARM_POSE = new Set([
   "arms up",
   "arms behind back",
@@ -2242,6 +2282,11 @@ const ARM_POSE = new Set([
   "hand in pocket",
   "index fingers together",
   "beckoning",
+  // 單手上舉留一隻手。雙手垂下、雙手插袋佔滿兩隻手，跟單手不同組。
+  "arm up",
+  "arm support",
+  "arms at sides",
+  "hands in pockets",
 ]);
 const LIE_BODY = new Set(["lying", "on back", "on stomach", "on side", "reclining"]);
 const LEG_EXTRA = new Set(["crossed legs", "legs up", "m legs", "leg lift"]);
@@ -2322,6 +2367,13 @@ const BOTH_ARMS = new Set([
   "v arms",
   "double v",
   "w arms",
+  "arms at sides",
+  "hands in pockets",
+  "own hands together",
+  "interlocked fingers",
+  "dual wielding",
+  "aiming",
+  "tying hair",
 ]);
 const HAND_GESTURE = new Set([
   "finger to mouth",
@@ -2354,12 +2406,37 @@ const HAND_GESTURE = new Set([
   "ok sign",
   "covering own eyes",
   "finger heart",
+  "hand on own face",
+  "hand in own hair",
+  "hand on own thigh",
+  "hand on own knee",
+  "hand on own neck",
+  "holding own wrist",
+  "paw pose",
+  "shushing",
+  "adjusting eyewear",
+  "adjusting gloves",
+  "holding weapon",
+  "holding sword",
+  "holding gun",
+  "holding knife",
+  "holding staff",
+  "pointing",
+  "index finger raised",
+  "reaching",
+  "waving",
+  "punching",
+  "hand on another's shoulder",
+  "hand on another's face",
+  "hand on another's cheek",
+  "feeding",
+  "between fingers",
 ]);
 const MALE_FACE = new Set(["facial hair", "stubble", "beard", "goatee", "mustache"]);
 const GAG_BLOCKS = new Set([
   "fellatio", "deepthroat", "irrumatio", "cunnilingus", "anilingus",
   "kiss", "french kiss", "kissing neck", "licking penis", "imminent fellatio",
-  "reverse fellatio", "throat bulge",
+  "reverse fellatio", "throat bulge", "licking",
 ]);
 // 同一張嘴只能有一種口塞。變體 implies gag，父子不算兩種。
 const GAG_KIND = new Set(["gag", "tape gag", "bit gag", "ring gag", "ball gag"]);
@@ -2368,7 +2445,7 @@ const CLOSED_GAG = new Set(["tape gag", "bit gag"]);
 const NOT_PUBLIC_SCENE = new Set([
   "bedroom", "hotel room", "love hotel", "bathroom", "shower", "bathtub", "on bed", "bed",
 ]);
-const AMPUTEE_MOVE = new Set(["walking", "running", "jumping", "tiptoes", "footjob", "thigh sex", "leg lock", "hugging own legs", "fetal position", "curled up"]);
+const AMPUTEE_MOVE = new Set(["walking", "walking away", "running", "jumping", "tiptoes", "footjob", "thigh sex", "leg lock", "hugging own legs", "fetal position", "curled up", "kicking"]);
 // 穿在手上、臂上、或綁在兩腿之間的東西。無袖上衣不算。
 const AMPUTEE_WORN = new Set([
   "wide sleeves", "long sleeves", "short sleeves", "sleeves rolled up",
@@ -2384,7 +2461,9 @@ const AMPUTEE_HANDLESS = new Set([
   "object insertion", "tentacle sex", "sex machine", "large insertion",
   "urethral insertion", "egg laying", "nipple penetration",
 ]);
-const PUPIL_SHAPE = new Set(["symbol-shaped pupils", "slit pupils", "ringed eyes"]);
+const PUPIL_SHAPE = new Set(["symbol-shaped pupils", "slit pupils", "ringed eyes", "star-shaped pupils"]);
+// 背包格。自動補牌仍只擲包和手提包；肩背包、小袋、行李箱抽到時佔同一格。
+const BAG_SLOT = new Set(["bag", "handbag", "shoulder bag", "pouch", "suitcase"]);
 const MATERIAL = new Set(["denim", "shiny clothes", "leather", "satin"]);
 // 貞操帶蓋住的是她的下體。口交、乳交、手交、足交、腋交、乳頭插入這類不開鎖。
 // 人數標籤（3P、亂交）不在這裡：它們只是在「已經有合法行為」時順便出現。
@@ -2444,13 +2523,13 @@ function extraMutex(item) {
   if (TESTICLE_SIZE.has(item.tag)) groups.push("testicle_size");
   if (HAND_GESTURE.has(item.tag) && item.tag !== "holding hands") groups.push("hand_g");
   if (item.tag === "navel" || item.tag === "covered navel") groups.push("navel");
-  if (item.tag === "pale skin" || item.tag === "dark skin" || item.tag === "very dark skin") groups.push("skin_tone");
+  if (item.tag === "pale skin" || item.tag === "dark skin" || item.tag === "very dark skin" || item.tag === "black skin") groups.push("skin_tone");
   if (item.tag === "nipples" || item.tag === "covered nipples") groups.push("nipple_show");
   if (/\b(necktie|bowtie)\b/.test(item.tag)) groups.push("neckwear");
   if (item.mutex === "held_prop" || item.mutex === "sport_prop") groups.push("held");
-  // 這兩個字和瓶底眼鏡沒有互斥格，正常模式的衣服補牌不會選它們。
+  // 背包和瓶底眼鏡沒有詞庫互斥格，正常模式的衣服補牌不會選它們。
   // 補牌時仍要佔住背包格、眼鏡格，才不會跟背包或普通眼鏡疊在一起。
-  if ((item.tag === "bag" || item.tag === "handbag") && !groups.includes("bag")) groups.push("bag");
+  if (BAG_SLOT.has(item.tag) && !groups.includes("bag")) groups.push("bag");
   if (item.tag === "coke-bottle glasses" && !groups.includes("eyewear")) groups.push("eyewear");
   if ((item.tag === "pasties" || item.tag === "nipple tassels") && !groups.includes("chest_cover")) {
     groups.push("chest_cover");
@@ -2583,6 +2662,14 @@ export function applyPin(lex, pinned, userBanned, tag) {
     for (const i of implyChain(lex, tag)) {
       // 先釘了室外再釘溫泉，不該把室外換掉。沒有釘過室內外時，溫泉仍會帶進室內。
       if (keepPlaceSide(tag, i, (other) => nextPin.has(other))) continue;
+      const depItem = lex.byTag.get(i);
+      const rootItem = lex.byTag.get(tag);
+      // 同一格的孫字不釘。澀谷帶出東京，東京再帶出城市時，城市跟澀谷搶場地，
+      // 澀谷會從釘選裡消失。抽的時候本來就會把這個孫字丟掉，釘選跟抽對齊。
+      if (
+        depItem && rootItem && depItem.mutex && depItem.mutex === rootItem.mutex &&
+        !parentChild(lex, tag, i)
+      ) continue;
       nextPin.add(i);
       nextBan.delete(i);
       for (const sib of mutexSiblings(lex, i)) nextPin.delete(sib);
@@ -3029,20 +3116,25 @@ const MALE_SEQ = ["1boy", "2boys", "3boys"];
 function bumpGender(parts, female, want) {
   const seq = female ? FEMALE_SEQ : MALE_SEQ;
   const extra = female ? "multiple girls" : "multiple boys";
+  // 6人以上、4個男生只給釘選。已經釘了就不要換成較小的人數牌。
+  const wide = female ? ["6+girls"] : ["4boys", "6+boys"];
   if (genderCount(parts, female) >= want) return parts;
+  if (parts.some((t) => wide.includes(t))) return parts;
   const pick = seq.find((t) => COUNT_NUM[t] >= want) || seq[seq.length - 1];
-  return [...parts.filter((t) => t !== extra && !seq.includes(t)), pick];
+  const drop = new Set([extra, ...seq, ...wide]);
+  return [...parts.filter((t) => !drop.has(t)), pick];
 }
 
 function ensureCast(parts, settings, ctx) {
   let out = parts.slice();
+  if (ctx.needYaoi) out = out.filter((t) => !FEMALE_COUNT.has(t));
   if (ctx.needYuri) out = out.filter((t) => !MALE_COUNT.has(t));
-  if (ctx.needFemale && !hasFemale(out)) out.push("1girl");
+  if (ctx.needFemale && !ctx.needYaoi && !hasFemale(out)) out.push("1girl");
   if (ctx.needMale && !ctx.needYuri && !hasMale(out)) out.push("1boy");
-  if (ctx.need2Female) out = bumpGender(out, true, 2);
+  if (ctx.need2Female && !ctx.needYaoi) out = bumpGender(out, true, 2);
   if (ctx.need2Male && !ctx.needYuri) out = bumpGender(out, false, 2);
   const min = ctx.needFive ? 5 : ctx.needCrowd ? 4 : ctx.needGroup ? 3 : ctx.needPair ? 2 : 1;
-  const canGirl = settings.girl !== false;
+  const canGirl = settings.girl !== false && !ctx.needYaoi;
   const canBoy = settings.boy !== false && !ctx.needYuri;
   let guard = 0;
   while (personCount(out) < min && guard++ < 8) {
@@ -3061,7 +3153,7 @@ function ensureCast(parts, settings, ctx) {
     if (personCount(out) === before) {
       const gg = genderCount(out, true);
       const bb = genderCount(out, false);
-      if (gg < 5) out = bumpGender(out, true, gg + 1);
+      if (gg < 5 && !ctx.needYaoi) out = bumpGender(out, true, gg + 1);
       else if (!ctx.needYuri && bb < 3) out = bumpGender(out, false, bb + 1);
       else break;
     }
@@ -3201,24 +3293,25 @@ function placeCountsOutdoor(place, lex) {
   return true;
 }
 
-function actHasIndoorPlace(act, era, lex) {
+// 釘了雨或室內物件之後，活動能不能留下，要看「這個時代、這一側、而且職業／女僕裝
+// 也准」的場地還在不在。只問有沒有室外場地會漏：伸展的室外是公園，女僕裝卻只准
+// 庭園和陽台，兩邊一交集就是空的，場地格跟著空。
+function actHasUsableSide(act, era, lex, used, side) {
   const set = ACT_PLACE[act];
   if (!set) return false;
+  const jobs = usedJobs(used, lex);
   for (const p of set) {
-    if (!placeCountsIndoor(p, lex)) continue;
     const it = lex.byTag.get(p);
-    if (it && eraOk(it, era)) return true;
-  }
-  return false;
-}
-
-function actHasOutdoorPlace(act, era, lex) {
-  const set = ACT_PLACE[act];
-  if (!set) return false;
-  for (const p of set) {
-    if (!placeCountsOutdoor(p, lex)) continue;
-    const it = lex.byTag.get(p);
-    if (it && eraOk(it, era)) return true;
+    if (!it || !eraOk(it, era)) continue;
+    if (side === "out") {
+      if (!placeCountsOutdoor(p, lex)) continue;
+      // 雨那條不認 BOTH_IO。會帶出室內、或本身是室內房間的，都不算室外。
+      if (INDOOR_ROOM.has(p) || (it.implies || []).includes("indoors")) continue;
+    } else if (!placeCountsIndoor(p, lex)) {
+      continue;
+    }
+    if (!placeFitsJob(p, jobs, used)) continue;
+    return true;
   }
   return false;
 }
@@ -3238,6 +3331,7 @@ function pinContext(lex, pinned) {
   let need2Male = false;
   let need2Female = false;
   let needYuri = false;
+  let needYaoi = false;
   const heatLists = [];
   const eraLists = [];
   for (const tag of pinned) {
@@ -3270,11 +3364,18 @@ function pinContext(lex, pinned) {
       need2Female = true;
       needYuri = true;
     }
+    // 男同性戀題材對照百合。兄弟要兩個男生，但可以有女生，不走這裡。
+    if (tag === "yaoi" || needs.includes("yaoi")) {
+      needMale = true;
+      needPair = true;
+      need2Male = true;
+      needYaoi = true;
+    }
     heatLists.push(item.heat && item.heat.length ? item.heat : MIXED_HEATS);
     const e = erasOf(item);
     if (e) eraLists.push(e);
   }
-  return { needFemale, needMale, needPair, needGroup, needCrowd, needFive, need2Male, need2Female, needYuri, heatLists, eraLists };
+  return { needFemale, needMale, needPair, needGroup, needCrowd, needFive, need2Male, need2Female, needYuri, needYaoi, heatLists, eraLists };
 }
 
 function intersectOrUnion(lists) {
@@ -3296,7 +3397,7 @@ function chooseCast(lex, settings, pinned, banned, rand, ctx) {
   ctx = ctx || pinContext(lex, pinned);
   const povLock = pinned.has("pov") || pinned.has("pov crotch");
   const forced = [];
-  for (const t of ["1girl", "2girls", "3girls", "4girls", "5girls", "1boy", "2boys", "3boys"]) {
+  for (const t of ["1girl", "2girls", "3girls", "4girls", "5girls", "6+girls", "1boy", "2boys", "3boys", "4boys", "6+boys"]) {
     if (pinned.has(t) && !banned.has(t)) forced.push(t);
   }
   let parts;
@@ -3314,6 +3415,10 @@ function chooseCast(lex, settings, pinned, banned, rand, ctx) {
     if (ctx.needFemale || ctx.needYuri) girl = true;
     if (ctx.needMale && !ctx.needYuri) boy = true;
     if (ctx.needYuri) boy = false;
+    if (ctx.needYaoi) {
+      girl = false;
+      boy = true;
+    }
     let table;
     if (girl && boy) {
       table = lex.data.castWeights.mixed;
@@ -3790,6 +3895,7 @@ export function contradictions(lex, tags, opts = {}) {
         const yuriBad = (item.tag === "yuri" || needs.includes("yuri")) && (male || girls < 2);
         if (opts.pins) {
           if ((item.tag === "yuri" || needs.includes("yuri")) && male) found.push(["cast_need", item.tag, maleTag]);
+          if ((item.tag === "yaoi" || needs.includes("yaoi")) && female) found.push(["cast_need", item.tag, femaleTag]);
           continue;
         }
         if (!yuriBad && gateOk(item, female, male) && castOk(item, female, male, peopleN, girls, boys)) continue;
@@ -4078,7 +4184,7 @@ export function drawOne(lex, settings, pinned, userBanned, rand, seed, opts) {
   let cast = chooseCast(lex, settings, pinned, banned, rand, ctx);
   // 五人只在「兩邊性別都開、這一抽是性愛、沒有釘人數或特定多人」時，用另一條亂數
   // 低機率換掉卡司。不碰主 rand，沒升級的種子後面的衣服姿勢照舊。
-  const countPinned = ["1girl", "2girls", "3girls", "4girls", "5girls", "1boy", "2boys", "3boys"].some((t) =>
+  const countPinned = ["1girl", "2girls", "3girls", "4girls", "5girls", "6+girls", "1boy", "2boys", "3boys", "4boys", "6+boys"].some((t) =>
     pinned.has(t)
   );
   if (
@@ -4095,6 +4201,7 @@ export function drawOne(lex, settings, pinned, userBanned, rand, seed, opts) {
     !ctx.need2Male &&
     !ctx.need2Female &&
     !ctx.needFive &&
+    !ctx.needYaoi &&
     personCount(cast) < 5 &&
     Number.isFinite(seed)
   ) {
@@ -4124,9 +4231,10 @@ export function drawOne(lex, settings, pinned, userBanned, rand, seed, opts) {
 
   for (const t of cast) commit(t);
 
-  const forcePin = (tag, parent) => {
+  const forcePin = (tag, parent, root) => {
     if (!tag || used.has(tag)) return;
     if (userBanned.has(tag) && !pinned.has(tag)) return;
+    const origin = root || tag;
     const item = lex.byTag.get(tag);
     if (item) {
       for (const g of extraMutex(item)) {
@@ -4163,12 +4271,30 @@ export function drawOne(lex, settings, pinned, userBanned, rand, seed, opts) {
         if (keepPlaceSide(tag, d, (other) => pinned.has(other) || used.has(other))) continue;
         if (banned.has(d) && !pinned.has(d)) continue;
         if (!pinned.has(d) && era && !depAllowed(lex, d, era)) continue;
-        forcePin(d, tag);
+        const di = lex.byTag.get(d);
+        const originItem = lex.byTag.get(origin);
+        // 根字沒有直接帶出的同格孫字不要補。東京自己被釘時仍會帶出城市。
+        if (
+          di && originItem && di.mutex && di.mutex === originItem.mutex &&
+          !parentChild(lex, origin, d)
+        ) continue;
+        forcePin(d, tag, origin);
       }
     }
   };
-
-  for (const tag of pinned) forcePin(tag);
+  // 已經被另一張釘選帶出來的字不再當根。否則澀谷帶出的東京會自己再帶出城市。
+  const impliedPin = new Set();
+  for (const tag of pinned) {
+    const it = lex.byTag.get(tag);
+    if (!it) continue;
+    for (const d of [...(it.implies || []), ...(it.bind || [])]) {
+      if (pinned.has(d)) impliedPin.add(d);
+    }
+  }
+  for (const tag of pinned) {
+    if (impliedPin.has(tag)) continue;
+    forcePin(tag);
+  }
 
   const subjectNow = [...used].filter((t) => {
     const it = lex.byTag.get(t);
@@ -5556,7 +5682,7 @@ export function drawOne(lex, settings, pinned, userBanned, rand, seed, opts) {
       // 性愛那一檔不抽走路、跑步、跳躍、站立劈腿：這些佔走身體格，會把體位擠掉。
       // 踮腳留著，它是站著的一種。
       if (
-        (item.tag === "walking" || item.tag === "running" || item.tag === "jumping" || item.tag === "standing split") &&
+        (item.tag === "walking" || item.tag === "walking away" || item.tag === "running" || item.tag === "jumping" || item.tag === "standing split") &&
         heat === "sex" &&
         !pinned.has(item.tag)
       ) {
@@ -5684,8 +5810,8 @@ export function drawOne(lex, settings, pinned, userBanned, rand, seed, opts) {
         const outdoorWx = hasUsed((t) => OUTDOOR_WEATHER.has(t));
         if (indoorFix || outdoorWx) {
           if (!ACT_PLACE[item.tag]) return false;
-          if (indoorFix && !actHasIndoorPlace(item.tag, era, lex)) return false;
-          if (outdoorWx && !actHasOutdoorPlace(item.tag, era, lex)) return false;
+          if (indoorFix && !actHasUsableSide(item.tag, era, lex, used, "in")) return false;
+          if (outdoorWx && !actHasUsableSide(item.tag, era, lex, used, "out")) return false;
         }
       }
       const acts = usedActs(used, lex);
@@ -5865,11 +5991,14 @@ export function drawOne(lex, settings, pinned, userBanned, rand, seed, opts) {
   // 現代的東西，在現代不需要靠加權「顯示年代」。主要衣服（上衣／下身／一件式）照舊加權。
   // 現代的外套不再吃時代加權：夾克、大衣和它們的顏色款以前跟時代上衣同一階，
   // 1350 張裡夾克 26.5%、大衣 16.1%。降到普通衣服那一階，跟開襟衫、西裝外套一起分。
-  // 羽織、斗篷仍吃時代加權。古代的鞋子與主衣不變。
+  // 羽織、斗篷仍吃時代加權。古代的鞋子與主衣不變；足袋和女用木屐除外，見 EDO_SIDE_FEET。
   // 三層時代加權都要改：只排除第二層的話，sneakers 會掉進第三層（時代專屬＋衣服，
   // 不管是不是顏色款）拿到 20，幾乎沒改善（實測 47% → 36%）。
   const MODERN_PLAIN_SLOTS = new Set(["feet", "fabric"]);
-  const eraBoost = (item) => eraSpecific(item, era) && !(era === "modern" && MODERN_PLAIN_SLOTS.has(item.mutex));
+  const eraBoost = (item) =>
+    eraSpecific(item, era) &&
+    !EDO_SIDE_FEET.has(item.tag) &&
+    !(era === "modern" && MODERN_PLAIN_SLOTS.has(item.mutex));
   const clothingPrefer = {
     softTiers: [
       (item) =>
@@ -5894,7 +6023,13 @@ export function drawOne(lex, settings, pinned, userBanned, rand, seed, opts) {
         item.layer === "garment" &&
         !isColorVariant(item) &&
         (item.mutex === "onepiece" || item.mutex === "top" || item.mutex === "bottom"),
-      (item) => item.layer === "garment" && !isColorVariant(item),
+      // 非現代、又不是這個時代的鞋子（江戶的靴子、足袋、女用木屐）不要跟普通衣服同一階。
+      // 否則木屐／草履的 30 被七雙時代不限的鞋子加上這兩個新字稀釋，江戶鞋子不再以木屐為主。
+      // 現代不套這條：現代鞋子的平衡是另外調過的（球鞋不得超過 25%）。
+      (item) =>
+        item.layer === "garment" &&
+        !isColorVariant(item) &&
+        !(era !== "modern" && item.mutex === "feet" && !eraBoost(item)),
       (item) => item.layer === "garment",
     ],
     // 前兩層是「這件衣服屬於這個時代」，權重和後面拉開一個量級 —— 時代對不對是
@@ -6333,9 +6468,10 @@ export function drawOne(lex, settings, pinned, userBanned, rand, seed, opts) {
         item.tag !== "standing split" &&
         item.tag !== "tiptoes" &&
         item.tag !== "walking" &&
+        item.tag !== "walking away" &&
         item.tag !== "running" &&
         item.tag !== "jumping",
-      (item) => item.tag === "walking" || item.tag === "running" || item.tag === "jumping",
+      (item) => item.tag === "walking" || item.tag === "walking away" || item.tag === "running" || item.tag === "jumping",
       (item) => item.tag === "tiptoes",
       (item) => item.tag === "standing split",
     ],
@@ -6479,6 +6615,27 @@ export function drawOne(lex, settings, pinned, userBanned, rand, seed, opts) {
   const anchorPlaces = sexEra
     ? new Set((lex.data.eraAnchors?.[era] || []).flatMap((t) => lex.data.eraAnchorAlts?.[t] || [t]))
     : null;
+  // 活動比衣服先抽。女僕裝是後來才穿上的，所以上面那道閘看不到它。
+  // 伸展配女僕、又釘了雨：公園不算女僕的地方，臥室又被雨擋住，場地格會空。
+  // 這時候把還沒釘死的活動拿掉，場地照女僕和雨去填；下面場景鎖會再補一個配得上場地的活動。
+  if (lockOn) {
+    const indoorFix = [...used].some((t) => INDOOR_PROP.has(t) || INDOOR_FURN.has(t));
+    const outdoorWx = [...used].some((t) => OUTDOOR_WEATHER.has(t));
+    if (indoorFix || outdoorWx) {
+      for (const a of [...usedActs(used, lex)]) {
+        if (pinned.has(a)) continue;
+        if (outdoorWx && !actHasUsableSide(a, era, lex, used, "out")) {
+          used.delete(a);
+          if (mutexTaken.get("activity") === a) mutexTaken.delete("activity");
+          continue;
+        }
+        if (indoorFix && !actHasUsableSide(a, era, lex, used, "in")) {
+          used.delete(a);
+          if (mutexTaken.get("activity") === a) mutexTaken.delete("activity");
+        }
+      }
+    }
+  }
   fillSlot(
     "env",
     "place",

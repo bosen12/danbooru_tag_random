@@ -52,9 +52,10 @@ const GOLD = {
   // 2026-10-05 第四次：CSV 缺的現役詞進池。這張仍是 1girl solo，沒有男生或人類陰莖。
   // 2026-10-05 第五次：第二輪 149 個現役詞進池。這張抽到海豚短褲、換裝，仍是 1girl solo。
   // 2026-10-05 第六次：第三輪 104 個現役詞進池。這張抽到卷髮、腕銬、筆電，仍是 1girl solo。
+  // 2026-10-06：第四輪、地點與第五輪進池。這張換成發光頭髮、鼻血、洋裝、山。仍是 1girl solo。
   1: {
-    rng: 432,
-    pos: "1girl, solo, pixie cut, purple eyes, green hair, curly hair, huge breasts, bags under eyes, dark-skinned female, dark skin, puffy nipples, completely nude, wrist cuffs, hat, stiletto heels, high heels, necktie, fingering, squatting, pov hands, pov, looking at viewer, torogao, ryokan, indoors, twilight, ceiling light, laptop, computer, nsfw, explicit, masterpiece, best quality, amazing quality",
+    rng: 611,
+    pos: "1girl, solo, pixie cut, purple eyes, green hair, glowing hair, huge breasts, petite, backboob, nosebleed, sundress, dress, satin, pink sports bra, sports bra, zipper, female masturbation, bowing, standing, full body, looking to the side, sad, mountain, outdoors, evening, lamppost, wooden bench, mug, nsfw, explicit, masterpiece, best quality, amazing quality",
   },
   // 2026-09-29：路人進了環境池，同一顆亂數落到別的環境字，後面的姿勢跟著換。
   // seed 42 少了束縛和手銬（手銬是束縛之後才拉的），多了咬唇。seed 100 花瓣換成剪影。
@@ -64,15 +65,18 @@ const GOLD = {
   // 2026-10-05 第四次：布料和領口進了衣服池。仍是 1girl solo，沒有男生。
   // 2026-10-05 第五次：全身塗裝、澡堂。仍是 1girl solo，沒有男生或人類陰莖。
   // 2026-10-05 第六次：單眼眼罩、肚臍穿環、性愛機器。仍是 1girl solo，沒有男生或人類陰莖。
+  // 2026-10-06：第四輪、地點與第五輪進池。這張換成自由女神、超級英雄裝、拉鍊。仍是 1girl solo，沒有男生或人類陰莖。
   42: {
-    rng: 438,
-    pos: "1girl, solo, very short hair, aqua eyes, blue hair, hair intakes, gigantic breasts, clitoris, tongue, quadruple amputee, completely nude, navel piercing, eyepatch, collar, sun hat, hat, sitting, pov hands, pov, looking at viewer, pout, ovum, sex machine, mountain, outdoors, twilight, lamppost, lens flare, full-length mirror, mirror, nsfw, explicit, masterpiece, best quality, amazing quality",
+    rng: 609,
+    pos: "1girl, solo, very short hair, aqua eyes, blue hair, bangs pinned back, small breasts, nipple stimulation, pussy piercing, androgynous, piercing, superhero costume, g-string, thong, torn pantyhose, pantyhose, zipper, masturbation, squatting, portrait, looking down, sad, ok sign, statue of liberty, outdoors, overcast, dusk, city lights, falling petals, petals, nsfw, explicit, masterpiece, best quality, amazing quality",
   },
   // 2026-10-05 第五次：女僕圍裙是布料疊層，不占連身裙。仍是 1girl solo。
   // 2026-10-05 第六次：爆炸頭跟長裙、探頭偷看。仍是 1girl solo。
+  // 2026-10-06：第四輪、地點與第五輪進池。這張換成巫女、逛街、都市風景。仍是 1girl solo。
+  // 2026-10-06 第二次：購物的場地補上店家。這張仍是逛街，都市風景換成市集攤。仍是 1girl solo，沒有男生或人類陰莖。
   100: {
-    rng: 460,
-    pos: "1girl, solo, medium hair, purple eyes, red hair, afro, flat chest, ahoge, saliva, belly, long skirt, skirt, crop top, writing, sitting, bird's eye view, from above, peeking out, peeking, flustered, pencil, tent, outdoors, evening, lamppost, chair, nsfw, explicit, masterpiece, best quality, amazing quality",
+    rng: 653,
+    pos: "1girl, solo, medium hair, purple eyes, red hair, swept bangs, huge breasts, mole under mouth, colored inner hair, low ponytail, ponytail, miko, sleeves rolled up, satin, cow print, leggings, shopping, sitting, very wide shot, looking at viewer, sleepy, crazy eyes, shopping bag, market stall, outdoors, sunset, underlighting, japanese flag, nsfw, explicit, masterpiece, best quality, amazing quality",
   },
   // 2026-09-29 第三次：這張是性愛。淋浴間換成海邊，衣服和光線跟著換。仍是 1girl solo。
   // 2026-10-04（9a087a5）：帶衣物名的姿勢（hand in panties 這類）在候選階段就要先有對的衣服，
@@ -83,9 +87,10 @@ const GOLD = {
   // 2026-10-05 第四次：獸莖不拉男生、也不暗示人類陰莖。這張仍是 1girl solo。
   // 2026-10-05 第五次：乳環帶出穿洞，異種族不拉獸姦、也不拉男生。產卵不用手。仍是 1girl solo。
   // 2026-10-05 第六次：油頭後梳佔髮型格，咬痕、褲裝、計程車。仍是 1girl solo。
+  // 2026-10-06：第四輪、地點與第五輪進池。這張換成後台、武士刀、地藏。仍是 1girl solo，沒有男生或人類陰莖。
   999: {
-    rng: 456,
-    pos: "1girl, solo, long hair, grey eyes, orange hair, hair slicked back, gigantic breasts, bite mark, sideboob, tareme, pant suit, blue panties, panties, navel piercing, garter belt, veil, bag, nipple rings, piercing, female masturbation, face down, on stomach, full body, looking to the side, smile, taxi, car, outdoors, twilight, dim lighting, bulletin board, nsfw, explicit, masterpiece, best quality, amazing quality",
+    rng: 648,
+    pos: "1girl, solo, long hair, grey eyes, orange hair, undercut, flat chest, huge nipples, glowing eye, messy hair, school uniform, open coat, coat, thighhighs, gothic lolita, lolita fashion, sleeves rolled up, bag, nipple rings, piercing, masturbation through clothes, falling, over shoulder, looking at mirror, naughty face, heavy breathing, backstage, indoors, twilight, light rays, katana, sword, jizou, nsfw, explicit, masterpiece, best quality, amazing quality",
   },
   // 2026-09-23：走光補抽改成「所有成立的走光動作同一池、衣服吻合的權重 10」之後，
   // 這張的走光動作從 exhibitionism 換成 cameltoe（她穿 thong，吻合），場景跟著換。
@@ -93,9 +98,11 @@ const GOLD = {
   // 2026-10-05 第四次：looking away 不收回。視線格抽到的是 averting eyes。仍是 1girl solo。
   // 2026-10-05 第五次：萬聖節服裝、迷你女孩。仍是 1girl solo，沒有男生或人類陰莖。
   // 2026-10-05 第六次：裸外套、滑落肩帶。仍是 1girl solo，沒有男生或人類陰莖。
+  // 2026-10-06：第四輪、地點與第五輪進池。這張換成公園、下雨、走開帶出走路。仍是 1girl solo，沒有男生或人類陰莖。
+  // 2026-10-06 第二次：畫畫可以在女僕咖啡廳。這張從公園換成女僕咖啡廳和咖啡廳。仍是 1girl solo，沒有男生或人類陰莖。
   2026: {
-    rng: 456,
-    pos: "1girl, solo, bob cut, grey eyes, black hair, swept bangs, huge breasts, backboob, closed eyes, arm under breasts, naked jacket, jacket, white socks, socks, halterneck, maid apron, playing guitar, reclining, feet out of frame, smug, strap slip, lifting own clothes, guitar, rooftop, outdoors, dusk, dappled sunlight, chinese new year, nsfw, explicit, masterpiece, best quality, amazing quality",
+    rng: 413,
+    pos: "1girl, solo, bob cut, grey eyes, black hair, half updo, huge breasts, long eyelashes, wavy hair, hair slicked back, naked shirt, shirt, garter straps, zipper, lolita fashion, drawing (action), walking away, walking, from below, looking at breasts, sad, areola slip, pen, maid cafe, indoors, cafe, sunset, nsfw, explicit, masterpiece, best quality, amazing quality",
   },
 };
 
@@ -258,7 +265,18 @@ const MATRIX_SEEDS = 200;
 // 會挪動各情境的牌序。運動服蓋住下半身，不再跟只穿內衣同時成立。
 // 五張預設金標仍是 1girl solo，沒有男生，也沒有人類陰莖。
 // 指紋 bc2a1e0e → 6b4fe788。
-const MATRIX_GOLD = "6b4fe788";
+// 2026-10-06：第四輪 157 個、地點與第五輪 247 個現役詞進池。
+// 江戶的木屐和草履留在鞋履的時代層。釘選澀谷不再收成城市。
+// 王座補上維多利亞，王座廳才帶得動王座。
+// 釘了雨又穿女僕裝時，對不上場地的活動會先拿掉，場地格才不會空。
+// 五張預設金標仍是 1girl solo，沒有男生，也沒有人類陰莖。
+// 指紋 6b4fe788 → 1e79e1bc。
+// 2026-10-06 第二次：新場地補進它們本來該在的活動和職業清單。
+// 購物能進店，吃飯能進飯廳和女僕咖啡廳，女僕裝能去咖啡廳，護士能去保健室。
+// 沒有改權重。五張裡 seed 1、42、999 逐字沒變。seed 100 和 2026 換了場地，
+// 仍是 1girl solo，沒有男生，也沒有人類陰莖。
+// 指紋 1e79e1bc → 6ef42105。
+const MATRIX_GOLD = "6ef42105";
 
 function matrixSettings(over) {
   const s = defaultSettings(data);

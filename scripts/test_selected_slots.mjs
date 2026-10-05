@@ -16,6 +16,13 @@ function draw(s, pins, seed) {
 function group(d, section, g) {
   return d.sections[section].filter(t => lex.byTag.get(t)?.group === g);
 }
+// 走開帶出走路、坐在樓梯上帶出坐著。那是同一個格子的父子，不是補了第二張。
+function slotRoots(d, section, g) {
+  const tags = group(d, section, g);
+  const implied = new Set();
+  for (const t of tags) for (const dep of lex.byTag.get(t)?.implies || []) implied.add(dep);
+  return tags.filter((t) => !implied.has(t));
+}
 
 for (const [section, selected, pin] of [
   ["pose", "body", "cowboy shot"],
@@ -45,7 +52,7 @@ for (const [section, selected, pin] of [
 test("two selected categories both survive pins in other categories", () => {
   for (let seed = 1; seed <= 30; seed++) {
     const d = draw(settings("pose", ["body", "face"]), ["cowboy shot", "looking at viewer"], seed);
-    assert.equal(group(d, "pose", "body").length, 1);
+    assert.equal(slotRoots(d, "pose", "body").length, 1);
     assert(group(d, "pose", "face").length >= 1); // An expression can imply another face tag.
     assert(d.sections.pose.includes("cowboy shot") && d.sections.pose.includes("looking at viewer"));
   }
@@ -54,8 +61,8 @@ test("two selected categories both survive pins in other categories", () => {
 test("must-draw in another category also preserves the selected slot", () => {
   for (let seed = 1; seed <= 20; seed++) {
     const d = draw(settings("pose", ["body"], { mustDraw: { "pose:camera": 1 } }), [], seed);
-    assert.equal(group(d, "pose", "body").length, 1);
-    assert.equal(group(d, "pose", "camera").length, 1);
+    assert.equal(slotRoots(d, "pose", "body").length, 1);
+    assert.equal(slotRoots(d, "pose", "camera").length, 1);
   }
 });
 
@@ -92,7 +99,7 @@ test("the reported pool keeps all eight pins and fills body pose alongside the c
     const d = draw(s, pins, seed);
     const tags = Object.values(d.sections).flat();
     assert(pins.every(t => tags.includes(t)), `lost pin at ${seed}`);
-    assert.equal(group(d, "pose", "body").length, 1, `missing body at ${seed}`);
+    assert.equal(slotRoots(d, "pose", "body").length, 1, `body slot was not filled once at ${seed}: ${group(d, "pose", "body").join(", ")}`);
     assert(d.sections.env.some(t => lex.byTag.get(t)?.group === "place" || lex.byTag.get(t)?.group === "background"));
   }
 });

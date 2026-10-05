@@ -332,8 +332,9 @@ const bare = base({
     const have = tagSet(draw(uw, pinsOf("underwear only"), seed));
     ok(`pinned underwear only stays at seed ${seed}`, have.has("underwear only") && !have.has("swimsuit under clothes") && !have.has("sportswear"));
   }
-  const shower = tagSet(draw(uw, pinsOf("underwear only"), 87));
-  ok("seed 87 is a shower, so underwear only leaves and the hidden swimsuit stays gone",
+  // 詞庫變大之後，淋浴從 seed 87 挪到 164。規則沒變：淋浴會拿掉只穿內衣。
+  const shower = tagSet(draw(uw, pinsOf("underwear only"), 164));
+  ok("a shower drops pinned underwear only, and the hidden swimsuit stays gone",
     !shower.has("underwear only") && shower.has("showering") && !shower.has("swimsuit under clothes"));
 }
 

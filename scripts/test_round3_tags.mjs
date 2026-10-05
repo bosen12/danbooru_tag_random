@@ -312,7 +312,7 @@ function featuresExcept(...keep) {
   const ampBow = tagSet(draw(base({
     counts: { subject: 1, feature: 0, pose: 4, clothing: 0, env: 0 },
     heats: ["tease"], weights: { tease: 1, flash: 0, sex: 0, activity: 0 },
-  }), pinsOf("quadruple amputee"), 34, posesExcept("bowing", "standing")));
+  }), pinsOf("quadruple amputee"), 33, posesExcept("bowing", "standing")));
   ok("a quadruple amputee can still bow", ampBow.has("quadruple amputee") && ampBow.has("bowing") && ampBow.has("standing"));
 
   const pair = base({
@@ -383,8 +383,17 @@ function featuresExcept(...keep) {
   }), pinsOf("arms up"), 44, posesExcept("w arms", "arms up", "double v")));
   ok("arms up blocks w arms and double v", arms.has("arms up") && !arms.has("w arms") && !arms.has("double v"));
 
+  // 豁免的意思是：沒有拍照活動，手機仍進得了環境補牌。
+  // 環境裡不相干的字現在有兩百多個，40 張自由抽的期望值低於 1。
+  // 那是池子變大，不是豁免壞了。這裡只留場地、室內外、晝夜、光線和手機。
+  // 豁免一拿掉，這 40 張就會是 0。
   const heldBan = new Set();
-  for (const t of data.tags) if (t.mutex === "held_prop" && t.tag !== "smartphone" && t.tag !== "cellphone") heldBan.add(t.tag);
+  const envSkeleton = new Set(["place", "in_out", "day_night", "lighting"]);
+  for (const t of data.tags) {
+    if (t.section !== "env") continue;
+    if (t.tag === "smartphone" || t.tag === "cellphone") continue;
+    if (!envSkeleton.has(t.mutex)) heldBan.add(t.tag);
+  }
   let held = 0;
   for (let i = 0; i < 40; i += 1) {
     const have = tagSet(draw(base({

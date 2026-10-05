@@ -11205,7 +11205,9 @@
       "bind": [
         "chinese clothes"
       ],
-      "implies": [],
+      "implies": [
+        "chinese clothes"
+      ],
       "layer": "garment",
       "era": [
         "ancient_china"
@@ -11394,7 +11396,9 @@
       "bind": [
         "ancient greek clothes"
       ],
-      "implies": [],
+      "implies": [
+        "roman clothes"
+      ],
       "layer": "garment",
       "era": [
         "ancient_greece"
@@ -11624,6 +11628,7 @@
       ],
       "layer": "normal",
       "era": [
+        "victorian",
         "medieval",
         "ancient_china"
       ],
@@ -12489,7 +12494,7 @@
         "edo"
       ],
       "group": "other",
-      "zh": "團扇"
+      "zh": "扇子"
     },
     {
       "tag": "scroll",
@@ -19259,7 +19264,9 @@
       "bind": [
         "ancient greek clothes"
       ],
-      "implies": [],
+      "implies": [
+        "ancient greek clothes"
+      ],
       "layer": "garment",
       "era": [
         "ancient_greece"
@@ -21901,7 +21908,9 @@
       ],
       "mutex": "activity",
       "bind": [],
-      "implies": [],
+      "implies": [
+        "playing instrument"
+      ],
       "layer": "normal",
       "era": [
         "modern",
@@ -35810,7 +35819,9 @@
       ],
       "mutex": "onepiece",
       "bind": [],
-      "implies": [],
+      "implies": [
+        "korean clothes"
+      ],
       "layer": "garment",
       "era": [
         "modern"
@@ -35832,7 +35843,9 @@
       ],
       "mutex": "onepiece",
       "bind": [],
-      "implies": [],
+      "implies": [
+        "german clothes"
+      ],
       "layer": "garment",
       "era": [
         "modern",
@@ -35855,7 +35868,9 @@
       ],
       "mutex": "onepiece",
       "bind": [],
-      "implies": [],
+      "implies": [
+        "vietnamese clothes"
+      ],
       "layer": "garment",
       "era": [
         "modern"
@@ -40097,6 +40112,8186 @@
       ],
       "group": "skin",
       "zh": "脖子上的口紅印"
+    },
+    {
+      "tag": "chopsticks",
+      "section": "env",
+      "gate": "any",
+      "heat": [
+        "tease",
+        "flash",
+        "sex"
+      ],
+      "mutex": null,
+      "bind": [],
+      "implies": [],
+      "layer": "normal",
+      "era": [
+        "ancient_china",
+        "modern",
+        "edo"
+      ],
+      "group": "other",
+      "zh": "筷子"
+    },
+    {
+      "tag": "oil-paper umbrella",
+      "section": "clothing",
+      "gate": "any",
+      "heat": [
+        "tease",
+        "flash",
+        "sex"
+      ],
+      "mutex": null,
+      "bind": [],
+      "implies": [
+        "umbrella"
+      ],
+      "layer": "accessory",
+      "era": [
+        "ancient_china",
+        "edo"
+      ],
+      "group": "acc",
+      "zh": "油紙傘"
+    },
+    {
+      "tag": "chinese knot",
+      "section": "clothing",
+      "gate": "any",
+      "heat": [
+        "tease",
+        "flash",
+        "sex"
+      ],
+      "mutex": null,
+      "bind": [],
+      "implies": [],
+      "layer": "accessory",
+      "era": [
+        "ancient_china",
+        "modern"
+      ],
+      "group": "acc",
+      "zh": "中國結"
+    },
+    {
+      "tag": "uchiwa",
+      "section": "env",
+      "gate": "any",
+      "heat": [
+        "tease",
+        "flash",
+        "sex"
+      ],
+      "mutex": null,
+      "bind": [],
+      "implies": [],
+      "layer": "normal",
+      "era": [
+        "edo"
+      ],
+      "group": "other",
+      "zh": "團扇"
+    },
+    {
+      "tag": "turban",
+      "section": "clothing",
+      "gate": "any",
+      "heat": [
+        "tease",
+        "flash",
+        "sex"
+      ],
+      "mutex": "headwear",
+      "bind": [],
+      "implies": [],
+      "layer": "accessory",
+      "era": [
+        "any"
+      ],
+      "group": "acc",
+      "zh": "頭巾"
+    },
+    {
+      "tag": "sparkler",
+      "section": "env",
+      "gate": "any",
+      "heat": [
+        "tease",
+        "flash",
+        "sex"
+      ],
+      "mutex": "effect",
+      "bind": [],
+      "implies": [
+        "fireworks"
+      ],
+      "layer": "normal",
+      "era": [
+        "modern"
+      ],
+      "group": "effect",
+      "zh": "仙女棒"
+    },
+    {
+      "tag": "flower necklace",
+      "section": "clothing",
+      "gate": "any",
+      "heat": [
+        "tease",
+        "flash",
+        "sex"
+      ],
+      "mutex": "jewelry",
+      "bind": [],
+      "implies": [
+        "necklace"
+      ],
+      "layer": "accessory",
+      "era": [
+        "any"
+      ],
+      "group": "acc",
+      "zh": "花項鍊"
+    },
+    {
+      "tag": "bindi",
+      "section": "feature",
+      "gate": "female",
+      "heat": [
+        "tease",
+        "flash",
+        "sex"
+      ],
+      "mutex": null,
+      "bind": [],
+      "implies": [
+        "forehead mark"
+      ],
+      "layer": "normal",
+      "era": [
+        "any"
+      ],
+      "group": "skin",
+      "needs": [
+        "female"
+      ],
+      "zh": "眉心點"
+    },
+    {
+      "tag": "masquerade mask",
+      "section": "clothing",
+      "gate": "any",
+      "heat": [
+        "tease",
+        "flash",
+        "sex"
+      ],
+      "mutex": "headwear",
+      "bind": [],
+      "implies": [
+        "mask"
+      ],
+      "layer": "accessory",
+      "era": [
+        "modern",
+        "victorian"
+      ],
+      "group": "acc",
+      "zh": "假面舞會面具"
+    },
+    {
+      "tag": "lei",
+      "section": "clothing",
+      "gate": "any",
+      "heat": [
+        "tease",
+        "flash",
+        "sex"
+      ],
+      "mutex": null,
+      "bind": [],
+      "implies": [],
+      "layer": "accessory",
+      "era": [
+        "any"
+      ],
+      "group": "acc",
+      "zh": "花環"
+    },
+    {
+      "tag": "hijab",
+      "section": "clothing",
+      "gate": "female",
+      "heat": [
+        "tease",
+        "flash",
+        "sex"
+      ],
+      "mutex": "headwear",
+      "bind": [],
+      "implies": [],
+      "layer": "accessory",
+      "era": [
+        "modern"
+      ],
+      "group": "acc",
+      "needs": [
+        "female"
+      ],
+      "zh": "伊斯蘭頭巾"
+    },
+    {
+      "tag": "sombrero",
+      "section": "clothing",
+      "gate": "any",
+      "heat": [
+        "tease",
+        "flash",
+        "sex"
+      ],
+      "mutex": "headwear",
+      "bind": [],
+      "implies": [
+        "hat"
+      ],
+      "layer": "accessory",
+      "era": [
+        "modern"
+      ],
+      "group": "acc",
+      "zh": "寬邊帽"
+    },
+    {
+      "tag": "celtic knot",
+      "section": "clothing",
+      "gate": "any",
+      "heat": [
+        "tease",
+        "flash",
+        "sex"
+      ],
+      "mutex": null,
+      "bind": [],
+      "implies": [],
+      "layer": "accessory",
+      "era": [
+        "medieval",
+        "modern"
+      ],
+      "group": "acc",
+      "zh": "凱爾特結"
+    },
+    {
+      "tag": "kokoshnik",
+      "section": "clothing",
+      "gate": "female",
+      "heat": [
+        "tease",
+        "flash",
+        "sex"
+      ],
+      "mutex": "headwear",
+      "bind": [],
+      "implies": [],
+      "layer": "accessory",
+      "era": [
+        "modern",
+        "victorian"
+      ],
+      "group": "acc",
+      "needs": [
+        "female"
+      ],
+      "zh": "俄羅斯頭冠"
+    },
+    {
+      "tag": "wine",
+      "section": "env",
+      "gate": "any",
+      "heat": [
+        "tease",
+        "flash",
+        "sex"
+      ],
+      "mutex": null,
+      "bind": [],
+      "implies": [],
+      "layer": "normal",
+      "era": [
+        "modern",
+        "victorian",
+        "medieval",
+        "ancient_greece"
+      ],
+      "group": "other",
+      "zh": "葡萄酒"
+    },
+    {
+      "tag": "sake",
+      "section": "env",
+      "gate": "any",
+      "heat": [
+        "tease",
+        "flash",
+        "sex"
+      ],
+      "mutex": null,
+      "bind": [],
+      "implies": [],
+      "layer": "normal",
+      "era": [
+        "edo",
+        "modern"
+      ],
+      "group": "other",
+      "zh": "清酒"
+    },
+    {
+      "tag": "pizza",
+      "section": "env",
+      "gate": "any",
+      "heat": [
+        "tease",
+        "flash",
+        "sex"
+      ],
+      "mutex": null,
+      "bind": [],
+      "implies": [],
+      "layer": "normal",
+      "era": [
+        "modern"
+      ],
+      "group": "other",
+      "zh": "披薩"
+    },
+    {
+      "tag": "sushi",
+      "section": "env",
+      "gate": "any",
+      "heat": [
+        "tease",
+        "flash",
+        "sex"
+      ],
+      "mutex": null,
+      "bind": [],
+      "implies": [],
+      "layer": "normal",
+      "era": [
+        "edo",
+        "modern"
+      ],
+      "group": "other",
+      "zh": "壽司"
+    },
+    {
+      "tag": "ramen",
+      "section": "env",
+      "gate": "any",
+      "heat": [
+        "tease",
+        "flash",
+        "sex"
+      ],
+      "mutex": null,
+      "bind": [],
+      "implies": [],
+      "layer": "normal",
+      "era": [
+        "edo",
+        "modern"
+      ],
+      "group": "other",
+      "zh": "拉麵"
+    },
+    {
+      "tag": "curry",
+      "section": "env",
+      "gate": "any",
+      "heat": [
+        "tease",
+        "flash",
+        "sex"
+      ],
+      "mutex": null,
+      "bind": [],
+      "implies": [],
+      "layer": "normal",
+      "era": [
+        "modern"
+      ],
+      "group": "other",
+      "zh": "咖哩"
+    },
+    {
+      "tag": "pasta",
+      "section": "env",
+      "gate": "any",
+      "heat": [
+        "tease",
+        "flash",
+        "sex"
+      ],
+      "mutex": null,
+      "bind": [],
+      "implies": [],
+      "layer": "normal",
+      "era": [
+        "modern"
+      ],
+      "group": "other",
+      "zh": "義大利麵"
+    },
+    {
+      "tag": "champagne",
+      "section": "env",
+      "gate": "any",
+      "heat": [
+        "tease",
+        "flash",
+        "sex"
+      ],
+      "mutex": null,
+      "bind": [],
+      "implies": [],
+      "layer": "normal",
+      "era": [
+        "modern"
+      ],
+      "group": "other",
+      "zh": "香檳"
+    },
+    {
+      "tag": "mooncake",
+      "section": "env",
+      "gate": "any",
+      "heat": [
+        "tease",
+        "flash",
+        "sex"
+      ],
+      "mutex": null,
+      "bind": [],
+      "implies": [],
+      "layer": "normal",
+      "era": [
+        "ancient_china",
+        "modern"
+      ],
+      "group": "other",
+      "zh": "月餅"
+    },
+    {
+      "tag": "lion dance",
+      "section": "pose",
+      "gate": "any",
+      "heat": [
+        "tease",
+        "flash",
+        "sex"
+      ],
+      "mutex": "activity",
+      "bind": [],
+      "implies": [],
+      "layer": "normal",
+      "era": [
+        "ancient_china",
+        "modern"
+      ],
+      "group": "activity",
+      "zh": "舞獅"
+    },
+    {
+      "tag": "taco",
+      "section": "env",
+      "gate": "any",
+      "heat": [
+        "tease",
+        "flash",
+        "sex"
+      ],
+      "mutex": null,
+      "bind": [],
+      "implies": [],
+      "layer": "normal",
+      "era": [
+        "modern"
+      ],
+      "group": "other",
+      "zh": "塔克"
+    },
+    {
+      "tag": "goldfish scooping",
+      "section": "pose",
+      "gate": "any",
+      "heat": [
+        "tease",
+        "flash",
+        "sex"
+      ],
+      "mutex": "activity",
+      "bind": [],
+      "implies": [],
+      "layer": "normal",
+      "era": [
+        "edo",
+        "modern"
+      ],
+      "group": "activity",
+      "zh": "撈金魚"
+    },
+    {
+      "tag": "sunflower",
+      "section": "env",
+      "gate": "any",
+      "heat": [
+        "tease",
+        "flash",
+        "sex"
+      ],
+      "mutex": null,
+      "bind": [],
+      "implies": [],
+      "layer": "normal",
+      "era": [
+        "any"
+      ],
+      "group": "other",
+      "zh": "向日葵"
+    },
+    {
+      "tag": "autumn leaves",
+      "section": "env",
+      "gate": "any",
+      "heat": [
+        "tease",
+        "flash",
+        "sex"
+      ],
+      "mutex": "weather",
+      "bind": [],
+      "implies": [],
+      "layer": "normal",
+      "era": [
+        "any"
+      ],
+      "group": "weather",
+      "zh": "秋葉"
+    },
+    {
+      "tag": "fireworks",
+      "section": "env",
+      "gate": "any",
+      "heat": [
+        "tease",
+        "flash",
+        "sex"
+      ],
+      "mutex": "effect",
+      "bind": [],
+      "implies": [],
+      "layer": "normal",
+      "era": [
+        "modern"
+      ],
+      "group": "effect",
+      "zh": "煙火"
+    },
+    {
+      "tag": "maple leaf",
+      "section": "env",
+      "gate": "any",
+      "heat": [
+        "tease",
+        "flash",
+        "sex"
+      ],
+      "mutex": "weather",
+      "bind": [],
+      "implies": [
+        "autumn leaves"
+      ],
+      "layer": "normal",
+      "era": [
+        "any"
+      ],
+      "group": "weather",
+      "zh": "楓葉"
+    },
+    {
+      "tag": "plum blossoms",
+      "section": "env",
+      "gate": "any",
+      "heat": [
+        "tease",
+        "flash",
+        "sex"
+      ],
+      "mutex": "weather",
+      "bind": [],
+      "implies": [],
+      "layer": "normal",
+      "era": [
+        "any"
+      ],
+      "group": "weather",
+      "zh": "梅花"
+    },
+    {
+      "tag": "print kimono",
+      "section": "clothing",
+      "gate": "any",
+      "heat": [
+        "tease",
+        "flash",
+        "sex"
+      ],
+      "mutex": null,
+      "bind": [
+        "japanese clothes"
+      ],
+      "implies": [
+        "kimono"
+      ],
+      "layer": "garment",
+      "era": [
+        "edo"
+      ],
+      "group": "era",
+      "zh": "印花和服"
+    },
+    {
+      "tag": "floral print kimono",
+      "section": "clothing",
+      "gate": "any",
+      "heat": [
+        "tease",
+        "flash",
+        "sex"
+      ],
+      "mutex": null,
+      "bind": [
+        "japanese clothes"
+      ],
+      "implies": [
+        "print kimono",
+        "kimono"
+      ],
+      "layer": "garment",
+      "era": [
+        "edo"
+      ],
+      "group": "era",
+      "zh": "花紋和服"
+    },
+    {
+      "tag": "ancient egyptian clothes",
+      "section": "clothing",
+      "gate": "any",
+      "heat": [
+        "tease",
+        "flash",
+        "sex"
+      ],
+      "mutex": "onepiece",
+      "bind": [],
+      "implies": [],
+      "layer": "garment",
+      "era": [
+        "modern",
+        "victorian"
+      ],
+      "group": "onepiece",
+      "zh": "古埃及服裝"
+    },
+    {
+      "tag": "korean clothes",
+      "section": "clothing",
+      "gate": "any",
+      "heat": [
+        "tease",
+        "flash",
+        "sex"
+      ],
+      "mutex": null,
+      "bind": [],
+      "implies": [],
+      "layer": "garment",
+      "era": [
+        "modern"
+      ],
+      "group": "era",
+      "zh": "韓式服裝"
+    },
+    {
+      "tag": "german clothes",
+      "section": "clothing",
+      "gate": "any",
+      "heat": [
+        "tease",
+        "flash",
+        "sex"
+      ],
+      "mutex": null,
+      "bind": [],
+      "implies": [],
+      "layer": "garment",
+      "era": [
+        "modern",
+        "victorian"
+      ],
+      "group": "era",
+      "zh": "德式服裝"
+    },
+    {
+      "tag": "vietnamese clothes",
+      "section": "clothing",
+      "gate": "any",
+      "heat": [
+        "tease",
+        "flash",
+        "sex"
+      ],
+      "mutex": null,
+      "bind": [],
+      "implies": [],
+      "layer": "garment",
+      "era": [
+        "modern"
+      ],
+      "group": "era",
+      "zh": "越南服裝"
+    },
+    {
+      "tag": "roman clothes",
+      "section": "clothing",
+      "gate": "any",
+      "heat": [
+        "tease",
+        "flash",
+        "sex"
+      ],
+      "mutex": "onepiece",
+      "bind": [],
+      "implies": [],
+      "layer": "garment",
+      "era": [
+        "ancient_greece"
+      ],
+      "group": "era",
+      "zh": "古羅馬服裝"
+    },
+    {
+      "tag": "mexican clothes",
+      "section": "clothing",
+      "gate": "any",
+      "heat": [
+        "tease",
+        "flash",
+        "sex"
+      ],
+      "mutex": "onepiece",
+      "bind": [],
+      "implies": [],
+      "layer": "garment",
+      "era": [
+        "modern"
+      ],
+      "group": "onepiece",
+      "zh": "墨西哥服裝"
+    },
+    {
+      "tag": "russian clothes",
+      "section": "clothing",
+      "gate": "any",
+      "heat": [
+        "tease",
+        "flash",
+        "sex"
+      ],
+      "mutex": "onepiece",
+      "bind": [],
+      "implies": [],
+      "layer": "garment",
+      "era": [
+        "modern",
+        "victorian"
+      ],
+      "group": "onepiece",
+      "zh": "俄式服裝"
+    },
+    {
+      "tag": "flamenco dress",
+      "section": "clothing",
+      "gate": "female",
+      "heat": [
+        "tease",
+        "flash",
+        "sex"
+      ],
+      "mutex": "onepiece",
+      "bind": [],
+      "implies": [
+        "dress"
+      ],
+      "layer": "garment",
+      "era": [
+        "modern"
+      ],
+      "group": "onepiece",
+      "needs": [
+        "female"
+      ],
+      "zh": "佛朗明哥裙"
+    },
+    {
+      "tag": "sari",
+      "section": "clothing",
+      "gate": "female",
+      "heat": [
+        "tease",
+        "flash",
+        "sex"
+      ],
+      "mutex": "onepiece",
+      "bind": [],
+      "implies": [],
+      "layer": "garment",
+      "era": [
+        "modern"
+      ],
+      "group": "onepiece",
+      "needs": [
+        "female"
+      ],
+      "zh": "莎麗"
+    },
+    {
+      "tag": "hawaiian clothes",
+      "section": "clothing",
+      "gate": "any",
+      "heat": [
+        "tease",
+        "flash",
+        "sex"
+      ],
+      "mutex": "onepiece",
+      "bind": [],
+      "implies": [],
+      "layer": "garment",
+      "era": [
+        "modern"
+      ],
+      "group": "onepiece",
+      "zh": "夏威夷服裝"
+    },
+    {
+      "tag": "tabi",
+      "section": "clothing",
+      "gate": "any",
+      "heat": [
+        "tease",
+        "flash",
+        "sex"
+      ],
+      "mutex": "feet",
+      "bind": [],
+      "implies": [],
+      "layer": "garment",
+      "era": [
+        "edo"
+      ],
+      "group": "era",
+      "zh": "足袋"
+    },
+    {
+      "tag": "okobo",
+      "section": "clothing",
+      "gate": "female",
+      "heat": [
+        "tease",
+        "flash",
+        "sex"
+      ],
+      "mutex": "feet",
+      "bind": [],
+      "implies": [
+        "geta"
+      ],
+      "layer": "garment",
+      "era": [
+        "edo"
+      ],
+      "group": "era",
+      "needs": [
+        "female"
+      ],
+      "zh": "女用木屐"
+    },
+    {
+      "tag": "cornrows",
+      "section": "feature",
+      "gate": "any",
+      "heat": [
+        "tease",
+        "flash",
+        "sex"
+      ],
+      "mutex": "hair_style",
+      "bind": [],
+      "implies": [],
+      "layer": "normal",
+      "era": [
+        "any"
+      ],
+      "group": "hair_style",
+      "zh": "玉米辮"
+    },
+    {
+      "tag": "facial mark",
+      "section": "feature",
+      "gate": "any",
+      "heat": [
+        "tease",
+        "flash",
+        "sex"
+      ],
+      "mutex": null,
+      "bind": [],
+      "implies": [],
+      "layer": "normal",
+      "era": [
+        "any"
+      ],
+      "group": "skin",
+      "zh": "臉部標記"
+    },
+    {
+      "tag": "forehead mark",
+      "section": "feature",
+      "gate": "any",
+      "heat": [
+        "tease",
+        "flash",
+        "sex"
+      ],
+      "mutex": null,
+      "bind": [],
+      "implies": [
+        "facial mark"
+      ],
+      "layer": "normal",
+      "era": [
+        "any"
+      ],
+      "group": "skin",
+      "zh": "額頭印記"
+    },
+    {
+      "tag": "american flag",
+      "section": "env",
+      "gate": "any",
+      "heat": [
+        "tease",
+        "flash",
+        "sex"
+      ],
+      "mutex": null,
+      "bind": [],
+      "implies": [],
+      "layer": "normal",
+      "era": [
+        "modern"
+      ],
+      "group": "other",
+      "zh": "美國國旗"
+    },
+    {
+      "tag": "rice bowl",
+      "section": "env",
+      "gate": "any",
+      "heat": [
+        "tease",
+        "flash",
+        "sex"
+      ],
+      "mutex": null,
+      "bind": [],
+      "implies": [],
+      "layer": "normal",
+      "era": [
+        "ancient_china",
+        "modern",
+        "edo"
+      ],
+      "group": "other",
+      "zh": "飯碗"
+    },
+    {
+      "tag": "japanese flag",
+      "section": "env",
+      "gate": "any",
+      "heat": [
+        "tease",
+        "flash",
+        "sex"
+      ],
+      "mutex": null,
+      "bind": [],
+      "implies": [],
+      "layer": "normal",
+      "era": [
+        "edo",
+        "modern"
+      ],
+      "group": "other",
+      "zh": "日本國旗"
+    },
+    {
+      "tag": "brazilian flag",
+      "section": "env",
+      "gate": "any",
+      "heat": [
+        "tease",
+        "flash",
+        "sex"
+      ],
+      "mutex": null,
+      "bind": [],
+      "implies": [],
+      "layer": "normal",
+      "era": [
+        "modern"
+      ],
+      "group": "other",
+      "zh": "巴西國旗"
+    },
+    {
+      "tag": "german flag",
+      "section": "env",
+      "gate": "any",
+      "heat": [
+        "tease",
+        "flash",
+        "sex"
+      ],
+      "mutex": null,
+      "bind": [],
+      "implies": [],
+      "layer": "normal",
+      "era": [
+        "modern"
+      ],
+      "group": "other",
+      "zh": "德國國旗"
+    },
+    {
+      "tag": "tribal tattoo",
+      "section": "feature",
+      "gate": "any",
+      "heat": [
+        "tease",
+        "flash",
+        "sex"
+      ],
+      "mutex": null,
+      "bind": [],
+      "implies": [
+        "tattoo"
+      ],
+      "layer": "normal",
+      "era": [
+        "any"
+      ],
+      "group": "skin",
+      "zh": "部落刺青"
+    },
+    {
+      "tag": "french flag",
+      "section": "env",
+      "gate": "any",
+      "heat": [
+        "tease",
+        "flash",
+        "sex"
+      ],
+      "mutex": null,
+      "bind": [],
+      "implies": [],
+      "layer": "normal",
+      "era": [
+        "modern"
+      ],
+      "group": "other",
+      "zh": "法國國旗"
+    },
+    {
+      "tag": "russian flag",
+      "section": "env",
+      "gate": "any",
+      "heat": [
+        "tease",
+        "flash",
+        "sex"
+      ],
+      "mutex": null,
+      "bind": [],
+      "implies": [],
+      "layer": "normal",
+      "era": [
+        "modern"
+      ],
+      "group": "other",
+      "zh": "俄國國旗"
+    },
+    {
+      "tag": "subway",
+      "section": "env",
+      "gate": "any",
+      "heat": [
+        "tease",
+        "flash",
+        "sex"
+      ],
+      "mutex": "place",
+      "bind": [],
+      "implies": [
+        "indoors"
+      ],
+      "layer": "normal",
+      "era": [
+        "modern"
+      ],
+      "group": "place",
+      "zh": "地鐵"
+    },
+    {
+      "tag": "native american clothes",
+      "section": "clothing",
+      "gate": "any",
+      "heat": [
+        "tease",
+        "flash",
+        "sex"
+      ],
+      "mutex": "onepiece",
+      "bind": [],
+      "implies": [],
+      "layer": "garment",
+      "era": [
+        "modern"
+      ],
+      "group": "onepiece",
+      "zh": "美洲原住民服裝"
+    },
+    {
+      "tag": "gondola",
+      "section": "env",
+      "gate": "any",
+      "heat": [
+        "tease",
+        "flash",
+        "sex"
+      ],
+      "mutex": null,
+      "bind": [],
+      "implies": [],
+      "layer": "normal",
+      "era": [
+        "modern",
+        "victorian"
+      ],
+      "group": "other",
+      "zh": "貢多拉"
+    },
+    {
+      "tag": "mexican flag",
+      "section": "env",
+      "gate": "any",
+      "heat": [
+        "tease",
+        "flash",
+        "sex"
+      ],
+      "mutex": null,
+      "bind": [],
+      "implies": [],
+      "layer": "normal",
+      "era": [
+        "modern"
+      ],
+      "group": "other",
+      "zh": "墨西哥國旗"
+    },
+    {
+      "tag": "rickshaw",
+      "section": "env",
+      "gate": "any",
+      "heat": [
+        "tease",
+        "flash",
+        "sex"
+      ],
+      "mutex": null,
+      "bind": [],
+      "implies": [],
+      "layer": "normal",
+      "era": [
+        "edo",
+        "modern"
+      ],
+      "group": "other",
+      "zh": "人力車"
+    },
+    {
+      "tag": "poncho",
+      "section": "clothing",
+      "gate": "any",
+      "heat": [
+        "tease",
+        "flash",
+        "sex"
+      ],
+      "mutex": "outer",
+      "bind": [],
+      "implies": [],
+      "layer": "garment",
+      "era": [
+        "modern"
+      ],
+      "group": "outer",
+      "zh": "墨西哥披肩"
+    },
+    {
+      "tag": "halloween",
+      "section": "env",
+      "gate": "any",
+      "heat": [
+        "tease",
+        "flash",
+        "sex"
+      ],
+      "mutex": null,
+      "bind": [],
+      "implies": [],
+      "layer": "normal",
+      "era": [
+        "modern"
+      ],
+      "group": "other",
+      "zh": "萬聖節"
+    },
+    {
+      "tag": "new year",
+      "section": "env",
+      "gate": "any",
+      "heat": [
+        "tease",
+        "flash",
+        "sex"
+      ],
+      "mutex": null,
+      "bind": [],
+      "implies": [],
+      "layer": "normal",
+      "era": [
+        "modern"
+      ],
+      "group": "other",
+      "zh": "新年"
+    },
+    {
+      "tag": "desert",
+      "section": "env",
+      "gate": "any",
+      "heat": [
+        "tease",
+        "flash",
+        "sex"
+      ],
+      "mutex": "place",
+      "bind": [],
+      "implies": [
+        "outdoors"
+      ],
+      "layer": "normal",
+      "era": [
+        "any"
+      ],
+      "group": "place",
+      "zh": "沙漠"
+    },
+    {
+      "tag": "skyline",
+      "section": "env",
+      "gate": "any",
+      "heat": [
+        "tease",
+        "flash",
+        "sex"
+      ],
+      "mutex": "place",
+      "bind": [],
+      "implies": [
+        "outdoors"
+      ],
+      "layer": "normal",
+      "era": [
+        "modern"
+      ],
+      "group": "place",
+      "zh": "天際線"
+    },
+    {
+      "tag": "sunflower field",
+      "section": "env",
+      "gate": "any",
+      "heat": [
+        "tease",
+        "flash",
+        "sex"
+      ],
+      "mutex": "place",
+      "bind": [],
+      "implies": [
+        "outdoors",
+        "sunflower"
+      ],
+      "layer": "normal",
+      "era": [
+        "any"
+      ],
+      "group": "place",
+      "zh": "向日葵田"
+    },
+    {
+      "tag": "summer festival",
+      "section": "env",
+      "gate": "any",
+      "heat": [
+        "tease",
+        "flash",
+        "sex"
+      ],
+      "mutex": null,
+      "bind": [],
+      "implies": [],
+      "layer": "normal",
+      "era": [
+        "edo",
+        "modern"
+      ],
+      "group": "other",
+      "zh": "夏日祭典"
+    },
+    {
+      "tag": "easter",
+      "section": "env",
+      "gate": "any",
+      "heat": [
+        "tease",
+        "flash",
+        "sex"
+      ],
+      "mutex": null,
+      "bind": [],
+      "implies": [],
+      "layer": "normal",
+      "era": [
+        "modern"
+      ],
+      "group": "other",
+      "zh": "復活節"
+    },
+    {
+      "tag": "european architecture",
+      "section": "env",
+      "gate": "any",
+      "heat": [
+        "tease",
+        "flash",
+        "sex"
+      ],
+      "mutex": null,
+      "bind": [],
+      "implies": [],
+      "layer": "normal",
+      "era": [
+        "modern",
+        "victorian",
+        "medieval"
+      ],
+      "group": "other",
+      "zh": "歐式建築"
+    },
+    {
+      "tag": "canal",
+      "section": "env",
+      "gate": "any",
+      "heat": [
+        "tease",
+        "flash",
+        "sex"
+      ],
+      "mutex": "place",
+      "bind": [],
+      "implies": [
+        "outdoors"
+      ],
+      "layer": "normal",
+      "era": [
+        "modern",
+        "victorian"
+      ],
+      "group": "place",
+      "zh": "運河"
+    },
+    {
+      "tag": "tropical",
+      "section": "env",
+      "gate": "any",
+      "heat": [
+        "tease",
+        "flash",
+        "sex"
+      ],
+      "mutex": null,
+      "bind": [],
+      "implies": [],
+      "layer": "normal",
+      "era": [
+        "any"
+      ],
+      "group": "other",
+      "zh": "熱帶"
+    },
+    {
+      "tag": "lantern festival",
+      "section": "env",
+      "gate": "any",
+      "heat": [
+        "tease",
+        "flash",
+        "sex"
+      ],
+      "mutex": null,
+      "bind": [],
+      "implies": [],
+      "layer": "normal",
+      "era": [
+        "ancient_china",
+        "modern"
+      ],
+      "group": "other",
+      "zh": "元宵節"
+    },
+    {
+      "tag": "eiffel tower",
+      "section": "env",
+      "gate": "any",
+      "heat": [
+        "tease",
+        "flash",
+        "sex"
+      ],
+      "mutex": "place",
+      "bind": [],
+      "implies": [
+        "outdoors"
+      ],
+      "layer": "normal",
+      "era": [
+        "modern"
+      ],
+      "group": "place",
+      "zh": "艾菲爾鐵塔"
+    },
+    {
+      "tag": "sphinx",
+      "section": "env",
+      "gate": "any",
+      "heat": [
+        "tease",
+        "flash",
+        "sex"
+      ],
+      "mutex": "place",
+      "bind": [],
+      "implies": [
+        "outdoors"
+      ],
+      "layer": "normal",
+      "era": [
+        "any"
+      ],
+      "group": "place",
+      "zh": "獅身人面"
+    },
+    {
+      "tag": "savannah",
+      "section": "env",
+      "gate": "any",
+      "heat": [
+        "tease",
+        "flash",
+        "sex"
+      ],
+      "mutex": "place",
+      "bind": [],
+      "implies": [
+        "outdoors"
+      ],
+      "layer": "normal",
+      "era": [
+        "any"
+      ],
+      "group": "place",
+      "zh": "稀樹草原"
+    },
+    {
+      "tag": "mid-autumn festival",
+      "section": "env",
+      "gate": "any",
+      "heat": [
+        "tease",
+        "flash",
+        "sex"
+      ],
+      "mutex": null,
+      "bind": [],
+      "implies": [],
+      "layer": "normal",
+      "era": [
+        "ancient_china",
+        "modern"
+      ],
+      "group": "other",
+      "zh": "中秋節"
+    },
+    {
+      "tag": "oktoberfest",
+      "section": "env",
+      "gate": "any",
+      "heat": [
+        "tease",
+        "flash",
+        "sex"
+      ],
+      "mutex": null,
+      "bind": [],
+      "implies": [],
+      "layer": "normal",
+      "era": [
+        "modern"
+      ],
+      "group": "other",
+      "zh": "啤酒節"
+    },
+    {
+      "tag": "colosseum",
+      "section": "env",
+      "gate": "any",
+      "heat": [
+        "tease",
+        "flash",
+        "sex"
+      ],
+      "mutex": "place",
+      "bind": [],
+      "implies": [
+        "outdoors"
+      ],
+      "layer": "normal",
+      "era": [
+        "modern",
+        "ancient_greece"
+      ],
+      "group": "place",
+      "zh": "競技場"
+    },
+    {
+      "tag": "statue of liberty",
+      "section": "env",
+      "gate": "any",
+      "heat": [
+        "tease",
+        "flash",
+        "sex"
+      ],
+      "mutex": "place",
+      "bind": [],
+      "implies": [
+        "outdoors"
+      ],
+      "layer": "normal",
+      "era": [
+        "modern"
+      ],
+      "group": "place",
+      "zh": "自由女神"
+    },
+    {
+      "tag": "igloo",
+      "section": "env",
+      "gate": "any",
+      "heat": [
+        "tease",
+        "flash",
+        "sex"
+      ],
+      "mutex": "place",
+      "bind": [],
+      "implies": [
+        "outdoors",
+        "snow"
+      ],
+      "layer": "normal",
+      "era": [
+        "any"
+      ],
+      "group": "place",
+      "zh": "冰屋"
+    },
+    {
+      "tag": "oasis",
+      "section": "env",
+      "gate": "any",
+      "heat": [
+        "tease",
+        "flash",
+        "sex"
+      ],
+      "mutex": "place",
+      "bind": [],
+      "implies": [
+        "outdoors",
+        "desert"
+      ],
+      "layer": "normal",
+      "era": [
+        "any"
+      ],
+      "group": "place",
+      "zh": "綠洲"
+    },
+    {
+      "tag": "black skin",
+      "section": "feature",
+      "gate": "any",
+      "heat": [
+        "tease",
+        "flash",
+        "sex"
+      ],
+      "mutex": null,
+      "bind": [],
+      "implies": [
+        "dark skin"
+      ],
+      "layer": "normal",
+      "era": [
+        "any"
+      ],
+      "group": "skin",
+      "zh": "黑膚"
+    },
+    {
+      "tag": "patterned clothing",
+      "section": "clothing",
+      "gate": "any",
+      "heat": [
+        "tease",
+        "flash",
+        "sex"
+      ],
+      "mutex": null,
+      "bind": [],
+      "implies": [],
+      "layer": "garment",
+      "era": [
+        "any"
+      ],
+      "group": "fabric",
+      "zh": "花紋衣服"
+    },
+    {
+      "tag": "ink wash painting",
+      "section": "quality",
+      "gate": "any",
+      "heat": [
+        "tease",
+        "flash",
+        "sex"
+      ],
+      "mutex": "coloring",
+      "bind": [],
+      "implies": [],
+      "layer": "normal",
+      "era": [
+        "any"
+      ],
+      "group": "style",
+      "zh": "水墨畫"
+    },
+    {
+      "tag": "flying",
+      "section": "pose",
+      "gate": "any",
+      "heat": [
+        "tease",
+        "flash",
+        "sex"
+      ],
+      "mutex": "activity",
+      "bind": [],
+      "implies": [],
+      "layer": "normal",
+      "era": [
+        "any"
+      ],
+      "group": "activity",
+      "zh": "飛行"
+    },
+    {
+      "tag": "adjusting eyewear",
+      "section": "pose",
+      "gate": "any",
+      "heat": [
+        "tease",
+        "flash",
+        "sex"
+      ],
+      "mutex": null,
+      "bind": [],
+      "implies": [],
+      "layer": "normal",
+      "era": [
+        "any"
+      ],
+      "group": "tease",
+      "zh": "調整眼鏡"
+    },
+    {
+      "tag": "praying",
+      "section": "pose",
+      "gate": "any",
+      "heat": [
+        "tease",
+        "flash",
+        "sex"
+      ],
+      "mutex": "activity",
+      "bind": [],
+      "implies": [],
+      "layer": "normal",
+      "era": [
+        "any"
+      ],
+      "group": "activity",
+      "zh": "祈禱"
+    },
+    {
+      "tag": "adjusting gloves",
+      "section": "pose",
+      "gate": "any",
+      "heat": [
+        "tease",
+        "flash",
+        "sex"
+      ],
+      "mutex": null,
+      "bind": [],
+      "implies": [],
+      "layer": "normal",
+      "era": [
+        "any"
+      ],
+      "group": "tease",
+      "zh": "調整手套"
+    },
+    {
+      "tag": "spinning",
+      "section": "pose",
+      "gate": "any",
+      "heat": [
+        "tease",
+        "flash",
+        "sex"
+      ],
+      "mutex": null,
+      "bind": [],
+      "implies": [],
+      "layer": "normal",
+      "era": [
+        "any"
+      ],
+      "group": "tease",
+      "zh": "旋轉"
+    },
+    {
+      "tag": "walking away",
+      "section": "pose",
+      "gate": "any",
+      "heat": [
+        "tease",
+        "flash",
+        "sex"
+      ],
+      "mutex": "body_pose",
+      "bind": [],
+      "implies": [
+        "walking"
+      ],
+      "layer": "normal",
+      "era": [
+        "any"
+      ],
+      "group": "body",
+      "zh": "背對走遠"
+    },
+    {
+      "tag": "horizon",
+      "section": "env",
+      "gate": "any",
+      "heat": [
+        "tease",
+        "flash",
+        "sex"
+      ],
+      "mutex": null,
+      "bind": [],
+      "implies": [],
+      "layer": "normal",
+      "era": [
+        "any"
+      ],
+      "group": "other",
+      "zh": "地平線"
+    },
+    {
+      "tag": "landscape",
+      "section": "env",
+      "gate": "any",
+      "heat": [
+        "tease",
+        "flash",
+        "sex"
+      ],
+      "mutex": null,
+      "bind": [],
+      "implies": [],
+      "layer": "normal",
+      "era": [
+        "any"
+      ],
+      "group": "other",
+      "zh": "地景"
+    },
+    {
+      "tag": "colorful background",
+      "section": "env",
+      "gate": "any",
+      "heat": [
+        "tease",
+        "flash",
+        "sex"
+      ],
+      "mutex": "background",
+      "bind": [],
+      "implies": [],
+      "layer": "normal",
+      "era": [
+        "any"
+      ],
+      "group": "background",
+      "zh": "色彩繽紛背景"
+    },
+    {
+      "tag": "arm up",
+      "section": "pose",
+      "gate": "any",
+      "heat": [
+        "tease",
+        "flash",
+        "sex"
+      ],
+      "mutex": null,
+      "bind": [],
+      "implies": [],
+      "layer": "normal",
+      "era": [
+        "any"
+      ],
+      "group": "tease",
+      "zh": "單手上舉"
+    },
+    {
+      "tag": "arm support",
+      "section": "pose",
+      "gate": "any",
+      "heat": [
+        "tease",
+        "flash",
+        "sex"
+      ],
+      "mutex": null,
+      "bind": [],
+      "implies": [],
+      "layer": "normal",
+      "era": [
+        "any"
+      ],
+      "group": "tease",
+      "zh": "手臂撐著"
+    },
+    {
+      "tag": "hand on own face",
+      "section": "pose",
+      "gate": "any",
+      "heat": [
+        "tease",
+        "flash",
+        "sex"
+      ],
+      "mutex": null,
+      "bind": [],
+      "implies": [],
+      "layer": "normal",
+      "era": [
+        "any"
+      ],
+      "group": "tease",
+      "zh": "手摸自己臉"
+    },
+    {
+      "tag": "hand in own hair",
+      "section": "pose",
+      "gate": "any",
+      "heat": [
+        "tease",
+        "flash",
+        "sex"
+      ],
+      "mutex": null,
+      "bind": [],
+      "implies": [],
+      "layer": "normal",
+      "era": [
+        "any"
+      ],
+      "group": "tease",
+      "zh": "手插自己頭髮"
+    },
+    {
+      "tag": "arms at sides",
+      "section": "pose",
+      "gate": "any",
+      "heat": [
+        "tease",
+        "flash",
+        "sex"
+      ],
+      "mutex": null,
+      "bind": [],
+      "implies": [],
+      "layer": "normal",
+      "era": [
+        "any"
+      ],
+      "group": "tease",
+      "zh": "雙手垂在身側"
+    },
+    {
+      "tag": "hands in pockets",
+      "section": "pose",
+      "gate": "any",
+      "heat": [
+        "tease",
+        "flash",
+        "sex"
+      ],
+      "mutex": null,
+      "bind": [],
+      "implies": [],
+      "layer": "normal",
+      "era": [
+        "any"
+      ],
+      "group": "tease",
+      "zh": "雙手插口袋"
+    },
+    {
+      "tag": "back-to-back",
+      "section": "pose",
+      "gate": "any",
+      "heat": [
+        "tease",
+        "flash",
+        "sex"
+      ],
+      "mutex": null,
+      "bind": [],
+      "implies": [],
+      "layer": "normal",
+      "era": [
+        "any"
+      ],
+      "group": "tease",
+      "needs": [
+        "pair"
+      ],
+      "zh": "背靠背"
+    },
+    {
+      "tag": "hand on own thigh",
+      "section": "pose",
+      "gate": "any",
+      "heat": [
+        "tease",
+        "flash",
+        "sex"
+      ],
+      "mutex": null,
+      "bind": [],
+      "implies": [],
+      "layer": "normal",
+      "era": [
+        "any"
+      ],
+      "group": "tease",
+      "zh": "單手摸大腿"
+    },
+    {
+      "tag": "hand on own knee",
+      "section": "pose",
+      "gate": "any",
+      "heat": [
+        "tease",
+        "flash",
+        "sex"
+      ],
+      "mutex": null,
+      "bind": [],
+      "implies": [],
+      "layer": "normal",
+      "era": [
+        "any"
+      ],
+      "group": "tease",
+      "zh": "手放膝蓋"
+    },
+    {
+      "tag": "leaning to the side",
+      "section": "pose",
+      "gate": "any",
+      "heat": [
+        "tease",
+        "flash",
+        "sex"
+      ],
+      "mutex": null,
+      "bind": [],
+      "implies": [],
+      "layer": "normal",
+      "era": [
+        "any"
+      ],
+      "group": "tease",
+      "zh": "向旁傾"
+    },
+    {
+      "tag": "leaning on object",
+      "section": "pose",
+      "gate": "any",
+      "heat": [
+        "tease",
+        "flash",
+        "sex"
+      ],
+      "mutex": null,
+      "bind": [],
+      "implies": [],
+      "layer": "normal",
+      "era": [
+        "any"
+      ],
+      "group": "tease",
+      "zh": "靠在物體上"
+    },
+    {
+      "tag": "sitting on stairs",
+      "section": "pose",
+      "gate": "any",
+      "heat": [
+        "tease",
+        "flash",
+        "sex"
+      ],
+      "mutex": "body_pose",
+      "bind": [],
+      "implies": [
+        "sitting"
+      ],
+      "layer": "normal",
+      "era": [
+        "any"
+      ],
+      "group": "body",
+      "zh": "坐在階梯上"
+    },
+    {
+      "tag": "hand on own neck",
+      "section": "pose",
+      "gate": "any",
+      "heat": [
+        "tease",
+        "flash",
+        "sex"
+      ],
+      "mutex": null,
+      "bind": [],
+      "implies": [],
+      "layer": "normal",
+      "era": [
+        "any"
+      ],
+      "group": "tease",
+      "zh": "手摸自己脖子"
+    },
+    {
+      "tag": "sitting on object",
+      "section": "pose",
+      "gate": "any",
+      "heat": [
+        "tease",
+        "flash",
+        "sex"
+      ],
+      "mutex": "body_pose",
+      "bind": [],
+      "implies": [
+        "sitting"
+      ],
+      "layer": "normal",
+      "era": [
+        "any"
+      ],
+      "group": "body",
+      "zh": "坐在物體上"
+    },
+    {
+      "tag": "balancing",
+      "section": "pose",
+      "gate": "any",
+      "heat": [
+        "tease",
+        "flash",
+        "sex"
+      ],
+      "mutex": null,
+      "bind": [],
+      "implies": [],
+      "layer": "normal",
+      "era": [
+        "any"
+      ],
+      "group": "tease",
+      "zh": "保持平衡"
+    },
+    {
+      "tag": "handstand",
+      "section": "pose",
+      "gate": "any",
+      "heat": [
+        "tease",
+        "flash",
+        "sex"
+      ],
+      "mutex": "body_pose",
+      "bind": [],
+      "implies": [],
+      "layer": "normal",
+      "era": [
+        "any"
+      ],
+      "group": "body",
+      "zh": "倒立"
+    },
+    {
+      "tag": "holding own wrist",
+      "section": "pose",
+      "gate": "any",
+      "heat": [
+        "tease",
+        "flash",
+        "sex"
+      ],
+      "mutex": null,
+      "bind": [],
+      "implies": [],
+      "layer": "normal",
+      "era": [
+        "any"
+      ],
+      "group": "tease",
+      "zh": "握住自己手腕"
+    },
+    {
+      "tag": "androgynous",
+      "section": "feature",
+      "gate": "any",
+      "heat": [
+        "tease",
+        "flash",
+        "sex"
+      ],
+      "mutex": null,
+      "bind": [],
+      "implies": [],
+      "layer": "normal",
+      "era": [
+        "any"
+      ],
+      "group": "other",
+      "zh": "中性長相"
+    },
+    {
+      "tag": "old woman",
+      "section": "feature",
+      "gate": "female",
+      "heat": [
+        "tease",
+        "flash",
+        "sex"
+      ],
+      "mutex": null,
+      "bind": [],
+      "implies": [],
+      "layer": "normal",
+      "era": [
+        "any"
+      ],
+      "group": "body_f",
+      "needs": [
+        "female"
+      ],
+      "zh": "老婦人"
+    },
+    {
+      "tag": "trap",
+      "section": "feature",
+      "gate": "male",
+      "heat": [
+        "tease",
+        "flash",
+        "sex"
+      ],
+      "mutex": null,
+      "bind": [],
+      "implies": [],
+      "layer": "normal",
+      "era": [
+        "any"
+      ],
+      "group": "body_m",
+      "needs": [
+        "male"
+      ],
+      "zh": "男扮女相"
+    },
+    {
+      "tag": "isometric",
+      "section": "pose",
+      "gate": "any",
+      "heat": [
+        "tease",
+        "flash",
+        "sex"
+      ],
+      "mutex": "camera",
+      "bind": [],
+      "implies": [],
+      "layer": "normal",
+      "era": [
+        "any"
+      ],
+      "group": "camera",
+      "zh": "等角視圖"
+    },
+    {
+      "tag": "6+girls",
+      "section": "subject",
+      "gate": "female",
+      "heat": [
+        "tease",
+        "flash",
+        "sex"
+      ],
+      "mutex": "female_count",
+      "bind": [],
+      "implies": [],
+      "layer": "normal",
+      "era": [
+        "any"
+      ],
+      "group": "count_f",
+      "zh": "6人以上女性"
+    },
+    {
+      "tag": "4boys",
+      "section": "subject",
+      "gate": "male",
+      "heat": [
+        "tease",
+        "flash",
+        "sex"
+      ],
+      "mutex": "male_count",
+      "bind": [],
+      "implies": [],
+      "layer": "normal",
+      "era": [
+        "any"
+      ],
+      "group": "count_m",
+      "zh": "4個男性"
+    },
+    {
+      "tag": "6+boys",
+      "section": "subject",
+      "gate": "male",
+      "heat": [
+        "tease",
+        "flash",
+        "sex"
+      ],
+      "mutex": "male_count",
+      "bind": [],
+      "implies": [],
+      "layer": "normal",
+      "era": [
+        "any"
+      ],
+      "group": "count_m",
+      "zh": "6人以上男性"
+    },
+    {
+      "tag": "siblings",
+      "section": "feature",
+      "gate": "any",
+      "heat": [
+        "tease",
+        "flash",
+        "sex"
+      ],
+      "mutex": null,
+      "bind": [],
+      "implies": [],
+      "layer": "normal",
+      "era": [
+        "any"
+      ],
+      "group": "other",
+      "needs": [
+        "pair"
+      ],
+      "zh": "兄弟姊妹"
+    },
+    {
+      "tag": "sisters",
+      "section": "feature",
+      "gate": "any",
+      "heat": [
+        "tease",
+        "flash",
+        "sex"
+      ],
+      "mutex": null,
+      "bind": [],
+      "implies": [],
+      "layer": "normal",
+      "era": [
+        "any"
+      ],
+      "group": "other",
+      "needs": [
+        "female",
+        "2female",
+        "pair"
+      ],
+      "zh": "姊妹"
+    },
+    {
+      "tag": "yaoi",
+      "section": "feature",
+      "gate": "male",
+      "heat": [
+        "tease",
+        "flash",
+        "sex"
+      ],
+      "mutex": null,
+      "bind": [],
+      "implies": [],
+      "layer": "normal",
+      "era": [
+        "any"
+      ],
+      "group": "other",
+      "needs": [
+        "yaoi",
+        "male",
+        "2male",
+        "pair"
+      ],
+      "zh": "男同性戀題材"
+    },
+    {
+      "tag": "couple",
+      "section": "feature",
+      "gate": "any",
+      "heat": [
+        "tease",
+        "flash",
+        "sex"
+      ],
+      "mutex": null,
+      "bind": [],
+      "implies": [],
+      "layer": "normal",
+      "era": [
+        "any"
+      ],
+      "group": "other",
+      "needs": [
+        "pair"
+      ],
+      "zh": "情侶"
+    },
+    {
+      "tag": "age difference",
+      "section": "feature",
+      "gate": "any",
+      "heat": [
+        "tease",
+        "flash",
+        "sex"
+      ],
+      "mutex": null,
+      "bind": [],
+      "implies": [],
+      "layer": "normal",
+      "era": [
+        "any"
+      ],
+      "group": "other",
+      "needs": [
+        "pair"
+      ],
+      "zh": "年齡差"
+    },
+    {
+      "tag": "twins",
+      "section": "feature",
+      "gate": "any",
+      "heat": [
+        "tease",
+        "flash",
+        "sex"
+      ],
+      "mutex": null,
+      "bind": [],
+      "implies": [],
+      "layer": "normal",
+      "era": [
+        "any"
+      ],
+      "group": "other",
+      "needs": [
+        "pair"
+      ],
+      "zh": "雙胞胎"
+    },
+    {
+      "tag": "mother and daughter",
+      "section": "feature",
+      "gate": "any",
+      "heat": [
+        "tease",
+        "flash",
+        "sex"
+      ],
+      "mutex": null,
+      "bind": [],
+      "implies": [],
+      "layer": "normal",
+      "era": [
+        "any"
+      ],
+      "group": "other",
+      "needs": [
+        "female",
+        "2female",
+        "pair"
+      ],
+      "zh": "母女"
+    },
+    {
+      "tag": "brothers",
+      "section": "feature",
+      "gate": "male",
+      "heat": [
+        "tease",
+        "flash",
+        "sex"
+      ],
+      "mutex": null,
+      "bind": [],
+      "implies": [],
+      "layer": "normal",
+      "era": [
+        "any"
+      ],
+      "group": "other",
+      "needs": [
+        "male",
+        "2male",
+        "pair"
+      ],
+      "zh": "兄弟"
+    },
+    {
+      "tag": "husband and wife",
+      "section": "feature",
+      "gate": "any",
+      "heat": [
+        "tease",
+        "flash",
+        "sex"
+      ],
+      "mutex": null,
+      "bind": [],
+      "implies": [],
+      "layer": "normal",
+      "era": [
+        "any"
+      ],
+      "group": "other",
+      "needs": [
+        "female",
+        "male",
+        "pair"
+      ],
+      "zh": "夫妻"
+    },
+    {
+      "tag": "father and daughter",
+      "section": "feature",
+      "gate": "any",
+      "heat": [
+        "tease",
+        "flash",
+        "sex"
+      ],
+      "mutex": null,
+      "bind": [],
+      "implies": [],
+      "layer": "normal",
+      "era": [
+        "any"
+      ],
+      "group": "other",
+      "needs": [
+        "female",
+        "male",
+        "pair"
+      ],
+      "zh": "父女"
+    },
+    {
+      "tag": "family",
+      "section": "feature",
+      "gate": "any",
+      "heat": [
+        "tease",
+        "flash",
+        "sex"
+      ],
+      "mutex": null,
+      "bind": [],
+      "implies": [],
+      "layer": "normal",
+      "era": [
+        "any"
+      ],
+      "group": "other",
+      "needs": [
+        "group"
+      ],
+      "zh": "家人"
+    },
+    {
+      "tag": "mother and son",
+      "section": "feature",
+      "gate": "any",
+      "heat": [
+        "tease",
+        "flash",
+        "sex"
+      ],
+      "mutex": null,
+      "bind": [],
+      "implies": [],
+      "layer": "normal",
+      "era": [
+        "any"
+      ],
+      "group": "other",
+      "needs": [
+        "female",
+        "male",
+        "pair"
+      ],
+      "zh": "母子"
+    },
+    {
+      "tag": "group picture",
+      "section": "feature",
+      "gate": "any",
+      "heat": [
+        "tease",
+        "flash",
+        "sex"
+      ],
+      "mutex": null,
+      "bind": [],
+      "implies": [],
+      "layer": "normal",
+      "era": [
+        "any"
+      ],
+      "group": "other",
+      "needs": [
+        "group"
+      ],
+      "zh": "團體照"
+    },
+    {
+      "tag": "paw pose",
+      "section": "pose",
+      "gate": "any",
+      "heat": [
+        "tease",
+        "flash",
+        "sex"
+      ],
+      "mutex": null,
+      "bind": [],
+      "implies": [],
+      "layer": "normal",
+      "era": [
+        "any"
+      ],
+      "group": "tease",
+      "zh": "貓爪手勢"
+    },
+    {
+      "tag": "shushing",
+      "section": "pose",
+      "gate": "any",
+      "heat": [
+        "tease",
+        "flash",
+        "sex"
+      ],
+      "mutex": null,
+      "bind": [],
+      "implies": [
+        "finger to mouth"
+      ],
+      "layer": "normal",
+      "era": [
+        "any"
+      ],
+      "group": "tease",
+      "zh": "食指噓聲"
+    },
+    {
+      "tag": "bored",
+      "section": "pose",
+      "gate": "any",
+      "heat": [
+        "tease",
+        "flash",
+        "sex"
+      ],
+      "mutex": "expression",
+      "bind": [],
+      "implies": [],
+      "layer": "normal",
+      "era": [
+        "any"
+      ],
+      "group": "face",
+      "zh": "無聊"
+    },
+    {
+      "tag": "confident",
+      "section": "pose",
+      "gate": "any",
+      "heat": [
+        "tease",
+        "flash",
+        "sex"
+      ],
+      "mutex": "expression",
+      "bind": [],
+      "implies": [],
+      "layer": "normal",
+      "era": [
+        "any"
+      ],
+      "group": "face",
+      "zh": "自信"
+    },
+    {
+      "tag": "facing viewer",
+      "section": "pose",
+      "gate": "any",
+      "heat": [
+        "tease",
+        "flash",
+        "sex"
+      ],
+      "mutex": null,
+      "bind": [],
+      "implies": [],
+      "layer": "normal",
+      "era": [
+        "any"
+      ],
+      "group": "tease",
+      "zh": "面向觀眾"
+    },
+    {
+      "tag": "tomboy",
+      "section": "feature",
+      "gate": "female",
+      "heat": [
+        "tease",
+        "flash",
+        "sex"
+      ],
+      "mutex": null,
+      "bind": [],
+      "implies": [],
+      "layer": "normal",
+      "era": [
+        "any"
+      ],
+      "group": "body_f",
+      "needs": [
+        "female"
+      ],
+      "zh": "假小子"
+    },
+    {
+      "tag": "planet",
+      "section": "env",
+      "gate": "any",
+      "heat": [
+        "tease",
+        "flash",
+        "sex"
+      ],
+      "mutex": "place",
+      "bind": [],
+      "implies": [
+        "space"
+      ],
+      "layer": "normal",
+      "era": [
+        "modern"
+      ],
+      "group": "place",
+      "zh": "行星"
+    },
+    {
+      "tag": "lake",
+      "section": "env",
+      "gate": "any",
+      "heat": [
+        "tease",
+        "flash",
+        "sex"
+      ],
+      "mutex": "place",
+      "bind": [],
+      "implies": [
+        "outdoors"
+      ],
+      "layer": "normal",
+      "era": [
+        "any"
+      ],
+      "group": "place",
+      "zh": "湖"
+    },
+    {
+      "tag": "earth (planet)",
+      "section": "env",
+      "gate": "any",
+      "heat": [
+        "tease",
+        "flash",
+        "sex"
+      ],
+      "mutex": "place",
+      "bind": [],
+      "implies": [
+        "planet",
+        "space"
+      ],
+      "layer": "normal",
+      "era": [
+        "modern"
+      ],
+      "group": "place",
+      "zh": "地球"
+    },
+    {
+      "tag": "lava",
+      "section": "env",
+      "gate": "any",
+      "heat": [
+        "tease",
+        "flash",
+        "sex"
+      ],
+      "mutex": "place",
+      "bind": [],
+      "implies": [
+        "outdoors"
+      ],
+      "layer": "normal",
+      "era": [
+        "any"
+      ],
+      "group": "place",
+      "zh": "熔岩"
+    },
+    {
+      "tag": "island",
+      "section": "env",
+      "gate": "any",
+      "heat": [
+        "tease",
+        "flash",
+        "sex"
+      ],
+      "mutex": "place",
+      "bind": [],
+      "implies": [
+        "outdoors"
+      ],
+      "layer": "normal",
+      "era": [
+        "any"
+      ],
+      "group": "place",
+      "zh": "島"
+    },
+    {
+      "tag": "carousel",
+      "section": "env",
+      "gate": "any",
+      "heat": [
+        "tease",
+        "flash",
+        "sex"
+      ],
+      "mutex": "place",
+      "bind": [],
+      "implies": [
+        "outdoors"
+      ],
+      "layer": "normal",
+      "era": [
+        "modern"
+      ],
+      "group": "place",
+      "zh": "旋轉木馬"
+    },
+    {
+      "tag": "abandoned",
+      "section": "env",
+      "gate": "any",
+      "heat": [
+        "tease",
+        "flash",
+        "sex"
+      ],
+      "mutex": null,
+      "bind": [],
+      "implies": [],
+      "layer": "normal",
+      "era": [
+        "any"
+      ],
+      "group": "other",
+      "zh": "廢棄"
+    },
+    {
+      "tag": "dock",
+      "section": "env",
+      "gate": "any",
+      "heat": [
+        "tease",
+        "flash",
+        "sex"
+      ],
+      "mutex": "place",
+      "bind": [],
+      "implies": [
+        "outdoors"
+      ],
+      "layer": "normal",
+      "era": [
+        "any"
+      ],
+      "group": "place",
+      "zh": "船塢"
+    },
+    {
+      "tag": "volcano",
+      "section": "env",
+      "gate": "any",
+      "heat": [
+        "tease",
+        "flash",
+        "sex"
+      ],
+      "mutex": "place",
+      "bind": [],
+      "implies": [
+        "outdoors"
+      ],
+      "layer": "normal",
+      "era": [
+        "any"
+      ],
+      "group": "place",
+      "zh": "火山"
+    },
+    {
+      "tag": "asteroid",
+      "section": "env",
+      "gate": "any",
+      "heat": [
+        "tease",
+        "flash",
+        "sex"
+      ],
+      "mutex": "place",
+      "bind": [],
+      "implies": [
+        "space"
+      ],
+      "layer": "normal",
+      "era": [
+        "modern"
+      ],
+      "group": "place",
+      "zh": "小行星"
+    },
+    {
+      "tag": "scar on face",
+      "section": "feature",
+      "gate": "any",
+      "heat": [
+        "tease",
+        "flash",
+        "sex"
+      ],
+      "mutex": null,
+      "bind": [],
+      "implies": [
+        "scar"
+      ],
+      "layer": "normal",
+      "era": [
+        "any"
+      ],
+      "group": "skin",
+      "zh": "臉上疤痕"
+    },
+    {
+      "tag": "mole on cheek",
+      "section": "feature",
+      "gate": "any",
+      "heat": [
+        "tease",
+        "flash",
+        "sex"
+      ],
+      "mutex": null,
+      "bind": [],
+      "implies": [
+        "mole"
+      ],
+      "layer": "normal",
+      "era": [
+        "any"
+      ],
+      "group": "skin",
+      "zh": "臉頰痣"
+    },
+    {
+      "tag": "cloudy sky",
+      "section": "env",
+      "gate": "any",
+      "heat": [
+        "tease",
+        "flash",
+        "sex"
+      ],
+      "mutex": null,
+      "bind": [],
+      "implies": [],
+      "layer": "normal",
+      "era": [
+        "any"
+      ],
+      "group": "sky",
+      "zh": "多雲天空"
+    },
+    {
+      "tag": "starry sky background",
+      "section": "env",
+      "gate": "any",
+      "heat": [
+        "tease",
+        "flash",
+        "sex"
+      ],
+      "mutex": null,
+      "bind": [],
+      "implies": [
+        "starry sky"
+      ],
+      "layer": "normal",
+      "era": [
+        "any"
+      ],
+      "group": "sky",
+      "zh": "星空背景"
+    },
+    {
+      "tag": "comic",
+      "section": "quality",
+      "gate": "any",
+      "heat": [
+        "tease",
+        "flash",
+        "sex"
+      ],
+      "mutex": null,
+      "bind": [],
+      "implies": [],
+      "layer": "normal",
+      "era": [
+        "any"
+      ],
+      "group": "style",
+      "zh": "漫畫分格"
+    },
+    {
+      "tag": "painterly",
+      "section": "quality",
+      "gate": "any",
+      "heat": [
+        "tease",
+        "flash",
+        "sex"
+      ],
+      "mutex": "coloring",
+      "bind": [],
+      "implies": [],
+      "layer": "normal",
+      "era": [
+        "any"
+      ],
+      "group": "style",
+      "zh": "油畫感"
+    },
+    {
+      "tag": "cyberpunk",
+      "section": "quality",
+      "gate": "any",
+      "heat": [
+        "tease",
+        "flash",
+        "sex"
+      ],
+      "mutex": null,
+      "bind": [],
+      "implies": [],
+      "layer": "normal",
+      "era": [
+        "modern"
+      ],
+      "group": "style",
+      "zh": "賽博龐克"
+    },
+    {
+      "tag": "steampunk",
+      "section": "quality",
+      "gate": "any",
+      "heat": [
+        "tease",
+        "flash",
+        "sex"
+      ],
+      "mutex": null,
+      "bind": [],
+      "implies": [],
+      "layer": "normal",
+      "era": [
+        "modern",
+        "victorian"
+      ],
+      "group": "style",
+      "zh": "蒸汽龐克"
+    },
+    {
+      "tag": "art nouveau",
+      "section": "quality",
+      "gate": "any",
+      "heat": [
+        "tease",
+        "flash",
+        "sex"
+      ],
+      "mutex": null,
+      "bind": [],
+      "implies": [],
+      "layer": "normal",
+      "era": [
+        "modern",
+        "victorian"
+      ],
+      "group": "style",
+      "zh": "新藝術風格"
+    },
+    {
+      "tag": "neon palette",
+      "section": "quality",
+      "gate": "any",
+      "heat": [
+        "tease",
+        "flash",
+        "sex"
+      ],
+      "mutex": null,
+      "bind": [],
+      "implies": [],
+      "layer": "normal",
+      "era": [
+        "modern"
+      ],
+      "group": "style",
+      "zh": "霓虹色調"
+    },
+    {
+      "tag": "messy room",
+      "section": "env",
+      "gate": "any",
+      "heat": [
+        "tease",
+        "flash",
+        "sex"
+      ],
+      "mutex": "place",
+      "bind": [],
+      "implies": [
+        "indoors"
+      ],
+      "layer": "normal",
+      "era": [
+        "modern"
+      ],
+      "group": "place",
+      "zh": "凌亂房間"
+    },
+    {
+      "tag": "infirmary",
+      "section": "env",
+      "gate": "any",
+      "heat": [
+        "tease",
+        "flash",
+        "sex"
+      ],
+      "mutex": "place",
+      "bind": [],
+      "implies": [
+        "indoors"
+      ],
+      "layer": "normal",
+      "era": [
+        "modern"
+      ],
+      "group": "place",
+      "zh": "保健室"
+    },
+    {
+      "tag": "public restroom",
+      "section": "env",
+      "gate": "any",
+      "heat": [
+        "tease",
+        "flash",
+        "sex"
+      ],
+      "mutex": "place",
+      "bind": [],
+      "implies": [
+        "indoors"
+      ],
+      "layer": "normal",
+      "era": [
+        "modern"
+      ],
+      "group": "place",
+      "zh": "公共廁所"
+    },
+    {
+      "tag": "vehicle interior",
+      "section": "env",
+      "gate": "any",
+      "heat": [
+        "tease",
+        "flash",
+        "sex"
+      ],
+      "mutex": "place",
+      "bind": [],
+      "implies": [
+        "indoors"
+      ],
+      "layer": "normal",
+      "era": [
+        "modern"
+      ],
+      "group": "place",
+      "zh": "載具內部"
+    },
+    {
+      "tag": "closet",
+      "section": "env",
+      "gate": "any",
+      "heat": [
+        "tease",
+        "flash",
+        "sex"
+      ],
+      "mutex": "place",
+      "bind": [],
+      "implies": [
+        "indoors"
+      ],
+      "layer": "normal",
+      "era": [
+        "modern"
+      ],
+      "group": "place",
+      "zh": "衣櫥"
+    },
+    {
+      "tag": "spacecraft interior",
+      "section": "env",
+      "gate": "any",
+      "heat": [
+        "tease",
+        "flash",
+        "sex"
+      ],
+      "mutex": "place",
+      "bind": [],
+      "implies": [
+        "spacecraft",
+        "space"
+      ],
+      "layer": "normal",
+      "era": [
+        "modern"
+      ],
+      "group": "place",
+      "zh": "太空船內部"
+    },
+    {
+      "tag": "washitsu",
+      "section": "env",
+      "gate": "any",
+      "heat": [
+        "tease",
+        "flash",
+        "sex"
+      ],
+      "mutex": "place",
+      "bind": [],
+      "implies": [
+        "indoors"
+      ],
+      "layer": "normal",
+      "era": [
+        "edo",
+        "modern"
+      ],
+      "group": "place",
+      "zh": "和室"
+    },
+    {
+      "tag": "otaku room",
+      "section": "env",
+      "gate": "any",
+      "heat": [
+        "tease",
+        "flash",
+        "sex"
+      ],
+      "mutex": "place",
+      "bind": [],
+      "implies": [
+        "indoors"
+      ],
+      "layer": "normal",
+      "era": [
+        "modern"
+      ],
+      "group": "place",
+      "zh": "宅宅房間"
+    },
+    {
+      "tag": "clubroom",
+      "section": "env",
+      "gate": "any",
+      "heat": [
+        "tease",
+        "flash",
+        "sex"
+      ],
+      "mutex": "place",
+      "bind": [],
+      "implies": [
+        "indoors"
+      ],
+      "layer": "normal",
+      "era": [
+        "modern"
+      ],
+      "group": "place",
+      "zh": "社團教室"
+    },
+    {
+      "tag": "garage",
+      "section": "env",
+      "gate": "any",
+      "heat": [
+        "tease",
+        "flash",
+        "sex"
+      ],
+      "mutex": "place",
+      "bind": [],
+      "implies": [
+        "indoors"
+      ],
+      "layer": "normal",
+      "era": [
+        "modern"
+      ],
+      "group": "place",
+      "zh": "車庫"
+    },
+    {
+      "tag": "dressing room",
+      "section": "env",
+      "gate": "any",
+      "heat": [
+        "tease",
+        "flash",
+        "sex"
+      ],
+      "mutex": "place",
+      "bind": [],
+      "implies": [
+        "indoors"
+      ],
+      "layer": "normal",
+      "era": [
+        "modern"
+      ],
+      "group": "place",
+      "zh": "後台化妝室"
+    },
+    {
+      "tag": "genkan",
+      "section": "env",
+      "gate": "any",
+      "heat": [
+        "tease",
+        "flash",
+        "sex"
+      ],
+      "mutex": "place",
+      "bind": [],
+      "implies": [
+        "indoors"
+      ],
+      "layer": "normal",
+      "era": [
+        "edo",
+        "modern"
+      ],
+      "group": "place",
+      "zh": "玄關"
+    },
+    {
+      "tag": "dining room",
+      "section": "env",
+      "gate": "any",
+      "heat": [
+        "tease",
+        "flash",
+        "sex"
+      ],
+      "mutex": "place",
+      "bind": [],
+      "implies": [
+        "indoors"
+      ],
+      "layer": "normal",
+      "era": [
+        "modern"
+      ],
+      "group": "place",
+      "zh": "家中飯廳"
+    },
+    {
+      "tag": "warehouse",
+      "section": "env",
+      "gate": "any",
+      "heat": [
+        "tease",
+        "flash",
+        "sex"
+      ],
+      "mutex": "place",
+      "bind": [],
+      "implies": [
+        "indoors"
+      ],
+      "layer": "normal",
+      "era": [
+        "modern"
+      ],
+      "group": "place",
+      "zh": "倉庫"
+    },
+    {
+      "tag": "backstage",
+      "section": "env",
+      "gate": "any",
+      "heat": [
+        "tease",
+        "flash",
+        "sex"
+      ],
+      "mutex": "place",
+      "bind": [],
+      "implies": [
+        "indoors"
+      ],
+      "layer": "normal",
+      "era": [
+        "modern"
+      ],
+      "group": "place",
+      "zh": "後台"
+    },
+    {
+      "tag": "cafeteria",
+      "section": "env",
+      "gate": "any",
+      "heat": [
+        "tease",
+        "flash",
+        "sex"
+      ],
+      "mutex": "place",
+      "bind": [],
+      "implies": [
+        "indoors"
+      ],
+      "layer": "normal",
+      "era": [
+        "modern"
+      ],
+      "group": "place",
+      "zh": "學生餐廳"
+    },
+    {
+      "tag": "throne room",
+      "section": "env",
+      "gate": "any",
+      "heat": [
+        "tease",
+        "flash",
+        "sex"
+      ],
+      "mutex": "place",
+      "bind": [],
+      "implies": [
+        "indoors",
+        "throne"
+      ],
+      "layer": "normal",
+      "era": [
+        "victorian",
+        "medieval",
+        "ancient_china"
+      ],
+      "group": "place",
+      "zh": "王座廳"
+    },
+    {
+      "tag": "concert",
+      "section": "env",
+      "gate": "any",
+      "heat": [
+        "tease",
+        "flash",
+        "sex"
+      ],
+      "mutex": "place",
+      "bind": [],
+      "implies": [
+        "indoors",
+        "stage"
+      ],
+      "layer": "normal",
+      "era": [
+        "modern"
+      ],
+      "group": "place",
+      "zh": "演唱會"
+    },
+    {
+      "tag": "theater",
+      "section": "env",
+      "gate": "any",
+      "heat": [
+        "tease",
+        "flash",
+        "sex"
+      ],
+      "mutex": "place",
+      "bind": [],
+      "implies": [
+        "indoors"
+      ],
+      "layer": "normal",
+      "era": [
+        "modern"
+      ],
+      "group": "place",
+      "zh": "劇院"
+    },
+    {
+      "tag": "museum",
+      "section": "env",
+      "gate": "any",
+      "heat": [
+        "tease",
+        "flash",
+        "sex"
+      ],
+      "mutex": "place",
+      "bind": [],
+      "implies": [
+        "indoors"
+      ],
+      "layer": "normal",
+      "era": [
+        "modern"
+      ],
+      "group": "place",
+      "zh": "博物館"
+    },
+    {
+      "tag": "planetarium",
+      "section": "env",
+      "gate": "any",
+      "heat": [
+        "tease",
+        "flash",
+        "sex"
+      ],
+      "mutex": "place",
+      "bind": [],
+      "implies": [
+        "indoors"
+      ],
+      "layer": "normal",
+      "era": [
+        "modern"
+      ],
+      "group": "place",
+      "zh": "天象儀館"
+    },
+    {
+      "tag": "shop",
+      "section": "env",
+      "gate": "any",
+      "heat": [
+        "tease",
+        "flash",
+        "sex"
+      ],
+      "mutex": "place",
+      "bind": [],
+      "implies": [
+        "indoors"
+      ],
+      "layer": "normal",
+      "era": [
+        "modern"
+      ],
+      "group": "place",
+      "zh": "商店"
+    },
+    {
+      "tag": "bakery",
+      "section": "env",
+      "gate": "any",
+      "heat": [
+        "tease",
+        "flash",
+        "sex"
+      ],
+      "mutex": "place",
+      "bind": [],
+      "implies": [
+        "indoors",
+        "shop"
+      ],
+      "layer": "normal",
+      "era": [
+        "modern"
+      ],
+      "group": "place",
+      "zh": "麵包店"
+    },
+    {
+      "tag": "laundromat",
+      "section": "env",
+      "gate": "any",
+      "heat": [
+        "tease",
+        "flash",
+        "sex"
+      ],
+      "mutex": "place",
+      "bind": [],
+      "implies": [
+        "indoors"
+      ],
+      "layer": "normal",
+      "era": [
+        "modern"
+      ],
+      "group": "place",
+      "zh": "自助洗衣店"
+    },
+    {
+      "tag": "maid cafe",
+      "section": "env",
+      "gate": "any",
+      "heat": [
+        "tease",
+        "flash",
+        "sex"
+      ],
+      "mutex": "place",
+      "bind": [],
+      "implies": [
+        "indoors",
+        "cafe"
+      ],
+      "layer": "normal",
+      "era": [
+        "modern"
+      ],
+      "group": "place",
+      "zh": "女僕咖啡廳"
+    },
+    {
+      "tag": "clothes shop",
+      "section": "env",
+      "gate": "any",
+      "heat": [
+        "tease",
+        "flash",
+        "sex"
+      ],
+      "mutex": "place",
+      "bind": [],
+      "implies": [
+        "indoors",
+        "shop"
+      ],
+      "layer": "normal",
+      "era": [
+        "modern"
+      ],
+      "group": "place",
+      "zh": "服飾店"
+    },
+    {
+      "tag": "flower shop",
+      "section": "env",
+      "gate": "any",
+      "heat": [
+        "tease",
+        "flash",
+        "sex"
+      ],
+      "mutex": "place",
+      "bind": [],
+      "implies": [
+        "indoors",
+        "shop"
+      ],
+      "layer": "normal",
+      "era": [
+        "modern"
+      ],
+      "group": "place",
+      "zh": "花店"
+    },
+    {
+      "tag": "bookstore",
+      "section": "env",
+      "gate": "any",
+      "heat": [
+        "tease",
+        "flash",
+        "sex"
+      ],
+      "mutex": "place",
+      "bind": [],
+      "implies": [
+        "indoors",
+        "shop"
+      ],
+      "layer": "normal",
+      "era": [
+        "modern"
+      ],
+      "group": "place",
+      "zh": "書店"
+    },
+    {
+      "tag": "conveyor belt sushi",
+      "section": "env",
+      "gate": "any",
+      "heat": [
+        "tease",
+        "flash",
+        "sex"
+      ],
+      "mutex": "place",
+      "bind": [],
+      "implies": [
+        "indoors"
+      ],
+      "layer": "normal",
+      "era": [
+        "modern"
+      ],
+      "group": "place",
+      "zh": "迴轉壽司"
+    },
+    {
+      "tag": "skating rink",
+      "section": "env",
+      "gate": "any",
+      "heat": [
+        "tease",
+        "flash",
+        "sex"
+      ],
+      "mutex": "place",
+      "bind": [],
+      "implies": [
+        "indoors"
+      ],
+      "layer": "normal",
+      "era": [
+        "modern"
+      ],
+      "group": "place",
+      "zh": "溜冰場"
+    },
+    {
+      "tag": "sewer",
+      "section": "env",
+      "gate": "any",
+      "heat": [
+        "tease",
+        "flash",
+        "sex"
+      ],
+      "mutex": "place",
+      "bind": [],
+      "implies": [
+        "indoors"
+      ],
+      "layer": "normal",
+      "era": [
+        "modern"
+      ],
+      "group": "place",
+      "zh": "下水道"
+    },
+    {
+      "tag": "water slide",
+      "section": "env",
+      "gate": "any",
+      "heat": [
+        "tease",
+        "flash",
+        "sex"
+      ],
+      "mutex": "place",
+      "bind": [],
+      "implies": [
+        "outdoors",
+        "pool"
+      ],
+      "layer": "normal",
+      "era": [
+        "modern"
+      ],
+      "group": "place",
+      "zh": "滑水道"
+    },
+    {
+      "tag": "roller coaster",
+      "section": "env",
+      "gate": "any",
+      "heat": [
+        "tease",
+        "flash",
+        "sex"
+      ],
+      "mutex": "place",
+      "bind": [],
+      "implies": [
+        "outdoors",
+        "amusement park"
+      ],
+      "layer": "normal",
+      "era": [
+        "modern"
+      ],
+      "group": "place",
+      "zh": "雲霄飛車"
+    },
+    {
+      "tag": "empty pool",
+      "section": "env",
+      "gate": "any",
+      "heat": [
+        "tease",
+        "flash",
+        "sex"
+      ],
+      "mutex": "place",
+      "bind": [],
+      "implies": [
+        "outdoors",
+        "pool"
+      ],
+      "layer": "normal",
+      "era": [
+        "modern"
+      ],
+      "group": "place",
+      "zh": "空泳池"
+    },
+    {
+      "tag": "yatai",
+      "section": "env",
+      "gate": "any",
+      "heat": [
+        "tease",
+        "flash",
+        "sex"
+      ],
+      "mutex": "place",
+      "bind": [],
+      "implies": [
+        "outdoors"
+      ],
+      "layer": "normal",
+      "era": [
+        "edo",
+        "modern"
+      ],
+      "group": "place",
+      "zh": "屋台"
+    },
+    {
+      "tag": "gas station",
+      "section": "env",
+      "gate": "any",
+      "heat": [
+        "tease",
+        "flash",
+        "sex"
+      ],
+      "mutex": "place",
+      "bind": [],
+      "implies": [
+        "outdoors"
+      ],
+      "layer": "normal",
+      "era": [
+        "modern"
+      ],
+      "group": "place",
+      "zh": "加油站"
+    },
+    {
+      "tag": "porch",
+      "section": "env",
+      "gate": "any",
+      "heat": [
+        "tease",
+        "flash",
+        "sex"
+      ],
+      "mutex": "place",
+      "bind": [],
+      "implies": [
+        "outdoors"
+      ],
+      "layer": "normal",
+      "era": [
+        "modern",
+        "victorian"
+      ],
+      "group": "place",
+      "zh": "門廊"
+    },
+    {
+      "tag": "railroad tracks",
+      "section": "env",
+      "gate": "any",
+      "heat": [
+        "tease",
+        "flash",
+        "sex"
+      ],
+      "mutex": "place",
+      "bind": [],
+      "implies": [
+        "outdoors"
+      ],
+      "layer": "normal",
+      "era": [
+        "modern"
+      ],
+      "group": "place",
+      "zh": "鐵軌"
+    },
+    {
+      "tag": "railroad crossing",
+      "section": "env",
+      "gate": "any",
+      "heat": [
+        "tease",
+        "flash",
+        "sex"
+      ],
+      "mutex": "place",
+      "bind": [],
+      "implies": [
+        "outdoors",
+        "railroad tracks"
+      ],
+      "layer": "normal",
+      "era": [
+        "modern"
+      ],
+      "group": "place",
+      "zh": "平交道"
+    },
+    {
+      "tag": "tunnel",
+      "section": "env",
+      "gate": "any",
+      "heat": [
+        "tease",
+        "flash",
+        "sex"
+      ],
+      "mutex": "place",
+      "bind": [],
+      "implies": [],
+      "layer": "normal",
+      "era": [
+        "any"
+      ],
+      "group": "place",
+      "zh": "隧道"
+    },
+    {
+      "tag": "industrial",
+      "section": "env",
+      "gate": "any",
+      "heat": [
+        "tease",
+        "flash",
+        "sex"
+      ],
+      "mutex": "place",
+      "bind": [],
+      "implies": [
+        "outdoors"
+      ],
+      "layer": "normal",
+      "era": [
+        "modern"
+      ],
+      "group": "place",
+      "zh": "工業區"
+    },
+    {
+      "tag": "gazebo",
+      "section": "env",
+      "gate": "any",
+      "heat": [
+        "tease",
+        "flash",
+        "sex"
+      ],
+      "mutex": "place",
+      "bind": [],
+      "implies": [
+        "outdoors"
+      ],
+      "layer": "normal",
+      "era": [
+        "modern",
+        "victorian"
+      ],
+      "group": "place",
+      "zh": "涼亭"
+    },
+    {
+      "tag": "pedestrian bridge",
+      "section": "env",
+      "gate": "any",
+      "heat": [
+        "tease",
+        "flash",
+        "sex"
+      ],
+      "mutex": "place",
+      "bind": [],
+      "implies": [
+        "outdoors"
+      ],
+      "layer": "normal",
+      "era": [
+        "modern"
+      ],
+      "group": "place",
+      "zh": "行人天橋"
+    },
+    {
+      "tag": "clock tower",
+      "section": "env",
+      "gate": "any",
+      "heat": [
+        "tease",
+        "flash",
+        "sex"
+      ],
+      "mutex": "place",
+      "bind": [],
+      "implies": [
+        "outdoors"
+      ],
+      "layer": "normal",
+      "era": [
+        "modern",
+        "victorian"
+      ],
+      "group": "place",
+      "zh": "鐘樓"
+    },
+    {
+      "tag": "lighthouse",
+      "section": "env",
+      "gate": "any",
+      "heat": [
+        "tease",
+        "flash",
+        "sex"
+      ],
+      "mutex": "place",
+      "bind": [],
+      "implies": [
+        "outdoors"
+      ],
+      "layer": "normal",
+      "era": [
+        "modern",
+        "victorian"
+      ],
+      "group": "place",
+      "zh": "燈塔"
+    },
+    {
+      "tag": "treehouse",
+      "section": "env",
+      "gate": "any",
+      "heat": [
+        "tease",
+        "flash",
+        "sex"
+      ],
+      "mutex": "place",
+      "bind": [],
+      "implies": [
+        "outdoors"
+      ],
+      "layer": "normal",
+      "era": [
+        "modern"
+      ],
+      "group": "place",
+      "zh": "樹屋"
+    },
+    {
+      "tag": "shore",
+      "section": "env",
+      "gate": "any",
+      "heat": [
+        "tease",
+        "flash",
+        "sex"
+      ],
+      "mutex": "place",
+      "bind": [],
+      "implies": [
+        "outdoors"
+      ],
+      "layer": "normal",
+      "era": [
+        "any"
+      ],
+      "group": "place",
+      "zh": "海岸"
+    },
+    {
+      "tag": "hill",
+      "section": "env",
+      "gate": "any",
+      "heat": [
+        "tease",
+        "flash",
+        "sex"
+      ],
+      "mutex": "place",
+      "bind": [],
+      "implies": [
+        "outdoors"
+      ],
+      "layer": "normal",
+      "era": [
+        "any"
+      ],
+      "group": "place",
+      "zh": "山丘"
+    },
+    {
+      "tag": "stream",
+      "section": "env",
+      "gate": "any",
+      "heat": [
+        "tease",
+        "flash",
+        "sex"
+      ],
+      "mutex": "place",
+      "bind": [],
+      "implies": [
+        "outdoors"
+      ],
+      "layer": "normal",
+      "era": [
+        "any"
+      ],
+      "group": "place",
+      "zh": "小溪"
+    },
+    {
+      "tag": "floating island",
+      "section": "env",
+      "gate": "any",
+      "heat": [
+        "tease",
+        "flash",
+        "sex"
+      ],
+      "mutex": "place",
+      "bind": [],
+      "implies": [
+        "outdoors",
+        "island"
+      ],
+      "layer": "normal",
+      "era": [
+        "any"
+      ],
+      "group": "place",
+      "zh": "浮空島"
+    },
+    {
+      "tag": "riverbank",
+      "section": "env",
+      "gate": "any",
+      "heat": [
+        "tease",
+        "flash",
+        "sex"
+      ],
+      "mutex": "place",
+      "bind": [],
+      "implies": [
+        "outdoors"
+      ],
+      "layer": "normal",
+      "era": [
+        "any"
+      ],
+      "group": "place",
+      "zh": "河岸"
+    },
+    {
+      "tag": "wetland",
+      "section": "env",
+      "gate": "any",
+      "heat": [
+        "tease",
+        "flash",
+        "sex"
+      ],
+      "mutex": "place",
+      "bind": [],
+      "implies": [
+        "outdoors"
+      ],
+      "layer": "normal",
+      "era": [
+        "any"
+      ],
+      "group": "place",
+      "zh": "濕地"
+    },
+    {
+      "tag": "coral reef",
+      "section": "env",
+      "gate": "any",
+      "heat": [
+        "tease",
+        "flash",
+        "sex"
+      ],
+      "mutex": "place",
+      "bind": [],
+      "implies": [
+        "underwater"
+      ],
+      "layer": "normal",
+      "era": [
+        "any"
+      ],
+      "group": "place",
+      "zh": "珊瑚礁"
+    },
+    {
+      "tag": "canyon",
+      "section": "env",
+      "gate": "any",
+      "heat": [
+        "tease",
+        "flash",
+        "sex"
+      ],
+      "mutex": "place",
+      "bind": [],
+      "implies": [
+        "outdoors"
+      ],
+      "layer": "normal",
+      "era": [
+        "any"
+      ],
+      "group": "place",
+      "zh": "峽谷"
+    },
+    {
+      "tag": "valley",
+      "section": "env",
+      "gate": "any",
+      "heat": [
+        "tease",
+        "flash",
+        "sex"
+      ],
+      "mutex": "place",
+      "bind": [],
+      "implies": [
+        "outdoors"
+      ],
+      "layer": "normal",
+      "era": [
+        "any"
+      ],
+      "group": "place",
+      "zh": "山谷"
+    },
+    {
+      "tag": "seafloor",
+      "section": "env",
+      "gate": "any",
+      "heat": [
+        "tease",
+        "flash",
+        "sex"
+      ],
+      "mutex": "place",
+      "bind": [],
+      "implies": [
+        "underwater"
+      ],
+      "layer": "normal",
+      "era": [
+        "any"
+      ],
+      "group": "place",
+      "zh": "海底"
+    },
+    {
+      "tag": "glacier",
+      "section": "env",
+      "gate": "any",
+      "heat": [
+        "tease",
+        "flash",
+        "sex"
+      ],
+      "mutex": "place",
+      "bind": [],
+      "implies": [
+        "outdoors"
+      ],
+      "layer": "normal",
+      "era": [
+        "any"
+      ],
+      "group": "place",
+      "zh": "冰河"
+    },
+    {
+      "tag": "sand dune",
+      "section": "env",
+      "gate": "any",
+      "heat": [
+        "tease",
+        "flash",
+        "sex"
+      ],
+      "mutex": "place",
+      "bind": [],
+      "implies": [
+        "outdoors"
+      ],
+      "layer": "normal",
+      "era": [
+        "any"
+      ],
+      "group": "place",
+      "zh": "沙丘"
+    },
+    {
+      "tag": "boat",
+      "section": "env",
+      "gate": "any",
+      "heat": [
+        "tease",
+        "flash",
+        "sex"
+      ],
+      "mutex": "place",
+      "bind": [],
+      "implies": [
+        "outdoors"
+      ],
+      "layer": "normal",
+      "era": [
+        "any"
+      ],
+      "group": "place",
+      "zh": "小船"
+    },
+    {
+      "tag": "ship",
+      "section": "env",
+      "gate": "any",
+      "heat": [
+        "tease",
+        "flash",
+        "sex"
+      ],
+      "mutex": "place",
+      "bind": [],
+      "implies": [
+        "outdoors"
+      ],
+      "layer": "normal",
+      "era": [
+        "any"
+      ],
+      "group": "place",
+      "zh": "船"
+    },
+    {
+      "tag": "spacecraft",
+      "section": "env",
+      "gate": "any",
+      "heat": [
+        "tease",
+        "flash",
+        "sex"
+      ],
+      "mutex": "place",
+      "bind": [],
+      "implies": [
+        "space"
+      ],
+      "layer": "normal",
+      "era": [
+        "modern"
+      ],
+      "group": "place",
+      "zh": "太空船"
+    },
+    {
+      "tag": "bus",
+      "section": "env",
+      "gate": "any",
+      "heat": [
+        "tease",
+        "flash",
+        "sex"
+      ],
+      "mutex": "place",
+      "bind": [],
+      "implies": [
+        "outdoors"
+      ],
+      "layer": "normal",
+      "era": [
+        "modern"
+      ],
+      "group": "place",
+      "zh": "公車"
+    },
+    {
+      "tag": "airship",
+      "section": "env",
+      "gate": "any",
+      "heat": [
+        "tease",
+        "flash",
+        "sex"
+      ],
+      "mutex": "place",
+      "bind": [],
+      "implies": [
+        "outdoors"
+      ],
+      "layer": "normal",
+      "era": [
+        "modern",
+        "victorian"
+      ],
+      "group": "place",
+      "zh": "飛行船"
+    },
+    {
+      "tag": "train station platform",
+      "section": "env",
+      "gate": "any",
+      "heat": [
+        "tease",
+        "flash",
+        "sex"
+      ],
+      "mutex": "place",
+      "bind": [],
+      "implies": [
+        "outdoors",
+        "train station"
+      ],
+      "layer": "normal",
+      "era": [
+        "modern"
+      ],
+      "group": "place",
+      "zh": "車站月台"
+    },
+    {
+      "tag": "steam locomotive",
+      "section": "env",
+      "gate": "any",
+      "heat": [
+        "tease",
+        "flash",
+        "sex"
+      ],
+      "mutex": "place",
+      "bind": [],
+      "implies": [
+        "outdoors"
+      ],
+      "layer": "normal",
+      "era": [
+        "modern",
+        "victorian"
+      ],
+      "group": "place",
+      "zh": "蒸汽火車"
+    },
+    {
+      "tag": "rowboat",
+      "section": "env",
+      "gate": "any",
+      "heat": [
+        "tease",
+        "flash",
+        "sex"
+      ],
+      "mutex": "place",
+      "bind": [],
+      "implies": [
+        "outdoors",
+        "boat"
+      ],
+      "layer": "normal",
+      "era": [
+        "any"
+      ],
+      "group": "place",
+      "zh": "划艇"
+    },
+    {
+      "tag": "submarine",
+      "section": "env",
+      "gate": "any",
+      "heat": [
+        "tease",
+        "flash",
+        "sex"
+      ],
+      "mutex": "place",
+      "bind": [],
+      "implies": [
+        "underwater"
+      ],
+      "layer": "normal",
+      "era": [
+        "modern"
+      ],
+      "group": "place",
+      "zh": "潛水艇"
+    },
+    {
+      "tag": "pirate ship",
+      "section": "env",
+      "gate": "any",
+      "heat": [
+        "tease",
+        "flash",
+        "sex"
+      ],
+      "mutex": "place",
+      "bind": [],
+      "implies": [
+        "outdoors",
+        "ship"
+      ],
+      "layer": "normal",
+      "era": [
+        "modern",
+        "victorian",
+        "medieval"
+      ],
+      "group": "place",
+      "zh": "海盜船"
+    },
+    {
+      "tag": "streetcar",
+      "section": "env",
+      "gate": "any",
+      "heat": [
+        "tease",
+        "flash",
+        "sex"
+      ],
+      "mutex": "place",
+      "bind": [],
+      "implies": [
+        "outdoors"
+      ],
+      "layer": "normal",
+      "era": [
+        "modern",
+        "victorian"
+      ],
+      "group": "place",
+      "zh": "路面電車"
+    },
+    {
+      "tag": "shipwreck",
+      "section": "env",
+      "gate": "any",
+      "heat": [
+        "tease",
+        "flash",
+        "sex"
+      ],
+      "mutex": "place",
+      "bind": [],
+      "implies": [
+        "outdoors",
+        "ship"
+      ],
+      "layer": "normal",
+      "era": [
+        "any"
+      ],
+      "group": "place",
+      "zh": "沉船"
+    },
+    {
+      "tag": "subway station",
+      "section": "env",
+      "gate": "any",
+      "heat": [
+        "tease",
+        "flash",
+        "sex"
+      ],
+      "mutex": "place",
+      "bind": [],
+      "implies": [
+        "indoors",
+        "subway"
+      ],
+      "layer": "normal",
+      "era": [
+        "modern"
+      ],
+      "group": "place",
+      "zh": "地鐵站"
+    },
+    {
+      "tag": "hell",
+      "section": "env",
+      "gate": "any",
+      "heat": [
+        "tease",
+        "flash",
+        "sex"
+      ],
+      "mutex": "place",
+      "bind": [],
+      "implies": [],
+      "layer": "normal",
+      "era": [
+        "any"
+      ],
+      "group": "place",
+      "zh": "地獄"
+    },
+    {
+      "tag": "floating city",
+      "section": "env",
+      "gate": "any",
+      "heat": [
+        "tease",
+        "flash",
+        "sex"
+      ],
+      "mutex": "place",
+      "bind": [],
+      "implies": [
+        "outdoors"
+      ],
+      "layer": "normal",
+      "era": [
+        "any"
+      ],
+      "group": "place",
+      "zh": "浮空城市"
+    },
+    {
+      "tag": "heaven",
+      "section": "env",
+      "gate": "any",
+      "heat": [
+        "tease",
+        "flash",
+        "sex"
+      ],
+      "mutex": "place",
+      "bind": [],
+      "implies": [],
+      "layer": "normal",
+      "era": [
+        "any"
+      ],
+      "group": "place",
+      "zh": "天堂"
+    },
+    {
+      "tag": "underwater city",
+      "section": "env",
+      "gate": "any",
+      "heat": [
+        "tease",
+        "flash",
+        "sex"
+      ],
+      "mutex": "place",
+      "bind": [],
+      "implies": [
+        "underwater"
+      ],
+      "layer": "normal",
+      "era": [
+        "any"
+      ],
+      "group": "place",
+      "zh": "海底城市"
+    },
+    {
+      "tag": "tokyo",
+      "section": "env",
+      "gate": "any",
+      "heat": [
+        "tease",
+        "flash",
+        "sex"
+      ],
+      "mutex": "place",
+      "bind": [],
+      "implies": [
+        "outdoors",
+        "city"
+      ],
+      "layer": "normal",
+      "era": [
+        "modern"
+      ],
+      "group": "place",
+      "zh": "東京"
+    },
+    {
+      "tag": "mount fuji",
+      "section": "env",
+      "gate": "any",
+      "heat": [
+        "tease",
+        "flash",
+        "sex"
+      ],
+      "mutex": "place",
+      "bind": [],
+      "implies": [
+        "outdoors",
+        "mountain"
+      ],
+      "layer": "normal",
+      "era": [
+        "edo",
+        "modern"
+      ],
+      "group": "place",
+      "zh": "富士山"
+    },
+    {
+      "tag": "pyramid (structure)",
+      "section": "env",
+      "gate": "any",
+      "heat": [
+        "tease",
+        "flash",
+        "sex"
+      ],
+      "mutex": "place",
+      "bind": [],
+      "implies": [
+        "outdoors"
+      ],
+      "layer": "normal",
+      "era": [
+        "any"
+      ],
+      "group": "place",
+      "zh": "金字塔"
+    },
+    {
+      "tag": "tokyo tower",
+      "section": "env",
+      "gate": "any",
+      "heat": [
+        "tease",
+        "flash",
+        "sex"
+      ],
+      "mutex": "place",
+      "bind": [],
+      "implies": [
+        "outdoors",
+        "tokyo"
+      ],
+      "layer": "normal",
+      "era": [
+        "modern"
+      ],
+      "group": "place",
+      "zh": "東京鐵塔"
+    },
+    {
+      "tag": "shibuya (tokyo)",
+      "section": "env",
+      "gate": "any",
+      "heat": [
+        "tease",
+        "flash",
+        "sex"
+      ],
+      "mutex": "place",
+      "bind": [],
+      "implies": [
+        "outdoors",
+        "tokyo"
+      ],
+      "layer": "normal",
+      "era": [
+        "modern"
+      ],
+      "group": "place",
+      "zh": "澀谷"
+    },
+    {
+      "tag": "kyoto (city)",
+      "section": "env",
+      "gate": "any",
+      "heat": [
+        "tease",
+        "flash",
+        "sex"
+      ],
+      "mutex": "place",
+      "bind": [],
+      "implies": [
+        "outdoors"
+      ],
+      "layer": "normal",
+      "era": [
+        "edo",
+        "modern"
+      ],
+      "group": "place",
+      "zh": "京都"
+    },
+    {
+      "tag": "elizabeth tower",
+      "section": "env",
+      "gate": "any",
+      "heat": [
+        "tease",
+        "flash",
+        "sex"
+      ],
+      "mutex": "place",
+      "bind": [],
+      "implies": [
+        "outdoors"
+      ],
+      "layer": "normal",
+      "era": [
+        "modern",
+        "victorian"
+      ],
+      "group": "place",
+      "zh": "大笨鐘"
+    },
+    {
+      "tag": "new york city",
+      "section": "env",
+      "gate": "any",
+      "heat": [
+        "tease",
+        "flash",
+        "sex"
+      ],
+      "mutex": "place",
+      "bind": [],
+      "implies": [
+        "outdoors",
+        "city"
+      ],
+      "layer": "normal",
+      "era": [
+        "modern"
+      ],
+      "group": "place",
+      "zh": "紐約"
+    },
+    {
+      "tag": "tokyo skytree",
+      "section": "env",
+      "gate": "any",
+      "heat": [
+        "tease",
+        "flash",
+        "sex"
+      ],
+      "mutex": "place",
+      "bind": [],
+      "implies": [
+        "outdoors",
+        "tokyo"
+      ],
+      "layer": "normal",
+      "era": [
+        "modern"
+      ],
+      "group": "place",
+      "zh": "東京晴空塔"
+    },
+    {
+      "tag": "taipei 101",
+      "section": "env",
+      "gate": "any",
+      "heat": [
+        "tease",
+        "flash",
+        "sex"
+      ],
+      "mutex": "place",
+      "bind": [],
+      "implies": [
+        "outdoors"
+      ],
+      "layer": "normal",
+      "era": [
+        "modern"
+      ],
+      "group": "place",
+      "zh": "台北101"
+    },
+    {
+      "tag": "bookshelf",
+      "section": "env",
+      "gate": "any",
+      "heat": [
+        "tease",
+        "flash",
+        "sex"
+      ],
+      "mutex": null,
+      "bind": [],
+      "implies": [],
+      "layer": "normal",
+      "era": [
+        "any"
+      ],
+      "group": "other",
+      "zh": "書架"
+    },
+    {
+      "tag": "kotatsu",
+      "section": "env",
+      "gate": "any",
+      "heat": [
+        "tease",
+        "flash",
+        "sex"
+      ],
+      "mutex": null,
+      "bind": [],
+      "implies": [],
+      "layer": "normal",
+      "era": [
+        "edo",
+        "modern"
+      ],
+      "group": "other",
+      "zh": "暖桌"
+    },
+    {
+      "tag": "spiral staircase",
+      "section": "env",
+      "gate": "any",
+      "heat": [
+        "tease",
+        "flash",
+        "sex"
+      ],
+      "mutex": null,
+      "bind": [],
+      "implies": [
+        "stairs"
+      ],
+      "layer": "normal",
+      "era": [
+        "any"
+      ],
+      "group": "other",
+      "zh": "螺旋樓梯"
+    },
+    {
+      "tag": "crane game",
+      "section": "env",
+      "gate": "any",
+      "heat": [
+        "tease",
+        "flash",
+        "sex"
+      ],
+      "mutex": null,
+      "bind": [],
+      "implies": [],
+      "layer": "normal",
+      "era": [
+        "modern"
+      ],
+      "group": "other",
+      "zh": "夾娃娃機"
+    },
+    {
+      "tag": "arcade cabinet",
+      "section": "env",
+      "gate": "any",
+      "heat": [
+        "tease",
+        "flash",
+        "sex"
+      ],
+      "mutex": null,
+      "bind": [],
+      "implies": [],
+      "layer": "normal",
+      "era": [
+        "modern"
+      ],
+      "group": "other",
+      "zh": "大型電玩機台"
+    },
+    {
+      "tag": "purikura",
+      "section": "env",
+      "gate": "any",
+      "heat": [
+        "tease",
+        "flash",
+        "sex"
+      ],
+      "mutex": null,
+      "bind": [],
+      "implies": [],
+      "layer": "normal",
+      "era": [
+        "modern"
+      ],
+      "group": "other",
+      "zh": "拍貼機"
+    },
+    {
+      "tag": "road",
+      "section": "env",
+      "gate": "any",
+      "heat": [
+        "tease",
+        "flash",
+        "sex"
+      ],
+      "mutex": null,
+      "bind": [],
+      "implies": [],
+      "layer": "normal",
+      "era": [
+        "any"
+      ],
+      "group": "other",
+      "zh": "道路"
+    },
+    {
+      "tag": "path",
+      "section": "env",
+      "gate": "any",
+      "heat": [
+        "tease",
+        "flash",
+        "sex"
+      ],
+      "mutex": null,
+      "bind": [],
+      "implies": [],
+      "layer": "normal",
+      "era": [
+        "any"
+      ],
+      "group": "other",
+      "zh": "小徑"
+    },
+    {
+      "tag": "town",
+      "section": "env",
+      "gate": "any",
+      "heat": [
+        "tease",
+        "flash",
+        "sex"
+      ],
+      "mutex": null,
+      "bind": [],
+      "implies": [],
+      "layer": "normal",
+      "era": [
+        "any"
+      ],
+      "group": "other",
+      "zh": "城鎮"
+    },
+    {
+      "tag": "crosswalk",
+      "section": "env",
+      "gate": "any",
+      "heat": [
+        "tease",
+        "flash",
+        "sex"
+      ],
+      "mutex": null,
+      "bind": [],
+      "implies": [],
+      "layer": "normal",
+      "era": [
+        "modern"
+      ],
+      "group": "other",
+      "zh": "斑馬線"
+    },
+    {
+      "tag": "sidewalk",
+      "section": "env",
+      "gate": "any",
+      "heat": [
+        "tease",
+        "flash",
+        "sex"
+      ],
+      "mutex": null,
+      "bind": [],
+      "implies": [],
+      "layer": "normal",
+      "era": [
+        "modern"
+      ],
+      "group": "other",
+      "zh": "人行道"
+    },
+    {
+      "tag": "urban",
+      "section": "env",
+      "gate": "any",
+      "heat": [
+        "tease",
+        "flash",
+        "sex"
+      ],
+      "mutex": null,
+      "bind": [],
+      "implies": [],
+      "layer": "normal",
+      "era": [
+        "modern"
+      ],
+      "group": "other",
+      "zh": "都市感"
+    },
+    {
+      "tag": "dirt road",
+      "section": "env",
+      "gate": "any",
+      "heat": [
+        "tease",
+        "flash",
+        "sex"
+      ],
+      "mutex": null,
+      "bind": [],
+      "implies": [
+        "road"
+      ],
+      "layer": "normal",
+      "era": [
+        "any"
+      ],
+      "group": "other",
+      "zh": "泥土路"
+    },
+    {
+      "tag": "hedge",
+      "section": "env",
+      "gate": "any",
+      "heat": [
+        "tease",
+        "flash",
+        "sex"
+      ],
+      "mutex": null,
+      "bind": [],
+      "implies": [],
+      "layer": "normal",
+      "era": [
+        "any"
+      ],
+      "group": "other",
+      "zh": "樹籬"
+    },
+    {
+      "tag": "fence",
+      "section": "env",
+      "gate": "any",
+      "heat": [
+        "tease",
+        "flash",
+        "sex"
+      ],
+      "mutex": null,
+      "bind": [],
+      "implies": [],
+      "layer": "normal",
+      "era": [
+        "any"
+      ],
+      "group": "other",
+      "zh": "圍欄"
+    },
+    {
+      "tag": "brick wall",
+      "section": "env",
+      "gate": "any",
+      "heat": [
+        "tease",
+        "flash",
+        "sex"
+      ],
+      "mutex": null,
+      "bind": [],
+      "implies": [],
+      "layer": "normal",
+      "era": [
+        "any"
+      ],
+      "group": "other",
+      "zh": "磚牆"
+    },
+    {
+      "tag": "power lines",
+      "section": "env",
+      "gate": "any",
+      "heat": [
+        "tease",
+        "flash",
+        "sex"
+      ],
+      "mutex": null,
+      "bind": [],
+      "implies": [],
+      "layer": "normal",
+      "era": [
+        "modern"
+      ],
+      "group": "other",
+      "zh": "電線"
+    },
+    {
+      "tag": "utility pole",
+      "section": "env",
+      "gate": "any",
+      "heat": [
+        "tease",
+        "flash",
+        "sex"
+      ],
+      "mutex": null,
+      "bind": [],
+      "implies": [],
+      "layer": "normal",
+      "era": [
+        "modern"
+      ],
+      "group": "other",
+      "zh": "電線桿"
+    },
+    {
+      "tag": "chain-link fence",
+      "section": "env",
+      "gate": "any",
+      "heat": [
+        "tease",
+        "flash",
+        "sex"
+      ],
+      "mutex": null,
+      "bind": [],
+      "implies": [
+        "fence"
+      ],
+      "layer": "normal",
+      "era": [
+        "modern"
+      ],
+      "group": "other",
+      "zh": "鐵絲網圍欄"
+    },
+    {
+      "tag": "graffiti",
+      "section": "env",
+      "gate": "any",
+      "heat": [
+        "tease",
+        "flash",
+        "sex"
+      ],
+      "mutex": null,
+      "bind": [],
+      "implies": [],
+      "layer": "normal",
+      "era": [
+        "modern"
+      ],
+      "group": "other",
+      "zh": "塗鴉"
+    },
+    {
+      "tag": "vending machine",
+      "section": "env",
+      "gate": "any",
+      "heat": [
+        "tease",
+        "flash",
+        "sex"
+      ],
+      "mutex": null,
+      "bind": [],
+      "implies": [],
+      "layer": "normal",
+      "era": [
+        "modern"
+      ],
+      "group": "other",
+      "zh": "自動販賣機"
+    },
+    {
+      "tag": "traffic light",
+      "section": "env",
+      "gate": "any",
+      "heat": [
+        "tease",
+        "flash",
+        "sex"
+      ],
+      "mutex": null,
+      "bind": [],
+      "implies": [],
+      "layer": "normal",
+      "era": [
+        "modern"
+      ],
+      "group": "light",
+      "zh": "紅綠燈"
+    },
+    {
+      "tag": "billboard",
+      "section": "env",
+      "gate": "any",
+      "heat": [
+        "tease",
+        "flash",
+        "sex"
+      ],
+      "mutex": null,
+      "bind": [],
+      "implies": [],
+      "layer": "normal",
+      "era": [
+        "modern"
+      ],
+      "group": "other",
+      "zh": "廣告看板"
+    },
+    {
+      "tag": "phone booth",
+      "section": "env",
+      "gate": "any",
+      "heat": [
+        "tease",
+        "flash",
+        "sex"
+      ],
+      "mutex": null,
+      "bind": [],
+      "implies": [],
+      "layer": "normal",
+      "era": [
+        "modern"
+      ],
+      "group": "other",
+      "zh": "電話亭"
+    },
+    {
+      "tag": "building",
+      "section": "env",
+      "gate": "any",
+      "heat": [
+        "tease",
+        "flash",
+        "sex"
+      ],
+      "mutex": null,
+      "bind": [],
+      "implies": [],
+      "layer": "normal",
+      "era": [
+        "any"
+      ],
+      "group": "other",
+      "zh": "建築物"
+    },
+    {
+      "tag": "stairs",
+      "section": "env",
+      "gate": "any",
+      "heat": [
+        "tease",
+        "flash",
+        "sex"
+      ],
+      "mutex": null,
+      "bind": [],
+      "implies": [],
+      "layer": "normal",
+      "era": [
+        "any"
+      ],
+      "group": "other",
+      "zh": "樓梯"
+    },
+    {
+      "tag": "architecture",
+      "section": "env",
+      "gate": "any",
+      "heat": [
+        "tease",
+        "flash",
+        "sex"
+      ],
+      "mutex": null,
+      "bind": [],
+      "implies": [],
+      "layer": "normal",
+      "era": [
+        "any"
+      ],
+      "group": "other",
+      "zh": "建築"
+    },
+    {
+      "tag": "stone stairs",
+      "section": "env",
+      "gate": "any",
+      "heat": [
+        "tease",
+        "flash",
+        "sex"
+      ],
+      "mutex": null,
+      "bind": [],
+      "implies": [
+        "stairs"
+      ],
+      "layer": "normal",
+      "era": [
+        "any"
+      ],
+      "group": "other",
+      "zh": "石階"
+    },
+    {
+      "tag": "komainu",
+      "section": "env",
+      "gate": "any",
+      "heat": [
+        "tease",
+        "flash",
+        "sex"
+      ],
+      "mutex": null,
+      "bind": [],
+      "implies": [
+        "shrine"
+      ],
+      "layer": "normal",
+      "era": [
+        "edo",
+        "modern"
+      ],
+      "group": "other",
+      "zh": "狛犬"
+    },
+    {
+      "tag": "jizou",
+      "section": "env",
+      "gate": "any",
+      "heat": [
+        "tease",
+        "flash",
+        "sex"
+      ],
+      "mutex": null,
+      "bind": [],
+      "implies": [],
+      "layer": "normal",
+      "era": [
+        "edo",
+        "modern"
+      ],
+      "group": "other",
+      "zh": "地藏"
+    },
+    {
+      "tag": "rock",
+      "section": "env",
+      "gate": "any",
+      "heat": [
+        "tease",
+        "flash",
+        "sex"
+      ],
+      "mutex": null,
+      "bind": [],
+      "implies": [],
+      "layer": "normal",
+      "era": [
+        "any"
+      ],
+      "group": "other",
+      "zh": "岩石"
+    },
+    {
+      "tag": "palm tree",
+      "section": "env",
+      "gate": "any",
+      "heat": [
+        "tease",
+        "flash",
+        "sex"
+      ],
+      "mutex": null,
+      "bind": [],
+      "implies": [],
+      "layer": "normal",
+      "era": [
+        "any"
+      ],
+      "group": "other",
+      "zh": "棕櫚樹"
+    },
+    {
+      "tag": "mountainous horizon",
+      "section": "env",
+      "gate": "any",
+      "heat": [
+        "tease",
+        "flash",
+        "sex"
+      ],
+      "mutex": null,
+      "bind": [],
+      "implies": [],
+      "layer": "normal",
+      "era": [
+        "any"
+      ],
+      "group": "other",
+      "zh": "山巒地平線"
+    },
+    {
+      "tag": "puddle",
+      "section": "env",
+      "gate": "any",
+      "heat": [
+        "tease",
+        "flash",
+        "sex"
+      ],
+      "mutex": null,
+      "bind": [],
+      "implies": [],
+      "layer": "normal",
+      "era": [
+        "any"
+      ],
+      "group": "other",
+      "zh": "水窪"
+    },
+    {
+      "tag": "overgrown",
+      "section": "env",
+      "gate": "any",
+      "heat": [
+        "tease",
+        "flash",
+        "sex"
+      ],
+      "mutex": null,
+      "bind": [],
+      "implies": [],
+      "layer": "normal",
+      "era": [
+        "any"
+      ],
+      "group": "other",
+      "zh": "雜草叢生"
+    },
+    {
+      "tag": "stalactite",
+      "section": "env",
+      "gate": "any",
+      "heat": [
+        "tease",
+        "flash",
+        "sex"
+      ],
+      "mutex": null,
+      "bind": [],
+      "implies": [],
+      "layer": "normal",
+      "era": [
+        "any"
+      ],
+      "group": "other",
+      "zh": "鐘乳石"
+    },
+    {
+      "tag": "moon",
+      "section": "env",
+      "gate": "any",
+      "heat": [
+        "tease",
+        "flash",
+        "sex"
+      ],
+      "mutex": null,
+      "bind": [],
+      "implies": [],
+      "layer": "normal",
+      "era": [
+        "any"
+      ],
+      "group": "sky",
+      "zh": "月亮"
+    },
+    {
+      "tag": "milky way",
+      "section": "env",
+      "gate": "any",
+      "heat": [
+        "tease",
+        "flash",
+        "sex"
+      ],
+      "mutex": null,
+      "bind": [],
+      "implies": [
+        "starry sky"
+      ],
+      "layer": "normal",
+      "era": [
+        "any"
+      ],
+      "group": "sky",
+      "zh": "銀河"
+    },
+    {
+      "tag": "science fiction",
+      "section": "env",
+      "gate": "any",
+      "heat": [
+        "tease",
+        "flash",
+        "sex"
+      ],
+      "mutex": null,
+      "bind": [],
+      "implies": [],
+      "layer": "normal",
+      "era": [
+        "modern"
+      ],
+      "group": "other",
+      "zh": "科幻"
+    },
+    {
+      "tag": "post-apocalypse",
+      "section": "env",
+      "gate": "any",
+      "heat": [
+        "tease",
+        "flash",
+        "sex"
+      ],
+      "mutex": null,
+      "bind": [],
+      "implies": [],
+      "layer": "normal",
+      "era": [
+        "modern"
+      ],
+      "group": "other",
+      "zh": "末日廢土"
+    },
+    {
+      "tag": "holding weapon",
+      "section": "pose",
+      "gate": "any",
+      "heat": [
+        "tease",
+        "flash",
+        "sex"
+      ],
+      "mutex": null,
+      "bind": [],
+      "implies": [],
+      "layer": "normal",
+      "era": [
+        "any"
+      ],
+      "group": "tease",
+      "zh": "持武器"
+    },
+    {
+      "tag": "holding sword",
+      "section": "pose",
+      "gate": "any",
+      "heat": [
+        "tease",
+        "flash",
+        "sex"
+      ],
+      "mutex": null,
+      "bind": [],
+      "implies": [
+        "sword",
+        "holding weapon"
+      ],
+      "layer": "normal",
+      "era": [
+        "any"
+      ],
+      "group": "tease",
+      "zh": "持劍"
+    },
+    {
+      "tag": "holding gun",
+      "section": "pose",
+      "gate": "any",
+      "heat": [
+        "tease",
+        "flash",
+        "sex"
+      ],
+      "mutex": null,
+      "bind": [],
+      "implies": [
+        "gun",
+        "holding weapon"
+      ],
+      "layer": "normal",
+      "era": [
+        "modern"
+      ],
+      "group": "tease",
+      "zh": "持槍"
+    },
+    {
+      "tag": "holding knife",
+      "section": "pose",
+      "gate": "any",
+      "heat": [
+        "tease",
+        "flash",
+        "sex"
+      ],
+      "mutex": null,
+      "bind": [],
+      "implies": [
+        "knife",
+        "holding weapon"
+      ],
+      "layer": "normal",
+      "era": [
+        "any"
+      ],
+      "group": "tease",
+      "zh": "持刀"
+    },
+    {
+      "tag": "holding staff",
+      "section": "pose",
+      "gate": "any",
+      "heat": [
+        "tease",
+        "flash",
+        "sex"
+      ],
+      "mutex": null,
+      "bind": [],
+      "implies": [
+        "staff",
+        "holding weapon"
+      ],
+      "layer": "normal",
+      "era": [
+        "any"
+      ],
+      "group": "tease",
+      "zh": "持杖"
+    },
+    {
+      "tag": "pointing",
+      "section": "pose",
+      "gate": "any",
+      "heat": [
+        "tease",
+        "flash",
+        "sex"
+      ],
+      "mutex": null,
+      "bind": [],
+      "implies": [],
+      "layer": "normal",
+      "era": [
+        "any"
+      ],
+      "group": "tease",
+      "zh": "指向"
+    },
+    {
+      "tag": "index finger raised",
+      "section": "pose",
+      "gate": "any",
+      "heat": [
+        "tease",
+        "flash",
+        "sex"
+      ],
+      "mutex": null,
+      "bind": [],
+      "implies": [],
+      "layer": "normal",
+      "era": [
+        "any"
+      ],
+      "group": "tease",
+      "zh": "豎食指"
+    },
+    {
+      "tag": "reaching",
+      "section": "pose",
+      "gate": "any",
+      "heat": [
+        "tease",
+        "flash",
+        "sex"
+      ],
+      "mutex": null,
+      "bind": [],
+      "implies": [],
+      "layer": "normal",
+      "era": [
+        "any"
+      ],
+      "group": "tease",
+      "zh": "伸手"
+    },
+    {
+      "tag": "waving",
+      "section": "pose",
+      "gate": "any",
+      "heat": [
+        "tease",
+        "flash",
+        "sex"
+      ],
+      "mutex": null,
+      "bind": [],
+      "implies": [],
+      "layer": "normal",
+      "era": [
+        "any"
+      ],
+      "group": "tease",
+      "zh": "揮手"
+    },
+    {
+      "tag": "punching",
+      "section": "pose",
+      "gate": "any",
+      "heat": [
+        "tease",
+        "flash",
+        "sex"
+      ],
+      "mutex": null,
+      "bind": [],
+      "implies": [],
+      "layer": "normal",
+      "era": [
+        "any"
+      ],
+      "group": "tease",
+      "zh": "出拳"
+    },
+    {
+      "tag": "hand on another's shoulder",
+      "section": "pose",
+      "gate": "any",
+      "heat": [
+        "tease",
+        "flash",
+        "sex"
+      ],
+      "mutex": null,
+      "bind": [],
+      "implies": [],
+      "layer": "normal",
+      "era": [
+        "any"
+      ],
+      "group": "tease",
+      "needs": [
+        "pair"
+      ],
+      "zh": "手搭對方肩"
+    },
+    {
+      "tag": "hand on another's face",
+      "section": "pose",
+      "gate": "any",
+      "heat": [
+        "tease",
+        "flash",
+        "sex"
+      ],
+      "mutex": null,
+      "bind": [],
+      "implies": [],
+      "layer": "normal",
+      "era": [
+        "any"
+      ],
+      "group": "tease",
+      "needs": [
+        "pair"
+      ],
+      "zh": "手撫對方臉"
+    },
+    {
+      "tag": "hand on another's cheek",
+      "section": "pose",
+      "gate": "any",
+      "heat": [
+        "tease",
+        "flash",
+        "sex"
+      ],
+      "mutex": null,
+      "bind": [],
+      "implies": [],
+      "layer": "normal",
+      "era": [
+        "any"
+      ],
+      "group": "tease",
+      "needs": [
+        "pair"
+      ],
+      "zh": "手撫對方頰"
+    },
+    {
+      "tag": "feeding",
+      "section": "pose",
+      "gate": "any",
+      "heat": [
+        "tease",
+        "flash",
+        "sex"
+      ],
+      "mutex": null,
+      "bind": [],
+      "implies": [],
+      "layer": "normal",
+      "era": [
+        "any"
+      ],
+      "group": "tease",
+      "needs": [
+        "pair"
+      ],
+      "zh": "餵食"
+    },
+    {
+      "tag": "between fingers",
+      "section": "pose",
+      "gate": "any",
+      "heat": [
+        "tease",
+        "flash",
+        "sex"
+      ],
+      "mutex": null,
+      "bind": [],
+      "implies": [],
+      "layer": "normal",
+      "era": [
+        "any"
+      ],
+      "group": "tease",
+      "zh": "指縫之間"
+    },
+    {
+      "tag": "own hands together",
+      "section": "pose",
+      "gate": "any",
+      "heat": [
+        "tease",
+        "flash",
+        "sex"
+      ],
+      "mutex": null,
+      "bind": [],
+      "implies": [],
+      "layer": "normal",
+      "era": [
+        "any"
+      ],
+      "group": "tease",
+      "zh": "雙手合十"
+    },
+    {
+      "tag": "interlocked fingers",
+      "section": "pose",
+      "gate": "any",
+      "heat": [
+        "tease",
+        "flash",
+        "sex"
+      ],
+      "mutex": null,
+      "bind": [],
+      "implies": [],
+      "layer": "normal",
+      "era": [
+        "any"
+      ],
+      "group": "tease",
+      "zh": "十指交扣"
+    },
+    {
+      "tag": "dual wielding",
+      "section": "pose",
+      "gate": "any",
+      "heat": [
+        "tease",
+        "flash",
+        "sex"
+      ],
+      "mutex": null,
+      "bind": [],
+      "implies": [
+        "holding weapon"
+      ],
+      "layer": "normal",
+      "era": [
+        "any"
+      ],
+      "group": "tease",
+      "zh": "雙持"
+    },
+    {
+      "tag": "aiming",
+      "section": "pose",
+      "gate": "any",
+      "heat": [
+        "tease",
+        "flash",
+        "sex"
+      ],
+      "mutex": null,
+      "bind": [],
+      "implies": [],
+      "layer": "normal",
+      "era": [
+        "any"
+      ],
+      "group": "tease",
+      "zh": "瞄準"
+    },
+    {
+      "tag": "tying hair",
+      "section": "pose",
+      "gate": "any",
+      "heat": [
+        "tease",
+        "flash",
+        "sex"
+      ],
+      "mutex": null,
+      "bind": [],
+      "implies": [],
+      "layer": "normal",
+      "era": [
+        "any"
+      ],
+      "group": "tease",
+      "zh": "綁頭髮"
+    },
+    {
+      "tag": "licking",
+      "section": "pose",
+      "gate": "any",
+      "heat": [
+        "tease",
+        "flash",
+        "sex"
+      ],
+      "mutex": null,
+      "bind": [],
+      "implies": [],
+      "layer": "normal",
+      "era": [
+        "any"
+      ],
+      "group": "tease",
+      "zh": "舔"
+    },
+    {
+      "tag": "kicking",
+      "section": "pose",
+      "gate": "any",
+      "heat": [
+        "tease",
+        "flash",
+        "sex"
+      ],
+      "mutex": "body_pose",
+      "bind": [],
+      "implies": [],
+      "layer": "normal",
+      "era": [
+        "any"
+      ],
+      "group": "body",
+      "zh": "踢"
+    },
+    {
+      "tag": "falling",
+      "section": "pose",
+      "gate": "any",
+      "heat": [
+        "tease",
+        "flash",
+        "sex"
+      ],
+      "mutex": "body_pose",
+      "bind": [],
+      "implies": [],
+      "layer": "normal",
+      "era": [
+        "any"
+      ],
+      "group": "body",
+      "zh": "跌倒"
+    },
+    {
+      "tag": "playing instrument",
+      "section": "pose",
+      "gate": "any",
+      "heat": [
+        "tease",
+        "flash",
+        "sex"
+      ],
+      "mutex": "activity",
+      "bind": [],
+      "implies": [],
+      "layer": "normal",
+      "era": [
+        "any"
+      ],
+      "group": "activity",
+      "zh": "演奏樂器"
+    },
+    {
+      "tag": "wide-eyed",
+      "section": "pose",
+      "gate": "any",
+      "heat": [
+        "tease",
+        "flash",
+        "sex"
+      ],
+      "mutex": "expression",
+      "bind": [],
+      "implies": [],
+      "layer": "normal",
+      "era": [
+        "any"
+      ],
+      "group": "face",
+      "zh": "睜大眼"
+    },
+    {
+      "tag": "laughing",
+      "section": "pose",
+      "gate": "any",
+      "heat": [
+        "tease",
+        "flash",
+        "sex"
+      ],
+      "mutex": "expression",
+      "bind": [],
+      "implies": [],
+      "layer": "normal",
+      "era": [
+        "any"
+      ],
+      "group": "face",
+      "zh": "大笑"
+    },
+    {
+      "tag": "yawning",
+      "section": "pose",
+      "gate": "any",
+      "heat": [
+        "tease",
+        "flash",
+        "sex"
+      ],
+      "mutex": "expression",
+      "bind": [],
+      "implies": [],
+      "layer": "normal",
+      "era": [
+        "any"
+      ],
+      "group": "face",
+      "zh": "打哈欠"
+    },
+    {
+      "tag": "raised eyebrow",
+      "section": "pose",
+      "gate": "any",
+      "heat": [
+        "tease",
+        "flash",
+        "sex"
+      ],
+      "mutex": "expression",
+      "bind": [],
+      "implies": [],
+      "layer": "normal",
+      "era": [
+        "any"
+      ],
+      "group": "face",
+      "zh": "挑眉"
+    },
+    {
+      "tag": "letterboxed",
+      "section": "pose",
+      "gate": "any",
+      "heat": [
+        "tease",
+        "flash",
+        "sex"
+      ],
+      "mutex": null,
+      "bind": [],
+      "implies": [],
+      "layer": "normal",
+      "era": [
+        "any"
+      ],
+      "group": "camera",
+      "zh": "上下黑邊"
+    },
+    {
+      "tag": "perspective",
+      "section": "pose",
+      "gate": "any",
+      "heat": [
+        "tease",
+        "flash",
+        "sex"
+      ],
+      "mutex": null,
+      "bind": [],
+      "implies": [],
+      "layer": "normal",
+      "era": [
+        "any"
+      ],
+      "group": "camera",
+      "zh": "透視"
+    },
+    {
+      "tag": "symmetry",
+      "section": "pose",
+      "gate": "any",
+      "heat": [
+        "tease",
+        "flash",
+        "sex"
+      ],
+      "mutex": null,
+      "bind": [],
+      "implies": [],
+      "layer": "normal",
+      "era": [
+        "any"
+      ],
+      "group": "camera",
+      "zh": "對稱構圖"
+    },
+    {
+      "tag": "blush stickers",
+      "section": "feature",
+      "gate": "any",
+      "heat": [
+        "tease",
+        "flash",
+        "sex"
+      ],
+      "mutex": null,
+      "bind": [],
+      "implies": [],
+      "layer": "normal",
+      "era": [
+        "any"
+      ],
+      "group": "skin",
+      "zh": "腮紅貼"
+    },
+    {
+      "tag": "veins",
+      "section": "feature",
+      "gate": "any",
+      "heat": [
+        "tease",
+        "flash",
+        "sex"
+      ],
+      "mutex": null,
+      "bind": [],
+      "implies": [],
+      "layer": "normal",
+      "era": [
+        "any"
+      ],
+      "group": "skin",
+      "zh": "血管"
+    },
+    {
+      "tag": "arm tattoo",
+      "section": "feature",
+      "gate": "any",
+      "heat": [
+        "tease",
+        "flash",
+        "sex"
+      ],
+      "mutex": null,
+      "bind": [],
+      "implies": [
+        "tattoo"
+      ],
+      "layer": "normal",
+      "era": [
+        "any"
+      ],
+      "group": "skin",
+      "zh": "手臂刺青"
+    },
+    {
+      "tag": "leg tattoo",
+      "section": "feature",
+      "gate": "any",
+      "heat": [
+        "tease",
+        "flash",
+        "sex"
+      ],
+      "mutex": null,
+      "bind": [],
+      "implies": [
+        "tattoo"
+      ],
+      "layer": "normal",
+      "era": [
+        "any"
+      ],
+      "group": "skin",
+      "zh": "腿部刺青"
+    },
+    {
+      "tag": "neck tattoo",
+      "section": "feature",
+      "gate": "any",
+      "heat": [
+        "tease",
+        "flash",
+        "sex"
+      ],
+      "mutex": null,
+      "bind": [],
+      "implies": [
+        "tattoo"
+      ],
+      "layer": "normal",
+      "era": [
+        "any"
+      ],
+      "group": "skin",
+      "zh": "頸部刺青"
+    },
+    {
+      "tag": "scar on cheek",
+      "section": "feature",
+      "gate": "any",
+      "heat": [
+        "tease",
+        "flash",
+        "sex"
+      ],
+      "mutex": null,
+      "bind": [],
+      "implies": [
+        "scar"
+      ],
+      "layer": "normal",
+      "era": [
+        "any"
+      ],
+      "group": "skin",
+      "zh": "頰疤"
+    },
+    {
+      "tag": "nervous sweating",
+      "section": "feature",
+      "gate": "any",
+      "heat": [
+        "tease",
+        "flash",
+        "sex"
+      ],
+      "mutex": null,
+      "bind": [],
+      "implies": [
+        "sweat"
+      ],
+      "layer": "normal",
+      "era": [
+        "any"
+      ],
+      "group": "skin",
+      "zh": "緊張冒汗"
+    },
+    {
+      "tag": "nosebleed",
+      "section": "feature",
+      "gate": "any",
+      "heat": [
+        "tease",
+        "flash",
+        "sex"
+      ],
+      "mutex": null,
+      "bind": [],
+      "implies": [],
+      "layer": "normal",
+      "era": [
+        "any"
+      ],
+      "group": "skin",
+      "zh": "流鼻血"
+    },
+    {
+      "tag": "eyes visible through hair",
+      "section": "feature",
+      "gate": "any",
+      "heat": [
+        "tease",
+        "flash",
+        "sex"
+      ],
+      "mutex": null,
+      "bind": [],
+      "implies": [],
+      "layer": "normal",
+      "era": [
+        "any"
+      ],
+      "group": "eyes",
+      "zh": "髮間露眼"
+    },
+    {
+      "tag": "colored eyelashes",
+      "section": "feature",
+      "gate": "any",
+      "heat": [
+        "tease",
+        "flash",
+        "sex"
+      ],
+      "mutex": null,
+      "bind": [],
+      "implies": [
+        "eyelashes"
+      ],
+      "layer": "normal",
+      "era": [
+        "any"
+      ],
+      "group": "eyes",
+      "zh": "彩色睫毛"
+    },
+    {
+      "tag": "star-shaped pupils",
+      "section": "feature",
+      "gate": "any",
+      "heat": [
+        "tease",
+        "flash",
+        "sex"
+      ],
+      "mutex": null,
+      "bind": [],
+      "implies": [],
+      "layer": "normal",
+      "era": [
+        "any"
+      ],
+      "group": "eyes",
+      "zh": "星形瞳"
+    },
+    {
+      "tag": "narrowed eyes",
+      "section": "feature",
+      "gate": "any",
+      "heat": [
+        "tease",
+        "flash",
+        "sex"
+      ],
+      "mutex": null,
+      "bind": [],
+      "implies": [],
+      "layer": "normal",
+      "era": [
+        "any"
+      ],
+      "group": "eyes",
+      "zh": "眯眼"
+    },
+    {
+      "tag": "biceps",
+      "section": "feature",
+      "gate": "any",
+      "heat": [
+        "tease",
+        "flash",
+        "sex"
+      ],
+      "mutex": null,
+      "bind": [],
+      "implies": [],
+      "layer": "normal",
+      "era": [
+        "any"
+      ],
+      "group": "other",
+      "zh": "二頭肌"
+    },
+    {
+      "tag": "ribs",
+      "section": "feature",
+      "gate": "any",
+      "heat": [
+        "tease",
+        "flash",
+        "sex"
+      ],
+      "mutex": null,
+      "bind": [],
+      "implies": [],
+      "layer": "normal",
+      "era": [
+        "any"
+      ],
+      "group": "other",
+      "zh": "肋骨"
+    },
+    {
+      "tag": "shoulder blades",
+      "section": "feature",
+      "gate": "any",
+      "heat": [
+        "tease",
+        "flash",
+        "sex"
+      ],
+      "mutex": null,
+      "bind": [],
+      "implies": [],
+      "layer": "normal",
+      "era": [
+        "any"
+      ],
+      "group": "other",
+      "zh": "肩胛骨"
+    },
+    {
+      "tag": "buttons",
+      "section": "clothing",
+      "gate": "any",
+      "heat": [
+        "tease",
+        "flash",
+        "sex"
+      ],
+      "mutex": null,
+      "bind": [],
+      "implies": [],
+      "layer": "garment",
+      "era": [
+        "any"
+      ],
+      "group": "fabric",
+      "zh": "鈕扣"
+    },
+    {
+      "tag": "animal print",
+      "section": "clothing",
+      "gate": "any",
+      "heat": [
+        "tease",
+        "flash",
+        "sex"
+      ],
+      "mutex": null,
+      "bind": [],
+      "implies": [],
+      "layer": "garment",
+      "era": [
+        "modern"
+      ],
+      "group": "fabric",
+      "zh": "動物紋"
+    },
+    {
+      "tag": "polka dot",
+      "section": "clothing",
+      "gate": "any",
+      "heat": [
+        "tease",
+        "flash",
+        "sex"
+      ],
+      "mutex": null,
+      "bind": [],
+      "implies": [],
+      "layer": "garment",
+      "era": [
+        "modern",
+        "victorian"
+      ],
+      "group": "fabric",
+      "zh": "圓點"
+    },
+    {
+      "tag": "pocket",
+      "section": "clothing",
+      "gate": "any",
+      "heat": [
+        "tease",
+        "flash",
+        "sex"
+      ],
+      "mutex": null,
+      "bind": [],
+      "implies": [],
+      "layer": "garment",
+      "era": [
+        "any"
+      ],
+      "group": "fabric",
+      "zh": "口袋"
+    },
+    {
+      "tag": "zipper",
+      "section": "clothing",
+      "gate": "any",
+      "heat": [
+        "tease",
+        "flash",
+        "sex"
+      ],
+      "mutex": null,
+      "bind": [],
+      "implies": [],
+      "layer": "garment",
+      "era": [
+        "modern"
+      ],
+      "group": "fabric",
+      "zh": "拉鍊"
+    },
+    {
+      "tag": "breast pocket",
+      "section": "clothing",
+      "gate": "any",
+      "heat": [
+        "tease",
+        "flash",
+        "sex"
+      ],
+      "mutex": null,
+      "bind": [],
+      "implies": [
+        "pocket"
+      ],
+      "layer": "garment",
+      "era": [
+        "any"
+      ],
+      "group": "fabric",
+      "zh": "胸袋"
+    },
+    {
+      "tag": "cow print",
+      "section": "clothing",
+      "gate": "any",
+      "heat": [
+        "tease",
+        "flash",
+        "sex"
+      ],
+      "mutex": null,
+      "bind": [],
+      "implies": [],
+      "layer": "garment",
+      "era": [
+        "modern"
+      ],
+      "group": "fabric",
+      "zh": "乳牛紋"
+    },
+    {
+      "tag": "bandages",
+      "section": "clothing",
+      "gate": "any",
+      "heat": [
+        "tease",
+        "flash",
+        "sex"
+      ],
+      "mutex": null,
+      "bind": [],
+      "implies": [],
+      "layer": "accessory",
+      "era": [
+        "any"
+      ],
+      "group": "acc",
+      "zh": "繃帶"
+    },
+    {
+      "tag": "crown",
+      "section": "clothing",
+      "gate": "any",
+      "heat": [
+        "tease",
+        "flash",
+        "sex"
+      ],
+      "mutex": "headwear",
+      "bind": [],
+      "implies": [],
+      "layer": "accessory",
+      "era": [
+        "any"
+      ],
+      "group": "acc",
+      "zh": "皇冠"
+    },
+    {
+      "tag": "brooch",
+      "section": "clothing",
+      "gate": "any",
+      "heat": [
+        "tease",
+        "flash",
+        "sex"
+      ],
+      "mutex": "jewelry",
+      "bind": [],
+      "implies": [],
+      "layer": "accessory",
+      "era": [
+        "any"
+      ],
+      "group": "acc",
+      "zh": "胸針"
+    },
+    {
+      "tag": "anklet",
+      "section": "clothing",
+      "gate": "any",
+      "heat": [
+        "tease",
+        "flash",
+        "sex"
+      ],
+      "mutex": "jewelry",
+      "bind": [],
+      "implies": [],
+      "layer": "accessory",
+      "era": [
+        "any"
+      ],
+      "group": "acc",
+      "zh": "腳鍊"
+    },
+    {
+      "tag": "pendant",
+      "section": "clothing",
+      "gate": "any",
+      "heat": [
+        "tease",
+        "flash",
+        "sex"
+      ],
+      "mutex": "jewelry",
+      "bind": [],
+      "implies": [
+        "necklace"
+      ],
+      "layer": "accessory",
+      "era": [
+        "any"
+      ],
+      "group": "acc",
+      "zh": "墜飾"
+    },
+    {
+      "tag": "gem",
+      "section": "clothing",
+      "gate": "any",
+      "heat": [
+        "tease",
+        "flash",
+        "sex"
+      ],
+      "mutex": null,
+      "bind": [],
+      "implies": [],
+      "layer": "accessory",
+      "era": [
+        "any"
+      ],
+      "group": "acc",
+      "zh": "寶石"
+    },
+    {
+      "tag": "buckle",
+      "section": "clothing",
+      "gate": "any",
+      "heat": [
+        "tease",
+        "flash",
+        "sex"
+      ],
+      "mutex": null,
+      "bind": [],
+      "implies": [],
+      "layer": "accessory",
+      "era": [
+        "any"
+      ],
+      "group": "acc",
+      "zh": "帶扣"
+    },
+    {
+      "tag": "belt buckle",
+      "section": "clothing",
+      "gate": "any",
+      "heat": [
+        "tease",
+        "flash",
+        "sex"
+      ],
+      "mutex": null,
+      "bind": [],
+      "implies": [
+        "belt"
+      ],
+      "layer": "accessory",
+      "era": [
+        "any"
+      ],
+      "group": "acc",
+      "zh": "皮帶扣"
+    },
+    {
+      "tag": "name tag",
+      "section": "clothing",
+      "gate": "any",
+      "heat": [
+        "tease",
+        "flash",
+        "sex"
+      ],
+      "mutex": null,
+      "bind": [],
+      "implies": [],
+      "layer": "accessory",
+      "era": [
+        "modern"
+      ],
+      "group": "acc",
+      "zh": "名牌"
+    },
+    {
+      "tag": "lace-up boots",
+      "section": "clothing",
+      "gate": "any",
+      "heat": [
+        "tease",
+        "flash",
+        "sex"
+      ],
+      "mutex": "feet",
+      "bind": [],
+      "implies": [
+        "boots"
+      ],
+      "layer": "garment",
+      "era": [
+        "modern"
+      ],
+      "group": "feet",
+      "zh": "綁帶靴"
+    },
+    {
+      "tag": "suspender skirt",
+      "section": "clothing",
+      "gate": "female",
+      "heat": [
+        "tease",
+        "flash",
+        "sex"
+      ],
+      "mutex": "bottom",
+      "bind": [],
+      "implies": [
+        "skirt",
+        "suspenders"
+      ],
+      "layer": "garment",
+      "era": [
+        "modern"
+      ],
+      "group": "bottom",
+      "needs": [
+        "female"
+      ],
+      "zh": "吊帶裙"
+    },
+    {
+      "tag": "shoulder bag",
+      "section": "clothing",
+      "gate": "any",
+      "heat": [
+        "tease",
+        "flash",
+        "sex"
+      ],
+      "mutex": null,
+      "bind": [],
+      "implies": [
+        "bag"
+      ],
+      "layer": "accessory",
+      "era": [
+        "any"
+      ],
+      "group": "acc",
+      "zh": "肩背包"
+    },
+    {
+      "tag": "pouch",
+      "section": "clothing",
+      "gate": "any",
+      "heat": [
+        "tease",
+        "flash",
+        "sex"
+      ],
+      "mutex": null,
+      "bind": [],
+      "implies": [
+        "bag"
+      ],
+      "layer": "accessory",
+      "era": [
+        "any"
+      ],
+      "group": "acc",
+      "zh": "小袋"
+    },
+    {
+      "tag": "suitcase",
+      "section": "clothing",
+      "gate": "any",
+      "heat": [
+        "tease",
+        "flash",
+        "sex"
+      ],
+      "mutex": null,
+      "bind": [],
+      "implies": [],
+      "layer": "accessory",
+      "era": [
+        "modern"
+      ],
+      "group": "acc",
+      "zh": "行李箱"
+    },
+    {
+      "tag": "sword",
+      "section": "env",
+      "gate": "any",
+      "heat": [
+        "tease",
+        "flash",
+        "sex"
+      ],
+      "mutex": null,
+      "bind": [],
+      "implies": [],
+      "layer": "normal",
+      "era": [
+        "any"
+      ],
+      "group": "other",
+      "zh": "劍"
+    },
+    {
+      "tag": "katana",
+      "section": "env",
+      "gate": "any",
+      "heat": [
+        "tease",
+        "flash",
+        "sex"
+      ],
+      "mutex": null,
+      "bind": [],
+      "implies": [
+        "sword"
+      ],
+      "layer": "normal",
+      "era": [
+        "edo",
+        "modern"
+      ],
+      "group": "other",
+      "zh": "日本刀"
+    },
+    {
+      "tag": "knife",
+      "section": "env",
+      "gate": "any",
+      "heat": [
+        "tease",
+        "flash",
+        "sex"
+      ],
+      "mutex": null,
+      "bind": [],
+      "implies": [],
+      "layer": "normal",
+      "era": [
+        "any"
+      ],
+      "group": "other",
+      "zh": "刀"
+    },
+    {
+      "tag": "staff",
+      "section": "env",
+      "gate": "any",
+      "heat": [
+        "tease",
+        "flash",
+        "sex"
+      ],
+      "mutex": null,
+      "bind": [],
+      "implies": [],
+      "layer": "normal",
+      "era": [
+        "any"
+      ],
+      "group": "other",
+      "zh": "杖"
+    },
+    {
+      "tag": "gun",
+      "section": "env",
+      "gate": "any",
+      "heat": [
+        "tease",
+        "flash",
+        "sex"
+      ],
+      "mutex": null,
+      "bind": [],
+      "implies": [],
+      "layer": "normal",
+      "era": [
+        "modern"
+      ],
+      "group": "other",
+      "zh": "槍"
+    },
+    {
+      "tag": "rifle",
+      "section": "env",
+      "gate": "any",
+      "heat": [
+        "tease",
+        "flash",
+        "sex"
+      ],
+      "mutex": null,
+      "bind": [],
+      "implies": [
+        "gun"
+      ],
+      "layer": "normal",
+      "era": [
+        "modern"
+      ],
+      "group": "other",
+      "zh": "步槍"
+    },
+    {
+      "tag": "handgun",
+      "section": "env",
+      "gate": "any",
+      "heat": [
+        "tease",
+        "flash",
+        "sex"
+      ],
+      "mutex": null,
+      "bind": [],
+      "implies": [
+        "gun"
+      ],
+      "layer": "normal",
+      "era": [
+        "modern"
+      ],
+      "group": "other",
+      "zh": "手槍"
+    },
+    {
+      "tag": "cup",
+      "section": "env",
+      "gate": "any",
+      "heat": [
+        "tease",
+        "flash",
+        "sex"
+      ],
+      "mutex": null,
+      "bind": [],
+      "implies": [],
+      "layer": "normal",
+      "era": [
+        "any"
+      ],
+      "group": "other",
+      "zh": "杯子"
+    },
+    {
+      "tag": "mug",
+      "section": "env",
+      "gate": "any",
+      "heat": [
+        "tease",
+        "flash",
+        "sex"
+      ],
+      "mutex": null,
+      "bind": [],
+      "implies": [],
+      "layer": "normal",
+      "era": [
+        "any"
+      ],
+      "group": "other",
+      "zh": "馬克杯"
+    },
+    {
+      "tag": "bottle",
+      "section": "env",
+      "gate": "any",
+      "heat": [
+        "tease",
+        "flash",
+        "sex"
+      ],
+      "mutex": null,
+      "bind": [],
+      "implies": [],
+      "layer": "normal",
+      "era": [
+        "any"
+      ],
+      "group": "other",
+      "zh": "瓶子"
+    },
+    {
+      "tag": "bell",
+      "section": "env",
+      "gate": "any",
+      "heat": [
+        "tease",
+        "flash",
+        "sex"
+      ],
+      "mutex": null,
+      "bind": [],
+      "implies": [],
+      "layer": "normal",
+      "era": [
+        "any"
+      ],
+      "group": "other",
+      "zh": "鈴鐺"
+    },
+    {
+      "tag": "candy",
+      "section": "env",
+      "gate": "any",
+      "heat": [
+        "tease",
+        "flash",
+        "sex"
+      ],
+      "mutex": null,
+      "bind": [],
+      "implies": [],
+      "layer": "normal",
+      "era": [
+        "modern"
+      ],
+      "group": "other",
+      "zh": "糖果"
+    },
+    {
+      "tag": "cake",
+      "section": "env",
+      "gate": "any",
+      "heat": [
+        "tease",
+        "flash",
+        "sex"
+      ],
+      "mutex": null,
+      "bind": [],
+      "implies": [],
+      "layer": "normal",
+      "era": [
+        "modern"
+      ],
+      "group": "other",
+      "zh": "蛋糕"
+    },
+    {
+      "tag": "lollipop",
+      "section": "env",
+      "gate": "any",
+      "heat": [
+        "tease",
+        "flash",
+        "sex"
+      ],
+      "mutex": null,
+      "bind": [],
+      "implies": [],
+      "layer": "normal",
+      "era": [
+        "modern"
+      ],
+      "group": "other",
+      "zh": "棒棒糖"
+    },
+    {
+      "tag": "popsicle",
+      "section": "env",
+      "gate": "any",
+      "heat": [
+        "tease",
+        "flash",
+        "sex"
+      ],
+      "mutex": null,
+      "bind": [],
+      "implies": [],
+      "layer": "normal",
+      "era": [
+        "modern"
+      ],
+      "group": "other",
+      "zh": "冰棒"
+    },
+    {
+      "tag": "strawberry",
+      "section": "env",
+      "gate": "any",
+      "heat": [
+        "tease",
+        "flash",
+        "sex"
+      ],
+      "mutex": null,
+      "bind": [],
+      "implies": [],
+      "layer": "normal",
+      "era": [
+        "modern"
+      ],
+      "group": "other",
+      "zh": "草莓"
+    },
+    {
+      "tag": "ice cream",
+      "section": "env",
+      "gate": "any",
+      "heat": [
+        "tease",
+        "flash",
+        "sex"
+      ],
+      "mutex": null,
+      "bind": [],
+      "implies": [],
+      "layer": "normal",
+      "era": [
+        "modern"
+      ],
+      "group": "other",
+      "zh": "冰淇淋"
+    },
+    {
+      "tag": "chocolate",
+      "section": "env",
+      "gate": "any",
+      "heat": [
+        "tease",
+        "flash",
+        "sex"
+      ],
+      "mutex": null,
+      "bind": [],
+      "implies": [],
+      "layer": "normal",
+      "era": [
+        "modern"
+      ],
+      "group": "other",
+      "zh": "巧克力"
+    },
+    {
+      "tag": "apple",
+      "section": "env",
+      "gate": "any",
+      "heat": [
+        "tease",
+        "flash",
+        "sex"
+      ],
+      "mutex": null,
+      "bind": [],
+      "implies": [],
+      "layer": "normal",
+      "era": [
+        "modern"
+      ],
+      "group": "other",
+      "zh": "蘋果"
+    },
+    {
+      "tag": "bread",
+      "section": "env",
+      "gate": "any",
+      "heat": [
+        "tease",
+        "flash",
+        "sex"
+      ],
+      "mutex": null,
+      "bind": [],
+      "implies": [],
+      "layer": "normal",
+      "era": [
+        "modern"
+      ],
+      "group": "other",
+      "zh": "麵包"
+    },
+    {
+      "tag": "donut",
+      "section": "env",
+      "gate": "any",
+      "heat": [
+        "tease",
+        "flash",
+        "sex"
+      ],
+      "mutex": null,
+      "bind": [],
+      "implies": [],
+      "layer": "normal",
+      "era": [
+        "modern"
+      ],
+      "group": "other",
+      "zh": "甜甜圈"
+    },
+    {
+      "tag": "cookie",
+      "section": "env",
+      "gate": "any",
+      "heat": [
+        "tease",
+        "flash",
+        "sex"
+      ],
+      "mutex": null,
+      "bind": [],
+      "implies": [],
+      "layer": "normal",
+      "era": [
+        "modern"
+      ],
+      "group": "other",
+      "zh": "餅乾"
+    },
+    {
+      "tag": "coffee",
+      "section": "env",
+      "gate": "any",
+      "heat": [
+        "tease",
+        "flash",
+        "sex"
+      ],
+      "mutex": null,
+      "bind": [],
+      "implies": [],
+      "layer": "normal",
+      "era": [
+        "modern"
+      ],
+      "group": "other",
+      "zh": "咖啡"
+    },
+    {
+      "tag": "beer",
+      "section": "env",
+      "gate": "any",
+      "heat": [
+        "tease",
+        "flash",
+        "sex"
+      ],
+      "mutex": null,
+      "bind": [],
+      "implies": [],
+      "layer": "normal",
+      "era": [
+        "modern",
+        "victorian"
+      ],
+      "group": "other",
+      "zh": "啤酒"
+    },
+    {
+      "tag": "onigiri",
+      "section": "env",
+      "gate": "any",
+      "heat": [
+        "tease",
+        "flash",
+        "sex"
+      ],
+      "mutex": null,
+      "bind": [],
+      "implies": [],
+      "layer": "normal",
+      "era": [
+        "edo",
+        "modern"
+      ],
+      "group": "other",
+      "zh": "飯糰"
+    },
+    {
+      "tag": "bubble tea",
+      "section": "env",
+      "gate": "any",
+      "heat": [
+        "tease",
+        "flash",
+        "sex"
+      ],
+      "mutex": null,
+      "bind": [],
+      "implies": [],
+      "layer": "normal",
+      "era": [
+        "modern"
+      ],
+      "group": "other",
+      "zh": "珍珠奶茶"
+    },
+    {
+      "tag": "balloon",
+      "section": "env",
+      "gate": "any",
+      "heat": [
+        "tease",
+        "flash",
+        "sex"
+      ],
+      "mutex": null,
+      "bind": [],
+      "implies": [],
+      "layer": "normal",
+      "era": [
+        "any"
+      ],
+      "group": "other",
+      "zh": "氣球"
+    },
+    {
+      "tag": "basket",
+      "section": "env",
+      "gate": "any",
+      "heat": [
+        "tease",
+        "flash",
+        "sex"
+      ],
+      "mutex": null,
+      "bind": [],
+      "implies": [],
+      "layer": "normal",
+      "era": [
+        "any"
+      ],
+      "group": "other",
+      "zh": "籃子"
+    },
+    {
+      "tag": "key",
+      "section": "env",
+      "gate": "any",
+      "heat": [
+        "tease",
+        "flash",
+        "sex"
+      ],
+      "mutex": null,
+      "bind": [],
+      "implies": [],
+      "layer": "normal",
+      "era": [
+        "any"
+      ],
+      "group": "other",
+      "zh": "鑰匙"
+    },
+    {
+      "tag": "playing card",
+      "section": "env",
+      "gate": "any",
+      "heat": [
+        "tease",
+        "flash",
+        "sex"
+      ],
+      "mutex": null,
+      "bind": [],
+      "implies": [],
+      "layer": "normal",
+      "era": [
+        "any"
+      ],
+      "group": "other",
+      "zh": "撲克牌"
+    },
+    {
+      "tag": "scissors",
+      "section": "env",
+      "gate": "any",
+      "heat": [
+        "tease",
+        "flash",
+        "sex"
+      ],
+      "mutex": null,
+      "bind": [],
+      "implies": [],
+      "layer": "normal",
+      "era": [
+        "any"
+      ],
+      "group": "other",
+      "zh": "剪刀"
+    },
+    {
+      "tag": "surfboard",
+      "section": "env",
+      "gate": "any",
+      "heat": [
+        "tease",
+        "flash",
+        "sex"
+      ],
+      "mutex": null,
+      "bind": [],
+      "implies": [],
+      "layer": "normal",
+      "era": [
+        "modern"
+      ],
+      "group": "other",
+      "zh": "衝浪板"
+    },
+    {
+      "tag": "skateboard",
+      "section": "env",
+      "gate": "any",
+      "heat": [
+        "tease",
+        "flash",
+        "sex"
+      ],
+      "mutex": null,
+      "bind": [],
+      "implies": [],
+      "layer": "normal",
+      "era": [
+        "modern"
+      ],
+      "group": "other",
+      "zh": "滑板"
+    },
+    {
+      "tag": "dumbbell",
+      "section": "env",
+      "gate": "any",
+      "heat": [
+        "tease",
+        "flash",
+        "sex"
+      ],
+      "mutex": null,
+      "bind": [],
+      "implies": [],
+      "layer": "normal",
+      "era": [
+        "modern"
+      ],
+      "group": "other",
+      "zh": "啞鈴"
+    },
+    {
+      "tag": "blanket",
+      "section": "env",
+      "gate": "any",
+      "heat": [
+        "tease",
+        "flash",
+        "sex"
+      ],
+      "mutex": null,
+      "bind": [],
+      "implies": [],
+      "layer": "normal",
+      "era": [
+        "any"
+      ],
+      "group": "other",
+      "zh": "毯子"
+    },
+    {
+      "tag": "glowing",
+      "section": "env",
+      "gate": "any",
+      "heat": [
+        "tease",
+        "flash",
+        "sex"
+      ],
+      "mutex": "effect",
+      "bind": [],
+      "implies": [],
+      "layer": "normal",
+      "era": [
+        "any"
+      ],
+      "group": "effect",
+      "zh": "發光"
+    },
+    {
+      "tag": "electricity",
+      "section": "env",
+      "gate": "any",
+      "heat": [
+        "tease",
+        "flash",
+        "sex"
+      ],
+      "mutex": "effect",
+      "bind": [],
+      "implies": [],
+      "layer": "normal",
+      "era": [
+        "any"
+      ],
+      "group": "effect",
+      "zh": "電光"
+    },
+    {
+      "tag": "lightning",
+      "section": "env",
+      "gate": "any",
+      "heat": [
+        "tease",
+        "flash",
+        "sex"
+      ],
+      "mutex": "effect",
+      "bind": [],
+      "implies": [
+        "electricity"
+      ],
+      "layer": "normal",
+      "era": [
+        "any"
+      ],
+      "group": "effect",
+      "zh": "閃電"
+    },
+    {
+      "tag": "aura",
+      "section": "env",
+      "gate": "any",
+      "heat": [
+        "tease",
+        "flash",
+        "sex"
+      ],
+      "mutex": "effect",
+      "bind": [],
+      "implies": [],
+      "layer": "normal",
+      "era": [
+        "any"
+      ],
+      "group": "effect",
+      "zh": "氣場"
+    },
+    {
+      "tag": "snowflakes",
+      "section": "env",
+      "gate": "any",
+      "heat": [
+        "tease",
+        "flash",
+        "sex"
+      ],
+      "mutex": "effect",
+      "bind": [],
+      "implies": [
+        "snow"
+      ],
+      "layer": "normal",
+      "era": [
+        "any"
+      ],
+      "group": "effect",
+      "zh": "雪花"
+    },
+    {
+      "tag": "ripples",
+      "section": "env",
+      "gate": "any",
+      "heat": [
+        "tease",
+        "flash",
+        "sex"
+      ],
+      "mutex": "effect",
+      "bind": [],
+      "implies": [],
+      "layer": "normal",
+      "era": [
+        "any"
+      ],
+      "group": "effect",
+      "zh": "波紋"
+    },
+    {
+      "tag": "rainbow",
+      "section": "env",
+      "gate": "any",
+      "heat": [
+        "tease",
+        "flash",
+        "sex"
+      ],
+      "mutex": "effect",
+      "bind": [],
+      "implies": [],
+      "layer": "normal",
+      "era": [
+        "any"
+      ],
+      "group": "effect",
+      "zh": "彩虹"
+    },
+    {
+      "tag": "magic circle",
+      "section": "env",
+      "gate": "any",
+      "heat": [
+        "tease",
+        "flash",
+        "sex"
+      ],
+      "mutex": "effect",
+      "bind": [],
+      "implies": [],
+      "layer": "normal",
+      "era": [
+        "any"
+      ],
+      "group": "effect",
+      "zh": "魔法陣"
+    },
+    {
+      "tag": "sparks",
+      "section": "env",
+      "gate": "any",
+      "heat": [
+        "tease",
+        "flash",
+        "sex"
+      ],
+      "mutex": "effect",
+      "bind": [],
+      "implies": [],
+      "layer": "normal",
+      "era": [
+        "any"
+      ],
+      "group": "effect",
+      "zh": "火花"
+    },
+    {
+      "tag": "embers",
+      "section": "env",
+      "gate": "any",
+      "heat": [
+        "tease",
+        "flash",
+        "sex"
+      ],
+      "mutex": "effect",
+      "bind": [],
+      "implies": [],
+      "layer": "normal",
+      "era": [
+        "any"
+      ],
+      "group": "effect",
+      "zh": "餘燼"
+    },
+    {
+      "tag": "blue fire",
+      "section": "env",
+      "gate": "any",
+      "heat": [
+        "tease",
+        "flash",
+        "sex"
+      ],
+      "mutex": "effect",
+      "bind": [],
+      "implies": [],
+      "layer": "normal",
+      "era": [
+        "any"
+      ],
+      "group": "effect",
+      "zh": "藍火"
+    },
+    {
+      "tag": "glitch",
+      "section": "env",
+      "gate": "any",
+      "heat": [
+        "tease",
+        "flash",
+        "sex"
+      ],
+      "mutex": "effect",
+      "bind": [],
+      "implies": [],
+      "layer": "normal",
+      "era": [
+        "modern"
+      ],
+      "group": "effect",
+      "zh": "故障藝術"
+    },
+    {
+      "tag": "shooting star",
+      "section": "env",
+      "gate": "any",
+      "heat": [
+        "tease",
+        "flash",
+        "sex"
+      ],
+      "mutex": "effect",
+      "bind": [],
+      "implies": [
+        "starry sky"
+      ],
+      "layer": "normal",
+      "era": [
+        "any"
+      ],
+      "group": "effect",
+      "zh": "流星"
+    },
+    {
+      "tag": "glowstick",
+      "section": "env",
+      "gate": "any",
+      "heat": [
+        "tease",
+        "flash",
+        "sex"
+      ],
+      "mutex": "effect",
+      "bind": [],
+      "implies": [],
+      "layer": "normal",
+      "era": [
+        "modern"
+      ],
+      "group": "effect",
+      "zh": "螢光棒"
+    },
+    {
+      "tag": "diffraction spikes",
+      "section": "env",
+      "gate": "any",
+      "heat": [
+        "tease",
+        "flash",
+        "sex"
+      ],
+      "mutex": "effect",
+      "bind": [],
+      "implies": [],
+      "layer": "normal",
+      "era": [
+        "any"
+      ],
+      "group": "effect",
+      "zh": "星芒"
+    },
+    {
+      "tag": "caustics",
+      "section": "env",
+      "gate": "any",
+      "heat": [
+        "tease",
+        "flash",
+        "sex"
+      ],
+      "mutex": "effect",
+      "bind": [],
+      "implies": [],
+      "layer": "normal",
+      "era": [
+        "any"
+      ],
+      "group": "effect",
+      "zh": "水面光斑"
+    },
+    {
+      "tag": "floating clothes",
+      "section": "env",
+      "gate": "any",
+      "heat": [
+        "tease",
+        "flash",
+        "sex"
+      ],
+      "mutex": "effect",
+      "bind": [],
+      "implies": [],
+      "layer": "normal",
+      "era": [
+        "any"
+      ],
+      "group": "effect",
+      "zh": "衣袂飄揚"
+    },
+    {
+      "tag": "anger vein",
+      "section": "env",
+      "gate": "any",
+      "heat": [
+        "tease",
+        "flash",
+        "sex"
+      ],
+      "mutex": "effect",
+      "bind": [],
+      "implies": [],
+      "layer": "normal",
+      "era": [
+        "any"
+      ],
+      "group": "effect",
+      "zh": "怒筋"
+    },
+    {
+      "tag": "clear sky",
+      "section": "env",
+      "gate": "any",
+      "heat": [
+        "tease",
+        "flash",
+        "sex"
+      ],
+      "mutex": null,
+      "bind": [],
+      "implies": [
+        "blue sky"
+      ],
+      "layer": "normal",
+      "era": [
+        "any"
+      ],
+      "group": "sky",
+      "zh": "晴空"
+    },
+    {
+      "tag": "underlighting",
+      "section": "env",
+      "gate": "any",
+      "heat": [
+        "tease",
+        "flash",
+        "sex"
+      ],
+      "mutex": "lighting",
+      "bind": [],
+      "implies": [],
+      "layer": "normal",
+      "era": [
+        "any"
+      ],
+      "group": "light",
+      "zh": "底光"
     },
     {
       "tag": "petite",
