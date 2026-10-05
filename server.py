@@ -2155,8 +2155,23 @@ DC_CONTENT_MAX = 2000
 # Discord embed 的上限（官方文件）：標題 256、說明 4096、單一欄位值 1024。
 DC_TITLE_MAX = 256
 DC_DESC_MAX = 4096
-# 左側色條。跟介面的 --color-accent 同一個硃砂調。
+# 左側色條。跟介面的 --color-accent 同一個硃砂調；Hires 的放大圖用金色，一眼分得開。
 DC_COLOR = 0xE0563C
+DC_COLOR_HIRES = 0xD9A441
+# 欄位（官方上限：一個欄位值 1024、作者名 256、頁尾 2048、一則訊息所有 embed 加起來 6000）。
+DC_FIELD_MAX = 1024
+DC_AUTHOR_MAX = 256
+DC_FOOTER_MAX = 2048
+DC_RATING_ZH = {"general": "全年齡", "sensitive": "敏感", "explicit": "色情"}
+# 中文標籤照詞庫的 section 分欄，順序就是畫面上的順序。查不到的（LoRA 觸發詞、手打的字）歸「其他」。
+DC_SECTIONS = (
+    ("subject", "人物"),
+    ("feature", "外觀"),
+    ("clothing", "服裝"),
+    ("pose", "姿勢"),
+    ("env", "場景"),
+    ("quality", "畫質"),
+)
 DC_GAP = 1.0
 DC_RETRY_WAIT = 5.0
 DC_QUEUE_MAX = int(cfg("discord.queueMax", "", 200))
@@ -2179,6 +2194,8 @@ _dc = {
     "channelId": "",
     "webhook": "",
     "enabled": False,
+    # 精簡：只送第一個 embed（圖＋一行小字），不送分欄和英文。無限抽洗版時用。
+    "compact": False,
     "sent": 0,
     "failed": 0,
     "lastError": "",
@@ -2200,6 +2217,7 @@ def dc_load() -> None:
         mode = str(raw.get("mode") or "bot")
         _dc["mode"] = mode if mode in ("bot", "webhook") else "bot"
         _dc["enabled"] = bool(raw.get("enabled"))
+        _dc["compact"] = bool(raw.get("compact"))
 
 
 def dc_save() -> None:
@@ -2210,6 +2228,7 @@ def dc_save() -> None:
             "channelId": _dc["channelId"],
             "webhook": _dc["webhook"],
             "enabled": _dc["enabled"],
+            "compact": _dc["compact"],
         }
     DC_SECRETS.parent.mkdir(parents=True, exist_ok=True)
     DC_SECRETS.write_text(json.dumps(body, ensure_ascii=False, indent=2), encoding="utf-8")
@@ -2263,6 +2282,7 @@ def dc_status() -> dict:
             "webhookTail": tg_tail(_dc["webhook"]),
             "channelId": _dc["channelId"],
             "enabled": bool(_dc["enabled"]),
+            "compact": bool(_dc["compact"]),
             "sent": _dc["sent"],
             "failed": _dc["failed"],
             "lastError": _dc["lastError"],
@@ -2286,46 +2306,154 @@ def dc_fence(text: str, limit: int) -> str:
     return fence + nl + body + nl + fence
 
 
-def dc_embed(job: dict, filename: str) -> dict:
-    """一張成品的 embed：標題放 seed 和尺寸，說明放中文 POS，圖嵌在裡面。"""
+_dc_lex: dict = {"mtime": None, "tags": {}, "zh": {}}
+
+
+def dc_lexicon() -> "tuple[dict, dict]":
+    """tag → (section, 中文)，和詞庫外的中文對照。檔案沒變就不重讀。"""
+    path = SHARED / "lexicon.json"
+    if not path.is_file():
+        path = WEB / "lexicon.json"
+    try:
+        mtime = path.stat().st_mtime
+    except OSError:
+        return {}, {}
+    if _dc_lex["mtime"] != mtime:
+        tags: dict = {}
+        extra: dict = {}
+        try:
+            data = json.loads(path.read_text(encoding="utf-8"))
+            for item in data.get("tags") or []:
+                if isinstance(item, dict) and item.get("tag"):
+                    tags[str(item["tag"])] = (str(item.get("section") or ""), str(item.get("zh") or ""))
+            for t in data.get("quality") or []:
+                tags.setdefault(str(t), ("quality", ""))
+            if isinstance(data.get("zh"), dict):
+                extra = {str(k): str(v) for k, v in data["zh"].items()}
+        except Exception:
+            tags, extra = {}, {}
+        _dc_lex.update(mtime=mtime, tags=tags, zh=extra)
+    return _dc_lex["tags"], _dc_lex["zh"]
+
+
+def dc_tag_of(part: str) -> str:
+    """POS 裡的一段 → 標籤本身：去掉 (tag:1.2) 的權重、Comfy 的跳脫括號。"""
+    t = str(part or "").strip()
+    m = re.match(r"^\((.+):(\d+(?:\.\d+)?)\)$", t)
+    if m:
+        t = m.group(1).strip()
+    return t.replace("\\(", "(").replace("\\)", ")")
+
+
+def dc_groups(en: str) -> "list[tuple[str, list[str]]]":
+    """英文 POS → [(欄名, [中文…])]，照 DC_SECTIONS 的順序，空的欄不出現。"""
+    tags, extra = dc_lexicon()
+    if not tags:
+        return []
+    buckets: dict = {sec: [] for sec, _ in DC_SECTIONS}
+    other: list = []
+    for part in str(en or "").split(","):
+        tag = dc_tag_of(part)
+        if not tag:
+            continue
+        sec, zh = tags.get(tag, ("", ""))
+        label = zh or extra.get(tag) or tag
+        (buckets[sec] if sec in buckets else other).append(label)
+    out = [(name, buckets[sec]) for sec, name in DC_SECTIONS if buckets[sec]]
+    if other:
+        out.append(("其他", other))
+    return out
+
+
+def dc_clip(text: str, limit: int) -> str:
+    text = str(text or "")
+    return text if len(text) <= limit else text[: max(0, limit - 1)] + "…"
+
+
+def dc_model_name(path: str) -> str:
+    """底模、LoRA 只留檔名本身：資料夾和副檔名在 Discord 上只是雜訊。"""
+    base = re.split(r"[\\/]", str(path or ""))[-1]
+    return re.sub(r"\.(safetensors|ckpt|pt|pth|bin)$", "", base, flags=re.I)
+
+
+def dc_footer(job: dict) -> str:
     bits = []
     if job.get("seed") is not None:
         bits.append(f"seed {job['seed']}")
     if job.get("width") and job.get("height"):
         bits.append(f"{job['width']}×{job['height']}")
-    embed = {
-        "color": DC_COLOR,
-        "title": (" · ".join(bits) or "排字匣")[:DC_TITLE_MAX],
+    ckpt = dc_model_name(job.get("ckpt") or "")
+    if ckpt:
+        bits.append(ckpt)
+    loras = []
+    for lo in job.get("loras") or []:
+        if not isinstance(lo, dict):
+            continue
+        name = dc_model_name(lo.get("file") or lo.get("name") or "")
+        if not name:
+            continue
+        try:
+            loras.append(f"{name} ×{float(lo.get('strength')):g}")
+        except (TypeError, ValueError):
+            loras.append(name)
+    if loras:
+        bits.append("LoRA " + "、".join(loras))
+    return " · ".join(bits)
+
+
+def dc_payload(job: dict, filename: str, compact: bool = False) -> dict:
+    """一張成品的訊息：圖放第一個 embed，分欄和英文 POS 放第二個。
+
+    Discord 把訊息本文排在 embed 上面、embed 裡的文字又排在圖上面，所以只要有字
+    跟圖放在同一塊，圖就會被往下推。拆成兩個 embed（都不設 url，否則 Discord 會把
+    它們併成相簿），第一塊只有一行來源、圖、一行小字頁尾，滑頻道時第一眼就是圖。
+    """
+    hires = str(job.get("hires") or "").strip()
+    color = DC_COLOR_HIRES if hires else DC_COLOR
+    head = [str(job.get("source") or "").strip() or "排字匣"]
+    rating = DC_RATING_ZH.get(str(job.get("rating") or ""))
+    if rating:
+        head.append(rating)
+    hero: dict = {
+        "color": color,
+        "author": {"name": dc_clip(" · ".join(head), DC_AUTHOR_MAX)},
         "image": {"url": f"attachment://{filename}"},
     }
-    zh = str(job.get("zh") or "").strip()
-    if zh:
-        embed["description"] = zh if len(zh) <= DC_DESC_MAX else zh[: DC_DESC_MAX - 1] + "…"
-    return embed
+    if hires:
+        hero["title"] = dc_clip(hires, DC_TITLE_MAX)
+    foot = dc_footer(job)
+    if foot:
+        hero["footer"] = {"text": dc_clip(foot, DC_FOOTER_MAX)}
+    embeds = [hero]
+    if compact:
+        return {"embeds": embeds}
 
-
-def dc_content(job: dict) -> str:
-    """和 Telegram 同樣的「seed · 尺寸 / 中文 / 英文」，只是上限不同。
-
-    Discord 的 2000 字比 Telegram 的 1024 寬，所以多數情況下英文 POS 塞得進
-    同一則，不必像 Telegram 那樣再補一則接在圖下面。
-    """
-    head_bits = []
-    if job.get("seed") is not None:
-        head_bits.append(f"seed {job['seed']}")
-    if job.get("width") and job.get("height"):
-        head_bits.append(f"{job['width']}x{job['height']}")
-    head = " · ".join(head_bits)
-    zh = str(job.get("zh") or "").strip()
+    detail: dict = {"color": color}
     en = str(job.get("en") or "").strip()
-    nl = chr(10)
-    full = nl.join([p for p in (head, zh, en) if p])
-    if len(full) <= DC_CONTENT_MAX:
-        return full
-    short = nl.join([p for p in (head, zh) if p])
-    if len(short) > DC_CONTENT_MAX:
-        short = short[: DC_CONTENT_MAX - 1] + "…"
-    return short
+    groups = dc_groups(en)
+    if groups:
+        detail["fields"] = [
+            {"name": name, "value": dc_clip("、".join(labels), DC_FIELD_MAX), "inline": True}
+            for name, labels in groups
+        ]
+    else:
+        # 詞庫讀不到：退回前端給的整串中文。
+        zh = str(job.get("zh") or "").strip()
+        if zh:
+            detail["description"] = dc_clip(zh, DC_DESC_MAX)
+    if en:
+        # dc_fence 的兩道圍籬加換行佔 8 字。
+        if len(en) + 8 <= DC_FIELD_MAX or "description" in detail:
+            # 放在分欄最下面，複製時一整塊拿得到。
+            detail.setdefault("fields", []).append(
+                {"name": "英文提示詞", "value": dc_fence(en, DC_FIELD_MAX), "inline": False}
+            )
+        else:
+            # 塞不進欄位：改放說明（4096 字），會排在分欄上面，但至少完整、可複製。
+            detail["description"] = dc_fence(en, DC_DESC_MAX)
+    if detail.get("fields") or detail.get("description"):
+        embeds.append(detail)
+    return {"embeds": embeds}
 
 
 def dc_webhook_ok(url: str) -> str:
@@ -2431,12 +2559,9 @@ def dc_send_photo(job: dict) -> None:
     elif blob[:4] == b"RIFF":
         mime = "image/webp"
     fname = dc_safe_filename(job.get("filename") or "shot.png")
-    # 版面：embed 負責好看（色條、標題、中文說明、圖），英文 POS 放在訊息本體的
-    # code block —— 那裡有 2000 字可用（embed 欄位只有 1024），而且使用者可以直接複製。
-    payload = {"embeds": [dc_embed(job, fname)]}
-    en = str(job.get("en") or "").strip()
-    if en:
-        payload["content"] = dc_fence(en, DC_CONTENT_MAX)
+    with _dc_lock:
+        compact = bool(_dc["compact"])
+    payload = dc_payload(job, fname, compact)
     body, boundary = tg_multipart(
         {"payload_json": json.dumps(payload, ensure_ascii=False)},
         fname,
@@ -2515,6 +2640,8 @@ def dc_apply_config(payload: dict) -> dict:
             _dc["mode"] = mode
         if "enabled" in payload:
             _dc["enabled"] = bool(payload.get("enabled"))
+        if "compact" in payload:
+            _dc["compact"] = bool(payload.get("compact"))
     try:
         dc_save()
     except Exception as exc:

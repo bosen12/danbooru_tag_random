@@ -3086,6 +3086,8 @@ function stopNow(reason) {
 
 async function streamCardJob(card, seedNum, extra) {
   let shot = null;
+  // 送 Discord 用：這張用的底模、LoRA、尺度（job 只活在下面的 try 裡）。
+  let dcMeta = null;
   skipping = false;
   lastFailNet = false;
   jobAbort = new AbortController();
@@ -3145,6 +3147,7 @@ async function streamCardJob(card, seedNum, extra) {
       rating: settings.rating,
       workflowId: currentWorkflowId(),
     });
+    dcMeta = { source: "排字匣", ckpt: job.ckpt, loras: job.loras, rating: job.rating };
     await streamGen(
       {
         positive: job.positive,
@@ -3267,7 +3270,7 @@ async function streamCardJob(card, seedNum, extra) {
   if (shot) {
     const zh = posZh(extra.positive);
     tgSendCard(card, shot, zh);
-    dcSendCard(card, shot, zh);
+    dcSendCard(card, shot, zh, dcMeta || { source: "排字匣" });
   }
   return shot;
 }

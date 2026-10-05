@@ -12,7 +12,7 @@ import { setServiceStatus } from "./service-settings.js";
 
 const $ = (id) => document.getElementById(id);
 
-let status = { configured: false, enabled: false, channelId: "", tokenTail: "", mode: "bot", webhookTail: "" };
+let status = { configured: false, enabled: false, compact: false, channelId: "", tokenTail: "", mode: "bot", webhookTail: "" };
 let poll = 0;
 // 面板上「現在選著哪一個」。status.mode 是伺服器上**存著**的那個，兩者可以不同：
 // 使用者點了 Webhook 但還沒按存設定的那段時間就是。分開才有辦法一邊照選擇切欄位、
@@ -83,6 +83,13 @@ function ensureDom() {
             <em id="dc-enabled-hint">一般抽、無限抽都送。送失敗不會中斷抽圖</em>
           </span>
         </button>
+        <button type="button" class="same-switch tg-switch" id="dc-compact" role="switch" aria-checked="false">
+          <span class="same-knob" aria-hidden="true"><i></i></span>
+          <span class="same-copy">
+            <strong>精簡</strong>
+            <em>只送圖和底下一行小字（seed、尺寸、模型、LoRA），不送分類標籤和英文提示詞。無限抽時頻道比較不會被洗版</em>
+          </span>
+        </button>
         <div class="tg-actions">
           <button type="button" class="primary" id="dc-save"><span>存設定</span></button>
           <button type="button" class="ghost" id="dc-test">送一則測試</button>
@@ -142,6 +149,11 @@ function paint() {
   if (sw) {
     sw.classList.toggle("is-on", !!status.enabled);
     sw.setAttribute("aria-checked", status.enabled ? "true" : "false");
+  }
+  const cp = $("dc-compact");
+  if (cp) {
+    cp.classList.toggle("is-on", !!status.compact);
+    cp.setAttribute("aria-checked", status.compact ? "true" : "false");
   }
   const stats = $("dc-stats");
   if (stats) {
@@ -264,6 +276,7 @@ async function save() {
         channelId: $("dc-channel")?.value || "",
         webhook: $("dc-webhook")?.value || "",
         enabled: !!status.enabled,
+        compact: !!status.compact,
       }),
     });
     if (j && j.ok) {
@@ -324,7 +337,8 @@ export function onDcStatus(fn) {
 
 // 把一張成品排進伺服器的送圖佇列。不 await，送圖再慢也不拖抽圖。
 // card 可以是 null（墨池、疊印台不在圖上蓋章，面板的計數就是回饋）。
-export function dcSendCard(card, job, zh) {
+// meta：{ source 哪一頁, rating, ckpt, loras, hires 放大的標示 } —— 伺服器拿去排來源行、頁尾和色條。
+export function dcSendCard(card, job, zh, meta = {}) {
   if (!dcReady() || !job || !job.image) return;
   let q;
   try {
@@ -346,6 +360,11 @@ export function dcSendCard(card, job, zh) {
       height: job.height,
       zh: zh || "",
       en: job.positive || "",
+      source: meta.source || "",
+      rating: meta.rating || job.rating || "",
+      ckpt: meta.ckpt ?? job.ckpt ?? "",
+      loras: meta.loras ?? job.loras ?? [],
+      hires: meta.hires || "",
     }),
   })
     .then((r) => r.json())
@@ -378,6 +397,11 @@ export function initDiscord() {
   $("dc-test")?.addEventListener("click", test);
   $("dc-enabled")?.addEventListener("click", () => {
     status.enabled = !status.enabled;
+    paint();
+    save();
+  });
+  $("dc-compact")?.addEventListener("click", () => {
+    status.compact = !status.compact;
     paint();
     save();
   });

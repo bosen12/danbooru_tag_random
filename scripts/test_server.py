@@ -618,40 +618,78 @@ ok("fence never exceeds the limit", len(tight) <= 40, f"len={len(tight)}")
 ok("fence marks truncation", "…" in tight)
 ok("fence still closed when truncated", tight.startswith(FENCE + NL) and tight.endswith(NL + FENCE))
 
-# embed 本體
-emb = server.dc_embed(dc_job, server.dc_safe_filename(dc_job["filename"]))
-ok("embed carries the accent colour", emb["color"] == server.DC_COLOR)
-ok("embed title has seed and size", emb["title"] == "seed 786465539 · 1024×1216", emb["title"])
-ok("embed shows the image inline", emb["image"]["url"] == "attachment://ComfyUI_00042_.png", emb["image"]["url"])
-ok("embed description is the chinese pos", emb["description"] == dc_job["zh"])
-ok("embed does not duplicate the english pos", "fields" not in emb)
+# 版面：圖在第一個 embed，分欄與英文在第二個（Discord 把文字排在圖上面，拆開圖才會在最上面）
+dc_full = dict(
+    dc_job,
+    source="墨池",
+    rating="general",
+    ckpt="Illustrious\\waiNSFWIllustrious_v140.safetensors",
+    loras=[{"file": "style/ink_v2.safetensors", "strength": 0.8}],
+)
+pay = server.dc_payload(dc_full, server.dc_safe_filename(dc_full["filename"]))
+hero = pay["embeds"][0]
+ok("payload has no message content above the image", "content" not in pay)
+ok("hero embed carries the accent colour", hero["color"] == server.DC_COLOR)
+ok("hero embed shows the image inline", hero["image"]["url"] == "attachment://ComfyUI_00042_.png", hero["image"]["url"])
+ok("hero embed has no text block above the image", "description" not in hero and "fields" not in hero)
+ok("hero author line names the page and rating", hero["author"]["name"] == "墨池 · 全年齡", hero["author"]["name"])
+foot = hero["footer"]["text"]
+ok("footer has seed and size", foot.startswith("seed 786465539 · 1024×1216"), foot)
+ok("footer drops model folder and extension", "waiNSFWIllustrious_v140" in foot and ".safetensors" not in foot and "Illustrious\\" not in foot, foot)
+ok("footer lists lora with strength", "LoRA ink_v2 ×0.8" in foot, foot)
+ok("embeds never share a url (would merge into a gallery)", all("url" not in e for e in pay["embeds"]))
+
+detail = pay["embeds"][1]
+names = [f["name"] for f in detail["fields"]]
+ok("detail groups follow lexicon sections", names[:3] == ["人物", "外觀", "服裝"], str(names))
+ok("detail puts the english pos last", names[-1] == "英文提示詞", str(names))
+ok("english pos is copy-friendly in a code block", detail["fields"][-1]["value"].startswith(FENCE + NL))
+ok("quality tags land in their own field", "畫質" in names, str(names))
+
+# 權重、查不到的字
+grouped = dict(server.dc_groups("(red hair:1.2), my_lora_trigger"))
+ok("weights are stripped before lookup", grouped.get("外觀") == ["紅髮"], str(grouped))
+ok("unknown tags go to 其他 as-is", grouped.get("其他") == ["my_lora_trigger"], str(grouped))
+
+# 精簡：只剩圖那塊
+compact = server.dc_payload(dc_full, "x.png", True)
+ok("compact sends only the hero embed", len(compact["embeds"]) == 1 and "image" in compact["embeds"][0])
+
+# Hires：金色、標題標出模式和倍率
+hi = server.dc_payload(dict(dc_full, hires="Hires 深度 1.5×"), "x.png")
+ok("hires uses the gold colour", all(e["color"] == server.DC_COLOR_HIRES for e in hi["embeds"]))
+ok("hires label is the hero title", hi["embeds"][0]["title"] == "Hires 深度 1.5×")
+ok("non-hires has no title", "title" not in hero)
 
 # attachment:// 一定要對得上實際上傳的檔名
 dirty = dict(dc_job, filename="a b!c.png")
 fn = server.dc_safe_filename(dirty["filename"])
-ok("attachment url matches the uploaded name", server.dc_embed(dirty, fn)["image"]["url"] == "attachment://" + fn)
+ok("attachment url matches the uploaded name", server.dc_payload(dirty, fn)["embeds"][0]["image"]["url"] == "attachment://" + fn)
 
-# 沒有 seed / 尺寸時的退路
-bare = server.dc_embed({"filename": "x.png"}, "x.png")
-ok("embed falls back to a plain title", bare["title"] == "排字匣", bare["title"])
-ok("embed omits description when there is no chinese", "description" not in bare)
-
-# 只有 seed、只有尺寸
-ok("embed title with seed only", server.dc_embed({"seed": 7}, "x.png")["title"] == "seed 7")
-ok("embed title with size only", server.dc_embed({"width": 832, "height": 1216}, "x.png")["title"] == "832×1216")
+# 沒有 seed / 尺寸 / 來源時的退路
+bare = server.dc_payload({"filename": "x.png"}, "x.png")
+ok("missing source falls back to 排字匣", bare["embeds"][0]["author"]["name"] == "排字匣")
+ok("no footer when nothing to say", "footer" not in bare["embeds"][0])
+ok("no detail embed when there is no text", len(bare["embeds"]) == 1)
 
 # 上限
-long_zh = "字" * 9000
-ok("embed truncates a huge chinese pos", len(server.dc_embed({"zh": long_zh}, "x.png")["description"]) <= server.DC_DESC_MAX)
-ok("embed truncation is marked", server.dc_embed({"zh": long_zh}, "x.png")["description"].endswith("…"))
-long_title = server.dc_embed({"seed": "S" * 900, "width": 1, "height": 1}, "x.png")["title"]
-ok("embed truncates a huge title", len(long_title) <= server.DC_TITLE_MAX)
-
-# 英文 POS 放訊息本體，2000 字上限
 long_en = ", ".join(["some very long danbooru tag"] * 200)
-body = server.dc_fence(long_en, server.DC_CONTENT_MAX)
-ok("english pos stays under the content limit", len(body) <= server.DC_CONTENT_MAX, f"len={len(body)}")
-ok("english pos is copy-friendly in a code block", body.startswith(FENCE + NL))
+big = server.dc_payload({"en": long_en}, "x.png")["embeds"][1]
+ok("too-long english moves to the description", big["description"].startswith(FENCE + NL) and len(big["description"]) <= server.DC_DESC_MAX)
+ok("every field stays under the field limit", all(len(f["value"]) <= server.DC_FIELD_MAX for f in big.get("fields", [])))
+
+def dc_text_len(p):
+    # Discord 的 6000 字算的是 title、description、欄位名與值、頁尾、作者名。
+    n = 0
+    for e in p["embeds"]:
+        n += len(e.get("title", "")) + len(e.get("description", ""))
+        n += len(e.get("footer", {}).get("text", "")) + len(e.get("author", {}).get("name", ""))
+        n += sum(len(f["name"]) + len(f["value"]) for f in e.get("fields", []))
+    return n
+
+
+worst = server.dc_payload(dict(dc_full, en=long_en), "x.png")
+ok("all embeds stay under discord's 6000 total", dc_text_len(worst) <= 6000, str(dc_text_len(worst)))
 
 # multipart 仍然用 Discord 要的欄位名
 dc_body, dc_boundary = server.tg_multipart(

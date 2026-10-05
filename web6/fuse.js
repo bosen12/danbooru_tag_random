@@ -240,7 +240,7 @@ async function boot() {
 
   initLoraPicker();
   initWorkflow({ sampling: true });
-  discord = mountDiscord(zh);
+  discord = mountDiscord(zh, "疊印台");
   pingLoop();
   wireChrome();
 

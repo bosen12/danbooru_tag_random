@@ -129,7 +129,7 @@ async function boot() {
   buildTrashPanel();
   initLoraPicker();
   initWorkflow({ sampling: true });
-  discord = mountDiscord(zh);
+  discord = mountDiscord(zh, "墨池");
   pingLoop();
 
   renderRating();

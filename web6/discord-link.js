@@ -14,8 +14,8 @@ import { HIRES_MODES } from "./hires.js";
 
 const LOGO = `<svg viewBox="0 0 24 24" width="18" height="18" fill="currentColor" aria-hidden="true"><path d="M19.27 5.33A16.2 16.2 0 0 0 15.23 4c-.2.35-.42.82-.58 1.2a15 15 0 0 0-4.3 0A11 11 0 0 0 9.76 4a16.2 16.2 0 0 0-4.04 1.33C3.16 9.15 2.46 12.87 2.8 16.54a16.3 16.3 0 0 0 5 2.54c.4-.55.76-1.14 1.07-1.76-.59-.22-1.15-.49-1.68-.8.14-.11.28-.22.41-.34 3.24 1.5 6.75 1.5 9.95 0 .14.12.28.23.42.34-.53.31-1.1.58-1.69.8.31.62.67 1.21 1.07 1.76a16.2 16.2 0 0 0 5-2.54c.4-4.26-.71-7.95-2.99-11.21ZM9.35 14.3c-.97 0-1.77-.9-1.77-2s.78-2 1.77-2 1.79.9 1.77 2c0 1.1-.78 2-1.77 2Zm5.3 0c-.97 0-1.77-.9-1.77-2s.78-2 1.77-2 1.79.9 1.77 2c0 1.1-.78 2-1.77 2Z"/></svg>`;
 
-/** 頂欄加一顆 Discord 鈕、掛好面板。zh(tag) 給送出去的中文說明用。 */
-export function mountDiscord(zh) {
+/** 頂欄加一顆 Discord 鈕、掛好面板。zh(tag) 給送出去的中文說明用；source 是頁名，標在訊息最上面那行。 */
+export function mountDiscord(zh, source) {
   initDiscord();
   const tools = document.getElementById("mast-tools");
   if (tools && !document.getElementById("dc-btn")) {
@@ -40,7 +40,7 @@ export function mountDiscord(zh) {
     shot(shot) {
       if (shot.status !== "done" || !shot.image || shot._dcSent === shot.image) return;
       shot._dcSent = shot.image;
-      dcSendCard(null, shot, posZh(shot.positive, zh));
+      dcSendCard(null, shot, posZh(shot.positive, zh), { source });
     },
     /** Hires 的 done 叫：新圖已經換上 shot.image、尺寸在 shot.hires。seed 留原圖的，那才是重現構圖用的。 */
     hires(shot) {
@@ -50,7 +50,7 @@ export function mountDiscord(zh) {
       const scale = Number.isInteger(h.scale) ? String(h.scale) : Number(h.scale).toFixed(2).replace(/0$/, "");
       const head = `Hires ${HIRES_MODES[h.mode]?.zh || ""} ${scale}×`.replace(/\s+/g, " ");
       const job = { ...shot, width: h.width, height: h.height };
-      dcSendCard(null, job, `${head}\n${posZh(shot.positive, zh)}`);
+      dcSendCard(null, job, posZh(shot.positive, zh), { source, hires: head });
     },
     /** 面板開著時吞掉頁面的快捷鍵，Esc 關面板。 */
     keys: dcHandleKeys,
