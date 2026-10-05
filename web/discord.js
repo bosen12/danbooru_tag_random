@@ -18,6 +18,10 @@ let poll = 0;
 // 使用者點了 Webhook 但還沒按存設定的那段時間就是。分開才有辦法一邊照選擇切欄位、
 // 一邊讓狀態列照實描述伺服器的狀態。
 let uiMode = "bot";
+// 誰打開面板的。排字匣走頂欄齒輪（關掉時焦點回齒輪）；墨池、疊印台沒有齒輪，
+// 是頂欄自己的一顆 Discord 鈕 —— 關掉要回到那顆鈕，不然焦點會掉到 body。
+let opener = null;
+const listeners = new Set();
 
 function reduceMotion() {
   return matchMedia("(prefers-reduced-motion: reduce)").matches;
@@ -133,6 +137,7 @@ function paint() {
   const saveLabel = document.querySelector("#dc-save span");
   if (saveLabel) saveLabel.textContent = pending ? "存設定 · 尚未套用" : "存設定";
   setServiceStatus("discord", status.configured && status.enabled);
+  for (const fn of listeners) fn(dcReady());
   const sw = $("dc-enabled");
   if (sw) {
     sw.classList.toggle("is-on", !!status.enabled);
@@ -194,6 +199,7 @@ function isOpen() {
 function open() {
   const el = $("dc-modal");
   if (!el) return;
+  opener = document.activeElement;
   delete el.dataset.closing;
   el.classList.remove("is-closing");
   el.classList.add("open");
@@ -237,7 +243,10 @@ function close() {
     delete el.dataset.closing;
     el.classList.remove("open", "is-closing");
     unlockScroll("dc-modal");
-    $("service-settings-btn")?.focus();
+    // 齒輪選單裡的那一項在面板打開前就收起來了，回不去，所以排字匣照舊回齒輪。
+    const back = $("service-settings-btn") || (opener && opener.isConnected ? opener : null);
+    opener = null;
+    back?.focus();
   }, ms);
 }
 
@@ -306,7 +315,15 @@ export function dcReady() {
   return !!(status.configured && status.enabled);
 }
 
+// 自動送開關或設定變了就通知（帶 dcReady()）。墨池、疊印台用它點亮頂欄那顆鈕的小點。
+export function onDcStatus(fn) {
+  listeners.add(fn);
+  fn(dcReady());
+  return () => listeners.delete(fn);
+}
+
 // 把一張成品排進伺服器的送圖佇列。不 await，送圖再慢也不拖抽圖。
+// card 可以是 null（墨池、疊印台不在圖上蓋章，面板的計數就是回饋）。
 export function dcSendCard(card, job, zh) {
   if (!dcReady() || !job || !job.image) return;
   let q;

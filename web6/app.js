@@ -49,6 +49,7 @@ import { attachPeek } from "./card-peek.js";
 import { createHires, openHiresPicker, paintHiresVeil, hiresBusy, HIRES_MODES } from "./hires.js";
 import * as S from "./store.js";
 import { getSfx } from "./sfx.js";
+import { mountDiscord } from "./discord-link.js";
 
 const sfx = getSfx();
 // 聲音引擎第一次建立要幾十毫秒：第一個手勢時先在下一輪建好，等真的要出聲時已經在了。
@@ -128,6 +129,7 @@ async function boot() {
   buildTrashPanel();
   initLoraPicker();
   initWorkflow({ sampling: true });
+  discord = mountDiscord(zh);
   pingLoop();
 
   renderRating();
@@ -1154,6 +1156,8 @@ function switchBox(label, on, onChange) {
 /* ================= 抽牌與生圖 ================= */
 
 const tabNote = tabTitle();
+// 頂欄的 Discord 鈕和送圖（init 裡掛上）。
+let discord = null;
 
 const generator = createGenerator({
   payload: (shot) => ({
@@ -1174,6 +1178,7 @@ const generator = createGenerator({
       shot._heard = shot.status;
     }
     updateShot(shot);
+    discord?.shot(shot);
     // 拿到伺服器的工作編號就先存一次：畫到一半重新整理也接得回來。
     const newJob = shot.job && shot._savedJob !== shot.job;
     if (newJob) shot._savedJob = shot.job;
@@ -2239,7 +2244,7 @@ const drag = createDrag({
 /* ================= 鍵盤 ================= */
 
 function onKey(e) {
-  if (handleLoraKeys(e) || wfHandleKeys(e)) return;
+  if (handleLoraKeys(e) || wfHandleKeys(e) || discord?.keys(e)) return;
   if (anyOverlay() || e.ctrlKey || e.metaKey || e.altKey) return;
   const t = e.target;
   if (t && (t.tagName === "INPUT" || t.tagName === "SELECT" || t.tagName === "TEXTAREA")) return;

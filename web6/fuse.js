@@ -48,6 +48,7 @@ import * as S from "./store.js";
 import { REGISTERS, REGISTER_ROLE, emptyBed, sanitizeBed, placeCard, removeCard, relationsOf } from "./fuse-bed.js";
 import { createSfx } from "./fuse-sfx.js";
 import { genSeed, isFixedSeed, mountSeedControl, onSeedChange, restoreSeed, seedState, seedUseButton, useSeed } from "./seed-control.js";
+import { mountDiscord } from "./discord-link.js";
 
 const $ = (id) => document.getElementById(id);
 const LETTERS = ["A", "B", "C", "D"];
@@ -239,6 +240,7 @@ async function boot() {
 
   initLoraPicker();
   initWorkflow({ sampling: true });
+  discord = mountDiscord(zh);
   pingLoop();
   wireChrome();
 
@@ -691,6 +693,9 @@ function reroll() {
 
 const tabNote = tabTitle();
 
+// 頂欄的 Discord 鈕和送圖（init 裡掛上）。
+let discord = null;
+
 const generator = createGenerator({
   payload: (p) => ({ width: p.width, height: p.height, loras: p.loras, ckpt: p.ckpt, rating: p.rating, workflowId: p.workflowId, ...(p.sampling || {}) }),
   update: (p) => {
@@ -712,6 +717,7 @@ const generator = createGenerator({
     }
     p._shownStatus = p.status;
     if (p.status === "done") {
+      discord?.shot(p);
       sfx.done();
       haptic(14);
       savePrints();
@@ -3563,7 +3569,7 @@ function wireChrome() {
 }
 
 function onKey(e) {
-  if (handleLoraKeys(e) || wfHandleKeys(e)) return;
+  if (handleLoraKeys(e) || wfHandleKeys(e) || discord?.keys(e)) return;
   if (anyOverlay() || e.altKey) return;
   const t = e.target;
   const typing = t && (t.tagName === "INPUT" || t.tagName === "SELECT" || t.tagName === "TEXTAREA");
