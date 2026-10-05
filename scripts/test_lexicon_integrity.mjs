@@ -22,6 +22,7 @@ import {
   indexLexicon,
   mulberry32,
   mutexSiblings,
+  sanitizeSettings,
 } from "../web/engine.js";
 
 const NL = String.fromCharCode(10);
@@ -142,6 +143,50 @@ function ok(name, rows) {
     for (const e of it.era || []) if (e !== "any" && !ERAS.includes(e)) bad.push(`${it.tag} 有未知 era「${e}」`);
   }
   ok("沒有重複、缺欄位或未知列舉值", bad);
+}
+
+// --- 細分類（scripts/subgroups.py）：給人找字的那一層 ----------------------------
+// 專案主 2026-10-06：「其他」那格找不到東西，每個字都要有說得出名字的位置。
+{
+  const bad = [];
+  const order = data.subOrder || {};
+  const zh = data.groupZh || {};
+  const used = new Map();
+  for (const it of data.tags) {
+    if (!it.sub) {
+      bad.push(`${it.tag} 沒有細分類`);
+      continue;
+    }
+    if (it.sub === "other" || it.sub === "extra") bad.push(`${it.tag} 的細分類是「其他」（${it.sub}）`);
+    if (!(order[it.section] || []).includes(it.sub)) bad.push(`${it.tag} 的細分類 ${it.sub} 不在 subOrder.${it.section}`);
+    if (!zh[it.sub]) bad.push(`細分類 ${it.sub} 沒有中文名`);
+    if (zh[it.sub] === "其他") bad.push(`細分類 ${it.sub} 叫「其他」`);
+    const k = it.section + ":" + it.sub;
+    used.set(k, (used.get(k) || 0) + 1);
+  }
+  for (const [sec, ids] of Object.entries(order)) {
+    if (new Set(ids).size !== ids.length) bad.push(`subOrder.${sec} 有重複的 id`);
+    for (const id of ids) if (id !== "fixed" && !used.get(sec + ":" + id)) bad.push(`細分類 ${sec}:${id} 沒有任何字`);
+  }
+  ok("每個字都有細分類，沒有「其他」", bad);
+
+  // 必抽照細分類抽：抽「地點・住家」只會出住家的字。舊的「段:小分類」key 照整個小分類抽。
+  const wrong = [];
+  const home = lex.bySub.get("env:pl_home") || [];
+  if (!home.length) wrong.push("env:pl_home 沒有字");
+  for (const s of [1, 2, 3, 4, 5, 6, 7, 8]) {
+    const settings = { ...sanitizeSettings(defaultSettings(data), data), mustDraw: { "env:pl_home": 1 } };
+    const d = drawOne(lex, settings, new Set(), new Set(), mulberry32(s), s);
+    const rep = (d.mustReport || []).find((m) => m.key === "env:pl_home");
+    if (!rep || rep.got < 1) wrong.push(`seed ${s}：必抽住家沒抽到（${JSON.stringify(rep)}）`);
+  }
+  {
+    const settings = { ...sanitizeSettings(defaultSettings(data), data), mustDraw: { "pose:sex": 1 }, heats: ["sex"] };
+    const d = drawOne(lex, settings, new Set(), new Set(), mulberry32(3), 3);
+    const rep = (d.mustReport || []).find((m) => m.key === "pose:sex");
+    if (!rep || rep.got < 1) wrong.push(`舊 key pose:sex 沒有照整個小分類抽（${JSON.stringify(rep)}）`);
+  }
+  ok("必抽認得細分類，舊的小分類 key 仍有效", wrong);
 }
 
 // --- 資料有地雷，引擎要擋住 ------------------------------------------------

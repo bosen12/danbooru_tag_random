@@ -2561,6 +2561,8 @@ export function indexLexicon(data) {
   const mutexOf = new Map();
   const byMutex = new Map();
   const byGroup = new Map();
+  // 細分類（scripts/subgroups.py）：只給人找字和必抽用。key 一樣是「段:id」。
+  const bySub = new Map();
   for (const item of data.tags) {
     extraMutex(item);
     relOf(item);
@@ -2580,6 +2582,11 @@ export function indexLexicon(data) {
       if (!byGroup.has(k)) byGroup.set(k, []);
       byGroup.get(k).push(item);
     }
+    if (item.sub) {
+      const k = item.section + ":" + item.sub;
+      if (!bySub.has(k)) bySub.set(k, []);
+      bySub.get(k).push(item);
+    }
   }
   const siblings = new Map();
   const lexStub = { byTag };
@@ -2594,7 +2601,7 @@ export function indexLexicon(data) {
     }
     siblings.set(item.tag, [...out]);
   }
-  return { data, byTag, bySection, mutexOf, siblings, byMutex, byGroup };
+  return { data, byTag, bySection, mutexOf, siblings, byMutex, byGroup, bySub };
 }
 
 function implyChain(lex, tag) {
@@ -6245,17 +6252,17 @@ export function drawOne(lex, settings, pinned, userBanned, rand, seed, opts) {
       const group = key.slice(sep + 1);
       const want = Math.max(0, Math.min(MUST_MAX, Math.floor(Number(mustSpec[key])) || 0));
       if (!want || section === "quality" || !lex.bySection[section]) continue;
-      mustWants.push({ key, section, group, want });
+      const inKey = mustMatcher(lex, key, section, group);
+      mustWants.push({ key, section, group, want, inKey });
       let have = 0;
       for (const t of used) {
-        const it = lex.byTag.get(t);
-        if (it && it.section === section && it.group === group) have += 1;
+        if (inKey(lex.byTag.get(t))) have += 1;
       }
       if (have >= want) continue;
-      const indexed = lex.byGroup && lex.byGroup.get(key);
-      const pool = mPool(
-        indexed || lex.bySection[section].filter((item) => item.group === group)
-      ).filter((item) => mustAllow(item));
+      const indexed = (lex.bySub && lex.bySub.get(key)) || (lex.byGroup && lex.byGroup.get(key));
+      const pool = mPool(indexed || lex.bySection[section].filter(inKey)).filter((item) =>
+        mustAllow(item)
+      );
       const before = new Set(used);
       commitMeta.source = SOURCES.must_draw;
       commitMeta.stage = STAGES.must_draw;
@@ -7689,11 +7696,10 @@ export function drawOne(lex, settings, pinned, userBanned, rand, seed, opts) {
     people,
   });
 
-  const mustReport = mustWants.map(({ key, section, group, want }) => {
+  const mustReport = mustWants.map(({ key, section, group, want, inKey }) => {
     let got = 0;
     for (const t of positive) {
-      const it = lex.byTag.get(t);
-      if (it && it.section === section && it.group === group) got += 1;
+      if (inKey(lex.byTag.get(t))) got += 1;
     }
     return { key, section, group, want, got };
   });
@@ -7887,7 +7893,14 @@ export function sanitizeOffGroups(raw) {
   return [...new Set(raw.filter((k) => typeof k === "string" && all.has(k)))].sort();
 }
 
-// settings.mustDraw is keyed "section:group" -> how many that group must contribute.
+// 必抽的 key 是「段:細分類」（左欄、字盒列的那一格）。細分類沒有這個 id 時退回
+// 「段:小分類」：拆開之前存的設定（例如 pose:sex）照整個小分類抽，不會默默失效。
+function mustMatcher(lex, key, section, id) {
+  if (lex.bySub && lex.bySub.has(key)) return (it) => !!it && it.section === section && it.sub === id;
+  return (it) => !!it && it.section === section && it.group === id;
+}
+
+// settings.mustDraw is keyed "section:sub" (or a legacy "section:group") -> how many it must contribute.
 export function sanitizeMustDraw(raw) {
   const out = {};
   if (!raw || typeof raw !== "object") return out;

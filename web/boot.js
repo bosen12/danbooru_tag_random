@@ -1746,11 +1746,14 @@ function buildCats() {
     toggle.setAttribute("aria-controls", body.id);
     wrap.append(body);
     applyCatOpen(wrap, opened);
-    const order = (lex.data.groupOrder && lex.data.groupOrder[sec.id]) || ["other"];
+    // 照細分類列（scripts/subgroups.py）；舊詞庫沒有細分類就照小分類。
+    const order =
+      (lex.data.subOrder && lex.data.subOrder[sec.id]) ||
+      (lex.data.groupOrder && lex.data.groupOrder[sec.id]) || ["other"];
     const zhMap = lex.data.groupZh || {};
     const buckets = new Map();
     for (const item of items) {
-      const g = item.group || "other";
+      const g = item.sub || item.group || "other";
       if (!buckets.has(g)) buckets.set(g, []);
       buckets.get(g).push(item);
     }
@@ -4284,6 +4287,13 @@ async function main() {
   settings = defaultSettings(data);
   const saved = loadStore();
   if (saved.settings) settings = sanitizeSettings(saved.settings, data);
+  // 小分類拆成細分類之後，舊存檔的必抽（例如 pose:sex）在左欄已經沒有那一格可以關，
+  // 留著會變成看不見的條件。左欄有的才留。
+  if (lex.bySub.size && settings.mustDraw) {
+    for (const key of Object.keys(settings.mustDraw)) {
+      if (!lex.bySub.has(key)) delete settings.mustDraw[key];
+    }
+  }
   if (Array.isArray(saved.pinned)) pinned = new Set(knownTags(lex, saved.pinned));
   presetOwned = prunePresetOwned(sanitizePresetOwned(saved.presetOwned, lex), pinned, lex);
   userPresets = sanitizePinPresets(saved.pinPresets, lex);

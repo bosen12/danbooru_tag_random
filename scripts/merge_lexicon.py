@@ -8,6 +8,7 @@ from pathlib import Path
 
 sys.path.insert(0, str(Path(__file__).resolve().parent))
 from groups import GROUP_ORDER, GROUP_ZH, assign_group
+from subgroups import SUB_ORDER, SUB_ZH, assign_sub, check_subs
 
 ROOT = Path(__file__).resolve().parents[1]
 PARTS = ROOT / "web" / "lexicon_parts"
@@ -4544,6 +4545,21 @@ def main() -> None:
 
     inherit_eras(unique)
 
+    # 細分類（給人找字用，見 subgroups.py）。拆開的小分類裡有字沒位置就停，不留「其他」。
+    problems = check_subs(unique)
+    if problems:
+        raise SystemExit("細分類有問題：\n  " + "\n  ".join(problems))
+    for i, t in enumerate(unique):
+        sub = assign_sub(t)
+        out: dict = {}
+        for k, v in t.items():
+            if k == "sub":
+                continue
+            out[k] = v
+            if k == "group":
+                out["sub"] = sub
+        unique[i] = out
+
     by_sec: dict[str, int] = {}
     for t in unique:
         by_sec[t["section"]] = by_sec.get(t["section"], 0) + 1
@@ -4664,7 +4680,9 @@ def main() -> None:
             },
         },
         "groupOrder": GROUP_ORDER,
-        "groupZh": GROUP_ZH,
+        "groupZh": {**GROUP_ZH, **SUB_ZH},
+        # 字盒、左欄、必抽照這個順序列細分類；引擎的骨架格仍看 groupOrder。
+        "subOrder": SUB_ORDER,
         "eraAnchors": ERA_ANCHORS,
         "eraAnchorAlts": ERA_ANCHOR_ALTS,
         "zh": top_zh,

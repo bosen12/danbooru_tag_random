@@ -36,7 +36,7 @@ import { SCENE_MODES, SCENE_MODE_LABELS, heatBlockedByRating } from "./scene-pol
 import { initLoraPicker, currentLorasPayload, currentTriggerText, currentCkpt, handleLoraKeys } from "./lora.js";
 import { initWorkflow, currentWorkflowId, currentSampling, wfHandleKeys } from "./workflow.js";
 import { HARD_BANNED } from "./card-art.js";
-import { buildLibrary, createAssets, cardNode, setCardFlag, setEnterTarget, eagerArt, cardFacts, CARD_SUIT_INFO, CARD_SUITS, RATING_ZH } from "./cards.js";
+import { buildLibrary, groupChips, createAssets, cardNode, setCardFlag, setEnterTarget, eagerArt, cardFacts, CARD_SUIT_INFO, CARD_SUITS, RATING_ZH } from "./cards.js";
 import { bindArt, artFallback } from "./card-images.js";
 import { el, openSheet, anyOverlay, toast, runToastAction, ICONS } from "./ui.js";
 import { createDrag, inkRing } from "./drag.js";
@@ -306,17 +306,29 @@ function renderLibrary() {
   if (ui.suit === "all") {
     chips.hidden = true;
   } else {
-    const groups = [...new Map(inSuit.map((c) => [c.group, [c.groupZh, c.seal]])).entries()];
-    chips.hidden = groups.length < 2;
+    const runs = groupChips(inSuit);
+    const count = runs.reduce((n, r) => n + r.items.length, 0);
+    // 存檔裡的分類籤可能是改版前的小分類（例如 other），對不上就回到「全部」，不然整盒是空的。
+    if (ui.group && !runs.some((r) => r.items.some((i) => i.g === ui.group))) ui.group = "";
+    chips.hidden = count < 2;
+    const chip = (i, inRun) =>
+      el(
+        "button",
+        { class: "group-chip pressable", type: "button", "aria-pressed": ui.group === i.g ? "true" : "false", "aria-label": i.short === i.zh ? null : i.zh, onclick: (e) => pickGroup(i.g, e.currentTarget) },
+        i.seal && !inRun ? el("b", { class: "chip-seal", "aria-hidden": "true" }, i.seal) : null,
+        i.short
+      );
     chips.replaceChildren(
       el("button", { class: "group-chip pressable", type: "button", "aria-pressed": ui.group === "" ? "true" : "false", onclick: (e) => pickGroup("", e.currentTarget) }, "全部"),
-      ...groups.map(([g, [zh, seal]]) =>
-        el(
-          "button",
-          { class: "group-chip pressable", type: "button", "aria-pressed": ui.group === g ? "true" : "false", onclick: (e) => pickGroup(g, e.currentTarget) },
-          seal ? el("b", { class: "chip-seal", "aria-hidden": "true" }, seal) : null,
-          zh
-        )
+      ...runs.map((r) =>
+        r.fam
+          ? el(
+              "span",
+              { class: "chip-run" },
+              el("span", { class: "chip-fam", "aria-hidden": "true" }, r.seal ? el("b", { class: "chip-seal" }, r.seal) : null, r.fam),
+              ...r.items.map((i) => chip(i, true))
+            )
+          : chip(r.items[0], false)
       )
     );
   }

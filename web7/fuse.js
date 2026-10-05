@@ -36,7 +36,7 @@ import { heatBlockedByRating } from "./scene-policy.js";
 import { initLoraPicker, currentLorasPayload, currentTriggerText, currentCkpt, handleLoraKeys } from "./lora.js";
 import { initWorkflow, currentWorkflowId, currentSampling, wfHandleKeys } from "./workflow.js";
 import { HARD_BANNED, applyArtSources } from "./card-art.js";
-import { buildLibrary, createAssets, cardNode, cardFacts, setEnterTarget, eagerArt, CARD_SUIT_INFO, CARD_SUITS, RATING_ZH, ERA_ZH } from "./cards.js";
+import { buildLibrary, groupChips, createAssets, cardNode, cardFacts, setEnterTarget, eagerArt, CARD_SUIT_INFO, CARD_SUITS, RATING_ZH, ERA_ZH } from "./cards.js";
 import { el, openSheet, anyOverlay, toast } from "./ui.js";
 import { initMotion, settleMotion, flip, flipBy, leave, gatherHome, flight, enter, seat, refuse, CURVE, DUR, css } from "./motion.js";
 import { createHand } from "./hand.js";
@@ -2916,17 +2916,18 @@ function affinities() {
 function renderCaseGroups(inSuit) {
   const box = $("case-groups");
   const suitTab = CARD_SUITS.includes(caseTab);
-  const groups = suitTab ? [...new Map(inSuit.map((c) => [c.group, [c.groupZh, c.seal]])).entries()] : [];
-  if (caseGroup && !groups.some(([g]) => g === caseGroup)) caseGroup = "";
-  box.hidden = groups.length < 2;
+  const runs = suitTab ? groupChips(inSuit) : [];
+  if (caseGroup && !runs.some((r) => r.items.some((i) => i.g === caseGroup))) caseGroup = "";
+  box.hidden = runs.reduce((n, r) => n + r.items.length, 0) < 2;
   if (box.hidden) return box.replaceChildren();
-  const chip = (g, label, seal) =>
+  const chip = (g, label, seal, full) =>
     el(
       "button",
       {
         class: "group-chip pressable",
         type: "button",
         "aria-pressed": caseGroup === g ? "true" : "false",
+        "aria-label": full && full !== label ? full : null,
         onclick: () => {
           caseGroup = g;
           dealCase = true;
@@ -2937,7 +2938,19 @@ function renderCaseGroups(inSuit) {
       seal ? el("b", { class: "chip-seal", "aria-hidden": "true" }, seal) : null,
       label
     );
-  box.replaceChildren(chip("", "全部", null), ...groups.map(([g, [zh, seal]]) => chip(g, zh, seal)));
+  box.replaceChildren(
+    chip("", "全部", null),
+    ...runs.map((r) =>
+      r.fam
+        ? el(
+            "span",
+            { class: "chip-run" },
+            el("span", { class: "chip-fam", "aria-hidden": "true" }, r.seal ? el("b", { class: "chip-seal" }, r.seal) : null, r.fam),
+            ...r.items.map((i) => chip(i.g, i.short, null, i.zh))
+          )
+        : chip(r.items[0].g, r.items[0].short, r.items[0].seal, r.items[0].zh)
+    )
+  );
 }
 
 function renderCase() {

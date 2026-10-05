@@ -31,8 +31,9 @@ export function buildLibrary(data, { ratingBlocked }) {
       tag: item.tag,
       zh: item.zh || item.tag,
       suit: cardSuit(item),
-      group: item.group,
-      groupZh: (data.groupZh && data.groupZh[item.group]) || item.group,
+      // 字盒的分類籤照細分類（scripts/subgroups.py）；花色章仍看引擎的小分類。
+      group: item.sub || item.group,
+      groupZh: (data.groupZh && data.groupZh[item.sub || item.group]) || item.sub || item.group,
       seal: groupSeal(item),
       rating: ratingTier(item, ratingBlocked),
       gate: item.gate,
@@ -42,7 +43,60 @@ export function buildLibrary(data, { ratingBlocked }) {
     cards.push(card);
     byTag.set(card.tag, card);
   }
+  // 詞庫本身是各段交錯的（每輪新字接在後面），照詞庫排的話同一類散在各處。
+  // 改成花色 → 細分類（subOrder 的順序）；同一格裡維持詞庫順序（sort 是穩定的）。
+  const subRank = new Map();
+  for (const sec of ["subject", "clothing", "feature", "pose", "env", "quality"]) {
+    for (const id of (data.subOrder && data.subOrder[sec]) || []) subRank.set(sec + ":" + id, subRank.size);
+  }
+  if (subRank.size) {
+    const rank = (c) =>
+      CARD_SUITS.indexOf(c.suit) * 100000 + (subRank.get(c.item.section + ":" + c.group) ?? 99999);
+    cards.sort((a, b) => rank(a) - rank(b));
+  }
   return { cards, byTag };
+}
+
+/**
+ * 字盒的分類籤（細分類，見 scripts/subgroups.py）。
+ * 同一家族（「地點・住家」的「地點」）連在一起的收成一串：家族名寫一次，籤上只寫後半，
+ * 一個花色三十幾格也只佔幾行。章只在整格的牌都是同一個章時才標（細分類可能跨小分類收字）。
+ * 回傳 [{ fam, seal, items: [{ g, zh, short, seal }] }]；fam 是 null 的那串就是單獨的籤。
+ */
+export function groupChips(cards) {
+  // 章取這一格多數牌的章（過半才算）：「天空」收了一張滿月（小分類是場景雜項、沒有章），
+  // 其他都是「天」章，籤上就標「天」。
+  const subs = new Map();
+  for (const c of cards) {
+    let s = subs.get(c.group);
+    if (!s) subs.set(c.group, (s = { g: c.group, zh: c.groupZh || c.group, n: 0, seals: new Map() }));
+    s.n += 1;
+    if (c.seal) s.seals.set(c.seal, (s.seals.get(c.seal) || 0) + 1);
+  }
+  for (const s of subs.values()) {
+    const [top, n] = [...s.seals].sort((a, b) => b[1] - a[1])[0] || [null, 0];
+    s.seal = n * 2 > s.n ? top : null;
+  }
+  const runs = [];
+  for (const s of subs.values()) {
+    const cut = s.zh.indexOf("・");
+    const fam = cut > 0 ? s.zh.slice(0, cut) : null;
+    const item = { g: s.g, zh: s.zh, short: fam ? s.zh.slice(cut + 1) : s.zh, seal: s.seal };
+    const last = runs[runs.length - 1];
+    if (fam && last && last.fam === fam) last.items.push(item);
+    else runs.push({ fam, items: [item] });
+  }
+  for (const r of runs) {
+    if (r.fam && r.items.length === 1) {
+      r.items[0].short = r.items[0].zh;
+      r.fam = null;
+    }
+    const seals = new Map();
+    for (const i of r.items) if (i.seal) seals.set(i.seal, (seals.get(i.seal) || 0) + 1);
+    const [top, n] = [...seals].sort((a, b) => b[1] - a[1])[0] || [null, 0];
+    r.seal = r.fam && n * 2 > r.items.length ? top : null;
+  }
+  return runs;
 }
 
 export function createAssets(manifest) {
