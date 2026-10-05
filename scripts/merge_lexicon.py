@@ -36,6 +36,12 @@ CLOTHING_STATE = {
     "spreader bar",
     "nipple tassels",
     "public vibrator",
+    # 刑具和搾乳不是日常能穿出門的衣服。不列進來會被 widen 成三檔。
+    "pillory",
+    "stocks",
+    "restraints",
+    "milking machine",
+    "breast pump",
     "open shirt",
     "open kimono",
     "clothes between breasts",
@@ -328,6 +334,10 @@ ERA_OF = {
 # 「black sports bra, sports bra, bra」這種三連出現，而那個 bra 是訓練集裡沒有的。
 SUFFIX_COMPOUND_EXCEPTIONS = {
     "bra": ("sports bra",),
+    # 水手領是領口形狀，不是項圈。後綴規則會把它收成 collar。
+    "collar": ("sailor collar",),
+    # 大衣只有現代。毛皮大衣要在維多利亞也能抽，再帶出 coat 會整筆被拒。
+    "coat": ("fur coat",),
 }
 
 SUFFIX_PARENT = (
@@ -835,6 +845,12 @@ SEX_ACT = {
     "nipple penetration",
     "fisting",
     "vore",
+    "double anal",
+    "double vaginal",
+    "anal fisting",
+    "urethral fingering",
+    "enema",
+    "egg implantation",
 }
 
 SOLO_SEX_ACT = {
@@ -848,6 +864,11 @@ SOLO_SEX_ACT = {
     "egg laying",
     "nipple penetration",
     "fisting",
+    # 單人可以自己做。肛門拳交和尿道指交在沒有第二人、又四肢截斷時由引擎擋下。
+    "anal fisting",
+    "urethral fingering",
+    "enema",
+    "egg implantation",
 }
 
 NEEDS_MALE = {
@@ -977,6 +998,13 @@ NEEDS_MALE = {
     "armpit sex",
     "cervical penetration",
     "cum inflation",
+    "double anal",
+    "double vaginal",
+    "penis size difference",
+    "cum in nose",
+    "cum through clothes",
+    "cum bubble",
+    "cumdump",
 }
 
 NEEDS_FEMALE = {
@@ -1107,6 +1135,27 @@ NEEDS_FEMALE = {
     "chastity belt",
     "nipple tassels",
     "public vibrator",
+    "long nipples",
+    "minigirl",
+    "giantess",
+    "pussy peek",
+    "excessive pussy juice",
+    "lactation through clothes",
+    "milking machine",
+    "breast pump",
+    "nipple pull",
+    "double anal",
+    "double vaginal",
+    "anal fisting",
+    "urethral fingering",
+    "enema",
+    "egg implantation",
+    "navel penetration",
+    "penis size difference",
+    "cum in nose",
+    "cum through clothes",
+    "cum bubble",
+    "cumdump",
 }
 
 NEEDS_PAIR = {
@@ -1187,6 +1236,9 @@ NEEDS_PAIR = {
     "impregnation",
     "holding another's wrist",
     "hand on another's head",
+    "double anal",
+    "double vaginal",
+    "penis size difference",
 }
 
 NEEDS_GROUP = {
@@ -1202,6 +1254,8 @@ NEEDS_GROUP = {
     "fivesome",
     "surrounded by penises",
     "triple penetration",
+    "double anal",
+    "double vaginal",
 }
 
 NEEDS_CROWD = {
@@ -1219,6 +1273,8 @@ NEEDS_2MALE = {
     "surrounded by penises",
     "bukkake",
     "triple penetration",
+    "double anal",
+    "double vaginal",
 }
 
 NEEDS_2FEMALE = {
@@ -1317,6 +1373,9 @@ NARROW_HEAT = {
     # 場地跟傢俱本來會被 widen 成三檔。這兩個只在性愛成立。
     "glory hole": ["sex"],
     "wooden horse": ["sex"],
+    # 場地和傢俱會被 widen 成三檔。這兩個只在性愛成立。
+    "tentacle pit": ["sex"],
+    "vacuum bed": ["sex"],
 }
 
 
@@ -3170,6 +3229,252 @@ def extra_kink_tags() -> list[dict]:
     ]
 
 
+def extra_csv_tags() -> list[dict]:
+    """danbooru_missing_tags.csv 裡還沒進詞庫的 150 個字。
+
+    不開新互斥格。獸莖不暗示人類 penis，避免把男孩拉進來。
+    水手領是領口，不佔上衣格，也不暗示項圈。
+    雙插佔體位格並且要兩男；其餘性愛主題不佔體位格。
+    手機的中文用「電話」，因為 cellphone 已經是「手機」。
+    黃昏的中文讓給既有的 dusk，twilight 用「暮色」。
+    丁字褲讓給既有的 thong，g-string 用「細繩丁字褲」。
+    """
+    all_h = list(HEATS)
+    sex = ["sex"]
+    flash = ["flash", "sex"]
+    modern = ["modern"]
+    any_era = ["any"]
+    vic = ["victorian", "modern"]
+
+    def row(tag, section, zh, mutex=None, heat=None, gate="any", layer="normal",
+            implies=None, needs=None, era=None):
+        return {
+            "tag": tag,
+            "section": section,
+            "gate": gate,
+            "heat": list(heat or all_h),
+            "mutex": mutex,
+            "bind": [],
+            "implies": implies or [],
+            "layer": layer,
+            "era": era or any_era,
+            "needs": needs or [],
+            "zh": zh,
+        }
+
+    pair = ["female", "male", "pair"]
+    two_male = ["female", "male", "pair", "group", "2male"]
+    girl = ["female"]
+    hetero = ["female", "male"]
+    return [
+        # ---- 配件。空互斥，正常模式靠釘選或奇葩模式進場，跟口塞同一條。
+        row("halo", "clothing", "光環", layer="accessory"),
+        row("piercing", "clothing", "穿洞", layer="accessory"),
+        row("ear piercing", "clothing", "耳洞", layer="accessory", implies=["piercing"]),
+        row("tongue piercing", "clothing", "舌環", layer="accessory", implies=["piercing"]),
+        row("bandaid", "clothing", "OK繃", layer="accessory"),
+        row("armband", "clothing", "臂章", layer="accessory"),
+        row("needle", "clothing", "針", layer="accessory"),
+        row("milking machine", "clothing", "擠乳機", layer="accessory", gate="female",
+            heat=sex, implies=["lactation"], needs=girl),
+        row("breast pump", "clothing", "吸乳器", layer="accessory", gate="female",
+            heat=sex, implies=["lactation"], needs=girl),
+        row("pillory", "clothing", "頸手枷", layer="accessory", heat=sex),
+        row("stocks", "clothing", "枷鎖", layer="accessory", heat=sex),
+        row("restraints", "clothing", "束具", layer="accessory", heat=sex),
+        # cellphone 已是「手機」。這個字跟它搶手上道具那一格。
+        row("phone", "env", "電話", mutex="held_prop", era=modern),
+
+        # ---- 姿勢。屈膝不佔坐姿格，才不會把坐著擠掉。
+        row("knees up", "pose", "屈膝抬腿"),
+        row("v arms", "pose", "雙臂夾胸"),
+        row("hands on own thighs", "pose", "手放大腿"),
+        row("upside-down", "pose", "倒過來", mutex="camera"),
+        row("sideways", "pose", "橫躺構圖", mutex="camera"),
+        row("vanishing point", "pose", "消失點透視", mutex="camera"),
+        # looking away 在 2023-06 停用，模型學的是 averting eyes。不收回詞庫。
+        row("smirk", "pose", "壞笑", mutex="expression"),
+        row("evil smile", "pose", "邪笑", mutex="expression"),
+        row("crazy smile", "pose", "瘋狂笑", mutex="expression"),
+        row("annoyed", "pose", "不耐煩", mutex="expression"),
+        row("jitome", "pose", "半眼鄙視", mutex="expression"),
+        # 病嬌是角色氣質，可以跟笑容共存，不佔表情格。
+        row("yandere", "feature", "病嬌"),
+
+        # ---- 身體與瞳孔。迷你娘不是蘿莉，也不跟身高格（petite）搶。
+        row("minigirl", "feature", "迷你娘", gate="female", needs=girl),
+        row("giantess", "feature", "女巨人", gate="female", needs=girl),
+        row("long nipples", "feature", "長乳頭", gate="female", heat=sex, needs=girl),
+        row("symbol-shaped pupils", "feature", "符號瞳孔"),
+        row("slit pupils", "feature", "豎瞳"),
+        row("ringed eyes", "feature", "環狀瞳"),
+        row("split-color hair", "feature", "左右雙色髮"),
+        row("robot joints", "feature", "機械關節"),
+        row("injury", "feature", "受傷"),
+        row("whip marks", "feature", "鞭痕", heat=sex),
+        row("eyeliner", "feature", "眼線", gate="female", needs=girl),
+        row("mascara", "feature", "睫毛膏", gate="female", needs=girl),
+        row("red lips", "feature", "紅唇", gate="female", implies=["lipstick"], needs=girl),
+
+        # ---- 種族零件可以疊。完整種族才佔種族格，正常模式不自動抽。
+        row("animal ears", "feature", "獸耳"),
+        row("tail", "feature", "尾巴"),
+        row("horns", "feature", "角"),
+        row("wings", "feature", "翅膀"),
+        row("demon horns", "feature", "惡魔角", implies=["horns"]),
+        row("demon wings", "feature", "惡魔翅膀", implies=["wings"]),
+        row("angel wings", "feature", "天使翅膀", implies=["wings"]),
+        row("cat girl", "feature", "貓娘", mutex="race", gate="female",
+            implies=["animal ears"], needs=girl),
+        row("fox girl", "feature", "狐娘", mutex="race", gate="female",
+            implies=["animal ears"], needs=girl),
+        row("dragon girl", "feature", "龍娘", mutex="race", gate="female",
+            implies=["horns"], needs=girl),
+        row("rabbit girl", "feature", "兔娘", mutex="race", gate="female",
+            implies=["animal ears"], needs=girl),
+        row("wolf girl", "feature", "狼娘", mutex="race", gate="female",
+            implies=["animal ears"], needs=girl),
+        row("dog girl", "feature", "犬娘", mutex="race", gate="female",
+            implies=["animal ears"], needs=girl),
+        row("kitsune", "feature", "妖狐", mutex="race", gate="female",
+            implies=["animal ears"], needs=girl),
+        row("mermaid", "feature", "人魚", mutex="race", gate="female", needs=girl),
+        row("harpy", "feature", "鳥身女妖", mutex="race", gate="female",
+            implies=["wings"], needs=girl),
+
+        # ---- 衣服。丹寧短褲會再帶上丹寧；水手領只是領口。
+        row("denim", "clothing", "丹寧", layer="garment", era=modern),
+        row("shiny clothes", "clothing", "亮面衣料", layer="garment", era=modern),
+        row("leather", "clothing", "皮革", layer="garment", era=vic),
+        row("satin", "clothing", "緞面", layer="garment", era=vic),
+        row("sailor collar", "clothing", "水手領", layer="garment", era=modern),
+        row("halterneck", "clothing", "繞頸", layer="garment", era=modern),
+        row("tube top", "clothing", "平口抹胸", mutex="top", gate="female",
+            layer="garment", era=modern, needs=girl),
+        row("living clothes", "clothing", "活體衣服", mutex="onepiece", layer="garment"),
+        row("bike shorts", "clothing", "自行車短褲", mutex="bottom", layer="garment"),
+        row("denim shorts", "clothing", "牛仔短褲", mutex="bottom", layer="garment",
+            implies=["denim"]),
+        row("dolphin shorts", "clothing", "海豚褲", mutex="bottom", layer="garment"),
+        row("hakama skirt", "clothing", "袴裙", mutex="bottom", gate="female",
+            layer="garment", needs=girl),
+        row("leather jacket", "clothing", "皮外套", mutex="outer", layer="garment",
+            implies=["leather"], era=modern),
+        row("trench coat", "clothing", "風衣", mutex="outer", layer="garment"),
+        row("fur coat", "clothing", "毛皮大衣", mutex="outer", layer="garment", era=vic),
+        row("white thighhighs", "clothing", "白色過膝襪", mutex="legs", gate="female",
+            layer="garment", needs=girl),
+        row("zettai ryouiki", "clothing", "絕對領域", mutex="legs", gate="female",
+            layer="garment", implies=["thighhighs"], needs=girl),
+        row("torn pantyhose", "clothing", "破褲襪", mutex="legs", gate="female",
+            layer="garment", implies=["pantyhose"], needs=girl),
+        row("fishnet pantyhose", "clothing", "網襪褲襪", mutex="legs", gate="female",
+            layer="garment", implies=["pantyhose"], needs=girl),
+        row("loose socks", "clothing", "泡泡襪", mutex="feet", layer="garment"),
+        row("over-kneehighs", "clothing", "過膝長襪", mutex="legs", gate="female",
+            layer="garment", implies=["kneehighs"], needs=girl),
+        row("soles", "clothing", "腳底", mutex="feet", layer="accessory"),
+        row("no shoes", "clothing", "沒穿鞋", mutex="feet", layer="accessory"),
+        row("slippers", "clothing", "拖鞋", mutex="feet", layer="accessory"),
+        row("stiletto heels", "clothing", "細跟高跟鞋", mutex="feet", gate="female",
+            layer="accessory", implies=["high heels"], needs=girl),
+        row("striped panties", "clothing", "條紋內褲", mutex="underwear_bottom", gate="female",
+            layer="garment", needs=girl),
+        row("side-tie panties", "clothing", "綁帶內褲", mutex="underwear_bottom", gate="female",
+            layer="garment", needs=girl),
+        row("highleg panties", "clothing", "高衩內褲", mutex="underwear_bottom", gate="female",
+            layer="garment", needs=girl),
+        row("string panties", "clothing", "細帶內褲", mutex="underwear_bottom", gate="female",
+            layer="garment", needs=girl),
+        row("lace-trimmed panties", "clothing", "蕾絲邊內褲", mutex="underwear_bottom",
+            gate="female", layer="garment", needs=girl),
+        row("g-string", "clothing", "細繩丁字褲", mutex="underwear_bottom", gate="female",
+            layer="garment", implies=["thong"], needs=girl),
+        row("strapless bra", "clothing", "無肩帶胸罩", mutex="underwear_top", gate="female",
+            layer="garment", needs=girl),
+        row("negligee", "clothing", "薄紗睡衣", mutex="onepiece", gate="female",
+            layer="garment", era=modern, needs=girl),
+
+        # ---- 畫面。愛心跟動態線搶特效格。黏液不是史萊姆娘。雲可以跟藍天一起。
+        row("heart", "env", "愛心", mutex="effect"),
+        row("motion lines", "env", "動態線", mutex="effect"),
+        row("spoken heart", "env", "對話愛心", mutex="effect"),
+        row("slime (substance)", "env", "黏液"),
+        row("cloud", "env", "雲"),
+        row("aurora", "env", "極光"),
+        row("twilight", "env", "暮色", mutex="day_night"),
+        row("floor", "env", "地板"),
+        row("space", "env", "太空", mutex="place", era=modern),
+        row("stage", "env", "舞台", mutex="place", implies=["indoors"]),
+        row("school", "env", "學校", mutex="place", era=modern),
+        row("train station", "env", "車站", mutex="place", era=modern),
+        row("tentacle pit", "env", "觸手坑", mutex="place", implies=["indoors"], heat=sex),
+        row("vacuum bed", "env", "真空床", mutex="furniture", heat=sex, era=modern),
+
+        # ---- 畫風。只在釘選時出現，跟 1990s 畫風同一條。
+        row("realistic", "quality", "寫實"),
+        row("1980s (style)", "quality", "1980s 畫風", mutex="era_style"),
+
+        # ---- 走光
+        row("pussy peek", "pose", "露出一點陰部", gate="female", heat=flash, needs=girl),
+
+        # ---- 性愛主題。不佔體位格，所以還能同時有一個體位。
+        row("peeing", "pose", "尿尿", heat=sex),
+        row("bestiality", "pose", "獸姦", heat=sex),
+        row("animal penis", "feature", "獸莖", heat=sex),
+        row("horse penis", "feature", "馬屌", heat=sex, implies=["animal penis"]),
+        row("transformation", "pose", "變身", heat=sex),
+        row("suspension", "pose", "吊縛", heat=sex),
+        row("ovum", "pose", "卵子", heat=sex),
+        row("fertilization", "pose", "受精", heat=sex),
+        row("sperm cell", "pose", "精子", heat=sex),
+        row("penis size difference", "pose", "尺寸差", gate="female", heat=sex, needs=pair),
+        row("slapping", "pose", "打耳光", heat=sex),
+        row("nipple pull", "pose", "拉乳頭", gate="female", heat=sex, needs=girl),
+        row("stomach punch", "pose", "揍肚子", heat=sex),
+        row("whipping", "pose", "鞭打", heat=sex, implies=["whip marks"]),
+        row("lactation through clothes", "pose", "乳汁滲出衣服", gate="female", heat=sex,
+            implies=["lactation"], needs=girl),
+        row("objectification", "pose", "物化", heat=sex),
+        row("human furniture", "pose", "人體家具", heat=sex),
+        row("forniphilia", "pose", "人體家具癖", heat=sex, implies=["human furniture"]),
+        row("sex doll", "pose", "性愛娃娃", heat=sex),
+        row("cum in nose", "pose", "精液進鼻", gate="female", heat=sex, needs=hetero),
+        row("cum through clothes", "pose", "精液滲出衣服", gate="female", heat=sex, needs=hetero),
+        row("cum bubble", "pose", "精液泡泡", gate="female", heat=sex, needs=hetero),
+        row("cumdump", "pose", "精液便器", gate="female", heat=sex, needs=hetero),
+        row("excessive pussy juice", "pose", "愛液過多", gate="female", heat=sex, needs=girl),
+        row("crucifixion", "pose", "釘十字架", heat=sex),
+        row("petrification", "pose", "石化", heat=sex),
+        row("scat", "pose", "排泄物", heat=sex),
+        row("orgasm denial", "pose", "禁止高潮", heat=sex),
+        row("parasite", "pose", "寄生", heat=sex),
+        row("knotting", "pose", "成結", heat=sex, implies=["animal penis"]),
+        row("penetration through clothes", "pose", "隔著衣服插入", gate="female", heat=sex, needs=girl),
+        row("necrophilia", "pose", "姦屍", heat=sex),
+        row("electrostimulation", "pose", "電擊刺激", heat=sex),
+        row("encasement", "pose", "封入", heat=sex),
+        row("wax play", "pose", "滴蠟", heat=sex),
+        row("stomach (organ)", "pose", "胃（器官）", heat=sex),
+        row("unbirthing", "pose", "逆生產", heat=sex),
+        row("digestion", "pose", "消化", heat=sex),
+        row("navel penetration", "pose", "肚臍插入", gate="female", heat=sex, needs=girl),
+
+        # ---- 性行為本身。單人的進 SOLO_SEX_ACT。雙插要兩男，不進單人池。
+        row("double anal", "pose", "雙插肛", gate="female", heat=sex,
+            implies=["anal"], needs=two_male),
+        row("double vaginal", "pose", "雙插穴", gate="female", heat=sex,
+            implies=["vaginal"], needs=two_male),
+        row("anal fisting", "pose", "肛門拳交", gate="female", heat=sex,
+            implies=["fisting"], needs=girl),
+        row("urethral fingering", "pose", "手指插尿道", gate="female", heat=sex,
+            implies=["urethral insertion"], needs=girl),
+        row("enema", "pose", "灌腸", gate="female", heat=sex, needs=girl),
+        row("egg implantation", "pose", "植卵", gate="female", heat=sex,
+            implies=["egg laying"], needs=girl),
+    ]
+
+
 def main() -> None:
     rows: list[dict] = []
     for path in sorted(PARTS.glob("*.json")):
@@ -3192,6 +3497,7 @@ def main() -> None:
     rows.extend(extra_fluid_tags())
     rows.extend(extra_erotic_tags())
     rows.extend(extra_kink_tags())
+    rows.extend(extra_csv_tags())
     rows.extend(extra_loli_tags())
     rows.extend(extra_shota_tags())
     rows.extend(extra_style_tags())

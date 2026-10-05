@@ -84,6 +84,9 @@ const SFW_EXTRA = new Set([
   "virgin killer sweater",
   "body writing",
   "cleavage cutout",
+  "fishnet pantyhose",
+  "torn pantyhose",
+  "negligee",
 ]);
 
 // 三段分級，對齊 Danbooru 自己的 rating 階梯。
@@ -177,6 +180,14 @@ const EXPLICIT_ONLY_EXTRA = new Set([
   "breast expansion",
   "tally",
   "nipple tassels",
+  "tentacle pit",
+  "vacuum bed",
+  "breast pump",
+  "milking machine",
+  "pillory",
+  "stocks",
+  "restraints",
+  "whip marks",
 ]);
 
 // 只有 explicit 能出現：真正的性、裸露、脫衣走光、內衣當外衣。

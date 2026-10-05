@@ -1377,7 +1377,11 @@ function indoorOutdoorClash(have) {
   for (let i = 0; i < 40; i++) {
     const d = drawOne(lex, s, new Set(), new Set(), mulberry32(26100 + i), 26100 + i);
     const h = tagsOf(d);
-    if (h.has("nude") || h.has("completely nude")) nude.push(i);
+    // 公開裸體是走光組的字，自己帶出 nude，收尾會把沒釘住的衣服脫掉。
+    // 那不是服裝段的裸體骰（走光本來就不擲那顆骰子）。
+    // 詞庫變大之後這 40 張會抽到一張，不能算「硬脫光」。
+    const publicNude = h.has("public nudity");
+    if ((h.has("nude") || h.has("completely nude")) && !publicNude) nude.push(i);
     // 「身上有主衣」不能用 mutex 判。詞庫裡 layer=garment 而 mutex 不是那三種的
     // 有 103 個，包含 dress、shirt、skirt、school uniform、kimono、sportswear ——
     // 也就是說「只穿一件洋裝」會被這條判成沒穿衣服。這條之所以一直是綠的，
@@ -1392,7 +1396,7 @@ function indoorOutdoorClash(have) {
       if (it.layer !== "garment") return false;
       return !["underwear", "legs", "feet"].includes(it.group);
     });
-    if (!garment) noGarment.push(i);
+    if (!garment && !publicNude) noGarment.push(i);
     const act = [...h].some((t) => {
       const it = lex.byTag.get(t);
       return it && (it.mutex === "clothes_action" || it.group === "flash");
@@ -5576,7 +5580,9 @@ function indoorOutdoorClash(have) {
     // 第二十八次（2026-10-05）：56 個現役詞進池。鏡頭、表情、衣服、破衣、膚況和
     // 全年齡場地會挪動單人女性的牌序。性愛主題不佔體位格。這張仍是 1girl solo，
     // 水手服、隔著衣服自慰、車廂，沒有男生、陰莖或精液。
-    "1girl, solo, very short hair, aqua eyes, blue hair, blunt bangs, large breasts, teeth, huge ass, breast suppress, sailor dress, dress, panties, thighhighs, maid headdress, masturbation through clothes, wariza, very wide shot, looking outside, torogao, hand on own hip, car interior, indoors, sunrise, ceiling light, emphasis lines, nsfw, explicit, masterpiece, best quality, amazing quality");
+    // 第二十九次（2026-10-05）：CSV 缺的現役詞進池。looking away 不收回。
+    // 牌序再位移一次。這張仍是 1girl solo，沒有男生，也沒有人類陰莖。
+    "1girl, solo, very short hair, aqua eyes, blue hair, blunt bangs, large breasts, long nipples, nose blush, dress, no panties, denim, halterneck, handcuffs, fingering, reclining, multiple views, looking down, exhausted, bondage, golf course, outdoors, day, backlighting, sparkle, blue sky, nsfw, explicit, masterpiece, best quality, amazing quality");
   ok("drawOne exposes shadow diagnostics", Array.isArray(shadowIntegrationDraw.shadowViolations));
 
   const eatProneShadow = validateSupportShadow({
@@ -7478,8 +7484,11 @@ function indoorOutdoorClash(have) {
   // 沒釘場所的性愛跟其他熱度用同一池場地，權重拉平。
   // 公園、大街、沙灘、神社、教室這組以前被私密白名單擋掉，現在每個時代裡
   // 說得通的那些都要抽得到。中世紀的城堡、古中國的東亞建築仍先擲一次招牌
-  // （機率 35%）。400 張的樣本會在 35% 上下晃，招牌第一名放到 45% 仍算這顆骰子；
+  // （機率 35%）。樣本會在 35% 上下晃，招牌第一名放到 45% 仍算這顆骰子；
   // 別的場地超過三分之一就是真的洗版。
+  // 現代場地大約 110 種、權重拉平，400 張時都市風景是 0、同組大街公園是 2～3。
+  // 1200 張都市風景 12，太空、舞台、學校、車站、觸手坑都在 2～5，沒有吃掉這一格。
+  // 400 張會把這種落空判成抽不到，所以覆蓋改看 1200 張。
   const s = defaultSettings(data);
   s.girl = true;
   s.heats = ["sex"];
@@ -7497,7 +7506,7 @@ function indoorOutdoorClash(have) {
   for (const era of ERAS) {
     s.eras = [era];
     const m = new Map();
-    const N = 400;
+    const N = 1200;
     for (let i = 1; i <= N; i++) {
       const h = tagsOf(drawOne(lex, s, new Set(), new Set(), mulberry32(i), i));
       for (const t of h) {

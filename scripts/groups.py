@@ -130,6 +130,13 @@ FABRIC = {
     "fur trim",
     # 破衣疊在任何衣服上，不跟乳膠／網襪搶布料那一格。
     "torn clothes",
+    # 布料與領口細節。不佔上衣格，才不會把襯衫擠掉。
+    "denim",
+    "shiny clothes",
+    "leather",
+    "satin",
+    "sailor collar",
+    "halterneck",
 }
 
 MAKEUP = {
@@ -138,6 +145,9 @@ MAKEUP = {
     "nail polish",
     "red nails",
     "pink nails",
+    "eyeliner",
+    "mascara",
+    "red lips",
 }
 
 BODY_ANY = {
@@ -161,6 +171,8 @@ SKY = {
     "blue sky",
     "orange sky",
     "starry sky",
+    "cloud",
+    "aurora",
 }
 
 HAIR_STYLE = {
@@ -201,6 +213,7 @@ HAIR_COLOR_LOOK = {
     "streaked hair",
     "two-tone hair",
     "colored inner hair",
+    "split-color hair",
 }
 
 BODY_HAIR = {
@@ -256,6 +269,10 @@ FACE = {
     "scared",
     "smug",
     "nervous",
+    "evil smile",
+    "crazy smile",
+    "annoyed",
+    "jitome",
 }
 
 SKIN = {
@@ -286,6 +303,8 @@ SKIN = {
     "tally",
     "steaming body",
     "wet hair",
+    "injury",
+    "whip marks",
 }
 
 SEX = {
@@ -456,6 +475,53 @@ SEX = {
     "armpit sex",
     "cervical penetration",
     "triple penetration",
+    # 主題與結果。不進 sex_act，heat 是 ["sex"] 時本來會進 sex；寫在這裡避免以後被攤成走光。
+    "peeing",
+    "bestiality",
+    "transformation",
+    "suspension",
+    "ovum",
+    "fertilization",
+    "penis size difference",
+    "sperm cell",
+    "slapping",
+    "lactation through clothes",
+    "objectification",
+    "cum in nose",
+    "nipple pull",
+    "human furniture",
+    "cumdump",
+    "cum through clothes",
+    "excessive pussy juice",
+    "cum bubble",
+    "crucifixion",
+    "enema",
+    "petrification",
+    "scat",
+    "double anal",
+    "orgasm denial",
+    "stomach punch",
+    "parasite",
+    "knotting",
+    "penetration through clothes",
+    "necrophilia",
+    "double vaginal",
+    "whipping",
+    "electrostimulation",
+    "anal fisting",
+    "encasement",
+    "wax play",
+    "egg implantation",
+    "sex doll",
+    "stomach (organ)",
+    "unbirthing",
+    "urethral fingering",
+    "forniphilia",
+    "navel penetration",
+    "digestion",
+    "animal penis",
+    "horse penis",
+    "pussy peek",
 }
 
 
@@ -507,7 +573,10 @@ def assign_group(item: dict) -> str:
             return "hair_len"
         if mx == "hair_color" or tag in HAIR_COLOR_LOOK:
             return "hair_color"
-        if mx == "eye_color" or "eye" in tag or tag in {"eyelashes", "eyeshadow", "heterochromia", "tareme", "tsurime"}:
+        if mx == "eye_color" or "eye" in tag or tag in {
+            "eyelashes", "eyeshadow", "heterochromia", "tareme", "tsurime",
+            "symbol-shaped pupils", "slit pupils",
+        }:
             return "eyes"
         if tag in BODY_HAIR:
             return BODY_HAIR[tag]
@@ -556,7 +625,7 @@ def assign_group(item: dict) -> str:
             "testicles",
         }:
             return "body_m"
-        if tag in {"futanari", "quadruple amputee"}:
+        if tag in {"futanari", "quadruple amputee", "minigirl", "giantess"}:
             return "body_f"
         return "other"
 

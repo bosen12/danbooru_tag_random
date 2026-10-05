@@ -1039,7 +1039,7 @@ const FISH_PLACE = new Set(["beach", "ocean", "poolside", "pool"]);
 // 仍會把現代的煮飯換成廚房，所以現代的測試一個字都不會變。不把 courtyard
 // 再加進女僕場地：那會讓女僕去運動，見 JOB_PLACE.maid。
 const COOK_PLACE = new Set(["kitchen", "castle", "palace", "courtyard", "ryokan"]);
-const INDOOR_FURN = new Set(["on bed", "on chair", "office chair", "gaming chair", "swivel chair", "bunk bed", "on couch", "on desk", "wooden horse"]);
+const INDOOR_FURN = new Set(["on bed", "on chair", "office chair", "gaming chair", "swivel chair", "bunk bed", "on couch", "on desk", "wooden horse", "vacuum bed"]);
 const DRY_NO_WATER = new Set([
   "airplane interior",
   "cockpit",
@@ -2282,6 +2282,7 @@ const NEEDS_FREE_HAND = new Set([
   "covering privates",
   "hand on another's head",
   "grabbing another's hair",
+  "hands on own thighs",
 ]);
 const HANDS_BUSY_BODY = new Set(["crawling", "all fours", "top-down bottom-up", "bondage", "restrained", "handcuffs", "bound wrists"]);
 const BOTH_ARMS = new Set([
@@ -2297,6 +2298,7 @@ const BOTH_ARMS = new Set([
   "spread cleavage",
   "breast hold",
   "arms under breasts",
+  "v arms",
 ]);
 const HAND_GESTURE = new Set([
   "finger to mouth",
@@ -2334,7 +2336,17 @@ const AMPUTEE_MOVE = new Set(["walking", "running", "jumping", "tiptoes", "footj
 const AMPUTEE_WORN = new Set([
   "wide sleeves", "long sleeves", "short sleeves", "sleeves rolled up",
   "detached sleeves", "puffy sleeves", "wrist cuffs", "spreader bar",
+  "pillory", "stocks",
 ]);
+// 這些手是對方的。單人又四肢截斷時沒有手；有第二個人就可以。
+const PARTNER_HAND = new Set(["fisting", "anal fisting", "urethral fingering", "slapping", "nipple pull"]);
+// 沒有手時才補的體位。不要把「所有單人 sex_act」都算進來。
+const AMPUTEE_HANDLESS = new Set([
+  "object insertion", "tentacle sex", "sex machine", "large insertion",
+  "urethral insertion", "egg laying", "nipple penetration",
+]);
+const PUPIL_SHAPE = new Set(["symbol-shaped pupils", "slit pupils", "ringed eyes"]);
+const MATERIAL = new Set(["denim", "shiny clothes", "leather", "satin"]);
 // 貞操帶蓋住的是她的下體。口交、乳交、手交、足交、腋交、乳頭插入這類不開鎖。
 // 人數標籤（3P、亂交）不在這裡：它們只是在「已經有合法行為」時順便出現。
 const CHASTITY_OK = new Set([
@@ -2352,6 +2364,9 @@ const CHASTITY_CROTCH = new Set([
   "clothed sex", "stealth sex", "spread pussy", "spread ass",
   "after vaginal", "after anal", "cum in pussy", "cum on pussy", "cum in ass",
   "prolapse", "anal prolapse", "butt plug", "anal beads", "crotch rope", "stomach bulge",
+  "pussy peek", "penetration through clothes", "knotting", "peeing", "excessive pussy juice",
+  // 獸姦、獵奇性交、排泄、把人吞回體內，都要打開帶子才做得到。
+  "bestiality", "necrophilia", "scat", "unbirthing",
 ]);
 
 function needsLimbs(item) {
@@ -4522,9 +4537,20 @@ export function drawOne(lex, settings, pinned, userBanned, rand, seed, opts) {
     // 四肢都沒了，就不再抽用手、用腳、走路、手套、袖子、分腿棍。觀看者的手（pov hands）不是她的。
     // 拳交在有第二個人時可以是對方的手，單人則沒有手可伸。
     if (item.tag === "quadruple amputee" && hasUsed((t) => needsLimbs(lex.byTag.get(t)))) return false;
-    if (item.tag === "quadruple amputee" && people < 2 && used.has("fisting")) return false;
+    if (item.tag === "quadruple amputee" && people < 2 && hasUsed((t) => PARTNER_HAND.has(t))) return false;
     if (needsLimbs(item) && used.has("quadruple amputee") && item.tag !== "pov hands") return false;
-    if (item.tag === "fisting" && people < 2 && used.has("quadruple amputee")) return false;
+    if (PARTNER_HAND.has(item.tag) && people < 2 && used.has("quadruple amputee")) return false;
+    if (item.tag === "minigirl" && used.has("giantess")) return false;
+    if (item.tag === "giantess" && used.has("minigirl")) return false;
+    if (PUPIL_SHAPE.has(item.tag) && hasUsed((t) => PUPIL_SHAPE.has(t) && t !== item.tag)) return false;
+    if (MATERIAL.has(item.tag) && hasUsed((t) => t !== item.tag && (MATERIAL.has(t) || lex.byTag.get(t)?.mutex === "fabric"))) return false;
+    if (item.mutex === "fabric" && hasUsed((t) => MATERIAL.has(t))) return false;
+    if (item.tag === "space" && (used.has("indoors") || used.has("outdoors"))) return false;
+    if ((item.tag === "indoors" || item.tag === "outdoors") && used.has("space")) return false;
+    // 真空床、木馬這類室內傢俱會把室內外閘死在室內。太空又不准寫室內，
+    // 兩件都在時室內外會整格空白（釘真空床、seed 15005）。
+    if (item.tag === "space" && hasUsed((t) => INDOOR_FURN.has(t))) return false;
+    if (INDOOR_FURN.has(item.tag) && used.has("space")) return false;
     // 貞操帶蓋住下體。泛用的「sex」是性交；口交那些字也會暗示它，所以父字已經在場時放行。
     const beltOpen =
       hasUsed((t) => chastityCloses(lex.byTag.get(t))) ||
@@ -5028,7 +5054,9 @@ export function drawOne(lex, settings, pinned, userBanned, rand, seed, opts) {
     }
     if (item.mutex === "held_prop") {
       const acts = usedActs(used, lex);
-      if (![...acts].some((a) => (ACT_PROP[a] || []).includes(item.tag))) return false;
+      // 電話不是拍照或直播的道具，活動清單裡沒有它。這道閘會讓它永遠抽不到。
+      // 它仍佔手持格，所以跟手機二選一。
+      if (item.tag !== "phone" && ![...acts].some((a) => (ACT_PROP[a] || []).includes(item.tag))) return false;
     }
     // 這兩個是 env prop，而且 mustDraw 跑在一般場景 fill 之前。只靠最後的
     // NEEDS_CONTEXT cleanup 不夠：mustDraw 會把抽中的字鎖住，錯場也不能刪。
@@ -6751,8 +6779,8 @@ export function drawOne(lex, settings, pinned, userBanned, rand, seed, opts) {
     takeFromPool(acts, 1, rand, commit, null, allow, mPre);
   }
   // 四肢都沒了，自慰和單人拳交都不成立。貞操帶是另一件事：下體鎖著就不要硬補插入。
-  // 只在完全沒有動作時，從不必第二個人、而且現在合法的字補一個（機器、觸手、道具、產卵）。
-  // 平常這段不跑，也不擲骰。
+  // 只在完全沒有動作時，從這份不用手的清單補一個。新的單人體位（灌腸、植卵）
+  // 不自動塞進來，避免以後每加一個字就改寫這條補法。
   if (
     heat === "sex" &&
     people === 1 &&
@@ -6760,9 +6788,7 @@ export function drawOne(lex, settings, pinned, userBanned, rand, seed, opts) {
     !used.has("chastity belt") &&
     !someUsed((it) => soloSex(it.tag) || it.mutex === "sex_act" || it.tag === "sex")
   ) {
-    const acts = lex.bySection.pose.filter(
-      (item) => item.mutex === "sex_act" && !(item.needs || []).includes("pair") && allow(item)
-    );
+    const acts = lex.bySection.pose.filter((item) => AMPUTEE_HANDLESS.has(item.tag) && allow(item));
     takeFromPool(acts, 1, rand, commit, null, allow, mPre);
   }
 
@@ -7040,6 +7066,32 @@ export function drawOne(lex, settings, pinned, userBanned, rand, seed, opts) {
       if (opts.length) commit(opts[Math.floor(gearRand() * opts.length)].tag);
     }
   }
+  // 枷鎖、搾乳也沒有白名單上的互斥格。不塞進上面那個池，口塞的比例才不會被稀釋。
+  if (Number.isFinite(seed) && heat === "sex" && Math.max(0, Number(counts.clothing) || 0) > 0) {
+    const lockRand = mulberry32(((seed >>> 0) ^ 0x6c6f636b) >>> 0);
+    if (lockRand() < 0.08) {
+      const opts = [];
+      for (const t of ["pillory", "stocks", "restraints", "milking machine", "breast pump"]) {
+        const item = lex.byTag.get(t);
+        if (item && !used.has(t) && !banned.has(t) && allow(item)) opts.push(item);
+      }
+      if (opts.length) commit(opts[Math.floor(lockRand() * opts.length)].tag);
+    }
+  }
+  // 光環、穿孔、OK繃、臂章、針沒有互斥格。放進衣服池會跟時代衣服同一階，幾乎每張都中。
+  // 另開亂數，大約一成的圖補一件。浴場不補，免得剛脫掉又戴回去。
+  if (Number.isFinite(seed) && Math.max(0, Number(counts.clothing) || 0) > 0) {
+    const accRand = mulberry32(((seed >>> 0) ^ 0x68616c6f) >>> 0);
+    const accKind = sceneClothLocked(used, mustPins(), lex, era, lockOn);
+    if (accKind !== "bath" && accKind !== "swim" && accRand() < 0.1) {
+      const opts = [];
+      for (const t of ["halo", "piercing", "ear piercing", "tongue piercing", "bandaid", "armband", "needle"]) {
+        const item = lex.byTag.get(t);
+        if (item && !used.has(t) && !banned.has(t) && allow(item)) opts.push(item);
+      }
+      if (opts.length) commit(opts[Math.floor(accRand() * opts.length)].tag);
+    }
+  }
   {
     const tusks = lex.byTag.get("tusks");
     if (Number.isFinite(seed) && tusks && !used.has("tusks") && !banned.has("tusks") && allow(tusks)) {
@@ -7137,7 +7189,9 @@ export function drawOne(lex, settings, pinned, userBanned, rand, seed, opts) {
                  it.group === "underwear");
       const covered = [...used].some((t) => {
         const it = lex.byTag.get(t);
-        return it && coversLowerBody(it) && !isUnderwearItem(it);
+        // 「只穿內衣」自己佔連身格，coversLowerBody 會把它當成外衣。
+        // 那一句的意思正好相反：內衣就是身上的衣服，不該拿它當理由把內衣刪掉。
+        return it && t !== "underwear only" && coversLowerBody(it) && !isUnderwearItem(it);
       });
       if (covered) {
         for (const t of [...used]) {
@@ -7201,6 +7255,29 @@ export function drawOne(lex, settings, pinned, userBanned, rand, seed, opts) {
           }
         }
       }
+    }
+  }
+
+  // 上面已不再把「只穿內衣」當成外衣。這裡補的是另一種空話：
+  // 沒有互斥格的布料和襪子把衣服額度填滿，內衣從頭就沒抽到。
+  // 水景不補。已經有外衣遮住下半身的也不補，免得內褲塞回衣服底下。
+  if (used.has("underwear only") && !isBathScene(used) && !isSwimScene(used)) {
+    const wornUw = (it) =>
+      !!it &&
+      it.group === "underwear" &&
+      !it.tag.startsWith("no ") &&
+      it.tag !== "panties aside" &&
+      it.tag !== "panties around one leg" &&
+      it.tag !== "bra visible through clothes";
+    const hasUnder = [...used].some((t) => wornUw(lex.byTag.get(t)));
+    const covered = [...used].some((t) => {
+      const it = lex.byTag.get(t);
+      return it && t !== "underwear only" && coversLowerBody(it) && it.group !== "underwear" &&
+        it.mutex !== "underwear_top" && it.mutex !== "underwear_bottom";
+    });
+    if (!hasUnder && !covered) {
+      const pool = lex.bySection.clothing.filter((item) => wornUw(item) && allow(item));
+      takeFromPool(pool, 1, rand, commit, null, allow, mPre);
     }
   }
 

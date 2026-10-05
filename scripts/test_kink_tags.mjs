@@ -113,6 +113,7 @@ const LIMB = ["handjob", "walking", "running", "jumping", "tiptoes", "footjob", 
 const AMPUTEE_WORN = [
   "wide sleeves", "long sleeves", "short sleeves", "sleeves rolled up",
   "detached sleeves", "puffy sleeves", "wrist cuffs", "spreader bar",
+  "pillory", "stocks",
 ];
 const BELT_OK = new Set([
   "paizuri", "paizuri under clothes", "perpendicular paizuri", "straddling paizuri",
@@ -128,6 +129,8 @@ const BELT_CROTCH = new Set([
   "clothed sex", "stealth sex", "spread pussy", "spread ass",
   "after vaginal", "after anal", "cum in pussy", "cum on pussy", "cum in ass",
   "prolapse", "anal prolapse", "butt plug", "anal beads", "crotch rope", "stomach bulge",
+  "pussy peek", "penetration through clothes", "knotting", "peeing", "excessive pussy juice",
+  "bestiality", "necrophilia", "scat", "unbirthing",
 ]);
 function beltClash(tag, have) {
   if (BELT_OK.has(tag)) return false;
@@ -376,6 +379,7 @@ eq("explicit does not block guro", blocked("guro", "explicit"), false);
   const HANDLESS = [
     "object insertion", "tentacle sex", "sex machine", "large insertion",
     "urethral insertion", "egg laying", "nipple penetration",
+    "enema", "egg implantation",
   ];
   let ampNoAct = 0;
   for (const d of sweep(sex, pinsOf("quadruple amputee"), 40, 8100)) {
@@ -480,6 +484,213 @@ eq("explicit does not block guro", blocked("guro", "explicit"), false);
 
   const pinDungeon = tagSet(draw(base(), pinsOf("dungeon"), 71));
   ok("dungeon implies indoors", pinDungeon.has("dungeon") && pinDungeon.has("indoors") && !pinDungeon.has("outdoors"));
+}
+
+const CSV_NEW = [
+  "halo", "piercing", "ear piercing", "bandaid", "armband", "tongue piercing", "needle",
+  "milking machine", "pillory", "stocks", "breast pump", "restraints", "phone",
+  "knees up", "minigirl", "giantess", "long nipples", "bike shorts", "denim shorts",
+  "hakama skirt", "dolphin shorts", "upside-down", "sideways", "vanishing point",
+  "heart", "motion lines", "spoken heart", "slime (substance)", "symbol-shaped pupils",
+  "slit pupils", "jitome", "ringed eyes", "denim", "shiny clothes", "leather", "satin",
+  "smirk", "evil smile", "annoyed", "yandere", "crazy smile", "soles", "no shoes",
+  "slippers", "stiletto heels", "pussy peek", "floor", "vacuum bed",
+  "split-color hair", "white thighhighs", "zettai ryouiki", "torn pantyhose",
+  "fishnet pantyhose", "loose socks", "over-kneehighs", "eyeliner", "red lips", "mascara",
+  "living clothes", "leather jacket", "trench coat", "fur coat", "space", "stage",
+  "school", "tentacle pit", "train station", "animal ears", "tail", "horns", "wings",
+  "cat girl", "fox girl", "demon horns", "demon wings", "dragon girl", "rabbit girl",
+  "wolf girl", "angel wings", "dog girl", "kitsune", "mermaid", "robot joints", "harpy",
+  "peeing", "bestiality", "animal penis", "transformation", "suspension", "ovum",
+  "fertilization", "horse penis", "penis size difference", "sperm cell", "slapping",
+  "lactation through clothes", "objectification", "cum in nose", "nipple pull",
+  "human furniture", "cumdump", "cum through clothes", "excessive pussy juice", "cum bubble",
+  "crucifixion", "enema", "petrification", "scat", "double anal", "orgasm denial",
+  "stomach punch", "parasite", "knotting", "penetration through clothes", "necrophilia",
+  "double vaginal", "whipping", "electrostimulation", "anal fisting", "encasement",
+  "wax play", "egg implantation", "sex doll", "stomach (organ)", "unbirthing",
+  "urethral fingering", "forniphilia", "navel penetration", "digestion", "injury",
+  "whip marks", "cloud", "aurora", "realistic", "1980s (style)", "v arms",
+  "hands on own thighs", "twilight", "sailor collar", "halterneck", "tube top",
+  "striped panties", "side-tie panties", "highleg panties", "string panties",
+  "lace-trimmed panties", "negligee", "g-string", "strapless bra",
+];
+{
+  const missing = CSV_NEW.filter((tag) => !item(tag));
+  eq("csv tags are in the lexicon", missing, []);
+  const themes = [
+    "peeing", "bestiality", "transformation", "suspension", "orgasm denial", "knotting",
+    "penetration through clothes", "navel penetration", "forniphilia", "human furniture",
+    "pussy peek", "slapping", "whipping",
+  ];
+  const themeSlot = themes.filter((tag) => item(tag).mutex === "sex_act");
+  eq("sex themes do not take the sex act slot", themeSlot, []);
+  eq("double anal takes the act slot and needs two men", {
+    mutex: item("double anal").mutex,
+    needs: item("double anal").needs,
+    implies: item("double anal").implies,
+  }, {
+    mutex: "sex_act",
+    needs: ["female", "male", "pair", "group", "2male"],
+    implies: ["anal"],
+  });
+  eq("double vaginal matches double anal", {
+    mutex: item("double vaginal").mutex,
+    needs: item("double vaginal").needs,
+    implies: item("double vaginal").implies,
+  }, {
+    mutex: "sex_act",
+    needs: ["female", "male", "pair", "group", "2male"],
+    implies: ["vaginal"],
+  });
+  for (const tag of ["animal penis", "horse penis", "bestiality", "knotting"]) {
+    ok(`${tag} does not imply a human penis`, !(item(tag).implies || []).includes("penis"));
+    ok(`${tag} does not require a boy`, !(item(tag).needs || []).includes("male"));
+  }
+  eq("horse penis implies animal penis", item("horse penis").implies, ["animal penis"]);
+  eq("sailor collar does not imply a pet collar", item("sailor collar").implies || [], []);
+  eq("sailor collar is a fabric detail", item("sailor collar").mutex, null);
+  eq("hakama skirt implies skirt and not hakama", item("hakama skirt").implies, ["skirt"]);
+  eq("tube top occupies the top slot", item("tube top").mutex, "top");
+  eq("phone shares the held prop slot", item("phone").mutex, "held_prop");
+  ok("looking away stays retired in favor of averting eyes", !item("looking away") && !!item("averting eyes"));
+  eq("fur coat does not pull the modern-only coat", item("fur coat").implies || [], []);
+  eq("g-string implies thong", item("g-string").implies, ["thong"]);
+  eq("cat girl implies animal ears and not monster girl", item("cat girl").implies, ["animal ears"]);
+  eq("kitsune does not imply fox girl", item("kitsune").implies, ["animal ears"]);
+  eq("yandere does not take the expression slot", item("yandere").mutex, null);
+  eq("tentacle pit stays sex-only and indoors", {
+    heat: item("tentacle pit").heat,
+    implies: item("tentacle pit").implies,
+  }, { heat: SEX, implies: ["indoors"] });
+  eq("vacuum bed stays sex-only", item("vacuum bed").heat, SEX);
+  eq("space is neither indoors nor outdoors", item("space").implies || [], []);
+  eq("cloud can sit with a sky", item("cloud").mutex, null);
+  eq("heart takes the effect slot", item("heart").mutex, "effect");
+  eq("slime substance does not imply slime girl", item("slime (substance)").implies || [], []);
+  eq("realistic is a pin-only style", item("realistic").section, "quality");
+  ok("negative still says photorealistic", data.negative.includes("photorealistic"));
+  ok("negative does not ban the tag realistic", !data.negative.split(", ").map((t) => t.trim()).includes("realistic"));
+
+  eq("striped panties are explicit like other panties", blocked("striped panties", "sensitive"), true);
+  eq("negligee is sensitive, not explicit-only", blocked("negligee", "general") && !blocked("negligee", "sensitive"), true);
+  eq("fishnet pantyhose is sensitive, not explicit-only", blocked("fishnet pantyhose", "general") && !blocked("fishnet pantyhose", "sensitive"), true);
+  eq("injury is allowed at general", blocked("injury", "general"), false);
+  eq("whip marks are explicit-only", blocked("whip marks", "sensitive"), true);
+  eq("bestiality is explicit-only", blocked("bestiality", "sensitive"), true);
+  eq("tentacle pit is explicit-only", blocked("tentacle pit", "sensitive"), true);
+  eq("long nipples are explicit-only", blocked("long nipples", "sensitive"), true);
+
+  const sex = base({ heats: ["sex"], weights: { tease: 0, flash: 0, sex: 1, activity: 0 } });
+  const pair = base({
+    girl: true,
+    boy: true,
+    heats: ["sex"],
+    weights: { tease: 0, flash: 0, sex: 1, activity: 0 },
+  });
+  const tease = base({ heats: ["tease"], weights: { tease: 1, flash: 0, sex: 0, activity: 0 } });
+  let teaseLeak = 0;
+  for (const d of sweep(tease, new Set(), 30, 13000)) {
+    const have = tagSet(d);
+    for (const t of ["tentacle pit", "vacuum bed", "pillory", "bestiality", "enema"]) {
+      if (have.has(t)) teaseLeak += 1;
+    }
+  }
+  eq("tease does not draw the new sex-only places or gear", teaseLeak, 0);
+
+  let race = 0;
+  for (const d of sweep(base(), new Set(), 40, 13100)) {
+    if (tagSet(d).has("cat girl") || tagSet(d).has("mermaid") || tagSet(d).has("kitsune")) race += 1;
+  }
+  eq("normal mode does not auto-draw the new races", race, 0);
+
+  const pinCat = tagSet(draw(base(), pinsOf("cat girl"), 81));
+  ok("pinned cat girl keeps animal ears and not monster girl", pinCat.has("cat girl") && pinCat.has("animal ears") && !pinCat.has("monster girl"));
+
+  const castKey = (set) =>
+    ["1girl", "2girls", "3girls", "4girls", "5girls", "1boy", "2boys", "3boys"].filter((t) => set.has(t)).join(",");
+  let horseBad = 0;
+  for (let i = 0; i < 20; i += 1) {
+    const seed = 16000 + i;
+    const pinned = tagSet(draw(sex, pinsOf("horse penis"), seed));
+    const bare = tagSet(draw(sex, new Set(), seed));
+    if (!pinned.has("horse penis") || !pinned.has("animal penis")) horseBad += 1;
+    if (pinned.has("1boy") || pinned.has("2boys") || pinned.has("3boys") || pinned.has("penis")) horseBad += 1;
+    if (castKey(pinned) !== castKey(bare)) horseBad += 1;
+  }
+  eq("pinned horse penis keeps the girl cast and does not add a human penis", horseBad, 0);
+
+  const pinCollar = tagSet(draw(base(), pinsOf("sailor collar"), 83));
+  ok("pinned sailor collar does not add a pet collar", pinCollar.has("sailor collar") && !pinCollar.has("collar"));
+
+  let giant = 0;
+  for (const d of sweep(base(), pinsOf("minigirl"), 20, 14000)) {
+    const have = tagSet(d);
+    if (!have.has("minigirl") || have.has("giantess")) giant += 1;
+  }
+  eq("pinned minigirl never draws giantess", giant, 0);
+
+  let pupils = 0;
+  for (const d of sweep(base(), pinsOf("slit pupils"), 20, 14100)) {
+    const have = tagSet(d);
+    if (!have.has("slit pupils")) pupils += 1;
+    if (have.has("symbol-shaped pupils") || have.has("ringed eyes")) pupils += 1;
+  }
+  eq("pinned slit pupils do not stack with other pupil shapes", pupils, 0);
+
+  let cloth = 0;
+  for (const d of sweep(base(), pinsOf("denim"), 20, 14200)) {
+    const have = tagSet(d);
+    if (!have.has("denim")) cloth += 1;
+    for (const t of ["leather", "satin", "shiny clothes", "latex"]) if (have.has(t)) cloth += 1;
+  }
+  eq("pinned denim does not stack with another material", cloth, 0);
+
+  const pinSpace = tagSet(draw(base(), pinsOf("space"), 84));
+  ok("pinned space is not indoors or outdoors", pinSpace.has("space") && !pinSpace.has("indoors") && !pinSpace.has("outdoors"));
+
+  let bedOut = 0;
+  for (const d of sweep(sex, pinsOf("vacuum bed"), 12, 15000)) {
+    const have = tagSet(d);
+    if (!have.has("vacuum bed") || !have.has("indoors") || have.has("outdoors")) bedOut += 1;
+  }
+  eq("vacuum bed stays indoors", bedOut, 0);
+
+  let pit = 0;
+  for (const d of sweep(sex, pinsOf("tentacle pit"), 12, 15100)) {
+    const have = tagSet(d);
+    if (!have.has("tentacle pit") || !have.has("indoors") || have.has("outdoors")) pit += 1;
+  }
+  eq("tentacle pit is an indoor place", pit, 0);
+
+  let denial = 0;
+  for (const d of sweep(pair, pinsOf("chastity belt", "orgasm denial"), 12, 15200)) {
+    const have = tagSet(d);
+    if (!have.has("chastity belt") || !have.has("orgasm denial")) denial += 1;
+  }
+  eq("a chastity belt can keep orgasm denial", denial, 0);
+
+  let peek = 0;
+  for (const d of sweep(sex, pinsOf("chastity belt"), 20, 15300)) {
+    const have = tagSet(d);
+    for (const t of ["pussy peek", "peeing", "knotting", "bestiality", "scat", "unbirthing", "necrophilia"]) {
+      if (have.has(t)) peek += 1;
+    }
+  }
+  eq("a chastity belt does not auto-draw crotch exposure", peek, 0);
+
+  const pinNavel = tagSet(draw(sex, pinsOf("chastity belt", "navel penetration"), 85));
+  ok("navel penetration does not need the belt opened", pinNavel.has("chastity belt") && pinNavel.has("navel penetration"));
+
+  let ampHand = 0;
+  for (const d of sweep(sex, pinsOf("quadruple amputee"), 20, 15400)) {
+    const have = tagSet(d);
+    if (d.people >= 2) continue;
+    for (const t of ["anal fisting", "urethral fingering", "slapping", "nipple pull", "v arms", "pillory", "stocks", "hands on own thighs"]) {
+      if (have.has(t)) ampHand += 1;
+    }
+  }
+  eq("a solo quadruple amputee does not get partner-hand acts or arm binds", ampHand, 0);
 }
 
 if (failed) {
