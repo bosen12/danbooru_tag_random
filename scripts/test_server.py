@@ -809,11 +809,11 @@ _live = [t.strip() for t in server.NEGATIVE.split(",") if t.strip()]
 _requested_base_negative = [
     "worst quality", "bad quality", "worst detail", "sketch", "bad hands", "extra digits",
     "censored", "bar censor", "mosaic censoring", "watermark", "signature", "english text",
-    "speech bubble", "multiple views", "3d", "photorealistic", "cross-section", "x-ray", "inset",
+    "speech bubble", "3d", "photorealistic", "inset",
     "loli", "child", "aged down",
 ]
 ok(
-    "基礎 negative prompt 使用指定的 22 個 tag 且順序一致",
+    "基礎 negative prompt 使用指定的 19 個 tag 且順序一致",
     _live == _requested_base_negative,
     f"實際為 {_live}",
 )

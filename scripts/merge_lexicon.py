@@ -28,6 +28,14 @@ CLOTHING_STATE = {
     "underwear only",
     "see-through clothes",
     "open clothes",
+    # 這幾個是狀態或刑具，不是可以穿去任何場合的衣服。不進 CLOTHING_STATE 的話
+    # widen_heat 會把它們攤成三檔。
+    "crotchless",
+    "chastity belt",
+    "gag",
+    "spreader bar",
+    "nipple tassels",
+    "public vibrator",
     "open shirt",
     "open kimono",
     "clothes between breasts",
@@ -56,7 +64,7 @@ GATES = {"any", "female", "male"}
 NEGATIVE = (
     "worst quality, bad quality, worst detail, sketch, bad hands, extra digits, "
     "censored, bar censor, mosaic censoring, watermark, signature, english text, "
-    "speech bubble, multiple views, 3d, photorealistic, cross-section, x-ray, inset, "
+    "speech bubble, 3d, photorealistic, inset, "
     "loli, child, aged down"
 )
 
@@ -116,6 +124,7 @@ UMBRELLA = {
     "oral",
     "threesome",
     "monster boy",
+    "monster girl",
     "fat",
     "otaku",
 }
@@ -739,6 +748,7 @@ EXPRESSION = {
     "ahegao",
     "torogao",
     "naughty face",
+    "crying with eyes open",
     "embarrassed",
     "shy",
     "come hither",
@@ -815,12 +825,29 @@ SEX_ACT = {
     "straddling paizuri",
     "mutual masturbation",
     "tentacle sex",
+    "sex machine",
+    "large insertion",
+    "triple penetration",
+    "urethral insertion",
+    "armpit sex",
+    "egg laying",
+    "cervical penetration",
+    "nipple penetration",
+    "fisting",
+    "vore",
 }
 
 SOLO_SEX_ACT = {
     "object insertion",
     # 觸手不是第二個人。佔住 sex_act，但不要求 pair，也不把男生拉進來。
     "tentacle sex",
+    # 機器、道具、自己的身體。不把第二個人拉進來。
+    "sex machine",
+    "large insertion",
+    "urethral insertion",
+    "egg laying",
+    "nipple penetration",
+    "fisting",
 }
 
 NEEDS_MALE = {
@@ -946,6 +973,10 @@ NEEDS_MALE = {
     "holding another's wrist",
     "hand on another's head",
     "grabbing another's hair",
+    "triple penetration",
+    "armpit sex",
+    "cervical penetration",
+    "cum inflation",
 }
 
 NEEDS_FEMALE = {
@@ -1055,6 +1086,27 @@ NEEDS_FEMALE = {
     "holding another's wrist",
     "hand on another's head",
     "grabbing another's hair",
+    "sex machine",
+    "large insertion",
+    "triple penetration",
+    "urethral insertion",
+    "armpit sex",
+    "egg laying",
+    "cervical penetration",
+    "nipple penetration",
+    "fisting",
+    "inflation",
+    "cum inflation",
+    "prolapse",
+    "anal prolapse",
+    "breast expansion",
+    "pubic tattoo",
+    "tally",
+    "quadruple amputee",
+    "crotchless",
+    "chastity belt",
+    "nipple tassels",
+    "public vibrator",
 }
 
 NEEDS_PAIR = {
@@ -1149,6 +1201,7 @@ NEEDS_GROUP = {
     "foursome",
     "fivesome",
     "surrounded by penises",
+    "triple penetration",
 }
 
 NEEDS_CROWD = {
@@ -1165,6 +1218,7 @@ NEEDS_2MALE = {
     "double handjob",
     "surrounded by penises",
     "bukkake",
+    "triple penetration",
 }
 
 NEEDS_2FEMALE = {
@@ -1260,6 +1314,9 @@ NARROW_HEAT = {
     "condom in mouth": ["sex"],
     "condom wrapper": ["sex"],
     "condom box": ["sex"],
+    # 場地跟傢俱本來會被 widen 成三檔。這兩個只在性愛成立。
+    "glory hole": ["sex"],
+    "wooden horse": ["sex"],
 }
 
 
@@ -1517,7 +1574,7 @@ def extra_look_tags() -> list[dict]:
     查掉的：multicolored background、starry background（deprecated）；oil painting (medium)、
     traditional media、anime screencap、official art、game cg（category 5，不是一般 tag）；
     muted color、vibrant colors、cinematic lighting、dramatic lighting、dynamic angle（0 張）；
-    rim lighting（不存在）。sketch 與 multiple views 在共同負面裡，不收。
+    rim lighting（不存在）。sketch 仍在共同負面，不收。multiple views 已改成可抽的鏡頭。
 
     背景：純色／圖樣背景就是「沒有場景」，所以它除了自己的 background 格，還佔住
     place、in_out、day_night —— 有白背景就不會再抽出臥室、室內或夜晚，反過來也一樣。
@@ -2980,6 +3037,139 @@ def extra_erotic_tags() -> list[dict]:
     ]
 
 
+def extra_kink_tags() -> list[dict]:
+    """使用者點名的 56 個現役 Danbooru 字（2026-10-05 對過 category 0、有圖、未棄用）。
+
+    尺度：日常構圖與種族走三檔；破損、挖洞、露背停在敏感；插入、刑具、獵奇只進性愛，
+    分級再由 rating.js 收成 explicit。
+    互斥：不開新格。鏡頭共用 camera，種族共用 race，衣服佔既有主衣格或布料層。
+    洗腦、催眠、羞辱、奴隸、獵奇、膨脹、脫垂不進 sex_act，才不會把體位擠掉。
+    口塞與分腿棍不 implies bondage：bondage 要 pair，單人戴口塞就會整筆失敗。
+    扶他只標身體，不暗示 penis。penis 在這套引擎是「有男生」，兩套意思疊在一起會把男孩拉進來。
+    """
+    all_h = list(HEATS)
+    sex = ["sex"]
+    flash = ["flash", "sex"]
+    modern = ["modern"]
+    any_era = ["any"]
+
+    def row(tag, section, zh, mutex=None, heat=None, gate="any", layer="normal",
+            implies=None, needs=None, era=None):
+        return {
+            "tag": tag,
+            "section": section,
+            "gate": gate,
+            "heat": list(heat or all_h),
+            "mutex": mutex,
+            "bind": [],
+            "implies": implies or [],
+            "layer": layer,
+            "era": era or any_era,
+            "needs": needs or [],
+            "zh": zh,
+        }
+
+    return [
+        # ---- 鏡頭。multiple views / 剖面 / 透視已從共同負面移出，否則正片會被負片抵銷。
+        row("multiple views", "pose", "多視角", mutex="camera"),
+        row("split screen", "pose", "分割畫面", mutex="camera"),
+        row("pov hands", "pose", "第一人稱手", mutex="camera", implies=["pov"]),
+        # 剖面跟透視是性愛圖解，不是鏡頭格，所以可以跟「從側面」共存。
+        row("cross-section", "pose", "剖面圖", heat=sex),
+        row("x-ray", "pose", "透視圖", heat=sex),
+
+        # ---- 表情
+        row("crying with eyes open", "pose", "睜眼流淚", mutex="expression", implies=["crying"]),
+
+        # ---- 種族。正常模式不自動抽，跟怪物男同一條；多元模式女角也擲得到。
+        # 魔物娘是傘，mutex 清空，由具體種族 implies 進來。乳牛娘是獸耳，不掛這把傘。
+        row("monster girl", "feature", "魔物娘", gate="female", needs=["female"]),
+        row("demon girl", "feature", "惡魔娘", mutex="race", gate="female",
+            implies=["monster girl"], needs=["female"]),
+        row("slime girl", "feature", "史萊姆娘", mutex="race", gate="female",
+            implies=["monster girl"], needs=["female"]),
+        row("cow girl", "feature", "乳牛娘", mutex="race", gate="female", needs=["female"]),
+
+        # ---- 身體。扶他是女體，不佔種族格，也不要求男生。
+        row("futanari", "feature", "扶他", gate="female", needs=["female"]),
+        row("faceless male", "feature", "無臉男", gate="male", needs=["male"]),
+        row("quadruple amputee", "feature", "四肢截斷", gate="female", heat=sex, needs=["female"]),
+        row("breast expansion", "feature", "乳房膨脹", gate="female", heat=sex,
+            implies=["large breasts"], needs=["female"]),
+
+        # ---- 皮膚。淫紋含 pubic，分組要在 groups.py 先認 SKIN，才不會被收成身材。
+        row("pubic tattoo", "feature", "淫紋", gate="female", heat=sex, needs=["female"]),
+        row("heart tattoo", "feature", "愛心刺青"),
+        row("body writing", "feature", "身體塗鴉"),
+        row("tally", "feature", "正字記號", gate="female", heat=sex, needs=["female"]),
+
+        # ---- 衣服。破衣是疊在衣服上的布料狀態，不佔布料互斥格。
+        row("torn clothes", "clothing", "破衣", layer="garment"),
+        row("cleavage cutout", "clothing", "胸口挖洞", mutex="top", gate="female",
+            layer="garment", era=modern, needs=["female"]),
+        row("virgin killer sweater", "clothing", "處男殺手毛衣", mutex="top", gate="female",
+            layer="garment", implies=["sweater"], era=modern, needs=["female"]),
+        row("backless outfit", "clothing", "露背裝", mutex="onepiece", gate="female",
+            layer="garment", era=modern, needs=["female"]),
+        row("o-ring bikini", "clothing", "O環比基尼", mutex="onepiece", gate="female",
+            layer="garment", implies=["bikini"], era=modern, needs=["female"]),
+        row("reverse bunnysuit", "clothing", "逆兔女郎", mutex="onepiece", gate="female",
+            layer="garment", era=modern, needs=["female"]),
+        row("harem outfit", "clothing", "後宮舞孃裝", mutex="onepiece", gate="female",
+            layer="garment", needs=["female"]),
+        # 跟既有的開襠內褲搶同一格內衣。
+        row("crotchless", "clothing", "開襠", mutex="underwear_bottom", gate="female",
+            layer="garment", heat=flash, era=modern, needs=["female"]),
+        row("chastity belt", "clothing", "貞操帶", mutex="underwear_bottom", gate="female",
+            layer="garment", heat=sex, era=modern, needs=["female"]),
+        row("gag", "clothing", "口塞", layer="accessory", heat=sex),
+        row("spreader bar", "clothing", "分腿棍", layer="accessory", heat=sex),
+        row("nipple tassels", "clothing", "乳貼流蘇", layer="accessory", gate="female",
+            heat=flash, era=modern, needs=["female"]),
+        row("public vibrator", "clothing", "公共跳蛋", layer="accessory", gate="female",
+            heat=sex, implies=["vibrator"], era=modern, needs=["female"]),
+
+        # ---- 走光
+        row("public nudity", "pose", "公開裸體", heat=flash, implies=["nude"]),
+
+        # ---- 性愛主題（不佔體位格）
+        row("mind control", "pose", "洗腦", heat=sex),
+        row("hypnosis", "pose", "催眠", heat=sex, implies=["mind control"]),
+        row("corruption", "pose", "惡墮", heat=sex),
+        row("humiliation", "pose", "羞辱", heat=sex),
+        row("slave", "pose", "奴隸", heat=sex),
+        row("guro", "pose", "獵奇", heat=sex),
+        row("inflation", "pose", "肚子膨脹", gate="female", heat=sex, needs=["female"]),
+        row("cum inflation", "pose", "灌精鼓肚", gate="female", heat=sex,
+            implies=["cum", "inflation"], needs=["female", "male"]),
+        row("prolapse", "pose", "脫垂", gate="female", heat=sex, needs=["female"]),
+        row("anal prolapse", "pose", "肛門脫垂", gate="female", heat=sex,
+            implies=["prolapse"], needs=["female"]),
+
+        # ---- 性行為本身（sex_act）。單人的進 SOLO_SEX_ACT。
+        row("sex machine", "pose", "性愛機器", gate="female", heat=sex, era=modern, needs=["female"]),
+        row("large insertion", "pose", "巨大插入", gate="female", heat=sex,
+            implies=["object insertion"], needs=["female"]),
+        row("urethral insertion", "pose", "尿道插入", gate="female", heat=sex, needs=["female"]),
+        row("egg laying", "pose", "產卵", gate="female", heat=sex, needs=["female"]),
+        row("nipple penetration", "pose", "乳頭插入", gate="female", heat=sex, needs=["female"]),
+        row("fisting", "pose", "拳交", gate="female", heat=sex, needs=["female"]),
+        row("vore", "pose", "吞食", heat=sex),
+        row("armpit sex", "pose", "腋交", gate="female", heat=sex, needs=["female", "male", "pair"]),
+        row("cervical penetration", "pose", "子宮姦", gate="female", heat=sex,
+            implies=["vaginal"], needs=["female", "male", "pair"]),
+        row("triple penetration", "pose", "三穴同插", gate="female", heat=sex,
+            needs=["female", "male", "pair", "group", "2male"]),
+
+        # ---- 場地與傢俱
+        row("dungeon", "env", "地牢", mutex="place", implies=["indoors"]),
+        row("prison cell", "env", "牢房", mutex="place", implies=["indoors"],
+            era=["modern", "medieval", "victorian"]),
+        row("glory hole", "env", "牆洞", mutex="place", implies=["indoors"], heat=sex, era=modern),
+        row("wooden horse", "env", "木馬刑具", mutex="furniture", implies=["indoors"], heat=sex),
+    ]
+
+
 def main() -> None:
     rows: list[dict] = []
     for path in sorted(PARTS.glob("*.json")):
@@ -3001,6 +3191,7 @@ def main() -> None:
     rows.extend(extra_corpus_tags())
     rows.extend(extra_fluid_tags())
     rows.extend(extra_erotic_tags())
+    rows.extend(extra_kink_tags())
     rows.extend(extra_loli_tags())
     rows.extend(extra_shota_tags())
     rows.extend(extra_style_tags())

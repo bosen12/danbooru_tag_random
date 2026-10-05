@@ -128,6 +128,8 @@ FABRIC = {
     "puffy sleeves",
     # 毛邊疊在衣服上，不跟「透視／乳膠」搶布料那一格。
     "fur trim",
+    # 破衣疊在任何衣服上，不跟乳膠／網襪搶布料那一格。
+    "torn clothes",
 }
 
 MAKEUP = {
@@ -278,6 +280,10 @@ SKIN = {
     "body freckles",
     "scar",
     "tattoo",
+    "pubic tattoo",
+    "heart tattoo",
+    "body writing",
+    "tally",
     "steaming body",
     "wet hair",
 }
@@ -427,6 +433,29 @@ SEX = {
     "grabbing from behind",
     "hickey",
     "spanking",
+    # 性愛主題與結果。heat 是 ["sex"] 時本來就會進 sex，寫在這裡是怕以後被攤寬。
+    "cross-section",
+    "x-ray",
+    "mind control",
+    "hypnosis",
+    "corruption",
+    "humiliation",
+    "slave",
+    "guro",
+    "inflation",
+    "cum inflation",
+    "prolapse",
+    "anal prolapse",
+    "sex machine",
+    "large insertion",
+    "urethral insertion",
+    "egg laying",
+    "nipple penetration",
+    "fisting",
+    "vore",
+    "armpit sex",
+    "cervical penetration",
+    "triple penetration",
 }
 
 
@@ -462,7 +491,7 @@ def assign_group(item: dict) -> str:
             return "sex"
         if mx == "job":
             return "job"
-        if mx == "race" or tag == "monster boy":
+        if mx == "race" or tag in {"monster boy", "monster girl"}:
             return "race"
         if mx == "male_build" or tag in {
             "ugly bastard",
@@ -486,6 +515,9 @@ def assign_group(item: dict) -> str:
             return "hair_style"
         if tag in MAKEUP:
             return "makeup"
+        # 要在「名字裡有 pubic／breast 就當身材」之前。淫紋是標記，不是體型。
+        if tag in SKIN:
+            return "skin"
         if mx == "height" or tag in {"loli", "tall female", "petite"}:
             return "body_f"
         if mx == "height_m" or tag in {"shota", "tall male", "short male"}:
@@ -524,8 +556,8 @@ def assign_group(item: dict) -> str:
             "testicles",
         }:
             return "body_m"
-        if tag in SKIN:
-            return "skin"
+        if tag in {"futanari", "quadruple amputee"}:
+            return "body_f"
         return "other"
 
     if sec == "pose":

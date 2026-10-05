@@ -866,6 +866,9 @@ const INDOOR_ROOM = new Set([
   "supermarket",
   "internet cafe",
   "prison",
+  "prison cell",
+  "dungeon",
+  "glory hole",
   "casino",
   "nightclub",
   "laboratory",
@@ -1036,7 +1039,7 @@ const FISH_PLACE = new Set(["beach", "ocean", "poolside", "pool"]);
 // 仍會把現代的煮飯換成廚房，所以現代的測試一個字都不會變。不把 courtyard
 // 再加進女僕場地：那會讓女僕去運動，見 JOB_PLACE.maid。
 const COOK_PLACE = new Set(["kitchen", "castle", "palace", "courtyard", "ryokan"]);
-const INDOOR_FURN = new Set(["on bed", "on chair", "office chair", "gaming chair", "swivel chair", "bunk bed", "on couch", "on desk"]);
+const INDOOR_FURN = new Set(["on bed", "on chair", "office chair", "gaming chair", "swivel chair", "bunk bed", "on couch", "on desk", "wooden horse"]);
 const DRY_NO_WATER = new Set([
   "airplane interior",
   "cockpit",
@@ -2318,6 +2321,53 @@ const HAND_GESTURE = new Set([
   "bra pull",
   "wedgie",
 ]);
+const MALE_FACE = new Set(["facial hair", "stubble", "beard", "goatee", "mustache"]);
+const GAG_BLOCKS = new Set([
+  "fellatio", "deepthroat", "irrumatio", "cunnilingus", "anilingus",
+  "kiss", "french kiss", "kissing neck", "licking penis", "imminent fellatio",
+]);
+const NOT_PUBLIC_SCENE = new Set([
+  "bedroom", "hotel room", "love hotel", "bathroom", "shower", "bathtub", "on bed", "bed",
+]);
+const AMPUTEE_MOVE = new Set(["walking", "running", "jumping", "tiptoes", "footjob", "thigh sex", "leg lock"]);
+// 穿在手上、臂上、或綁在兩腿之間的東西。無袖上衣不算。
+const AMPUTEE_WORN = new Set([
+  "wide sleeves", "long sleeves", "short sleeves", "sleeves rolled up",
+  "detached sleeves", "puffy sleeves", "wrist cuffs", "spreader bar",
+]);
+// 貞操帶蓋住的是她的下體。口交、乳交、手交、足交、腋交、乳頭插入這類不開鎖。
+// 人數標籤（3P、亂交）不在這裡：它們只是在「已經有合法行為」時順便出現。
+const CHASTITY_OK = new Set([
+  "paizuri", "paizuri under clothes", "perpendicular paizuri", "straddling paizuri",
+  "fellatio", "deepthroat", "irrumatio", "imminent fellatio", "licking penis", "oral",
+  "handjob", "double handjob", "two-handed handjob", "cooperative handjob", "nursing handjob",
+  "footjob", "armpit sex", "nipple penetration", "69", "vore",
+  "male masturbation", "testicle sucking", "testicle grab",
+]);
+// 沒有佔住性愛動作格、但一樣要打開帶子的字。隔著衣服自慰留著：那是頂著帶子磨。
+const CHASTITY_CROTCH = new Set([
+  "masturbation", "female masturbation", "fingering", "anal fingering",
+  "hand in panties", "grinding",
+  "guided penetration", "imminent penetration", "deep penetration",
+  "clothed sex", "stealth sex", "spread pussy", "spread ass",
+  "after vaginal", "after anal", "cum in pussy", "cum on pussy", "cum in ass",
+  "prolapse", "anal prolapse", "butt plug", "anal beads", "crotch rope", "stomach bulge",
+]);
+
+function needsLimbs(item) {
+  if (!item) return false;
+  if (AMPUTEE_MOVE.has(item.tag) || AMPUTEE_WORN.has(item.tag)) return true;
+  if (BOTH_ARMS.has(item.tag) || HAND_GESTURE.has(item.tag) || ARM_POSE.has(item.tag)) return true;
+  if (NEEDS_FREE_HAND.has(item.tag) || HANDS_BUSY_ACT.has(item.tag)) return true;
+  return item.mutex === "feet" || item.mutex === "legs" || item.mutex === "hands";
+}
+
+function chastityCloses(item) {
+  if (!item || item.tag === "chastity belt" || item.tag === "sex") return false;
+  if (CHASTITY_OK.has(item.tag)) return false;
+  if (item.mutex === "sex_act") return true;
+  return CHASTITY_CROTCH.has(item.tag);
+}
 
 function extraMutex(item) {
   if (item._mx) return item._mx;
@@ -2343,6 +2393,9 @@ function extraMutex(item) {
   // 補牌時仍要佔住背包格、眼鏡格，才不會跟背包或普通眼鏡疊在一起。
   if ((item.tag === "bag" || item.tag === "handbag") && !groups.includes("bag")) groups.push("bag");
   if (item.tag === "coke-bottle glasses" && !groups.includes("eyewear")) groups.push("eyewear");
+  if ((item.tag === "pasties" || item.tag === "nipple tassels") && !groups.includes("chest_cover")) {
+    groups.push("chest_cover");
+  }
   item._mx = groups;
   return groups;
 }
@@ -4432,6 +4485,53 @@ export function drawOne(lex, settings, pinned, userBanned, rand, seed, opts) {
     if ((item.tag === "closed mouth" || item.tag === "covering own mouth") && hasUsed((t) => MOUTH_EXTRA.has(t))) {
       return false;
     }
+    // 睜眼流淚跟閉眼、睡著互相抵銷。普通的 crying 仍可閉眼。
+    if (
+      item.tag === "crying with eyes open" &&
+      (used.has("closed eyes") || used.has("sleeping"))
+    ) {
+      return false;
+    }
+    if (
+      (item.tag === "closed eyes" || item.tag === "sleeping") &&
+      used.has("crying with eyes open")
+    ) {
+      return false;
+    }
+    // 口塞佔住嘴。口交、接吻進不來；反過來也一樣。
+    if (item.tag === "gag" && hasUsed((t) => GAG_BLOCKS.has(t))) return false;
+    if (GAG_BLOCKS.has(item.tag) && used.has("gag")) return false;
+    // 無臉男沒有鬍子。不把它算進無臉構圖，女生的表情還在。
+    if (item.tag === "faceless male" && hasUsed((t) => MALE_FACE.has(t))) return false;
+    if (MALE_FACE.has(item.tag) && used.has("faceless male")) return false;
+    // 第一人稱的手是觀看者的手。畫面上已經有兩個人時不再加。
+    if (item.tag === "pov hands" && people >= 2 && !pinned.has("pov hands")) return false;
+    // 公開裸體、公共跳蛋不進臥室這類私密場景。
+    if (
+      (item.tag === "public nudity" || item.tag === "public vibrator") &&
+      hasUsed((t) => NOT_PUBLIC_SCENE.has(t))
+    ) {
+      return false;
+    }
+    if (
+      NOT_PUBLIC_SCENE.has(item.tag) &&
+      (used.has("public nudity") || used.has("public vibrator"))
+    ) {
+      return false;
+    }
+    // 四肢都沒了，就不再抽用手、用腳、走路、手套、袖子、分腿棍。觀看者的手（pov hands）不是她的。
+    // 拳交在有第二個人時可以是對方的手，單人則沒有手可伸。
+    if (item.tag === "quadruple amputee" && hasUsed((t) => needsLimbs(lex.byTag.get(t)))) return false;
+    if (item.tag === "quadruple amputee" && people < 2 && used.has("fisting")) return false;
+    if (needsLimbs(item) && used.has("quadruple amputee") && item.tag !== "pov hands") return false;
+    if (item.tag === "fisting" && people < 2 && used.has("quadruple amputee")) return false;
+    // 貞操帶蓋住下體。泛用的「sex」是性交；口交那些字也會暗示它，所以父字已經在場時放行。
+    const beltOpen =
+      hasUsed((t) => chastityCloses(lex.byTag.get(t))) ||
+      (used.has("sex") && !hasUsed((t) => CHASTITY_OK.has(t)));
+    if (item.tag === "chastity belt" && beltOpen) return false;
+    if (chastityCloses(item) && used.has("chastity belt")) return false;
+    if (item.tag === "sex" && used.has("chastity belt") && !hasUsed((t) => CHASTITY_OK.has(t))) return false;
     if (SKY_EXTRA.has(item.tag) && hasUsed((t) => SKY_EXTRA.has(t))) return false;
     if ((item.tag === "on bed" || item.tag === "bed sheet") && usedPlaces(used, lex).size && ![...usedPlaces(used, lex)].some((p) => BED_PLACE.has(p))) {
       return false;
@@ -5830,7 +5930,7 @@ export function drawOne(lex, settings, pinned, userBanned, rand, seed, opts) {
       (item) => allow(item)
     );
     if (section === "pose" && mutexName === "camera" && people >= 2) {
-      pool = pool.filter((item) => item.tag !== "pov" && item.tag !== "pov crotch");
+      pool = pool.filter((item) => item.tag !== "pov" && item.tag !== "pov crotch" && item.tag !== "pov hands");
     }
     let prefer = preferOverride;
     if (prefer == null) {
@@ -5963,7 +6063,9 @@ export function drawOne(lex, settings, pinned, userBanned, rand, seed, opts) {
     fillGroup("feature", "hair_style");
   }
   if (female) fillSlot("feature", "breast_size");
-  if (male && !real && rand() < 0.38) fillSlot("feature", "race");
+  // 人種格在正常模式由 allow() 擋掉。多元／奇葩才擲。以前只在有男生時擲，
+  // 女角的惡魔娘、史萊姆娘、乳牛娘就永遠進不了只有女生的多元圖。
+  if (!real && (female || male) && rand() < 0.38) fillSlot("feature", "race");
   if (settings.drawJob && !used.has("maid")) fillSlot("feature", "job");
   if (heat !== "sex" && !someUsed((it) => it.mutex === "sex_act" || it.tag === "sex")) {
     fillSlot("pose", "activity", sportActivityPrefer() || undefined);
@@ -6648,6 +6750,21 @@ export function drawOne(lex, settings, pinned, userBanned, rand, seed, opts) {
     const acts = lex.bySection.pose.filter((item) => soloSex(item.tag) && allow(item));
     takeFromPool(acts, 1, rand, commit, null, allow, mPre);
   }
+  // 四肢都沒了，自慰和單人拳交都不成立。貞操帶是另一件事：下體鎖著就不要硬補插入。
+  // 只在完全沒有動作時，從不必第二個人、而且現在合法的字補一個（機器、觸手、道具、產卵）。
+  // 平常這段不跑，也不擲骰。
+  if (
+    heat === "sex" &&
+    people === 1 &&
+    used.has("quadruple amputee") &&
+    !used.has("chastity belt") &&
+    !someUsed((it) => soloSex(it.tag) || it.mutex === "sex_act" || it.tag === "sex")
+  ) {
+    const acts = lex.bySection.pose.filter(
+      (item) => item.mutex === "sex_act" && !(item.needs || []).includes("pair") && allow(item)
+    );
+    takeFromPool(acts, 1, rand, commit, null, allow, mPre);
+  }
 
   if (
     [...usedActs(used, lex)].some(
@@ -6859,6 +6976,20 @@ export function drawOne(lex, settings, pinned, userBanned, rand, seed, opts) {
       const item = lex.byTag.get("pasties");
       if (item && !used.has("pasties") && !banned.has("pasties") && r() < 0.22 && allow(item)) commit("pasties");
     }
+    if (!chestCovered || chestOpen) {
+      const tasselRand = mulberry32(((seed >>> 0) ^ 0x74617373) >>> 0);
+      const tassels = lex.byTag.get("nipple tassels");
+      if (
+        tassels &&
+        !used.has("nipple tassels") &&
+        !used.has("pasties") &&
+        !banned.has("nipple tassels") &&
+        tasselRand() < 0.1 &&
+        allow(tassels)
+      ) {
+        commit("nipple tassels");
+      }
+    }
     const sport = lex.byTag.get("sportswear");
     if (sport && sportCtx && !used.has("sportswear") && !banned.has("sportswear") && r() < 0.3 && allow(sport)) {
       commit("sportswear");
@@ -6896,6 +7027,18 @@ export function drawOne(lex, settings, pinned, userBanned, rand, seed, opts) {
     // commit 會把父字一起放進來，父字過不了熱度，整筆就失敗。震動棒本來也只有性愛。
     // 所以玩具只在性愛補，不在誘惑和走光空轉一顆骰子。
     if (heat === "sex" && r() < 0.16) pick(["dildo", "vibrator", "egg vibrator"]);
+  }
+  // 口塞、分腿棍、公共跳蛋沒有衣服白名單上的互斥格。另開亂數，不挪動上面那條玩具骰子。
+  if (Number.isFinite(seed) && heat === "sex" && Math.max(0, Number(counts.clothing) || 0) > 0) {
+    const gearRand = mulberry32(((seed >>> 0) ^ 0x6b696e6b) >>> 0);
+    if (gearRand() < 0.1) {
+      const opts = [];
+      for (const t of ["gag", "spreader bar", "public vibrator"]) {
+        const item = lex.byTag.get(t);
+        if (item && !used.has(t) && !banned.has(t) && allow(item)) opts.push(item);
+      }
+      if (opts.length) commit(opts[Math.floor(gearRand() * opts.length)].tag);
+    }
   }
   {
     const tusks = lex.byTag.get("tusks");

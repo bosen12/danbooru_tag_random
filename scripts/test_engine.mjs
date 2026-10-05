@@ -3092,13 +3092,14 @@ function indoorOutdoorClash(have) {
     const d = drawOne(lex, s, pin, new Set(), mulberry32(148000 + i), 148000 + i);
     const h = tagsOf(d);
     if (h.has("masturbation through clothes")) through += 1;
-    if (
-      !h.has("masturbation") &&
-      !h.has("female masturbation") &&
-      !h.has("fingering")
-    ) {
-      noSolo += 1;
-    }
+    // 自慰、指交，或任何不要求第二個人的性愛行為（機器、觸手、道具、產卵）。
+    // 洗腦、催眠這種主題不佔體位格，不能拿來充數。
+    const soloAct = [...h].some((t) => {
+      if (t === "masturbation" || t === "female masturbation" || t === "fingering") return true;
+      const it = lex.byTag.get(t);
+      return !!it && it.mutex === "sex_act" && !(it.needs || []).includes("pair");
+    });
+    if (!soloAct) noSolo += 1;
   }
   eq("nude solo sex never through-clothes", through, 0);
   eq("nude solo sex still has a masturbation tag", noSolo, 0);
@@ -5572,7 +5573,10 @@ function indoorOutdoorClash(have) {
     // 仍是單人女性、道場、室內、夜。乳貼和運動服這張都沒補。
     // 第二十七次（2026-09-29）：沒釘場所的性愛不再只用私密場地，場地權重改成平的。
     // 這張是性愛，場地從道場換成巴士車廂，後面的表情和畫面字跟著換。仍是單人女性、室內。
-    "1girl, solo, very short hair, aqua eyes, blue hair, blunt bangs, large breasts, nipple piercing, narrow waist, half updo, underwear only, black bra, bra, torn thighhighs, thighhighs, blue panties, panties, fingering, kneeling, pov, looking at viewer, drunk, covering privates, bus interior, indoors, night, chromatic aberration, chinese new year, nsfw, explicit, masterpiece, best quality, amazing quality");
+    // 第二十八次（2026-10-05）：56 個現役詞進池。鏡頭、表情、衣服、破衣、膚況和
+    // 全年齡場地會挪動單人女性的牌序。性愛主題不佔體位格。這張仍是 1girl solo，
+    // 水手服、隔著衣服自慰、車廂，沒有男生、陰莖或精液。
+    "1girl, solo, very short hair, aqua eyes, blue hair, blunt bangs, large breasts, teeth, huge ass, breast suppress, sailor dress, dress, panties, thighhighs, maid headdress, masturbation through clothes, wariza, very wide shot, looking outside, torogao, hand on own hip, car interior, indoors, sunrise, ceiling light, emphasis lines, nsfw, explicit, masterpiece, best quality, amazing quality");
   ok("drawOne exposes shadow diagnostics", Array.isArray(shadowIntegrationDraw.shadowViolations));
 
   const eatProneShadow = validateSupportShadow({
@@ -7474,7 +7478,8 @@ function indoorOutdoorClash(have) {
   // 沒釘場所的性愛跟其他熱度用同一池場地，權重拉平。
   // 公園、大街、沙灘、神社、教室這組以前被私密白名單擋掉，現在每個時代裡
   // 說得通的那些都要抽得到。中世紀的城堡、古中國的東亞建築仍先擲一次招牌
-  // （約 35%），所以那兩個時代的第一名可以接近三分之一，但不能再更高。
+  // （機率 35%）。400 張的樣本會在 35% 上下晃，招牌第一名放到 45% 仍算這顆骰子；
+  // 別的場地超過三分之一就是真的洗版。
   const s = defaultSettings(data);
   s.girl = true;
   s.heats = ["sex"];
@@ -7504,7 +7509,9 @@ function indoorOutdoorClash(have) {
     const sorted = [...m.entries()].sort((a, b) => b[1] - a[1]);
     if (sorted.length) {
       const pct = Math.round((100 * sorted[0][1]) / N);
-      if (pct > 35) hot.push(`${era} ${sorted[0][0]} ${pct}%`);
+      const anchor = era === "medieval" ? "castle" : era === "ancient_china" ? "east asian architecture" : "";
+      const cap = sorted[0][0] === anchor ? 45 : 35;
+      if (pct > cap) hot.push(`${era} ${sorted[0][0]} ${pct}%`);
     }
     for (const tag of open[era] || []) {
       if (!m.get(tag)) missed.push(`${era} ${tag}`);
