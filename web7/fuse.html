@@ -2,13 +2,14 @@
 <html lang="zh-Hant">
   <head>
     <meta charset="utf-8" />
-    <!-- 墨池 ⇄ 疊印台 換版（styles.css 的 @view-transition）：判斷方向（滾筒光、分頁底線用），從別頁過來就不播。
+    <!-- 墨池 ⇄ 疊印台 ⇄ 卡冊 換版（styles.css 的 @view-transition）：判斷方向（滾筒光、分頁底線用），從別頁過來就不播。
          要在第一次畫面之前掛上，所以放在 head 最前面。 -->
     <script>
       addEventListener("pagereveal", (e) => {
         const vt = e.viewTransition;
         if (!vt) return;
-        const room = (u) => (/fuse\.html$/.test(u) ? 1 : /\/(index\.html)?$/.test(u) ? 0 : -1);
+        // 三個房間由左到右：墨池 0、疊印台 1、卡冊 2。往右走的換版從右邊進來，往左反過來。
+        const room = (u) => (/fuse\.html$/.test(u) ? 1 : /book\.html$/.test(u) ? 2 : /\/(index\.html)?$/.test(u) ? 0 : -1);
         let from = "";
         try {
           from = new URL(navigation?.activation?.from?.url || document.referrer || "", location.href).pathname;
@@ -22,10 +23,10 @@
         document.documentElement.dataset.vtIn = document.documentElement.dataset.vt;
         setTimeout(() => delete document.documentElement.dataset.vtIn, 1100);
         vt.finished.finally(() => delete document.documentElement.dataset.vt);
-        // 導覽的墨底從剛才那個標籤滑過來。
+        // 導覽的墨底從剛才那個標籤滑過來（三個分頁：找的是剛才那一頁的標籤，不是「另一個」）。
         const ink = document.querySelector(".page-switch-ink");
         const a = ink?.parentElement;
-        const other = a && [...a.parentElement.querySelectorAll("a")].find((x) => x !== a);
+        const other = a && [...a.parentElement.querySelectorAll("a")].find((x) => x !== a && room(new URL(x.href).pathname) === was);
         if (ink && other) {
           const ra = a.getBoundingClientRect();
           const ro = other.getBoundingClientRect();
@@ -75,6 +76,7 @@
         <nav class="page-switch" aria-label="墨池頁面">
           <a href="./"><span class="page-switch-label">墨池</span></a>
           <a href="fuse.html" aria-current="page"><span class="page-switch-ink" aria-hidden="true"></span><span class="page-switch-label">疊印台</span></a>
+          <a href="book.html" title="每張牌用過幾次：多到少、少到多，點開看它的來歷"><span class="page-switch-label">卡冊</span></a>
         </nav>
         <a class="mast-extra" href="intro.html" title="三分鐘的介紹影片（畫面、配樂即時產生）· Intro film">介紹影片</a>
         <a class="mast-extra" href="tutorial.html" title="墨池與疊印台的使用教學影片 · How-to film">教學</a>

@@ -1858,6 +1858,14 @@ const ALBUM_FIXTURE = [
           const h = readFileSync(join(ROOT, f), "utf8");
           return h.includes("/book\\.html$/.test(u) ? 2") && h.includes("room(new URL(x.href).pathname) === was") && h.includes('href="book.html"');
         }) && bookHtml.includes('src="book.js"'));
+      ok("卡冊同步到 web7：頁面、導覽、三個房間的換版、墨池與疊印台記使用次數",
+        ["web7/book.html", "web7/book.js", "web7/book.css", "web7/usage.js"].every((f) => existsSync(join(ROOT, f))) &&
+          ["web7/index.html", "web7/fuse.html", "web7/book.html"].every((f) => {
+            const h = readFileSync(join(ROOT, f), "utf8");
+            return h.includes("/book\\.html$/.test(u) ? 2") && h.includes('href="book.html"');
+          }) &&
+          readFileSync(join(ROOT, "web7/app.js"), "utf8").includes("noteUses(made);") &&
+          /prints\.unshift\(p\);\s*\/\/[^\n]*\n\s*recordUses\(/.test(readFileSync(join(ROOT, "web7/fuse.js"), "utf8")));
       ok("卡冊：多到少／少到多、換排序時牌從舊位置滑過去（FLIP）、別的分頁抽完牌會跟著更新",
         book6.includes('ui.order === "desc"') && book6.includes("translate(${dx}px, ${dy}px)") && book6.includes('addEventListener("storage"'));
       ok("手機頂欄放不下時工具換行，不會整頁左右滑",
