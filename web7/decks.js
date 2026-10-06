@@ -52,8 +52,9 @@ export function suggestName(tags, zh) {
  *   has(tag)：這張牌現在還在詞庫裡（詞庫改過，舊牌組裡可能有已經拿掉的字）。
  *   zh(tag)：牌的中文名。
  *   apply(deck)：套用一組。面板先收起來再呼叫，套用的動畫才看得到。
+ *   paste()：「貼上提示詞變成牌」（paste-prompt.js）；有給才出現那一顆。
  */
-export function openDecks({ where, current, has, zh, apply }) {
+export function openDecks({ where, current, has, zh, apply, paste }) {
   const now = current().filter(has);
   const list = el("div", { class: "deck-list", "aria-live": "polite" }, el("p", { class: "deck-note" }, "讀取牌組…"));
   const name = el("input", {
@@ -82,7 +83,21 @@ export function openDecks({ where, current, has, zh, apply }) {
   name.addEventListener("input", label);
   label();
 
-  const { close } = openSheet("牌組", el("div", { class: "decks" }, form, list));
+  const pasteBtn = paste
+    ? el(
+        "button",
+        {
+          class: "btn btn-small decks-paste pressable",
+          type: "button",
+          onclick: () => {
+            close();
+            setTimeout(paste, DUR.short);
+          },
+        },
+        "貼上提示詞變成牌…"
+      )
+    : null;
+  const { close } = openSheet("牌組", el("div", { class: "decks" }, pasteBtn, form, list));
 
   const row = (d) => {
     const tags = d.tags.filter(has);

@@ -4867,3 +4867,73 @@ html[data-booting] :is(#lib-grid, #case-grid, #book-grid):empty::before {
   align-items: center;
   gap: var(--space-sm);
 }
+
+/* ---------- 貼上提示詞變成牌（paste-prompt.js）：上面貼、底下即時分好類 ---------- */
+.paste {
+  display: grid;
+  gap: var(--space-md);
+}
+.paste-text {
+  width: 100%;
+  min-height: 7rem;
+  padding: var(--space-sm);
+  border: 1px solid var(--color-rule);
+  border-radius: var(--radius-sm);
+  background: var(--color-paper-2);
+  color: var(--color-ink);
+  font-family: var(--font-mono);
+  font-size: var(--text-sm);
+  line-height: 1.5;
+  resize: vertical;
+}
+.paste-text:focus-visible {
+  outline: 2px solid var(--color-focus);
+  outline-offset: 1px;
+}
+.paste-result {
+  display: grid;
+  gap: var(--space-sm);
+}
+.paste-note {
+  margin: 0;
+  color: var(--color-muted);
+  font-size: var(--text-sm);
+}
+.paste-group h3 {
+  display: flex;
+  align-items: baseline;
+  gap: var(--space-sm);
+  margin: 0 0 var(--space-2xs);
+  color: var(--color-ink-2);
+  font-size: var(--text-sm);
+}
+.paste-chips {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 4px;
+}
+.paste-chip {
+  padding: 2px var(--space-xs);
+  border: 1px solid var(--color-rule-2);
+  border-radius: 999px;
+  color: var(--color-ink-2);
+  font-size: var(--text-xs);
+}
+.paste-group.is-cards .paste-chip {
+  border-color: var(--color-pool-2);
+  color: var(--color-ink);
+}
+.paste-group.is-unknown .paste-chip {
+  border-style: dashed;
+}
+.paste-group.is-muted {
+  opacity: 0.7;
+}
+.paste-group.is-blocked .paste-chip {
+  border-color: var(--color-accent);
+  color: var(--color-accent);
+  text-decoration: line-through;
+}
+.decks-paste {
+  justify-self: start;
+}

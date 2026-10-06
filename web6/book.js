@@ -14,6 +14,7 @@ import { ratingBlocked, RATING_LABEL } from "./rules/rating.js";
 import { buildLibrary, groupChips, createAssets, cardNode, cardFacts, setCardFlag, eagerArt, CARD_SUIT_INFO, CARD_SUITS } from "./cards.js";
 import { el, openSheet, toast } from "./ui.js";
 import { openDecks } from "./decks.js";
+import { openPaste } from "./paste-prompt.js";
 import { initMotion, settleMotion, seat, refuse, flight, reducedMotion, CURVE, DUR, css } from "./motion.js";
 import { watchLink, LINK_LABEL, viewSrc } from "./gen.js";
 import { getSfx } from "./sfx.js";
@@ -1118,7 +1119,23 @@ function removeFromPanel(tag) {
 
 /** 卡盒的牌組：盒子裡的牌存成一組，或把一組牌放進盒子（換掉盒子裡的，可以復原）。 */
 function openBoxDecks() {
-  openDecks({ where: "卡盒", current: () => [...box], has: (t) => lib.byTag.has(t), zh: (t) => lib.byTag.get(t)?.zh || t, apply: deckToBox });
+  const zh = (t) => lib.byTag.get(t)?.zh || t;
+  openDecks({
+    where: "卡盒",
+    current: () => [...box],
+    has: (t) => lib.byTag.has(t),
+    zh,
+    apply: deckToBox,
+    // 貼上提示詞變成牌：換成或加進卡盒（卡盒不管互斥，照貼上的順序放）。
+    paste: () =>
+      openPaste({
+        where: "卡盒",
+        lexTags: data.tags.map((t) => t.tag),
+        isCard: (t) => lib.byTag.has(t),
+        zh,
+        apply: (tags, { replace }) => deckToBox({ name: "貼上的提示詞", tags: replace ? tags : [...box, ...tags.filter((t) => !box.includes(t))] }),
+      }),
+  });
 }
 
 function deckToBox(deck) {
@@ -1138,7 +1155,7 @@ function deckToBox(deck) {
   };
   const tags = deck.tags.filter((t) => lib.byTag.has(t)).slice(0, BOX_MAX);
   put(tags);
-  toast(`牌組「${deck.name}」放進卡盒了（${tags.length} 張）`, { action: { label: "復原", run: () => put(was) } });
+  toast(`${deck.name === "貼上的提示詞" ? "貼上的提示詞" : `牌組「${deck.name}」`}放進卡盒了（${tags.length} 張）`, { action: { label: "復原", run: () => put(was) } });
 }
 
 function clearBox() {

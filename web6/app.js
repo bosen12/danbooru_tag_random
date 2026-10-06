@@ -40,6 +40,7 @@ import { buildLibrary, groupChips, createAssets, cardNode, setCardFlag, setEnter
 import { bindArt, artFallback } from "./card-images.js";
 import { el, openSheet, anyOverlay, toast, runToastAction, ICONS } from "./ui.js";
 import { openDecks } from "./decks.js";
+import { openPaste, listenPaste } from "./paste-prompt.js";
 import { favButton } from "./album-save.js";
 import { createDrag, inkRing } from "./drag.js";
 import { initMotion, settleMotion, replayDeal, flip, flipBy, leave, enter, confirmButton, gatherHome, flight, seat, refuse, reducedMotion, CURVE, DUR, css } from "./motion.js";
@@ -2622,18 +2623,38 @@ $("trash").setAttribute("aria-expanded", "false");
 $("trash").innerHTML = ICONS.trash + "<b>0</b><span>廢字簍</span>";
 // 牌組：合成池存成一組、或套用存過的（decks.js；伺服器上一份，手機電腦共用）。
 $("pool-decks").addEventListener("click", () =>
-  openDecks({ where: "合成池", current: () => [...pool], has: (t) => lib.byTag.has(t), zh, apply: applyDeck })
+  openDecks({ where: "合成池", current: () => [...pool], has: (t) => lib.byTag.has(t), zh, apply: applyDeck, paste: () => openPastePool() })
 );
 
+// 貼上提示詞變成牌（paste-prompt.js）：合成池旁的「貼上」、牌組面板裡、電腦上在空白處按 Ctrl+V。
+function openPastePool(text = "") {
+  if (!data || !lib) return;
+  openPaste({
+    where: "合成池",
+    text,
+    lexTags: data.tags.map((t) => t.tag),
+    isCard: (t) => lib.byTag.has(t),
+    zh,
+    apply: (tags, { replace }) => applyCards(tags, { replace, label: "貼上的提示詞" }),
+  });
+}
+$("pool-paste").addEventListener("click", () => openPastePool());
+listenPaste((text) => {
+  if (!pickerOpen) openPastePool(text);
+});
+
+const applyDeck = (deck) => applyCards(deck.tags, { replace: true, label: `牌組「${deck.name}」` });
+
 /**
- * 套用一組牌：合成池換成這一組。照放牌的規矩一張張釘上去（同一格、時代不合的互相讓，帶上該帶的），
- * 跟手放的結果一樣；換上來的牌從上面輕輕落定。五秒內可以復原成原本的合成池。
+ * 放一組牌進合成池：replace 是換成這一組（牌組、貼上的「換成」），不然加在現在的後面。
+ * 照放牌的規矩一張張釘上去（同一格、時代不合的互相讓，帶上該帶的），跟手放的結果一樣；
+ * 新來的牌從上面輕輕落定。五秒內可以復原成原本的合成池。
  */
-function applyDeck(deck) {
+function applyCards(tags, { replace = true, label = "" } = {}) {
   const before = { pool: [...pool], bans: [...bans] };
-  let pinned = new Set();
+  let pinned = replace ? new Set() : new Set(pool);
   let banned = new Set(bans);
-  for (const t of deck.tags) {
+  for (const t of tags) {
     if (HARD_BANNED.includes(t) || !lib.byTag.has(t)) continue;
     const r = applyPin(lex, pinned, banned, t);
     pinned = r.pinned;
@@ -2642,9 +2663,10 @@ function applyDeck(deck) {
   pool = pinned;
   bans = banned;
   poolNote = null;
+  const fresh = new Set([...pool].filter((t) => replace || !before.pool.includes(t)));
   commitPins();
   if (!reducedMotion()) {
-    [...$("pool-well").querySelectorAll(".card")].forEach((c, i) =>
+    [...$("pool-well").querySelectorAll(".card")].filter((c) => fresh.has(c.dataset.tag)).forEach((c, i) =>
       c.animate(
         [{ opacity: 0, transform: "translateY(-22px) rotate(-3deg) scale(0.94)" }, { opacity: 1, transform: "none" }],
         { duration: DUR.long, delay: Math.min(i, 10) * 45, easing: css(CURVE.settle), fill: "backwards" }
@@ -2655,7 +2677,7 @@ function applyDeck(deck) {
   const pw = $("pool-well");
   const r = pw.getBoundingClientRect();
   if (r.bottom < 0 || r.top > innerHeight) pw.scrollIntoView({ behavior: reducedMotion() ? "instant" : "smooth", block: "center" });
-  toast(`套用了牌組「${deck.name}」：合成池 ${pool.size} 張`, {
+  toast(`${label}：${replace ? "換成" : "加進"} ${fresh.size} 張，合成池共 ${pool.size} 張`, {
     action: {
       label: "復原",
       run: () => {

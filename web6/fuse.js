@@ -39,6 +39,7 @@ import { HARD_BANNED, applyArtSources } from "./card-art.js";
 import { buildLibrary, groupChips, createAssets, cardNode, cardFacts, setEnterTarget, eagerArt, CARD_SUIT_INFO, CARD_SUITS, RATING_ZH, ERA_ZH } from "./cards.js";
 import { el, openSheet, anyOverlay, toast } from "./ui.js";
 import { openDecks, loadDecks, cachedDecks } from "./decks.js";
+import { openPaste, listenPaste } from "./paste-prompt.js";
 import { favButton } from "./album-save.js";
 import { initMotion, settleMotion, flip, flipBy, leave, gatherHome, flight, enter, seat, refuse, CURVE, DUR, css } from "./motion.js";
 import { createHand } from "./hand.js";
@@ -1742,19 +1743,31 @@ function reshuffleStarters() {
  * 套用一組牌：卡池換成這一組（從空白版照放牌的規矩一張張放，撤回會回到原本的版）。
  * 這一級分級出不了、或丟進廢字簍的牌先跳過，提示上說幾張。
  */
-function applyDeck(deck, btn = null) {
+function applyDeck(deck, btn = null, { fresh = true, kind = "牌組", label = `牌組「${deck.name}」` } = {}) {
   const ok = deck.tags.filter((t) => lib.byTag.has(t) && rankOk(cardOf(t)) && !bans.has(t));
   const skipped = deck.tags.length - ok.length;
   if (!ok.length) {
     if (btn) refuse(btn);
-    return toast(`牌組「${deck.name}」的牌在${RATING_LABEL[settings.rating]}都出不了`);
+    return toast(`${label}的牌在${RATING_LABEL[settings.rating]}都出不了`);
   }
-  startWith({ name: deck.name, tags: ok }, btn, { fresh: true, kind: "牌組" });
-  toast(`套用了牌組「${deck.name}」${skipped ? `（${skipped} 張這一級出不了，先跳過）` : ""}`, { action: { label: "撤回", run: undo } });
+  startWith({ name: deck.name, tags: ok }, btn, { fresh, kind });
+  toast(`${fresh ? "換成" : "疊上"}${label}${skipped ? `（${skipped} 張這一級出不了或在廢字簍，先跳過）` : ""}`, { action: { label: "撤回", run: undo } });
+}
+
+// 貼上提示詞變成牌（paste-prompt.js）：牌組面板裡、電腦上在空白處按 Ctrl+V。
+function openPastePlate(text = "") {
+  openPaste({
+    where: "卡池",
+    text,
+    lexTags: data.tags.map((t) => t.tag),
+    isCard: (t) => lib.byTag.has(t),
+    zh,
+    apply: (tags, { replace }) => applyDeck({ name: "貼上的提示詞", tags }, null, { fresh: replace, kind: "貼上", label: "貼上的提示詞" }),
+  });
 }
 
 const openDeckSheet = () =>
-  openDecks({ where: "卡池", current: () => [...bed.pins], has: (t) => lib.byTag.has(t), zh, apply: (d) => applyDeck(d) });
+  openDecks({ where: "卡池", current: () => [...bed.pins], has: (t) => lib.byTag.has(t), zh, apply: (d) => applyDeck(d), paste: () => openPastePlate() });
 
 /** 空白版上「你的牌組」：最近的三組，跟起手式同一種按鈕。 */
 function deckStarters() {
@@ -3614,6 +3627,7 @@ function wireChrome() {
   });
   $("undo").addEventListener("click", undo);
   $("decks-btn").addEventListener("click", openDeckSheet);
+  listenPaste((text) => openPastePlate(text));
   // 牌組讀到了：版還是空的就重畫，「你的牌組」才出現在起手式上面。
   loadDecks().then((d) => {
     if (d && d.length && !bed.pins.length) renderPlate([]);
