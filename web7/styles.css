@@ -4937,3 +4937,9 @@ html[data-booting] :is(#lib-grid, #case-grid, #book-grid):empty::before {
 .decks-paste {
   justify-self: start;
 }
+
+.paste-group.is-cards .paste-chip.is-off {
+  border-color: var(--color-rule-2);
+  border-style: dashed;
+  color: var(--color-muted);
+}

@@ -2572,6 +2572,8 @@ function openPastePool(text = "") {
     isCard: (t) => lib.byTag.has(t),
     zh,
     apply: (tags, { replace }) => applyCards(tags, { replace, label: "貼上的提示詞" }),
+    // 合成池照樣收（牌上蓋「分級擋掉」、抽的時候不用），預覽先說。
+    off: (t) => (ratingBlocked(lib.byTag.get(t).item, settings.rating) ? `${RATING_LABEL[settings.rating]}用不了` : bans.has(t) ? "在廢字簍" : null),
   });
 }
 $("pool-paste").addEventListener("click", () => openPastePool());

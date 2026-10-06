@@ -1763,6 +1763,8 @@ function openPastePlate(text = "") {
     isCard: (t) => lib.byTag.has(t),
     zh,
     apply: (tags, { replace }) => applyDeck({ name: "貼上的提示詞", tags }, null, { fresh: replace, kind: "貼上", label: "貼上的提示詞" }),
+    // 卡池放不上去的會跳過（applyDeck），預覽先說。
+    off: (t) => (!rankOk(cardOf(t)) ? `${RATING_LABEL[settings.rating]}出不了，會跳過` : bans.has(t) ? "在廢字簍，會跳過" : null),
   });
 }
 

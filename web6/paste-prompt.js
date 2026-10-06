@@ -65,7 +65,8 @@ export function parsePrompt(text, { lexTags, isCard, zh }) {
     res.loras.push(name.trim());
     return ",";
   });
-  for (const raw0 of src.split(/[,，、\n]+/)) {
+  // BREAK 是 SD 提示詞的分段語法，不是字：跟逗號一樣當分隔。
+  for (const raw0 of src.split(/[,，、\n]+|\bBREAK\b/)) {
     const raw = raw0.trim();
     if (!raw) continue;
     const tries = variants(raw);
@@ -98,8 +99,10 @@ export function parsePrompt(text, { lexTags, isCard, zh }) {
  *   where：「合成池」「卡池」「卡盒」；text：先填好的內容（Ctrl+V 帶進來的）。
  *   lexTags、isCard、zh：同 parsePrompt。
  *   apply(tags, { replace })：換成這些牌（replace）或加進去。面板先收起來再呼叫。
+ *   off(tag)：這張牌現在用不了的原因（分級擋掉、在廢字簍…），沒有就回 null。
+ *     預覽上先標出來，不要放進去才發現；照樣算「會變成牌」，放不放由各頁照原本的規矩。
  */
-export function openPaste({ where, text = "", lexTags, isCard, zh, apply }) {
+export function openPaste({ where, text = "", lexTags, isCard, zh, apply, off = () => null }) {
   const area = el("textarea", {
     class: "paste-text",
     rows: "5",
@@ -158,7 +161,10 @@ export function openPaste({ where, text = "", lexTags, isCard, zh, apply }) {
           parsed.cards.map(({ tag, raw }) => {
             const name = zh(tag);
             const same = raw.toLowerCase() === tag.toLowerCase() || raw === name;
-            return chip(same ? name : `${raw} → ${name}`, tag);
+            const why = off(tag);
+            const c = chip(`${same ? name : `${raw} → ${name}`}${why ? `（${why}）` : ""}`, tag);
+            if (why) c.classList.add("is-off");
+            return c;
           }),
           "cards"
         ),
