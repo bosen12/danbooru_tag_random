@@ -1870,6 +1870,9 @@ function indoorOutdoorClash(have) {
     const d = drawOne(lex, s, pinned, new Set(), mulberry32(30700 + i), 30700 + i);
     const h = tagsOf(d);
     if (d.people !== 1) miss += 1;
+    // 貞操帶鎖著下體時引擎刻意不硬補自慰（engine.js「貞操帶是另一件事：下體鎖著就不要硬補」），
+    // HEAD 釘貞操帶時也是 63/200 張沒有。以前這 40 顆種子剛好沒抽到貞操帶，第六輪亂數位移後抽到了。
+    else if (h.has("chastity belt")) continue;
     else if (![...h].some((t) => SOLO_SEX.has(t))) miss += 1;
   }
   eq("girl-only solo sex always has a masturbation tag", miss, 0);
@@ -5137,7 +5140,9 @@ function indoorOutdoorClash(have) {
   ok("medieval palace can still have armor", palArmor > 0, `armor=${palArmor}/40`);
   const pinLock = applyPin(lex, new Set(), new Set(), "locker room").pinned;
   let lockSwim = 0;
-  for (let i = 0; i < 40; i++) {
+  // 第六輪（2026-10-06）服裝池變大，更衣室抽到泳裝從約 12% 降到 8%（400 張 47 → 32），
+  // 40 張剛好抽到 0。規則沒變（抽得到），樣本放大到 120。
+  for (let i = 0; i < 120; i++) {
     const h = tagsOf(drawOne(lex, s, pinLock, new Set(), mulberry32(440560 + i), 440560 + i));
     if ([...h].some((t) => /\b(bikini|swimsuit)\b/.test(t))) lockSwim += 1;
   }
@@ -5602,7 +5607,9 @@ function indoorOutdoorClash(have) {
     // 肚臍穿環、性愛機器。仍是 1girl solo，沒有男生，也沒有人類陰莖。
     // 第三十二次（2026-10-06）：第四輪 157 個、地點與第五輪 247 個現役詞進池。
     // 這張換成自由女神、超級英雄裝、拉鍊。仍是 1girl solo，沒有男生，也沒有人類陰莖。
-    "1girl, solo, very short hair, aqua eyes, blue hair, bangs pinned back, small breasts, nipple stimulation, pussy piercing, androgynous, piercing, superhero costume, g-string, thong, torn pantyhose, pantyhose, zipper, masturbation, squatting, portrait, looking down, sad, ok sign, statue of liberty, outdoors, overcast, dusk, city lights, falling petals, petals, nsfw, explicit, masterpiece, best quality, amazing quality");
+    // 第三十三次（2026-10-06）：第六輪 CSV 119 個現役詞進池（袖長、蝴蝶結、獸耳這些）。
+    // 這張換成超短裙、過大襯衫、峽谷、人力車。仍是 1girl solo，沒有男生，也沒有人類陰莖。
+    "1girl, solo, very short hair, yellow eyes, aqua hair, undercut, medium breasts, whip marks, huge ass, ass tattoo, microskirt, skirt, oversized shirt, shirt, unzipped, zipper pull tab, female masturbation, tiptoes, standing, from side, looking down, ahegao, canyon, outdoors, twilight, sunlight, rickshaw, traffic light, nsfw, explicit, masterpiece, best quality, amazing quality");
   ok("drawOne exposes shadow diagnostics", Array.isArray(shadowIntegrationDraw.shadowViolations));
 
   const eatProneShadow = validateSupportShadow({

@@ -57,7 +57,7 @@ const EXPECT = {
   "body writing": { section: "feature", group: "skin", mutex: null, heat: ALL, gate: "any", layer: "normal", implies: [], needs: [], zh: "身體塗鴉" },
   "tally": { section: "feature", group: "skin", mutex: null, heat: SEX, gate: "female", layer: "normal", implies: [], needs: ["female"], zh: "正字記號" },
   "torn clothes": { section: "clothing", group: "fabric", mutex: null, heat: ALL, gate: "any", layer: "garment", implies: [], needs: [], zh: "破衣" },
-  "cleavage cutout": { section: "clothing", group: "top", mutex: "top", heat: ALL, gate: "female", layer: "garment", implies: [], needs: ["female"], zh: "胸口挖洞" },
+  "cleavage cutout": { section: "clothing", group: "top", mutex: "top", heat: ALL, gate: "female", layer: "garment", implies: ["clothing cutout"], needs: ["female"], zh: "胸口挖洞" }, // 第六輪：帶出衣物挖空
   "virgin killer sweater": { section: "clothing", group: "top", mutex: "top", heat: ALL, gate: "female", layer: "garment", implies: ["sweater"], needs: ["female"], zh: "處男殺手毛衣" },
   "backless outfit": { section: "clothing", group: "onepiece", mutex: "onepiece", heat: ALL, gate: "female", layer: "garment", implies: [], needs: ["female"], zh: "露背裝" },
   "o-ring bikini": { section: "clothing", group: "onepiece", mutex: "onepiece", heat: ALL, gate: "female", layer: "garment", implies: ["bikini"], needs: ["female"], zh: "O環比基尼" },
@@ -279,7 +279,9 @@ eq("explicit does not block guro", blocked("guro", "explicit"), false);
 
   const diverse = base({ sceneMode: "diverse" });
   const raceHits = { "demon girl": 0, "slime girl": 0, "cow girl": 0 };
-  for (const d of sweep(diverse, new Set(), 160, 4000)) {
+  // 第六輪多了馬娘、妖精、改造人三個種族，種族格擲到的那 6 成分給 18 個：160 張時惡魔娘的期望值只剩 1 次左右，
+  // 量到 0 是抽樣不夠，不是抽不到（800 張量到 9 次）。樣本放大到 400。
+  for (const d of sweep(diverse, new Set(), 400, 4000)) {
     const have = tagSet(d);
     for (const t of Object.keys(raceHits)) if (have.has(t)) raceHits[t] += 1;
   }

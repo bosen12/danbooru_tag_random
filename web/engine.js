@@ -195,6 +195,9 @@ const UNDERWEAR_ONLY_BAD = new Set(["onepiece", "top", "bottom", "outer", "era"]
 const SLEEVE_WORD = new Set([
   "long sleeves", "short sleeves", "wide sleeves", "puffy sleeves",
   "detached sleeves", "sleeves rolled up",
+  // 第六輪。無袖也是在講「那件衣服」，只穿內衣時沒有那一件。
+  "sleeveless", "puffy short sleeves", "puffy long sleeves", "sleeves past wrists",
+  "juliet sleeves", "frilled sleeves", "layered sleeves",
 ]);
 const underwearOnlyClash = (item) =>
   !!item &&
@@ -2288,6 +2291,11 @@ const ARM_POSE = new Set([
   "beckoning",
   // 單手上舉留一隻手。雙手垂下、雙手插袋佔滿兩隻手，跟單手不同組。
   "arm up",
+  // 第六輪：舉手、雙臂伸展、手枕腦後也是手臂擺在哪，同一時間只有一種。
+  "hand up",
+  "hands up",
+  "outstretched arms",
+  "arm behind head",
   "arm support",
   "arms at sides",
   "hands in pockets",
@@ -2357,6 +2365,8 @@ const NEEDS_FREE_HAND = new Set([
 const HANDS_BUSY_BODY = new Set(["crawling", "all fours", "top-down bottom-up", "bondage", "restrained", "handcuffs", "bound wrists"]);
 const BOTH_ARMS = new Set([
   "arms up",
+  "hands up",
+  "outstretched arms",
   "arms behind back",
   "arms behind head",
   "crossed arms",
@@ -2435,6 +2445,12 @@ const HAND_GESTURE = new Set([
   "hand on another's cheek",
   "feeding",
   "between fingers",
+  // 第六輪：握拳、手上拿著杯子／手機／傘／扇子。一隻手一次做一件事，跟其他手勢同一格。
+  "clenched hand",
+  "holding cup",
+  "holding phone",
+  "holding umbrella",
+  "holding fan",
 ]);
 const MALE_FACE = new Set(["facial hair", "stubble", "beard", "goatee", "mustache"]);
 const GAG_BLOCKS = new Set([
@@ -2443,7 +2459,8 @@ const GAG_BLOCKS = new Set([
   "reverse fellatio", "throat bulge", "licking",
 ]);
 // 同一張嘴只能有一種口塞。變體 implies gag，父子不算兩種。
-const GAG_KIND = new Set(["gag", "tape gag", "bit gag", "ring gag", "ball gag"]);
+// 嘴叼物（第六輪）也算嘴裡的一樣東西：跟口塞不並存，口交、接吻也進不來。
+const GAG_KIND = new Set(["gag", "tape gag", "bit gag", "ring gag", "ball gag", "mouth hold"]);
 // 膠帶和咬棒把嘴封住。開口器是撐開，不在這組。
 const CLOSED_GAG = new Set(["tape gag", "bit gag"]);
 const NOT_PUBLIC_SCENE = new Set([
@@ -2457,6 +2474,9 @@ const AMPUTEE_WORN = new Set([
   "pillory", "stocks",
   "cuffs", "straitjacket", "bound ankles", "frogtie", "hogtie",
   "bandaged arm", "bandaged leg",
+  // 第六輪：新的袖子、臂鎧、腕帶、裸臂都要有手臂。
+  "puffy short sleeves", "puffy long sleeves", "sleeves past wrists", "juliet sleeves",
+  "frilled sleeves", "layered sleeves", "gauntlets", "wristband", "bare arms",
 ]);
 // 這些手是對方的。單人又四肢截斷時沒有手；有第二個人就可以。
 const PARTNER_HAND = new Set(["fisting", "anal fisting", "urethral fingering", "slapping", "nipple pull", "crotch grab"]);
@@ -4524,6 +4544,9 @@ export function drawOne(lex, settings, pinned, userBanned, rand, seed, opts) {
     if (!castOk(item, female, male, people, cast.girls, cast.boys)) return false;
     if (used.has("bald") && (item.mutex === "hair_color" || item.group === "hair_style" || item.group === "hair_color")) return false;
     if (item.tag === "bald" && someUsed((it) => it.group === "hair_color" || it.group === "hair_style")) return false;
+    // 動物種類（詞庫的 kind，merge_lexicon.py 的 KIND）：貓耳只配貓娘，兔尾不配狐尾，龍角不配惡魔角。
+    // 同種的耳朵、尾巴、角、種族可以疊；沒有種類的字（獸耳、尾巴、精靈）跟誰都能放。
+    if (item.kind && someUsed((it) => it.kind && it.kind !== item.kind)) return false;
     if (item.tag === "fat" && used.has("skinny")) return false;
     if (item.tag === "skinny" && used.has("fat")) return false;
     if (item.tag === "long sleeves" && used.has("short sleeves")) return false;
@@ -4702,7 +4725,7 @@ export function drawOne(lex, settings, pinned, userBanned, rand, seed, opts) {
     }
     // 口塞佔住嘴。口交、接吻進不來；反過來也一樣。
     // 膠帶和咬棒把嘴封住，不能再張嘴。開口器是撐開，要帶著張嘴，所以不在 CLOSED_GAG。
-    if (item.tag === "gag" && hasUsed((t) => GAG_BLOCKS.has(t))) return false;
+    if ((item.tag === "gag" || item.tag === "mouth hold") && hasUsed((t) => GAG_BLOCKS.has(t))) return false;
     if (GAG_BLOCKS.has(item.tag) && hasUsed((t) => GAG_KIND.has(t))) return false;
     if (CLOSED_GAG.has(item.tag) && hasUsed((t) => MOUTH_EXTRA.has(t))) return false;
     if (MOUTH_EXTRA.has(item.tag) && hasUsed((t) => CLOSED_GAG.has(t))) return false;

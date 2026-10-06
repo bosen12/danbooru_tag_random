@@ -362,7 +362,7 @@ ERA_OF = {
 SUFFIX_COMPOUND_EXCEPTIONS = {
     "bra": ("sports bra",),
     # 水手領是領口形狀，不是項圈。後綴規則會把它收成 collar。
-    "collar": ("sailor collar",),
+    "collar": ("sailor collar", "frilled collar", "high collar", "fur collar"),
     # 大衣只有現代。毛皮大衣要在維多利亞也能抽，再帶出 coat 會整筆被拒。
     "coat": ("fur coat",),
 }
@@ -1524,6 +1524,75 @@ def inherit_eras(tags: list[dict]) -> None:
         item["group"] = assign_group(item)
 
 
+# ---- 第六輪（2026-10-06）：動物種類、補互斥格、補帶出 ----------------------------------
+#
+# 動物種類（kind）：同一種的耳朵、尾巴、角、種族可以一起出現，不同種不行 ——
+# 貓耳配狐娘、兔尾配狐尾、龍角配惡魔角都是兩個角色的零件湊在一個人身上。
+# 這件事不是互斥格表達得了的（同種的耳朵和尾巴要能並存），所以另外一欄，
+# 由 engine.js 的 allow() 檢查：圖上已經有某一種，就不再補別種的零件。
+# 沒有種類的字（獸耳、尾巴、精靈、吸血鬼……）跟誰都能放。
+KIND = {
+    "cat": ["cat girl", "cat boy", "cat ears", "cat tail"],
+    "fox": ["fox girl", "fox boy", "kitsune", "fox ears", "fox tail"],
+    "rabbit": ["rabbit girl", "rabbit boy", "rabbit ears", "rabbit tail"],
+    "horse": ["horse girl", "horse boy", "horse ears", "horse tail"],
+    "wolf": ["wolf girl", "wolf boy", "werewolf", "wolf ears"],
+    "dog": ["dog girl", "dog boy", "dog ears"],
+    "dragon": ["dragon girl", "dragon boy", "dragon horns"],
+    "demon": ["demon", "demon girl", "demon boy", "demon horns", "demon tail", "demon wings"],
+    "cow": ["cow girl"],
+    "tiger": ["tiger boy"],
+    "lion": ["lion boy"],
+    "bear": ["bear boy"],
+    "shark": ["shark boy"],
+    "tanuki": ["tanuki"],
+    "fairy": ["fairy", "fairy wings"],
+}
+KIND_OF = {t: k for k, tags in KIND.items() for t in tags}
+
+# 既有的字補上額外互斥格（新字自己在 row 裡寫）。
+#   bangs：瀏海只會有一種（齊瀏海、側撥、中分、交叉）。
+#   sleeve_len：袖長只會有一種（無袖、短袖、長袖、袖過手腕）。父子（泡泡短袖 → 短袖）不算兩種。
+#   bare_long／bare_elbow／bare_det：手臂露出來（bare arms）分別跟長袖、過肘手套、分離袖不並存，
+#     但後三者之間照舊可以疊（長袖配分離袖是常見的穿法），所以是三格不是一格。
+#   nail_color：指甲只塗一種顏色。
+#   wing_type：翅膀只有一種（天使翼是羽毛翼的一種，父子不算兩種）。
+#   hood_up／hood_on：兜帽放下分別跟「戴上兜帽」「兜帽」不並存（後兩者是同一個狀態，不互斥）。
+#   strap：無肩帶跟繞頸不並存。
+#   season：夏天跟冬天不並存。
+MUTEX_EXTRA_PATCH = {
+    "blunt bangs": ["bangs"],
+    "swept bangs": ["bangs"],
+    "parted bangs": ["bangs"],
+    "bangs pinned back": ["bangs"],
+    "long sleeves": ["sleeve_len", "bare_long"],
+    "short sleeves": ["sleeve_len"],
+    "elbow gloves": ["bare_elbow"],
+    "detached sleeves": ["bare_det"],
+    "red nails": ["nail_color"],
+    "pink nails": ["nail_color"],
+    "angel wings": ["wing_type"],
+    "demon wings": ["wing_type"],
+    "hood up": ["hood_up"],
+    "hood": ["hood_on"],
+    "halterneck": ["strap"],
+    "winter": ["season"],
+}
+
+# 既有的字補上 Danbooru 的父子關係，讓新加的父標籤跟著出現、也不跟子標籤互斥。
+IMPLIES.update({
+    "hair ribbon": ["ribbon"],
+    "neck ribbon": ["ribbon"],
+    "highleg panties": ["panties", "highleg"],
+    "highleg leotard": ["leotard", "highleg"],
+    "cleavage cutout": ["clothing cutout"],
+    "strapless dress": ["dress", "strapless"],
+    "plaid skirt": ["skirt", "plaid clothes"],
+    "floral print kimono": ["print kimono", "floral print"],
+    "angel wings": ["wings", "feathered wings"],
+    "green skin": ["colored skin"],
+})
+
 def norm(item: dict) -> dict | None:
     tag = str(item.get("tag") or "").strip().lower().replace("_", " ")
     if not tag or tag in BANNED:
@@ -1582,6 +1651,9 @@ def norm(item: dict) -> dict | None:
         needs.append("yuri")
         seen_needs.add("yuri")
     mutex_extra: list[str] = [str(g) for g in (item.get("mutexExtra") or []) if g]
+    for g in MUTEX_EXTRA_PATCH.get(tag, ()):
+        if g not in mutex_extra:
+            mutex_extra.append(g)
     if tag in SEX_ACT:
         if mutex and mutex != "sex_act":
             mutex_extra.append("sex_act")
@@ -1649,6 +1721,8 @@ def norm(item: dict) -> dict | None:
         out["needs"] = needs
     if mutex_extra:
         out["mutexExtra"] = mutex_extra
+    if tag in KIND_OF:
+        out["kind"] = KIND_OF[tag]
     return out
 
 
@@ -4480,6 +4554,206 @@ def extra_csv_round5() -> list[dict]:
 
 
 
+def extra_csv_round6() -> list[dict]:
+    """danbooru_worth_adding.csv（2026-10-06，Opus）。119 個，全部向 Danbooru 核過現役。
+
+    原則：
+    - 零件跟種族用 kind（見 KIND）：貓耳只配貓娘，兔尾不配狐尾。同種可以疊。
+    - 獸耳只會有一種（animal_ear 格），父標籤 animal ears 跟著出現；尾巴、角、翅膀同理帶出父標籤。
+    - 袖長、瀏海、指甲顏色、翅膀種類、兜帽狀態各自一格（mutexExtra，見 MUTEX_EXTRA_PATCH）。
+    - 基底字（蝴蝶結、緞帶、花）照 Danbooru 當父標籤：髮上蝴蝶結帶出蝴蝶結，既有的髮帶、領口緞帶帶出緞帶。
+    - 手上拿東西佔手勢那一格（hand_g，engine.js 的 HAND_GESTURE），並帶出那樣東西；
+      嘴叼物算嘴裡的一樣東西（GAG_KIND），跟口塞、口交、接吻不並存。
+    - 內褲走光只在走光以上，帶出內褲；風掀起衣服帶出風。
+    - 時代跟著被帶出的字走（拿扇子跟團扇一樣只在古中國、江戶），不然整筆會被拒。
+    """
+    all_h = list(HEATS)
+    hot = ["tease", "flash", "sex"]
+    flash = ["flash", "sex"]
+    modern = ["modern"]
+    medieval = ["medieval"]
+    fantasy = ["medieval", "modern"]
+    cloth = "clothing"
+    feat = "feature"
+    pose = "pose"
+    env = "env"
+    g = "garment"
+    acc = "accessory"
+    girl = ["female"]
+    solid = ["place", "in_out", "day_night", "bg_blur"]
+
+    def row(tag, section, zh, mutex=None, heat=None, gate="any", layer="normal",
+            implies=None, needs=None, era=None, bind=None, extra=None):
+        out = {
+            "tag": tag,
+            "section": section,
+            "gate": gate,
+            "heat": list(heat or all_h),
+            "mutex": mutex,
+            "bind": bind or [],
+            "implies": implies or [],
+            "layer": layer,
+            "era": era or ["any"],
+            "needs": needs or [],
+            "zh": zh,
+        }
+        if extra:
+            out["mutexExtra"] = list(extra)
+        return out
+
+    return [
+        # ---- 髮型。上紮、單側上紮、髮環是主髮型（佔 hair_style 格）；短雙馬尾、側辮、雙鑽捲是既有髮型的細分，
+        # 帶出父髮型（父子不互斥）。兩種新瀏海跟既有瀏海同一格。刺刺髮是髮質，跟直、捲、波浪同一格。
+        row("two side up", feat, "雙側上紮", mutex="hair_style"),
+        row("one side up", feat, "單側上紮", mutex="hair_style"),
+        row("double-parted bangs", feat, "中分瀏海", extra=["bangs"]),
+        row("crossed bangs", feat, "交叉瀏海", extra=["bangs"]),
+        row("spiked hair", feat, "刺刺髮", extra=["hair_texture"]),
+        row("short twintails", feat, "短雙馬尾", mutex="hair_style", implies=["twintails"]),
+        row("side braid", feat, "側辮", mutex="hair_style", implies=["braid"]),
+        row("twin drills", feat, "雙鑽捲髮", mutex="hair_style", implies=["drill hair"]),
+        row("hair rings", feat, "髮環", mutex="hair_style"),
+        row("hair behind ear", feat, "頭髮別到耳後"),
+        # ---- 眼睛。黑眼睛補進瞳色格。亮瞳、白瞳孔是瞳孔的明暗，只會有一種。
+        row("black eyes", feat, "黑眼睛", mutex="eye_color"),
+        row("bright pupils", feat, "亮瞳", extra=["pupil_tone"]),
+        row("white pupils", feat, "白瞳孔", extra=["pupil_tone"]),
+        row("multicolored eyes", feat, "多色瞳"),
+        row("one eye covered", feat, "遮住一眼"),
+        row("v-shaped eyebrows", feat, "八字眉"),
+        # ---- 臉。只露上排牙、波浪嘴、陰影臉是表情的附帶，不佔表情格。淡紅暈是臉紅的一種，帶出臉紅。
+        row("upper teeth only", pose, "只露上排牙", implies=["teeth"]),
+        row("wavy mouth", pose, "波浪嘴"),
+        row("shaded face", pose, "陰影臉"),
+        row("flying sweatdrops", feat, "飛散汗滴"),
+        row("light blush", feat, "淡紅暈", implies=["blush"]),
+        row("skin fang", feat, "微露尖牙", implies=["fang"]),
+        # ---- 指甲。黑、藍跟既有紅、粉同一格，都帶出指甲油。
+        row("fingernails", feat, "指甲"),
+        # 指甲油限女性，帶出它的字也要限女性，不然男生抽到會整筆被拒。
+        row("black nails", feat, "黑指甲", gate="female", implies=["nail polish"], extra=["nail_color"], needs=girl),
+        row("blue nails", feat, "藍指甲", gate="female", implies=["nail polish"], extra=["nail_color"], needs=girl),
+        # ---- 身體。腹部跟肚臍、腰腹一樣是身體部位。有色皮膚（藍、綠皮膚）跟白皙、深膚色同一格。
+        row("stomach", feat, "腹部"),
+        row("colored skin", feat, "有色皮膚", extra=["skin_tone"]),
+        # ---- 手臂。舉手、雙臂伸展、手枕腦後進手臂那一格（engine.js 的 ARM_POSE／BOTH_ARMS）。
+        row("hand up", pose, "單手舉起"),
+        row("hands up", pose, "雙手舉起"),
+        row("outstretched arms", pose, "雙臂伸展"),
+        row("arm behind head", pose, "手枕腦後"),
+        row("clenched hand", pose, "握拳"),
+        row("mouth hold", pose, "嘴叼物"),
+        # ---- 露出的手腳。不是裸體（不進 nude 那一層）。裸腿佔腿襪格；裸臂跟長袖、過肘手套不並存。
+        row("bare arms", cloth, "裸臂", extra=["bare_long", "bare_elbow", "bare_det"]),
+        row("bare legs", cloth, "裸腿", mutex="legs"),
+        # ---- 種族零件。獸耳只會有一種，帶出 animal ears；尾巴、角、翅膀帶出父標籤。種類見 KIND。
+        row("cat ears", feat, "貓耳", mutex="animal_ear", implies=["animal ears"]),
+        row("rabbit ears", feat, "兔耳", mutex="animal_ear", implies=["animal ears"]),
+        row("horse ears", feat, "馬耳", mutex="animal_ear", implies=["animal ears"]),
+        row("fox ears", feat, "狐耳", mutex="animal_ear", implies=["animal ears"]),
+        row("wolf ears", feat, "狼耳", mutex="animal_ear", implies=["animal ears"]),
+        row("dog ears", feat, "狗耳", mutex="animal_ear", implies=["animal ears"]),
+        row("animal ear fluff", feat, "獸耳絨毛", implies=["animal ears"]),
+        row("cat tail", feat, "貓尾", implies=["tail"]),
+        row("fox tail", feat, "狐尾", implies=["tail"]),
+        row("horse tail", feat, "馬尾（尾巴）", implies=["tail"]),
+        row("demon tail", feat, "惡魔尾", implies=["tail"]),
+        row("rabbit tail", feat, "兔尾", implies=["tail"]),
+        row("multiple tails", feat, "多尾", implies=["tail"]),
+        row("feathered wings", feat, "羽毛翅膀", implies=["wings"], extra=["wing_type"]),
+        row("bat wings", feat, "蝙蝠翅膀", implies=["wings"], extra=["wing_type"]),
+        row("fairy wings", feat, "妖精翅膀", implies=["wings"], extra=["wing_type"]),
+        row("head wings", feat, "頭翅膀"),
+        row("dragon horns", feat, "龍角", implies=["horns"]),
+        row("claws", feat, "爪"),
+        row("mechanical arms", feat, "機械臂", era=fantasy),
+        # 完整種族佔種族格；正常模式不自動抽（engine.js 擋 group=race）。馬娘就是馬耳加馬尾。
+        row("horse girl", feat, "馬娘", mutex="race", gate="female",
+            implies=["horse ears", "horse tail"], needs=girl),
+        row("fairy", feat, "妖精", mutex="race"),
+        row("cyborg", feat, "改造人", mutex="race", era=modern),
+        # ---- 衣料。袖長一格（父子不互斥：泡泡短袖帶出泡泡袖和短袖）。花紋、滾邊疊在衣服上。
+        row("sleeveless", cloth, "無袖", layer=g, extra=["sleeve_len"]),
+        row("striped clothes", cloth, "條紋衣服", layer=g),
+        row("clothing cutout", cloth, "衣物挖空", layer=g),
+        row("puffy short sleeves", cloth, "泡泡短袖", layer=g,
+            implies=["puffy sleeves", "short sleeves"], extra=["sleeve_len"]),
+        row("puffy long sleeves", cloth, "泡泡長袖", layer=g,
+            implies=["puffy sleeves", "long sleeves"], extra=["sleeve_len", "bare_long"]),
+        row("sleeves past wrists", cloth, "袖過手腕", layer=g,
+            implies=["long sleeves"], extra=["sleeve_len", "bare_long"]),
+        row("juliet sleeves", cloth, "朱麗葉袖", layer=g, era=["victorian", "medieval", "modern"],
+            implies=["long sleeves", "puffy sleeves"], extra=["sleeve_len", "bare_long"]),
+        row("strapless", cloth, "無肩帶", layer=g, extra=["strap"]),
+        row("plaid clothes", cloth, "格紋衣服", layer=g, era=modern),
+        row("floral print", cloth, "碎花圖案", layer=g),
+        # 荷葉邊類不帶出 frills：詞庫的 frills 只標維多利亞，帶出它會把現代的荷葉邊袖、裙、領一起收窄掉。
+        row("frilled sleeves", cloth, "荷葉邊袖", layer=g),
+        row("ribbon trim", cloth, "緞帶滾邊", layer=g),
+        row("lace trim", cloth, "蕾絲滾邊", layer=g),
+        row("high collar", cloth, "高領", layer=g),
+        row("layered sleeves", cloth, "層次袖", layer=g),
+        row("formal clothes", cloth, "正裝", layer=g, era=["modern", "victorian"]),
+        row("fur collar", cloth, "毛皮領", layer=g, implies=["fur trim"]),
+        row("highleg", cloth, "高衩", layer=g, heat=hot),
+        # ---- 衣服本體。字尾規則會再帶出 dress／skirt／jacket／thighhighs。
+        row("frilled dress", cloth, "荷葉邊洋裝", mutex="onepiece", layer=g, gate="female",
+            era=["modern", "victorian"], implies=["dress"], needs=girl),
+        row("frilled skirt", cloth, "荷葉邊裙", mutex="bottom", layer=g, gate="female",
+            era=["modern", "victorian"], implies=["skirt"], needs=girl),
+        row("hooded jacket", cloth, "連帽外套", mutex="outer", layer=g, era=modern, implies=["jacket"]),
+        row("robe", cloth, "長袍", mutex="outer", layer=g),
+        row("hood down", cloth, "兜帽放下", layer=acc, extra=["hood_up", "hood_on"]),
+        row("single thighhigh", cloth, "單邊過膝襪", mutex="legs", layer=g, gate="female",
+            era=["modern", "victorian"], implies=["thighhighs"], needs=girl),
+        row("high heel boots", cloth, "高跟靴", mutex="feet", layer=g, gate="female",
+            era=["modern", "victorian"], implies=["boots", "high heels"], needs=girl),
+        row("ankle boots", cloth, "短靴", mutex="feet", layer=g, implies=["boots"]),
+        row("armored boots", cloth, "裝甲靴", mutex="feet", layer=g, era=medieval, implies=["boots"]),
+        # ---- 飾品。蝴蝶結、緞帶是基底；髮飾類跟既有髮帶同一格（hair_acc），帽子類佔頭飾格。
+        row("bow", cloth, "蝴蝶結", layer=acc),
+        row("ribbon", cloth, "緞帶", layer=acc),
+        row("hair bow", cloth, "髮上蝴蝶結", mutex="hair_acc", layer=acc, implies=["bow"]),
+        row("hat bow", cloth, "帽上蝴蝶結", layer=acc, implies=["bow"]),
+        row("hat ribbon", cloth, "帽上緞帶", layer=acc, implies=["ribbon"]),
+        row("neckerchief", cloth, "頸巾", mutex="neckwear", layer=acc),
+        row("headband", cloth, "頭帶", mutex="hair_acc", layer=acc),
+        row("scrunchie", cloth, "大腸圈", layer=acc),
+        row("hair bobbles", cloth, "髮球飾", mutex="hair_acc", layer=acc),
+        row("tassel", cloth, "流蘇", layer=acc),
+        row("wristband", cloth, "腕帶", layer=acc, era=modern),
+        row("gauntlets", cloth, "臂鎧", mutex="hands", layer=acc, era=medieval),
+        row("pauldrons", cloth, "肩鎧", layer=acc, era=medieval, implies=["shoulder armor"]),
+        row("star hair ornament", cloth, "星星髮飾", mutex="headwear", layer=acc, gate="female",
+            implies=["hair ornament"], needs=girl),
+        row("feather hair ornament", cloth, "羽毛髮飾", mutex="headwear", layer=acc, gate="female",
+            implies=["hair ornament"], needs=girl),
+        row("hair bell", cloth, "頭髮鈴鐺", mutex="headwear", layer=acc, gate="female",
+            implies=["hair ornament"], needs=girl),
+        row("santa hat", cloth, "聖誕帽", mutex="headwear", layer=acc, era=modern),
+        row("mask on head", cloth, "面具戴在頭上", mutex="headwear", layer=acc, implies=["mask"]),
+        row("fox mask", cloth, "狐狸面具", mutex="headwear", layer=acc, era=["edo", "modern"], implies=["mask"]),
+        row("frilled collar", cloth, "荷葉邊領", mutex="neckwear", layer=acc),
+        # ---- 手上拿著。佔手勢格，帶出那樣東西；時代跟那樣東西走。
+        row("holding cup", pose, "拿著杯子", implies=["cup"]),
+        row("holding phone", pose, "拿著手機", era=modern, implies=["phone"]),
+        row("holding umbrella", pose, "拿著傘", implies=["umbrella"]),
+        row("holding fan", pose, "拿著扇子", era=["ancient_china", "edo"], implies=["hand fan"]),
+        # ---- 走光。內褲走光帶出內褲，只在走光以上；風掀起衣服帶出風。
+        row("pantyshot", pose, "內褲走光", heat=flash, gate="female", era=modern, implies=["panties"], needs=girl),
+        row("wind lift", pose, "風掀起衣服", heat=flash, implies=["wind"]),
+        # ---- 場景。綠、紫背景跟既有色背景一樣：素色背景、不跟場地／室內外／日夜並存。
+        row("green background", env, "綠背景", mutex="background", implies=["simple background"], extra=solid),
+        row("purple background", env, "紫背景", mutex="background", implies=["simple background"], extra=solid),
+        row("star (symbol)", env, "星星符號", mutex="effect"),
+        row("summer", env, "夏天", extra=["season"]),
+        row("flower", env, "花"),
+        row("leaf", env, "葉子"),
+        row("feathers", env, "羽毛"),
+        row("chain", env, "鎖鏈"),
+    ]
+
+
 def main() -> None:
     rows: list[dict] = []
     for path in sorted(PARTS.glob("*.json")):
@@ -4507,6 +4781,7 @@ def main() -> None:
     rows.extend(extra_csv_round3())
     rows.extend(extra_csv_round4())
     rows.extend(extra_csv_round5())
+    rows.extend(extra_csv_round6())
     rows.extend(extra_loli_tags())
     rows.extend(extra_shota_tags())
     rows.extend(extra_style_tags())

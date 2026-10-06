@@ -131,7 +131,8 @@ eq("swimsuit under clothes does not imply swimsuit", implies("swimsuit under clo
 eq("latex gloves imply gloves", implies("latex gloves"), ["gloves"]);
 eq("sweater vest implies vest, not sweater", implies("sweater vest"), ["vest"]);
 eq("thong leotard implies leotard, not thong", implies("thong leotard"), ["leotard"]);
-eq("highleg leotard implies leotard, not thong", implies("highleg leotard"), ["leotard"]);
+// 2026-10-06 第六輪：詞庫有了 highleg（高衩）這個父標籤，照 Danbooru 一起帶出。重點仍是不帶出丁字褲。
+eq("highleg leotard implies leotard and highleg, not thong", implies("highleg leotard"), ["leotard", "highleg"]);
 ok("pant suit does not imply pants", !implies("pant suit").includes("pants"));
 ok("catsuit implies neither bodysuit nor cat", !implies("catsuit").includes("bodysuit") && !implies("catsuit").some((t) => t.includes("cat")));
 for (const t of ["rope", "cuffs", "shackles", "bound ankles"]) {
@@ -332,8 +333,9 @@ const bare = base({
     const have = tagSet(draw(uw, pinsOf("underwear only"), seed));
     ok(`pinned underwear only stays at seed ${seed}`, have.has("underwear only") && !have.has("swimsuit under clothes") && !have.has("sportswear"));
   }
-  // 詞庫變大之後，淋浴從 seed 87 挪到 164。規則沒變：淋浴會拿掉只穿內衣。
-  const shower = tagSet(draw(uw, pinsOf("underwear only"), 164));
+  // 詞庫變大之後，淋浴從 seed 87 挪到 164，第六輪（2026-10-06）再挪到 155。規則沒變：淋浴會拿掉只穿內衣
+  // （1～3000 顆種子裡抽到淋浴的 4 次都拿掉了）。
+  const shower = tagSet(draw(uw, pinsOf("underwear only"), 155));
   ok("a shower drops pinned underwear only, and the hidden swimsuit stays gone",
     !shower.has("underwear only") && shower.has("showering") && !shower.has("swimsuit under clothes"));
 }

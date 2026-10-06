@@ -170,7 +170,8 @@ eq("a poncho is outerwear and does not imply a coat", {
 }, { mutex: "outer", implies: [], zh: "墨西哥披肩" });
 eq("floral print kimono brings out the print and the kimono", {
   implies: implies("floral print kimono"), bind: item("floral print kimono").bind,
-}, { implies: ["print kimono", "kimono"], bind: ["japanese clothes"] });
+  // 2026-10-06 第六輪：詞庫有了 floral print（碎花圖案），照 Danbooru 一起帶出。
+}, { implies: ["print kimono", "floral print", "kimono"], bind: ["japanese clothes"] });
 eq("print kimono is edo", item("print kimono").era, ["edo"]);
 eq("patterned clothing is a fabric overlay", item("patterned clothing").group, "fabric");
 

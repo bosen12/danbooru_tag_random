@@ -166,6 +166,26 @@ FABRIC = {
     "zipper",
     "breast pocket",
     "cow print",
+    # 第六輪：袖長、花紋、滾邊、領口、正裝、裸臂都疊在衣服上，不佔上衣格。
+    "sleeveless",
+    "striped clothes",
+    "clothing cutout",
+    "puffy short sleeves",
+    "puffy long sleeves",
+    "sleeves past wrists",
+    "juliet sleeves",
+    "strapless",
+    "plaid clothes",
+    "floral print",
+    "frilled sleeves",
+    "ribbon trim",
+    "lace trim",
+    "high collar",
+    "layered sleeves",
+    "formal clothes",
+    "fur collar",
+    "highleg",
+    "bare arms",
 }
 
 MAKEUP = {
@@ -177,6 +197,9 @@ MAKEUP = {
     "eyeliner",
     "mascara",
     "red lips",
+    "fingernails",
+    "black nails",
+    "blue nails",
 }
 
 BODY_ANY = {
@@ -193,6 +216,7 @@ BODY_ANY = {
     "underboob",
     "backboob",
     "cleft of venus",
+    "stomach",
 }
 
 SKY = {
@@ -251,6 +275,8 @@ HAIR_STYLE = {
     "dreadlocks",
     "afro",
     "cornrows",
+    "spiked hair",
+    "hair behind ear",
 }
 
 HAIR_COLOR_LOOK = {
@@ -325,6 +351,9 @@ FACE = {
     "laughing",
     "yawning",
     "raised eyebrow",
+    "upper teeth only",
+    "wavy mouth",
+    "shaded face",
 }
 
 SKIN = {
@@ -381,6 +410,8 @@ SKIN = {
     "scar on cheek",
     "nervous sweating",
     "nosebleed",
+    "colored skin",
+    "light blush",
 }
 
 SEX = {
@@ -684,7 +715,7 @@ def assign_group(item: dict) -> str:
         if mx == "eye_color" or "eye" in tag or tag in {
             "eyelashes", "eyeshadow", "heterochromia", "tareme", "tsurime",
             "symbol-shaped pupils", "slit pupils", "dilated pupils",
-            "star-shaped pupils",
+            "star-shaped pupils", "bright pupils", "white pupils",
         }:
             return "eyes"
         if tag in BODY_HAIR:

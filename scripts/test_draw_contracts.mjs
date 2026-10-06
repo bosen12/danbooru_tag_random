@@ -153,7 +153,8 @@ const WATER_SRC = [
   for (const [prop, , trigger] of NEEDS) {
     // 牌桌只在賭場、夜店、酒吧才合法，又跟兩百多個環境字搶剩下的名額。
     // 80 張現在只看得到三次，低於「至少看過 5 次」。規則還在，樣本不夠。
-    const n = prop === "poker table" ? 400 : 80;
+    // 第六輪（2026-10-06）環境池又多了幾個字，床頭櫃、購物車 80 張只剩 4、3 次，同樣放大。
+    const n = prop === "poker table" || prop === "nightstand" || prop === "shopping cart" ? 400 : 80;
     for (const mode of ["normal", "diverse"]) sweep(mk({ sceneMode: mode }), trigger, n, 500000);
   }
 

@@ -83,6 +83,7 @@ SUBS = {
             "single braid", "hair bun", "double bun", "single hair bun", "half updo",
             "drill hair", "hime cut", "undercut", "hair slicked back", "mohawk",
             "dreadlocks", "afro", "cornrows",
+            "two side up", "one side up", "short twintails", "side braid", "twin drills", "hair rings",
         ]),
         ("hair_detail", "髮型・瀏海髮質", [
             "blunt bangs", "swept bangs", "parted bangs", "bangs pinned back", "sidelocks",
@@ -90,28 +91,33 @@ SUBS = {
             "hair over shoulder", "hair over one eye", "hair between eyes",
             "eyes visible through hair", "straight hair", "wavy hair", "curly hair",
             "messy hair", "floating hair", "glowing hair",
+            "double-parted bangs", "crossed bangs", "spiked hair", "hair behind ear",
         ]),
         ("wear_bits", "髮飾兜帽", ["hair scrunchie", "hair flower", "hood up"]),
         ("eye_color", "眼睛・瞳色", [
             "brown eyes", "blue eyes", "green eyes", "red eyes", "grey eyes", "yellow eyes",
             "pink eyes", "purple eyes", "orange eyes", "aqua eyes", "heterochromia",
             "glowing eyes", "glowing eye",
+            "black eyes", "multicolored eyes",
         ]),
         ("eye_shape", "眼睛・眼型瞳孔", [
             "tsurime", "tareme", "narrowed eyes", "closed eyes", "eyelashes",
             "long eyelashes", "colored eyelashes", "thick eyebrows", "bags under eyes",
             "slit pupils", "ringed eyes", "dilated pupils", "symbol-shaped pupils",
             "star-shaped pupils", "heart-shaped pupils", "tears",
+            "bright pupils", "white pupils", "one eye covered", "v-shaped eyebrows",
         ]),
-        ("mouth_bits", "嘴牙舌", ["tongue", "teeth", "fang", "saliva", "saliva trail"]),
+        ("mouth_bits", "嘴牙舌", ["tongue", "teeth", "fang", "saliva", "saliva trail", "skin fang"]),
         ("makeup", "妝容", ["eyeshadow", "eyeliner"]),
         ("skin_tone", "皮膚・膚色", [
             "pale skin", "tan", "tanlines", "sun tattoo", "dark skin", "very dark skin",
             "black skin", "green skin", "dark-skinned female", "dark-skinned male", "shiny skin",
+            "colored skin",
         ]),
         ("skin_flush", "皮膚・臉紅汗濕", [
             "blush", "nose blush", "body blush", "blush stickers", "sweat", "nervous sweating",
             "sweatdrop", "wet", "wet hair", "steaming body",
+            "flying sweatdrops", "light blush",
         ]),
         ("skin_mark", "皮膚・痣疤傷", [
             "mole", "mole under eye", "mole under mouth", "mole on cheek", "mole on breast",
@@ -152,6 +158,7 @@ SUBS = {
             "forehead", "collarbone", "shoulder blades", "armpits", "biceps", "ribs", "midriff",
             "belly", "navel", "covered navel", "ass", "ass ripple", "thighs", "skindentation",
             "thigh strap",
+            "stomach",
         ]),
         ("bm_build", "身體・男性身材", [
             "short male", "tall male", "shota", "skinny", "toned male", "muscular",
@@ -174,16 +181,19 @@ SUBS = {
             "ghost", "zombie", "skeleton", "android", "alien", "slime girl", "slime boy",
             "mermaid", "merman", "lamia", "harpy", "centaur", "satyr", "minotaur", "goblin",
             "orc", "ogre", "troll", "kobold", "lizardman", "monster girl", "monster boy",
+            "fairy", "cyborg",
         ]),
         ("race_kemono", "種族・獸耳獸人", [
             "cat girl", "fox girl", "kitsune", "wolf girl", "dog girl", "rabbit girl",
             "cow girl", "dragon girl", "cat boy", "fox boy", "wolf boy", "dog boy",
             "rabbit boy", "horse boy", "bear boy", "tiger boy", "lion boy", "dragon boy",
             "shark boy", "tanuki", "werewolf",
+            "horse girl",
         ]),
         ("nonhuman", "種族・非人特徵", [
             "animal ears", "pointy ears", "tail", "horns", "demon horns", "wings",
             "demon wings", "angel wings", "tusks", "robot joints",
+            "cat ears", "rabbit ears", "horse ears", "fox ears", "wolf ears", "dog ears", "animal ear fluff", "cat tail", "fox tail", "horse tail", "demon tail", "rabbit tail", "multiple tails", "feathered wings", "bat wings", "fairy wings", "head wings", "dragon horns", "claws", "mechanical arms",
         ]),
         ("job_classic", "職業・古風奇幻", [
             "knight", "samurai", "ninja", "oiran", "onmyouji", "viking", "gladiator", "witch",
@@ -231,6 +241,7 @@ SUBS = {
             "crying with eyes open", "tearing up", "angry", "annoyed", "frown", "pout",
             "serious", "expressionless", "bored", "sleepy", "yawning", "exhausted", "dazed",
             "drunk",
+            "shaded face",
         ]),
         ("face_eyes", "表情・眼神", [
             "half-closed eyes", "one eye closed", "wide-eyed", "sparkling eyes", "empty eyes",
@@ -239,6 +250,7 @@ SUBS = {
         ("face_mouth", "表情・嘴", [
             "closed mouth", "open mouth", "parted lips", "tongue out", "licking lips",
             "biting own lip", "clenched teeth", "drooling",
+            "upper teeth only", "wavy mouth",
         ]),
         ("face_lewd", "表情・情色", [
             "come hither", "seductive smile", "naughty face", "aroused", "heavy breathing",
@@ -258,6 +270,7 @@ SUBS = {
             "hand on own thigh", "hands on own thighs", "hand on own knee", "hand in pocket",
             "hands in pockets", "holding own wrist", "own hands together", "covering own mouth",
             "covering own eyes", "finger to mouth", "cheek squash",
+            "hand up", "hands up", "outstretched arms", "arm behind head",
         ]),
         ("pose_sign", "動作・比手勢", [
             "shushing", "v", "double v",
@@ -265,6 +278,7 @@ SUBS = {
             "finger gun", "paw pose", "salute", "index finger raised", "pointing",
             "pointing at viewer", "reaching", "reaching towards viewer", "outstretched hand",
             "beckoning", "waving", "blowing kiss", "between fingers",
+            "clenched hand",
         ]),
         ("pose_two", "動作・兩人互動", [
             "hug", "hug from behind", "cuddling", "clinging", "kiss", "holding hands",
@@ -281,9 +295,11 @@ SUBS = {
             "washing hair", "after bathing", "splashing", "pillow hug", "head on pillow",
             "face in pillow", "smelling", "licking", "punching", "struggling", "between legs",
             ]),
-        ("pose_hold", "動作・持武器", [
+        ("pose_hold", "動作・手持物", [
             "holding weapon", "holding sword", "holding knife", "holding gun", "holding staff",
             "dual wielding", "aiming",
+            "mouth hold",
+            "holding cup", "holding phone", "holding umbrella", "holding fan",
         ]),
         ("pose_situ", "曖昧情境", [
             "breast focus", "spread cleavage", "wardrobe malfunction", "accidental exposure",
@@ -295,12 +311,14 @@ SUBS = {
             "dress pull", "one-piece swimsuit pull", "pants pull", "panty pull", "bra pull",
             "strap slip", "clothing aside", "swimsuit aside", "bikini bottom aside",
             "leotard aside", "wedgie", "undressing", "undressing another", "hand under clothes",
+            "wind lift",
         ]),
         ("flash_expose", "走光・露出", [
             "upskirt", "downblouse", "one breast out", "nipple slip", "areola slip", "cameltoe",
             "ass visible through thighs", "bulge", "erection under clothes", "flashing",
             "exhibitionism", "public nudity", "caught", "hidden camera",
             "clothed female nude male", "clothed male nude female",
+            "pantyshot",
         ]),
         ("flash_pose", "走光・姿勢", [
             "bent over", "presenting", "jack-o' challenge", "m legs", "spread legs", "leg lift",
@@ -414,7 +432,7 @@ SUBS = {
         ]),
     ],
     "clothing": [
-        ("nude", "裸身", ["topless female", "topless male", "bottomless", "bare shoulders"]),
+        ("nude", "裸身", ["topless female", "topless male", "bottomless", "bare shoulders", "bare arms"]),
         ("era_jp", "時代・和風", [
             "japanese clothes", "kimono", "white kimono", "blue kimono", "purple kimono",
             "print kimono", "floral print kimono", "furisode", "open kimono", "yukata",
@@ -444,6 +462,7 @@ SUBS = {
             "pinafore dress", "pencil dress", "sailor dress", "white dress", "black dress",
             "red dress", "pink dress", "blue dress", "green dress", "purple dress",
             "evening gown", "cocktail dress", "wedding dress",
+            "frilled dress",
         ]),
         ("op_uniform", "連身・制服套裝", [
             "school uniform", "serafuku", "gakuran", "gym uniform", "track uniform",
@@ -495,6 +514,7 @@ SUBS = {
             "skirt", "miniskirt", "microskirt", "pleated skirt", "plaid skirt", "pencil skirt",
             "long skirt", "high-waist skirt", "suspender skirt", "hakama skirt", "torn skirt",
             "black skirt", "white skirt", "blue skirt", "brown skirt",
+            "frilled skirt",
         ]),
         ("bot_pants", "下身・褲", [
             "pants", "jeans", "suit pants", "sweatpants", "yoga pants", "high-waist pants",
@@ -514,27 +534,31 @@ SUBS = {
             "male underwear", "chastity belt", "maebari", "heart maebari",
         ]),
         ("legs", "腿襪", ["loose socks"]),
-        ("feet", "鞋履", None),
+        ("feet", "鞋履", ["armored boots"]),
         ("outer", "外套", None),
         ("fab_sleeve", "衣料・袖子領口", [
             "long sleeves", "short sleeves", "wide sleeves", "puffy sleeves",
             "detached sleeves", "sleeves rolled up", "sailor collar", "mandarin collar",
             "halterneck", "side slit",
+            "sleeveless", "puffy short sleeves", "puffy long sleeves", "sleeves past wrists", "juliet sleeves", "frilled sleeves", "layered sleeves", "high collar",
         ]),
         ("fab_material", "衣料・材質花紋", [
             "see-through clothes", "latex", "leather", "denim", "satin", "shiny clothes",
             "fishnets", "fur trim", "frills", "patterned clothing", "polka dot",
             "animal print", "cow print",
+            "striped clothes", "plaid clothes", "floral print", "ribbon trim", "lace trim", "fur collar",
         ]),
         ("fab_state", "衣料・穿著狀態", [
             "tight clothes", "skin tight", "oversized clothes", "revealing clothes",
             "open clothes", "unzipped", "clothes between breasts", "layered clothes",
             "swimsuit under clothes", "wet clothes", "torn clothes", "blood on clothes",
             "costume switch", "reverse outfit",
+            "clothing cutout", "strapless", "highleg",
         ]),
         ("fab_style", "衣料・穿搭風格", [
             "casual", "cosplay", "lolita fashion", "gothic lolita", "halloween costume",
             "animal costume",
+            "formal clothes",
         ]),
         ("fab_detail", "衣料・圍裙扣件", [
             "maid apron", "waist apron", "frilled apron", "suspenders", "buttons", "zipper",
@@ -547,16 +571,22 @@ SUBS = {
             "crown", "tiara", "circlet", "kokoshnik", "laurel crown", "halo",
             "maid headdress", "fake animal ears", "hair ornament", "hair ribbon", "hairband",
             "hairclip", "hairpin", "hair stick", "kanzashi",
+            "hood down", "hair bow", "headband", "scrunchie", "hair bobbles", "star hair ornament", "feather hair ornament", "hair bell", "santa hat",
+        ]),
+        ("acc_bow", "飾品・蝴蝶結緞帶", [
+            "bow", "ribbon", "hat bow", "hat ribbon", "tassel",
         ]),
         ("acc_face", "飾品・眼鏡面具耳機", [
             "glasses", "coke-bottle glasses", "sunglasses", "goggles", "eyewear on head",
             "eyepatch", "medical eyepatch", "mask", "masquerade mask", "headphones",
             "headphones around neck", "earbuds",
+            "mask on head", "fox mask",
         ]),
         ("acc_neck", "飾品・領帶頸飾", [
             "necktie", "black necktie", "blue necktie", "bowtie", "black bowtie", "ascot",
             "neck ribbon", "detached collar", "scarf", "choker", "collar", "black collar",
             "red collar", "animal collar",
+            "neckerchief", "frilled collar",
         ]),
         ("acc_jewel", "飾品・首飾穿環", [
             "jewelry", "necklace", "bead necklace", "cross necklace", "tooth necklace",
@@ -570,6 +600,7 @@ SUBS = {
             "gloves", "black gloves", "elbow gloves", "fingerless gloves", "latex gloves",
             "boxing gloves", "belt", "black belt", "brown belt", "belt buckle", "buckle",
             "obi", "sash", "o-ring", "armband", "shoulder armor", "knee pads",
+            "wristband", "gauntlets", "pauldrons",
         ]),
         ("acc_carry", "飾品・隨身物品", [
             "bag", "handbag", "shoulder bag", "backpack", "pouch", "suitcase", "umbrella",
@@ -683,6 +714,7 @@ SUBS = {
         ("fx_comic", "特效・漫畫符號", [
             "heart", "spoken heart", "anger vein", "motion lines", "speed lines",
             "emphasis lines", "afterimage", "time stop", "glitch",
+            "star (symbol)",
         ]),
         ("fx_glow", "特效・光", [
             "glowing", "aura", "light particles", "sparkle", "sparks", "embers", "blue fire",
@@ -702,6 +734,7 @@ SUBS = {
             "stairs", "stone stairs", "spiral staircase", "escalator", "floor",
             "wooden floor", "stone floor", "tiles", "tatami", "shouji", "fusuma", "noren",
             "veranda",
+            "chain",
         ]),
         ("obj_street", "景物・街景", [
             "town", "urban", "road", "dirt road", "path", "sidewalk", "crosswalk",
@@ -725,6 +758,7 @@ SUBS = {
             "tree", "pine tree", "willow", "palm tree", "bamboo", "bush", "grass", "moss",
             "overgrown", "rose", "lotus", "chrysanthemum", "sunflower", "koi", "horse",
             "cherry blossoms", "autumn leaves", "maple leaf", "plum blossoms",
+            "flower", "leaf", "feathers",
         ]),
         ("obj_land", "景物・地景水土", [
             "scenery", "landscape", "horizon", "mountainous horizon", "rock", "stalactite",
@@ -772,6 +806,7 @@ SUBS = {
             "winter", "tropical", "fantasy", "magic", "medieval", "victorian", "tribal",
             "science fiction", "post-apocalypse", "surreal",
             "mecha",
+            "summer",
         ]),
     ],
 }
