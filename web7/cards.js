@@ -2,8 +2,9 @@
  * 墨池的卡牌：整本詞庫 → 卡牌資料，以及卡面 DOM。
  * 花色、分級、插畫檔名都來自 web/card-art.js（字鋪、烘焙腳本共用同一份）。
  */
-import { isCard, cardSuit, ratingTier, artFile, artSources, artUrl, applyArtSources, groupSeal, CARD_SUIT_INFO, CARD_SUITS } from "./card-art.js";
+import { isCard, cardSuit, ratingTier, artFile, artSources, artUrl, groupSeal, CARD_SUIT_INFO, CARD_SUITS } from "./card-art.js";
 import { el } from "./ui.js";
+import { miniSet, bindArt, artFallback } from "./card-images.js";
 import { DUR, CURVE, css, reducedMotion } from "./motion.js";
 
 export { CARD_SUIT_INFO, CARD_SUITS };
@@ -109,6 +110,10 @@ export function createAssets(manifest) {
     sources(tag) {
       return have.has(tag) ? artSources({ ...manifest[tag], file: artFile(tag) }) : null;
     },
+    /** 牌面用的細縮圖（card-images.js 照牌實際大小 × DPR 挑）；沒有或過期回 null。 */
+    mini(tag) {
+      return have.has(tag) ? miniSet({ ...manifest[tag], file: artFile(tag) }) : null;
+    },
     count() {
       return have.size;
     },
@@ -140,7 +145,7 @@ export function cardNode(card, assets, { tagName = "button", flag, src } = {}) {
     el(
       "span",
       { class: "card-art", "aria-hidden": "true" },
-      art ? artImg(assets.sources ? assets.sources(card.tag) : { src: art }) : el("span", { class: "card-glyph" }, [...card.zh][0]),
+      art ? artImg(assets.sources ? assets.sources(card.tag) : { src: art }, assets.mini?.(card.tag)) : el("span", { class: "card-glyph" }, [...card.zh][0]),
       flag ? el("span", { class: "card-flag", dataset: { kind: flag.kind } }, flag.text) : null,
       src ? el("span", { class: "card-flag", dataset: { kind: "src" } }, src) : null
     )
@@ -148,9 +153,10 @@ export function cardNode(card, assets, { tagName = "button", flag, src } = {}) {
   return node;
 }
 
-function artImg(sources) {
-  const i = applyArtSources(el("img", { alt: "", decoding: "async", draggable: "false" }), sources);
-  i.addEventListener("error", () => i.remove(), { once: true });
+function artImg(sources, mini) {
+  const i = bindArt(el("img", { alt: "", decoding: "async", draggable: "false" }), mini, sources);
+  // 挑的細縮圖不見了就退回原圖；原圖也沒有才拿掉，露出底下的字。
+  i.addEventListener("error", () => artFallback(i) || i.remove());
   // 圖晚到的（新換上來的影子、捲進來的字盒、連線慢的時候）：淡進來，不要啪一下蓋上去。
   // 本來就在快取裡的（60ms 內就到）直接出現 —— 不能一律先藏起來等 load，那會讓每次重畫都閃一格空白。
   const born = performance.now();

@@ -839,7 +839,7 @@ function saveBox() {
 const inBox = (tag) => box.includes(tag);
 
 function boxAddButton(card) {
-  const b = el("button", { class: "box-add", type: "button", "aria-pressed": "false", "aria-label": `把「${card.zh}」放進卡盒` }, "＋");
+  const b = el("button", { class: "box-add", type: "button", "aria-pressed": "false", "aria-label": `把「${card.zh}」放進卡盒` });
   b.addEventListener("click", (e) => {
     e.stopPropagation();
     toggleBox(card, cells.get(card.tag)?.querySelector(".card"));
@@ -847,14 +847,13 @@ function boxAddButton(card) {
   return b;
 }
 
-/** 牌格上的狀態：「＋」或「✓」、牌上的「盒中」章。 */
+/** 牌格上的狀態：「＋」或「✓」（book.css 用兩條線畫，aria-pressed 一換就變形過去）、牌上的「盒中」章。 */
 function paintBoxMark(cell, tag) {
   const on = inBox(tag);
   const b = cell.querySelector(".box-add");
   if (b) {
     b.setAttribute("aria-pressed", on ? "true" : "false");
     b.setAttribute("aria-label", `${on ? "把它拿出卡盒" : "放進卡盒"}：${lib.byTag.get(tag)?.zh || tag}`);
-    b.textContent = on ? "✓" : "＋";
   }
   cell.dataset.boxed = on ? "true" : "false";
   setCardFlag(cell.querySelector(".card"), on ? { kind: "box", text: "盒中" } : null);

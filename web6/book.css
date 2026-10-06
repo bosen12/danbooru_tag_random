@@ -519,9 +519,6 @@
   border-radius: 50%;
   background: color-mix(in oklch, var(--color-paper) 86%, transparent);
   color: var(--color-ink);
-  font-size: 17px;
-  font-weight: 700;
-  line-height: 1;
   box-shadow: 0 6px 14px -6px var(--color-shade);
   opacity: 0;
   transform: translateY(4px) scale(0.85);
@@ -530,6 +527,42 @@
     transform var(--dur-short) var(--ease-settle),
     background-color var(--dur-micro) var(--ease-out),
     color var(--dur-micro) var(--ease-out);
+}
+
+/* ＋／✓ 用兩條線畫：全形「＋」在中文字型裡偏上，不會在圓心。
+ * 兩條線都從圓心出發，放進盒子時直接折成勾（短的那筆往左下、長的往右上）。 */
+.box-add::before,
+.box-add::after {
+  content: "";
+  position: absolute;
+  left: 50%;
+  top: 50%;
+  width: 12px;
+  height: 2px;
+  margin: -1px 0 0 -6px;
+  border-radius: 1px;
+  background: currentColor;
+  transition:
+    transform var(--dur-short) var(--ease-settle),
+    width var(--dur-short) var(--ease-settle),
+    margin var(--dur-short) var(--ease-settle);
+}
+
+.box-add::after {
+  transform: rotate(90deg);
+}
+
+/* 勾：16 格裡 (4,8)→(7,11)→(12.5,4.5)，以圓心 (8,8) 為準，再往左下挪 0.7px（量過，看起來才在正中）。 */
+.box-add[aria-pressed="true"]::before {
+  width: 5px;
+  margin-left: -2.5px;
+  transform: translate(-3.2px, 2px) rotate(45deg);
+}
+
+.box-add[aria-pressed="true"]::after {
+  width: 9px;
+  margin-left: -4.5px;
+  transform: translate(1.05px, 0.25px) rotate(-49.8deg);
 }
 
 .book-cell:hover .box-add,
@@ -838,6 +871,8 @@
 
 @media (prefers-reduced-motion: reduce) {
   .box-add,
+  .box-add::before,
+  .box-add::after,
   .box-stack i,
   .box-close,
   .box-x {

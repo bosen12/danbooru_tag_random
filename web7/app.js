@@ -35,7 +35,8 @@ import { HEATS, toggleHeat } from "./heats.js";
 import { SCENE_MODES, SCENE_MODE_LABELS, heatBlockedByRating } from "./scene-policy.js";
 import { initLoraPicker, currentLorasPayload, currentTriggerText, currentCkpt, handleLoraKeys } from "./lora.js";
 import { initWorkflow, currentWorkflowId, currentSampling, wfHandleKeys } from "./workflow.js";
-import { HARD_BANNED, applyArtSources } from "./card-art.js";
+import { HARD_BANNED } from "./card-art.js";
+import { bindArt, artFallback } from "./card-images.js";
 import { buildLibrary, groupChips, createAssets, cardNode, setCardFlag, setEnterTarget, eagerArt, cardFacts, CARD_SUIT_INFO, CARD_SUITS, RATING_ZH } from "./cards.js";
 import { el, openSheet, anyOverlay, toast, runToastAction, ICONS } from "./ui.js";
 import { createDrag, inkRing } from "./drag.js";
@@ -2013,11 +2014,18 @@ function draftHand(shot) {
       return el(
         "span",
         { class: "hand-card", style: `--o:${off};--y:${off * off};--suit:var(--suit-${card.suit})` },
-        art ? applyArtSources(el("img", { alt: "", decoding: "async", draggable: "false" }), assets.sources(t)) : el("b", {}, [...card.zh][0]),
+        art ? handArt(t) : el("b", {}, [...card.zh][0]),
         el("i", {}, card.zh)
       );
     })
   );
+}
+
+/** 手牌的插畫：跟牌面一樣照實際大小挑細縮圖（card-images.js），沒有就照舊用縮圖／原圖。 */
+function handArt(tag) {
+  const i = bindArt(el("img", { alt: "", decoding: "async", draggable: "false" }), assets.mini(tag), assets.sources(tag), "hand");
+  i.addEventListener("error", () => artFallback(i));
+  return i;
 }
 
 /* ================= 原檔不在了（gone.js） ================= */

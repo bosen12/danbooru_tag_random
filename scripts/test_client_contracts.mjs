@@ -1886,6 +1886,16 @@ const ALBUM_FIXTURE = [
             readFileSync(join(ROOT, d, "app.js"), "utf8").includes("function greetHandoff()") &&
             readFileSync(join(ROOT, d, "store.js"), "utf8").includes("export let handoffFrom");
         }));
+      ok("牌面細縮圖（card-images.js）web7 也接上：字盒、卡池、卡冊、手牌都照牌實際大小 × DPR 挑",
+        readFileSync(join(ROOT, "web7/card-images.js"), "utf8").replace(/\r\n/g, "\n") === readFileSync(join(ROOT, "web6/card-images.js"), "utf8").replace(/\r\n/g, "\n") &&
+          readFileSync(join(ROOT, "web7/cards.js"), "utf8").includes("bindArt(el(\"img\"") &&
+          readFileSync(join(ROOT, "web7/app.js"), "utf8").includes("art ? handArt(t) :"));
+      ok("卡冊：右下角的＋／✓ 用兩條線畫（全形＋在中文字型裡偏上），放進盒子時折成勾（web6、web7）",
+        ["web6", "web7"].every((d) => {
+          const js = readFileSync(join(ROOT, d, "book.js"), "utf8");
+          const cssText = readFileSync(join(ROOT, d, "book.css"), "utf8");
+          return !js.includes('b.textContent = on ? "✓" : "＋"') && cssText.includes(".box-add::before,") && cssText.includes('.box-add[aria-pressed="true"]::after {');
+        }));
       ok("卡冊：沒用過的牌不灰掉；滑鼠停上去有浮空放大卡（web6、web7）",
         ["web6", "web7"].every((d) => {
           const js = readFileSync(join(ROOT, d, "book.js"), "utf8");
