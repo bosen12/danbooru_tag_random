@@ -11,9 +11,9 @@
  */
 import { indexLexicon } from "./engine.js";
 import { ratingBlocked, RATING_LABEL } from "./rules/rating.js";
-import { buildLibrary, groupChips, createAssets, cardNode, cardFacts, CARD_SUIT_INFO, CARD_SUITS } from "./cards.js";
+import { buildLibrary, groupChips, createAssets, cardNode, cardFacts, setCardFlag, CARD_SUIT_INFO, CARD_SUITS } from "./cards.js";
 import { el, openSheet, toast } from "./ui.js";
-import { initMotion, settleMotion, seat, refuse, reducedMotion, CURVE, DUR, css } from "./motion.js";
+import { initMotion, settleMotion, seat, refuse, flight, reducedMotion, CURVE, DUR, css } from "./motion.js";
 import { watchLink, LINK_LABEL, viewSrc } from "./gen.js";
 import { getSfx } from "./sfx.js";
 import { attachPeek } from "./card-peek.js";
@@ -81,6 +81,7 @@ async function boot() {
   usage = seedUsage((t) => lib.byTag.has(t));
   if (!["desc", "asc"].includes(ui.order)) ui.order = "desc";
 
+  buildBox();
   renderRating();
   renderSort();
   renderUsedToggle();
@@ -385,7 +386,7 @@ function cellOf(card) {
     node.addEventListener("click", () => openCard(card, node));
     const n = el("b", { class: "book-n" });
     const meta = el("span", { class: "book-meta" }, n, el("span", { class: "book-unit" }));
-    cell = el("div", { class: "book-cell", role: "listitem", dataset: { tag: card.tag } }, node, meta);
+    cell = el("div", { class: "book-cell", role: "listitem", dataset: { tag: card.tag } }, node, meta, boxAddButton(card));
     cells.set(card.tag, cell);
   }
   return cell;
@@ -407,6 +408,7 @@ function paintCell(cell, card, rank) {
       cell._stampRank = true;
     }
   } else old?.remove();
+  paintBoxMark(cell, card.tag);
   cell.querySelector(".card").setAttribute("aria-description", c ? `用過 ${c} 次${rank ? `，第 ${rank} 名` : ""}` : "還沒用過");
 }
 
@@ -637,6 +639,18 @@ function openCard(card, srcNode) {
           },
           "帶去墨池合成池"
         ),
+        el(
+          "button",
+          {
+            class: "btn",
+            type: "button",
+            onclick: (e) => {
+              toggleBox(card, srcNode);
+              e.currentTarget.textContent = inBox(card.tag) ? "從卡盒拿出來" : "放進卡盒";
+            },
+          },
+          inBox(card.tag) ? "從卡盒拿出來" : "放進卡盒"
+        ),
       ],
     }
   );
@@ -778,6 +792,347 @@ function flyToDetail(src, sheetEl) {
   };
   anim.onfinish = land;
   setTimeout(land, 700);
+}
+
+/* ================= 卡盒：從卡冊挑好幾張，一起放進墨池 =================
+ * 右下角一個盒子。牌右下角的「＋」（或詳情裡的「放進卡盒」）把牌放進來：影子沿弧線飛進盒子、
+ * 盒子彈一下、數字跳一下；牌上蓋「盒中」章，「＋」變成「✓」，再按一次拿出來。
+ * 點開盒子：從右下角長出一塊面板，牌依序落下，× 拿掉時旁邊的牌滑過來補位。
+ * 「全部放進墨池合成池」：牌依序往上飛走，交接便條（store.js）寫好就換版到墨池，牌已經在池子裡。
+ * 存在這個瀏覽器（mochi.book.box.v1），最多 BOX_MAX 張。 */
+
+const BOX_KEY = "mochi.book.box.v1";
+const BOX_MAX = 24;
+const BOX_ICON =
+  '<svg viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linejoin="round" aria-hidden="true"><path d="M3 9l9-5 9 5-9 5z"/><path d="M3 9v8l9 5 9-5V9"/><path d="M12 14v8"/></svg>';
+let box = readBox();
+let boxOpen = false;
+
+function readBox() {
+  try {
+    const v = JSON.parse(localStorage.getItem(BOX_KEY) || "[]");
+    return Array.isArray(v) ? v.filter((t) => typeof t === "string").slice(0, BOX_MAX) : [];
+  } catch {
+    return [];
+  }
+}
+function saveBox() {
+  try {
+    localStorage.setItem(BOX_KEY, JSON.stringify(box));
+  } catch {
+    /* 存不了就算了 */
+  }
+}
+
+const inBox = (tag) => box.includes(tag);
+
+function boxAddButton(card) {
+  const b = el("button", { class: "box-add", type: "button", "aria-pressed": "false", "aria-label": `把「${card.zh}」放進卡盒` }, "＋");
+  b.addEventListener("click", (e) => {
+    e.stopPropagation();
+    toggleBox(card, cells.get(card.tag)?.querySelector(".card"));
+  });
+  return b;
+}
+
+/** 牌格上的狀態：「＋」或「✓」、牌上的「盒中」章。 */
+function paintBoxMark(cell, tag) {
+  const on = inBox(tag);
+  const b = cell.querySelector(".box-add");
+  if (b) {
+    b.setAttribute("aria-pressed", on ? "true" : "false");
+    b.setAttribute("aria-label", `${on ? "把它拿出卡盒" : "放進卡盒"}：${lib.byTag.get(tag)?.zh || tag}`);
+    b.textContent = on ? "✓" : "＋";
+  }
+  cell.dataset.boxed = on ? "true" : "false";
+  setCardFlag(cell.querySelector(".card"), on ? { kind: "box", text: "盒中" } : null);
+}
+
+function toggleBox(card, fromNode) {
+  if (inBox(card.tag)) {
+    box = box.filter((t) => t !== card.tag);
+    saveBox();
+    afterBoxChange({ removed: card.tag });
+    return;
+  }
+  if (box.length >= BOX_MAX) {
+    refuse($("box-pill"));
+    toast(`卡盒最多 ${BOX_MAX} 張，先放進墨池或拿掉幾張`);
+    return;
+  }
+  box.push(card.tag);
+  saveBox();
+  sfx.tap?.();
+  flyIntoBox(fromNode);
+  afterBoxChange({ added: card.tag });
+}
+
+function afterBoxChange({ added = null, removed = null } = {}) {
+  const cell = cells.get(added || removed);
+  if (cell) paintBoxMark(cell, added || removed);
+  renderBoxPill({ bump: !!added && reducedMotion(), drop: !!removed });
+  if (boxOpen) renderBoxPanel({ added, removed });
+}
+
+/** 牌的影子沿弧線飛進盒子（motion.js 的 flight：追著落點、途中微轉、落地縮小淡掉），落地時盒子彈一下。 */
+function flyIntoBox(fromNode) {
+  const pill = $("box-pill");
+  if (!fromNode || reducedMotion()) return bumpPill();
+  const r = fromNode.getBoundingClientRect();
+  if (!r.width || r.bottom < 0 || r.top > innerHeight) return bumpPill();
+  const ghost = fromNode.cloneNode(true);
+  ghost.classList.add("box-ghost");
+  ghost.querySelector(".book-rank")?.remove();
+  document.body.append(ghost);
+  flight(ghost, { left: r.left, top: r.top, width: r.width, height: r.height }, () => pill.querySelector(".box-stack") || pill, {
+    endScale: 0.3,
+    endOpacity: 0.35,
+    arc: 70,
+    tilt: -8,
+    zIndex: 120,
+    onLand: () => bumpPill(),
+  });
+}
+
+function bumpPill() {
+  const pill = $("box-pill");
+  if (!pill || reducedMotion()) return;
+  pill.animate(
+    [{ transform: "none" }, { transform: "translateY(-5px) scale(1.08)" }, { transform: "none" }],
+    { duration: DUR.medium, easing: css(CURVE.settle) }
+  );
+}
+
+function renderBoxPill({ drop = false } = {}) {
+  const pill = $("box-pill");
+  const count = pill.querySelector(".box-count");
+  const old = count.textContent;
+  count.textContent = String(box.length);
+  pill.dataset.empty = box.length ? "false" : "true";
+  pill.setAttribute("aria-label", `卡盒：${box.length} 張，點開看`);
+  // 最後放進去的三張疊成一小疊（只有插畫，沒有字）。
+  const stack = pill.querySelector(".box-stack");
+  stack.replaceChildren(
+    ...box.slice(-3).map((t, i, a) => {
+      const art = assets.art(t);
+      const card = lib.byTag.get(t);
+      return el(
+        "i",
+        { style: `--k: ${a.length - 1 - i}; --suit: var(--suit-${card?.suit || "cast"})` },
+        art ? el("img", { src: art, alt: "", decoding: "async" }) : el("b", {}, [...(card?.zh || "字")][0])
+      );
+    })
+  );
+  if (old !== count.textContent && !reducedMotion()) {
+    count.animate(
+      [{ transform: `translateY(${drop ? "-" : ""}6px)`, opacity: 0 }, { transform: "none", opacity: 1 }],
+      { duration: DUR.short, easing: css(CURVE.out) }
+    );
+  }
+  if (drop && !reducedMotion()) {
+    pill.animate([{ transform: "none" }, { transform: "scale(0.95)" }, { transform: "none" }], { duration: DUR.short, easing: css(CURVE.out) });
+  }
+}
+
+function setBoxOpen(on) {
+  if (boxOpen === on) return;
+  boxOpen = on;
+  const panel = $("box-panel");
+  const pill = $("box-pill");
+  pill.setAttribute("aria-expanded", on ? "true" : "false");
+  if (on) {
+    panel.hidden = false;
+    renderBoxPanel({ deal: true });
+    if (!reducedMotion()) {
+      // 從盒子的位置長出來：右下角為原點，縮放加淡入，接著牌一張張落下。
+      panel.animate(
+        [{ opacity: 0, transform: "translateY(12px) scale(0.92)" }, { opacity: 1, transform: "none" }],
+        { duration: DUR.medium, easing: css(CURVE.out) }
+      );
+    }
+    panel.querySelector(".box-close")?.focus({ preventScroll: true });
+  } else {
+    const done = () => {
+      if (!boxOpen) panel.hidden = true;
+    };
+    if (reducedMotion()) return done();
+    const a = panel.animate(
+      [{ opacity: 1, transform: "none" }, { opacity: 0, transform: "translateY(10px) scale(0.95)" }],
+      { duration: DUR.short, easing: css(CURVE.exit) }
+    );
+    a.onfinish = done;
+    setTimeout(done, DUR.short + 60);
+  }
+}
+
+function renderBoxPanel({ deal = false, added = null, removed = null } = {}) {
+  const panel = $("box-panel");
+  const grid = panel.querySelector(".box-grid");
+  panel.querySelector(".box-title").textContent = `卡盒 ${box.length}/${BOX_MAX}`;
+  const go = panel.querySelector(".box-go");
+  go.disabled = !box.length;
+  go.querySelector(".count").textContent = box.length ? `×${box.length}` : "";
+  panel.querySelector(".box-clear").disabled = !box.length;
+  panel.querySelector(".box-empty").hidden = box.length > 0;
+  const make = (t) => {
+    const card = lib.byTag.get(t);
+    const node = cardNode(card, assets, { tagName: "div" });
+    const x = el("button", { class: "box-x", type: "button", "aria-label": `把「${card.zh}」拿出卡盒` }, "×");
+    x.addEventListener("click", () => removeFromPanel(t));
+    return el("div", { class: "box-slot", dataset: { tag: t } }, node, x);
+  };
+  if (removed) {
+    const slot = grid.querySelector(`.box-slot[data-tag="${CSS.escape(removed)}"]`);
+    if (slot) leaveAndFlip(grid, slot);
+    return;
+  }
+  if (added && !deal) {
+    const slot = make(added);
+    grid.append(slot);
+    if (!reducedMotion()) slot.animate([{ opacity: 0, transform: "translateY(-10px) scale(0.9)" }, { opacity: 1, transform: "none" }], { duration: DUR.medium, easing: css(CURVE.settle) });
+    return;
+  }
+  grid.replaceChildren(...box.filter((t) => lib.byTag.has(t)).map(make));
+  if (deal && !reducedMotion()) {
+    [...grid.children].forEach((s, i) =>
+      s.animate(
+        [{ opacity: 0, transform: "translateY(14px) rotate(-3deg) scale(0.94)" }, { opacity: 1, transform: "none" }],
+        { duration: DUR.medium, delay: DUR.micro + Math.min(i, 12) * 28, easing: css(CURVE.out), fill: "backwards" }
+      )
+    );
+  }
+}
+
+function leaveAndFlip(grid, slot) {
+  const rest = [...grid.children].filter((s) => s !== slot);
+  const before = new Map(rest.map((s) => [s, s.getBoundingClientRect()]));
+  const finish = () => {
+    slot.remove();
+    if (reducedMotion()) return;
+    for (const s of rest) {
+      const a = before.get(s);
+      const b = s.getBoundingClientRect();
+      if (Math.abs(a.left - b.left) + Math.abs(a.top - b.top) < 1) continue;
+      s.animate([{ transform: `translate(${a.left - b.left}px, ${a.top - b.top}px)` }, { transform: "none" }], { duration: DUR.medium, easing: css(CURVE.out) });
+    }
+  };
+  if (reducedMotion()) return finish();
+  const a = slot.animate([{ opacity: 1, transform: "none" }, { opacity: 0, transform: "scale(0.85)" }], { duration: DUR.short, easing: css(CURVE.exit), fill: "forwards" });
+  a.onfinish = finish;
+  setTimeout(() => slot.isConnected && finish(), DUR.short + 80);
+}
+
+function removeFromPanel(tag) {
+  box = box.filter((t) => t !== tag);
+  saveBox();
+  afterBoxChange({ removed: tag });
+  if (!box.length) $("box-panel").querySelector(".box-close")?.focus({ preventScroll: true });
+}
+
+function clearBox() {
+  if (!box.length) return;
+  const was = [...box];
+  box = [];
+  saveBox();
+  for (const t of was) {
+    const cell = cells.get(t);
+    if (cell) paintBoxMark(cell, t);
+  }
+  renderBoxPill({ drop: true });
+  const grid = $("box-panel").querySelector(".box-grid");
+  const slots = [...grid.children];
+  if (!reducedMotion()) {
+    slots.forEach((s, i) =>
+      s.animate([{ opacity: 1, transform: "none" }, { opacity: 0, transform: "translateY(10px) scale(0.9)" }], { duration: DUR.short, delay: i * 16, easing: css(CURVE.exit), fill: "forwards" })
+    );
+  }
+  setTimeout(() => renderBoxPanel(), reducedMotion() ? 0 : DUR.short + slots.length * 16);
+  toast(`卡盒清空了（${was.length} 張）`, {
+    action: {
+      label: "復原",
+      run: () => {
+        box = was;
+        saveBox();
+        for (const t of was) {
+          const cell = cells.get(t);
+          if (cell) paintBoxMark(cell, t);
+        }
+        renderBoxPill();
+        bumpPill();
+        if (boxOpen) renderBoxPanel({ deal: true });
+      },
+    },
+  });
+}
+
+/** 全部放進墨池：牌依序往上飛走，交接便條寫好，換版過去（牌已經在合成池裡）。 */
+function boxToMochi() {
+  if (!box.length) return refuse($("box-panel").querySelector(".box-go"));
+  S.handOffPool(box);
+  const n = box.length;
+  box = [];
+  saveBox();
+  sfx.deal?.(Math.min(6, n + 1));
+  const slots = [...$("box-panel").querySelectorAll(".box-slot")];
+  if (reducedMotion() || !slots.length) return void (location.href = "./");
+  slots.forEach((s, i) =>
+    s.animate(
+      [{ opacity: 1, transform: "none" }, { opacity: 0, transform: "translateY(-60px) rotate(4deg) scale(0.9)" }],
+      { duration: DUR.long, delay: Math.min(i, 10) * 35, easing: css(CURVE.in), fill: "forwards" }
+    )
+  );
+  setTimeout(() => (location.href = "./"), DUR.long + Math.min(slots.length, 10) * 35 - 120);
+}
+
+function buildBox() {
+  const dock = el(
+    "div",
+    { class: "box-dock", id: "box-dock" },
+    el(
+      "section",
+      { class: "box-panel", id: "box-panel", hidden: true, role: "dialog", "aria-label": "卡盒" },
+      el(
+        "div",
+        { class: "box-panel-head" },
+        el("b", { class: "box-title" }, "卡盒"),
+        el("button", { class: "btn btn-small btn-ghost box-clear", type: "button", onclick: clearBox }, "清空"),
+        el("button", { class: "box-close", type: "button", "aria-label": "收起卡盒", onclick: () => setBoxOpen(false) }, "×")
+      ),
+      el("p", { class: "box-empty" }, "按牌右下角的「＋」，把想用的牌放進來，再一起放進墨池。"),
+      el("div", { class: "box-grid" }),
+      el(
+        "div",
+        { class: "box-panel-foot" },
+        el("button", { class: "btn btn-primary box-go", type: "button", onclick: boxToMochi }, "全部放進墨池合成池", el("span", { class: "count" }, ""))
+      )
+    ),
+    el(
+      "button",
+      { class: "box-pill pressable", id: "box-pill", type: "button", "aria-expanded": "false", "aria-controls": "box-panel", onclick: () => setBoxOpen(!boxOpen) },
+      el("span", { class: "box-stack", "aria-hidden": "true" }),
+      el("span", { class: "box-icon", html: BOX_ICON }),
+      el("span", { class: "box-label" }, "卡盒"),
+      el("b", { class: "box-count" }, "0")
+    )
+  );
+  document.body.append(dock);
+  box = box.filter((t) => lib.byTag.has(t));
+  renderBoxPill();
+  addEventListener("keydown", (e) => {
+    if (e.key === "Escape" && boxOpen && !document.querySelector(".overlay")) setBoxOpen(false);
+  });
+  // 點盒子外面就收起來（點牌上的「＋」不算：邊挑邊看盒子是正常用法）。
+  document.addEventListener("pointerdown", (e) => {
+    if (boxOpen && !e.target.closest("#box-dock, .box-add, .overlay, .toast")) setBoxOpen(false);
+  });
+  // 別的分頁也開著卡冊：盒子內容跟著同步。
+  addEventListener("storage", (e) => {
+    if (e.key !== BOX_KEY) return;
+    box = readBox().filter((t) => lib.byTag.has(t));
+    for (const [t, cell] of cells) paintBoxMark(cell, t);
+    renderBoxPill();
+    if (boxOpen) renderBoxPanel();
+  });
 }
 
 /* ================= 別的分頁、別的裝置抽完牌 ================= */

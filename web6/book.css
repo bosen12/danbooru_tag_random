@@ -494,3 +494,353 @@
   html[data-vt-in] .book-grid > .book-cell:nth-child(12) { animation-delay: calc(var(--dur-micro) * 2.45); }
   html[data-vt-in] .book-grid > .book-cell:nth-child(n + 13) { animation-delay: calc(var(--dur-micro) * 2.6); }
 }
+
+/* ================= 卡盒 =================
+ * 右下角一顆膠囊（最後放進去的三張疊成一小疊＋張數），點開往上長出一塊面板。
+ * 牌格右下角的「＋」：滑鼠移上去才出現（觸控一直都在），放進盒子之後變「✓」、牌上蓋「盒中」。 */
+
+.book {
+  /* 盒子固定在右下角：最後一排牌底下留出它的高度，不被蓋住。 */
+  padding-bottom: calc(var(--space-2xl) + 64px);
+}
+
+.box-add {
+  position: absolute;
+  right: 6px;
+  /* 牌的底緣（次數那一行之上）。 */
+  bottom: calc(1.4em + 12px);
+  z-index: 3;
+  display: grid;
+  place-items: center;
+  width: 30px;
+  height: 30px;
+  padding: 0;
+  border: 1px solid var(--color-rule);
+  border-radius: 50%;
+  background: color-mix(in oklch, var(--color-paper) 86%, transparent);
+  color: var(--color-ink);
+  font-size: 17px;
+  font-weight: 700;
+  line-height: 1;
+  box-shadow: 0 6px 14px -6px var(--color-shade);
+  opacity: 0;
+  transform: translateY(4px) scale(0.85);
+  transition:
+    opacity var(--dur-micro) var(--ease-out),
+    transform var(--dur-short) var(--ease-settle),
+    background-color var(--dur-micro) var(--ease-out),
+    color var(--dur-micro) var(--ease-out);
+}
+
+.book-cell:hover .box-add,
+.book-cell:focus-within .box-add,
+.box-add[aria-pressed="true"] {
+  opacity: 1;
+  transform: none;
+}
+
+@media (hover: none) {
+  .box-add {
+    opacity: 1;
+    transform: none;
+  }
+}
+
+.box-add[aria-pressed="true"] {
+  border-color: var(--color-pool-2);
+  background: var(--color-pool-2);
+  color: var(--color-paper);
+}
+
+@media (hover: hover) and (pointer: fine) {
+  .box-add:hover {
+    transform: scale(1.1);
+  }
+}
+
+.box-add:active {
+  transform: scale(0.9);
+  transition-duration: var(--dur-micro);
+}
+
+.card-flag[data-kind="box"] {
+  color: var(--color-pool-2);
+}
+
+/* 飛往盒子的影子：牌的複製，飛行由 motion.js 的 flight 逐格畫。 */
+.box-ghost {
+  box-shadow: var(--shadow-lift);
+}
+
+/* ---------- 盒子（右下角） ---------- */
+
+.box-dock {
+  position: fixed;
+  right: calc(var(--space-md) + env(safe-area-inset-right));
+  bottom: calc(var(--space-md) + env(safe-area-inset-bottom));
+  z-index: 60;
+  display: grid;
+  justify-items: end;
+  gap: var(--space-xs);
+  pointer-events: none;
+}
+
+.box-dock > * {
+  pointer-events: auto;
+}
+
+.box-pill {
+  display: inline-flex;
+  align-items: center;
+  gap: var(--space-xs);
+  min-height: 48px;
+  padding: 6px 14px 6px 10px;
+  border: 1px solid var(--color-rule);
+  border-radius: 999px;
+  background: var(--color-paper-2);
+  color: var(--color-ink);
+  box-shadow: 0 14px 30px -10px var(--color-shade);
+  font: inherit;
+  font-size: var(--text-sm);
+  cursor: pointer;
+  transition: border-color var(--dur-micro) var(--ease-out), background-color var(--dur-micro) var(--ease-out);
+}
+
+.box-pill[aria-expanded="true"] {
+  border-color: var(--color-ink-2);
+}
+
+@media (hover: hover) and (pointer: fine) {
+  .box-pill:hover {
+    border-color: var(--color-ink-2);
+  }
+}
+
+.box-icon {
+  display: grid;
+  color: var(--color-ink-2);
+}
+
+.box-count {
+  min-width: 1.6em;
+  padding: 1px 6px;
+  border-radius: 999px;
+  background: var(--color-pool-2);
+  color: var(--color-paper);
+  font-family: var(--font-mono);
+  font-size: var(--text-xs);
+  text-align: center;
+}
+
+.box-pill[data-empty="true"] .box-count {
+  background: var(--color-paper-4);
+  color: var(--color-muted);
+}
+
+/* 最後放進去的三張：小小一疊，往右斜著疊。 */
+.box-stack {
+  position: relative;
+  display: block;
+  width: 26px;
+  height: 34px;
+}
+
+.box-pill[data-empty="true"] .box-stack {
+  display: none;
+}
+
+.box-stack i {
+  position: absolute;
+  inset: 0;
+  overflow: hidden;
+  border: 1px solid color-mix(in oklch, var(--suit) 70%, var(--color-rule));
+  border-radius: 3px;
+  background: var(--color-stock);
+  transform: translateX(calc(var(--k) * -5px)) rotate(calc(var(--k) * -7deg));
+  transform-origin: 50% 100%;
+  transition: transform var(--dur-short) var(--ease-settle);
+}
+
+.box-stack i img {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+  object-position: 50% 22%;
+}
+
+.box-stack i b {
+  display: grid;
+  place-items: center;
+  height: 100%;
+  color: var(--color-stock-ink, #333);
+  font-family: var(--font-display);
+  font-size: 13px;
+}
+
+@media (hover: hover) and (pointer: fine) {
+  .box-pill:hover .box-stack i {
+    transform: translateX(calc(var(--k) * -8px)) rotate(calc(var(--k) * -12deg));
+  }
+}
+
+/* ---------- 打開的面板 ---------- */
+
+.box-panel {
+  display: grid;
+  grid-template-rows: auto auto minmax(0, 1fr) auto;
+  gap: var(--space-sm);
+  width: min(30rem, calc(100vw - 2 * var(--space-md)));
+  max-height: min(34rem, calc(100dvh - 140px));
+  padding: var(--space-md);
+  border: 1px solid var(--color-rule);
+  border-radius: var(--radius-md);
+  background: var(--color-paper-2);
+  box-shadow: 0 24px 60px -16px var(--color-shade);
+  transform-origin: 100% 100%;
+}
+
+.box-panel[hidden] {
+  display: none;
+}
+
+.box-panel-head {
+  display: flex;
+  align-items: center;
+  gap: var(--space-xs);
+}
+
+.box-title {
+  margin-right: auto;
+  font-family: var(--font-display);
+  font-size: var(--text-lg);
+  letter-spacing: 0.04em;
+  font-variant-numeric: tabular-nums;
+}
+
+.box-close {
+  display: grid;
+  place-items: center;
+  width: 32px;
+  height: 32px;
+  padding: 0;
+  border: 1px solid var(--color-rule-2);
+  border-radius: 50%;
+  background: transparent;
+  color: var(--color-ink-2);
+  font-size: 18px;
+  line-height: 1;
+  cursor: pointer;
+  transition: transform var(--dur-short) var(--ease-settle), border-color var(--dur-micro) var(--ease-out);
+}
+
+.box-close:hover {
+  border-color: var(--color-ink-2);
+  transform: rotate(90deg);
+}
+
+.box-empty {
+  margin: 0;
+  color: var(--color-muted);
+  font-size: var(--text-sm);
+}
+
+.box-empty[hidden] {
+  display: none;
+}
+
+.box-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(72px, 1fr));
+  gap: var(--space-xs);
+  overflow-y: auto;
+  overscroll-behavior: contain;
+  padding: 4px 2px;
+  min-height: 0;
+}
+
+.box-slot {
+  position: relative;
+}
+
+.box-slot .card {
+  --card-w: 100%;
+  width: 100%;
+  font-size: 9.5px;
+}
+
+.box-x {
+  position: absolute;
+  top: -6px;
+  right: -6px;
+  z-index: 2;
+  display: grid;
+  place-items: center;
+  width: 22px;
+  height: 22px;
+  padding: 0;
+  border: 1px solid var(--color-rule);
+  border-radius: 50%;
+  background: var(--color-paper-2);
+  color: var(--color-ink-2);
+  font-size: 14px;
+  line-height: 1;
+  cursor: pointer;
+  opacity: 0;
+  transform: scale(0.8);
+  transition: opacity var(--dur-micro) var(--ease-out), transform var(--dur-short) var(--ease-settle), color var(--dur-micro) var(--ease-out);
+}
+
+.box-slot:hover .box-x,
+.box-x:focus-visible {
+  opacity: 1;
+  transform: none;
+}
+
+.box-x:hover {
+  color: var(--color-accent);
+}
+
+@media (hover: none) {
+  .box-x {
+    opacity: 1;
+    transform: none;
+  }
+}
+
+.box-panel-foot {
+  display: flex;
+  justify-content: flex-end;
+}
+
+.box-go {
+  gap: var(--space-xs);
+}
+
+.box-go .count {
+  font-family: var(--font-mono);
+  opacity: 0.85;
+}
+
+@media (max-width: 40rem) {
+  .box-dock {
+    right: calc(var(--space-sm) + env(safe-area-inset-right));
+    bottom: calc(var(--space-sm) + env(safe-area-inset-bottom));
+  }
+  .box-panel {
+    width: calc(100vw - 2 * var(--space-sm));
+    max-height: calc(100dvh - 120px);
+  }
+  .box-go {
+    width: 100%;
+    justify-content: center;
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .box-add,
+  .box-stack i,
+  .box-close,
+  .box-x {
+    transition: none;
+  }
+}
