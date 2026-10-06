@@ -137,6 +137,7 @@ async function boot() {
   renderLibraryChrome();
   renderLibrary();
   renderPool();
+  greetHandoff();
   renderRules();
   renderGoBar();
   renderWall();
@@ -917,6 +918,26 @@ function zh(tag) {
 }
 
 /* ================= 合成池 ================= */
+
+/**
+ * 從卡冊、疊印台帶牌過來：牌依序落進合成池（換版的錯開動畫之後接著落），並跳一行說從哪裡來的。
+ * 以前是靜靜地出現在池子裡，看不出是剛帶過來的。
+ */
+function greetHandoff() {
+  const from = { book: "卡冊", fuse: "疊印台" }[S.handoffFrom];
+  if (!from || !pool.size) return;
+  const cards = [...$("pool-well").querySelectorAll(".card")];
+  if (!reducedMotion()) {
+    cards.forEach((c, i) =>
+      c.animate(
+        [{ opacity: 0, transform: "translateY(-28px) rotate(-4deg) scale(0.92)" }, { opacity: 1, transform: "none" }],
+        { duration: DUR.long, delay: DUR.short + Math.min(i, 10) * 45, easing: css(CURVE.settle), fill: "backwards" }
+      )
+    );
+    setTimeout(() => sfx.deal?.(Math.min(6, cards.length + 1)), DUR.short);
+  }
+  setTimeout(() => toast(`從${from}帶來 ${pool.size} 張牌，已經放進合成池`), DUR.long);
+}
 
 function renderPool(fresh) {
   const well = $("pool-well");

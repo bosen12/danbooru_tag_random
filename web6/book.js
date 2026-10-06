@@ -11,7 +11,7 @@
  */
 import { indexLexicon } from "./engine.js";
 import { ratingBlocked, RATING_LABEL } from "./rules/rating.js";
-import { buildLibrary, groupChips, createAssets, cardNode, cardFacts, setCardFlag, CARD_SUIT_INFO, CARD_SUITS } from "./cards.js";
+import { buildLibrary, groupChips, createAssets, cardNode, cardFacts, setCardFlag, eagerArt, CARD_SUIT_INFO, CARD_SUITS } from "./cards.js";
 import { el, openSheet, toast } from "./ui.js";
 import { initMotion, settleMotion, seat, refuse, flight, reducedMotion, CURVE, DUR, css } from "./motion.js";
 import { watchLink, LINK_LABEL, viewSrc } from "./gen.js";
@@ -631,7 +631,7 @@ function openCard(card, srcNode) {
             type: "button",
             onclick: (e) => {
               // 交接便條：墨池下次打開時把它放進合成池（30 分鐘內有效，見 store.js）。
-              S.handOffPool([card.tag]);
+              S.handOffPool([card.tag], "book");
               sfx.tap?.();
               e.currentTarget.textContent = "帶過去了…";
               setTimeout(() => (location.href = "./"), reducedMotion() ? 0 : DUR.short);
@@ -914,7 +914,9 @@ function renderBoxPill({ drop = false } = {}) {
   const stack = pill.querySelector(".box-stack");
   stack.replaceChildren(
     ...box.slice(-3).map((t, i, a) => {
-      const art = assets.art(t);
+      // 26px 寬的小疊：借格子上已經載好的那張縮圖（currentSrc），不另外拉整張原圖。
+      const shown = cells.get(t)?.querySelector(".card-art img");
+      const art = (shown && shown.currentSrc) || assets.art(t);
       const card = lib.byTag.get(t);
       return el(
         "i",
@@ -976,7 +978,8 @@ function renderBoxPanel({ deal = false, added = null, removed = null } = {}) {
   panel.querySelector(".box-empty").hidden = box.length > 0;
   const make = (t) => {
     const card = lib.byTag.get(t);
-    const node = cardNode(card, assets, { tagName: "div" });
+    // 立刻載圖：字盒那套 lazy 在面板剛長出來時還沒輪到，牌面會空白一下。
+    const node = eagerArt(cardNode(card, assets, { tagName: "div" }));
     const x = el("button", { class: "box-x", type: "button", "aria-label": `把「${card.zh}」拿出卡盒` }, "×");
     x.addEventListener("click", () => removeFromPanel(t));
     return el("div", { class: "box-slot", dataset: { tag: t } }, node, x);
@@ -1068,7 +1071,7 @@ function clearBox() {
 /** 全部放進墨池：牌依序往上飛走，交接便條寫好，換版過去（牌已經在合成池裡）。 */
 function boxToMochi() {
   if (!box.length) return refuse($("box-panel").querySelector(".box-go"));
-  S.handOffPool(box);
+  S.handOffPool(box, "book");
   const n = box.length;
   box = [];
   saveBox();
@@ -1108,7 +1111,7 @@ function buildBox() {
     ),
     el(
       "button",
-      { class: "box-pill pressable", id: "box-pill", type: "button", "aria-expanded": "false", "aria-controls": "box-panel", onclick: () => setBoxOpen(!boxOpen) },
+      { class: "box-pill pressable", id: "box-pill", type: "button", "aria-expanded": "false", "aria-controls": "box-panel", "aria-keyshortcuts": "B", title: "卡盒（B）", onclick: () => setBoxOpen(!boxOpen) },
       el("span", { class: "box-stack", "aria-hidden": "true" }),
       el("span", { class: "box-icon", html: BOX_ICON }),
       el("span", { class: "box-label" }, "卡盒"),
@@ -1120,6 +1123,12 @@ function buildBox() {
   renderBoxPill();
   addEventListener("keydown", (e) => {
     if (e.key === "Escape" && boxOpen && !document.querySelector(".overlay")) setBoxOpen(false);
+    // B：開關卡盒（在找字的框裡打字時不算）。
+    const typing = /^(INPUT|TEXTAREA|SELECT)$/.test(document.activeElement?.tagName || "");
+    if ((e.key === "b" || e.key === "B") && !typing && !e.ctrlKey && !e.metaKey && !e.altKey && !document.querySelector(".overlay")) {
+      e.preventDefault();
+      setBoxOpen(!boxOpen);
+    }
   });
   // 點盒子外面就收起來（點牌上的「＋」不算：邊挑邊看盒子是正常用法）。
   document.addEventListener("pointerdown", (e) => {

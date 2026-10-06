@@ -1876,7 +1876,9 @@ const ALBUM_FIXTURE = [
       ok("卡冊的卡盒：牌上的＋放進盒子（飛進去、蓋盒中章）、盒子點開能拿掉、全部放進墨池走交接便條（web6、web7）",
         ["web6", "web7"].every((d) => {
           const js = readFileSync(join(ROOT, d, "book.js"), "utf8");
-          return js.includes('const BOX_KEY = "mochi.book.box.v1";') && js.includes("flight(ghost") && js.includes('kind: "box", text: "盒中"') && js.includes("S.handOffPool(box);") && js.includes("leaveAndFlip(grid, slot)");
+          return js.includes('const BOX_KEY = "mochi.book.box.v1";') && js.includes("flight(ghost") && js.includes('kind: "box", text: "盒中"') && js.includes('S.handOffPool(box, "book");') && js.includes("leaveAndFlip(grid, slot)") &&
+            readFileSync(join(ROOT, d, "app.js"), "utf8").includes("function greetHandoff()") &&
+            readFileSync(join(ROOT, d, "store.js"), "utf8").includes("export let handoffFrom");
         }));
       ok("卡冊：沒用過的牌不灰掉；滑鼠停上去有浮空放大卡（web6、web7）",
         ["web6", "web7"].every((d) => {

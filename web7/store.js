@@ -35,7 +35,10 @@ function write(key, value) {
 const HANDOFF_MS = 30 * 60 * 1000;
 
 /** 疊印台把一版牌交給墨池：寫一張便條，墨池下次打開時拿走。 */
-export const handOffPool = (tags) => write(KEY.handoff, { tags: [...tags], at: Date.now() });
+/** from：從哪裡交過來（"fuse"、"book"），墨池接到時跟使用者說一聲。 */
+export const handOffPool = (tags, from = "") => write(KEY.handoff, { tags: [...tags], at: Date.now(), from });
+/** 上一次 takePool() 拿到的便條是從哪裡來的（沒有便條就是空字串）。 */
+export let handoffFrom = "";
 
 /** 墨池開機時呼叫：拿走交接的牌（沒有就是空的池子），順手清掉舊版一直存著的合成池。 */
 export function takePool() {
@@ -47,6 +50,7 @@ export function takePool() {
     /* 刪不了就算了：下一次還會再試 */
   }
   if (!note || !Array.isArray(note.tags) || !(Date.now() - note.at < HANDOFF_MS)) return [];
+  handoffFrom = typeof note.from === "string" ? note.from : "";
   return note.tags.filter((t) => typeof t === "string");
 }
 export const loadBans = () => read(KEY.bans, []);

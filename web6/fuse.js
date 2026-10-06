@@ -2636,7 +2636,7 @@ function showPos() {
 
 function sendToPool() {
   if (!bed.pins.length) return;
-  S.handOffPool(bed.pins);
+  S.handOffPool(bed.pins, "fuse");
   const b = $("print-bar").querySelector(".pb-links button:last-child");
   if (b) b.textContent = "放好了：回墨池工作臺就看得到";
   announce("這一版的牌放進墨池的合成池了");
