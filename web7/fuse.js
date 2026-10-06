@@ -2878,6 +2878,7 @@ function renderCaseTabs() {
             caseGroup = "";
             writeJ(FK.tab, id);
             renderCaseTabs();
+            caseBackToTop(true);
             dealCase = true;
             renderCase();
             seat($("case-tabs").querySelector('[aria-pressed="true"]'));
@@ -2937,6 +2938,7 @@ function renderCaseGroups(inSuit) {
         "aria-label": full && full !== label ? full : null,
         onclick: () => {
           caseGroup = g;
+          caseBackToTop();
           dealCase = true;
           renderCase();
           seat($("case-groups").querySelector('[aria-pressed="true"]'));
@@ -2958,6 +2960,18 @@ function renderCaseGroups(inSuit) {
         : chip(r.items[0].g, r.items[0].short, r.items[0].seal, r.items[0].zh)
     )
   );
+}
+
+/**
+ * 換了花色、小分類、搜尋：字盒捲過頭就捲回來（細分類籤跟牌一起捲，見 fuse.css 的 .case-scroll）。
+ *   all：換花色，連新的細分類籤一起看到（捲到最上面）。不然牌格頂端露出來就好。
+ * 窄螢幕那一層沒有在捲（display: contents），什麼都不做。
+ */
+function caseBackToTop(all = false) {
+  const box = $("case-scroll");
+  if (!box || box.scrollHeight <= box.clientHeight + 1) return;
+  const top = all ? 0 : $("case-grid").getBoundingClientRect().top - box.getBoundingClientRect().top + box.scrollTop;
+  if (box.scrollTop > top) box.scrollTop = top;
 }
 
 function renderCase() {
@@ -3477,6 +3491,7 @@ function wireChrome() {
     clearTimeout(caseSearchTimer);
     caseSearchTimer = setTimeout(() => {
       caseQuery = q.value;
+      caseBackToTop();
       renderCase();
     }, 120);
   });

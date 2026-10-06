@@ -1917,6 +1917,19 @@ const ALBUM_FIXTURE = [
           return htmlText.includes('<div class="lib-scroll" id="lib-scroll">') && cssText.includes("body[data-picker=\"open\"] .library .lib-scroll {") &&
             cssText.includes(".library .lib-scroll > .lib-grid {") && js.includes("libBackToTop(true);") && js.includes("function libBackToTop(all = false)");
         }));
+      ok("疊印台字盒：細分類籤跟牌在同一個捲動區（寬螢幕），換花色捲回最上面（web6、web7）",
+        ["web6", "web7"].every((d) => {
+          const htmlText = readFileSync(join(ROOT, d, "fuse.html"), "utf8");
+          const cssText = readFileSync(join(ROOT, d, "fuse.css"), "utf8");
+          const js = readFileSync(join(ROOT, d, "fuse.js"), "utf8");
+          return htmlText.includes('<div class="case-scroll" id="case-scroll">') && /\.case-scroll \{\s*display: flex;/.test(cssText) &&
+            js.includes("caseBackToTop(true);") && js.includes("function caseBackToTop(all = false)");
+        }));
+      ok("手機：LoRA／底模彈窗清單 62dvh、目前選擇 26dvh（工作流不動），分類籤一排左右滑（web6、web7）",
+        ["web6", "web7"].every((d) => {
+          const cssText = readFileSync(join(ROOT, d, "styles.css"), "utf8");
+          return cssText.includes(".lora-modal:not(.wf-modal) .lm-left {") && cssText.includes(".lora-modal .lm-cats {");
+        }));
       ok("卡冊：沒用過的牌不灰掉；滑鼠停上去有浮空放大卡（web6、web7）",
         ["web6", "web7"].every((d) => {
           const js = readFileSync(join(ROOT, d, "book.js"), "utf8");

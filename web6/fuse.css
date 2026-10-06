@@ -542,15 +542,28 @@ body.fuse {
   align-content: start;
 }
 
+/* 細分類籤跟牌一起捲：寬螢幕的字盒高度固定，籤以前釘在牌格上面，
+ * 「服裝」的籤有 476px，1280×720 牌格一張都看不到、1440×900 只剩 138px。
+ * 現在籤和牌在同一個捲動區，往下捲籤就捲走；搜尋框、花色籤照樣釘在上面。
+ * 換花色捲回最上面（fuse.js 的 caseBackToTop）。窄螢幕字盒跟著頁面捲，這一層不存在。 */
+.case-scroll {
+  display: contents;
+}
+
 @media (min-width: 68.75rem) {
   .case-grid {
     /* 字盒變寬就多一欄，牌不會被撐得比卡池裡的還大。 */
     grid-template-columns: repeat(auto-fill, minmax(4.6rem, 1fr));
+  }
+  .case-scroll {
+    display: flex;
+    flex-direction: column;
+    gap: var(--space-xs);
+    flex: 1;
+    min-height: 0;
     overflow-y: auto;
     scrollbar-gutter: stable;
     overscroll-behavior: contain;
-    flex: 1;
-    min-height: 0;
   }
 }
 
