@@ -1260,9 +1260,11 @@ function renderRules() {
           dataset: { heat: h },
           "aria-pressed": settings.heats.includes(h) && !heatBlockedByRating(h, settings.rating) ? "true" : "false",
           // 分級擋掉的尺度跟主工具一樣變灰：這一級根本抽不到那種畫面。
-          disabled: heatBlockedByRating(h, settings.rating),
+          // 不用 disabled：手機沒有滑鼠停留的說明，點下去要有反應、說得出為什麼（explainBlockedHeat）。
+          "aria-disabled": heatBlockedByRating(h, settings.rating) ? "true" : undefined,
           title: heatBlockedByRating(h, settings.rating) ? `${RATING_LABEL[settings.rating]}不會出現${HEAT_ZH[h]}` : undefined,
           onclick: (e) => {
+            if (heatBlockedByRating(h, settings.rating)) return explainBlockedHeat(h, e.currentTarget, settings.rating);
             const focused = document.activeElement === e.currentTarget;
             setSettings({ heats: toggleHeat(settings.heats, h) });
             renderRules();
@@ -1396,11 +1398,26 @@ function stepper(label, value, min, max, onChange) {
   return el("span", { class: "stepper" }, el("span", { class: "stepper-label" }, label), minus, out, plus);
 }
 
-function switchBox(label, on, onChange) {
+function switchBox(label, on, onChange, hint) {
   const input = el("input", { type: "checkbox", role: "switch" });
   input.checked = !!on;
   input.onchange = () => onChange(input.checked);
-  return el("label", { class: "switch" }, input, label);
+  return el("label", { class: "switch", title: hint }, input, label);
+}
+
+/**
+ * 分級擋掉的尺度被點了：牌搖一下、說為什麼，頂欄的分級亮一下指出要去哪裡換。
+ * 墨池、疊印台共用（疊印台在規則面板裡）。
+ */
+function explainBlockedHeat(h, btn, rating) {
+  refuse(btn);
+  toast(`${RATING_LABEL[rating]}不會出現${HEAT_ZH[h]}：要用的話，先把頂端的分級換成「敏感」或「色情」`);
+  const bar = $("rating");
+  if (!bar || reducedMotion()) return;
+  bar.classList.remove("is-hint");
+  void bar.offsetWidth;
+  bar.classList.add("is-hint");
+  bar.addEventListener("animationend", () => bar.classList.remove("is-hint"), { once: true });
 }
 
 /* ================= 抽牌與生圖 ================= */
@@ -1493,6 +1510,19 @@ function openHires(shot, btn) {
 // 生圖種子那一組只建一次，每次重畫合成池底下那排時把同一個節點搬回去（輸入到一半不會被洗掉）。
 let seedNode = null;
 
+/** 抽牌那一列的狀態字：忙的時候講進度；閒著但「同一個人」開著卻沒作用時說一聲。 */
+function goStatusText(busy = generator.busy || looping || drawingRounds > 0) {
+  if (busy) return `${generator.pending ? `印製中，還有 ${generator.pending} 張` : "下一輪…"}${infinite ? "・無限抽開著" : ""}`;
+  // 同一個人是「同一輪裡」第 2 張起才鎖長相：一次 1 張的時候開著也沒有作用。
+  return settings.samePerson && settings.n < 2 ? "同一個人：一次 2 張以上才有作用" : "";
+}
+
+/** 只換狀態字，不整列重畫（改張數、開關的時候：重畫會把鍵盤焦點弄丟）。 */
+function renderGoStatus() {
+  const s = $("go-bar")?.querySelector(".go-status");
+  if (s) s.textContent = goStatusText();
+}
+
 function renderGoBar() {
   const bar = $("go-bar");
   const busy = generator.busy || looping || drawingRounds > 0;
@@ -1505,17 +1535,19 @@ function renderGoBar() {
   bar.dataset.key = key;
   bar.replaceChildren(
     ...[
-    stepper("一次", n, 1, 50, (v) => setSettings({ n: v })),
+    stepper("一次", n, 1, 50, (v) => {
+      setSettings({ n: v });
+      renderGoStatus();
+    }),
     switchBox("無限抽", infinite, (v) => {
       infinite = v;
       if (!v) stopAsked = true;
-    }),
-    switchBox("同一個人", settings.samePerson, (v) => setSettings({ samePerson: v })),
-    el(
-      "span",
-      { class: "go-status", "aria-live": "polite" },
-      busy ? `${generator.pending ? `印製中，還有 ${generator.pending} 張` : "下一輪…"}${infinite ? "・無限抽開著" : ""}` : ""
-    ),
+    }, "抽完一輪自動接著抽下一輪，一直到按「停」"),
+    switchBox("同一個人", settings.samePerson, (v) => {
+      setSettings({ samePerson: v });
+      renderGoStatus();
+    }, "一次抽好幾張時，第 2 張起沿用第 1 張的長相：同一個角色換姿勢、換衣服"),
+    el("span", { class: "go-status", "aria-live": "polite" }, goStatusText(busy)),
     el("span", { class: "spacer" }),
     busy ? el("button", { class: "btn", type: "button", onclick: stopAll }, "停") : null,
     el(

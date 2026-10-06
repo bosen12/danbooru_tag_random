@@ -2621,6 +2621,9 @@ body[data-dragging="true"] .library[data-over="true"] {
   bottom: calc(var(--space-lg) + env(safe-area-inset-bottom));
   z-index: 95;
   translate: -50% 0;
+  /* left: 50% 讓瀏覽器只給它半個螢幕寬來排字（手機上一句話折成三四行）；
+   * 寬度照內容，上限才是下面那條。 */
+  width: max-content;
   max-width: min(90vw, 30rem);
   padding: var(--space-xs) var(--space-md);
   border-radius: var(--radius-sm);
@@ -4656,5 +4659,44 @@ body {
   }
   .lora-modal .lm-cat {
     flex: none;
+  }
+}
+
+/* ---------- 被分級擋掉的選項：一樣變灰，但點得到（點了會說為什麼，app.js 的 explainBlockedHeat） ---------- */
+.chip-toggle[aria-disabled="true"] {
+  opacity: 0.4;
+  cursor: help;
+}
+
+/* 頂端的分級被指名的時候亮一下：外圈描一圈、輕輕放大再回來。 */
+.segmented.is-hint {
+  animation: rating-hint var(--dur-story) var(--ease-out);
+}
+
+@keyframes rating-hint {
+  0%,
+  100% {
+    box-shadow: 0 0 0 0 transparent;
+    scale: 1;
+  }
+  25% {
+    box-shadow: 0 0 0 3px var(--color-focus);
+    scale: 1.04;
+  }
+  60% {
+    box-shadow: 0 0 0 3px var(--color-focus);
+    scale: 1;
+  }
+}
+
+/* 手機上頂欄的連線狀態只剩一顆點；連不上的時候把字露出來（綠點不用解釋）。 */
+@media (max-width: 40rem) {
+  .ping[data-ok="0"] span {
+    position: static;
+    width: auto;
+    height: auto;
+    overflow: visible;
+    clip-path: none;
+    color: var(--color-accent);
   }
 }

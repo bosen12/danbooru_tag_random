@@ -30,13 +30,13 @@ function harness() {
       records.push({ settings: structuredClone(settings), pins: [...pins], banned: [...banned], seed });
       return { positive: "draw" + seed };
     },
-    makeShot(drawn, seed, pins, snapshot) { return { id: "s" + seed, positive: drawn.positive, seed, width: snapshot?.width ?? ctx.settings.width, pins: [...pins] }; },
+    makeShot(drawn, seed, pins, snapshot) { return { id: "s" + seed, positive: drawn.positive, seed, width: snapshot?.width ?? ctx.settings.width, pins: [...pins], mine: [...pins], drawn: [] }; },
     currentTriggerText: () => "trigger", currentLorasPayload: () => [], currentCkpt: () => "model", currentWorkflowId: () => "wf", currentSampling: () => ({ steps: 19, cfg: 4 }),
     $: id => id === "wall" ? wall : id === "go-bar" ? bar : id === "wall-head" ? wallHead : id === "wall-empty" ? wallEmpty : {},
-    refuse() {}, toast() {}, sfx: { deal() {}, roll() {} },
+    refuse() {}, toast() {}, sfx: { deal() {}, roll() {} }, recordUses() {}, tagsOfPositive: () => [],
     shotNode: shot => ({ id: shot.id }), enter() {}, trimWall() {},
     S: { saveShots() {} }, generator: { busy: false, pending: 0, enqueue: shot => sent.push(shot.id), stop() {} }, renderGoBar() {}, reducedMotion: () => false, DUR: { micro: 120 },
-    looping: false, infinite: false, hand: null, seedNode: null,
+    looping: false, infinite: false, hand: null, seedNode: null, discord: null,
     stepper: () => ({}), switchBox: () => ({}), mountSeedControl: () => ({}), renderGoFloat() {},
     el: (tag, attrs, ...children) => ({ tag, attrs, text: children.filter(x => typeof x === "string").join("") }),
     handleLoraKeys: () => false, wfHandleKeys: () => false, anyOverlay: () => false, trashPanel: null,
@@ -47,7 +47,7 @@ function harness() {
   vm.runInContext(declarations + text.slice(begin, end) + "\nthis.drawBatch = drawBatch", ctx);
   return {
     ctx, records, frames, timers, sent, nodes, bar,
-    wireControls() { for (const name of ["renderGoBar", "stopAll", "onKey"]) { const start = text.indexOf("function " + name + "("); const finish = text.indexOf("\n}", start); vm.runInContext(text.slice(start, finish + 2), ctx); } },
+    wireControls() { for (const name of ["goStatusText", "renderGoStatus", "renderGoBar", "stopAll", "onKey"]) { const start = text.indexOf("function " + name + "("); const finish = text.indexOf("\n}", start); vm.runInContext(text.slice(start, finish + 2), ctx); } },
     async drain() { for (let i = 0; i < 200; i++) { const pending = [...frames.values()]; frames.clear(); for (const fn of pending) fn(clock); await Promise.resolve(); } },
   };
 }

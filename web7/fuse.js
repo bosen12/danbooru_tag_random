@@ -491,7 +491,35 @@ function place(tag, sourceEl, { viaDrag = false } = {}) {
   if (carried.length) bits.push(`帶上${carried.map((t) => `「${zh(t)}」`).join("")}`);
   for (const e of events) if (e.kind === "replace") bits.push(`「${zh(e.out)}」${e.why === "era" ? "時代不合拿下" : e.why === "people" ? "拿下（沒有人物）" : "被換下"}`);
   announce(bits.join("，"));
+  replacedNote(tag, events);
   return result;
+}
+
+/**
+ * 放一張牌把別的擠下來了：畫面上要說（以前只有讀螢幕聽得到，牌就這樣不見了）。
+ * 跟墨池同一套說法；手機上卡池常不在畫面裡，所以用底下的提示，給「撤回」。
+ */
+function replacedNote(tag, events) {
+  const gone = events.filter((e) => e.kind === "replace");
+  if (!gone.length) return;
+  const of = (why) => gone.filter((e) => (e.why === "era" || e.why === "people" ? e.why : "slot") === why).map((e) => `「${zh(e.out)}」`).join("");
+  const parts = [];
+  if (of("people")) parts.push(tag === "no humans" ? `畫面沒有人物：${of("people")}拿下來了` : "放了人物的牌：「沒有人物」拿下來了");
+  if (of("slot")) parts.push(`同一格只留一張：${of("slot")}換成「${zh(tag)}」`);
+  if (of("era")) parts.push(`${of("era")}跟「${zh(tag)}」不是同一個時代，先拿下來了`);
+  toast(parts.join("；"), { action: { label: "撤回", run: undo } });
+}
+
+/** 分級擋掉的情境被點了：牌搖一下、說為什麼，頂欄的分級亮一下（跟墨池同一套）。 */
+function explainBlockedHeat(h, btn, rating) {
+  refuse(btn);
+  toast(`${RATING_LABEL[rating]}不會出現${HEAT_ZH[h]}：要用的話，先把頂端的分級換成「敏感」或「色情」`);
+  const bar = $("rating");
+  if (!bar || reduced()) return;
+  bar.classList.remove("is-hint");
+  void bar.offsetWidth;
+  bar.classList.add("is-hint");
+  bar.addEventListener("animationend", () => bar.classList.remove("is-hint"), { once: true });
 }
 
 /** 拿下一張。viaDrag：拖回字盒的那張由 drag.js 飛回去，這裡只讓它帶上來的牌掀起來。 */
@@ -3346,9 +3374,11 @@ function openRules() {
           class: "chip-toggle pressable",
           type: "button",
           "aria-pressed": settings.heats.includes(h) && !blocked ? "true" : "false",
-          disabled: blocked || undefined,
+          // 不用 disabled：手機點下去要有反應、說得出為什麼（explainBlockedHeat）。
+          "aria-disabled": blocked ? "true" : undefined,
           title: blocked ? `${RATING_LABEL[settings.rating]}不會出現${HEAT_ZH[h]}` : undefined,
           onclick: (e) => {
+            if (heatBlockedByRating(h, settings.rating)) return explainBlockedHeat(h, e.currentTarget, settings.rating);
             setSettings({ heats: toggleHeat(settings.heats, h) });
             e.currentTarget.setAttribute("aria-pressed", settings.heats.includes(h) ? "true" : "false");
           },

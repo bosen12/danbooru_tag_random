@@ -1930,6 +1930,23 @@ const ALBUM_FIXTURE = [
           const cssText = readFileSync(join(ROOT, d, "styles.css"), "utf8");
           return cssText.includes(".lora-modal:not(.wf-modal) .lm-left {") && cssText.includes(".lora-modal .lm-cats {");
         }));
+      ok("回饋：分級擋掉的尺度點得到（aria-disabled），點了說為什麼、頂端分級亮一下；疊印台放牌擠掉別張時畫面上說、給撤回（web6、web7）",
+        ["web6", "web7"].every((d) => {
+          const app = readFileSync(join(ROOT, d, "app.js"), "utf8");
+          const fuse = readFileSync(join(ROOT, d, "fuse.js"), "utf8");
+          const cssText = readFileSync(join(ROOT, d, "styles.css"), "utf8");
+          return app.includes("function explainBlockedHeat(h, btn, rating)") && fuse.includes("function explainBlockedHeat(h, btn, rating)") &&
+            !app.includes("disabled: heatBlockedByRating(h, settings.rating),") && !fuse.includes("disabled: blocked || undefined,") &&
+            fuse.includes("replacedNote(tag, events);") && fuse.includes('toast(parts.join("；"), { action: { label: "撤回", run: undo } });') &&
+            cssText.includes(".segmented.is-hint {") && cssText.includes('.chip-toggle[aria-disabled="true"] {');
+        }));
+      ok("狀態：無限抽／同一個人有說明，一次 1 張時開同一個人會說沒作用；手機斷線時頂欄露出字；提示框不再只拿半個螢幕寬（web6、web7）",
+        ["web6", "web7"].every((d) => {
+          const app = readFileSync(join(ROOT, d, "app.js"), "utf8");
+          const cssText = readFileSync(join(ROOT, d, "styles.css"), "utf8");
+          return app.includes('"同一個人：一次 2 張以上才有作用"') && app.includes("function renderGoStatus()") && app.includes('"抽完一輪自動接著抽下一輪，一直到按「停」"') &&
+            cssText.includes('.ping[data-ok="0"] span {') && /\.toast \{[^}]*width: max-content;/.test(cssText);
+        }));
       ok("卡冊：沒用過的牌不灰掉；滑鼠停上去有浮空放大卡（web6、web7）",
         ["web6", "web7"].every((d) => {
           const js = readFileSync(join(ROOT, d, "book.js"), "utf8");
