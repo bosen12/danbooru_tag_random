@@ -48,6 +48,7 @@ import { genSeed, mountSeedControl, seedUseButton } from "./seed-control.js";
 import { attachPeek } from "./card-peek.js";
 import { createHires, openHiresPicker, paintHiresVeil, hiresBusy, HIRES_MODES } from "./hires.js";
 import * as S from "./store.js";
+import { recordUses } from "./usage.js";
 import { getSfx } from "./sfx.js";
 import { mountDiscord } from "./discord-link.js";
 
@@ -1440,6 +1441,9 @@ async function drawBatchNow(gen, intent, epoch) {
     }
   }
   shots.unshift(...made.slice().reverse());
+  // 卡冊的使用次數：每張新成品用了哪些牌。要在存成品之前記 —— 第一次會從存檔補算舊的，
+  // 先存的話剛抽的這批會被算兩次。
+  noteUses(made);
   if (!made.length) {
     if (epoch !== drawEpoch) return;
     refuse(document.activeElement?.closest?.("button") || $("go-bar"));
@@ -1464,6 +1468,15 @@ async function drawBatchNow(gen, intent, epoch) {
   if (gen && epoch === drawEpoch) for (const shot of made) if (shots.includes(shot)) generator.enqueue(shot);
   renderGoBar();
   document.getElementById("wall-head").scrollIntoView({ block: "nearest", behavior: reducedMotion() ? "instant" : "smooth" });
+}
+
+/** 卡冊（book.html）的使用次數：一張新成品＝它用到的每張牌各一次。 */
+function noteUses(list) {
+  if (!list.length) return;
+  recordUses(
+    list.map((s) => ({ tags: [...s.mine, ...s.drawn.map((d) => d.tag)], mine: s.mine })),
+    (t) => lib.byTag.has(t)
+  );
 }
 
 function makeShot(drawn, seed, poolAtDraw, snapshot = null) {
@@ -2001,6 +2014,7 @@ function reprint(shot) {
   // 重印的是原本的尺寸、原本的圖；Hires 的結果不跟著過去。
   const copy = { ...shot, id: "s" + shotSeq++, status: "drawn", image: null, preview: null, note: "", hi: null, hires: null, baseImage: null, at: new Date().toISOString() };
   shots.unshift(copy);
+  noteUses([copy]);
   const node = shotNode(copy, true);
   flip($("wall"), () => $("wall").prepend(node));
   enter(node);

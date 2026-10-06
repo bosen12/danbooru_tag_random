@@ -1844,6 +1844,22 @@ const ALBUM_FIXTURE = [
           app6h.includes("onHold: (p) => showCard(p.tag,") &&
           fuse6h.includes("if (info) showPeek(node, info);") &&
           peek.includes('document.addEventListener("pointerdown", touchDismiss, true)'));
+      // 2026-10-06：卡冊（book.html）。次數由墨池、疊印台在存成品之前記（先存的話第一次補算會算兩次）。
+      const usage6 = readFileSync(join(ROOT, "web6/usage.js"), "utf8");
+      const book6 = readFileSync(join(ROOT, "web6/book.js"), "utf8");
+      const bookHtml = readFileSync(join(ROOT, "web6/book.html"), "utf8");
+      ok("卡冊：墨池抽牌、同種子重印、疊印台付印都記使用次數，而且記在存檔之前",
+        /shots\.unshift\(\.\.\.made\.slice\(\)\.reverse\(\)\);\s*\/\/[^\n]*\n[^\n]*\n\s*noteUses\(made\);/.test(app6h) &&
+          app6h.includes("noteUses([copy]);") &&
+          /prints\.unshift\(p\);\s*\/\/[^\n]*\n\s*recordUses\(/.test(fuse6h) &&
+          usage6.includes("if (u.seeded) return u;"));
+      ok("卡冊：三頁的換版認得三個房間（墨池 0、疊印台 1、卡冊 2），分頁底線從剛才那一頁滑過來",
+        ["web6/index.html", "web6/fuse.html", "web6/book.html"].every((f) => {
+          const h = readFileSync(join(ROOT, f), "utf8");
+          return h.includes("/book\\.html$/.test(u) ? 2") && h.includes("room(new URL(x.href).pathname) === was") && h.includes('href="book.html"');
+        }) && bookHtml.includes('src="book.js"'));
+      ok("卡冊：多到少／少到多、換排序時牌從舊位置滑過去（FLIP）、別的分頁抽完牌會跟著更新",
+        book6.includes('ui.order === "desc"') && book6.includes("translate(${dx}px, ${dy}px)") && book6.includes('addEventListener("storage"'));
       ok("手機頂欄放不下時工具換行，不會整頁左右滑",
         /\.mast-controls \{\s*overflow-x: visible;\s*flex-wrap: wrap;/.test(readFileSync(join(ROOT, "web6/styles.css"), "utf8")));
     }

@@ -363,6 +363,9 @@ export function playPageEntrance() {
       [".rules, .trials-head, .preview", 140, 10],
       [".go-bar, .trials, .print-bar", 170, 10],
       [".wall-head, .wall-empty, .line-title, .line-empty", 190, 8],
+      // 卡冊（book.html）：標題列、工具列，牌照下面那條一張張落定。
+      [".book-head", 40, 8],
+      [".book-bar", 70, 8],
     ];
     const candidates = [];
     const seen = new Set();
@@ -373,7 +376,7 @@ export function playPageEntrance() {
         candidates.push({ node, delay, rise, card: false });
       }
     }
-    const cards = document.querySelectorAll(".lib-grid > .card:nth-child(-n+18), .case-grid > .card:nth-child(-n+18)");
+    const cards = document.querySelectorAll(".lib-grid > .card:nth-child(-n+18), .case-grid > .card:nth-child(-n+18), .book-grid > .book-cell:nth-child(-n+18)");
     [...cards].slice(0, 18).forEach((node, i) => candidates.push({ node, delay: 100 + i * 12, rise: 14, card: true }));
     // 首屏之外不量更多牌；所有幾何讀取先一起做完，才開始寫入動畫。
     const visible = candidates.filter(({ node }) => {

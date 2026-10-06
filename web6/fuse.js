@@ -45,6 +45,7 @@ import { createGenerator, comfyOnline, viewSrc, tabTitle, watchLink, LINK_LABEL 
 import { attachPeek, hidePeek, showPeek } from "./card-peek.js";
 import { createHires, openHiresPicker, paintHiresVeil, hiresBusy } from "./hires.js";
 import * as S from "./store.js";
+import { recordUses, tagsOfPositive } from "./usage.js";
 import { REGISTERS, REGISTER_ROLE, emptyBed, sanitizeBed, placeCard, removeCard, relationsOf } from "./fuse-bed.js";
 import { createSfx } from "./fuse-sfx.js";
 import { genSeed, isFixedSeed, mountSeedControl, onSeedChange, restoreSeed, seedState, seedUseButton, useSeed } from "./seed-control.js";
@@ -824,6 +825,8 @@ function printNow() {
     at: new Date().toISOString(),
   };
   prints.unshift(p);
+  // 卡冊的使用次數：付印的這張用到的每張牌各一次（試印不算）。要在存檔之前記，見 usage.js。
+  recordUses([{ tags: tagsOfPositive(p.positive).filter((tg) => lib.byTag.has(tg)), mine: p.mine }], (tg) => lib.byTag.has(tg));
   // 超過上限從最舊的收掉，但還在排隊、還在畫的不收：收掉了 ComfyUI 照樣畫，畫好卻沒地方看。
   // 它們畫完之後，下一次付印就會照常被收掉。
   for (let i = prints.length - 1; i >= 0 && prints.length > PRINT_MAX; i--) {
