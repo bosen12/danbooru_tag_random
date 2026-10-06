@@ -38,6 +38,7 @@ import { initWorkflow, currentWorkflowId, currentSampling, wfHandleKeys } from "
 import { HARD_BANNED, applyArtSources } from "./card-art.js";
 import { buildLibrary, groupChips, createAssets, cardNode, cardFacts, setEnterTarget, eagerArt, CARD_SUIT_INFO, CARD_SUITS, RATING_ZH, ERA_ZH } from "./cards.js";
 import { el, openSheet, anyOverlay, toast } from "./ui.js";
+import { openDecks, loadDecks, cachedDecks } from "./decks.js";
 import { initMotion, settleMotion, flip, flipBy, leave, gatherHome, flight, enter, seat, refuse, CURVE, DUR, css } from "./motion.js";
 import { createHand } from "./hand.js";
 import { createDrag, inkRing } from "./drag.js";
@@ -542,26 +543,27 @@ function toggle(tag, sourceEl) {
   else place(tag, sourceEl);
 }
 
-function startWith(starter, btn = null) {
+function startWith(starter, btn = null, { fresh = false, kind = "起手" } = {}) {
   // 起手鈕上那幾張小圖：記下位置，放上版之後牌就從小圖那裡飛進各自的列（不是憑空冒出來）。
   const withArt = starter.tags.slice(0, 3).filter((t) => assets.art(t));
   const thumbs = btn ? [...btn.querySelectorAll(".starter-arts img")] : [];
   const fromOf = new Map(withArt.map((t, i) => [t, thumbs[i]?.getBoundingClientRect()]).filter(([, r]) => r && r.width));
-  let next = bed;
+  // 牌組是「換成這一組」：從空白版開始放（撤回會回到原本的版）；起手是疊在現在的版上。
+  let next = fresh ? emptyBed() : bed;
   const events = [];
   for (const t of starter.tags) {
     const r = placeCard(next, t, deps());
     next = r.bed;
     events.push(...r.events);
   }
-  commit(next, `起手：${starter.name}`, events);
+  commit(next, `${kind}：${starter.name}`, events);
   starter.tags.forEach((t, i) => {
     const from = fromOf.get(t);
     if (from && !reduced()) flyIn(t, from, { delay: DUR.micro + i * (DUR.micro / 2) });
     else popIn(t, i * 120);
   });
   starter.tags.forEach((t, i) => setTimeout(() => (inkRow(suitOf(t)), sfx.stamp()), i * 120));
-  announce(`起手：${starter.name}，疊上${starter.tags.map((t) => `「${zh(t)}」`).join("")}`);
+  announce(`${kind}：${starter.name}，疊上${starter.tags.map((t) => `「${zh(t)}」`).join("")}`);
 }
 
 function undo() {
@@ -1688,6 +1690,53 @@ function reshuffleStarters() {
   sfx.shuffle();
 }
 
+/**
+ * 套用一組牌：卡池換成這一組（從空白版照放牌的規矩一張張放，撤回會回到原本的版）。
+ * 這一級分級出不了、或丟進廢字簍的牌先跳過，提示上說幾張。
+ */
+function applyDeck(deck, btn = null) {
+  const ok = deck.tags.filter((t) => lib.byTag.has(t) && rankOk(cardOf(t)) && !bans.has(t));
+  const skipped = deck.tags.length - ok.length;
+  if (!ok.length) {
+    if (btn) refuse(btn);
+    return toast(`牌組「${deck.name}」的牌在${RATING_LABEL[settings.rating]}都出不了`);
+  }
+  startWith({ name: deck.name, tags: ok }, btn, { fresh: true, kind: "牌組" });
+  toast(`套用了牌組「${deck.name}」${skipped ? `（${skipped} 張這一級出不了，先跳過）` : ""}`, { action: { label: "撤回", run: undo } });
+}
+
+const openDeckSheet = () =>
+  openDecks({ where: "卡池", current: () => [...bed.pins], has: (t) => lib.byTag.has(t), zh, apply: (d) => applyDeck(d) });
+
+/** 空白版上「你的牌組」：最近的三組，跟起手式同一種按鈕。 */
+function deckStarters() {
+  const decks = (cachedDecks() || []).map((d) => ({ ...d, tags: d.tags.filter((t) => lib.byTag.has(t)) })).filter((d) => d.tags.length).slice(0, 3);
+  if (!decks.length) return null;
+  return el(
+    "div",
+    { class: "starters starters-decks" },
+    el(
+      "span",
+      { class: "starters-label" },
+      "你的牌組",
+      el("button", { class: "starters-more link-btn pressable", type: "button", onclick: openDeckSheet }, "全部")
+    ),
+    decks.map((d) =>
+      el(
+        "button",
+        { class: "starter pressable", type: "button", onclick: (e) => applyDeck(d, e.currentTarget) },
+        el(
+          "span",
+          { class: "starter-arts", "aria-hidden": "true" },
+          d.tags.filter((tg) => assets.art(tg)).slice(0, 3).map((tg) => applyArtSources(el("img", { alt: "" }), assets.sources(tg)))
+        ),
+        el("span", { class: "starter-name" }, d.name),
+        el("span", { class: "starter-tags" }, d.tags.map(zh).join("・"))
+      )
+    )
+  );
+}
+
 function startBlock() {
   if (!starterPick) starterPick = pickStarters();
   const starters = starterPick.filter((s) => s.tags.every((t) => lib.byTag.has(t) && rankOk(cardOf(t)) && !bans.has(t)));
@@ -1702,6 +1751,7 @@ function startBlock() {
       // 手機沒有滑鼠懸停的放大卡：長按（放開）是唯一看得到牌面說明的地方，寫在第一次挑牌的這裡。
       matchMedia("(hover: none)").matches ? "長按一張牌放開，可以看它的說明。" : null
     ),
+    deckStarters(),
     starters.length
       ? el(
           "div",
@@ -3514,6 +3564,11 @@ function wireChrome() {
     if (sfx.on) sfx.carry();
   });
   $("undo").addEventListener("click", undo);
+  $("decks-btn").addEventListener("click", openDeckSheet);
+  // 牌組讀到了：版還是空的就重畫，「你的牌組」才出現在起手式上面。
+  loadDecks().then((d) => {
+    if (d && d.length && !bed.pins.length) renderPlate([]);
+  });
   $("clear").addEventListener("click", clearBed);
   $("reroll").addEventListener("click", reroll);
   const q = $("case-q");

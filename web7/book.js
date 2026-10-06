@@ -13,6 +13,7 @@ import { indexLexicon } from "./engine.js";
 import { ratingBlocked, RATING_LABEL } from "./rules/rating.js";
 import { buildLibrary, groupChips, createAssets, cardNode, cardFacts, setCardFlag, eagerArt, CARD_SUIT_INFO, CARD_SUITS } from "./cards.js";
 import { el, openSheet, toast } from "./ui.js";
+import { openDecks } from "./decks.js";
 import { initMotion, settleMotion, seat, refuse, flight, reducedMotion, CURVE, DUR, css } from "./motion.js";
 import { watchLink, LINK_LABEL, viewSrc } from "./gen.js";
 import { getSfx } from "./sfx.js";
@@ -1115,6 +1116,31 @@ function removeFromPanel(tag) {
   if (!box.length) $("box-panel").querySelector(".box-close")?.focus({ preventScroll: true });
 }
 
+/** 卡盒的牌組：盒子裡的牌存成一組，或把一組牌放進盒子（換掉盒子裡的，可以復原）。 */
+function openBoxDecks() {
+  openDecks({ where: "卡盒", current: () => [...box], has: (t) => lib.byTag.has(t), zh: (t) => lib.byTag.get(t)?.zh || t, apply: deckToBox });
+}
+
+function deckToBox(deck) {
+  const was = [...box];
+  const put = (tags) => {
+    const touched = new Set([...box, ...tags]);
+    box = tags;
+    saveBox();
+    for (const t of touched) {
+      const cell = cells.get(t);
+      if (cell) paintBoxMark(cell, t);
+    }
+    renderBoxPill();
+    bumpPill();
+    if (!boxOpen) setBoxOpen(true);
+    renderBoxPanel({ deal: true });
+  };
+  const tags = deck.tags.filter((t) => lib.byTag.has(t)).slice(0, BOX_MAX);
+  put(tags);
+  toast(`牌組「${deck.name}」放進卡盒了（${tags.length} 張）`, { action: { label: "復原", run: () => put(was) } });
+}
+
 function clearBox() {
   if (!box.length) return;
   const was = [...box];
@@ -1181,6 +1207,7 @@ function buildBox() {
         "div",
         { class: "box-panel-head" },
         el("b", { class: "box-title" }, "卡盒"),
+        el("button", { class: "btn btn-small btn-ghost box-decks", type: "button", title: "把卡盒存成牌組，或把牌組放進卡盒", onclick: openBoxDecks }, "牌組"),
         el("button", { class: "btn btn-small btn-ghost box-clear", type: "button", onclick: clearBox }, "清空"),
         el("button", { class: "box-close", type: "button", "aria-label": "收起卡盒", onclick: () => setBoxOpen(false) }, "×")
       ),

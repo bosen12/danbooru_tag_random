@@ -1970,6 +1970,17 @@ const ALBUM_FIXTURE = [
             app.includes("function greetPicked()") && app.includes("pickerFrom = new Set(pool);") &&
             cssText.includes(".stepper button::before {") && fuseCss.includes(".case-tab::before {");
         }));
+      ok("牌組：三頁共用面板（decks.js，/api/decks）；墨池合成池、疊印台卡池（空白版列出你的牌組、撤回回原版）、卡冊卡盒都能存、能套用（web6、web7）",
+        readFileSync(join(ROOT, "web6/decks.js"), "utf8") === readFileSync(join(ROOT, "web7/decks.js"), "utf8") &&
+          readFileSync(join(ROOT, "server.py"), "utf8").includes('if path == "/api/decks":') &&
+          ["web6", "web7"].every((d) => {
+            const app = readFileSync(join(ROOT, d, "app.js"), "utf8");
+            const fuse = readFileSync(join(ROOT, d, "fuse.js"), "utf8");
+            const book = readFileSync(join(ROOT, d, "book.js"), "utf8");
+            return readFileSync(join(ROOT, d, "index.html"), "utf8").includes('id="pool-decks"') && app.includes("function applyDeck(deck)") &&
+              readFileSync(join(ROOT, d, "fuse.html"), "utf8").includes('id="decks-btn"') && fuse.includes("function deckStarters()") && fuse.includes('{ fresh: true, kind: "牌組" }') &&
+              book.includes("function deckToBox(deck)") && book.includes("onclick: openBoxDecks");
+          }));
       ok("卡冊：沒用過的牌不灰掉；滑鼠停上去有浮空放大卡（web6、web7）",
         ["web6", "web7"].every((d) => {
           const js = readFileSync(join(ROOT, d, "book.js"), "utf8");
