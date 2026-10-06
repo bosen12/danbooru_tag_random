@@ -4465,3 +4465,116 @@ html {
     padding-inline: calc(var(--space-lg) - 10px);
   }
 }
+
+
+/* ---------- 手機：字盒是挑牌抽屜（app.js 的 openPicker／closePicker） ----------
+ * 收著：只剩標題列和一顆「挑牌」。打開：字盒本身固定在底部、幾乎全螢幕，牌格自己捲，
+ * 底部一條「合成池 N 張・完成」。背後一層暗幕；廢字簍、浮動抽牌列、偏好卡牌托盤先讓開。 */
+.picker-grip,
+.picker-foot,
+.picker-scrim,
+.picker-hold {
+  display: none;
+}
+
+@media (max-width: 40rem) {
+  body:not([data-picker="open"]) .library :is(.lib-search, .suit-tabs, .group-chips, .lib-grid) {
+    display: none;
+  }
+  body:not([data-picker="open"]) .library .lib-toggle {
+    min-height: 44px;
+    padding-inline: var(--space-lg);
+    border-color: var(--color-ink-2);
+    color: var(--color-ink);
+    font-weight: 700;
+  }
+  .picker-hold:not([hidden]) {
+    display: block;
+  }
+  .picker-scrim:not([hidden]) {
+    display: block;
+    position: fixed;
+    inset: 0;
+    z-index: 84;
+    background: var(--color-scrim);
+  }
+  body[data-picker="open"] .library {
+    position: fixed;
+    left: 0;
+    right: 0;
+    bottom: 0;
+    top: max(44px, 6dvh);
+    z-index: 85;
+    display: flex;
+    flex-direction: column;
+    margin: 0;
+    padding-bottom: env(safe-area-inset-bottom);
+    border: 1px solid var(--color-rule);
+    border-bottom: 0;
+    border-radius: var(--radius-lg) var(--radius-lg) 0 0;
+    background: var(--color-paper);
+    box-shadow: 0 -20px 50px -10px var(--color-shade);
+    overflow: hidden;
+    overscroll-behavior: contain;
+  }
+  body[data-picker="open"] .library .lib-grid {
+    flex: 1 1 auto;
+    min-height: 0;
+    max-height: none;
+    overflow-y: auto;
+    -webkit-mask-image: none;
+    mask-image: none;
+  }
+  body[data-picker="open"] .picker-grip {
+    display: block;
+    flex: none;
+    width: 44px;
+    height: 5px;
+    margin: 8px auto 2px;
+    border-radius: 3px;
+    background: var(--color-rule);
+    touch-action: none;
+  }
+  body[data-picker="open"] .library .panel-head {
+    touch-action: none;
+  }
+  body[data-picker="open"] .picker-foot {
+    display: flex;
+    flex: none;
+    align-items: center;
+    justify-content: space-between;
+    gap: var(--space-sm);
+    padding: var(--space-xs) var(--space-sm);
+    border-top: 1px solid var(--color-rule-2);
+    background: var(--color-paper-2);
+  }
+  .picker-count {
+    display: inline-block;
+    color: var(--color-ink-2);
+    font-size: var(--text-sm);
+    font-variant-numeric: tabular-nums;
+  }
+  .picker-done {
+    min-width: 7rem;
+    min-height: 44px;
+  }
+  body[data-picker="open"] :is(.trash, .go-float, .fav-hand, .tray-bridge) {
+    visibility: hidden;
+  }
+  /* 抽屜裡底下已經有「完成」：標題旁那顆「挑牌」不用了。 */
+  body[data-picker="open"] .library .lib-toggle {
+    display: none;
+  }
+}
+
+
+/* ---------- 加到主畫面（全螢幕）：狀態列透明疊在頁面上，讓出瀏海那一段 ----------
+ * 在 Safari 裡（不是全螢幕）safe-area-inset-top 是 0，這兩條沒有作用。 */
+body {
+  padding-top: env(safe-area-inset-top);
+}
+@media (max-width: 40rem) {
+  body[data-picker="open"] .library {
+    top: max(44px, 6dvh, calc(env(safe-area-inset-top) + 8px));
+  }
+}

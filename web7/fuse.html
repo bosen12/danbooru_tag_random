@@ -44,6 +44,14 @@
     <title>墨池 · 疊印台</title>
     <meta name="description" content="墨池的疊印台：牌照花色疊進六列卡池，引擎補的牌以影子排在旁邊；挑好一張試印再付印。" />
     <link rel="icon" href="favicon.svg" type="image/svg+xml" />
+    <!-- 加到主畫面（iPhone：分享 → 加入主畫面）：像 App 一樣全螢幕打開，沒有網址列。
+         狀態列透明疊在頁面上，body 用 safe-area 讓出瀏海那一段（styles.css）。 -->
+    <link rel="manifest" href="manifest.json" />
+    <link rel="apple-touch-icon" href="icon-180.png" />
+    <meta name="apple-mobile-web-app-capable" content="yes" />
+    <meta name="mobile-web-app-capable" content="yes" />
+    <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent" />
+    <meta name="apple-mobile-web-app-title" content="活版" />
     <!-- 墨池 ↔ 疊印台 的跨頁轉場：同意書放在最前面、直接寫在頁面裡。放在 styles.css 的話，
          冷啟動時它排在 Google Fonts 後面才讀到，瀏覽器已經判定這頁沒同意，轉場就被跳過。 -->
     <style>

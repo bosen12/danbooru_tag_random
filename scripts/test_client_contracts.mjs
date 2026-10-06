@@ -1888,6 +1888,22 @@ const ALBUM_FIXTURE = [
         }));
       ok("卡冊：多到少／少到多、換排序時牌從舊位置滑過去（FLIP）、別的分頁抽完牌會跟著更新",
         book6.includes('ui.order === "desc"') && book6.includes("translate(${dx}px, ${dy}px)") && book6.includes('addEventListener("storage"'));
+      ok("手機：字盒是挑牌抽屜（收著只剩標題列；打開是字盒本身固定在底部，返回手勢、Esc、握把下拉、完成都會收）",
+        ["web6", "web7"].every((d) => {
+          const js = readFileSync(join(ROOT, d, "app.js"), "utf8");
+          const cssText = readFileSync(join(ROOT, d, "styles.css"), "utf8");
+          return js.includes('const pickerMQ = matchMedia("(max-width: 40rem)")') && js.includes("history.pushState({ mochiPicker: true }") &&
+            js.includes('addEventListener("popstate"') && js.includes("tuckIntoPicker(tag, from)") && cssText.includes('body[data-picker="open"] .library {');
+        }));
+      ok("加到主畫面：manifest、iPhone 圖示與全螢幕標記，三頁都有；全螢幕時讓出瀏海",
+        ["web6", "web7"].every((d) => {
+          const m = JSON.parse(readFileSync(join(ROOT, d, "manifest.json"), "utf8"));
+          return m.display === "standalone" && m.start_url === "./" && ["icon-180.png", "icon-192.png", "icon-512.png"].every((f) => existsSync(join(ROOT, d, f))) &&
+            ["index.html", "fuse.html", "book.html"].every((f) => {
+              const h = readFileSync(join(ROOT, d, f), "utf8");
+              return h.includes('<link rel="manifest" href="manifest.json" />') && h.includes('name="apple-mobile-web-app-capable" content="yes"');
+            }) && readFileSync(join(ROOT, d, "styles.css"), "utf8").includes("padding-top: env(safe-area-inset-top);");
+        }));
       ok("手機頂欄放不下時工具換行，不會整頁左右滑",
         /\.mast-controls \{\s*overflow-x: visible;\s*flex-wrap: wrap;/.test(readFileSync(join(ROOT, "web6/styles.css"), "utf8")));
     }

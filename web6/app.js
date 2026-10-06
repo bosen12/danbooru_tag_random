@@ -128,6 +128,7 @@ async function boot() {
 
   buildHand();
   buildTrashPanel();
+  buildPicker();
   initLoraPicker();
   initWorkflow({ sampling: true });
   discord = mountDiscord(zh, "墨池");
@@ -242,6 +243,8 @@ function renderLibraryChrome() {
   q.title = "Enter 放進第一張，↓ 走進字盒";
   $("lib-grid").onkeydown = libKeys;
   $("lib-toggle").onclick = () => {
+    // 手機：字盒是抽屜，按鈕是「挑牌」。
+    if (pickerMode()) return pickerOpen ? closePicker() : openPicker();
     ui.collapsed = !ui.collapsed;
     saveUi();
     syncCollapse();
@@ -251,6 +254,7 @@ function renderLibraryChrome() {
 
 /** 手機上字盒收著時展開（點花色、開始找字）。寬螢幕沒有收合，什麼都不做。 */
 function expandLibrary() {
+  if (pickerMode()) return;
   if (!ui.collapsed || !matchMedia("(max-width: 63.99rem)").matches) return;
   ui.collapsed = false;
   saveUi();
@@ -258,10 +262,185 @@ function expandLibrary() {
 }
 
 function syncCollapse() {
+  if (pickerMode()) {
+    // 抽屜模式不用「收起／展開」：牌格永遠完整，收著時整個字盒只剩標題列。
+    $("library").dataset.collapsed = "false";
+    $("lib-toggle").textContent = "挑牌";
+    $("lib-toggle").setAttribute("aria-expanded", pickerOpen ? "true" : "false");
+    return;
+  }
   $("library").dataset.collapsed = ui.collapsed ? "true" : "false";
   $("lib-toggle").textContent = ui.collapsed ? "展開全部" : "收起字盒";
   $("lib-toggle").setAttribute("aria-expanded", ui.collapsed ? "false" : "true");
 }
+
+/* ================= 手機：字盒變成挑牌抽屜 =================
+ * 手機上字盒收著只露一排半、展開又是頁面裡再捲一層，兩層捲動很容易滑錯。
+ * 改成：收著只剩標題列和一顆「挑牌」；按下去字盒本身從底部滑上來（幾乎全螢幕、背後一層暗幕），
+ * 搜尋、花色、細分類、點牌、長按看詳情、拖曳都是原本那一套。底部一條「合成池 N 張・完成」，
+ * 點牌時牌飛進這個數字。握把往下拉、iPhone 從左邊緣滑的「返回」、Esc、點暗幕都會收起來。
+ * 只在手機寬度（≤ 40rem）；平板、桌面照舊。 */
+
+const pickerMQ = matchMedia("(max-width: 40rem)");
+let pickerOpen = false;
+let pickerHold = null;
+const pickerMode = () => pickerMQ.matches;
+
+function buildPicker() {
+  const lib = $("library");
+  const grip = el("div", { class: "picker-grip", "aria-hidden": "true" });
+  lib.prepend(grip);
+  const foot = el(
+    "div",
+    { class: "picker-foot" },
+    el("span", { class: "picker-count", id: "picker-count" }),
+    el("button", { class: "btn btn-primary picker-done", type: "button", onclick: () => closePicker() }, "完成")
+  );
+  lib.append(foot);
+  const scrim = el("div", { class: "picker-scrim", id: "picker-scrim", hidden: true, onclick: () => closePicker() });
+  lib.after(scrim);
+  pickerHold = el("div", { class: "picker-hold", "aria-hidden": "true", hidden: true });
+  lib.before(pickerHold);
+  swipeDown(grip, lib);
+  addEventListener("popstate", () => {
+    if (pickerOpen) closePicker({ fromHistory: true });
+  });
+  addEventListener("keydown", (e) => {
+    if (e.key === "Escape" && pickerOpen && !document.querySelector(".overlay")) closePicker();
+  });
+  pickerMQ.addEventListener?.("change", () => {
+    if (!pickerMode() && pickerOpen) closePicker();
+    syncCollapse();
+  });
+  updatePickerFoot();
+}
+
+function openPicker() {
+  if (pickerOpen || !pickerMode()) return;
+  pickerOpen = true;
+  const lib = $("library");
+  // 字盒離開版面（變成固定在底部的抽屜）時，原位墊一塊一樣高的空白：背後的頁面不會跳。
+  pickerHold.style.height = lib.getBoundingClientRect().height + "px";
+  pickerHold.hidden = false;
+  document.body.dataset.picker = "open";
+  document.documentElement.style.overflow = "hidden";
+  lib.setAttribute("role", "dialog");
+  lib.setAttribute("aria-modal", "true");
+  $("picker-scrim").hidden = false;
+  $("lib-toggle").setAttribute("aria-expanded", "true");
+  try {
+    history.pushState({ mochiPicker: true }, "");
+  } catch {
+    /* 不能動歷史紀錄就算了：照樣用按鈕收 */
+  }
+  updatePickerFoot();
+  renderLibrary();
+  if (!reducedMotion()) {
+    lib.animate([{ transform: "translateY(100%)" }, { transform: "none" }], { duration: DUR.long, easing: css(CURVE.out) });
+    $("picker-scrim").animate([{ opacity: 0 }, { opacity: 1 }], { duration: DUR.medium, easing: css(CURVE.out) });
+  }
+  lib.querySelector(".picker-done")?.focus({ preventScroll: true });
+}
+
+function closePicker({ fromHistory = false } = {}) {
+  if (!pickerOpen) return;
+  pickerOpen = false;
+  const lib = $("library");
+  const done = () => {
+    if (pickerOpen) return;
+    delete document.body.dataset.picker;
+    document.documentElement.style.overflow = "";
+    lib.removeAttribute("role");
+    lib.removeAttribute("aria-modal");
+    lib.style.transform = "";
+    $("picker-scrim").hidden = true;
+    pickerHold.hidden = true;
+    $("lib-toggle").setAttribute("aria-expanded", "false");
+    $("lib-toggle").focus({ preventScroll: true });
+  };
+  if (!fromHistory && history.state && history.state.mochiPicker) {
+    try {
+      history.back();
+    } catch {
+      /* 沒關係 */
+    }
+  }
+  if (reducedMotion()) return done();
+  const from = lib.style.transform || "none";
+  const a = lib.animate([{ transform: from }, { transform: "translateY(100%)" }], { duration: DUR.short, easing: css(CURVE.exit), fill: "forwards" });
+  $("picker-scrim").animate([{ opacity: 1 }, { opacity: 0 }], { duration: DUR.short, easing: css(CURVE.exit), fill: "forwards" });
+  const finish = () => {
+    a.cancel();
+    for (const x of $("picker-scrim").getAnimations()) x.cancel();
+    done();
+  };
+  a.onfinish = finish;
+  setTimeout(() => !pickerOpen && document.body.dataset.picker && finish(), DUR.short + 80);
+}
+
+/** 握把往下拉：超過 90px 或甩一下就收起，不到就彈回。 */
+function swipeDown(grip, sheet) {
+  let drag = null;
+  const startOn = (node) => {
+    node.addEventListener("pointerdown", (e) => {
+      if (!pickerOpen || e.pointerType === "mouse") return;
+      drag = { id: e.pointerId, y: e.clientY, t: performance.now(), dy: 0 };
+      try {
+        node.setPointerCapture(e.pointerId);
+      } catch {
+        /* 照樣處理 */
+      }
+    });
+    node.addEventListener("pointermove", (e) => {
+      if (!drag || e.pointerId !== drag.id) return;
+      const raw = e.clientY - drag.y;
+      drag.dy = raw > 0 ? raw : raw / 6;
+      sheet.style.transform = `translateY(${drag.dy.toFixed(1)}px)`;
+    });
+    const end = (e) => {
+      if (!drag || e.pointerId !== drag.id) return;
+      const { dy, t } = drag;
+      drag = null;
+      const speed = dy / Math.max(1, performance.now() - t);
+      if (dy > 90 || (dy > 24 && speed > 0.6)) return closePicker();
+      if (dy && !reducedMotion()) sheet.animate([{ transform: `translateY(${dy}px)` }, { transform: "none" }], { duration: DUR.medium, easing: css(CURVE.settle) });
+      sheet.style.transform = "";
+    };
+    node.addEventListener("pointerup", end);
+    node.addEventListener("pointercancel", end);
+  };
+  startOn(grip);
+  startOn(sheet.querySelector(".panel-head"));
+}
+
+function updatePickerFoot() {
+  const n = $("picker-count");
+  if (!n) return;
+  const count = [...pool].filter((t) => lib.byTag.has(t)).length;
+  const text = count ? `合成池 ${count} 張` : "合成池還是空的";
+  if (n.textContent !== text) {
+    n.textContent = text;
+    if (pickerOpen && !reducedMotion()) n.animate([{ transform: "translateY(5px)", opacity: 0.4 }, { transform: "none", opacity: 1 }], { duration: DUR.short, easing: css(CURVE.out) });
+  }
+}
+
+/** 抽屜開著時放牌：牌的影子飛進底下那個「合成池 N 張」，數字彈一下（不跳「看合成池」提示）。 */
+function tuckIntoPicker(tag, from) {
+  const card = lib.byTag.get(tag);
+  const target = $("picker-count");
+  if (!card || !from || !from.width || !target || reducedMotion()) return;
+  const f = cardNode(card, assets, { tagName: "div" });
+  f.classList.add("flying");
+  document.body.append(f);
+  flight(f, { left: from.left, top: from.top, width: from.width, height: from.height }, () => target, {
+    endScale: 0.3,
+    endOpacity: 0.3,
+    arc: 50,
+    zIndex: 120,
+    onLand: () => target.animate([{ transform: "scale(1.15)" }, { transform: "none" }], { duration: DUR.medium, easing: css(CURVE.settle) }),
+  });
+}
+
 
 function pickSuit(s, from) {
   const focused = document.activeElement === from;
@@ -558,6 +737,10 @@ function flyInto(tag, from, { delay = 0, src = null, startRotate = 0, startScale
   const to = target.getBoundingClientRect();
   // 合成池捲出畫面了（手機上從字盒底下、托盤出牌）：飛過去看起來像牌飛出螢幕。
   // 改成原地往合成池那個方向收進去，再說一聲、給一顆「看合成池」。
+  if (pickerOpen) {
+    show();
+    return from ? tuckIntoPicker(tag, from) : undefined;
+  }
   if (to.bottom < 0 || to.top > window.innerHeight || !to.width) {
     show();
     return from ? tuckAway(tag, from, to.top < 0 ? -1 : 1) : undefined;
@@ -940,6 +1123,7 @@ function greetHandoff() {
 }
 
 function renderPool(fresh) {
+  updatePickerFoot();
   const well = $("pool-well");
   const tags = [...pool].filter((t) => lib.byTag.has(t));
   settleText($("pool-count"), tags.length ? `${tags.length} 張會一定進圖` : "");
@@ -952,7 +1136,7 @@ function renderPool(fresh) {
         "div",
         { class: "pool-empty" },
         // 觸控裝置沒有「拖」這個第一直覺：寫點一下就放（拖也還是可以）。
-        el("b", {}, matchMedia("(hover: none)").matches ? "點字盒的牌放進來" : "把字拖進來"),
+        el("b", {}, pickerMode() ? "按上面的「挑牌」選牌放進來" : matchMedia("(hover: none)").matches ? "點字盒的牌放進來" : "把字拖進來"),
         // 一行就好：兩句操作說明（點字盒也能放、點 × 拿出來）做了就會發現，寫在這裡只是把合成池撐高。
         el("span", {}, "放進來的字，每一張圖都一定有；其他格子引擎補。"),
         // 手機上看詳情只有長按（沒有右鍵、沒有懸停），寫在第一次要放牌的這裡。
