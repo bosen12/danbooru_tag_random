@@ -93,6 +93,7 @@ async function boot() {
     }
   }
 
+  watchMast();
   buildBox();
   renderRating();
   renderSort();
@@ -237,6 +238,33 @@ function renderSuits() {
   renderGroups();
 }
 
+/**
+ * 篩選、排序換了：捲過頭的話捲回來，換好的牌從第一張開始看。
+ *   電腦（工具列黏在頂欄底下）：捲到牌格頂端剛好貼著工具列；還沒捲到牌格就不動。
+ *   手機（工具列不黏，跟著捲走）：只有換排序（always）才回卡冊頂端，跟以前一樣。
+ */
+function backToTop({ always = false } = {}) {
+  const tools = $("book-tools");
+  if (getComputedStyle(tools).position === "sticky") {
+    const below = tools.getBoundingClientRect().height + (parseFloat(getComputedStyle(document.documentElement).getPropertyValue("--mast-h")) || 0);
+    const top = $("book-grid").getBoundingClientRect().top + scrollY - below - 8;
+    if (scrollY > top) scrollTo({ top, behavior: "instant" });
+    return;
+  }
+  if (!always) return;
+  const top = $("book").getBoundingClientRect().top + scrollY - 8;
+  if (scrollY > top) scrollTo({ top, behavior: "instant" });
+}
+
+/** 頂欄的高度放進 --mast-h（工具列黏在它底下）。頂欄換行、字級跟著螢幕放大時會變。 */
+function watchMast() {
+  const mast = document.querySelector(".mast");
+  if (!mast) return;
+  const put = () => document.documentElement.style.setProperty("--mast-h", mast.getBoundingClientRect().height + "px");
+  put();
+  if (typeof ResizeObserver === "function") new ResizeObserver(put).observe(mast);
+}
+
 function pickSuit(s, from) {
   if (ui.suit === s) return;
   const focused = document.activeElement === from;
@@ -247,6 +275,7 @@ function pickSuit(s, from) {
   const selected = $("book-suits").querySelector('[aria-pressed="true"]');
   if (focused) selected?.focus({ preventScroll: true });
   seat(selected);
+  backToTop();
   render();
 }
 
@@ -289,6 +318,7 @@ function pickGroup(g, from) {
   const selected = [...$("book-groups").querySelectorAll(".group-chip")].find((b) => b.getAttribute("aria-pressed") === "true");
   if (from && document.activeElement === from) selected?.focus({ preventScroll: true });
   seat(selected);
+  backToTop();
   render();
 }
 
@@ -312,8 +342,7 @@ function renderSort() {
             if (focused) selected?.focus({ preventScroll: true });
             seat(selected);
             // 換排序：先回到頂端，讓「最多／最少」的那幾張在眼前排好。
-            const top = $("book").getBoundingClientRect().top + scrollY - 8;
-            if (scrollY > top) scrollTo({ top, behavior: "instant" });
+            backToTop({ always: true });
             render({ shuffle: true });
           },
         },
@@ -332,6 +361,7 @@ function renderUsedToggle() {
     saveUi();
     b.setAttribute("aria-pressed", ui.usedOnly ? "true" : "false");
     seat(b);
+    backToTop();
     render();
   };
 }
@@ -345,6 +375,7 @@ function wireSearch() {
     // 打字時等一下下再排：每打一個字就整片滑一次太吵。
     timer = setTimeout(() => {
       ui.query = q.value.trim();
+      backToTop();
       render();
     }, 140);
   });

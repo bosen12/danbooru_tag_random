@@ -1896,6 +1896,19 @@ const ALBUM_FIXTURE = [
           const cssText = readFileSync(join(ROOT, d, "book.css"), "utf8");
           return !js.includes('b.textContent = on ? "✓" : "＋"') && cssText.includes(".box-add::before,") && cssText.includes('.box-add[aria-pressed="true"]::after {');
         }));
+      ok("手機：輸入框、下拉選單最少 16px（iPhone 點到才不會整頁放大；要 !important 才蓋得過元件自己的字級），種子框不因此掉到下一行（web6、web7）",
+        ["web6", "web7"].every((d) => {
+          const cssText = readFileSync(join(ROOT, d, "styles.css"), "utf8");
+          return cssText.includes("font-size: max(1rem, 16px) !important;") && cssText.includes(".seed-ctl .seed-ctl-input {");
+        }));
+      ok("卡冊：電腦上工具列捲下去黏在頂欄底下（手機不黏），換花色／小分類／只看用過的／搜尋／排序都捲回牌格頂端（web6、web7）",
+        ["web6", "web7"].every((d) => {
+          const js = readFileSync(join(ROOT, d, "book.js"), "utf8");
+          const cssText = readFileSync(join(ROOT, d, "book.css"), "utf8");
+          const htmlText = readFileSync(join(ROOT, d, "book.html"), "utf8");
+          return htmlText.includes('<div class="book-tools" id="book-tools">') && /@media \(min-width: 40\.0625rem\) \{\s*\.book-tools \{\s*position: sticky;\s*top: var\(--mast-h, 0px\);/.test(cssText) &&
+            (js.match(/backToTop\(/g) || []).length >= 6 && js.includes("backToTop({ always: true });") && js.includes("watchMast();");
+        }));
       ok("卡冊：沒用過的牌不灰掉；滑鼠停上去有浮空放大卡（web6、web7）",
         ["web6", "web7"].every((d) => {
           const js = readFileSync(join(ROOT, d, "book.js"), "utf8");

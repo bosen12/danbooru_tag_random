@@ -4061,10 +4061,18 @@ html {
   touch-action: manipulation;
 }
 
-/* iPhone 的 Safari：點到字級小於 16px 的輸入框或下拉選單會把整頁放大，而且不縮回來。 */
+/* iPhone 的 Safari：點到字級小於 16px 的輸入框或下拉選單會把整頁放大，而且不縮回來。
+ * 要 !important：元件自己的字級（疊印台找牌框、下拉選單、種子框、Discord 設定 13.6～14px）
+ * 選擇器都比這裡具體，以前用 :where() 寫，全被蓋掉了。 */
 @media (pointer: coarse) {
   :where(input:not([type="checkbox"]):not([type="radio"]):not([type="range"]), select, textarea) {
-    font-size: max(1rem, 16px);
+    font-size: max(1rem, 16px) !important;
+  }
+  /* 種子框的寬是用「字寬」算的（web/seed-control.js 的 17.5ch）：字一放大框就變寬，
+   * 整排擠不下、框掉到下一行。手機上基準收到 12 字，長的種子在框裡捲。 */
+  .seed-ctl .seed-ctl-input {
+    flex-basis: 12ch;
+    width: 12ch;
   }
 }
 

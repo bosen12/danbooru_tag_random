@@ -887,3 +887,37 @@
     padding-inline: 4px;
   }
 }
+
+/* ---------- 電腦：工具列（花色、排序、只看用過的、小分類）捲下去時黏在頂欄底下 ----------
+ * 手機不黏：工具列在手機上有兩三行高，加上頂欄會佔掉四分之一個螢幕。
+ * 頂欄的高度 book.js 量好放在 --mast-h。黏住之後底下才出現一條線和淡淡的影子
+ * （scroll-state 查詢；不支援的瀏覽器就是一直沒有線，照樣能用）。 */
+.book-tools-in {
+  display: grid;
+  gap: var(--space-sm);
+}
+
+@media (min-width: 40.0625rem) {
+  .book-tools {
+    position: sticky;
+    top: var(--mast-h, 0px);
+    z-index: 20;
+    margin-inline: calc(var(--space-lg) * -1);
+    container-type: scroll-state;
+  }
+  .book-tools-in {
+    padding: var(--space-xs) var(--space-lg);
+    /* 跟頂欄同一個底色：背後的牌捲過去時字不會透上來。 */
+    background: color-mix(in oklch, var(--color-paper) 96%, transparent);
+    border-bottom: 1px solid transparent;
+    transition:
+      border-color var(--dur-short) var(--ease-out),
+      box-shadow var(--dur-short) var(--ease-out);
+  }
+  @container scroll-state(stuck: top) {
+    .book-tools-in {
+      border-bottom-color: var(--color-rule-2);
+      box-shadow: 0 12px 20px -18px var(--color-shade);
+    }
+  }
+}

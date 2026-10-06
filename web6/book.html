@@ -106,14 +106,19 @@
         </div>
         <input class="book-q" id="book-q" type="search" placeholder="找牌：紅髮、kimono…" aria-label="找牌" autocomplete="off" />
       </div>
-      <div class="book-bar">
-        <div class="suit-tabs book-suits" id="book-suits" role="group" aria-label="花色"></div>
-        <div class="book-order">
-          <div class="segmented" id="book-sort" role="radiogroup" aria-label="排序"></div>
-          <button class="chip-toggle pressable book-used" id="book-used" type="button" aria-pressed="false">只看用過的</button>
+      <!-- 電腦上捲下去時黏在頂欄底下（book.css）：換花色、排序不必捲回最上面。 -->
+      <div class="book-tools" id="book-tools">
+        <div class="book-tools-in">
+          <div class="book-bar">
+            <div class="suit-tabs book-suits" id="book-suits" role="group" aria-label="花色"></div>
+            <div class="book-order">
+              <div class="segmented" id="book-sort" role="radiogroup" aria-label="排序"></div>
+              <button class="chip-toggle pressable book-used" id="book-used" type="button" aria-pressed="false">只看用過的</button>
+            </div>
+          </div>
+          <div class="group-chips book-groups" id="book-groups" role="group" aria-label="小分類" hidden></div>
         </div>
       </div>
-      <div class="group-chips book-groups" id="book-groups" role="group" aria-label="小分類" hidden></div>
       <p class="book-hint" id="book-hint" hidden><b>還沒有使用紀錄。</b><span>在墨池抽牌、或在疊印台付印，用到的牌會記在這裡，越用越往前排。</span><a class="btn btn-small" href="./">去墨池抽幾張</a></p>
       <div class="book-grid" id="book-grid" role="list" aria-label="卡冊：點一張牌看它用過幾次"></div>
     </main>
