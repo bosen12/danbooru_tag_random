@@ -469,7 +469,7 @@ SUBS = {
             "sportswear", "basketball uniform", "soccer uniform", "baseball uniform",
             "tennis uniform", "volleyball uniform", "cheerleader", "maid", "apron", "miko",
             "nun", "police uniform", "military uniform", "suit", "business suit", "pant suit",
-            "tuxedo", "hospital gown", "racing suit", "pilot suit", "overalls", "jumpsuit",
+            "tuxedo", "hospital gown", "racing suit", "mecha pilot suit", "overalls", "jumpsuit",
             "idol clothes", "magical girl", "superhero costume", "santa costume",
         ]),
         ("op_swim", "連身・泳裝", [
@@ -544,7 +544,7 @@ SUBS = {
         ]),
         ("fab_material", "衣料・材質花紋", [
             "see-through clothes", "latex", "leather", "denim", "satin", "shiny clothes",
-            "fishnets", "fur trim", "frills", "patterned clothing", "polka dot",
+            "fishnets", "fur trim", "frills", "polka dot",
             "animal print", "cow print",
             "striped clothes", "plaid clothes", "floral print", "ribbon trim", "lace trim", "fur collar",
         ]),

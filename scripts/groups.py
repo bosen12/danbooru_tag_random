@@ -157,8 +157,8 @@ FABRIC = {
     "unzipped",
     "zipper pull tab",
     "blood on clothes",
-    "patterned clothing",
     # 鈕扣、口袋、花紋疊在衣服上，不佔上衣或下身。
+    # patterned clothing 已停用且沒有後繼，不留在這組。
     "buttons",
     "animal print",
     "polka dot",

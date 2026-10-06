@@ -98,7 +98,12 @@ const ZH_OVERRIDE = {
   "hands in pockets": "雙手插口袋",
   comic: "漫畫分格",
 };
-const SKIP = new Set(["sketch", "photorealistic"]);
+const SKIP = new Set([
+  "sketch",
+  "photorealistic",
+  // 2026-10-06：Danbooru 停用，沒有後繼標籤。花紋改由碎花、圓點、格紋、條紋各自表示。
+  "patterned clothing",
+]);
 
 function loadCsv(path) {
   return readFileSync(path, "utf8").replace(/^\uFEFF/, "").trim().split(/\r?\n/).slice(1).map((line) => {
@@ -173,7 +178,12 @@ eq("floral print kimono brings out the print and the kimono", {
   // 2026-10-06 第六輪：詞庫有了 floral print（碎花圖案），照 Danbooru 一起帶出。
 }, { implies: ["print kimono", "floral print", "kimono"], bind: ["japanese clothes"] });
 eq("print kimono is edo", item("print kimono").era, ["edo"]);
-eq("patterned clothing is a fabric overlay", item("patterned clothing").group, "fabric");
+eq("patterned clothing left: Danbooru deprecated it with no successor", item("patterned clothing"), undefined);
+eq("pilot suit left: it split into three different clothes", item("pilot suit"), undefined);
+eq("mecha pilot suit takes the old pilot-suit slot", {
+  mutex: item("mecha pilot suit").mutex, group: item("mecha pilot suit").group,
+  era: item("mecha pilot suit").era, zh: item("mecha pilot suit").zh,
+}, { mutex: "onepiece", group: "onepiece", era: ["modern"], zh: "機甲駕駛服" });
 
 for (const t of ["wine", "sake", "pizza", "sushi", "ramen", "curry", "pasta", "champagne", "mooncake", "taco", "rice bowl"]) {
   ok(`${t} does not imply eating or drinking`, !implies(t).includes("eating") && !implies(t).includes("drinking"));

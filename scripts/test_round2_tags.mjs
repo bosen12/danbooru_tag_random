@@ -72,7 +72,9 @@ const csvRows = csvText.replace(/^\uFEFF/, "").trim().split(/\r?\n/).slice(1).ma
 
 {
   eq("round 2 csv has 149 tags", csvRows.length, 149);
-  const missing = csvRows.filter((r) => !item(r.tag)).map((r) => r.tag);
+  // 2026-10-06：pilot suit 被 Danbooru 停用、拆成三種衣服，詞庫改收 mecha pilot suit（見 merge_lexicon.extra_csv_round2）。
+  const RETIRED = new Map([["pilot suit", "mecha pilot suit"]]);
+  const missing = csvRows.filter((r) => !item(r.tag) && !(RETIRED.has(r.tag) && item(RETIRED.get(r.tag)))).map((r) => r.tag);
   eq("every csv tag is in the lexicon", missing, []);
   const zhBad = csvRows.filter((r) => item(r.tag) && item(r.tag).zh !== r.zh).map((r) => `${r.tag}:${item(r.tag)?.zh}`);
   eq("chinese names match, cocktail dress is 短晚禮服", zhBad, []);

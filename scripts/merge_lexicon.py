@@ -3501,7 +3501,7 @@ def extra_csv_tags() -> list[dict]:
             implies=["leather"], era=modern),
         row("trench coat", "clothing", "風衣", mutex="outer", layer="garment"),
         row("fur coat", "clothing", "毛皮大衣", mutex="outer", layer="garment", era=vic),
-        row("white thighhighs", "clothing", "白色過膝襪", mutex="legs", gate="female",
+        row("white thighhighs", "clothing", "白過膝襪", mutex="legs", gate="female",
             layer="garment", needs=girl),
         row("zettai ryouiki", "clothing", "絕對領域", mutex="legs", gate="female",
             layer="garment", implies=["thighhighs"], needs=girl),
@@ -3781,7 +3781,11 @@ def extra_csv_round2() -> list[dict]:
         row("hospital gown", cloth, "病人服", mutex="onepiece", layer=g, era=modern),
         row("straitjacket", cloth, "束縛衣", mutex="onepiece", layer=g, heat=sex),
         row("catsuit", cloth, "貓裝", mutex="onepiece", layer=g, era=modern),
-        row("pilot suit", cloth, "駕駛員服", mutex="onepiece", layer=g, era=modern),
+        # pilot suit 在 2024-10 被 Danbooru 停用，沒有單一後繼。
+        # wiki 拆成三個不同的衣服：機甲駕駛服、飛行服、民航制服。
+        # 這格原本是現代連身衣，動畫裡對上的是機甲駕駛服（2.7 萬張）。
+        # 飛行服、民航制服是另一種衣服，不在這裡補。
+        row("mecha pilot suit", cloth, "機甲駕駛服", mutex="onepiece", layer=g, era=modern),
 
         # ---- 不是畫面內容。品質段不會被自動補。
         row("uncensored", "quality", "無碼"),
@@ -4178,7 +4182,9 @@ def extra_csv_round4() -> list[dict]:
         row("igloo", env, "冰屋", mutex="place", implies=["outdoors", "snow"]),
         row("oasis", env, "綠洲", mutex="place", implies=["outdoors", "desert"]),
         row("black skin", feat, "黑膚", implies=["dark skin"]),
-        row("patterned clothing", cloth, "花紋衣服", layer=g),
+        # patterned clothing 在 2026-08 被停用，別名 patterned_clothes 沒過，
+        # patterned 同一天也停了。沒有可以一對一換的字。
+        # 花紋已經有碎花、圓點、格紋、條紋，傘標拿掉。
         row("ink wash painting", qual, "水墨畫", mutex="coloring"),
         # ---- 姿勢。單手跟雙手不佔同一格。背對走遠就是走路的一種。
         row("flying", pose, "飛行", mutex="activity"),

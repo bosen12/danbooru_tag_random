@@ -544,13 +544,13 @@
     "masterpiece": "傑作",
     "best quality": "最高品質",
     "amazing quality": "極致品質",
-    "nsfw": "限制級",
-    "explicit": "露骨",
     "absurdres": "超高解析",
     "highres": "高解析",
     "very aesthetic": "非常有美感",
     "highly aesthetic": "極有美感",
-    "newest": "最新風"
+    "newest": "最新風",
+    "nsfw": "限制級",
+    "explicit": "露骨"
   },
   "tags": [
     {
@@ -38983,7 +38983,7 @@
       "zh": "貓裝"
     },
     {
-      "tag": "pilot suit",
+      "tag": "mecha pilot suit",
       "section": "clothing",
       "gate": "any",
       "heat": [
@@ -39000,7 +39000,7 @@
       ],
       "group": "onepiece",
       "sub": "op_uniform",
-      "zh": "駕駛員服"
+      "zh": "機甲駕駛服"
     },
     {
       "tag": "uncensored",
@@ -44213,26 +44213,6 @@
       "group": "skin",
       "sub": "skin_tone",
       "zh": "黑膚"
-    },
-    {
-      "tag": "patterned clothing",
-      "section": "clothing",
-      "gate": "any",
-      "heat": [
-        "tease",
-        "flash",
-        "sex"
-      ],
-      "mutex": null,
-      "bind": [],
-      "implies": [],
-      "layer": "garment",
-      "era": [
-        "any"
-      ],
-      "group": "fabric",
-      "sub": "fab_material",
-      "zh": "花紋衣服"
     },
     {
       "tag": "ink wash painting",

@@ -68,9 +68,10 @@ const GOLD = {
   // 2026-10-05 第六次：單眼眼罩、肚臍穿環、性愛機器。仍是 1girl solo，沒有男生或人類陰莖。
   // 2026-10-06：第四輪、地點與第五輪進池。這張換成自由女神、超級英雄裝、拉鍊。仍是 1girl solo，沒有男生或人類陰莖。
   // 2026-10-06 第六輪：CSV 119 個現役詞進池（袖長、蝴蝶結、緞帶、花、獸耳這些）。仍是 1girl solo，沒有男生或人類陰莖。
+  // 2026-10-06：花紋衣服拿掉、駕駛員服換成機甲駕駛服。衣服池少一個疊層，這張換成破襯衫、藍內褲、屈膝禮。仍是 1girl solo，沒有男生或人類陰莖。
   42: {
     rng: 671,
-    pos: "1girl, solo, very short hair, yellow eyes, aqua hair, undercut, medium breasts, whip marks, huge ass, ass tattoo, microskirt, skirt, oversized shirt, shirt, unzipped, zipper pull tab, female masturbation, tiptoes, standing, from side, looking down, ahegao, canyon, outdoors, twilight, sunlight, rickshaw, traffic light, nsfw, explicit, masterpiece, best quality, amazing quality",
+    pos: "1girl, solo, very short hair, yellow eyes, aqua hair, undercut, medium breasts, whip marks, huge ass, ass tattoo, microskirt, skirt, oversized clothes, torn shirt, shirt, blue panties, panties, female masturbation, curtsey, standing, from behind, looking down, ahegao, canyon, outdoors, twilight, sunlight, rickshaw, traffic light, nsfw, explicit, masterpiece, best quality, amazing quality",
   },
   // 2026-10-05 第五次：女僕圍裙是布料疊層，不占連身裙。仍是 1girl solo。
   // 2026-10-05 第六次：爆炸頭跟長裙、探頭偷看。仍是 1girl solo。
@@ -79,7 +80,7 @@ const GOLD = {
   // 2026-10-06 第六輪：CSV 119 個現役詞進池（袖長、蝴蝶結、緞帶、花、獸耳這些）。仍是 1girl solo，沒有男生或人類陰莖。
   100: {
     rng: 709,
-    pos: "1girl, solo, medium hair, grey eyes, white hair, sidelocks, medium breasts, lipstick mark on neck, lipstick mark, closed eyes, tears, red shirt, shirt, garter straps, zipper pull tab, cardigan, long skirt, skirt, archery, curtsey, standing, cowboy shot, crying, head on pillow, sports court, outdoors, twilight, spotlight, water, halloween, pillow, bow (weapon), nsfw, explicit, masterpiece, best quality, amazing quality",
+    pos: "1girl, solo, medium hair, grey eyes, white hair, sidelocks, medium breasts, lipstick mark on neck, lipstick mark, closed eyes, tears, red shirt, shirt, garter straps, zipper pull tab, watch, long skirt, skirt, archery, curtsey, standing, cowboy shot, crying, head on pillow, sports court, outdoors, twilight, spotlight, water, halloween, pillow, bow (weapon), nsfw, explicit, masterpiece, best quality, amazing quality",
   },
   // 2026-09-29 第三次：這張是性愛。淋浴間換成海邊，衣服和光線跟著換。仍是 1girl solo。
   // 2026-10-04（9a087a5）：帶衣物名的姿勢（hand in panties 這類）在候選階段就要先有對的衣服，
@@ -107,7 +108,7 @@ const GOLD = {
   // 2026-10-06 第六輪：CSV 119 個現役詞進池（袖長、蝴蝶結、緞帶、花、獸耳這些）。仍是 1girl solo，沒有男生或人類陰莖。
   2026: {
     rng: 702,
-    pos: "1girl, solo, bob cut, purple eyes, white hair, glowing hair, flat chest, yandere, messy hair, long eyelashes, sleeveless shirt, shirt, micro shorts, shorts, lolita fashion, cardigan, reading, falling, over shoulder, sideways glance, confident, downblouse, book, clubroom, indoors, dusk, lamp, strawberry, nsfw, explicit, masterpiece, best quality, amazing quality",
+    pos: "1girl, solo, bob cut, purple eyes, white hair, glowing hair, flat chest, yandere, messy hair, long eyelashes, sleeveless shirt, shirt, micro shorts, shorts, lolita fashion, watch, reading, falling, over shoulder, sideways glance, confident, downblouse, book, clubroom, indoors, dusk, lamp, strawberry, nsfw, explicit, masterpiece, best quality, amazing quality",
   },
 };
 
@@ -289,7 +290,10 @@ const MATRIX_SEEDS = 200;
 // 指紋 6ef42105 → 929ae20d。
 // 2026-10-06 第六輪：CSV 119 個現役詞。新的動物種類規則、袖長／瀏海／指甲色／翅膀各一格、
 // 嘴叼物算口中物、手上拿著佔手勢格。指紋 929ae20d → bc0ae058。
-const MATRIX_GOLD = "bc0ae058";
+// 2026-10-06：patterned clothing 停用且沒有後繼，拿掉。pilot suit 拆成三種衣服，
+// 這一格換成 mecha pilot suit。種子 1、999 逐字沒變。42、100、2026 換了衣服，
+// 仍是 1girl solo，沒有男生，也沒有人類陰莖。指紋 bc0ae058 → f55bf037。
+const MATRIX_GOLD = "f55bf037";
 
 function matrixSettings(over) {
   const s = defaultSettings(data);

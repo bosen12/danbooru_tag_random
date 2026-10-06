@@ -5609,7 +5609,9 @@ function indoorOutdoorClash(have) {
     // 這張換成自由女神、超級英雄裝、拉鍊。仍是 1girl solo，沒有男生，也沒有人類陰莖。
     // 第三十三次（2026-10-06）：第六輪 CSV 119 個現役詞進池（袖長、蝴蝶結、獸耳這些）。
     // 這張換成超短裙、過大襯衫、峽谷、人力車。仍是 1girl solo，沒有男生，也沒有人類陰莖。
-    "1girl, solo, very short hair, yellow eyes, aqua hair, undercut, medium breasts, whip marks, huge ass, ass tattoo, microskirt, skirt, oversized shirt, shirt, unzipped, zipper pull tab, female masturbation, tiptoes, standing, from side, looking down, ahegao, canyon, outdoors, twilight, sunlight, rickshaw, traffic light, nsfw, explicit, masterpiece, best quality, amazing quality");
+    // 第三十四次（2026-10-06）：花紋衣服拿掉，駕駛員服換成機甲駕駛服。
+    // 這張換成過大的衣服、破襯衫、藍內褲、屈膝禮、背面。仍是 1girl solo，沒有男生，也沒有人類陰莖。
+    "1girl, solo, very short hair, yellow eyes, aqua hair, undercut, medium breasts, whip marks, huge ass, ass tattoo, microskirt, skirt, oversized clothes, torn shirt, shirt, blue panties, panties, female masturbation, curtsey, standing, from behind, looking down, ahegao, canyon, outdoors, twilight, sunlight, rickshaw, traffic light, nsfw, explicit, masterpiece, best quality, amazing quality");
   ok("drawOne exposes shadow diagnostics", Array.isArray(shadowIntegrationDraw.shadowViolations));
 
   const eatProneShadow = validateSupportShadow({
