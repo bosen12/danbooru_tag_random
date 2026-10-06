@@ -4446,17 +4446,20 @@ html {
   .layout {
     padding-inline: 6px;
   }
-  .lib-grid,
   .go-bar,
-  .rules,
+  .rules {
+    padding-inline: 14px;
+  }
+  /* 字盒再寬一點（專案主：字盒可以再大一點點）：內層 8px，牌離螢幕邊 14px，四欄的牌各大一些。 */
+  .lib-grid,
   .library .panel-head,
   .suit-tabs,
   .group-chips {
-    padding-inline: 14px;
+    padding-inline: 8px;
   }
   /* 搜尋框外面那一圈是 margin，不是 padding。 */
   .lib-search {
-    margin-inline: 14px;
+    margin-inline: 8px;
   }
   .pool-well {
     padding-inline: calc(var(--space-lg) - 10px);
