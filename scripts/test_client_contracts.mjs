@@ -1958,6 +1958,18 @@ const ALBUM_FIXTURE = [
             gen.includes("function netFailText(err)") && gen.includes(": netFailText(err);") &&
             /\.book-q:focus-visible \{\s*outline: 2px solid var\(--color-focus\);/.test(bookCss);
         }));
+      ok("第三輪：卡冊記住看到哪一張（換頁回來停原地）；手機頂欄往上滑就冒出來；抽屜收起後新牌落定；觸控的小按鈕擴點擊範圍（web6、web7）",
+        ["web6", "web7"].every((d) => {
+          const book = readFileSync(join(ROOT, d, "book.js"), "utf8");
+          const motion = readFileSync(join(ROOT, d, "motion.js"), "utf8");
+          const app = readFileSync(join(ROOT, d, "app.js"), "utf8");
+          const cssText = readFileSync(join(ROOT, d, "styles.css"), "utf8");
+          const fuseCss = readFileSync(join(ROOT, d, "fuse.css"), "utf8");
+          return book.includes('const SPOT_KEY = "mochi.book.spot.v1";') && book.includes("restoreSpot();") && book.includes('addEventListener("pagehide", saveSpot);') &&
+            motion.includes("function watchMastPeek()") && motion.includes("watchMastPeek();") && cssText.includes('html[data-mast="away"] .mast {') &&
+            app.includes("function greetPicked()") && app.includes("pickerFrom = new Set(pool);") &&
+            cssText.includes(".stepper button::before {") && fuseCss.includes(".case-tab::before {");
+        }));
       ok("卡冊：沒用過的牌不灰掉；滑鼠停上去有浮空放大卡（web6、web7）",
         ["web6", "web7"].every((d) => {
           const js = readFileSync(join(ROOT, d, "book.js"), "utf8");

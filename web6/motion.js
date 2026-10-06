@@ -517,8 +517,58 @@ function wirePress() {
   }).observe(document.body, { subtree: true, attributes: true, attributeOldValue: true, attributeFilter: ["aria-pressed"] });
 }
 
+/* ---------- 手機：頂欄往上滑就冒出來 ----------
+ * 手機的頂欄將近 100px，一直黏著太佔地方，以前是跟著頁面捲走；可是捲深了要切頁、換分級，
+ * 得一路滑回最上面。現在：往下捲它照樣離開（滑上去），往上滑一小段就從上面滑下來，
+ * 回到頂端就是原本的樣子。html[data-mast]：away 收起、peek 冒出來（styles.css）。
+ * 小抖動不算：往下累積 12px 才收、往上累積 24px 才出來（iOS 捲到底的回彈不會把它叫出來）。 */
+function watchMastPeek() {
+  const mast = document.querySelector(".mast");
+  if (!mast) return;
+  const phone = matchMedia("(max-width: 44rem)");
+  const root = document.documentElement;
+  let lastY = scrollY;
+  let down = 0;
+  let up = 0;
+  let ticking = false;
+  const set = (v) => {
+    if ((root.dataset.mast || "") === v) return;
+    if (v) root.dataset.mast = v;
+    else delete root.dataset.mast;
+  };
+  const update = () => {
+    ticking = false;
+    const y = scrollY;
+    const dy = y - lastY;
+    lastY = y;
+    // 鍵盤走在頂欄裡、頂欄的選單開著：不收。
+    if (!phone.matches || y <= 8 || mast.contains(document.activeElement)) {
+      down = up = 0;
+      return set(y <= 8 || !phone.matches ? "" : root.dataset.mast === "away" ? "peek" : root.dataset.mast || "");
+    }
+    if (dy > 0) {
+      down += dy;
+      up = 0;
+      if (down > 12 && y > mast.offsetHeight / 2) set("away");
+    } else if (dy < 0) {
+      up -= dy;
+      down = 0;
+      if (up > 24) set("peek");
+    }
+  };
+  addEventListener("scroll", () => {
+    if (ticking) return;
+    ticking = true;
+    requestAnimationFrame(update);
+  }, { passive: true });
+  // 分頁在背景時 rAF 不跑：回來時對一次。
+  document.addEventListener("visibilitychange", () => { if (!document.hidden) update(); });
+  phone.addEventListener?.("change", () => set(""));
+}
+
 export function initMotion() {
   wirePress();
+  watchMastPeek();
   // 發牌（.dealt）的動畫是 fill: both，播完如果 class 還掛著，那個「已結束」的動畫就一直留著：
   // 墨池抽 50 次牌留下 1350 個，而且它的 transform: none 壓過牌 hover 時的抬起。
   // 播完就拿掉 class，最後一格本來就等於牌的原樣，看不出差別。

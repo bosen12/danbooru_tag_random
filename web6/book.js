@@ -101,6 +101,8 @@ async function boot() {
   renderSuits();
   wireSearch();
   render({ animate: false, deal: true });
+  restoreSpot();
+  addEventListener("pagehide", saveSpot);
   renderSummary({ count: true });
   pingLoop();
   wireSound();
@@ -551,6 +553,45 @@ function emptyNote() {
     ),
     ui.usedOnly && !any ? el("a", { class: "btn btn-small", href: "./" }, "去墨池") : null
   );
+}
+
+/* ================= 回來時停在剛才看的地方 =================
+ * 從墨池、疊印台切回卡冊以前一律回到第一張，捲很深的話得重新找。離開時記下畫面最上面那張牌
+ * （不是捲軸位置：使用次數一變排序會挪，跟著牌走比較準）和它離頂端多遠；回來時篩選、排序都
+ * 一樣、半小時內，就把牌畫到那一張、捲回去。分頁自己一份（sessionStorage）。 */
+const SPOT_KEY = "mochi.book.spot.v1";
+const SPOT_TTL = 30 * 60 * 1000;
+const spotSig = () => JSON.stringify([ui.suit, ui.group, ui.order, ui.usedOnly, ui.query, rating]);
+
+function saveSpot() {
+  // 手機的頂欄不黏，捲下去就離開畫面（底緣變負的）：最少從畫面頂端算。
+  const mast = Math.max(0, document.querySelector(".mast")?.getBoundingClientRect().bottom || 0);
+  const tools = $("book-tools");
+  const under = getComputedStyle(tools).position === "sticky" ? tools.getBoundingClientRect().bottom : mast;
+  // 最上面那張「看得到」的牌：底緣在頂欄（電腦是黏住的工具列）下面的第一張。
+  const cell = [...$("book-grid").querySelectorAll(".book-cell")].find((c) => c.getBoundingClientRect().bottom > under + 8);
+  try {
+    if (!cell || scrollY < 80) return sessionStorage.removeItem(SPOT_KEY);
+    sessionStorage.setItem(SPOT_KEY, JSON.stringify({ tag: cell.dataset.tag, top: cell.getBoundingClientRect().top, sig: spotSig(), at: Date.now() }));
+  } catch {
+    /* 存不了就算了：回來從第一張看 */
+  }
+}
+
+function restoreSpot() {
+  let spot = null;
+  try {
+    spot = JSON.parse(sessionStorage.getItem(SPOT_KEY) || "null");
+  } catch {
+    return;
+  }
+  if (!spot || spot.sig !== spotSig() || Date.now() - spot.at > SPOT_TTL) return;
+  const i = list.findIndex((c) => c.tag === spot.tag);
+  if (i < 0) return;
+  while (shown <= i && shown < list.length) moreCells();
+  const cell = cells.get(spot.tag);
+  if (!cell) return;
+  scrollTo({ top: cell.getBoundingClientRect().top + scrollY - spot.top, behavior: "instant" });
 }
 
 function watchMore() {

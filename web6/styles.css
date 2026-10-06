@@ -4746,3 +4746,68 @@ html[data-booting] :is(#lib-grid, #case-grid, #book-grid):empty::before {
     display: none;
   }
 }
+
+/* ---------- 手機：頂欄往上滑就冒出來（motion.js 的 watchMastPeek） ----------
+ * 以前手機的頂欄 position: static 跟著捲走。改成黏住但往下捲時滑上去藏起來，往上滑才下來。
+ * 加到主畫面（全螢幕）時狀態列透明疊在上面：頂欄停在 safe-area 下緣，上面那一段用同色補滿。 */
+@media (max-width: 44rem) {
+  .mast {
+    position: sticky;
+    top: env(safe-area-inset-top);
+    transition:
+      translate var(--dur-medium) var(--ease-out),
+      box-shadow var(--dur-medium) var(--ease-out);
+  }
+  .mast::before {
+    content: "";
+    position: absolute;
+    left: 0;
+    right: 0;
+    bottom: 100%;
+    height: env(safe-area-inset-top);
+    background: inherit;
+  }
+  html[data-mast="away"] .mast {
+    translate: 0 calc(-100% - env(safe-area-inset-top) - 2px);
+    transition-timing-function: var(--ease-exit);
+  }
+  html[data-mast="peek"] .mast {
+    box-shadow: 0 10px 24px -14px var(--color-shade);
+  }
+}
+
+@media (max-width: 44rem) and (prefers-reduced-motion: reduce) {
+  .mast {
+    transition: none;
+  }
+}
+
+/* ---------- 觸控：常按的小按鈕，看不見的點擊範圍再擴一點 ----------
+ * 手機實測：張數與規則的 ± 是 30×30、頁籤 30px 高。只往空的方向擴，而且不超過到鄰居距離的一半
+ * （規則裡上下兩排 ± 只隔 5～6px），外觀不變。± 的外框原本 overflow: hidden 會把擴出去的範圍也裁掉，
+ * 改成只把兩端按鈕的角磨圓。 */
+@media (pointer: coarse) {
+  .stepper {
+    overflow: visible;
+  }
+  .stepper > :first-child {
+    border-radius: calc(var(--radius-sm) - 1px) 0 0 calc(var(--radius-sm) - 1px);
+  }
+  .stepper > :last-child {
+    border-radius: 0 calc(var(--radius-sm) - 1px) calc(var(--radius-sm) - 1px) 0;
+  }
+  .stepper button {
+    position: relative;
+  }
+  /* ::after 已經是按下去的墨暈（pointer-events: none），點擊範圍用 ::before。 */
+  .stepper button::before {
+    content: "";
+    position: absolute;
+    inset: -3px -6px;
+  }
+  .page-switch a::after {
+    content: "";
+    position: absolute;
+    inset: -5px 0;
+  }
+}

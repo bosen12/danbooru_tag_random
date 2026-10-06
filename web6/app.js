@@ -284,6 +284,8 @@ function syncCollapse() {
 
 const pickerMQ = matchMedia("(max-width: 40rem)");
 let pickerOpen = false;
+// 打開抽屜那一刻合成池裡有哪些牌：收起來時比一比，新放進去的那幾張要落定給人看（greetPicked）。
+let pickerFrom = null;
 let pickerHold = null;
 const pickerMode = () => pickerMQ.matches;
 
@@ -319,6 +321,7 @@ function buildPicker() {
 function openPicker() {
   if (pickerOpen || !pickerMode()) return;
   pickerOpen = true;
+  pickerFrom = new Set(pool);
   const lib = $("library");
   // 字盒離開版面（變成固定在底部的抽屜）時，原位墊一塊一樣高的空白：背後的頁面不會跳。
   pickerHold.style.height = lib.getBoundingClientRect().height + "px";
@@ -358,6 +361,7 @@ function closePicker({ fromHistory = false } = {}) {
     pickerHold.hidden = true;
     $("lib-toggle").setAttribute("aria-expanded", "false");
     $("lib-toggle").focus({ preventScroll: true });
+    greetPicked();
   };
   if (!fromHistory && history.state && history.state.mochiPicker) {
     try {
@@ -377,6 +381,27 @@ function closePicker({ fromHistory = false } = {}) {
   };
   a.onfinish = finish;
   setTimeout(() => !pickerOpen && document.body.dataset.picker && finish(), DUR.short + 80);
+}
+
+/**
+ * 抽屜收起來之後：這次挑進合成池的牌一張張微微浮起、落定（跟從卡冊帶來的同一種，幅度小一點）。
+ * 以前抽屜一收，合成池就已經是新的樣子，看不出剛才放了哪幾張。畫面外的不動。
+ */
+function greetPicked() {
+  const from = pickerFrom;
+  pickerFrom = null;
+  if (!from || reducedMotion()) return;
+  const added = [...pool].filter((t) => !from.has(t)).map(poolNode).filter(Boolean);
+  const seen = added.filter((n) => {
+    const r = n.getBoundingClientRect();
+    return r.width && r.bottom > 0 && r.top < innerHeight;
+  });
+  seen.slice(0, 12).forEach((n, i) =>
+    n.animate(
+      [{ transform: "translateY(-14px) scale(1.06)", filter: "brightness(1.12)" }, { transform: "none", filter: "none" }],
+      { duration: DUR.long, delay: DUR.micro + i * 50, easing: css(CURVE.settle), fill: "backwards" }
+    )
+  );
 }
 
 /** 握把往下拉：超過 90px 或甩一下就收起，不到就彈回。 */

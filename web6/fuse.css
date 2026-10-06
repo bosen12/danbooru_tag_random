@@ -2937,3 +2937,15 @@ body.fuse {
     padding-inline: 4px;
   }
 }
+
+/* 觸控：花色籤 29px 寬、左右只隔 3px —— 只往上下擴（上隔 8px、下隔 12px），外觀不變。 */
+@media (pointer: coarse) {
+  .case-tab {
+    position: relative;
+  }
+  .case-tab::before {
+    content: "";
+    position: absolute;
+    inset: -4px 0;
+  }
+}
