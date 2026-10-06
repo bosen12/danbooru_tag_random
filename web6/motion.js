@@ -306,6 +306,7 @@ function schedule() {
 
 /** 開機的 DOM 都放好了：下一格排完版、畫上去之後再量滑塊。 */
 export function settleMotion() {
+  delete document.documentElement.dataset.booting;
   playPageEntrance();
   if (document.hidden) {
     ready = true;

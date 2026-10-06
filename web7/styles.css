@@ -4689,3 +4689,49 @@ body {
     color: var(--color-accent);
   }
 }
+
+/* ---------- 開機中：詞庫、牌面還在讀（各頁 <head> 掛上 html[data-booting]，settleMotion 拿掉） ----------
+ * 手機走 Tailscale、剛更新完要重新下載時，畫面會有一兩秒是半空的，看起來像壞掉。
+ * 頂欄底下一條光掃過去；延遲 250ms 才出現，讀得快的時候不會閃一下。空的牌格寫一行字。 */
+html[data-booting] .mast::after {
+  content: "";
+  position: absolute;
+  left: 0;
+  bottom: -1px;
+  width: 30%;
+  height: 2px;
+  background: linear-gradient(90deg, transparent, var(--color-pool-2), transparent);
+  pointer-events: none;
+  animation: boot-sweep var(--dur-develop) var(--ease-in-out) 250ms infinite both;
+}
+
+@keyframes boot-sweep {
+  from {
+    translate: -100% 0;
+  }
+  to {
+    translate: 340% 0;
+  }
+}
+
+html[data-booting] :is(#lib-grid, #case-grid, #book-grid):empty::before {
+  content: "正在讀詞庫…";
+  grid-column: 1 / -1;
+  padding: var(--space-lg) 0;
+  color: var(--color-muted);
+  font-size: var(--text-sm);
+  text-align: center;
+  animation: boot-fade var(--dur-long) var(--ease-out) 250ms both;
+}
+
+@keyframes boot-fade {
+  from {
+    opacity: 0;
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  html[data-booting] .mast::after {
+    display: none;
+  }
+}

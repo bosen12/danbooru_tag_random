@@ -167,7 +167,7 @@ export function createGenerator(hooks) {
         ? `Comfy 靜默超過 ${IDLE_MS / 1000} 秒，這張放棄`
         : !(err instanceof GenError) && current.job
           ? "連線斷了，重試幾次都接不回去"
-          : String(err && err.message ? err.message : err);
+          : netFailText(err);
       hooks.update(shot);
       if (stalled) cancelJob(current.job, current.promptId);
       return false;
@@ -333,6 +333,17 @@ export async function linkState() {
   } catch {
     return "comfy";
   }
+}
+
+/**
+ * 送出去就失敗的那種（還沒拿到工作編號）：瀏覽器給的是英文的「Failed to fetch」
+ * （iPhone 是「Load failed」），使用者看不懂。連線層的錯誤換成白話；伺服器自己講的錯照原樣。
+ */
+function netFailText(err) {
+  const msg = String(err && err.message ? err.message : err);
+  // 只認瀏覽器的連線錯誤字樣：程式自己的 TypeError（bug）照原樣，才查得到。
+  if (/failed to fetch|load failed|networkerror|network request failed/i.test(msg)) return "連不到主機：網路斷了，或伺服器沒開";
+  return msg;
 }
 
 export const LINK_LABEL = { ok: "Comfy 已連", comfy: "Comfy 未連", net: "連不到主機" };

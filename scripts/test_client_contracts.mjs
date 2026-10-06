@@ -1947,6 +1947,17 @@ const ALBUM_FIXTURE = [
           return app.includes('"同一個人：一次 2 張以上才有作用"') && app.includes("function renderGoStatus()") && app.includes('"抽完一輪自動接著抽下一輪，一直到按「停」"') &&
             cssText.includes('.ping[data-ok="0"] span {') && /\.toast \{[^}]*width: max-content;/.test(cssText);
         }));
+      ok("開機中有交代（頂欄掃光、空牌格寫正在讀詞庫，settleMotion 收掉、15 秒保底）；連不到主機不再顯示英文 Failed to fetch；卡冊找牌框有焦點外框（web6、web7）",
+        ["web6", "web7"].every((d) => {
+          const cssText = readFileSync(join(ROOT, d, "styles.css"), "utf8");
+          const motion = readFileSync(join(ROOT, d, "motion.js"), "utf8");
+          const gen = readFileSync(join(ROOT, d, "gen.js"), "utf8");
+          const bookCss = readFileSync(join(ROOT, d, "book.css"), "utf8");
+          return ["index.html", "fuse.html", "book.html"].every((f) => readFileSync(join(ROOT, d, f), "utf8").includes('document.documentElement.dataset.booting = "";')) &&
+            cssText.includes("html[data-booting] .mast::after {") && motion.includes("delete document.documentElement.dataset.booting;") &&
+            gen.includes("function netFailText(err)") && gen.includes(": netFailText(err);") &&
+            /\.book-q:focus-visible \{\s*outline: 2px solid var\(--color-focus\);/.test(bookCss);
+        }));
       ok("卡冊：沒用過的牌不灰掉；滑鼠停上去有浮空放大卡（web6、web7）",
         ["web6", "web7"].every((d) => {
           const js = readFileSync(join(ROOT, d, "book.js"), "utf8");

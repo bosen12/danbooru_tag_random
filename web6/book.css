@@ -64,8 +64,10 @@
   transition: border-color var(--dur-micro) var(--ease-out), background-color var(--dur-micro) var(--ease-out);
 }
 
+/* 跟疊印台的找牌框同一種焦點：以前只換一點底色，鍵盤走到這裡幾乎看不出來。 */
 .book-q:focus-visible {
-  outline: none;
+  outline: 2px solid var(--color-focus);
+  outline-offset: 1px;
   border-color: var(--color-ink-2);
   background: var(--color-paper-3);
 }
