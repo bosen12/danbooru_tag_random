@@ -4433,3 +4433,32 @@ html {
     translate: var(--vt-dx, 0) var(--space-sm);
   }
 }
+
+
+/* ---------- 手機：左右留白收窄（2026-10-06 專案主用 iPhone 17：左右各多 2mm 左右） ----------
+ * iPhone 17 上 1mm 約 6px。以前外框 16px、字盒和按鈕列又各自 16px，牌離螢幕邊 32px，
+ * 合成池的四角內距再疊 24px。只在手機寬度收：外框 16→6，內層 16→14，合成池四角內距少 10px，
+ * 每一層加起來左右各多約 12px（2mm）。四角套準線、按鈕的點擊面積都不變。 */
+@media (max-width: 30rem) {
+  .mast {
+    padding-inline: 6px;
+  }
+  .layout {
+    padding-inline: 6px;
+  }
+  .lib-grid,
+  .go-bar,
+  .rules,
+  .library .panel-head,
+  .suit-tabs,
+  .group-chips {
+    padding-inline: 14px;
+  }
+  /* 搜尋框外面那一圈是 margin，不是 padding。 */
+  .lib-search {
+    margin-inline: 14px;
+  }
+  .pool-well {
+    padding-inline: calc(var(--space-lg) - 10px);
+  }
+}

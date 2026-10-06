@@ -2908,3 +2908,18 @@ body.fuse {
     touch-action: pan-y;
   }
 }
+
+
+/* ---------- 手機：左右留白收窄（見 styles.css 同一段；iPhone 17 左右各多約 2mm） ---------- */
+@media (max-width: 30rem) {
+  .case,
+  .line,
+  .trials,
+  .print-bar {
+    padding-inline: 6px;
+  }
+  .registers,
+  .plate-head {
+    padding-inline: 4px;
+  }
+}
