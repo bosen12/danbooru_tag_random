@@ -42,7 +42,7 @@ import { initMotion, settleMotion, flip, flipBy, leave, gatherHome, flight, ente
 import { createHand } from "./hand.js";
 import { createDrag, inkRing } from "./drag.js";
 import { createGenerator, comfyOnline, viewSrc, tabTitle, watchLink, LINK_LABEL } from "./gen.js";
-import { attachPeek, hidePeek } from "./card-peek.js";
+import { attachPeek, hidePeek, showPeek } from "./card-peek.js";
 import { createHires, openHiresPicker, paintHiresVeil, hiresBusy } from "./hires.js";
 import * as S from "./store.js";
 import { REGISTERS, REGISTER_ROLE, emptyBed, sanitizeBed, placeCard, removeCard, relationsOf } from "./fuse-bed.js";
@@ -272,6 +272,8 @@ async function boot() {
   });
   attachPeek($("registers"), ".card[data-tag]", peekInfo);
   if (hand) attachPeek(hand.fan, ".card[data-tag]", peekInfo);
+  // 觸控裝置沒有實體鍵盤：搜尋框不提「按 /」（手機上只會把提示擠到看不完）。
+  if (matchMedia("(hover: none)").matches) $("case-q").placeholder = $("case-q").placeholder.replace(/（按[^）]*）/, "");
   watchPoolPill();
   watchPrintBar();
   setTimeout(sweepPrints, 1500);
@@ -1665,7 +1667,9 @@ function startBlock() {
     el(
       "p",
       { class: "pool-start-body" },
-      "從字盒挑牌，或用下方起手式；留白的層由引擎補上。"
+      "從字盒挑牌，或用下方起手式；留白的層由引擎補上。",
+      // 手機沒有滑鼠懸停的放大卡：長按（放開）是唯一看得到牌面說明的地方，寫在第一次挑牌的這裡。
+      matchMedia("(hover: none)").matches ? "長按一張牌放開，可以看它的說明。" : null
     ),
     starters.length
       ? el(
@@ -3174,6 +3178,11 @@ const drag = createDrag({
     if (zone !== "plate") return;
     dropRow = $("registers").querySelector(`.register[data-suit="${suitOf(p.tag)}"]`);
     dropRow?.classList.add("is-drop-target");
+  },
+  // 手機長按原地放開：沒有滑鼠懸停，用同一張放大卡給它看（點任何地方收起）。
+  onHold: (p, node) => {
+    const info = peekInfo(node);
+    if (info) showPeek(node, info);
   },
   onDrop: (p, zone, at) => {
     if (zone === "hand") {

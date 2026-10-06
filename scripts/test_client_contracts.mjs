@@ -1835,6 +1835,18 @@ const ALBUM_FIXTURE = [
     ok("墨池成品的「放大」鈕換成 Hires（點圖仍是放大）；疊印台印好的那張付印鈕變成 Hires", !app6h.includes('onclick: () => showShot(shot) }, "放大")') && app6h.includes("onclick: (e) => openHires(shot, e.currentTarget)") && fuse6h.includes('if (p && p.status === "done") return openHires(p, btn);') && fuse6h.includes("onclick: (e) => printAction(e.currentTarget)"));
     ok("原檔被刪（404／410）才算不在：墨池成品換成說明＋照原樣再印／撤下，疊印台繩上寫原檔已刪、付印鈕變再印一次；開頁面閒下來時逐張問（no-cache 重新驗證）", readFileSync(join(ROOT, "web6/gone.js"), "utf8").includes('return r.status === 404 || r.status === 410;') && readFileSync(join(ROOT, "web6/gone.js"), "utf8").includes('fetch(src, { cache: "no-cache" })') && readFileSync(join(ROOT, "web6/app.js"), "utf8").includes("setTimeout(sweepShots, 1500);") && fuse6h.includes("setTimeout(sweepPrints, 1500);") && fuse6h.includes('} else if (p && p._gone) label = "再印一次";'));
     ok("手機：付印那排捲走時右下角留一顆付印鈕（跟付印同一個動作、Hires 選單貼著它彈出），托盤打開時讓到上面", fuse6h.includes('float.addEventListener("click", (e) => printAction(e.currentTarget));') && fuse6h.includes("const show = narrowFuse.matches && !printBarSeen && !!go && !!t;") && readFileSync(join(ROOT, "web6/fuse.html"), "utf8").includes('id="print-float"') && readFileSync(join(ROOT, "web6/fuse.css"), "utf8").includes('body[data-fav-hand-open="true"] .print-float'));
+    {
+      // 2026-10-06：手機沒有懸停、iPhone 長按不送 contextmenu —— 長按原地放開是觸控唯一看得到牌的地方。
+      const drag6 = readFileSync(join(ROOT, "web6/drag.js"), "utf8");
+      const peek = readFileSync(join(ROOT, "web/card-peek.js"), "utf8");
+      ok("手機：長按牌原地放開＝看詳情（墨池開詳情抽屜、疊印台浮出放大卡，點別處收起）",
+        drag6.includes("const held = !cancelled && state.touch && onHold") &&
+          app6h.includes("onHold: (p) => showCard(p.tag,") &&
+          fuse6h.includes("if (info) showPeek(node, info);") &&
+          peek.includes('document.addEventListener("pointerdown", touchDismiss, true)'));
+      ok("手機頂欄放不下時工具換行，不會整頁左右滑",
+        /\.mast-controls \{\s*overflow-x: visible;\s*flex-wrap: wrap;/.test(readFileSync(join(ROOT, "web6/styles.css"), "utf8")));
+    }
     ok("Hires 自己一條佇列，按停付印不會連 Hires 一起砍；單張可以停", hires6.includes("const gen = createGenerator(") && readFileSync(join(ROOT, "web6/gen.js"), "utf8").includes("cancelOne(shot)"));
     ok("聲音：總線放大加壓縮器、兩頁共用一個引擎與開關，按鈕有敲擊聲", sfx6.includes("const MASTER = 1.6;") && sfx6.includes("createDynamicsCompressor") && app6h.includes('$("sound-btn")') && readFileSync(join(ROOT, "web6/motion.js"), "utf8").includes("getSfx().tap()"));
   }

@@ -170,6 +170,19 @@ export function showPeek(anchor, info) {
   peek.dataset.show = "true";
   pendingEl = null;
   shownAt = anchor.getBoundingClientRect();
+  // 觸控（長按放開叫出來的）：沒有滑鼠移開這回事，下一次點到任何地方就收。
+  // 晚一格才掛，不然叫出它的那次放開／點擊會馬上把它收掉。
+  if (!FINE) {
+    clearTimeout(touchArm);
+    document.removeEventListener("pointerdown", touchDismiss, true);
+    touchArm = setTimeout(() => document.addEventListener("pointerdown", touchDismiss, true), 0);
+  }
+}
+
+let touchArm = 0;
+function touchDismiss() {
+  document.removeEventListener("pointerdown", touchDismiss, true);
+  hidePeek();
 }
 
 // 滑鼠停一下（120ms）才浮出放大卡：只是掃過字盒不要一路閃。已經開著的換牌不等。

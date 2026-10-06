@@ -648,9 +648,13 @@ body #wf-pick-btn.has {
     margin-left: auto;
   }
   /* 第二排不要橫向捲：捲出去的工具和連線燈看不到、也不知道還有。LoRA、模型改成只留圖示
-   * （文字給螢幕閱讀器，滑鼠停上去仍有 title），整排就放得下。 */
+   * （文字給螢幕閱讀器，滑鼠停上去仍有 title），整排就放得下。
+   * 疊印台多一顆「規則」，375 寬還是差三十幾 px（音效鈕被切掉、連線燈跑到畫面外、整頁能左右滑）：
+   * 放不下時工具整排換到下一行，按鈕不縮小。墨池放得下就還是一行。 */
   .mast-controls {
     overflow-x: visible;
+    flex-wrap: wrap;
+    row-gap: var(--space-xs);
   }
   .mast-tools .ghost .gen-pick-label {
     position: absolute;
@@ -677,7 +681,8 @@ body #wf-pick-btn.has {
   }
   .mast .segmented button {
     min-height: 30px;
-    padding: 0 var(--space-xs);
+    /* 8px 的話墨池那排差 2px 放不下、被擠成三排；6px 字還是有呼吸，按鈕仍有 40px 寬。 */
+    padding: 0 6px;
     font-size: var(--text-xs);
   }
   .mast-tools .ghost {
@@ -921,6 +926,19 @@ body #wf-pick-btn.has {
 .chip-fam::after {
   content: "：";
   font-weight: 400;
+}
+
+/* 一串後面接著單獨的籤（鏡頭那串後面的「視線」）：拉開一點，不要看起來像同一串。
+   手機上每串自己一行，單獨的籤排在串與串之間。 */
+.chip-run {
+  margin-right: var(--space-sm);
+}
+
+@media (max-width: 34rem) {
+  .chip-run {
+    flex-basis: 100%;
+    margin-right: 0;
+  }
 }
 
 .group-chip[aria-pressed="true"] {
@@ -2830,7 +2848,7 @@ body[data-dragging="true"] .library[data-over="true"] {
 
 /* 手機：字盒改成可以收起來 */
 @media (max-width: 63.99rem) {
-  .library[data-collapsed="true"] .suit-tabs,
+  /* 花色分頁收著也留著（一排）：點一個花色就直接展開到那一類，不必先按「展開全部」。 */
   .library[data-collapsed="true"] .group-chips {
     display: none;
   }

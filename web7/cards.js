@@ -217,7 +217,9 @@ export function setCardFlag(node, flag) {
 /** 卡牌的說明（提示框、詳情共用）。 */
 export function cardFacts(card, lex, data) {
   const facts = [];
-  facts.push(["花色", `${CARD_SUIT_INFO[card.suit].zh}・${card.groupZh}`]);
+  // 細分類名常以花色開頭（人數・女）：不要疊成「人數・人數・女」。
+  const suitZh = CARD_SUIT_INFO[card.suit].zh;
+  facts.push(["花色", card.groupZh.startsWith(suitZh + "・") ? card.groupZh : `${suitZh}・${card.groupZh}`]);
   facts.push(["分級", RATING_ZH[card.rating]]);
   facts.push(["時代", card.eras.map((e) => ERA_ZH[e] || e).join("、")]);
   if (card.gate === "female") facts.push(["人物", "只在有女性時"]);

@@ -143,6 +143,8 @@ async function boot() {
   // Hires 做到一半就重新整理的：接回去。
   for (const s of shots) if (s.status === "done" && s.hiresJob) hiresRun.resume(s, s.hiresJob);
   for (const root of [$("lib-grid"), $("pool-well"), $("wall"), hand?.fan]) attachPeek(root, ".card[data-tag]", peekInfo);
+  // 觸控裝置沒有實體鍵盤：搜尋框不提「按 /」（手機上只會把提示擠到看不完）。
+  if (matchMedia("(hover: none)").matches) $("lib-q").placeholder = $("lib-q").placeholder.replace(/（按[^）]*）/, "");
   document.addEventListener("keydown", onKey);
   settleMotion();
 }
@@ -223,6 +225,8 @@ function renderLibraryChrome() {
   q.value = ui.query;
   q.oninput = () => {
     ui.query = q.value.trim();
+    // 手機上字盒收著只露一排：開始找字就展開，找到的牌才看得到。
+    if (ui.query) expandLibrary();
     q.closest(".lib-search").dataset.typing = ui.query ? "true" : "false";
     renderLibrary();
   };
@@ -239,6 +243,14 @@ function renderLibraryChrome() {
   syncCollapse();
 }
 
+/** 手機上字盒收著時展開（點花色、開始找字）。寬螢幕沒有收合，什麼都不做。 */
+function expandLibrary() {
+  if (!ui.collapsed || !matchMedia("(max-width: 63.99rem)").matches) return;
+  ui.collapsed = false;
+  saveUi();
+  syncCollapse();
+}
+
 function syncCollapse() {
   $("library").dataset.collapsed = ui.collapsed ? "true" : "false";
   $("lib-toggle").textContent = ui.collapsed ? "展開全部" : "收起字盒";
@@ -249,6 +261,7 @@ function pickSuit(s, from) {
   const focused = document.activeElement === from;
   ui.suit = s;
   ui.group = "";
+  if (s !== "all") expandLibrary();
   saveUi();
   renderLibraryChrome();
   const selected = $("suit-tabs").querySelector('[aria-pressed="true"]');
@@ -912,9 +925,12 @@ function renderPool(fresh) {
       el(
         "div",
         { class: "pool-empty" },
-        el("b", {}, "把字拖進來"),
+        // 觸控裝置沒有「拖」這個第一直覺：寫點一下就放（拖也還是可以）。
+        el("b", {}, matchMedia("(hover: none)").matches ? "點字盒的牌放進來" : "把字拖進來"),
         // 一行就好：兩句操作說明（點字盒也能放、點 × 拿出來）做了就會發現，寫在這裡只是把合成池撐高。
-        el("span", {}, "放進來的字，每一張圖都一定有；其他格子引擎補。")
+        el("span", {}, "放進來的字，每一張圖都一定有；其他格子引擎補。"),
+        // 手機上看詳情只有長按（沒有右鍵、沒有懸停），寫在第一次要放牌的這裡。
+        matchMedia("(hover: none)").matches ? el("span", {}, "長按一張牌放開，可以看它的詳情。") : null
       )
     );
     return;
@@ -2140,6 +2156,7 @@ const drag = createDrag({
   // 拖著經過托盤：要插進去的那一格先空出來。
   onMove: (zone, p, x) => hand?.hover(zone === "hand" ? x : null, p.tag),
   // 回傳落點：影子飛到那張牌的位置落下（drag.js）。
+  onHold: (p) => showCard(p.tag, p.from === "pool" || p.from === "library" ? p.from : null),
   onDrop: (p, zone, at) => {
     if (zone === "hand") {
       // 放在哪就插在哪（托盤上的牌＝換位置）；滿了收不下，影子彈回原位。

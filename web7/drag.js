@@ -6,6 +6,8 @@
  *   滑鼠：按下後移動超過 5px 才算拖，沒移動就是點一下。
  *   觸控：長按 280ms 才開始拖；在那之前手指一動就讓給捲動（字盒要能滑）。
  *         長按的那段時間牌會慢慢往下壓，看得出「再按一下就拿起來了」。
+ *         長按到拿起來之後原地放開（沒拖走）＝看這張牌的詳情（onHold）。手機上沒有滑鼠懸停、
+ *         iPhone 長按也不送 contextmenu，這是觸控唯一看得到詳情的地方。
  *   拖曳中按 Esc 取消。拖完之後緊接著的那個 click 會被吃掉，不會又當成點一下。
  *
  * 手感：
@@ -53,6 +55,7 @@ const buzz = (ms) => {
  *   null／undefined          沒有落點：影子原地淡出（sink 的區域照樣轉進去）
  * onOver(zoneId|null, payload)  拖著經過的區域換了（離開所有區域時給 null）
  * onMove(zoneId|null, payload, x, y)  拖著每動一下（托盤拿來即時空出插入的位置）
+ * onHold(payload, node)  觸控長按拿起來、手指沒離開原地就放開：牌彈回原位，頁面開詳情
  */
 /** 牌落定的地方散開一圈墨（顏色是那張牌的花色）。點一下放牌、拖曳放下都用這個。 */
 export function inkRing(target) {
@@ -70,7 +73,7 @@ export function inkRing(target) {
   setTimeout(() => ring.remove(), 560);
 }
 
-export function createDrag({ zones, onDrop, onOver, onMove }) {
+export function createDrag({ zones, onDrop, onOver, onMove, onHold }) {
   let active = null;
 
   // 長按開始拖之後，手指一動瀏覽器就會想捲動頁面（然後送 pointercancel 把拖曳砍掉）。
@@ -395,8 +398,13 @@ export function createDrag({ zones, onDrop, onOver, onMove }) {
       };
       state.node.addEventListener("click", eat, { capture: true, once: true });
       setTimeout(() => state.node.removeEventListener("click", eat, { capture: true }), 60);
-      const zone = !cancelled && state.over ? state.over : null;
-      if (zone) {
+      // 觸控長按拿起來、沒拖走就放開：不是拖曳，是「看這張」。牌彈回原位，頁面開詳情。
+      const held = !cancelled && state.touch && onHold && (state.far || 0) < TOUCH_SLOP * 2;
+      const zone = !cancelled && !held && state.over ? state.over : null;
+      if (held) {
+        goHome(state);
+        onHold(state.payload, state.node);
+      } else if (zone) {
         delete state.node.dataset.dragging;
         let result = null;
         try {
@@ -426,6 +434,8 @@ export function createDrag({ zones, onDrop, onOver, onMove }) {
         if (!mine(ev)) return;
         if (state.dragging) {
           ev.preventDefault();
+          // 拿起來之後離開原地多遠：沒拖走就放開＝長按看詳情（見 end）。
+          if (state.touch) state.far = Math.max(state.far || 0, Math.hypot(ev.clientX - state.x0, ev.clientY - state.y0));
           move(state, ev.clientX, ev.clientY);
           return;
         }
