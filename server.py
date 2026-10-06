@@ -37,6 +37,7 @@ ROOT = Path(__file__).resolve().parent
 if str(ROOT) not in sys.path:
     sys.path.insert(0, str(ROOT))
 
+import card_usage
 import lora_scan
 import recipes
 import workflows
@@ -3378,6 +3379,10 @@ class Handler(BaseHTTPRequestHandler):
         if path == "/api/ping":
             self._json(200, ping())
             return
+        # 卡冊：每張牌用過幾次（所有裝置共用一份，見 card_usage.py）。
+        if path == "/api/usage":
+            self._json(200, {"ok": True, **card_usage.load()})
+            return
         if path == "/api/gen/attach":
             qs = urllib.parse.parse_qs(urllib.parse.urlparse(self.path).query)
             job = find_job((qs.get("job") or [""])[0])
@@ -3460,6 +3465,12 @@ class Handler(BaseHTTPRequestHandler):
             return
         if path == "/api/comfy":
             self._apply_comfy_config(payload)
+            return
+        if path == "/api/usage":
+            try:
+                self._json(200, {"ok": True, **card_usage.add(payload)})
+            except card_usage.UsageError as exc:
+                self._json(400, {"ok": False, "error": str(exc), "code": "invalid"})
             return
         if path == "/api/workflows":
             self._serve_workflow_save(payload)

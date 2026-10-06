@@ -315,6 +315,125 @@
   margin-bottom: var(--space-md);
 }
 
+/* ---------- 詳情：用它做過的圖 ---------- */
+
+.book-detail .book-works {
+  grid-column: 1 / -1;
+}
+
+.book-works {
+  display: grid;
+  gap: var(--space-xs);
+  padding-top: var(--space-sm);
+  border-top: 1px solid var(--color-rule-2);
+}
+
+.book-works-head {
+  display: flex;
+  align-items: baseline;
+  gap: var(--space-xs);
+  margin: 0;
+  font-size: var(--text-sm);
+  font-weight: 700;
+}
+
+.book-works-head span {
+  color: var(--color-muted);
+  font-weight: 400;
+  font-size: var(--text-xs);
+}
+
+.book-works-empty {
+  margin: 0;
+  color: var(--color-muted);
+  font-size: var(--text-xs);
+}
+
+/* 一排小圖，照各自的長寬比，錯開浮上來（詳情打開之後，接在牌飛進來後面）。 */
+.book-works-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(78px, 1fr));
+  gap: var(--space-xs);
+  align-items: start;
+}
+
+.book-work {
+  position: relative;
+  display: block;
+  width: 100%;
+  padding: 0;
+  overflow: hidden;
+  border: 1px solid var(--color-rule-2);
+  border-radius: var(--radius-xs);
+  background: var(--color-paper-3);
+  cursor: zoom-in;
+  transition: transform var(--dur-short) var(--ease-out), border-color var(--dur-micro) var(--ease-out), box-shadow var(--dur-short) var(--ease-out);
+  animation: book-work-in var(--dur-medium) var(--ease-out) calc(var(--dur-short) + var(--i, 0) * 30ms) both;
+}
+
+.book-work img {
+  display: block;
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+}
+
+.book-work-room {
+  position: absolute;
+  left: 4px;
+  bottom: 4px;
+  padding: 1px 5px;
+  border-radius: 3px;
+  background: color-mix(in oklch, var(--color-paper) 78%, transparent);
+  color: var(--color-ink-2);
+  font-size: var(--text-2xs);
+  line-height: 1.5;
+  opacity: 0;
+  transition: opacity var(--dur-micro) var(--ease-out);
+}
+
+@media (hover: hover) and (pointer: fine) {
+  .book-work:hover {
+    transform: translateY(-2px);
+    border-color: var(--color-ink-2);
+    box-shadow: var(--shadow-lift);
+  }
+  .book-work:hover .book-work-room {
+    opacity: 1;
+  }
+}
+
+@media (hover: none) {
+  .book-work-room {
+    opacity: 1;
+  }
+}
+
+.book-work:active {
+  transform: scale(0.97);
+  transition-duration: var(--dur-micro);
+}
+
+@keyframes book-work-in {
+  from {
+    opacity: 0;
+    transform: translateY(8px) scale(0.96);
+  }
+}
+
+.book-work-full {
+  display: grid;
+  gap: var(--space-xs);
+  justify-items: center;
+}
+
+.book-work-full img {
+  max-width: 100%;
+  max-height: 72dvh;
+  border-radius: var(--radius-sm);
+  object-fit: contain;
+}
+
 /* ---------- 窄螢幕 ---------- */
 
 @media (max-width: 40rem) {
@@ -337,6 +456,7 @@
 }
 
 @media (prefers-reduced-motion: reduce) {
+  .book-work,
   .book-bar-fill,
   .book-order [aria-checked="true"] .sort-arrow {
     animation: none;

@@ -1866,6 +1866,13 @@ const ALBUM_FIXTURE = [
           }) &&
           readFileSync(join(ROOT, "web7/app.js"), "utf8").includes("noteUses(made);") &&
           /prints\.unshift\(p\);\s*\/\/[^\n]*\n\s*recordUses\(/.test(readFileSync(join(ROOT, "web7/fuse.js"), "utf8")));
+      ok("卡冊：次數存在伺服器（/api/usage，所有裝置共用），瀏覽器只是快取＋有上限的待送；詳情看得到用過的圖（web6、web7）",
+        readFileSync(join(ROOT, "server.py"), "utf8").includes('if path == "/api/usage":') &&
+          ["web6", "web7"].every((d) => {
+            const u = readFileSync(join(ROOT, d, "usage.js"), "utf8");
+            const js = readFileSync(join(ROOT, d, "book.js"), "utf8");
+            return u.includes("const PENDING_MAX = 300;") && u.includes('fetch("/api/usage"') && js.includes("worksOf(card)") && js.includes("fetchUsage().then");
+          }));
       ok("卡冊：沒用過的牌不灰掉；滑鼠停上去有浮空放大卡（web6、web7）",
         ["web6", "web7"].every((d) => {
           const js = readFileSync(join(ROOT, d, "book.js"), "utf8");

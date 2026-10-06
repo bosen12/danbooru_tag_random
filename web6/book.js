@@ -14,11 +14,11 @@ import { ratingBlocked, RATING_LABEL } from "./rules/rating.js";
 import { buildLibrary, groupChips, createAssets, cardNode, cardFacts, CARD_SUIT_INFO, CARD_SUITS } from "./cards.js";
 import { el, openSheet, toast } from "./ui.js";
 import { initMotion, settleMotion, seat, refuse, reducedMotion, CURVE, DUR, css } from "./motion.js";
-import { watchLink, LINK_LABEL } from "./gen.js";
+import { watchLink, LINK_LABEL, viewSrc } from "./gen.js";
 import { getSfx } from "./sfx.js";
 import { attachPeek } from "./card-peek.js";
 import * as S from "./store.js";
-import { USAGE_KEY, loadUsage, seedUsage } from "./usage.js";
+import { USAGE_KEY, loadUsage, seedUsage, fetchUsage, tagsOfPositive } from "./usage.js";
 
 const sfx = getSfx();
 const $ = (id) => document.getElementById(id);
@@ -91,6 +91,9 @@ async function boot() {
   pingLoop();
   wireSound();
   watchOtherTabs();
+  // 先用這個瀏覽器的快取畫，伺服器的正本（所有裝置共用）回來再換上；之後定時問一次。
+  fetchUsage().then((u) => applyUsage(u, { quiet: true }));
+  watchServer();
   // 滑鼠停在牌上：跟墨池、疊印台同一張浮空放大卡，多一行用過幾次。
   attachPeek($("book-grid"), ".card[data-tag]", peekInfo);
   settleMotion();
@@ -614,7 +617,8 @@ function openCard(card, srcNode) {
         ),
         stats,
         el("dl", {}, cardFacts(card, lex, data).map(([k, v]) => [el("dt", {}, k), el("dd", {}, v)]))
-      )
+      ),
+      worksOf(card)
     ),
     {
       foot: [
@@ -638,6 +642,96 @@ function openCard(card, srcNode) {
   );
   flyToDetail(srcNode, sheet.sheet || document.querySelector(".overlay:last-of-type .sheet"));
   if (c) countUp(big, c);
+}
+
+/* ---------- 用這張牌做過的圖 ----------
+ * 直接讀成品牆（墨池）和晾紙繩（疊印台）上還留著的成品，不另外存：那兩處本來就有上限，
+ * 舊的會被擠掉，卡冊不多佔空間。所以這裡看得到的是「最近、還留著的」，不是全部歷史。 */
+
+const WORKS_MAX = 24;
+
+function readList(key) {
+  try {
+    const v = JSON.parse(localStorage.getItem(key) || "[]");
+    return Array.isArray(v) ? v : [];
+  } catch {
+    return [];
+  }
+}
+
+function worksOf(card) {
+  const when = (x) => Date.parse(x.at) || 0;
+  const has = (x) => x.image && tagsOfPositive(x.positive).includes(card.tag);
+  const list = [
+    ...readList("mochi.shots.v1").filter(has).map((x) => ({ x, room: "墨池" })),
+    ...readList("mochi.fuse.prints.v1").filter(has).map((x) => ({ x, room: "疊印台" })),
+  ].sort((a, b) => when(b.x) - when(a.x));
+  const shown = list.slice(0, WORKS_MAX);
+  const head = el(
+    "h3",
+    { class: "book-works-head" },
+    "用它做過的圖",
+    el("span", {}, list.length ? `${list.length} 張${list.length > WORKS_MAX ? `・最近 ${WORKS_MAX} 張` : ""}` : "")
+  );
+  if (!shown.length) {
+    return el(
+      "section",
+      { class: "book-works" },
+      head,
+      el("p", { class: "book-works-empty" }, "成品牆和晾紙繩上目前沒有用到它的圖。那兩處只留最近的幾十張，舊的會被擠掉。")
+    );
+  }
+  const grid = el(
+    "div",
+    { class: "book-works-grid" },
+    shown.map(({ x, room }, i) =>
+      el(
+        "button",
+        {
+          class: "book-work",
+          type: "button",
+          style: `--i: ${Math.min(i, 12)}; aspect-ratio: ${x.width || 1} / ${x.height || 1}`,
+          "aria-label": `${room}的成品，${new Date(when(x)).toLocaleString("zh-TW")}，點一下放大`,
+          onclick: (e) => openWork(x, room, e.currentTarget),
+        },
+        el("img", { src: viewSrc(x.image), alt: "", loading: "lazy", decoding: "async" }),
+        el("span", { class: "book-work-room" }, room)
+      )
+    )
+  );
+  return el("section", { class: "book-works" }, head, grid);
+}
+
+/** 放大看一張成品：從縮圖的位置長出來（跟牌飛進詳情同一個手法）。 */
+function openWork(x, room, thumb) {
+  sfx.tap?.();
+  const sheet = openSheet(
+    `${room}的成品`,
+    el(
+      "div",
+      { class: "book-work-full" },
+      el("img", { src: viewSrc(x.image), alt: "", decoding: "async" }),
+      el("p", { class: "tag-en" }, [x.width && x.height ? `${x.width}×${x.height}` : "", new Date(Date.parse(x.at) || 0).toLocaleString("zh-TW")].filter(Boolean).join("・"))
+    ),
+    { wide: true, foot: [el("a", { class: "btn btn-small", href: x.image, target: "_blank", rel: "noopener" }, "開原圖")] }
+  );
+  const s = sheet.sheet || document.querySelector(".overlay:last-of-type .sheet");
+  const dst = s && s.querySelector(".book-work-full img");
+  if (!dst || reducedMotion()) return;
+  const go = () => {
+    const from = thumb.getBoundingClientRect();
+    const to = dst.getBoundingClientRect();
+    if (!from.width || !to.width) return;
+    dst.animate(
+      [
+        { transform: `translate(${from.left - to.left}px, ${from.top - to.top}px) scale(${from.width / to.width})`, transformOrigin: "0 0", opacity: 0.6 },
+        { transform: "none", transformOrigin: "0 0", opacity: 1 },
+      ],
+      { duration: DUR.long, easing: css(CURVE.out) }
+    );
+  };
+  if (dst.complete && dst.naturalWidth) go();
+  else dst.addEventListener("load", go, { once: true });
 }
 
 /** 大數字從 0 數上去（牌飛進來的同時）。 */
@@ -686,13 +780,54 @@ function flyToDetail(src, sheetEl) {
   setTimeout(land, 700);
 }
 
-/* ================= 別的分頁抽完牌 ================= */
+/* ================= 別的分頁、別的裝置抽完牌 ================= */
+
+function watchServer() {
+  // 別的裝置（手機、另一台電腦）抽的牌只有伺服器知道：頁面在前面時每 20 秒問一次。
+  const tick = () => {
+    if (document.hidden) return;
+    fetchUsage().then((u) => applyUsage(u));
+  };
+  setInterval(tick, 20000);
+  document.addEventListener("visibilitychange", tick);
+}
+
+function sameUsage(a, b) {
+  const ka = Object.keys(a.counts);
+  if (ka.length !== Object.keys(b.counts).length) return false;
+  return ka.every((t) => a.counts[t] === b.counts[t]) && Object.keys(a.mine).every((t) => a.mine[t] === b.mine[t]);
+}
+
+/**
+ * 換上新的紀錄。quiet：開頁時快取換成伺服器正本那一下 —— 有差就靜靜重排（牌照樣滑過去），不跳提示。
+ * 平常：數字原地跳一下，排序不自己動，給一顆「重新排序」。
+ */
+function applyUsage(next, { quiet = false } = {}) {
+  if (!next || sameUsage(usage, next)) {
+    if (next) usage = next;
+    return;
+  }
+  if (quiet) {
+    usage = next;
+    renderSummary();
+    renderSuits();
+    render();
+    return;
+  }
+  bumpTo(next);
+}
 
 function watchOtherTabs() {
   addEventListener("storage", (e) => {
     if (e.key !== USAGE_KEY) return;
+    applyUsage(loadUsage());
+  });
+}
+
+function bumpTo(next) {
+  {
     const before = usage;
-    usage = loadUsage();
+    usage = next;
     // 數字原地跳一下；排序不自己動（牌在手底下跑掉很煩），給一顆「重新排序」。
     let changed = 0;
     for (const cell of $("book-grid").querySelectorAll(".book-cell")) {
@@ -716,7 +851,7 @@ function watchOtherTabs() {
       toast(`剛剛又記了 ${bumped} 張牌的使用次數`, { action: { label: "重新排序", run: () => render({ shuffle: true }) } });
     }
     void changed;
-  });
+  }
 }
 
 boot();
