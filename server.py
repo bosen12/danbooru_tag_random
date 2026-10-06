@@ -38,6 +38,7 @@ if str(ROOT) not in sys.path:
     sys.path.insert(0, str(ROOT))
 
 import card_usage
+import card_decks
 import lora_scan
 import recipes
 import workflows
@@ -3383,6 +3384,10 @@ class Handler(BaseHTTPRequestHandler):
         if path == "/api/usage":
             self._json(200, {"ok": True, **card_usage.load()})
             return
+        # 牌組：取名存起來的一組牌（所有裝置共用一份，見 card_decks.py）。
+        if path == "/api/decks":
+            self._json(200, {"ok": True, "decks": card_decks.load()})
+            return
         if path == "/api/gen/attach":
             qs = urllib.parse.parse_qs(urllib.parse.urlparse(self.path).query)
             job = find_job((qs.get("job") or [""])[0])
@@ -3470,6 +3475,12 @@ class Handler(BaseHTTPRequestHandler):
             try:
                 self._json(200, {"ok": True, **card_usage.add(payload)})
             except card_usage.UsageError as exc:
+                self._json(400, {"ok": False, "error": str(exc), "code": "invalid"})
+            return
+        if path == "/api/decks":
+            try:
+                self._json(200, {"ok": True, **card_decks.save(payload)})
+            except card_decks.DeckError as exc:
                 self._json(400, {"ok": False, "error": str(exc), "code": "invalid"})
             return
         if path == "/api/workflows":
@@ -3561,6 +3572,12 @@ class Handler(BaseHTTPRequestHandler):
             return
         if path.startswith("/api/recipes/"):
             self._serve_recipe_delete(path)
+            return
+        if path.startswith("/api/decks/"):
+            try:
+                self._json(200, {"ok": True, **card_decks.delete(urllib.parse.unquote(path[len("/api/decks/"):]))})
+            except card_decks.DeckError as exc:
+                self._json(404, {"ok": False, "error": str(exc), "code": "missing"})
             return
         pid = self._workflow_pid(path)
         if not pid:

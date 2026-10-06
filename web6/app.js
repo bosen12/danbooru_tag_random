@@ -39,6 +39,7 @@ import { HARD_BANNED } from "./card-art.js";
 import { buildLibrary, groupChips, createAssets, cardNode, setCardFlag, setEnterTarget, eagerArt, cardFacts, CARD_SUIT_INFO, CARD_SUITS, RATING_ZH } from "./cards.js";
 import { bindArt, artFallback } from "./card-images.js";
 import { el, openSheet, anyOverlay, toast, runToastAction, ICONS } from "./ui.js";
+import { openDecks } from "./decks.js";
 import { createDrag, inkRing } from "./drag.js";
 import { initMotion, settleMotion, replayDeal, flip, flipBy, leave, enter, confirmButton, gatherHome, flight, seat, refuse, reducedMotion, CURVE, DUR, css } from "./motion.js";
 import { createHand } from "./hand.js";
@@ -2614,6 +2615,53 @@ $("trash").addEventListener("click", () => trashPanel?.toggle());
 $("trash").setAttribute("aria-controls", "trash-panel");
 $("trash").setAttribute("aria-expanded", "false");
 $("trash").innerHTML = ICONS.trash + "<b>0</b><span>廢字簍</span>";
+// 牌組：合成池存成一組、或套用存過的（decks.js；伺服器上一份，手機電腦共用）。
+$("pool-decks").addEventListener("click", () =>
+  openDecks({ where: "合成池", current: () => [...pool], has: (t) => lib.byTag.has(t), zh, apply: applyDeck })
+);
+
+/**
+ * 套用一組牌：合成池換成這一組。照放牌的規矩一張張釘上去（同一格、時代不合的互相讓，帶上該帶的），
+ * 跟手放的結果一樣；換上來的牌從上面輕輕落定。五秒內可以復原成原本的合成池。
+ */
+function applyDeck(deck) {
+  const before = { pool: [...pool], bans: [...bans] };
+  let pinned = new Set();
+  let banned = new Set(bans);
+  for (const t of deck.tags) {
+    if (HARD_BANNED.includes(t) || !lib.byTag.has(t)) continue;
+    const r = applyPin(lex, pinned, banned, t);
+    pinned = r.pinned;
+    banned = r.userBanned;
+  }
+  pool = pinned;
+  bans = banned;
+  poolNote = null;
+  commitPins();
+  if (!reducedMotion()) {
+    [...$("pool-well").querySelectorAll(".card")].forEach((c, i) =>
+      c.animate(
+        [{ opacity: 0, transform: "translateY(-22px) rotate(-3deg) scale(0.94)" }, { opacity: 1, transform: "none" }],
+        { duration: DUR.long, delay: Math.min(i, 10) * 45, easing: css(CURVE.settle), fill: "backwards" }
+      )
+    );
+    sfx.deal?.(Math.min(6, pool.size + 1));
+  }
+  const pw = $("pool-well");
+  const r = pw.getBoundingClientRect();
+  if (r.bottom < 0 || r.top > innerHeight) pw.scrollIntoView({ behavior: reducedMotion() ? "instant" : "smooth", block: "center" });
+  toast(`套用了牌組「${deck.name}」：合成池 ${pool.size} 張`, {
+    action: {
+      label: "復原",
+      run: () => {
+        pool = new Set(before.pool.filter((t) => lib.byTag.has(t)));
+        bans = new Set(before.bans);
+        commitPins();
+      },
+    },
+  });
+}
+
 $("pool-clear").addEventListener("click", () => {
   const before = [...pool];
   if (!before.length) return;
