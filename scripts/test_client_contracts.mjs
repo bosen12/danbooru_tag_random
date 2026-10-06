@@ -1871,8 +1871,14 @@ const ALBUM_FIXTURE = [
           ["web6", "web7"].every((d) => {
             const u = readFileSync(join(ROOT, d, "usage.js"), "utf8");
             const js = readFileSync(join(ROOT, d, "book.js"), "utf8");
-            return u.includes("const PENDING_MAX = 300;") && u.includes('fetch("/api/usage"') && js.includes("worksOf(card)") && js.includes("fetchUsage().then");
+            return u.includes("const PENDING_MAX = 300;") && u.includes('fetch("/api/usage"') && js.includes("worksOf(card)") && js.includes("(first || fetchUsage()).then");
           }));
+      ok("卡冊：這個瀏覽器還沒對過伺服器時，先等正本一下（最多 700ms）再畫，不畫兩遍（web6、web7）",
+        ["web6", "web7"].every((d) => {
+          const js = readFileSync(join(ROOT, d, "book.js"), "utf8");
+          return /if \(!usage\.synced\) \{\s*first = fetchUsage\(\);\s*const u = await Promise\.race\(\[first, new Promise\(\(r\) => setTimeout\(r, 700\)\)\]\);/.test(js) &&
+            js.indexOf("Promise.race([first") < js.indexOf("render({ animate: false, deal: true });");
+        }));
       ok("卡冊的卡盒：牌上的＋放進盒子（飛進去、蓋盒中章）、盒子點開能拿掉、全部放進墨池走交接便條（web6、web7）",
         ["web6", "web7"].every((d) => {
           const js = readFileSync(join(ROOT, d, "book.js"), "utf8");

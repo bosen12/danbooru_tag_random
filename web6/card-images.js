@@ -19,6 +19,8 @@ import { applyArtSources } from "./card-art.js";
 // 來源寬 ÷ 畫出寬：先挑 ≥ AIM 的最小一張；那張超過 2 倍（會走 mipmap）而小一號還有 LOW 以上，就用小一號。
 // 牌階 160／240／320／原圖 480。桌機 DPR 1 的牌（90～92px）拿 160（約 1.75 倍），70px 的手牌也是 160；
 // DPR 2 的牌（約 181～197，含手機）拿 240（1.2～1.33 倍；實測 1.33 倍比 320 還乾淨，也比 320 省一半流量）。
+// 夠大的只剩原圖、而最大的 mini 也有 LOW 以上，就用 mini：iPhone（DPR 3）一張 92px 的牌要 276，
+// 320 是 1.16 倍，3 倍螢幕上看不出差別；原圖每張 36KB、320 只要 24KB，一頁幾十張差很多。
 const AIM = 1.2;
 const LOW = 1.1;
 const HIGH = 2;
@@ -50,7 +52,7 @@ export function chooseArt(set, need) {
   const all = [...set.list, { w: SRC_W, url: set.full }];
   const i = all.findIndex((c) => c.w >= need * AIM);
   if (i < 0) return set.full;
-  if (i > 0 && all[i].w > need * HIGH && all[i - 1].w >= need * LOW) return all[i - 1].url;
+  if (i > 0 && (all[i].w > need * HIGH || i === all.length - 1) && all[i - 1].w >= need * LOW) return all[i - 1].url;
   return all[i].url;
 }
 

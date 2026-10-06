@@ -78,7 +78,7 @@ try {
         noV: miniSet({ ...e, v: undefined }),
         none: miniSet({ file: 'x_y.webp', v: 'aaaaaaaaaa' }),
         junk: miniSet({ ...e, mini: { src: 'aaaaaaaaaa', w: { 160: '../../evil', abc: '1111111111', 480: '4444444444' } } }),
-        picks: Object.fromEntries([[70, 1], [90.42, 1], [92, 1], [111.9, 1], [90.42, 1.25], [90.42, 1.5], [90.42, 2], [60, 3], [70, 3], [85, 3], [92, 3], [400, 1]].map(([w, d]) => [`${w}@${d}`, pick(w * d)])),
+        picks: Object.fromEntries([[70, 1], [90.42, 1], [92, 1], [111.9, 1], [90.42, 1.25], [90.42, 1.5], [90.42, 2], [60, 3], [70, 3], [85, 3], [92, 3], [104, 3], [400, 1]].map(([w, d]) => [`${w}@${d}`, pick(w * d)])),
         cover: [coverWidth(66.92, 132.23), coverWidth(70, 102.375)],
       };
     });
@@ -87,7 +87,7 @@ try {
     ok('miniSet：原圖重烤過（v 對不上）不用', r.stale === null);
     ok('miniSet：沒有 v、沒有 mini 不用', r.noV === null && r.none === null);
     ok('miniSet：怪檔名、比原圖大的寬一律濾掉', r.junk === null, JSON.stringify(r.junk));
-    const want = { '70@1': 'mini/160/x_y-1111111111.webp', '90.42@1': 'mini/160/x_y-1111111111.webp', '92@1': 'mini/160/x_y-1111111111.webp', '111.9@1': 'mini/160/x_y-1111111111.webp', '90.42@1.25': 'mini/160/x_y-1111111111.webp', '90.42@1.5': 'mini/240/x_y-2222222222.webp', '90.42@2': 'mini/240/x_y-2222222222.webp', '60@3': 'mini/240/x_y-2222222222.webp', '70@3': 'mini/320/x_y-3333333333.webp', '85@3': 'mini/320/x_y-3333333333.webp', '92@3': 'x_y.webp', '400@1': 'x_y.webp' };
+    const want = { '70@1': 'mini/160/x_y-1111111111.webp', '90.42@1': 'mini/160/x_y-1111111111.webp', '92@1': 'mini/160/x_y-1111111111.webp', '111.9@1': 'mini/160/x_y-1111111111.webp', '90.42@1.25': 'mini/160/x_y-1111111111.webp', '90.42@1.5': 'mini/240/x_y-2222222222.webp', '90.42@2': 'mini/240/x_y-2222222222.webp', '60@3': 'mini/240/x_y-2222222222.webp', '70@3': 'mini/320/x_y-3333333333.webp', '85@3': 'mini/320/x_y-3333333333.webp', '92@3': 'mini/320/x_y-3333333333.webp', '104@3': 'x_y.webp', '400@1': 'x_y.webp' };
     ok('chooseArt：各種牌寬 × DPR 挑到實測最好的那張', JSON.stringify(r.picks) === JSON.stringify(want), JSON.stringify(r.picks));
     ok('coverWidth：牌面格子（窄）是高 × 480/702、手牌（同比例）是自己的寬', Math.abs(r.cover[0] - 90.4) < 0.1 && Math.abs(r.cover[1] - 70) < 0.01, JSON.stringify(r.cover));
     await page.close();
@@ -122,9 +122,9 @@ try {
   if (!hasMini) {
     console.log('skip: web/cards/manifest.json 沒有細縮圖（先跑 python scripts/make_card_thumbs.py --mini-only）');
   } else {
-    /* ---------- 真的牌：DPR 1／1.25／2 挑到的圖 ---------- */
-    const expect = { 1: '/mini/160/', 1.25: '/mini/160/', 1.5: '/mini/240/', 2: '/mini/240/' };
-    for (const dpr of [1, 1.25, 1.5, 2]) {
+    /* ---------- 真的牌：DPR 1／1.25／2／3 挑到的圖（3 是 iPhone：拿 320，不拿原圖） ---------- */
+    const expect = { 1: '/mini/160/', 1.25: '/mini/160/', 1.5: '/mini/240/', 2: '/mini/240/', 3: '/mini/320/' };
+    for (const dpr of [1, 1.25, 1.5, 2, 3]) {
       const page = await open(dpr);
       requests.length = 0;
       const r = await page.evaluate(async (tag) => {
@@ -163,7 +163,7 @@ try {
         return { before, after: img.currentSrc, guess: M._artStats().guess.card };
       }, TAG);
       const art = requests.filter((u) => u.startsWith('/cards/'));
-      ok('手機 DPR 3、60px 的牌：先猜原圖，排版後改挑 240', !r.before.includes('/mini/') && r.after.includes('/mini/240/'), JSON.stringify(r));
+      ok('手機 DPR 3、60px 的牌：先猜 320（不是原圖），排版後改挑 240', r.before.includes('/mini/320/') && r.after.includes('/mini/240/'), JSON.stringify(r));
       ok('lazy 的圖只抓了改挑的那一張', art.length === 1 && art[0].includes('/mini/240/'), JSON.stringify(art));
       ok('量到的大小記下來，下一張重畫的牌直接猜對', Math.abs(r.guess - 60) < 0.5, String(r.guess));
       await page.close();

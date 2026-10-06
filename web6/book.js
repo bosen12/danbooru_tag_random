@@ -80,6 +80,18 @@ async function boot() {
   // 第一次打開：從成品牆、晾紙繩補算（只做一次）。
   usage = seedUsage((t) => lib.byTag.has(t));
   if (!["desc", "asc"].includes(ui.order)) ui.order = "desc";
+  // 這個瀏覽器還沒跟伺服器對過（新手機、清過資料）：本機的排序跟正本差很多，
+  // 先畫本機的、正本一到整格重排，第一批牌的圖白載、版面也多排一次。等正本一下下再畫，
+  // 伺服器慢（或沒開）就不等了，照舊先畫本機的、回來再換。
+  let first = null;
+  if (!usage.synced) {
+    first = fetchUsage();
+    const u = await Promise.race([first, new Promise((r) => setTimeout(r, 700))]);
+    if (u) {
+      usage = u;
+      first = Promise.resolve(null); // 已經是正本了，下面不用再問一次
+    }
+  }
 
   buildBox();
   renderRating();
@@ -93,7 +105,7 @@ async function boot() {
   wireSound();
   watchOtherTabs();
   // 先用這個瀏覽器的快取畫，伺服器的正本（所有裝置共用）回來再換上；之後定時問一次。
-  fetchUsage().then((u) => applyUsage(u, { quiet: true }));
+  (first || fetchUsage()).then((u) => applyUsage(u, { quiet: true }));
   watchServer();
   // 滑鼠停在牌上：跟墨池、疊印台同一張浮空放大卡，多一行用過幾次。
   attachPeek($("book-grid"), ".card[data-tag]", peekInfo);
