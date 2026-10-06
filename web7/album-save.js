@@ -33,6 +33,9 @@ export function workName(item, zh) {
 export async function saveToAlbum(item, name) {
   const s = item.sampling || {};
   const { recipe } = await call("/api/recipes", "POST", {
+    // 編號自己給、不重複：伺服器照名字轉的編號，中文名常常只剩幾個數字（「1個女性」→ 1），
+    // 刪掉之後下一件可能又拿到同一個，舊成品上的「已收藏」就會指到別張。
+    id: `w-${Date.now().toString(36)}-${Math.random().toString(36).slice(2, 7)}`,
     name,
     positive: item.positive || "",
     seed: item.seed,
