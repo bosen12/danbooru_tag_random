@@ -745,6 +745,8 @@ const WATER_PLACE = new Set([
   "beach",
   "ocean",
   "underwater",
+  "pond",
+  "river",
   "onsen",
   "bath",
   "bathroom",
@@ -1027,7 +1029,7 @@ function usedActs(used, lex) {
   return remember(used, "_acts", s);
 }
 
-const FISH_PLACE = new Set(["beach", "ocean", "poolside", "pool"]);
+const FISH_PLACE = new Set(["beach", "ocean", "poolside", "pool", "pond", "river"]);
 // 煮飯的場地以前有兩份：ACT_PLACE.cooking 一份、placeFitsActs() 裡又寫死一份。
 // 釣魚和開車都是共用 FISH_PLACE／DRIVE_PLACE，只有煮飯把清單抄成字面值，所以
 // 兩邊會各自漂移 —— 寫實模式走 ACT_PLACE、非寫實模式走那份寫死的，同一個時代
@@ -1121,10 +1123,12 @@ const MEAL_PLACE = new Set([
 export const ACT_PLACE = {
   bathing: new Set([...BATH_PLACE]),
   showering: new Set(["bathroom", "shower (place)"]),
-  swimming: new Set(["pool", "ocean", "beach", "underwater"]),
+  // 池、海、沙灘、水下都是任何時代。古中國游泳若只有這四個，場地永遠不是時代專屬，
+  // 人再穿漢服也只靠衣服。池塘、河是這個時代真的有的水。
+  swimming: new Set(["pool", "ocean", "beach", "underwater", "pond", "river"]),
   "pole dancing": new Set(["stage"]),
-  wading: new Set(["beach", "ocean", "pool", "poolside"]),
-  floating: new Set(["pool", "ocean", "bathtub", "ofuro", "onsen", "bubble bath"]),
+  wading: new Set(["beach", "ocean", "pool", "poolside", "pond", "river"]),
+  floating: new Set(["pool", "ocean", "bathtub", "ofuro", "onsen", "bubble bath", "pond", "river"]),
   "shared bathing": new Set(["onsen", "bathhouse", "ofuro", "bath"]),
   eating: new Set([...MEAL_PLACE, "movie theater", "airplane interior", "convenience store", "izakaya", "festival", "market", "ryokan", "tavern"]),
   drinking: new Set(["cafe", "maid cafe", "bar (place)", "restaurant", "kitchen", "dining room", "cafeteria", "conveyor belt sushi", "yatai", "living room", "movie theater", "airplane interior", "izakaya", "festival", "market", "ryokan", "tavern", "ballroom", "courtyard", "garden", "balcony", "colonnade", "village"]),
@@ -1173,7 +1177,7 @@ export const ACT_PLACE = {
   hiking: new Set(["forest", "park", "bamboo forest", "garden", "mountain", "river", "bridge", "field", "battlefield", "ruins", "colonnade", "cave", "jungle", "rural"]),
   jogging: new Set(["park", "street", "running track", "stadium", "garden", "city", "cityscape", "alley"]),
   skiing: new Set(["mountain"]),
-  diving: new Set(["ocean", "underwater", "pool"]),
+  diving: new Set(["ocean", "underwater", "pool", "pond", "river"]),
   weightlifting: new Set(["fitness gym", "school gym"]),
   sunbathing: new Set(["beach", "poolside", "rooftop", "balcony", "park"]),
   sleeping: new Set([
@@ -6617,8 +6621,16 @@ export function drawOne(lex, settings, pinned, userBanned, rand, seed, opts) {
   // 量過（各 400／3000 張）：3:1 只靠衣服 29.0%、沒有場地過 35%、大街海邊都抽得到；
   // 4:1 東亞建築 36%，5:1 中世紀大街、維多利亞海邊抽不到。兩份規格在這裡互相拉扯，
   // 3 是唯一兩邊都過的整數，緩衝很薄（29.0% 對 30%）。
+  //
+  // 詞庫變大之後古中國又越線（3000 張、seed 310000：只靠衣服 30.3%、完全沒訊號 2.8%）。
+  // 沒訊號的 83 張裡 68 張是性愛、沒有活動、也沒有時代衣服（人脫光，場地是海底、沙灘
+  // 這種中性字）。身上已經有時代衣服的性愛仍用 3:1，大街和海邊才留得住；
+  // 沒有時代衣服時改回 14:1，跟誘惑、走光同一套，招牌場地一樣不吃這個加權。
   const evenPlace = sidePinned || (heat === "sex" && (!era || era === "modern"));
   const sexEra = heat === "sex" && !evenPlace;
+  const noEraCloth = !!(era && era !== "modern" && !someUsed(
+    (it) => it.section === "clothing" && eraSpecific(it, era)
+  ));
   const anchorPlaces = sexEra
     ? new Set((lex.data.eraAnchors?.[era] || []).flatMap((t) => lex.data.eraAnchorAlts?.[t] || [t]))
     : null;
@@ -6654,7 +6666,7 @@ export function drawOne(lex, settings, pinned, userBanned, rand, seed, opts) {
         }
       : {
           softTiers: [(item) => eraSpecific(item, era) && !(sexEra && anchorPlaces.has(item.tag))],
-          weights: [sexEra ? 3 : 14, 1],
+          weights: [sexEra && !noEraCloth ? 3 : 14, 1],
           ...(relaxesPrivateSex() ? { capShare: 0.4 } : {}),
         },
   );

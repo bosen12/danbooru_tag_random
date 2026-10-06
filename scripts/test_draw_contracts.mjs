@@ -98,7 +98,7 @@ const WATER_ACTS = ["partially submerged", "splashing", "washing back"];
 const WATER_SRC = [
   "onsen", "bath", "bathroom", "bathtub", "shower (place)", "sauna", "beach", "ocean",
   "poolside", "pool", "pool ladder", "underwater", "bubble bath", "waterfall",
-  "beach towel", "river", "lake", "hot spring", "fountain", "puddle",
+  "beach towel", "river", "pond", "lake", "hot spring", "fountain", "puddle",
   "rain", "steam", "water", "shower head", "fishing", "fishing rod",
   "bathing", "showering", "swimming", "shared bathing", "diving", "wading", "partially submerged",
   "after bathing", "wet", "wet hair", "wet clothes", "steaming body",

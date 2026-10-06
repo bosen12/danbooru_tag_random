@@ -83,7 +83,7 @@ const WATER_SOURCES = [
   // 場地
   "onsen", "bath", "bathroom", "bathtub", "shower (place)", "sauna", "beach", "ocean",
   "poolside", "pool", "pool ladder", "underwater", "bubble bath",
-  "waterfall", "beach towel", "river", "lake", "hot spring", "fountain", "puddle",
+  "waterfall", "beach towel", "river", "pond", "lake", "hot spring", "fountain", "puddle",
   // 天氣與物件
   "rain", "steam", "water", "shower head",
   // 釣魚不是泡水，但畫面裡一定有水

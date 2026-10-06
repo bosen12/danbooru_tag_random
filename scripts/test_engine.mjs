@@ -3398,7 +3398,7 @@ function indoorOutdoorClash(have) {
   swimSex.eras = ["victorian"];
   swimSex.sceneMode = "normal";
   swimSex.counts = { subject: 10, feature: 10, pose: 10, clothing: 10, env: 10 };
-  const WATER2 = ["pool", "beach", "ocean", "underwater", "poolside"];
+  const WATER2 = ["pool", "beach", "ocean", "underwater", "poolside", "pond"];
   let drySwim = 0;
   for (let i = 0; i < 40; i++) {
     const h = tagsOf(drawOne(lex, swimSex, pinSwimSex, new Set(), mulberry32(197000 + i), 197000 + i));
