@@ -16,6 +16,7 @@ import { el, openSheet, toast } from "./ui.js";
 import { initMotion, settleMotion, seat, refuse, reducedMotion, CURVE, DUR, css } from "./motion.js";
 import { watchLink, LINK_LABEL } from "./gen.js";
 import { getSfx } from "./sfx.js";
+import { attachPeek } from "./card-peek.js";
 import * as S from "./store.js";
 import { USAGE_KEY, loadUsage, seedUsage } from "./usage.js";
 
@@ -90,6 +91,8 @@ async function boot() {
   pingLoop();
   wireSound();
   watchOtherTabs();
+  // 滑鼠停在牌上：跟墨池、疊印台同一張浮空放大卡，多一行用過幾次。
+  attachPeek($("book-grid"), ".card[data-tag]", peekInfo);
   settleMotion();
 }
 
@@ -526,6 +529,25 @@ function moreCells() {
   shown += next.length;
   grid.insertBefore(frag, more);
   watchMore();
+}
+
+function peekInfo(node) {
+  const card = lib.byTag.get(node.dataset.tag);
+  if (!card) return null;
+  const c = countOf(card.tag);
+  const facts = cardFacts(card, lex, data).filter(([k]) => k !== "分級");
+  facts.unshift(["用過", c ? `${fmt(c)} 次・最近 ${ago(lastOf(card.tag))}` : "還沒用過"]);
+  return {
+    zh: card.zh,
+    tag: card.tag,
+    glyph: CARD_SUIT_INFO[card.suit].glyph,
+    seal: card.seal,
+    sealTitle: card.groupZh,
+    suitColor: `var(--suit-${card.suit})`,
+    art: assets.art(card.tag),
+    rating: card.rating,
+    facts: facts.slice(0, 5),
+  };
 }
 
 /* ================= 單張牌的詳情 ================= */

@@ -145,19 +145,7 @@
   font-size: 11px;
 }
 
-/* 沒用過的：牌褪一點色、像還沒翻開的那幾頁；停上去就回來，看得出它長什麼樣。 */
-/* 只在「有用過的牌」時才淡化：全部都還沒用過時，整頁灰掉只是悶。 */
-.book-grid[data-any="true"] .book-cell[data-unused="true"] .card {
-  filter: saturate(0.35) brightness(0.82);
-  transition: filter var(--dur-short) var(--ease-out);
-}
-
-@media (hover: hover) and (pointer: fine) {
-  .book-grid[data-any="true"] .book-cell[data-unused="true"] .card:hover,
-  .book-grid[data-any="true"] .book-cell[data-unused="true"] .card:focus-visible {
-    filter: none;
-  }
-}
+/* 沒用過的牌照原樣顯示（專案主：不要灰色），只有底下的「未使用」字是淡的。 */
 
 .book-meta {
   display: inline-flex;

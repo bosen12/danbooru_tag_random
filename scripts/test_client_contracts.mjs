@@ -1866,6 +1866,12 @@ const ALBUM_FIXTURE = [
           }) &&
           readFileSync(join(ROOT, "web7/app.js"), "utf8").includes("noteUses(made);") &&
           /prints\.unshift\(p\);\s*\/\/[^\n]*\n\s*recordUses\(/.test(readFileSync(join(ROOT, "web7/fuse.js"), "utf8")));
+      ok("卡冊：沒用過的牌不灰掉；滑鼠停上去有浮空放大卡（web6、web7）",
+        ["web6", "web7"].every((d) => {
+          const js = readFileSync(join(ROOT, d, "book.js"), "utf8");
+          const cssText = readFileSync(join(ROOT, d, "book.css"), "utf8");
+          return js.includes('attachPeek($("book-grid"), ".card[data-tag]", peekInfo)') && !/data-unused="true"\][^{]*\.card\s*\{[^}]*filter/.test(cssText);
+        }));
       ok("卡冊：多到少／少到多、換排序時牌從舊位置滑過去（FLIP）、別的分頁抽完牌會跟著更新",
         book6.includes('ui.order === "desc"') && book6.includes("translate(${dx}px, ${dy}px)") && book6.includes('addEventListener("storage"'));
       ok("手機頂欄放不下時工具換行，不會整頁左右滑",
