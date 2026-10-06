@@ -775,7 +775,7 @@ body #wf-pick-btn.has {
   flex: none;
 }
 
-.library > .lib-grid {
+.library .lib-grid {
   flex: 1 1 auto;
   /* aspect-ratio + overflow:hidden 的格子在可捲動的格線裡最小高度會變 0，列要照內容撐開 */
   grid-auto-rows: max-content;
@@ -2846,6 +2846,32 @@ body[data-dragging="true"] .library[data-over="true"] {
   }
 }
 
+/* ---------- 細分類籤跟牌一起捲 ----------
+ * 字盒高度固定的時候（電腦的側欄、手機的挑牌抽屜），細分類籤以前釘在牌格上面：
+ * 「服裝」的籤有 400～460px 高，1280×720 的電腦只剩 78px、手機抽屜 119px 給牌。
+ * 現在籤和牌放在同一個捲動區（.lib-scroll），往下捲籤就捲走、牌格拿到整個高度；
+ * 搜尋框、花色籤還是釘在上面。換花色會捲回最上面（app.js 的 libBackToTop）。
+ * 其他寬度（字盒跟著頁面捲、牌格自己有上限）這一層不存在（display: contents），照舊。 */
+.lib-scroll {
+  display: contents;
+}
+
+@media (min-width: 64rem) {
+  .library .lib-scroll {
+    display: block;
+    flex: 1 1 auto;
+    min-height: 0;
+    overflow-y: auto;
+    overscroll-behavior: contain;
+    scrollbar-gutter: stable;
+  }
+  .library .lib-scroll > .lib-grid {
+    overflow: visible;
+    max-height: none;
+    scrollbar-gutter: auto;
+  }
+}
+
 /* 手機：字盒改成可以收起來 */
 @media (max-width: 63.99rem) {
   /* 花色分頁收著也留著（一排）：點一個花色就直接展開到那一類，不必先按「展開全部」。 */
@@ -4536,11 +4562,17 @@ html {
     overflow: hidden;
     overscroll-behavior: contain;
   }
-  body[data-picker="open"] .library .lib-grid {
+  body[data-picker="open"] .library .lib-scroll {
+    display: block;
     flex: 1 1 auto;
     min-height: 0;
-    max-height: none;
     overflow-y: auto;
+    overscroll-behavior: contain;
+  }
+  body[data-picker="open"] .library .lib-grid {
+    min-height: 0;
+    max-height: none;
+    overflow: visible;
     -webkit-mask-image: none;
     mask-image: none;
   }

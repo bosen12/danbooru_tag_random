@@ -62,8 +62,12 @@ try{
         assert.deepEqual(await geometry(reduced),normal,'Settled opening must preserve geometry and CSS transforms');await reduced.close();
         await page.reload();await ready(page,fuse);await page.waitForFunction(()=>entryRecords.length>0);
         await page.evaluate(()=>dispatchEvent(new PointerEvent('pointerdown',{bubbles:true})));assert.equal(await page.evaluate(()=>document.getAnimations().filter(a=>a.id==='web6-page-enter').length),0);
-        const search=page.locator(fuse?'#case-q':'#lib-q');await search.fill('kimono');await page.waitForTimeout(100);
+        // 手機寬度的墨池：字盒收成挑牌抽屜，搜尋框要打開抽屜才看得到；打完字收回去，下面才點得到換頁。
+        const search=page.locator(fuse?'#case-q':'#lib-q');const picker=!fuse&&!(await search.isVisible());
+        if(picker)await page.click('#lib-toggle');
+        await search.fill('kimono');await page.waitForTimeout(100);
         assert.equal(await search.inputValue(),'kimono');assert.equal(await page.evaluate(()=>document.getAnimations().filter(a=>a.id==='web6-page-enter').length),0);
+        if(picker){await page.click('.picker-done');await page.waitForTimeout(400);}
         // The Windows WebKit port crashes on this existing native cross-document
         // transition, including HEAD motion.js. Only disable that transition in
         // this runner; direct opening/reload effects above remain fully enabled.

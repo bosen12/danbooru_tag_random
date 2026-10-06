@@ -232,6 +232,7 @@ function renderLibraryChrome() {
     // 手機上字盒收著只露一排：開始找字就展開，找到的牌才看得到。
     if (ui.query) expandLibrary();
     q.closest(".lib-search").dataset.typing = ui.query ? "true" : "false";
+    libBackToTop();
     renderLibrary();
   };
   q.onkeydown = libSearchKeys;
@@ -445,6 +446,7 @@ function pickSuit(s, from) {
   ui.group = "";
   if (s !== "all") expandLibrary();
   saveUi();
+  libBackToTop(true);
   renderLibraryChrome();
   const selected = $("suit-tabs").querySelector('[aria-pressed="true"]');
   if (focused) selected?.focus({ preventScroll: true });
@@ -641,10 +643,24 @@ function moreLibrary(n = LIB_PAGE) {
   libObserver.observe(more);
 }
 
+/**
+ * 換了花色、小分類、搜尋：字盒捲過頭就捲回來（細分類籤跟牌一起捲，見 styles.css 的 .lib-scroll）。
+ *   all：換花色，連新的細分類籤一起看到（捲到最上面）。
+ *   不然：牌格頂端露出來就好，籤捲走沒關係。
+ * 那一層沒有在捲（display: contents 的寬度）就什麼都不做。
+ */
+function libBackToTop(all = false) {
+  const box = $("lib-scroll");
+  if (!box || box.scrollHeight <= box.clientHeight + 1) return;
+  const top = all ? 0 : $("lib-grid").getBoundingClientRect().top - box.getBoundingClientRect().top + box.scrollTop;
+  if (box.scrollTop > top) box.scrollTop = top;
+}
+
 function pickGroup(g, from) {
   const focused = document.activeElement === from;
   ui.group = g;
   saveUi();
+  libBackToTop();
   dealLibrary = true;
   renderLibrary();
   const selected = $("group-chips").querySelector('[aria-pressed="true"]');

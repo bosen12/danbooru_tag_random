@@ -1909,6 +1909,14 @@ const ALBUM_FIXTURE = [
           return htmlText.includes('<div class="book-tools" id="book-tools">') && /@media \(min-width: 40\.0625rem\) \{\s*\.book-tools \{\s*position: sticky;\s*top: var\(--mast-h, 0px\);/.test(cssText) &&
             (js.match(/backToTop\(/g) || []).length >= 6 && js.includes("backToTop({ always: true });") && js.includes("watchMast();");
         }));
+      ok("字盒：細分類籤跟牌在同一個捲動區（電腦側欄、手機抽屜），往下捲籤就捲走；換花色捲回最上面（web6、web7）",
+        ["web6", "web7"].every((d) => {
+          const htmlText = readFileSync(join(ROOT, d, "index.html"), "utf8");
+          const cssText = readFileSync(join(ROOT, d, "styles.css"), "utf8");
+          const js = readFileSync(join(ROOT, d, "app.js"), "utf8");
+          return htmlText.includes('<div class="lib-scroll" id="lib-scroll">') && cssText.includes("body[data-picker=\"open\"] .library .lib-scroll {") &&
+            cssText.includes(".library .lib-scroll > .lib-grid {") && js.includes("libBackToTop(true);") && js.includes("function libBackToTop(all = false)");
+        }));
       ok("卡冊：沒用過的牌不灰掉；滑鼠停上去有浮空放大卡（web6、web7）",
         ["web6", "web7"].every((d) => {
           const js = readFileSync(join(ROOT, d, "book.js"), "utf8");
