@@ -1981,6 +1981,19 @@ const ALBUM_FIXTURE = [
               readFileSync(join(ROOT, d, "fuse.html"), "utf8").includes('id="decks-btn"') && fuse.includes("function deckStarters()") && fuse.includes('{ fresh: true, kind: "牌組" }') &&
               book.includes("function deckToBox(deck)") && book.includes("onclick: openBoxDecks");
           }));
+      ok("作品冊：第四個房間（四頁頂欄都有、換頁方向算 3）；墨池成品、疊印台作品詳情有收藏鈕（存伺服器、圖另存、縮圖）；作品冊照分級、能帶牌回墨池、刪除要按兩次（web6、web7）",
+        readFileSync(join(ROOT, "web6/album.js"), "utf8") === readFileSync(join(ROOT, "web7/album.js"), "utf8") &&
+          readFileSync(join(ROOT, "web6/album-save.js"), "utf8") === readFileSync(join(ROOT, "web7/album-save.js"), "utf8") &&
+          readFileSync(join(ROOT, "recipes.py"), "utf8").includes("def save_thumbnail(") &&
+          ["web6", "web7"].every((d) => {
+            const pages = ["index.html", "fuse.html", "book.html", "album.html"].map((f) => readFileSync(join(ROOT, d, f), "utf8"));
+            const album = readFileSync(join(ROOT, d, "album.js"), "utf8");
+            return pages.every((h) => h.includes('href="album.html"') && h.includes("/album\\.html$/.test(u) ? 3")) &&
+              readFileSync(join(ROOT, d, "app.js"), "utf8").includes("favButton(shot, { zh, persist: () => S.saveShots(shots) })") &&
+              readFileSync(join(ROOT, d, "fuse.js"), "utf8").includes("favButton(p, { zh, persist: savePrints") &&
+              readFileSync(join(ROOT, d, "store.js"), "utf8").includes("albumId: s.albumId || null,") &&
+              album.includes('S.handOffPool(tags, "album");') && album.includes("再按一次：連存的圖一起刪") && album.includes("const visible = (w) =>");
+          }));
       ok("卡冊：沒用過的牌不灰掉；滑鼠停上去有浮空放大卡（web6、web7）",
         ["web6", "web7"].every((d) => {
           const js = readFileSync(join(ROOT, d, "book.js"), "utf8");

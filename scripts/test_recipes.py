@@ -223,6 +223,18 @@ ok(
     == "style",
 )
 
+# 作品冊：縮圖只收 webp、存好之後列表摘要帶縮圖、長寬、你選的牌。
+thumb_rec = recipes.save_recipe(sample(name="縮圖", width=832, height=1216, pinned=["1girl", "solo"]))
+try:
+    recipes.save_thumbnail(thumb_rec["id"], b"\x89PNG not webp")
+    ok("thumbnail rejects non-webp", False)
+except recipes.RecipeError:
+    ok("thumbnail rejects non-webp", True)
+recipes.save_thumbnail(thumb_rec["id"], b"RIFF....WEBPVP8 fake")
+row = next(r for r in recipes.list_recipes() if r["id"] == thumb_rec["id"])
+ok("summary carries thumbnail, size, pinned", row["thumbnail"]["file"].endswith(".thumb.webp") and row["width"] == 832 and row["height"] == 1216 and row["pinned"] == ["1girl", "solo"], str(row))
+ok("thumbnail file is stored", recipes.resolve_stored_file(row["thumbnail"]["file"]) is not None)
+
 if failed:
     print(f"\n{failed} failed")
     sys.exit(1)

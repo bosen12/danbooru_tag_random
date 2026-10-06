@@ -404,6 +404,11 @@ def _summary(rec: dict) -> dict:
         "loras": [x.get("file") or x.get("name") for x in rec.get("loras") or []],
         "image": rec.get("image"),
         "thumbnail": rec.get("thumbnail"),
+        # 作品冊的大圖牆：先排好每格的長寬比（不必等圖載完才知道多高）、知道是哪幾張牌。
+        "width": rec.get("width"),
+        "height": rec.get("height"),
+        "pinned": rec.get("pinned") if isinstance(rec.get("pinned"), list) else [],
+        "positive": rec.get("positive") or "",
     }
 
 
@@ -489,6 +494,32 @@ def save_image_bytes(rid: str, data: bytes, *, suffix: str = ".png") -> dict:
         except FileNotFoundError:
             pass
     rec["image"] = {"file": name, "copied": True}
+    rec["updatedAt"] = _now()
+    _write_json(_recipe_path(rec["id"]), rec)
+    return rec
+
+
+def save_thumbnail(rid: str, data: bytes) -> dict:
+    """作品冊牆上用的小檔（webp，ComfyUI 轉的）：原圖動輒 1～2 MB，一面牆幾十張太重。"""
+    if not data or len(data) > MAX_IMAGE_BYTES or data[:4] != b"RIFF":
+        raise RecipeError("縮圖不是 webp。", "bad_thumb")
+    rec = get_recipe(rid)
+    if rec is None:
+        raise RecipeError("找不到這個配方。", "missing")
+    name = f"{rec['id']}.thumb.webp"
+    dest = files_dir() / name
+    fd, temp_name = tempfile.mkstemp(prefix=f".{name}.", suffix=".tmp", dir=files_dir())
+    temp_path = Path(temp_name)
+    try:
+        with os.fdopen(fd, "wb") as handle:
+            handle.write(data)
+        os.replace(temp_path, dest)
+    finally:
+        try:
+            temp_path.unlink()
+        except FileNotFoundError:
+            pass
+    rec["thumbnail"] = {"file": name, "copied": True}
     rec["updatedAt"] = _now()
     _write_json(_recipe_path(rec["id"]), rec)
     return rec

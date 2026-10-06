@@ -367,6 +367,8 @@ export function playPageEntrance() {
       // 卡冊（book.html）：標題列、工具列，牌照下面那條一張張落定。
       [".book-head", 40, 8],
       [".book-bar", 70, 8],
+      // 作品冊（album.html）：標題列；牆上的圖自己會錯開浮上來（album.js）。
+      [".album-head", 40, 8],
     ];
     const candidates = [];
     const seen = new Set();

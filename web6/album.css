@@ -1,0 +1,280 @@
+/* ================= 作品冊（album.html） =================
+ * 收藏的成品一張張攤開：照每張的長寬比排成幾欄（columns），新的在前。
+ * 點一張：大圖在左、牌和資料在右（手機上下排）。頂欄、找字框跟卡冊同一套。 */
+
+.album {
+  display: grid;
+  /* 一欄、最小 0：牆上的作品名是不換行的，不限住的話手機上整欄被撐得比螢幕寬。 */
+  grid-template-columns: minmax(0, 1fr);
+  gap: var(--space-md);
+  padding: var(--space-md) var(--space-lg) var(--space-2xl);
+  max-width: 1600px;
+  margin: 0 auto;
+}
+
+.album-head {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: end;
+  justify-content: space-between;
+  gap: var(--space-sm) var(--space-lg);
+}
+
+.album-title {
+  display: flex;
+  align-items: baseline;
+  flex-wrap: wrap;
+  gap: var(--space-2xs) var(--space-md);
+  min-width: 0;
+}
+
+.album-title h2 {
+  margin: 0;
+  font-family: var(--font-display);
+  font-size: var(--text-xl);
+  letter-spacing: 0.06em;
+}
+
+.album-sum {
+  margin: 0;
+  color: var(--color-muted);
+  font-size: var(--text-sm);
+  font-variant-numeric: tabular-nums;
+}
+
+.album-q {
+  flex: 1 1 16rem;
+  min-width: 0;
+  max-width: 24rem;
+  min-height: 40px;
+  padding: 0 var(--space-sm);
+  border: 1px solid var(--color-rule-2);
+  border-radius: var(--radius-sm);
+  background: var(--color-paper-2);
+  color: var(--color-ink);
+  font: inherit;
+}
+
+.album-q:focus-visible {
+  outline: 2px solid var(--color-focus);
+  outline-offset: 1px;
+  border-color: var(--color-ink-2);
+  background: var(--color-paper-3);
+}
+
+.album-hint {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: var(--space-xs) var(--space-sm);
+  margin: 0;
+  padding: var(--space-md);
+  border: 1px dashed var(--color-rule);
+  border-radius: var(--radius-sm);
+  color: var(--color-ink-2);
+  font-size: var(--text-sm);
+}
+
+.album-hint[hidden] {
+  display: none;
+}
+
+/* ---------- 大圖牆 ---------- */
+
+.album-grid {
+  columns: 15rem;
+  column-gap: var(--space-sm);
+}
+
+.album-tile {
+  display: block;
+  width: 100%;
+  margin: 0 0 var(--space-sm);
+  padding: 0;
+  border: 0;
+  border-radius: var(--radius-sm);
+  background: none;
+  color: inherit;
+  text-align: left;
+  cursor: zoom-in;
+  break-inside: avoid;
+  transition: translate var(--dur-short) var(--ease-out);
+}
+
+.album-frame {
+  position: relative;
+  display: block;
+  overflow: hidden;
+  border-radius: var(--radius-sm);
+  background: var(--color-paper-2);
+  box-shadow: 0 10px 24px -16px var(--color-shade);
+  transition: box-shadow var(--dur-short) var(--ease-out);
+}
+
+.album-frame img {
+  display: block;
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+}
+
+.album-noimg {
+  display: grid;
+  place-items: center;
+  height: 100%;
+  min-height: 6rem;
+  color: var(--color-muted);
+  font-size: var(--text-xs);
+}
+
+.album-cap {
+  display: flex;
+  align-items: baseline;
+  justify-content: space-between;
+  gap: var(--space-xs);
+  padding: var(--space-2xs) 2px 0;
+  font-size: var(--text-xs);
+}
+
+.album-cap b {
+  overflow: hidden;
+  color: var(--color-ink-2);
+  font-weight: 500;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.album-cap small {
+  flex: none;
+  color: var(--color-muted);
+  font-variant-numeric: tabular-nums;
+}
+
+@media (hover: hover) and (pointer: fine) {
+  .album-tile:hover {
+    translate: 0 -2px;
+  }
+  .album-tile:hover .album-frame {
+    box-shadow: 0 16px 30px -14px var(--color-shade);
+  }
+}
+
+.album-tile:focus-visible {
+  outline: 2px solid var(--color-focus);
+  outline-offset: 2px;
+}
+
+.album-empty {
+  margin: 0;
+  color: var(--color-muted);
+}
+
+/* ---------- 一張作品的詳情 ---------- */
+
+.album-detail {
+  display: grid;
+  grid-template-columns: minmax(0, 1.2fr) minmax(16rem, 1fr);
+  gap: var(--space-lg);
+  align-items: start;
+}
+
+.album-big {
+  display: block;
+  overflow: hidden;
+  max-height: 72dvh;
+  border-radius: var(--radius-sm);
+  background: var(--color-paper-2);
+  cursor: zoom-in;
+}
+
+.album-big img {
+  display: block;
+  width: 100%;
+  height: 100%;
+  object-fit: contain;
+}
+
+.album-info {
+  display: grid;
+  gap: var(--space-md);
+  min-width: 0;
+}
+
+.album-info h3 {
+  margin: 0 0 var(--space-xs);
+  color: var(--color-ink-2);
+  font-size: var(--text-sm);
+}
+
+.album-facts {
+  display: grid;
+  grid-template-columns: auto minmax(0, 1fr);
+  gap: var(--space-2xs) var(--space-md);
+  margin: 0;
+  font-size: var(--text-sm);
+}
+
+.album-facts dt {
+  color: var(--color-muted);
+}
+
+.album-facts dd {
+  margin: 0;
+  overflow-wrap: anywhere;
+}
+
+.album-chips {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 4px;
+}
+
+.album-chip {
+  padding: 2px var(--space-xs);
+  border: 1px solid var(--color-rule-2);
+  border-radius: 999px;
+  color: var(--color-ink-2);
+  font-size: var(--text-xs);
+}
+
+.album-chips.is-mine .album-chip {
+  border-color: var(--color-pool-2);
+  color: var(--color-ink);
+}
+
+.album-pos summary {
+  color: var(--color-muted);
+  font-size: var(--text-sm);
+  cursor: pointer;
+}
+
+.album-del[data-armed="true"] {
+  border-color: var(--color-accent);
+  color: var(--color-accent);
+}
+
+@media (max-width: 40rem) {
+  .album {
+    padding-inline: var(--space-sm);
+  }
+  .album-grid {
+    columns: 2;
+    column-gap: 6px;
+  }
+  .album-tile {
+    margin-bottom: 6px;
+  }
+  .album-detail {
+    grid-template-columns: minmax(0, 1fr);
+  }
+  .album-big {
+    max-height: 60dvh;
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .album-tile,
+  .album-frame {
+    transition: none;
+  }
+}

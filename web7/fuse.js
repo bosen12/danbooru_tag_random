@@ -39,6 +39,7 @@ import { HARD_BANNED, applyArtSources } from "./card-art.js";
 import { buildLibrary, groupChips, createAssets, cardNode, cardFacts, setEnterTarget, eagerArt, CARD_SUIT_INFO, CARD_SUITS, RATING_ZH, ERA_ZH } from "./cards.js";
 import { el, openSheet, anyOverlay, toast } from "./ui.js";
 import { openDecks, loadDecks, cachedDecks } from "./decks.js";
+import { favButton } from "./album-save.js";
 import { initMotion, settleMotion, flip, flipBy, leave, gatherHome, flight, enter, seat, refuse, CURVE, DUR, css } from "./motion.js";
 import { createHand } from "./hand.js";
 import { createDrag, inkRing } from "./drag.js";
@@ -895,6 +896,7 @@ function savePrints() {
     FK.prints,
     prints.slice(0, PRINT_MAX).map((p) => ({
       id: p.id,
+      albumId: p.albumId || null,
       sig: p.sig,
       seed: p.seed,
       positive: p.positive,
@@ -2863,6 +2865,7 @@ function openPrint(p) {
     p.status === "failed" || p.status === "stopped" || p.status === "cancelled"
       ? el("button", { class: "btn btn-small", type: "button", onclick: () => (sheet.close(), reprint(p)) }, "再印一次")
       : null,
+    p._gone ? null : favButton(p, { zh, persist: savePrints, className: "btn btn-small" }),
     p.image && !p._gone ? el("a", { class: "btn btn-small", href: p.image, target: "_blank", rel: "noopener" }, "開原圖") : null,
     el(
       "button",

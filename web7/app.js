@@ -40,6 +40,7 @@ import { bindArt, artFallback } from "./card-images.js";
 import { buildLibrary, groupChips, createAssets, cardNode, setCardFlag, setEnterTarget, eagerArt, cardFacts, CARD_SUIT_INFO, CARD_SUITS, RATING_ZH } from "./cards.js";
 import { el, openSheet, anyOverlay, toast, runToastAction, ICONS } from "./ui.js";
 import { openDecks } from "./decks.js";
+import { favButton } from "./album-save.js";
 import { createDrag, inkRing } from "./drag.js";
 import { initMotion, settleMotion, flip, flipBy, leave, enter, confirmButton, gatherHome, flight, seat, refuse, reducedMotion, CURVE, DUR, css } from "./motion.js";
 import { createHand } from "./hand.js";
@@ -1146,7 +1147,7 @@ function zh(tag) {
  * 以前是靜靜地出現在池子裡，看不出是剛帶過來的。
  */
 function greetHandoff() {
-  const from = { book: "卡冊", fuse: "疊印台" }[S.handoffFrom];
+  const from = { book: "卡冊", fuse: "疊印台", album: "作品冊" }[S.handoffFrom];
   if (!from || !pool.size) return;
   const cards = [...$("pool-well").querySelectorAll(".card")];
   if (!reducedMotion()) {
@@ -1862,6 +1863,8 @@ function shotNode(shot, deal) {
         },
         "Hires"
       ),
+      // 收進作品冊（album.html）：印好了才出現。
+      favButton(shot, { zh, persist: () => S.saveShots(shots) }),
       el("button", { class: "btn btn-small btn-ghost", type: "button", onclick: (e) => copyPos(shot, e.currentTarget) }, "複製 POS"),
       el("button", { class: "btn btn-small btn-ghost", type: "button", onclick: () => reprint(shot), title: "同樣的 POS、同一顆種子再送一次" }, "同種子重印"),
       el("button", { class: "btn btn-small btn-ghost shot-remove", type: "button", onclick: () => removeShot(shot) }, "撤下")
@@ -2024,6 +2027,7 @@ function paintShot(node, shot) {
     }
   } else if (empty) empty.remove();
   paintHiresVeil(frame, shot, { onCancel: () => hiresRun.cancel(shot), onDismiss: () => hiresRun.dismiss(shot) });
+  node.querySelector(".fav-btn")?._paint?.();
   const hiBtn = node.querySelector(".shot-hires");
   if (hiBtn) {
     hiBtn.hidden = !(shot.status === "done" && shot.image);
@@ -2296,6 +2300,7 @@ function showShot(shot) {
     {
       wide: true,
       foot: [
+        favButton(shot, { zh, persist: () => (S.saveShots(shots), $("wall").querySelector(`.shot[data-id="${shot.id}"] .fav-btn`)?._paint?.()), className: "btn btn-small" }),
         el("button", { class: "btn btn-small", type: "button", onclick: (e) => copyPos(shot, e.currentTarget) }, "複製 POS"),
         shot.image ? el("a", { class: "btn btn-small", href: shot.image, target: "_blank", rel: "noopener" }, "開原圖") : null,
       ],

@@ -87,6 +87,8 @@ export function saveShots(shots) {
       workflowId: s.workflowId,
       sampling: s.sampling || {},
       image: s.image || null,
+      // 收進作品冊的那一筆（album-save.js）：成品上顯示「已收藏」。
+      albumId: s.albumId || null,
       // Hires 過的：image 是大圖，baseImage 是原圖（再 Hires 從原圖放大、也可以還原）。
       baseImage: s.baseImage || null,
       hires: s.hires || null,

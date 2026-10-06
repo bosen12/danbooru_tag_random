@@ -2935,6 +2935,13 @@ class Handler(BaseHTTPRequestHandler):
                     return
                 ext = Path(fn).suffix.lower() or ".png"
                 rec = recipes.save_image_bytes(pid, bytes(raw), suffix=ext)
+                # 順便請 ComfyUI 轉一張 webp 當縮圖（作品冊的牆用）；轉不出來就算了，牆上用原圖。
+                try:
+                    thumb = api("GET", f"/view?{q}&preview=" + urllib.parse.quote("webp;82"), timeout=60)
+                    if isinstance(thumb, (bytes, bytearray)) and bytes(thumb[:4]) == b"RIFF":
+                        rec = recipes.save_thumbnail(pid, bytes(thumb))
+                except Exception:
+                    pass
                 self._json(200, {"ok": True, "recipe": rec})
                 return
             pid = self._recipe_pid(path)

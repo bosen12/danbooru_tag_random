@@ -35,6 +35,10 @@
     {
       "name": "卡冊",
       "url": "book.html"
+    },
+    {
+      "name": "作品冊",
+      "url": "album.html"
     }
   ]
 }
