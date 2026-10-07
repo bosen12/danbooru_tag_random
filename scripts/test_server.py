@@ -1411,6 +1411,38 @@ ok("genlog: 新的在前、分頁有 more", len(_pg["items"]) == 1 and _pg["more
 with open(_gl.LOG_PATH, "a", encoding="utf-8") as _f:
     _f.write("{壞掉的一行" + chr(10))
 ok("genlog: 壞一行不連累整份", len(_gl.all_items()) >= 2)
+
+# ---- 統計：牌的戰績、模型成績單 ----
+_saved_log = _gl.LOG_PATH
+_gl.LOG_PATH = Path(_env_tmp.mkdtemp()) / "stats.jsonl"
+_t0 = _time.time()
+
+
+def _put(i, positive, ok=True, ckpt="m/a.safetensors", loras=(), kind="gen", seed=None):
+    p = {"positive": positive, "seed": seed if seed is not None else i, "ckpt": ckpt, "loras": list(loras)}
+    if kind == "hires":
+        p["hires"] = {"mode": "quick", "scale": 1.5, "image": "/x"}
+    d = {"image": f"/api/image?filename={i}.png", "seed": p["seed"]} if ok else {"error": "x"}
+    _gl.record(_gl.entry_of(f"s{i}", p, ok, d, origin="mochi", kind=kind, created_at=_t0 - 30, started_at=_t0 - 20, finished_at=_t0 + i))
+
+
+_put(1, "1girl, kimono, (rain:1.2)")
+_put(2, "1girl, kimono, night")
+_put(3, "1girl, school uniform", loras=[{"folder": "s", "file": "ink.safetensors", "strength": 1}])
+_put(4, "1girl, kimono", ok=False)
+_put(5, "1girl, kimono, (rain:1.2)", kind="hires", seed=1)
+_put(6, "1girl, school uniform", ckpt="m/b.safetensors")
+_gl.mark("s2", "discard")
+_known = frozenset({"1girl", "kimono", "rain", "night", "school uniform"})
+_st = _gl.stats(_known, [{"id": "w1", "seed": 1, "positive": "1girl, kimono, (rain:1.2)"}, {"id": "w9", "seed": 999, "positive": "1girl"}])
+ok("stats: 每張牌 [印好幾張, 收藏, 撤下]（Hires、印壞的不算）", _st["cards"].get("kimono") == [2, 1, 1] and _st["cards"].get("rain") == [1, 1, 0] and _st["cards"].get("1girl") == [4, 1, 1] and _st["total"] == 4 and _st["fav"] == 1 and _st["discard"] == 1, str(_st["cards"]))
+ok("stats: 收藏靠種子＋牌對上（權重寫法不影響）", _st["cards"]["rain"][1] == 1)
+_ma = next((m for m in _st["models"] if m["kind"] == "ckpt" and m["name"] == "a"), {})
+_ml = next((m for m in _st["models"] if m["kind"] == "lora" and m["name"] == "ink"), {})
+ok("stats: 底模成績（張數、收藏、撤下、印壞、平均畫多久、常配的牌、代表作先挑收藏的）", _ma.get("n") == 3 and _ma.get("fav") == 1 and _ma.get("discard") == 1 and _ma.get("failed") == 1 and _ma.get("drawMs") == 22000 and _ma.get("cards", [None])[0] == "1girl" and (_ma.get("best") or {}).get("id") == "s1", str(_ma))
+ok("stats: LoRA 也各算一份；多的排前面", _ml.get("n") == 1 and _st["models"][0]["name"] == "a", str(_st["models"]))
+ok("stats: 提示詞拆字跟 usage.js 一樣", _gl.tags_of("(smile:1.2), 1girl,1girl ,  (a (b):0.9)") == ["smile", "1girl", "a (b)"])
+_gl.LOG_PATH = _saved_log
 _h = server.GenJob(iter(()), {"origin": "evil", "hires": {"mode": "quick"}})
 ok("active: 不認得的 origin 當空的；Hires 標出來", _h.origin == "" and _h.kind == "hires")
 _c = server.GenJob(iter(()), {"origin": "fuse"})

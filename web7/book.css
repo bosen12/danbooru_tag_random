@@ -923,3 +923,18 @@
     }
   }
 }
+
+/* ---------- 牌的戰績（排序「出好圖」「常撤下」） ----------
+ * 大字變成幾成（收藏或撤下的比例），小字是「收藏・N 張」。常撤下用朱色，一眼分得出在看哪一種。 */
+.book-cell[data-war="good"] .book-n {
+  color: var(--color-good);
+}
+.book-cell[data-war="bad"] .book-n {
+  color: var(--color-accent);
+}
+.book-cell[data-war-zero="true"] .book-n {
+  color: var(--color-muted);
+}
+.book-war {
+  font-variant-numeric: tabular-nums;
+}

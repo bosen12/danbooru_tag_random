@@ -3469,6 +3469,10 @@ class Handler(BaseHTTPRequestHandler):
             self._json(200, {"ok": True, "decks": card_decks.load()})
             return
         # 出圖日誌（作品冊的「日誌」）：新的在前，before＝從這個時間（毫秒）之前接著翻。
+        # 牌的戰績（卡冊）、模型成績單（作品冊）：從日誌和作品冊算。
+        if path == "/api/genlog/stats":
+            self._json(200, {"ok": True, **gen_log.stats(card_usage._known_tags(), recipes.list_recipes())})
+            return
         if path == "/api/genlog":
             qs = urllib.parse.parse_qs(urllib.parse.urlparse(self.path).query)
             try:

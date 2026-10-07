@@ -13,6 +13,7 @@ from __future__ import annotations
 
 import json
 import os
+import re
 import threading
 import time
 from pathlib import Path
@@ -25,6 +26,7 @@ MARKS = ("discard",)
 PAGE_MAX = 2000
 
 _LOCK = threading.Lock()
+_WEIGHT_TAIL = re.compile(r"(:[\d.]+)?\)+$")
 _cache: dict = {"key": None, "items": []}
 
 
@@ -170,3 +172,112 @@ def page(limit: int = 200, before: int | None = None) -> dict:
 
 def all_items() -> list[dict]:
     return _load()
+
+
+# ---- 統計（卡冊的「牌的戰績」、作品冊的「模型」）-------------------------------------------
+
+
+def tags_of(positive: str) -> list[str]:
+    """提示詞拆回一個個字，跟 usage.js 的 tagsOfPositive 同一個規則：去掉權重括號、去重。"""
+    out: list[str] = []
+    seen = set()
+    for raw in str(positive or "").split(","):
+        t = raw.strip().lstrip("(")
+        t = _WEIGHT_TAIL.sub("", t).strip()
+        if t and t not in seen:
+            seen.add(t)
+            out.append(t)
+    return out
+
+
+def fav_key(seed, tags) -> str:
+    """作品冊那一筆跟日誌那一張是不是同一張：種子一樣、用到的牌一樣（作品冊沒記工作編號）。"""
+    return f"{seed}|{','.join(sorted(tags))}"
+
+
+def _model_name(path: str) -> str:
+    name = str(path or "").replace("\\", "/").rsplit("/", 1)[-1]
+    return name[:-12] if name.lower().endswith(".safetensors") else name
+
+
+def stats(known, favorites) -> dict:
+    """known：詞庫裡的牌；favorites：作品冊的每一筆（要 seed、positive、id）。
+
+    只算一般付印（Hires 是同一張圖再放大，不重複算）。印壞的不算進牌的戰績（不是牌的錯），
+    但算進模型的「印壞」。
+    """
+    known = known or frozenset()
+    favs = {}
+    for r in favorites or []:
+        cards = [t for t in tags_of(r.get("positive")) if t in known]
+        favs[fav_key(r.get("seed"), cards)] = r.get("id")
+    cards: dict[str, list[int]] = {}
+    models: dict[str, dict] = {}
+    total = 0
+    fav_n = 0
+    drop_n = 0
+    first = None
+
+    def model(kind: str, name: str) -> dict:
+        key = f"{kind}:{name}"
+        m = models.get(key)
+        if m is None:
+            m = models[key] = {"kind": kind, "name": name, "n": 0, "fav": 0, "discard": 0, "failed": 0, "drawMs": 0, "drawN": 0, "cards": {}, "best": None, "last": 0}
+        return m
+
+    for e in _load():
+        if e.get("kind") == "hires":
+            continue
+        at = e.get("at") or 0
+        first = at if first is None else min(first, at)
+        tags = [t for t in tags_of(e.get("positive")) if t in known]
+        ok = bool(e.get("ok"))
+        fav = ok and fav_key(e.get("seed"), tags) in favs
+        drop = ok and e.get("mark") == "discard"
+        ms = [model("ckpt", _model_name(e.get("ckpt")) or "預設")] + [model("lora", _model_name(l.get("file"))) for l in e.get("loras") or [] if l.get("file")]
+        for m in ms:
+            if not ok:
+                m["failed"] += 1
+                continue
+            m["n"] += 1
+            m["fav"] += fav
+            m["discard"] += drop
+            if e.get("drawMs"):
+                m["drawMs"] += e["drawMs"]
+                m["drawN"] += 1
+            for t in tags:
+                m["cards"][t] = m["cards"].get(t, 0) + 1
+            # 代表作：收藏過的優先，再來是最新的一張。
+            rank = (1 if fav else 0, at)
+            if e.get("image") and (m["best"] is None or rank > m["best"][0]):
+                m["best"] = (rank, {"image": e["image"], "width": e.get("width"), "height": e.get("height"), "id": e.get("id")})
+            m["last"] = max(m["last"], at)
+        if not ok:
+            continue
+        total += 1
+        fav_n += fav
+        drop_n += drop
+        for t in tags:
+            c = cards.get(t)
+            if c is None:
+                c = cards[t] = [0, 0, 0]
+            c[0] += 1
+            c[1] += fav
+            c[2] += drop
+    out_models = []
+    for m in models.values():
+        top = sorted(m["cards"].items(), key=lambda kv: -kv[1])[:8]
+        out_models.append({
+            "kind": m["kind"],
+            "name": m["name"],
+            "n": m["n"],
+            "fav": m["fav"],
+            "discard": m["discard"],
+            "failed": m["failed"],
+            "drawMs": int(m["drawMs"] / m["drawN"]) if m["drawN"] else None,
+            "cards": [t for t, _ in top],
+            "best": m["best"][1] if m["best"] else None,
+            "last": m["last"],
+        })
+    out_models.sort(key=lambda m: (-m["n"], m["name"]))
+    return {"cards": cards, "models": out_models, "total": total, "fav": fav_n, "discard": drop_n, "since": first}

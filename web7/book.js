@@ -29,7 +29,38 @@ const $ = (id) => document.getElementById(id);
 const UI_KEY = "mochi.book.v1";
 // 一次畫幾張：上千張一次畫完會卡；捲到底附近再接著畫（跟字盒同一套）。
 const CHUNK = 72;
-const ORDER_ZH = { desc: "多到少", asc: "少到多" };
+const ORDER_ZH = { desc: "多到少", asc: "少到多", good: "出好圖", bad: "常撤下" };
+const ORDER_MARK = { desc: "↓", asc: "↑", good: "★", bad: "✕" };
+// 牌的戰績（出好圖／常撤下）：印好的圖裡，用了這張牌的有幾成被收藏、幾成被單張撤下。
+// 從出圖日誌算（server.py 的 /api/genlog/stats），所以只算有日誌之後印的。
+// 少於 WAR_MIN 張的不排（印 1 張收 1 張就 100%，沒意義）；排的時候用信賴下界，
+// 印得多又穩定的排在「偶爾一次」前面。
+const WAR_MIN = 3;
+let war = null;
+const warOf = (tag) => (war && war.cards[tag]) || [0, 0, 0];
+const isWar = () => ui.order === "good" || ui.order === "bad";
+function lowerBound(k, n, z = 1.28) {
+  if (!n) return 0;
+  const p = k / n;
+  return (p + (z * z) / (2 * n) - z * Math.sqrt((p * (1 - p)) / n + (z * z) / (4 * n * n))) / (1 + (z * z) / n);
+}
+const warScore = (tag) => {
+  const [n, fav, drop] = warOf(tag);
+  return lowerBound(ui.order === "good" ? fav : drop, n);
+};
+const pct = (k, n) => (n ? Math.round((k / n) * 100) : 0);
+
+async function fetchWar() {
+  try {
+    const r = await fetch("/api/genlog/stats", { cache: "no-store" });
+    if (!r.ok) throw new Error(String(r.status));
+    const j = await r.json();
+    war = { cards: j.cards || {}, total: j.total || 0, fav: j.fav || 0, discard: j.discard || 0, since: j.since || 0 };
+  } catch {
+    war = war || { cards: {}, total: 0, since: 0, failed: true };
+  }
+  return war;
+}
 
 let data = null;
 let lex = null;
@@ -87,7 +118,10 @@ async function boot() {
   rating = (S.loadSettings() || {}).rating || "general";
   // 第一次打開：從成品牆、晾紙繩補算（只做一次）。
   usage = seedUsage((t) => lib.byTag.has(t));
-  if (!["desc", "asc"].includes(ui.order)) ui.order = "desc";
+  if (!ORDER_ZH[ui.order]) ui.order = "desc";
+  // 戰績排序：先等一下日誌的統計（畫兩次會整片跳）；伺服器慢就先畫、回來再排。
+  const warReady = fetchWar();
+  if (isWar()) await Promise.race([warReady, new Promise((r) => setTimeout(r, 900))]);
   // 這個瀏覽器還沒跟伺服器對過（新手機、清過資料）：本機的排序跟正本差很多，
   // 先畫本機的、正本一到整格重排，第一批牌的圖白載、版面也多排一次。等正本一下下再畫，
   // 伺服器慢（或沒開）就不等了，照舊先畫本機的、回來再換。
@@ -118,6 +152,9 @@ async function boot() {
   // 先用這個瀏覽器的快取畫，伺服器的正本（所有裝置共用）回來再換上；之後定時問一次。
   (first || fetchUsage()).then((u) => applyUsage(u, { quiet: true }));
   watchServer();
+  warReady.then(() => {
+    if (isWar()) (render(), renderSummary());
+  });
   // 滑鼠停在牌上：跟墨池、疊印台同一張浮空放大卡，多一行用過幾次。
   attachPeek($("book-grid"), ".card[data-tag]", peekInfo);
   settleMotion();
@@ -195,6 +232,20 @@ function renderSummary({ count = false } = {}) {
   const used = pool.filter((c) => countOf(c.tag) > 0).length;
   const total = pool.reduce((n, c) => n + countOf(c.tag), 0);
   const box = $("book-sum");
+  if (isWar()) {
+    // 戰績排序：摘要換成整體的比例——每張牌跟它比，才知道算好還是算差。
+    clearInterval(box._tick);
+    const t = war?.total || 0;
+    box.replaceChildren(
+      el("span", {}, "日誌裡印好 "),
+      el("b", { class: "book-sum-n" }, fmt(t)),
+      el("span", {}, " 張"),
+      t ? el("span", { class: "book-sum-dot", "aria-hidden": "true" }, "・") : null,
+      t ? el("span", {}, `整體收藏 ${pct(war.fav, t)}%・撤下 ${pct(war.discard, t)}%`) : null
+    );
+    sumShown = { used: -1, total: -1 };
+    return;
+  }
   const paint = (u, t) => {
     box.replaceChildren(
       el("b", { class: "book-sum-n" }, fmt(u)),
@@ -207,7 +258,8 @@ function renderSummary({ count = false } = {}) {
   };
   const from = count ? { used: 0, total: 0 } : sumShown;
   sumShown = { used, total };
-  if (reducedMotion() || (from.used === used && from.total === total)) return paint(used, total);
+  // 從戰績換回來（from 是 -1）：直接寫上，不從 0 數。
+  if (reducedMotion() || from.used < 0 || (from.used === used && from.total === total)) return paint(used, total);
   // 數字從舊值數到新值（開頁時從 0）：用計時器不用 rAF，分頁在背景也會停在對的數字。
   const t0 = performance.now();
   const dur = count ? DUR.develop : DUR.long;
@@ -335,7 +387,7 @@ function pickGroup(g, from) {
 function renderSort() {
   const box = $("book-sort");
   box.replaceChildren(
-    ...["desc", "asc"].map((o) =>
+    ...Object.keys(ORDER_ZH).map((o) =>
       el(
         "button",
         {
@@ -354,9 +406,12 @@ function renderSort() {
             // 換排序：先回到頂端，讓「最多／最少」的那幾張在眼前排好。
             backToTop({ always: true });
             render({ shuffle: true });
+            renderSummary();
+            // 戰績要日誌：還沒讀到（或讀過一陣子了）就問一次，回來再排。
+            if (isWar()) fetchWar().then(() => isWar() && (render(), renderSummary()));
           },
         },
-        o === "desc" ? el("span", { class: "sort-arrow", "aria-hidden": "true" }, "↓") : el("span", { class: "sort-arrow", "aria-hidden": "true" }, "↑"),
+        el("span", { class: "sort-arrow", "aria-hidden": "true" }, ORDER_MARK[o]),
         ORDER_ZH[o]
       )
     )
@@ -423,8 +478,10 @@ function listNow() {
       (ui.suit === "all" || c.suit === ui.suit) &&
       (!ui.group || c.group === ui.group) &&
       (!ui.usedOnly || countOf(c.tag) > 0) &&
+      (!isWar() || warOf(c.tag)[0] >= WAR_MIN) &&
       (!q || c.zh.toLowerCase().includes(q) || c.tag.includes(q))
   );
+  if (isWar()) return out.sort((a, b) => warScore(b.tag) - warScore(a.tag) || warOf(b.tag)[0] - warOf(a.tag)[0] || order.get(a.tag) - order.get(b.tag));
   // 次數一樣時：多到少看誰最近用過，少到多照字盒的順序（花色 → 細分類）。
   if (ui.order === "desc") out.sort((a, b) => countOf(b.tag) - countOf(a.tag) || lastOf(b.tag) - lastOf(a.tag) || order.get(a.tag) - order.get(b.tag));
   else out.sort((a, b) => countOf(a.tag) - countOf(b.tag) || order.get(a.tag) - order.get(b.tag));
@@ -450,8 +507,20 @@ function paintCell(cell, card, rank) {
   cell.dataset.unused = c ? "false" : "true";
   const n = cell.querySelector(".book-n");
   const unit = cell.querySelector(".book-unit");
-  n.textContent = c ? fmt(c) : "—";
-  unit.textContent = c ? "次" : "未使用";
+  if (isWar()) {
+    // 戰績：大字是幾成，小字是「收藏（撤下）・印過幾張」。
+    const [w, fav, drop] = warOf(card.tag);
+    const k = ui.order === "good" ? fav : drop;
+    cell.dataset.war = ui.order;
+    cell.dataset.warZero = k ? "false" : "true";
+    n.textContent = `${pct(k, w)}%`;
+    unit.textContent = `${ui.order === "good" ? "收藏" : "撤下"}・${fmt(w)} 張`;
+  } else {
+    delete cell.dataset.war;
+    delete cell.dataset.warZero;
+    n.textContent = c ? fmt(c) : "—";
+    unit.textContent = c ? "次" : "未使用";
+  }
   const old = cell.querySelector(".book-rank");
   if (rank) {
     if (!old || old.textContent !== String(rank)) {
@@ -462,7 +531,17 @@ function paintCell(cell, card, rank) {
     }
   } else old?.remove();
   paintBoxMark(cell, card.tag);
-  cell.querySelector(".card").setAttribute("aria-description", c ? `用過 ${c} 次${rank ? `，第 ${rank} 名` : ""}` : "還沒用過");
+  const [w, fav, drop] = warOf(card.tag);
+  cell
+    .querySelector(".card")
+    .setAttribute(
+      "aria-description",
+      isWar()
+        ? `印過 ${w} 張，收藏 ${fav} 張、撤下 ${drop} 張${rank ? `，第 ${rank} 名` : ""}`
+        : c
+          ? `用過 ${c} 次${rank ? `，第 ${rank} 名` : ""}`
+          : "還沒用過"
+    );
 }
 
 let more = null;
@@ -500,7 +579,8 @@ function render({ animate = true, shuffle = false, deal = false } = {}) {
   // 有沒有任何使用紀錄：有的話沒用過的牌才褪色；一筆都沒有就在上面放一行引導。
   const any = Object.values(usage.counts).some((n) => n > 0);
   grid.dataset.any = any ? "true" : "false";
-  $("book-hint").hidden = any;
+  // 戰績排序看的是日誌，不是使用次數：「還沒有使用紀錄」的引導不出現（沒資料時格子裡自己會說）。
+  $("book-hint").hidden = any || isWar();
   watchMore();
   if (!motion) return;
   if (deal) return;
@@ -543,10 +623,28 @@ function render({ animate = true, shuffle = false, deal = false } = {}) {
 
 /** 前三名蓋章：只在「多到少」、而且真的用過的時候。看全部花色時是總名次，選了花色是花色裡的名次。 */
 function rankAt(card, i) {
+  if (isWar()) return i < 3 && warScore(card.tag) > 0 ? i + 1 : 0;
   return ui.order === "desc" && i < 3 && countOf(card.tag) > 0 ? i + 1 : 0;
 }
 
 function emptyNote() {
+  if (isWar()) {
+    const total = war?.total || 0;
+    return el(
+      "div",
+      { class: "book-empty" },
+      el("b", {}, war?.failed ? "讀不到出圖日誌" : total ? "這一區還排不出來" : "出圖日誌還是空的"),
+      el(
+        "span",
+        {},
+        war?.failed
+          ? "伺服器沒開、或還是舊版（重開一次伺服器）。"
+          : total
+            ? `一張牌要在 ${WAR_MIN} 張以上印好的圖裡出現過才排：換個花色、清掉搜尋，或多印幾張、收藏喜歡的、撤下不要的。`
+            : "從現在起，墨池、疊印台印好的每一張都會記下來；收藏喜歡的、撤下不要的，這裡就排得出哪些牌常出好圖。"
+      )
+    );
+  }
   const any = Object.keys(usage.counts).length;
   return el(
     "div",
@@ -688,7 +786,9 @@ function openCard(card, srcNode) {
     el("dt", {}, "引擎補的"),
     el("dd", {}, `${Math.max(0, c - mine)} 次`),
     el("dt", {}, "最近一次"),
-    el("dd", {}, ago(usage.last[card.tag] || 0))
+    el("dd", {}, ago(usage.last[card.tag] || 0)),
+    el("dt", {}, "戰績"),
+    el("dd", { class: "book-war" }, warText(card.tag))
   );
   const share = c && sumShown.total ? Math.min(1, c / Math.max(...pool.map((x) => countOf(x.tag)), 1)) : 0;
   const sheet = openSheet(
@@ -748,6 +848,14 @@ function openCard(card, srcNode) {
   );
   flyToDetail(srcNode, sheet.sheet || document.querySelector(".overlay:last-of-type .sheet"));
   if (c) countUp(big, c);
+}
+
+/** 詳情裡的戰績：出圖日誌裡用了這張牌的、印好的圖，收藏幾張、撤下幾張。 */
+function warText(tag) {
+  if (!war || war.failed) return "讀不到出圖日誌";
+  const [n, fav, drop] = warOf(tag);
+  if (!n) return "日誌裡還沒有用它印好的圖";
+  return `印好 ${fmt(n)} 張・收藏 ${fav}（${pct(fav, n)}%）・撤下 ${drop}（${pct(drop, n)}%）${n < WAR_MIN ? "・張數還太少，不排名" : ""}`;
 }
 
 /* ---------- 用這張牌做過的圖 ----------
