@@ -7,7 +7,8 @@
  *     「連動」關掉就只動那一點；拖空白處、身體旁邊：整個人移動。
  *   - 起手式一鍵套用，再微調；鏡像、轉 ±15°、放大縮小、藏起看不到的點、復原。
  *   - 最多 3 個人（畫 2girls 用）；點誰就選誰。
- *   - 畫布比例跟著現在的尺寸（規則裡的尺寸）。
+ *   - 畫布比例跟著現在的尺寸（規則裡的尺寸）。畫布外圍多留一圈深灰的邊：點可以拖出畫面（不會被壓扁在邊上），
+ *     跑出去一點的看得到、拖得回來；送出去的骨架只取中間那塊。人整個不見了：「拉回中間」。
  *   - 從參考圖開始：伺服器抓好的骨架（/api/pose/keypoints）直接放進來，原圖淡淡墊在底下對照（「底圖」可關）。
  * 人物的「右」在畫面左邊（面向你）：OpenPose 的慣例。
  */
@@ -76,9 +77,18 @@ function bbox(pts) {
   return { x0: Math.min(...xs), y0: Math.min(...ys), x1: Math.max(...xs), y1: Math.max(...ys), cx: (Math.min(...xs) + Math.max(...xs)) / 2, cy: (Math.min(...ys) + Math.max(...ys)) / 2 };
 }
 
-/** 畫骨架（黑底）。scale：畫布像素 / 輸出像素；editor：編輯中（藏起的點畫成空心、選到的點加白圈）。 */
+/**
+ * 畫骨架（黑底）。scale：畫布像素 / 輸出像素；editor：編輯中（藏起的點畫成空心、選到的點加白圈）；
+ * editor.pad：外圍多畫幾個像素的邊（深灰，出去的點畫在上面），中間黑色那塊才是送出去的圖。
+ */
 export function drawSkeleton(ctx, people, W, H, { scale = 1, editor = null } = {}) {
   ctx.save();
+  const pad = editor?.pad || 0;
+  if (pad) {
+    ctx.fillStyle = "#1b1e24";
+    ctx.fillRect(0, 0, (W + 2 * pad) * scale, (H + 2 * pad) * scale);
+    ctx.translate(pad * scale, pad * scale);
+  }
   ctx.fillStyle = "#000";
   ctx.fillRect(0, 0, W * scale, H * scale);
   // 底圖（只在編輯器裡）：照伺服器裁參考圖的方式（等比例放大、置中裁掉多的）淡淡墊著。
@@ -87,9 +97,13 @@ export function drawSkeleton(ctx, people, W, H, { scale = 1, editor = null } = {
     const k = Math.max(W / under.naturalWidth, H / under.naturalHeight);
     const dw = under.naturalWidth * k;
     const dh = under.naturalHeight * k;
+    ctx.save();
+    ctx.beginPath();
+    ctx.rect(0, 0, W * scale, H * scale);
+    ctx.clip();
     ctx.globalAlpha = 0.38;
     ctx.drawImage(under, ((W - dw) / 2) * scale, ((H - dh) / 2) * scale, dw * scale, dh * scale);
-    ctx.globalAlpha = 1;
+    ctx.restore();
   }
   // controlnet_aux 在 512 的短邊上畫 4px 的線：放到這張的大小。
   const stick = Math.max(2, (4 * Math.min(W, H)) / 512) * scale;
@@ -145,6 +159,12 @@ export function drawSkeleton(ctx, people, W, H, { scale = 1, editor = null } = {
     ctx.strokeRect(b.x0 * scale - 12, b.y0 * scale - 12, (b.x1 - b.x0) * scale + 24, (b.y1 - b.y0) * scale + 24);
     ctx.setLineDash([]);
   }
+  if (pad) {
+    // 送出去的範圍：框一條細線，外面那圈只是讓點有地方去。
+    ctx.strokeStyle = "rgba(255,255,255,0.28)";
+    ctx.lineWidth = 1;
+    ctx.strokeRect(0.5, 0.5, W * scale - 1, H * scale - 1);
+  }
   ctx.restore();
 }
 
@@ -198,17 +218,22 @@ export function openPoseEditor({ size, draft = null, initial = null, underlay = 
 
   const canvas = el("canvas", { class: "pe-canvas", "aria-label": "姿勢：拖骨架上的點來擺" });
   // --pe-ratio：直的圖不要高過螢幕（寬度跟著高度上限縮），橫的照寬度放。
-  const wrap = el("div", { class: "pe-stage", style: `aspect-ratio: ${W} / ${H}; --pe-ratio: ${(W / H).toFixed(4)}` }, canvas);
+  // 外圍那圈邊（輸出像素）：短邊的一成。
+  const PAD = Math.round(Math.min(W, H) * 0.1);
+  const VW = W + 2 * PAD;
+  const VH = H + 2 * PAD;
+  const wrap = el("div", { class: "pe-stage", style: `aspect-ratio: ${VW} / ${VH}; --pe-ratio: ${(VW / VH).toFixed(4)}` }, canvas);
   const info = el("p", { class: "pe-info", "aria-live": "polite" });
   // 測試用：讀目前的點（畫布上看不出座標）。
   canvas._people = () => people;
+  canvas._view = () => ({ W, H, pad: PAD });
   let scale = 1;
   let handle = 9;
 
   function fit() {
     const r = wrap.getBoundingClientRect();
     const dpr = Math.min(2, window.devicePixelRatio || 1);
-    scale = (r.width / W) * dpr;
+    scale = (r.width / VW) * dpr;
     canvas.width = Math.max(1, Math.round(r.width * dpr));
     canvas.height = Math.max(1, Math.round(r.height * dpr));
     // 點的大小以螢幕上的手指為準：觸控大一點。
@@ -217,7 +242,7 @@ export function openPoseEditor({ size, draft = null, initial = null, underlay = 
   }
 
   function draw() {
-    drawSkeleton(canvas.getContext("2d"), people, W, H, { scale, editor: { sel, handle, person, underlay: showUnder ? under : null } });
+    drawSkeleton(canvas.getContext("2d"), people, W, H, { scale, editor: { sel, handle, person, pad: PAD, underlay: showUnder ? under : null } });
     const s = sel && people[sel.person] ? `${people.length > 1 ? `第 ${sel.person + 1} 個人的` : ""}${JOINT_ZH[sel.joint]}${people[sel.person].pts[sel.joint].on ? "" : "（藏起來了）"}` : "";
     info.textContent = s ? `選到：${s}` : "拖骨架上的點來擺（繞著上一節轉，長度不變；按住 Shift 可以拉長縮短）；拖空白處移動整個人。紅橘那側是人物的右手（畫面左邊）。";
     hideBtn.disabled = !sel;
@@ -228,7 +253,7 @@ export function openPoseEditor({ size, draft = null, initial = null, underlay = 
 
   const toLocal = (e) => {
     const r = canvas.getBoundingClientRect();
-    return { x: ((e.clientX - r.left) / r.width) * W, y: ((e.clientY - r.top) / r.height) * H };
+    return { x: ((e.clientX - r.left) / r.width) * VW - PAD, y: ((e.clientY - r.top) / r.height) * VH - PAD };
   };
 
   function hit(pt) {
@@ -319,15 +344,15 @@ export function openPoseEditor({ size, draft = null, initial = null, underlay = 
         const f = drag.from[i];
         const x = f.x - drag.pivot.x;
         const y = f.y - drag.pivot.y;
-        // 轉出畫布的點會拿不回來：夾在畫布裡（只有碰到邊的那幾點長度會稍微變）。
-        pts[j].x = Math.max(0, Math.min(W, drag.pivot.x + x * cos - y * sin));
-        pts[j].y = Math.max(0, Math.min(H, drag.pivot.y + x * sin + y * cos));
+        // 轉出畫面就讓它出去（外圍那圈看得到、拖得回來），不壓在邊上。
+        pts[j].x = drag.pivot.x + x * cos - y * sin;
+        pts[j].y = drag.pivot.y + x * sin + y * cos;
       });
     } else {
       for (const j of drag.joints) {
         const q = pts[j];
-        q.x = Math.max(0, Math.min(W, q.x + dx));
-        q.y = Math.max(0, Math.min(H, q.y + dy));
+        q.x += dx;
+        q.y += dy;
       }
     }
     drag.last = pt;
@@ -346,8 +371,8 @@ export function openPoseEditor({ size, draft = null, initial = null, underlay = 
     const b = bbox(pts);
     for (const q of pts) {
       const [x, y] = fn(q.x - b.cx, q.y - b.cy);
-      q.x = Math.max(0, Math.min(W, b.cx + x));
-      q.y = Math.max(0, Math.min(H, b.cy + y));
+      q.x = b.cx + x;
+      q.y = b.cy + y;
     }
     draw();
   };
@@ -455,6 +480,18 @@ export function openPoseEditor({ size, draft = null, initial = null, underlay = 
     tool("↻ 15°", "往右轉", () => rotate(15)),
     tool("縮小", "整個人縮小", () => transform((x, y) => [x * 0.9, y * 0.9])),
     tool("放大", "整個人放大", () => transform((x, y) => [x * 1.1, y * 1.1])),
+    tool("拉回中間", "選到的人放回畫面中間（太大就縮到放得下）", () => {
+      remember();
+      const pts = people[person].pts;
+      const b = bbox(pts);
+      const k = Math.min(1, (W * 0.9) / Math.max(1, b.x1 - b.x0), (H * 0.9) / Math.max(1, b.y1 - b.y0));
+      for (const q of pts) {
+        q.x = W / 2 + (q.x - b.cx) * k;
+        q.y = H / 2 + (q.y - b.cy) * k;
+      }
+      sel = null;
+      draw();
+    }),
     hideBtn,
     rigidBtn,
     linkBtn,
