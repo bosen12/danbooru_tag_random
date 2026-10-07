@@ -2030,6 +2030,12 @@ const ALBUM_FIXTURE = [
             [["app.js", "mochi"], ["fuse.js", "fuse"], ["book.js", "book"], ["album.js", "album"]].every(([f, room]) => readFileSync(join(ROOT, d, f), "utf8").includes(`mountKeysHelp("${room}");`)) &&
             readFileSync(join(ROOT, d, "styles.css"), "utf8").includes(".mast-tools .help-btn {")
           ));
+      ok("模型成績單：作品冊多「模型」分頁（每個底模、LoRA：代表作、印好、收藏、撤下、印壞、平均畫多久、常配的牌），點一張跳到日誌只看它印的（web6、web7）",
+        ["album.js", "album.css", "album-models.js", "album-log.js"].every((f) => readFileSync(join(ROOT, "web6", f), "utf8") === readFileSync(join(ROOT, "web7", f), "utf8")) &&
+          (() => {
+            const a = readFileSync(join(ROOT, "web6/album.js"), "utf8");
+            return a.includes('["models", "模型"]') && a.includes("openLogFor: (name) =>") && readFileSync(join(ROOT, "web6/album.html"), "utf8").includes('id="album-models"') && readFileSync(join(ROOT, "web7/album.html"), "utf8").includes('id="album-models"');
+          })());
       ok("牌的戰績：卡冊多「出好圖」「常撤下」排序（日誌統計 /api/genlog/stats，少於 3 張不排、信賴下界排名），摘要給整體比例，詳情多一行戰績（web6、web7）",
         readFileSync(join(ROOT, "web6/book.js"), "utf8") === readFileSync(join(ROOT, "web7/book.js"), "utf8") &&
           readFileSync(join(ROOT, "server.py"), "utf8").includes('if path == "/api/genlog/stats":') &&

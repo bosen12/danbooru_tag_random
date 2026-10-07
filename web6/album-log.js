@@ -70,7 +70,7 @@ export function createLog(ctx) {
     favs = new Map(ctx.getWorks().map((w) => [favKey(w.seed, w.positive, ctx.isCard), w.id]));
     for (const e of items) {
       e._fav = e.ok ? favs.get(favKey(e.seed, e.positive, ctx.isCard)) || null : null;
-      if (!e._text) e._text = [e.positive, ...cards(e).map(ctx.zh), shortName(e.ckpt), ORIGIN_ZH[e.origin] || ""].join(" ").toLowerCase();
+      if (!e._text) e._text = [e.positive, ...cards(e).map(ctx.zh), shortName(e.ckpt), ...(e.loras || []).map((l) => shortName(l.file)), ORIGIN_ZH[e.origin] || ""].join(" ").toLowerCase();
     }
   }
 

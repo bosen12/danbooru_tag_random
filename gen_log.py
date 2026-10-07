@@ -250,7 +250,7 @@ def stats(known, favorites) -> dict:
             # 代表作：收藏過的優先，再來是最新的一張。
             rank = (1 if fav else 0, at)
             if e.get("image") and (m["best"] is None or rank > m["best"][0]):
-                m["best"] = (rank, {"image": e["image"], "width": e.get("width"), "height": e.get("height"), "id": e.get("id")})
+                m["best"] = (rank, {"image": e["image"], "width": e.get("width"), "height": e.get("height"), "id": e.get("id"), "rating": e.get("rating") or ""})
             m["last"] = max(m["last"], at)
         if not ok:
             continue
@@ -266,7 +266,7 @@ def stats(known, favorites) -> dict:
             c[2] += drop
     out_models = []
     for m in models.values():
-        top = sorted(m["cards"].items(), key=lambda kv: -kv[1])[:8]
+        top = sorted(m["cards"].items(), key=lambda kv: -kv[1])[:14]
         out_models.append({
             "kind": m["kind"],
             "name": m["name"],

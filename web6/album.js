@@ -5,6 +5,7 @@
  *   - 點一張：大圖、你選的牌、全部的牌、尺寸／種子／底模；把牌帶回墨池、複製 POS、開原圖、從作品冊拿掉。
  *   - 網址帶 #作品編號（收藏完按「打開作品冊」過來）：直接打開那一張。
  *   - 「日誌」分頁：印過的每一張，不只收藏的（album-log.js）。網址帶 ?tab=log 直接開在日誌。
+ *   - 「模型」分頁：每個底模、LoRA 的成績單（album-models.js）；點一張跳到日誌只看它印的。
  */
 import { RATING_LABEL, ratingBlocked } from "./rules/rating.js";
 import { buildLibrary, ERA_ZH } from "./cards.js";
@@ -19,6 +20,7 @@ import { tagsOfPositive } from "./usage.js";
 import { removeFromAlbum } from "./album-save.js";
 import { weightsOfPositive } from "./weights.js";
 import { createLog, LOG_FILTERS } from "./album-log.js";
+import { createModels } from "./album-models.js";
 
 const sfx = getSfx();
 const $ = (id) => document.getElementById(id);
@@ -29,14 +31,16 @@ let works = [];
 let rating = "general";
 let query = "";
 // 分頁：works（收藏的）／log（印過的每一張）。
-let tab = new URLSearchParams(location.search).get("tab") === "log" ? "log" : "works";
-let logFilter = "all";
-let log = null;
 const TABS = [
   ["works", "作品"],
   ["log", "日誌"],
+  ["models", "模型"],
 ];
-const PLACEHOLDER = { works: "找作品：牌名、提示詞…", log: "找印過的：牌名、提示詞、底模…" };
+let tab = TABS.some(([v]) => v === new URLSearchParams(location.search).get("tab")) ? new URLSearchParams(location.search).get("tab") : "works";
+let logFilter = "all";
+let log = null;
+let models = null;
+const PLACEHOLDER = { works: "找作品：牌名、提示詞…", log: "找印過的：牌名、提示詞、底模、LoRA…", models: "找模型：底模、LoRA 的名字…" };
 
 const zh = (t) => lib?.byTag.get(t)?.zh || t;
 const fileUrl = (ref) => (ref && ref.file ? `/api/recipes/files/${encodeURIComponent(ref.file)}` : null);
@@ -76,6 +80,17 @@ async function boot() {
       log.reindex();
     },
   });
+  models = createModels({
+    zh,
+    isCard: (t) => lib.byTag.has(t),
+    sectionOf: (t) => lib.byTag.get(t)?.item?.section,
+    // 點一張成績單：換到日誌、找字框填上它的名字。
+    openLogFor: (name) => {
+      $("album-q").value = name;
+      query = name.toLowerCase();
+      pickTab("log");
+    },
+  });
   renderRating();
   renderTabs();
   wireSearch();
@@ -83,6 +98,7 @@ async function boot() {
   pingLoop();
   await load();
   if (tab === "log") await log.load();
+  if (tab === "models") await models.load();
   render({ deal: true });
   settleMotion();
   openFromHash();
@@ -95,6 +111,10 @@ async function boot() {
     // 日誌開著：回來時也重讀（剛才在墨池又印了幾張）。
     if (tab === "log") {
       await log.load();
+      return render();
+    }
+    if (tab === "models") {
+      await models.load();
       return render();
     }
     if (works.map((w) => w.id).join() !== before) render();
@@ -248,14 +268,19 @@ async function pickTab(v) {
   tab = v;
   // 換分頁記在網址上：重新整理、上一頁回來還是這一頁（不推新的歷史，免得上一頁要按好幾次）。
   const u = new URL(location.href);
-  if (tab === "log") u.searchParams.set("tab", "log");
-  else u.searchParams.delete("tab");
+  if (tab === "works") u.searchParams.delete("tab");
+  else u.searchParams.set("tab", tab);
   history.replaceState(null, "", u.pathname + u.search + u.hash);
   renderTabs();
   seat($("album-tabs").querySelector('[aria-checked="true"]'));
   if (tab === "log" && !log.loaded) {
     render();
     await log.load();
+  }
+  // 成績單每次換過來都重算（剛才可能又印了、又收藏了）。
+  if (tab === "models") {
+    if (!models.loaded) render();
+    await models.load();
   }
   render({ deal: true });
 }
@@ -267,8 +292,16 @@ const visible = (w) => (RANK[w.rating] ?? 2) <= RANK[rating];
 function render({ deal = false } = {}) {
   const grid = $("album-grid");
   const logBox = $("album-log");
+  const modelBox = $("album-models");
   grid.hidden = tab !== "works";
   logBox.hidden = tab !== "log";
+  modelBox.hidden = tab !== "models";
+  if (tab === "models") {
+    $("album-hint").hidden = true;
+    const r = models.render(modelBox, { query, rating }, { deal });
+    $("album-sum").textContent = r.total ? `從日誌裡印好的 ${r.total} 張算` : "";
+    return;
+  }
   if (tab === "log") {
     $("album-hint").hidden = true;
     const r = log.render(logBox, { query, filter: logFilter, rating }, { deal });

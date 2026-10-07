@@ -110,7 +110,7 @@
         </div>
         <input class="album-q" id="album-q" type="search" placeholder="找作品：牌名、提示詞…" aria-label="找作品" autocomplete="off" />
       </div>
-      <!-- 作品：收藏的；日誌：印過的每一張（album-log.js）。 -->
+      <!-- 作品：收藏的；日誌：印過的每一張（album-log.js）；模型：每個底模、LoRA 的成績（album-models.js）。 -->
       <div class="album-bar">
         <div class="segmented album-tabs" id="album-tabs" role="radiogroup" aria-label="作品冊分頁"></div>
         <div class="log-filters" id="log-filters" role="group" aria-label="篩選日誌" hidden></div>
@@ -118,6 +118,7 @@
       <p class="album-hint" id="album-hint" hidden><b>還沒有收藏的作品。</b><span>在墨池的成品、疊印台的作品上按「☆ 收藏」，就會收進這裡；圖另存一份，ComfyUI 那邊的原圖刪了也還在。</span><a class="btn btn-small" href="./">去墨池</a></p>
       <div class="album-grid" id="album-grid" role="list" aria-label="作品冊：點一張看大圖和用了哪些牌"></div>
       <div class="album-log" id="album-log" aria-label="出圖日誌：印過的每一張，點一張看配方" hidden></div>
+      <div class="album-log album-models" id="album-models" aria-label="模型成績單：每個底模、LoRA 印了幾張、收藏幾成" hidden></div>
     </main>
 
     <div class="toast" id="toast" role="status" aria-live="polite"></div>
