@@ -82,6 +82,7 @@ export const hiresBusy = (t) => !!t.hi && (t.hi.status === "queued" || t.hi.stat
 export function createHires(hooks) {
   const tasks = new Map(); // task.id → task
   const gen = createGenerator({
+    origin: hooks.origin,
     payload: (task) => {
       const t = task.target;
       return {

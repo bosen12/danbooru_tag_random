@@ -39,6 +39,7 @@ import { HARD_BANNED, applyArtSources } from "./card-art.js";
 import { buildLibrary, groupChips, createAssets, cardNode, cardFacts, setEnterTarget, eagerArt, CARD_SUIT_INFO, CARD_SUITS, RATING_ZH, ERA_ZH } from "./cards.js";
 import { el, openSheet, anyOverlay, toast } from "./ui.js";
 import { mountKeysHelp } from "./keys-help.js";
+import { mountGenStatus } from "./gen-status.js";
 import { openDecks, loadDecks, cachedDecks } from "./decks.js";
 import { openPaste, listenPaste } from "./paste-prompt.js";
 import { paintWeight, wireWeightInput, weightRow, weightPositive } from "./weights.js";
@@ -216,6 +217,7 @@ async function boot() {
   initMotion();
   // 快捷鍵說明（電腦）：頂欄的「?」、按 ? 打開（keys-help.js）。
   mountKeysHelp("fuse");
+  mountGenStatus("fuse");
   try {
     const [lexicon, man] = await Promise.all([
       fetch(document.querySelector('link[rel="preload"][href^="lexicon.json"]')?.href || "lexicon.json").then((r) => r.json()),
@@ -270,6 +272,13 @@ async function boot() {
   if (caseTab === "match") renderCase();
   renderLine();
   for (const p of prints) if (p.status === "queued" && p.live && p.job) generator.resume(p);
+  // 還排著沒送出去的（去別頁晃一下回來）：照原本的順序接著印（繩上新的在左邊，所以倒過來）。
+  const waiting = prints.filter((p) => p._waiting).reverse();
+  for (const p of waiting) {
+    delete p._waiting;
+    generator.enqueue(p);
+  }
+  if (waiting.length) toast(`接著印剛才排著的 ${waiting.length} 張`);
   for (const p of prints) if (p.status === "done" && p.hiresJob) hiresRun.resume(p, p.hiresJob);
   attachPeek($("case-grid"), ".card[data-tag]", peekInfo);
   // 生圖種子一換，同一張試印對應的成品就不一樣了：成品、付印那條、試印上的小圖都要重畫。
@@ -710,6 +719,7 @@ function reroll() {
 const tabNote = tabTitle();
 
 const generator = createGenerator({
+  origin: "fuse",
   payload: (p) => ({ width: p.width, height: p.height, loras: p.loras, ckpt: p.ckpt, rating: p.rating, workflowId: p.workflowId, ...currentSampling() }),
   update: (p) => {
     tabNote.shot(p, generator.pending);
@@ -754,6 +764,7 @@ const NET_WAIT_TEXT = "連不到主機（網路斷了？），網路回來就接
 
 // Hires：印好的那張放大、重畫細節，做好直接換掉（成品區、晾紙繩都是同一張，見 hires.js）。
 const hiresRun = createHires({
+  origin: "fuse",
   update: (p) => {
     const t = trials[picked];
     if (t && p.sig === sigOf(t)) {
@@ -892,11 +903,13 @@ function loadPrints() {
   // 重新整理就把沒印出來的（失敗、取消、停掉的）拿下繩子；只留印好的和畫到一半還接得回去的。
   return list
     .filter((p) => p && p.id && p.positive)
-    .filter((p) => p.status === "done" || (p.live && p.job))
+    .filter((p) => p.status === "done" || (p.live && p.job) || S.stillWaiting(p))
     .map((p) => ({
       ...p,
+      // 還排著沒送出去的：開機時接在後面排回佇列。
+      _waiting: S.stillWaiting(p),
       // 畫到一半就重新整理的那張：標成排隊，開機時用 generator.resume() 接回去。
-      status: p.status === "done" ? "done" : p.status === "failed" ? "failed" : p.live && p.job ? "queued" : "stopped",
+      status: p.status === "done" ? "done" : p.status === "failed" ? "failed" : (p.live && p.job) || S.stillWaiting(p) ? "queued" : "stopped",
       preview: null,
       progress: p.status === "done" ? 1 : 0,
     }));
@@ -931,6 +944,8 @@ function savePrints() {
       hiresJob: S.hiresJobOf(p),
       job: p.job || null,
       live: !!p.job && (p.status === "running" || p.status === "queued"),
+      waiting: S.isWaiting(p),
+      waitedAt: S.isWaiting(p) ? Date.now() : 0,
       note: p.status === "done" ? "" : p.note || "",
       at: p.at,
     }))

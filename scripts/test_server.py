@@ -1317,6 +1317,52 @@ ok("sampling: parse_hires 帶出取樣參數", spec["sampling"] == {"steps": 25,
 d = server.sampling_defaults()
 ok("sampling: /api/sampling 給兩種 Hires 各自的預設", d["hires"]["quick"]["denoise"] != d["hires"]["deep"]["denoise"] and d["base"]["steps"] == server.STEPS)
 
+# ---- 頂欄的生圖進度：GET /api/gen/active（gen-status.js）----
+import threading as _th  # noqa: E402
+import time as _time  # noqa: E402
+
+_gate = _th.Event()
+
+
+def _events():
+    yield ("progress", {"value": 5, "max": 20})
+    _gate.wait(5)
+    yield ("done", {"image": "/api/image?filename=x.png"})
+
+
+_job = server.GenJob(_events(), {"origin": "mochi", "positive": "1girl"}).start()
+for _ in range(200):
+    if _job.started:
+        break
+    _time.sleep(0.01)
+_act = {j["id"]: j for j in server.active_jobs()}.get(_job.id) or {}
+ok("active: 畫到一半的看得到（哪一頁送的、畫到幾成）", _act.get("state") == "running" and _act.get("progress") == 0.25 and _act.get("origin") == "mochi" and _act.get("kind") == "gen", str(_act))
+_job.left_at = _time.time() - server.GEN_REATTACH_SEC - 1
+ok("active: 沒人接、也沒有頁面在問：照舊算放棄", _job.abandoned())
+server.active_jobs()
+ok("active: 只是看看（沒帶 keep）不續命", _job.abandoned())
+server.active_jobs(keep=True)
+ok("active: 還有頁面開著（keep）就不砍", not _job.abandoned())
+_gate.set()
+for _ in range(200):
+    if _job.finished:
+        break
+    _time.sleep(0.01)
+_act = {j["id"]: j for j in server.active_jobs()}.get(_job.id) or {}
+ok("active: 印好的留著給別頁說「印好了」", _act.get("state") == "done" and _act.get("finishedAt", 0) > 0, str(_act))
+_job.finished_at -= server.GEN_KEEP_DONE_SEC + 1
+ok("active: 太久以前印好的不列", _job.id not in {j["id"] for j in server.active_jobs()})
+_h = server.GenJob(iter(()), {"origin": "evil", "hires": {"mode": "quick"}})
+ok("active: 不認得的 origin 當空的；Hires 標出來", _h.origin == "" and _h.kind == "hires")
+_c = server.GenJob(iter(()), {"origin": "fuse"})
+_c.cancelled = True
+with server._JOBS_LOCK:
+    server._JOBS[_c.id] = _c
+ok("active: 按停的不列", _c.id not in {j["id"] for j in server.active_jobs()})
+with server._JOBS_LOCK:
+    server._JOBS.pop(_c.id, None)
+    server._JOBS.pop(_job.id, None)
+
 if failed:
     print(f"\n{failed} failed")
     sys.exit(1)

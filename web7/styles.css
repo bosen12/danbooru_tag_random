@@ -5091,3 +5091,103 @@ html[data-booting] :is(#lib-grid, #case-grid, #book-grid):empty::before {
     bottom: calc(var(--space-sm) + 64px + env(safe-area-inset-bottom));
   }
 }
+
+/* ---------- 頂欄的生圖進度（gen-status.js） ----------
+ * 墨池、疊印台送去印的，別頁的頂欄也看得到：一圈進度＋「墨池 印製中 42%」，點了回去。
+ * 手機頂欄那排已經滿了：徽章收起來，改在換頁鈕的角落掛小圈（下面 .page-switch-gen）。 */
+.mast-tools .gen-badge {
+  gap: 6px;
+  padding-inline: 10px 12px;
+  font-family: var(--font-body);
+  font-variant-numeric: tabular-nums;
+  text-decoration: none;
+}
+.mast-tools .gen-badge[hidden] {
+  display: none;
+}
+.gen-badge-ring {
+  --ring: var(--color-accent);
+  flex: none;
+  width: 14px;
+  height: 14px;
+  border-radius: 50%;
+  background: conic-gradient(var(--ring) calc(var(--p, 0) * 1turn), color-mix(in oklab, var(--ring) 22%, transparent) 0);
+  -webkit-mask: radial-gradient(circle, transparent 3.5px, #000 4px);
+  mask: radial-gradient(circle, transparent 3.5px, #000 4px);
+}
+.gen-badge[data-state="done"] .gen-badge-ring {
+  --ring: var(--color-good);
+  --p: 1;
+}
+.gen-badge[data-state="failed"] .gen-badge-ring {
+  --p: 1;
+}
+.gen-badge[data-state="waiting"] .gen-badge-ring {
+  --ring: var(--color-muted);
+  --p: 0;
+}
+.gen-badge[data-state="done"] {
+  border-color: color-mix(in oklab, var(--color-good) 55%, var(--color-rule));
+}
+.gen-badge[data-state="failed"] {
+  border-color: color-mix(in oklab, var(--color-accent) 55%, var(--color-rule));
+}
+@media (prefers-reduced-motion: no-preference) {
+  /* 還在排隊（沒有進度）：那一圈慢慢呼吸，看得出不是卡住。 */
+  .gen-badge[data-queued="true"] .gen-badge-ring {
+    animation: gen-badge-breathe var(--dur-breath) var(--ease-in-out) infinite alternate;
+  }
+  .gen-badge-pop {
+    animation: gen-badge-pop var(--dur-medium) var(--ease-settle);
+  }
+}
+@keyframes gen-badge-breathe {
+  from {
+    opacity: 0.45;
+  }
+}
+@keyframes gen-badge-pop {
+  40% {
+    scale: 1.08;
+  }
+}
+/* 換頁鈕角落的小圈（手機）：在印是一塊會長的扇形，印好綠點，沒印成紅點，還排著空心圈。 */
+.page-switch-gen {
+  display: none;
+}
+@media (max-width: 40rem) {
+  .mast-tools .gen-badge {
+    display: none;
+  }
+  .page-switch a[data-gen] .page-switch-gen {
+    --ring: var(--color-accent);
+    position: absolute;
+    z-index: 2;
+    top: -4px;
+    right: -4px;
+    display: block;
+    width: 11px;
+    height: 11px;
+    border-radius: 50%;
+    background: conic-gradient(var(--ring) calc(var(--gp, 0) * 1turn), color-mix(in oklab, var(--ring) 30%, var(--color-paper-2)) 0);
+    box-shadow: 0 0 0 2px var(--color-paper-2);
+    pointer-events: none;
+  }
+  .page-switch a[data-gen="done"] .page-switch-gen {
+    background: var(--color-good);
+  }
+  .page-switch a[data-gen="failed"] .page-switch-gen {
+    background: var(--color-accent);
+  }
+  .page-switch a[data-gen="waiting"] .page-switch-gen {
+    background: var(--color-paper-2);
+    box-shadow:
+      0 0 0 2px var(--color-paper-2),
+      inset 0 0 0 2px var(--color-muted);
+  }
+}
+@media (max-width: 40rem) and (prefers-reduced-motion: no-preference) {
+  .page-switch a[data-gen-queued="true"] .page-switch-gen {
+    animation: gen-badge-breathe var(--dur-breath) var(--ease-in-out) infinite alternate;
+  }
+}

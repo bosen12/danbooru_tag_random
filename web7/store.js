@@ -14,6 +14,13 @@ const KEY = {
 };
 // 成品牆畫面上留幾張、存幾張是同一個數字（以前牆留 80、只存 60，重新整理後尾端無聲消失）。
 export const SHOT_MAX = 80;
+// 還排著、沒送出去的那幾張（waiting）：離開這一頁（去翻卡冊、重新整理）多久之內回來還接著印。
+// 隔太久（關掉分頁、明天再開）就不自己印了，照舊清掉。
+export const WAIT_KEEP_MS = 20 * 60 * 1000;
+/** 存檔用：還排著、伺服器那邊還沒有工作編號的那幾張。 */
+export const isWaiting = (s) => !s.job && (s.status === "queued" || s.status === "running");
+/** 讀檔用：存的時候還排著、而且是剛剛的事。 */
+export const stillWaiting = (s, now = Date.now()) => !!s && s.waiting === true && !s.job && now - (Number(s.waitedAt) || 0) < WAIT_KEEP_MS;
 
 function read(key, fallback) {
   try {
@@ -100,6 +107,8 @@ export function saveShots(shots) {
       // 伺服器那邊的出圖工作。畫到一半就重新整理的話，下次打開用它接回去（gen.js 的 resume）。
       job: s.job || null,
       live: !!s.job && (s.status === "running" || s.status === "queued"),
+      waiting: isWaiting(s),
+      waitedAt: isWaiting(s) ? Date.now() : 0,
       status: s.status === "done" ? "done" : s.status === "drawn" ? "drawn" : s.status === "failed" ? "failed" : "stopped",
       note: s.status === "done" || s.status === "drawn" ? "" : s.note || "",
       at: s.at,

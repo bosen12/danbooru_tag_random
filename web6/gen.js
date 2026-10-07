@@ -16,6 +16,12 @@ const IDLE_MS = 90000;
 // 斷線之後重接的間隔。加起來約 23 秒，比伺服器留著等的 30 秒短。
 const REATTACH_WAITS = [800, 1500, 2500, 4000, 6000, 8000];
 
+// 正在離開這一頁（換頁、重新整理）：連線是瀏覽器自己砍的，不是這張壞了。別把它記成「連不到主機」
+// 存起來——回來還要接著印（送出去的用 job 接回去，還沒拿到 job 的照排著的算，見 store.js 的 waiting）。
+let leaving = false;
+globalThis.addEventListener?.("pagehide", () => (leaving = true));
+globalThis.addEventListener?.("pageshow", () => (leaving = false));
+
 /** 伺服器（或 Comfy）說這張壞了：不是連線問題，重接也沒用。 */
 class GenError extends Error {}
 
@@ -63,6 +69,7 @@ async function* sseEvents(res) {
  *   payload(shot) → /api/gen 的 body（positive 以外的：loras、ckpt、rating、workflowId、width、height）
  *   update(shot)  shot 的狀態變了
  *   idle()        佇列清空了（無限抽用它接下一輪）
+ *   origin        "mochi"／"fuse"：哪一頁送的（頂欄的生圖進度用，見 gen-status.js）
  */
 export function createGenerator(hooks) {
   const queue = [];
@@ -99,7 +106,7 @@ export function createGenerator(hooks) {
         : fetch("/api/gen", {
             method: "POST",
             headers: { "Content-Type": "application/json", Accept: "text/event-stream", "X-Gen-Resume": "1" },
-            body: JSON.stringify({ ...hooks.payload(shot), positive: escapeForComfy(shot.positive), seed: shot.seed }),
+            body: JSON.stringify({ ...hooks.payload(shot), origin: hooks.origin, positive: escapeForComfy(shot.positive), seed: shot.seed }),
             signal: ctrl.signal,
           });
     try {
@@ -160,6 +167,7 @@ export function createGenerator(hooks) {
         hooks.update(shot);
         return false;
       }
+      if (leaving && !(err instanceof GenError)) return false;
       // 不是伺服器報錯、不是看門狗：是連線本身斷了，重接也接不回。
       shot.netFail = !(err instanceof GenError) && !stalled;
       shot.status = "failed";

@@ -1727,14 +1727,56 @@ def gen_via_ws(width: int, height: int, seed: int, positive: str, wf: dict, hire
 #   - POST /api/gen/cancel {job} 是明確的「停」：排隊中的從 Comfy 佇列刪掉，畫到一半的中斷。
 # 沒帶這個 header 的房間，/api/gen 的行為一點都沒變（斷線就中斷）。
 GEN_REATTACH_SEC = float(cfg("comfy.reattachSec", "GEN_REATTACH_SEC", 30))
-GEN_KEEP_DONE_SEC = 300.0
+# 印好的留多久給人接回去：離開墨池去翻作品冊時，那張照樣畫完（見 GEN_KEPT_SEC），回來才接得到。
+GEN_KEEP_DONE_SEC = 1800.0
+# 網站還有任何一頁開著（頂欄的生圖進度每幾秒問一次 /api/gen/active?keep=1），沒人接的那張也不砍。
+# 背景分頁的計時器最慢一分鐘才跑一次，所以留兩分鐘。
+GEN_KEPT_SEC = 120.0
 _JOBS: dict[str, "GenJob"] = {}
 _JOBS_LOCK = threading.Lock()
 
 
+def active_jobs(keep: bool = False) -> list[dict]:
+    """頂欄的生圖進度：還在排隊、畫到一半的，跟 GEN_KEEP_DONE_SEC 內印完的（按停的不算）。
+
+    keep：問的那一頁還開著，替沒人接的那幾張續命 GEN_KEPT_SEC 秒（見 GenJob.abandoned）。
+    """
+    now = time.time()
+    with _JOBS_LOCK:
+        jobs = list(_JOBS.values())
+    out = []
+    for j in jobs:
+        if j.cancelled or (j.finished and now - j.finished_at > GEN_KEEP_DONE_SEC):
+            continue
+        if keep and not j.finished:
+            with j.cond:
+                j.kept_until = now + GEN_KEPT_SEC
+        state = ("error" if j.failed else "done") if j.finished else ("running" if j.started else "queued")
+        out.append({
+            "id": j.id,
+            "origin": j.origin,
+            "kind": j.kind,
+            "state": state,
+            "progress": round(j.progress, 3),
+            "createdAt": int(j.created_at * 1000),
+            "finishedAt": int(j.finished_at * 1000) if j.finished else 0,
+        })
+    out.sort(key=lambda x: x["createdAt"])
+    return out
+
+
 class GenJob:
-    def __init__(self, events):
+    def __init__(self, events, payload: dict | None = None):
         self.id = uuid.uuid4().hex[:16]
+        # 頂欄的生圖進度（GET /api/gen/active）：哪一頁送的、是不是 Hires、建立時間、畫到哪。
+        src = payload if isinstance(payload, dict) else {}
+        self.origin = src.get("origin") if src.get("origin") in ("mochi", "fuse") else ""
+        self.kind = "hires" if src.get("hires") else "gen"
+        self.created_at = time.time()
+        self.progress = 0.0
+        self.started = False
+        self.failed = False
+        self.kept_until = 0.0
         self.cond = threading.Condition()
         self.log: list[tuple[str, dict]] = []  # 預覽以外的每一則；接回來的人從頭重播
         self.preview: tuple[int, dict] | None = None  # 預覽一張幾十 KB，只留最新的
@@ -1766,16 +1808,25 @@ class GenJob:
             if event == "preview":
                 self.pv_seq += 1
                 self.preview = (self.pv_seq, data)
+                self.started = True
             else:
                 self.log.append((event, data))
+            if event == "progress" and isinstance(data, dict):
+                self.started = True
+                try:
+                    self.progress = max(0.0, min(1.0, float(data.get("value") or 0) / float(data.get("max") or 25)))
+                except (TypeError, ValueError):
+                    pass
             if event in ("done", "error"):
                 self.finished = True
                 self.finished_at = time.time()
+                self.failed = event == "error"
             self.cond.notify_all()
 
     def abandoned(self) -> bool:
         with self.cond:
-            return self.cancelled or (self.watchers == 0 and time.time() - self.left_at > GEN_REATTACH_SEC)
+            now = time.time()
+            return self.cancelled or (self.watchers == 0 and now - self.left_at > GEN_REATTACH_SEC and now > self.kept_until)
 
     def _run(self) -> None:
         gave_up = False
@@ -3395,6 +3446,9 @@ class Handler(BaseHTTPRequestHandler):
         if path == "/api/decks":
             self._json(200, {"ok": True, "decks": card_decks.load()})
             return
+        if path == "/api/gen/active":
+            self._json(200, {"ok": True, "jobs": active_jobs(keep=urllib.parse.parse_qs(urllib.parse.urlparse(self.path).query).get("keep") == ["1"])})
+            return
         if path == "/api/gen/attach":
             qs = urllib.parse.parse_qs(urllib.parse.urlparse(self.path).query)
             job = find_job((qs.get("job") or [""])[0])
@@ -3504,7 +3558,7 @@ class Handler(BaseHTTPRequestHandler):
             accept = self.headers.get("Accept") or ""
             if "text/event-stream" in accept:
                 if self.headers.get("X-Gen-Resume") == "1":
-                    self._sse_job(GenJob(gen_events(payload)).start())
+                    self._sse_job(GenJob(gen_events(payload), payload).start())
                 else:
                     self._sse(gen_events(payload))
                 return

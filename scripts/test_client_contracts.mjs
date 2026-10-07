@@ -1679,7 +1679,7 @@ const ALBUM_FIXTURE = [
     const starters = m ? eval(m[1]) : [];
     ok("疊印台起手組合 20 組以上，每次隨機三組、可以換一組", starters.length >= 20 && fuse6.includes("function pickStarters(") && fuse6.includes("換一組"), `目前 ${starters.length} 組`);
   }
-  ok("重新整理清掉沒印出來的（墨池、疊印台）；疊印台取消的不掛上繩子", app6.includes('s.status === "done" || s.status === "drawn" || (s.live && s.job)') && fuse6.includes('.filter((p) => p.status === "done" || (p.live && p.job))') && fuse6.includes('else if (p.status === "cancelled") dropCancelled(p);'));
+  ok("重新整理清掉沒印出來的（墨池、疊印台；剛剛還排著的除外）；疊印台取消的不掛上繩子", app6.includes('s.status === "done" || s.status === "drawn" || (s.live && s.job) || S.stillWaiting(s)') && fuse6.includes('.filter((p) => p.status === "done" || (p.live && p.job) || S.stillWaiting(p))') && fuse6.includes('else if (p.status === "cancelled") dropCancelled(p);'));
   const drag6 = readFileSync(join(ROOT, "web6/drag.js"), "utf8");
   ok("整塊重畫也讓位（flipBy 用牌名認人）：墨池合成池、疊印台卡池（卡池捲出畫面時不量）；影子收下從影子的位置滑進去", motion6.includes("export function flipBy(") && app6.includes('flipBy($("pool-well"), ".pool-slot"') && fuse6.includes('(plateSeen ? flipBy : (_box, _sel, _key, mutate) => mutate())(box, ".plate-card, .ghost-card", cardKey') && fuse6.includes('alias: (k) => (k.startsWith("p:") ? "g:" + k.slice(2) : null)'));
   ok("首屏兩包 JSON：fetch 跟 preload 用同一個（帶版本的）網址，不會下載兩次", app6.includes(`fetch(document.querySelector('link[rel="preload"][href^="lexicon.json"]')?.href || "lexicon.json")`) && fuse6.includes(`fetch(document.querySelector('link[rel="preload"][href^="cards/manifest.json"]')?.href || "cards/manifest.json")`));
@@ -2030,6 +2030,21 @@ const ALBUM_FIXTURE = [
             [["app.js", "mochi"], ["fuse.js", "fuse"], ["book.js", "book"], ["album.js", "album"]].every(([f, room]) => readFileSync(join(ROOT, d, f), "utf8").includes(`mountKeysHelp("${room}");`)) &&
             readFileSync(join(ROOT, d, "styles.css"), "utf8").includes(".mast-tools .help-btn {")
           ));
+      ok("頂欄生圖進度：四個房間都掛，送印帶 origin（墨池、疊印台、Hires）；別頁開著就替沒人接的那張續命，排著的離開再回來接著印；離開頁面砍掉的連線不記成失敗；手機改掛換頁鈕的小圈（web6、web7）",
+        readFileSync(join(ROOT, "web6/gen-status.js"), "utf8") === readFileSync(join(ROOT, "web7/gen-status.js"), "utf8") &&
+          readFileSync(join(ROOT, "web6/gen-status.js"), "utf8").includes('fetch("/api/gen/active?keep=1"') &&
+          readFileSync(join(ROOT, "server.py"), "utf8").includes('if path == "/api/gen/active":') &&
+          ["web6", "web7"].every((d) => {
+            const read = (f) => readFileSync(join(ROOT, d, f), "utf8");
+            const css = read("styles.css");
+            return [["app.js", "mochi"], ["fuse.js", "fuse"], ["book.js", "book"], ["album.js", "album"]].every(([f, room]) => read(f).includes(`mountGenStatus("${room}");`)) &&
+              read("app.js").split('origin: "mochi",').length === 3 && read("fuse.js").split('origin: "fuse",').length === 3 &&
+              read("gen.js").includes("origin: hooks.origin") && read("hires.js").includes("origin: hooks.origin,") &&
+              read("gen.js").includes("if (leaving && !(err instanceof GenError)) return false;") &&
+              read("store.js").includes("waiting: isWaiting(s),") && read("fuse.js").includes("waiting: S.isWaiting(p),") &&
+              read("app.js").includes("for (const s of waiting) generator.enqueue(s);") && read("fuse.js").includes("const waiting = prints.filter((p) => p._waiting).reverse();") &&
+              css.includes(".page-switch a[data-gen] .page-switch-gen {") && /\.mast-tools \.gen-badge \{\s*display: none;/.test(css);
+          }));
       ok("疊印台手機挑牌抽屜：字盒收成一行＋挑牌，抽屜裡點牌飛進「卡池 N 張」，完成／暗幕／握把／返回手勢收（window.history，不是撤回的 history），收起捲到新牌；提示框不蓋完成（web6、web7）",
         ["web6", "web7"].every((d) => {
           const fuse = readFileSync(join(ROOT, d, "fuse.js"), "utf8");

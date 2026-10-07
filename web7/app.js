@@ -40,6 +40,7 @@ import { bindArt, artFallback } from "./card-images.js";
 import { buildLibrary, groupChips, createAssets, cardNode, setCardFlag, setEnterTarget, eagerArt, cardFacts, CARD_SUIT_INFO, CARD_SUITS, RATING_ZH } from "./cards.js";
 import { el, openSheet, anyOverlay, toast, runToastAction, ICONS } from "./ui.js";
 import { mountKeysHelp } from "./keys-help.js";
+import { mountGenStatus } from "./gen-status.js";
 import { openDecks } from "./decks.js";
 import { openPaste, listenPaste } from "./paste-prompt.js";
 import { paintWeight, wireWeightInput, weightRow, weightPositive } from "./weights.js";
@@ -108,6 +109,7 @@ async function boot() {
   initMotion();
   // 快捷鍵說明（電腦）：頂欄的「?」、按 ? 打開（keys-help.js）。
   mountKeysHelp("mochi");
+  mountGenStatus("mochi");
   try {
     const [lexicon, manifest] = await Promise.all([
       fetch(document.querySelector('link[rel="preload"][href^="lexicon.json"]')?.href || "lexicon.json").then((r) => r.json()),
@@ -129,13 +131,16 @@ async function boot() {
   weights = new Map(Object.entries(S.handoffWeights).filter(([t, w]) => pool.has(t) && w !== 1));
   bans = new Set(S.loadBans().filter((t) => lib.byTag.has(t)));
   // 重新整理就把沒印出來的清掉（失敗、取消、停掉的）：以前它們一直留在牆上掛著「再試一次」。
-  // 留下的：印好的、只抽牌的（本來就沒要印）、畫到一半還接得回去的。
+  // 留下的：印好的、只抽牌的（本來就沒要印）、畫到一半還接得回去的、剛剛還排著的（去別頁晃一下回來）。
   const saved = S.loadShots();
-  shots = saved.filter((s) => s.status === "done" || s.status === "drawn" || (s.live && s.job));
-  if (shots.length !== saved.length) S.saveShots(shots);
+  shots = saved.filter((s) => s.status === "done" || s.status === "drawn" || (s.live && s.job) || S.stillWaiting(s));
   // 上次畫到一半就重新整理（或關掉分頁）的那張：伺服器還留著一陣子，接回去。
   const resumable = shots.filter((s) => s.live && s.job);
   for (const s of resumable) s.status = "queued";
+  // 還排著沒送出去的：接在後面照原本的順序印（牆上新的在前面，所以倒過來）。
+  const waiting = shots.filter((s) => S.stillWaiting(s)).reverse();
+  for (const s of waiting) s.status = "queued";
+  if (shots.length !== saved.length) S.saveShots(shots);
 
   buildHand();
   buildTrashPanel();
@@ -156,6 +161,8 @@ async function boot() {
   $("wall-start").addEventListener("click", () => $("go-bar").querySelector(".btn-primary")?.click());
   renderTrash();
   for (const s of resumable) generator.resume(s);
+  for (const s of waiting) generator.enqueue(s);
+  if (waiting.length) toast(`接著印剛才排著的 ${waiting.length} 張`);
   // Hires 做到一半就重新整理的：接回去。
   for (const s of shots) if (s.status === "done" && s.hiresJob) hiresRun.resume(s, s.hiresJob);
   for (const root of [$("lib-grid"), $("pool-well"), $("wall"), hand?.fan]) attachPeek(root, ".card[data-tag]", peekInfo);
@@ -1480,6 +1487,7 @@ function explainBlockedHeat(h, btn, rating) {
 const tabNote = tabTitle();
 
 const generator = createGenerator({
+  origin: "mochi",
   payload: (shot) => ({
     width: shot.width,
     height: shot.height,
@@ -1525,6 +1533,7 @@ const generator = createGenerator({
 
 // Hires：印好的那張放大、重畫細節，做好直接換掉牆上那張（見 hires.js）。
 const hiresRun = createHires({
+  origin: "mochi",
   update: (shot) => {
     updateShot(shot);
     // 做完、停掉、做壞了都存一次（做壞的那筆工作編號要從存檔拿掉，不然每次重新整理都再接一次）。
@@ -1721,7 +1730,11 @@ function drawBatch(gen) {
   trimWall();
   S.saveShots(shots);
   // 一次抽超過 80 張時，最舊的幾張剛做好就被 trimWall 裁掉了：只送還在牆上的。
-  if (gen) for (const shot of made) if (shots.includes(shot)) generator.enqueue(shot);
+  if (gen) {
+    for (const shot of made) if (shots.includes(shot)) generator.enqueue(shot);
+    // 排進佇列之後再存一次：存檔才知道它們還排著（去別頁晃一下回來接著印）。
+    S.saveShots(shots);
+  }
   renderGoBar();
   document.getElementById("wall-head").scrollIntoView({ block: "nearest", behavior: reducedMotion() ? "instant" : "smooth" });
 }
@@ -2284,8 +2297,8 @@ function reprint(shot) {
   const r = node.getBoundingClientRect();
   if (r.top < 0 || r.top > innerHeight - 80) node.scrollIntoView({ behavior: matchMedia("(prefers-reduced-motion: reduce)").matches ? "auto" : "smooth", block: "nearest" });
   trimWall();
-  S.saveShots(shots);
   generator.enqueue(copy);
+  S.saveShots(shots);
   renderGoBar();
 }
 
