@@ -301,3 +301,43 @@ def stats(known, favorites) -> dict:
         "hours": hours,
         "works": len(favorites or []),
     }
+
+
+def by_tag(tag: str, favorites: dict, limit: int = 48, offset: int = 0) -> dict:
+    """卡冊「用它做過的圖」：日誌裡用到這張牌、印好的每一張（Hires 不重複算）。
+
+    favorites：fav_key → 作品冊那一筆（{"id", "thumb"}）。收藏過的排前面，再來一般的，撤下過的最後；同一類新的在前。
+    """
+    tag = str(tag or "").strip()
+    if not tag:
+        return {"items": [], "total": 0}
+    rows = []
+    for e in _load():
+        if e.get("kind") == "hires" or not e.get("ok") or not e.get("image"):
+            continue
+        tags = tags_of(e.get("positive"))
+        if tag not in tags:
+            continue
+        rows.append((e, tags))
+    out = []
+    for e, tags in rows:
+        known = favorites.get("_known", ())
+        fav = favorites.get(fav_key(e.get("seed"), [t for t in tags if t in known]))
+        out.append({
+            "id": e.get("id"),
+            "at": e.get("at") or 0,
+            "image": e.get("image"),
+            "width": e.get("width"),
+            "height": e.get("height"),
+            "seed": e.get("seed"),
+            "origin": e.get("origin") or "",
+            "positive": e.get("positive") or "",
+            "mark": e.get("mark"),
+            "fav": fav["id"] if fav else None,
+            "albumThumb": fav.get("thumb") if fav else None,
+        })
+    rank = lambda r: (0 if r["fav"] else 2 if r["mark"] == "discard" else 1, -r["at"])  # noqa: E731
+    out.sort(key=rank)
+    limit = max(1, min(200, int(limit or 48)))
+    offset = max(0, int(offset or 0))
+    return {"items": out[offset:offset + limit], "total": len(out)}

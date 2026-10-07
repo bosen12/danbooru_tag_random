@@ -1103,3 +1103,44 @@
 .ach-progress .ach-bar i {
   background: var(--color-good);
 }
+
+/* ---------- 用它做過的圖（從出圖日誌） ----------
+ * 收藏過的右上角一顆星，撤下過的淡一點；原圖不在了留一格說明。 */
+.book-work-badge {
+  position: absolute;
+  top: 4px;
+  right: 4px;
+  padding: 0 5px;
+  border-radius: 3px;
+  background: color-mix(in oklch, var(--color-paper) 78%, transparent);
+  color: var(--color-muted);
+  font-size: var(--text-2xs);
+  line-height: 1.6;
+}
+.book-work-badge.is-fav {
+  color: var(--color-good);
+}
+.book-work[data-discard="true"] img {
+  opacity: 0.55;
+}
+.book-work-gone {
+  display: grid;
+  place-items: center;
+  height: 100%;
+  min-height: 60px;
+  color: var(--color-muted);
+  font-size: var(--text-2xs);
+}
+.book-works-more {
+  justify-self: start;
+}
+.book-works-more[hidden],
+.book-works-grid[hidden],
+.book-works-empty[hidden] {
+  display: none;
+}
+.book-work-cards {
+  margin: 0;
+  color: var(--color-ink-2);
+  font-size: var(--text-xs);
+}

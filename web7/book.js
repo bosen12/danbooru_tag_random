@@ -24,6 +24,7 @@ import { getSfx } from "./sfx.js";
 import { attachPeek } from "./card-peek.js";
 import * as S from "./store.js";
 import { USAGE_KEY, loadUsage, seedUsage, fetchUsage, tagsOfPositive } from "./usage.js";
+import { weightsOfPositive } from "./weights.js";
 
 const sfx = getSfx();
 const $ = (id) => document.getElementById(id);
@@ -889,10 +890,12 @@ function warText(tag) {
 }
 
 /* ---------- 用這張牌做過的圖 ----------
- * 直接讀成品牆（墨池）和晾紙繩（疊印台）上還留著的成品，不另外存：那兩處本來就有上限，
- * 舊的會被擠掉，卡冊不多佔空間。所以這裡看得到的是「最近、還留著的」，不是全部歷史。 */
+ * 從出圖日誌撈（server.py 的 /api/genlog/bytag）：這張牌出現過、印好的每一張都看得到，
+ * 收藏過的排前面（用作品冊另存的那份圖，ComfyUI 那邊刪了也還在），撤下過的排最後。
+ * 日誌以前印的：成品牆（墨池）、晾紙繩（疊印台）上還留著的照樣併進來。 */
 
-const WORKS_MAX = 24;
+const WORKS_PAGE = 48;
+const ROOM_ZH = { mochi: "墨池", fuse: "疊印台" };
 
 function readList(key) {
   try {
@@ -903,64 +906,152 @@ function readList(key) {
   }
 }
 
-function worksOf(card) {
-  const when = (x) => Date.parse(x.at) || 0;
+/** 成品牆、晾紙繩上還留著、用到這張牌的（日誌以前的也在這裡）。 */
+function localWorks(card) {
   const has = (x) => x.image && tagsOfPositive(x.positive).includes(card.tag);
-  const list = [
-    ...readList("mochi.shots.v1").filter(has).map((x) => ({ x, room: "墨池" })),
-    ...readList("mochi.fuse.prints.v1").filter(has).map((x) => ({ x, room: "疊印台" })),
-  ].sort((a, b) => when(b.x) - when(a.x));
-  const shown = list.slice(0, WORKS_MAX);
-  const head = el(
-    "h3",
-    { class: "book-works-head" },
-    "用它做過的圖",
-    el("span", {}, list.length ? `${list.length} 張${list.length > WORKS_MAX ? `・最近 ${WORKS_MAX} 張` : ""}` : "")
-  );
-  if (!shown.length) {
-    return el(
-      "section",
-      { class: "book-works" },
-      head,
-      el("p", { class: "book-works-empty" }, "成品牆和晾紙繩上目前沒有用到它的圖。那兩處只留最近的幾十張，舊的會被擠掉。")
-    );
-  }
-  const grid = el(
-    "div",
-    { class: "book-works-grid" },
-    shown.map(({ x, room }, i) =>
-      el(
-        "button",
-        {
-          class: "book-work",
-          type: "button",
-          style: `--i: ${Math.min(i, 12)}; aspect-ratio: ${x.width || 1} / ${x.height || 1}`,
-          "aria-label": `${room}的成品，${new Date(when(x)).toLocaleString("zh-TW")}，點一下放大`,
-          onclick: (e) => openWork(x, room, e.currentTarget),
-        },
-        el("img", { src: viewSrc(x.image), alt: "", loading: "lazy", decoding: "async" }),
-        el("span", { class: "book-work-room" }, room)
-      )
-    )
-  );
-  return el("section", { class: "book-works" }, head, grid);
+  return [
+    ...readList("mochi.shots.v1").filter(has).map((x) => ({ ...x, room: "墨池", at: Date.parse(x.at) || 0, fav: x.albumId || null })),
+    ...readList("mochi.fuse.prints.v1").filter(has).map((x) => ({ ...x, room: "疊印台", at: Date.parse(x.at) || 0, fav: x.albumId || null })),
+  ].sort((a, b) => b.at - a.at);
 }
 
-/** 放大看一張成品：從縮圖的位置長出來（跟牌飛進詳情同一個手法）。 */
-function openWork(x, room, thumb) {
+function workTile(x, i) {
+  const src = x.albumThumb || viewSrc(x.image);
+  const img = el("img", {
+    src,
+    alt: "",
+    loading: "lazy",
+    decoding: "async",
+    onerror: (e) => {
+      // ComfyUI 那邊把原圖刪了（又沒收藏）：留一格說明，不要破圖。
+      const t = e.currentTarget.parentElement;
+      t.classList.add("is-gone");
+      e.currentTarget.replaceWith(el("span", { class: "book-work-gone" }, "原圖不在了"));
+    },
+  });
+  return el(
+    "button",
+    {
+      class: "book-work",
+      type: "button",
+      dataset: { fav: x.fav ? "true" : "false", discard: x.mark === "discard" ? "true" : "false" },
+      style: `--i: ${Math.min(i, 12)}; aspect-ratio: ${x.width || 1} / ${x.height || 1}`,
+      "aria-label": `${x.room}的成品${x.fav ? "（收藏過）" : x.mark === "discard" ? "（撤下過）" : ""}，${new Date(x.at).toLocaleString("zh-TW")}，點一下放大`,
+      onclick: (e) => openWork(x, e.currentTarget),
+    },
+    img,
+    el("span", { class: "book-work-room" }, x.room),
+    x.fav ? el("span", { class: "book-work-badge is-fav", "aria-hidden": "true" }, "★") : x.mark === "discard" ? el("span", { class: "book-work-badge", "aria-hidden": "true" }, "撤下") : null
+  );
+}
+
+function worksOf(card) {
+  const local = localWorks(card);
+  const count = el("span", {});
+  const head = el("h3", { class: "book-works-head" }, "用它做過的圖", count);
+  const grid = el("div", { class: "book-works-grid" });
+  const more = el("button", { class: "btn btn-small book-works-more", type: "button", hidden: true }, "再多看一些");
+  const note = el("p", { class: "book-works-empty" });
+  const box = el("section", { class: "book-works" }, head, grid, note, more);
+  let items = [];
+  let total = 0;
+  let fromLog = 0;
+
+  const paint = () => {
+    // 日誌那邊有的就不重複放（同一張圖的網址一樣）；日誌以前的接在後面。
+    const seen = new Set(items.map((x) => x.image));
+    const extra = local.filter((x) => !seen.has(x.image));
+    const all = [...items, ...extra];
+    count.textContent = all.length || total ? `${total + extra.length} 張${total > fromLog ? `・先看 ${all.length} 張` : ""}` : "";
+    grid.replaceChildren(...all.map(workTile));
+    grid.hidden = !all.length;
+    note.hidden = !!all.length;
+    note.textContent = "還沒有用到它的成品。從現在起印的每一張都會記下來，這裡就看得到。";
+    more.hidden = fromLog >= total;
+  };
+
+  const load = async (offset) => {
+    const r = await fetch(`/api/genlog/bytag?${new URLSearchParams({ tag: card.tag, limit: String(WORKS_PAGE), offset: String(offset) })}`, { cache: "no-store" });
+    if (!r.ok) throw new Error(String(r.status));
+    const j = await r.json();
+    total = j.total || 0;
+    const add = (j.items || []).map((x) => ({ ...x, room: ROOM_ZH[x.origin] || "成品" }));
+    items = offset ? items.concat(add) : add;
+    fromLog = items.length;
+  };
+
+  more.addEventListener("click", async () => {
+    more.disabled = true;
+    try {
+      await load(fromLog);
+      paint();
+    } catch {
+      refuse(more);
+    } finally {
+      more.disabled = false;
+    }
+  });
+  paint();
+  // 先畫本機還留著的，日誌回來再補齊（伺服器沒開就只有本機的）。
+  load(0)
+    .then(paint)
+    .catch(() => {});
+  return box;
+}
+
+/** 放大看一張成品：從縮圖的位置長出來（跟牌飛進詳情同一個手法）。可以看提示詞、把牌帶回墨池。 */
+function openWork(x, thumb) {
   sfx.tap?.();
+  const src = x.albumThumb && !x.image ? x.albumThumb : viewSrc(x.image);
+  const cards = tagsOfPositive(x.positive).filter((t) => lib.byTag.has(t));
+  // 原圖讀不到（ComfyUI 那邊刪了）：收藏過的換成作品冊那份。
+  let fellBack = false;
+  const big = el("img", {
+    src,
+    alt: "",
+    decoding: "async",
+    onerror: (e) => {
+      if (fellBack || !x.albumThumb) return;
+      fellBack = true;
+      e.currentTarget.src = x.albumThumb;
+    },
+  });
   const sheet = openSheet(
-    `${room}的成品`,
+    `${x.room}的成品`,
     el(
       "div",
       { class: "book-work-full" },
-      el("img", { src: viewSrc(x.image), alt: "", decoding: "async" }),
-      el("p", { class: "tag-en" }, [x.width && x.height ? `${x.width}×${x.height}` : "", new Date(Date.parse(x.at) || 0).toLocaleString("zh-TW")].filter(Boolean).join("・"))
+      big,
+      el("p", { class: "tag-en" }, [x.width && x.height ? `${x.width}×${x.height}` : "", x.seed != null ? `seed ${x.seed}` : "", new Date(x.at).toLocaleString("zh-TW"), x.fav ? "★ 收藏過" : x.mark === "discard" ? "撤下過" : ""].filter(Boolean).join("・")),
+      cards.length ? el("p", { class: "book-work-cards" }, cards.map((t) => lib.byTag.get(t).zh).join("・")) : null
     ),
-    { wide: true, foot: [el("a", { class: "btn btn-small", href: x.image, target: "_blank", rel: "noopener" }, "開原圖")] }
+    {
+      wide: true,
+      foot: [
+        cards.length
+          ? el(
+              "button",
+              {
+                class: "btn btn-small btn-primary",
+                type: "button",
+                onclick: (e) => {
+                  // 份量（weights.js）從提示詞讀回來：帶回去還是那個份量。
+                  const all = weightsOfPositive(x.positive);
+                  S.handOffPool(cards, "book", Object.fromEntries(cards.filter((t) => all[t]).map((t) => [t, all[t]])));
+                  e.currentTarget.textContent = "帶過去了…";
+                  setTimeout(() => (location.href = "./"), reducedMotion() ? 0 : DUR.short);
+                },
+              },
+              `這張的 ${cards.length} 張牌帶回墨池`
+            )
+          : null,
+        x.fav ? el("a", { class: "btn btn-small", href: `album.html#${encodeURIComponent(x.fav)}` }, "打開作品冊") : null,
+        x.image ? el("a", { class: "btn btn-small", href: x.image, target: "_blank", rel: "noopener" }, "開原圖") : null,
+      ],
+    }
   );
-  const s = sheet.sheet || document.querySelector(".overlay:last-of-type .sheet");
-  const dst = s && s.querySelector(".book-work-full img");
+  const s2 = sheet.sheet || document.querySelector(".overlay:last-of-type .sheet");
+  const dst = s2 && s2.querySelector(".book-work-full img");
   if (!dst || reducedMotion()) return;
   const go = () => {
     const from = thumb.getBoundingClientRect();

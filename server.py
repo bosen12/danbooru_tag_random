@@ -2037,6 +2037,33 @@ def active_jobs(keep: bool = False) -> list[dict]:
 
 
 _STATS_CACHE: dict = {"key": None, "value": None}
+_FAV_CACHE: dict = {"key": None, "value": None}
+
+
+def _recipes_stamp() -> tuple:
+    try:
+        st = Path(recipes.DATA_DIR).stat()
+        n = sum(1 for _ in Path(recipes.DATA_DIR).glob("*.json"))
+        return (st.st_mtime_ns, n)
+    except OSError:
+        return (0, 0)
+
+
+def favorite_index() -> dict:
+    """作品冊每一筆的 fav_key → {"id", "thumb"}（gen_log 用種子＋牌認收藏）。作品冊沒變就用上一次的。
+    "_known" 放詞庫的牌（算 fav_key 時只看牌）。"""
+    key = (_recipes_stamp(), card_usage.LEXICON_PATH.stat().st_mtime_ns if card_usage.LEXICON_PATH.exists() else 0)
+    if _FAV_CACHE["key"] == key and _FAV_CACHE["value"] is not None:
+        return _FAV_CACHE["value"]
+    known = card_usage._known_tags()
+    idx: dict = {"_known": known}
+    for r in recipes.list_recipes():
+        cards = [t for t in gen_log.tags_of(r.get("positive")) if t in known]
+        ref = r.get("thumbnail") or r.get("image") or {}
+        thumb = f"/api/recipes/files/{urllib.parse.quote(str(ref.get('file')))}" if isinstance(ref, dict) and ref.get("file") else None
+        idx[gen_log.fav_key(r.get("seed"), cards)] = {"id": r.get("id"), "thumb": thumb}
+    _FAV_CACHE.update(key=key, value=idx)
+    return idx
 
 
 def genlog_stats() -> dict:
@@ -3765,6 +3792,17 @@ class Handler(BaseHTTPRequestHandler):
             return
         # 出圖日誌（作品冊的「日誌」）：新的在前，before＝從這個時間（毫秒）之前接著翻。
         # 牌的戰績（卡冊）、模型成績單（作品冊）：從日誌和作品冊算。
+        # 卡冊「用它做過的圖」：日誌裡用到這張牌的每一張。
+        if path == "/api/genlog/bytag":
+            qs = urllib.parse.parse_qs(urllib.parse.urlparse(self.path).query)
+            try:
+                limit = int((qs.get("limit") or ["48"])[0])
+                offset = int((qs.get("offset") or ["0"])[0])
+            except ValueError:
+                self._json(400, {"ok": False, "error": "limit、offset 要是數字"})
+                return
+            self._json(200, {"ok": True, **gen_log.by_tag((qs.get("tag") or [""])[0], favorite_index(), limit, offset)})
+            return
         if path == "/api/genlog/stats":
             self._json(200, {"ok": True, **genlog_stats()})
             return

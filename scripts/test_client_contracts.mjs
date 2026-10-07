@@ -2036,6 +2036,10 @@ const ALBUM_FIXTURE = [
           readFileSync(join(ROOT, "web6/pose.js"), "utf8").includes('state.kind === "skeleton" ? { skeleton: true }') &&
           readFileSync(join(ROOT, "server.py"), "utf8").includes('"skeleton": raw.get("skeleton") is True') &&
           ["web6", "web7"].every((d) => readFileSync(join(ROOT, d, "app.js"), "utf8").includes("size: () => ({ w: settings.width, h: settings.height })") && readFileSync(join(ROOT, d, "styles.css"), "utf8").includes(".pe-canvas {")));
+      ok("卡冊「用它做過的圖」從出圖日誌撈（/api/genlog/bytag）：收藏過的排前面、用作品冊那份圖，撤下的排最後，可以再多看；日誌以前留在成品牆的照樣併進來；點開可以把牌帶回墨池（web6、web7）",
+        readFileSync(join(ROOT, "web6/book.js"), "utf8") === readFileSync(join(ROOT, "web7/book.js"), "utf8") &&
+          readFileSync(join(ROOT, "server.py"), "utf8").includes('if path == "/api/genlog/bytag":') &&
+          readFileSync(join(ROOT, "web6/book.js"), "utf8").includes("/api/genlog/bytag?") && readFileSync(join(ROOT, "web6/book.js"), "utf8").includes("function localWorks(card)"));
       ok("姿勢編輯器：拖點時繞著上一節轉、骨頭長度不變（「長度不變」關掉或按 Shift 才平移拉長），拖出畫面不壓扁（外圍留一圈邊看得到、拖得回來，「拉回中間」）（web6、web7）",
         readFileSync(join(ROOT, "web6/pose-editor.js"), "utf8") === readFileSync(join(ROOT, "web7/pose-editor.js"), "utf8") &&
           (() => {

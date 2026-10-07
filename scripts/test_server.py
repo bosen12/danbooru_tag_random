@@ -1442,6 +1442,11 @@ _ma = next((m for m in _st["models"] if m["kind"] == "ckpt" and m["name"] == "a"
 _ml = next((m for m in _st["models"] if m["kind"] == "lora" and m["name"] == "ink"), {})
 ok("stats: 底模成績（張數、收藏、撤下、印壞、平均畫多久、常配的牌、代表作先挑收藏的）", _ma.get("n") == 3 and _ma.get("fav") == 1 and _ma.get("discard") == 1 and _ma.get("failed") == 1 and _ma.get("drawMs") == 22000 and _ma.get("cards", [None])[0] == "1girl" and (_ma.get("best") or {}).get("id") == "s1", str(_ma))
 ok("stats: LoRA 也各算一份；多的排前面", _ml.get("n") == 1 and _st["models"][0]["name"] == "a", str(_st["models"]))
+_fi = {"_known": _known, _gl.fav_key(1, ["1girl", "kimono", "rain"]): {"id": "w1", "thumb": "/api/recipes/files/w1.webp"}}
+_bt = _gl.by_tag("kimono", _fi)
+ok("bytag: 用到這張牌、印好的才算（Hires、印壞的不算）", _bt["total"] == 2 and {r["id"] for r in _bt["items"]} == {"s1", "s2"}, str(_bt))
+ok("bytag: 收藏過的排第一、帶作品冊的縮圖；撤下的排最後", _bt["items"][0]["id"] == "s1" and _bt["items"][0]["fav"] == "w1" and _bt["items"][0]["albumThumb"].endswith("w1.webp") and _bt["items"][-1]["mark"] == "discard")
+ok("bytag: 分頁", _gl.by_tag("kimono", _fi, limit=1, offset=1)["items"][0]["id"] == "s2" and _gl.by_tag("", _fi)["total"] == 0)
 ok("stats: 提示詞拆字跟 usage.js 一樣", _gl.tags_of("(smile:1.2), 1girl,1girl ,  (a (b):0.9)") == ["smile", "1girl", "a (b)"])
 _gl.LOG_PATH = _saved_log
 
