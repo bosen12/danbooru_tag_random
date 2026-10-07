@@ -17,6 +17,7 @@ import { mountKeysHelp } from "./keys-help.js";
 import { mountGenStatus } from "./gen-status.js";
 import { openDecks } from "./decks.js";
 import { openPaste } from "./paste-prompt.js";
+import { measure, evaluate, announce, openWall } from "./achievements.js";
 import { initMotion, settleMotion, seat, refuse, flight, reducedMotion, CURVE, DUR, css } from "./motion.js";
 import { watchLink, LINK_LABEL, viewSrc } from "./gen.js";
 import { getSfx } from "./sfx.js";
@@ -154,7 +155,11 @@ async function boot() {
   watchServer();
   warReady.then(() => {
     if (isWar()) (render(), renderSummary());
+    // 日誌的統計到了，成就才算得完整：這時才比對、跳「解鎖」。
+    renderAch({ announceNew: true });
   });
+  $("book-ach").addEventListener("click", openAch);
+  renderAch();
   // 滑鼠停在牌上：跟墨池、疊印台同一張浮空放大卡，多一行用過幾次。
   attachPeek($("book-grid"), ".card[data-tag]", peekInfo);
   settleMotion();
@@ -279,6 +284,7 @@ function renderSuits() {
   const tabs = $("book-suits");
   const pool = lib.cards.filter(visibleCard);
   const usedIn = (s) => pool.filter((c) => (s === "all" || c.suit === s) && countOf(c.tag) > 0).length;
+  const totalIn = (s) => pool.filter((c) => c.suit === s).length || 1;
   tabs.replaceChildren(
     el("button", { class: "suit-tab pressable", type: "button", "aria-pressed": ui.suit === "all" ? "true" : "false", onclick: (e) => pickSuit("all", e.currentTarget) }, "全部"),
     ...CARD_SUITS.map((s) =>
@@ -287,9 +293,10 @@ function renderSuits() {
         {
           class: "suit-tab pressable",
           type: "button",
-          style: `--suit: var(--suit-${s})`,
+          // --lit：這個花色點亮了幾成，畫成圖章外圈的一圈（book.css）。
+          style: `--suit: var(--suit-${s}); --lit: ${(usedIn(s) / totalIn(s)).toFixed(3)}`,
           "aria-pressed": ui.suit === s ? "true" : "false",
-          title: `${CARD_SUIT_INFO[s].zh}：用過 ${usedIn(s)} 張`,
+          title: `${CARD_SUIT_INFO[s].zh}：點亮 ${usedIn(s)} / ${totalIn(s)} 張`,
           onclick: (e) => pickSuit(s, e.currentTarget),
         },
         el("b", { "aria-hidden": "true" }, CARD_SUIT_INFO[s].glyph),
@@ -848,6 +855,29 @@ function openCard(card, srcNode) {
   );
   flyToDetail(srcNode, sheet.sheet || document.querySelector(".overlay:last-of-type .sheet"));
   if (c) countUp(big, c);
+}
+
+/* ---------- 成就牆（achievements.js） ---------- */
+
+function achNow() {
+  const f = measure({ cards: lib.cards.filter(visibleCard), usage, war });
+  return [f, evaluate(f)];
+}
+
+function openAch() {
+  sfx.open?.();
+  const [f, list] = achNow();
+  openWall(f, list);
+}
+
+/** 標題旁那顆鈕寫上解鎖幾項；announceNew：跟上次比，新解鎖的跳提示。 */
+function renderAch({ announceNew = false } = {}) {
+  const [, list] = achNow();
+  const done = list.filter((a) => a.level > 0).length;
+  const b = $("book-ach");
+  b.textContent = `成就 ${done} / ${list.length}`;
+  b.setAttribute("aria-label", `成就牆：解鎖 ${done} / ${list.length} 項，還有每個花色的收集進度`);
+  if (announceNew) announce(list, openAch);
 }
 
 /** 詳情裡的戰績：出圖日誌裡用了這張牌的、印好的圖，收藏幾張、撤下幾張。 */
@@ -1417,9 +1447,11 @@ function applyUsage(next, { quiet = false } = {}) {
     renderSummary();
     renderSuits();
     render();
+    renderAch({ announceNew: !!war });
     return;
   }
   bumpTo(next);
+  renderAch({ announceNew: !!war });
 }
 
 function watchOtherTabs() {

@@ -2030,6 +2030,14 @@ const ALBUM_FIXTURE = [
             [["app.js", "mochi"], ["fuse.js", "fuse"], ["book.js", "book"], ["album.js", "album"]].every(([f, room]) => readFileSync(join(ROOT, d, f), "utf8").includes(`mountKeysHelp("${room}");`)) &&
             readFileSync(join(ROOT, d, "styles.css"), "utf8").includes(".mast-tools .help-btn {")
           ));
+      ok("成就與收集進度：卡冊標題旁「成就 N / M」打開成就牆（每個花色點亮進度、分級成就、解鎖日期），花色圖章外圈一圈點亮進度；新解鎖跳提示、第一次只說總數；只看不擋（web6、web7）",
+        ["book.js", "book.css", "achievements.js"].every((f) => readFileSync(join(ROOT, "web6", f), "utf8") === readFileSync(join(ROOT, "web7", f), "utf8")) &&
+          ["web6", "web7"].every((d) => readFileSync(join(ROOT, d, "book.html"), "utf8").includes('id="book-ach"')) &&
+          (() => {
+            const b = readFileSync(join(ROOT, "web6/book.js"), "utf8");
+            const a = readFileSync(join(ROOT, "web6/achievements.js"), "utf8");
+            return b.includes("renderAch({ announceNew: true });") && b.includes("--lit: ${") && a.includes("export function announce(") && a.includes("成就牆開張") && !/ratingBlocked|disabled/.test(a);
+          })());
       ok("模型成績單：作品冊多「模型」分頁（每個底模、LoRA：代表作、印好、收藏、撤下、印壞、平均畫多久、常配的牌），點一張跳到日誌只看它印的（web6、web7）",
         ["album.js", "album.css", "album-models.js", "album-log.js"].every((f) => readFileSync(join(ROOT, "web6", f), "utf8") === readFileSync(join(ROOT, "web7", f), "utf8")) &&
           (() => {

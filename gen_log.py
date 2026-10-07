@@ -217,6 +217,9 @@ def stats(known, favorites) -> dict:
     fav_n = 0
     drop_n = 0
     first = None
+    # 成就用（卡冊的成就牆）：每天印好幾張（本機時間的日期）、幾點印的。
+    days: dict[str, int] = {}
+    hours = [0] * 24
 
     def model(kind: str, name: str) -> dict:
         key = f"{kind}:{name}"
@@ -257,6 +260,10 @@ def stats(known, favorites) -> dict:
         total += 1
         fav_n += fav
         drop_n += drop
+        lt = time.localtime(at / 1000)
+        day = time.strftime("%Y-%m-%d", lt)
+        days[day] = days.get(day, 0) + 1
+        hours[lt.tm_hour] += 1
         for t in tags:
             c = cards.get(t)
             if c is None:
@@ -280,4 +287,14 @@ def stats(known, favorites) -> dict:
             "last": m["last"],
         })
     out_models.sort(key=lambda m: (-m["n"], m["name"]))
-    return {"cards": cards, "models": out_models, "total": total, "fav": fav_n, "discard": drop_n, "since": first}
+    return {
+        "cards": cards,
+        "models": out_models,
+        "total": total,
+        "fav": fav_n,
+        "discard": drop_n,
+        "since": first,
+        "days": days,
+        "hours": hours,
+        "works": len(favorites or []),
+    }
