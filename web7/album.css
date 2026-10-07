@@ -546,3 +546,58 @@
     width: 72px;
   }
 }
+
+/* ---------- 分輯與相似的作品（album-groups.js） ----------
+ * 分輯時大圖牆變成一段一段：段名＋件數，段裡還是照長寬比排的幾欄。「沒有那一類牌的」那段淡一點。 */
+.works-group-lead {
+  align-self: center;
+  margin-right: var(--space-2xs);
+  color: var(--color-muted);
+  font-size: var(--text-xs);
+}
+.works-group[hidden] {
+  display: none;
+}
+.album-grid.is-grouped {
+  display: grid;
+  gap: var(--space-lg);
+  columns: auto;
+}
+.album-grid-in {
+  columns: 15rem;
+  column-gap: var(--space-sm);
+}
+.album-group[data-rest="true"] .log-day-head {
+  color: var(--color-muted);
+}
+.album-similar h3 {
+  margin: 0 0 var(--space-xs);
+}
+.album-similar-row {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(72px, 1fr));
+  gap: var(--space-xs);
+}
+.album-similar-item {
+  display: grid;
+  gap: 2px;
+  padding: 0;
+  border: 0;
+  background: none;
+  color: var(--color-muted);
+  font: inherit;
+  text-align: center;
+  cursor: pointer;
+}
+.album-similar-item .album-frame {
+  max-height: 120px;
+}
+.album-similar-item small {
+  font-size: var(--text-xs);
+}
+@media (max-width: 40rem) {
+  .album-grid-in {
+    columns: 2;
+    column-gap: 6px;
+  }
+}

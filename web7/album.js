@@ -6,6 +6,7 @@
  *   - 網址帶 #作品編號（收藏完按「打開作品冊」過來）：直接打開那一張。
  *   - 「日誌」分頁：印過的每一張，不只收藏的（album-log.js）。網址帶 ?tab=log 直接開在日誌。
  *   - 「模型」分頁：每個底模、LoRA 的成績單（album-models.js）；點一張跳到日誌只看它印的。
+ *   - 分輯：依時代、髮色、服裝、場景把作品分段（album-groups.js）；詳情裡列出相似的作品。
  */
 import { RATING_LABEL, ratingBlocked } from "./rules/rating.js";
 import { buildLibrary, ERA_ZH } from "./cards.js";
@@ -21,6 +22,7 @@ import { removeFromAlbum } from "./album-save.js";
 import { weightsOfPositive } from "./weights.js";
 import { createLog, LOG_FILTERS } from "./album-log.js";
 import { createModels } from "./album-models.js";
+import { GROUPINGS, groupWorks, similarWorks } from "./album-groups.js";
 
 const sfx = getSfx();
 const $ = (id) => document.getElementById(id);
@@ -38,6 +40,16 @@ const TABS = [
 ];
 let tab = TABS.some(([v]) => v === new URLSearchParams(location.search).get("tab")) ? new URLSearchParams(location.search).get("tab") : "works";
 let logFilter = "all";
+// 分輯（作品分頁）：記在這個瀏覽器。
+const GROUP_KEY = "mochi.album.group.v1";
+let grouping = (() => {
+  try {
+    const v = localStorage.getItem(GROUP_KEY);
+    return GROUPINGS.some(([g]) => g === v) ? v : "none";
+  } catch {
+    return "none";
+  }
+})();
 let log = null;
 let models = null;
 const PLACEHOLDER = { works: "找作品：牌名、提示詞…", log: "找印過的：牌名、提示詞、底模、LoRA…", models: "找模型：底模、LoRA 的名字…" };
@@ -46,6 +58,8 @@ const zh = (t) => lib?.byTag.get(t)?.zh || t;
 const fileUrl = (ref) => (ref && ref.file ? `/api/recipes/files/${encodeURIComponent(ref.file)}` : null);
 const cardsOf = (w) => tagsOfPositive(w.positive || "").filter((t) => lib.byTag.has(t));
 const mineOf = (w) => (Array.isArray(w.pinned) ? w.pinned : []).filter((t) => lib.byTag.has(t));
+// 找相似用：去掉每張都有的人數牌（1個女性、單人），留下看得出差別的。
+const tellingOf = (w) => (w._telling ??= cardsOf(w).filter((t) => lib.byTag.get(t)?.item?.section !== "subject"));
 
 function dateText(iso) {
   const d = new Date(iso);
@@ -260,6 +274,33 @@ function renderTabs() {
       )
     )
   );
+  const groupBox = $("works-group");
+  groupBox.hidden = tab !== "works";
+  groupBox.replaceChildren(
+    el("span", { class: "works-group-lead" }, "分輯"),
+    ...GROUPINGS.map(([v, label]) =>
+      el(
+        "button",
+        {
+          class: "group-chip pressable",
+          type: "button",
+          "aria-pressed": grouping === v ? "true" : "false",
+          onclick: () => {
+            if (grouping === v) return;
+            grouping = v;
+            try {
+              localStorage.setItem(GROUP_KEY, v);
+            } catch {
+              /* 存不了：這一次照樣分 */
+            }
+            renderTabs();
+            render({ deal: true });
+          },
+        },
+        label
+      )
+    )
+  );
   $("album-q").placeholder = PLACEHOLDER[tab];
 }
 
@@ -316,9 +357,27 @@ function render({ deal = false } = {}) {
   $("album-sum").textContent = works.length
     ? `${shown.length} 件作品${hidden ? `・${hidden} 件在${RATING_LABEL[rating]}看不到` : ""}`
     : "";
-  const tiles = shown.map(tile);
-  const swap = () => grid.replaceChildren(...(tiles.length || !works.length ? tiles : [el("p", { class: "album-empty" }, query ? `找不到「${query}」` : `這一級分級看不到任何作品`)]));
-  swap();
+  const groups = groupWorks(shown, shown.length ? grouping : "none", { lib, eraZh: ERA_ZH, cardsOf });
+  const grouped = groups.length > 1 || (groups[0] && groups[0].label);
+  grid.classList.toggle("is-grouped", !!grouped);
+  const tiles = [];
+  const parts = grouped
+    ? groups.map((g) => {
+        const ts = g.items.map(tile);
+        tiles.push(...ts);
+        return el(
+          "section",
+          { class: "album-group", dataset: { rest: g.rest ? "true" : "false" } },
+          el("h3", { class: "log-day-head" }, g.label, el("small", {}, `${g.items.length} 件`)),
+          el("div", { class: "album-grid-in", role: "list" }, ts)
+        );
+      })
+    : (groups[0]?.items || []).map((w) => {
+        const t = tile(w);
+        tiles.push(t);
+        return t;
+      });
+  grid.replaceChildren(...(tiles.length || !works.length ? parts : [el("p", { class: "album-empty" }, query ? `找不到「${query}」` : `這一級分級看不到任何作品`)]));
   if (deal && !reducedMotion()) {
     tiles.slice(0, 12).forEach((t, i) =>
       t.animate([{ opacity: 0, transform: "translateY(14px)" }, { opacity: 1, transform: "none" }], {
@@ -358,6 +417,38 @@ function tile(w) {
 }
 
 /* ================= 一張作品 ================= */
+
+/** 詳情底下「相似的作品」：用到的牌重疊多的幾件（這一級分級看得到的），點一下換過去看。 */
+function similarBox(w, sheetOf) {
+  const list = similarWorks(w, works.filter(visible), tellingOf);
+  if (!list.length) return null;
+  return el(
+    "section",
+    { class: "album-similar" },
+    el("h3", {}, `相似的作品・${list.length}`),
+    el(
+      "div",
+      { class: "album-similar-row" },
+      list.map(({ work: x, both }) => {
+        const src = fileUrl(x.thumbnail) || fileUrl(x.image);
+        return el(
+          "button",
+          {
+            class: "album-similar-item pressable",
+            type: "button",
+            title: `${x.name}：${both} 張牌一樣`,
+            onclick: () => {
+              sheetOf()?.close();
+              setTimeout(() => openWork(x), reducedMotion() ? 0 : DUR.short);
+            },
+          },
+          el("span", { class: "album-frame", style: x.width && x.height ? `aspect-ratio: ${x.width} / ${x.height}` : "" }, src ? el("img", { src, alt: "", loading: "lazy", decoding: "async" }) : el("span", { class: "album-noimg" }, "沒有圖")),
+          el("small", {}, `${both} 張一樣`)
+        );
+      })
+    )
+  );
+}
 
 function openFromHash() {
   const id = decodeURIComponent(location.hash.slice(1));
@@ -447,7 +538,8 @@ function openWork(w) {
       el("dl", { class: "album-facts" }, facts.flatMap(([k, v]) => [el("dt", {}, k), el("dd", {}, v)])),
       mine.length ? el("section", {}, el("h3", {}, `你選的牌・${mine.length}`), chips(mine, "mine", weightsOfPositive(w.positive))) : null,
       rest.length ? el("section", {}, el("h3", {}, `${mine.length ? "引擎補的" : "這張用到的牌"}・${rest.length}`), chips(rest, "drawn")) : null,
-      el("details", { class: "album-pos" }, el("summary", {}, "提示詞"), el("pre", { class: "pos-text" }, w.positive || ""))
+      el("details", { class: "album-pos" }, el("summary", {}, "提示詞"), el("pre", { class: "pos-text" }, w.positive || "")),
+      similarBox(w, () => sheet)
     )
   );
   const s = openSheet(w.name, body, {
