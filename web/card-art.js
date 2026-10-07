@@ -145,8 +145,9 @@ const NO_ART = new Set(["looking at viewer", "looking ahead", "closed mouth", "s
 
 // 每一類字用一種鏡頭，讓那個字成為畫面的主角（字鋪試生 20 張後定下來的）。
 const PERSON_FRAME = {
-  hair_color: "upper body",
-  hair_style: "upper body",
+  // 髮色、髮型：頭肩特寫（2026-10-07 起）。上半身構圖在小小的牌面上頭只佔一角，字盒裡分不出差別。
+  hair_color: "portrait",
+  hair_style: "portrait",
   hair_len: "full body",
   eyes: "portrait",
   makeup: "portrait",

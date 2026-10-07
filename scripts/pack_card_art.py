@@ -60,11 +60,18 @@ def main() -> int:
     out = Path(args[0])
     manifest = json.loads((CARDS / "manifest.json").read_text(encoding="utf-8"))
     banned = hard_banned()
+    # 只收現在詞庫裡還有的牌（scripts/card_jobs.json）：拿掉的字本機可能還留著舊圖，不要再發出去。
+    try:
+        current = {j.get("tag") for j in json.loads((ROOT / "scripts" / "card_jobs.json").read_text(encoding="utf-8")) if isinstance(j, dict)}
+    except (OSError, ValueError):
+        current = None
+    # 細縮圖（mini）不放進包：那是這台照自己的圖做的，下載的人沒有那些檔，留著只會讓網頁先抓一次 404 才退回原圖。
     general = {
-        k: v
+        k: {kk: vv for kk, vv in v.items() if kk != "mini"}
         for k, v in manifest.items()
         if isinstance(v, dict)
         and k not in banned
+        and (current is None or k in current)
         and v.get("rating", "general") == "general"
         and (CARDS / str(v.get("file", ""))).exists()
     }

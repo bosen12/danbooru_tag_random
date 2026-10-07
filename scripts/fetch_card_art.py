@@ -33,17 +33,34 @@ from pathlib import Path
 ROOT = Path(__file__).resolve().parent.parent
 CARDS = ROOT / "web" / "cards"
 # 換版時標記跟著換：有 v1 標記、沒有 v2 標記的人，下次啟動會去補 v2 多的那些。
-MARKER = CARDS / ".card-art-v3"
+MARKER = CARDS / ".card-art-v4"
 
 # v3（2026-09-28）：1160 張。跟 v2 只差拿掉 cel shading（Danbooru 停用、意思含糊）。v1、v2 留在 GitHub 給舊版本用。
+# v4（2026-10-07）：1934 張。髮色、髮型改成頭肩特寫（字盒裡分得出差別）重烘；補上 v3 之後詞庫新增的全年齡牌。
+#   已經有 v3 的人：圖都在但提示詞是舊的（have_enough 的 outdated）→ 抓一次，只換 v3 放的那些，自己烘的不碰。
 # CARD_ART_URL 可以換來源（測試時指向本機的 file:// 包）；大小、雜湊照樣要對。
-URL = os.environ.get("CARD_ART_URL") or "https://github.com/bosen12/danbooru_tag_random/releases/download/card-art-v3/card-art-general.zip"
-SIZE = 55194051
-SHA256 = "ff2dacb2985f85f6ab93a7f2a4e8a5625656da41e04bcd443b27742c445bcdea"
-EXPECTED = 1160  # 這一包裡全年齡的張數
+URL = os.environ.get("CARD_ART_URL") or "https://github.com/bosen12/danbooru_tag_random/releases/download/card-art-v4/card-art-general.zip"
+SIZE = 100099803
+SHA256 = "5150ab40c284457ca4cda7db46e32c54b162314c14c118dd06da2b56dc09d49d"
+EXPECTED = 1934  # 這一包裡全年齡的張數
 
 
 JOBS = ROOT / "scripts" / "card_jobs.json"
+
+
+def outdated(wanted) -> bool:
+    """本機 manifest 裡，有沒有全年齡卡的提示詞跟卡面清單（card_jobs.json）對不上。"""
+    try:
+        manifest = json.loads((CARDS / "manifest.json").read_text(encoding="utf-8"))
+    except (OSError, ValueError):
+        return False
+    if not isinstance(manifest, dict):
+        return False
+    for j in wanted:
+        have = manifest.get(j.get("tag"))
+        if isinstance(have, dict) and have.get("positive") and j.get("positive") and have["positive"] != j["positive"]:
+            return True
+    return False
 
 
 def have_enough() -> bool:
@@ -62,7 +79,12 @@ def have_enough() -> bool:
         jobs = None
     if jobs:
         wanted = [j for j in jobs if isinstance(j, dict) and j.get("rating", "general") == "general" and j.get("file")]
-        return bool(wanted) and all((CARDS / str(j["file"])).exists() for j in wanted)
+        if not wanted or not all((CARDS / str(j["file"])).exists() for j in wanted):
+            return False
+        # 圖都在，但有的是舊版的（本機記的提示詞跟現在的卡面清單不一樣，例如 v4 把髮色、髮型改成頭肩特寫）：
+        # 抓一次新的包。解包時只換「上一版公開包放的」那些（cards/previous.json），自己烘的不碰；
+        # 抓完寫上這一版的標記，下次就不再抓，不會每次啟動都重抓。
+        return not outdated(wanted)
     # 讀不到卡面清單（檔案被刪了）：退回舊的數張數。
     try:
         manifest = json.loads((CARDS / "manifest.json").read_text(encoding="utf-8"))
