@@ -16,6 +16,7 @@ import os
 import sys
 import time
 import urllib.error
+import urllib.parse
 import urllib.request
 from pathlib import Path
 
@@ -370,6 +371,21 @@ def _announce_saved(base: str) -> None:
     print("Saved, but ComfyUI has not listed the model. Restart ComfyUI, then try deep Hires again.")
 
 
+def comfy_folders(base: str, timeout: float = 5) -> dict:
+    """開著的本機 ComfyUI 自己回報的資料夾（GET /internal/folder_paths）：{"upscale_models": [路徑…], …}。
+    第一次用、還沒有 config.json 的人靠這個找到 ComfyUI 在哪。遠端的 ComfyUI、沒開、版本太舊都回 {}。"""
+    host = (urllib.parse.urlparse(base).hostname or "").strip().lower().strip("[]")
+    if host not in {"127.0.0.1", "localhost", "::1"}:
+        return {}
+    try:
+        req = urllib.request.Request(base.rstrip("/") + "/internal/folder_paths", headers=UA)
+        with urllib.request.urlopen(req, timeout=timeout) as resp:
+            data = json.loads(resp.read().decode("utf-8") or "{}")
+    except (OSError, urllib.error.URLError, TimeoutError, ValueError):
+        return {}
+    return data if isinstance(data, dict) else {}
+
+
 def main(argv: list[str] | None = None) -> int:
     if os.environ.get("NO_UPSCALE_FETCH"):
         return 0
@@ -378,6 +394,9 @@ def main(argv: list[str] | None = None) -> int:
     config = load_config()
     dirs = collect_dirs(config)
     base = comfy_base(config)
+    if destination_dir(dirs) is None:
+        # 沒有 config.json（第一次用）：ComfyUI 開著的話，問它的 upscale_models 在哪。
+        dirs = _dedupe(dirs + [Path(x) for x in comfy_folders(base).get("upscale_models") or [] if isinstance(x, str)])
     names = list_upscale_names(base)
     dest = destination_dir(dirs)
     dest_ok = bool(dest and file_matches(dest / NAME))

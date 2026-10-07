@@ -56,8 +56,22 @@ def comfy_is_local(base: str) -> bool:
 
 
 def comfy_root(config: dict | None = None) -> Path | None:
-    """ComfyUI folder = the parent of models/ above comfy.checkpointDir."""
+    """ComfyUI folder = the parent of models/ above comfy.checkpointDir.
+
+    No config.json yet (first run): ask a running local ComfyUI where its custom_nodes folder is.
+    """
     config = up.load_config() if config is None else config
+    found = _root_from_config(config)
+    if found is not None:
+        return found
+    nodes = up.comfy_folders(up.comfy_base(config)).get("custom_nodes") or []
+    for p in nodes:
+        if isinstance(p, str) and Path(p).is_dir():
+            return Path(p).parent
+    return None
+
+
+def _root_from_config(config: dict) -> Path | None:
     comfy = config.get("comfy") if isinstance(config.get("comfy"), dict) else {}
     text = str(comfy.get("checkpointDir") or "").strip()
     if not text:
@@ -181,6 +195,11 @@ def install_node(root: Path) -> bool:
 
 def download_model(root: Path) -> bool:
     folder = root / "models" / "controlnet" / MODEL_SUBDIR
+    # extra_model_paths 把 controlnet 放到別處的：照 ComfyUI 自己說的第一個 controlnet 資料夾放。
+    if not (root / "models" / "controlnet").is_dir():
+        cn = [p for p in up.comfy_folders(up.comfy_base()).get("controlnet") or [] if isinstance(p, str) and Path(p).is_dir()]
+        if cn:
+            folder = Path(cn[0]) / MODEL_SUBDIR
     folder.mkdir(parents=True, exist_ok=True)
     dest = folder / MODEL_NAME
     part = folder / (MODEL_NAME + ".part")

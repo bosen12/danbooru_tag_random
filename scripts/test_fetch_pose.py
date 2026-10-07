@@ -137,6 +137,13 @@ node = root / "custom_nodes" / "comfyui_controlnet_aux"
 ok("沒有 git：下載 zip 解到 custom_nodes/comfyui_controlnet_aux", good and (node / "__init__.py").is_file() and not any(p.name.startswith(".tmp_") for p in (root / "custom_nodes").iterdir()))
 ok("套件用 ComfyUI 自己的 python（python_embeded）裝", pip_calls and pip_calls[0][0].endswith("python.exe") and "python_embeded" in pip_calls[0][0] and pip_calls[0][-1].endswith("requirements.txt"), str(pip_calls))
 
+_saved_cf = fp.up.comfy_folders
+fp.up.comfy_folders = lambda base, timeout=5: {"custom_nodes": [str(root / "custom_nodes")]}
+ok("第一次用、沒有 config.json：問開著的 ComfyUI 它裝在哪", fp.comfy_root({}) == root)
+fp.up.comfy_folders = lambda base, timeout=5: {}
+ok("沒有 config.json、ComfyUI 也沒開：找不到就不裝", fp.comfy_root({}) is None)
+fp.up.comfy_folders = _saved_cf
+
 ok("NO_POSE_FETCH 就什麼都不做", (fp.os.environ.__setitem__("NO_POSE_FETCH", "1") or fp.main(["--check"])) == 0)
 
 if failed:
