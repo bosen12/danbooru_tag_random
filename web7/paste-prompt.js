@@ -14,6 +14,22 @@
 import { el, openSheet, toast } from "./ui.js";
 import { HARD_BANNED } from "./card-art.js";
 import { enter, refuse, reducedMotion, DUR } from "./motion.js";
+import { snapWeight } from "./weights.js";
+
+/**
+ * 這一段原本的份量：(tag:1.2) 照寫的；((tag)) 每層 ×1.1、[tag] 每層 ×0.9（SD 的寫法）。
+ * 都對到五段之一（weights.js）。
+ */
+function weightOf(raw) {
+  const s = raw.trim();
+  const m = s.match(/:\s*(-?\d+(?:\.\d+)?)\s*[)\]}]*\s*$/);
+  if (m && /^[([{]/.test(s)) return snapWeight(Number(m[1]));
+  const up = (s.match(/^\(+/) || [""])[0].length;
+  if (up) return snapWeight(1.1 ** up);
+  const down = (s.match(/^\[+/) || [""])[0].length;
+  if (down) return snapWeight(0.9 ** down);
+  return 1;
+}
 
 const QUALITY = /^(score_\d+(_up)?|masterpiece|(best|amazing|high|good|normal|low|worst) quality|very aesthetic|aesthetic|absurdres|highres|lowres|newest|recent|year \d{4}|rating[ :_].*|nsfw|sfw|safe|general|sensitive|questionable|explicit|source_\w+|very awa|best aesthetic)$/;
 const LORA = /<\s*lora\s*:\s*([^:>]+)[^>]*>/gi;
@@ -85,7 +101,7 @@ export function parsePrompt(text, { lexTags, isCard, zh }) {
     if (seen.has(key)) continue;
     seen.add(key);
     if (tag && (hard.has(tag.toLowerCase()) || HARD_BANNED.includes(tag))) res.blocked.push(raw);
-    else if (tag && isCard(tag)) res.cards.push({ tag, raw });
+    else if (tag && isCard(tag)) res.cards.push({ tag, raw, w: weightOf(raw) });
     else if (tag) res.engine.push(raw);
     else if (tries.some((v) => hard.has(v))) res.blocked.push(raw);
     else if (tries.some((v) => QUALITY.test(v))) res.quality.push(raw);
@@ -98,7 +114,8 @@ export function parsePrompt(text, { lexTags, isCard, zh }) {
  * 打開「貼上提示詞」面板。
  *   where：「合成池」「卡池」「卡盒」；text：先填好的內容（Ctrl+V 帶進來的）。
  *   lexTags、isCard、zh：同 parsePrompt。
- *   apply(tags, { replace })：換成這些牌（replace）或加進去。面板先收起來再呼叫。
+ *   apply(tags, { replace, weights })：換成這些牌（replace）或加進去；weights 是貼上的份量 { tag: w }。
+ *     面板先收起來再呼叫。
  *   off(tag)：這張牌現在用不了的原因（分級擋掉、在廢字簍…），沒有就回 null。
  *     預覽上先標出來，不要放進去才發現；照樣算「會變成牌」，放不放由各頁照原本的規矩。
  */
@@ -158,11 +175,12 @@ export function openPaste({ where, text = "", lexTags, isCard, zh, apply, off = 
       ...[
         group(
           "會變成牌",
-          parsed.cards.map(({ tag, raw }) => {
+          parsed.cards.map(({ tag, raw, w }) => {
             const name = zh(tag);
             const same = raw.toLowerCase() === tag.toLowerCase() || raw === name;
             const why = off(tag);
-            const c = chip(`${same ? name : `${raw} → ${name}`}${why ? `（${why}）` : ""}`, tag);
+            // 帶份量的寫上數字（放進去之後牌的右下角也是這個數字）。
+            const c = chip(`${same ? name : `${raw} → ${name}`}${w !== 1 ? ` ${w}` : ""}${why ? `（${why}）` : ""}`, tag);
             if (why) c.classList.add("is-off");
             return c;
           }),
@@ -186,9 +204,10 @@ export function openPaste({ where, text = "", lexTags, isCard, zh, apply, off = 
   const { close } = openSheet("貼上提示詞變成牌", el("div", { class: "paste" }, area, result), { wide: true, foot: [replaceBtn, addBtn] });
   const go = (replace) => {
     const tags = parsed.cards.map((c) => c.tag);
+    const weights = Object.fromEntries(parsed.cards.filter((c) => c.w !== 1).map((c) => [c.tag, c.w]));
     if (!tags.length) return refuse(replace ? replaceBtn : addBtn);
     close();
-    setTimeout(() => apply(tags, { replace }), DUR.short);
+    setTimeout(() => apply(tags, { replace, weights }), DUR.short);
   };
   replaceBtn.addEventListener("click", () => go(true));
   addBtn.addEventListener("click", () => go(false));

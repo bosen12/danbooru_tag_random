@@ -40,6 +40,7 @@ import { buildLibrary, groupChips, createAssets, cardNode, cardFacts, setEnterTa
 import { el, openSheet, anyOverlay, toast } from "./ui.js";
 import { openDecks, loadDecks, cachedDecks } from "./decks.js";
 import { openPaste, listenPaste } from "./paste-prompt.js";
+import { paintWeight, wireWeightInput, weightRow, weightPositive } from "./weights.js";
 import { favButton } from "./album-save.js";
 import { initMotion, settleMotion, flip, flipBy, leave, gatherHome, flight, enter, seat, refuse, CURVE, DUR, css } from "./motion.js";
 import { createHand } from "./hand.js";
@@ -803,7 +804,7 @@ function printNow() {
     sig,
     seed: printSeedOf(t),
     fixedSeed: isFixedSeed(),
-    positive: insertTriggerAfterCast(t.positive, currentTriggerText()),
+    positive: trialPositive(t),
     width: settings.width,
     height: settings.height,
     rating: settings.rating,
@@ -1705,6 +1706,14 @@ function applyDeck(deck, btn = null, { fresh = true, kind = "牌組", label = `�
     return toast(`${label}的牌在${RATING_LABEL[settings.rating]}都出不了`);
   }
   startWith({ name: deck.name, tags: ok }, btn, { fresh, kind });
+  // 牌組、貼上的提示詞帶來的份量：放上去之後一起蓋上（撤回會連份量一起退回）。
+  const dw = deck.weights || {};
+  if (Object.keys(dw).length) {
+    const merged = { ...(fresh ? {} : bed.weights || {}) };
+    for (const t of bed.pins) if (dw[t] && dw[t] !== 1) merged[t] = dw[t];
+    if (Object.keys(merged).length) bed = { ...bed, weights: merged };
+    for (const t of Object.keys(merged)) paintWeight(plateNode(t), merged[t]);
+  }
   toast(`${fresh ? "換成" : "疊上"}${label}${skipped ? `（${skipped} 張這一級出不了或在廢字簍，先跳過）` : ""}`, { action: { label: "撤回", run: undo } });
 }
 
@@ -1716,14 +1725,14 @@ function openPastePlate(text = "") {
     lexTags: data.tags.map((t) => t.tag),
     isCard: (t) => lib.byTag.has(t),
     zh,
-    apply: (tags, { replace }) => applyDeck({ name: "貼上的提示詞", tags }, null, { fresh: replace, kind: "貼上", label: "貼上的提示詞" }),
+    apply: (tags, { replace, weights: w }) => applyDeck({ name: "貼上的提示詞", tags, weights: w }, null, { fresh: replace, kind: "貼上", label: "貼上的提示詞" }),
     // 卡池放不上去的會跳過（applyDeck），預覽先說。
     off: (t) => (!rankOk(cardOf(t)) ? `${RATING_LABEL[settings.rating]}出不了，會跳過` : bans.has(t) ? "在廢字簍，會跳過" : null),
   });
 }
 
 const openDeckSheet = () =>
-  openDecks({ where: "卡池", current: () => [...bed.pins], has: (t) => lib.byTag.has(t), zh, apply: (d) => applyDeck(d), paste: () => openPastePlate() });
+  openDecks({ where: "卡池", current: () => [...bed.pins], weightsNow: () => ({ ...(bed.weights || {}) }), has: (t) => lib.byTag.has(t), zh, apply: (d) => applyDeck(d), paste: () => openPastePlate() });
 
 /** 空白版上「你的牌組」：最近的三組，跟起手式同一種按鈕。 */
 function deckStarters() {
@@ -1857,6 +1866,26 @@ function refreshInk() {
   }
 }
 
+/** 試印送出去的提示詞：版上調過份量的牌寫成 (tag:1.2)，觸發詞照舊插在人物後面。付印、看 POS、複製都用這一個。 */
+function trialPositive(t) {
+  return insertTriggerAfterCast(weightPositive(t.positive, bed.weights), currentTriggerText());
+}
+
+/**
+ * 調一張版上的牌的份量（weights.js）。只改份量，不重抽試印（份量不影響抽牌），也不進撤回的紀錄；
+ * 撤回、清版會把整個版（連份量）一起退回去。
+ */
+function setPlateWeight(tag, w) {
+  if (!bed.pins.includes(tag) || ((bed.weights || {})[tag] || 1) === w) return;
+  const next = { ...(bed.weights || {}) };
+  if (w === 1) delete next[tag];
+  else next[tag] = w;
+  const { weights: _old, ...rest } = bed;
+  bed = Object.keys(next).length ? { ...rest, weights: next } : rest;
+  paintWeight(plateNode(tag), w, { pop: true });
+  sfx.stamp?.();
+}
+
 function plateCard(tag) {
   const card = cardOf(tag);
   const node = eagerArt(cardNode(card, assets, { src: bed.carried[tag] ? "附帶" : null }));
@@ -1865,6 +1894,9 @@ function plateCard(tag) {
   node.append(inkDots(tag));
   paintInk(node, tag);
   node.addEventListener("click", () => openPop(node, tag, "plate"));
+  // 份量：右下角的數字；電腦上滑鼠停著滾滾輪、或 +／− 調（weights.js）。點開的選單裡也有一排。
+  paintWeight(node, (bed.weights || {})[tag]);
+  wireWeightInput(node, { get: () => (bed.weights || {})[tag] || 1, set: (w) => setPlateWeight(tag, w) });
   node.addEventListener("keydown", (e) => {
     if (e.key === "Delete" || e.key === "Backspace") {
       e.preventDefault();
@@ -2193,6 +2225,8 @@ function openPop(anchor, tag, from) {
     "div",
     { class: "pop", role: "dialog", "aria-label": card.zh },
     el("p", { class: "pop-title" }, el("b", {}, card.zh), el("code", {}, card.tag)),
+    // 版上的牌：份量一排（手機調份量的地方）。
+    from === "plate" ? weightRow((bed.weights || {})[tag] || 1, (w) => setPlateWeight(tag, w), el) : null,
     el("dl", { class: "pop-lines" }, lines.map(([k, v]) => [el("dt", {}, k), el("dd", {}, v)])),
     // 主要的動作（拿下來／收下這張）排第一、拿到焦點：Enter 按下去是它，不是加進偏好卡牌。
     el("div", { class: "pop-acts" }, [...acts, handAct(tag, anchor)])
@@ -2657,7 +2691,7 @@ function showPos() {
       "div",
       {},
       el("p", { class: "tag-en" }, `seed ${t.seed}・${ERA_ZH[t.era] || ""}・${settings.width}×${settings.height}`),
-      el("pre", { class: "pos-text" }, insertTriggerAfterCast(t.positive, currentTriggerText()))
+      el("pre", { class: "pos-text" }, trialPositive(t))
     ),
     {
       wide: true,
@@ -2669,7 +2703,7 @@ function showPos() {
             type: "button",
             onclick: async (e) => {
               try {
-                await navigator.clipboard.writeText(insertTriggerAfterCast(t.positive, currentTriggerText()));
+                await navigator.clipboard.writeText(trialPositive(t));
                 e.target.textContent = "複製好了";
               } catch {
                 e.target.textContent = "複製不了，請手動選取";
@@ -2685,7 +2719,7 @@ function showPos() {
 
 function sendToPool() {
   if (!bed.pins.length) return;
-  S.handOffPool(bed.pins, "fuse");
+  S.handOffPool(bed.pins, "fuse", bed.weights || {});
   const b = $("print-bar").querySelector(".pb-links button:last-child");
   if (b) b.textContent = "放好了：回墨池工作臺就看得到";
   announce("這一版的牌放進墨池的合成池了");

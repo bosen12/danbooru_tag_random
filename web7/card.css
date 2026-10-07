@@ -873,3 +873,35 @@ body[data-hand-edit="true"] :is(#case-grid, #lib-grid) .card[data-in-hand="true"
   color: var(--color-accent);
   box-shadow: inset 0 0 0 1.5px var(--color-accent);
 }
+
+/* ---------- 份量（weights.js）：右下角一個小數字，1.0 不標 ----------
+ * 大於 1 暖色（墨紅）、小於 1 灰藍。牌本身也帶 data-w：加強的邊框深一點、淡化的透明一點。 */
+.card-w {
+  position: absolute;
+  right: 3px;
+  bottom: 3px;
+  z-index: 2;
+  min-width: 2em;
+  padding: 0.1em 0.35em;
+  border-radius: 999px;
+  background: color-mix(in oklch, var(--color-stock) 92%, transparent);
+  color: var(--color-accent);
+  font-family: var(--font-mono);
+  /* 手機合成池的牌只有 70px 寬：數字最少 10px，一眼讀得到。 */
+  font-size: max(10px, 1.05em);
+  font-weight: 600;
+  font-variant-numeric: tabular-nums;
+  line-height: 1.3;
+  text-align: center;
+  box-shadow: 0 0 0 1px currentColor inset;
+  pointer-events: none;
+}
+.card[data-w="down"] .card-w {
+  color: color-mix(in oklch, var(--color-pool-2) 70%, var(--color-muted));
+}
+.card[data-w="up"] {
+  box-shadow: 0 0 0 1.5px color-mix(in oklch, var(--color-accent) 70%, transparent), 0 6px 14px -8px var(--color-shade);
+}
+.card[data-w="down"] .card-art img {
+  opacity: 0.72;
+}

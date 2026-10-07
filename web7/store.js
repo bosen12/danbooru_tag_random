@@ -36,9 +36,11 @@ const HANDOFF_MS = 30 * 60 * 1000;
 
 /** 疊印台把一版牌交給墨池：寫一張便條，墨池下次打開時拿走。 */
 /** from：從哪裡交過來（"fuse"、"book"），墨池接到時跟使用者說一聲。 */
-export const handOffPool = (tags, from = "") => write(KEY.handoff, { tags: [...tags], at: Date.now(), from });
+export const handOffPool = (tags, from = "", weights = {}) => write(KEY.handoff, { tags: [...tags], at: Date.now(), from, weights });
 /** 上一次 takePool() 拿到的便條是從哪裡來的（沒有便條就是空字串）。 */
 export let handoffFrom = "";
+/** 上一次 takePool() 拿到的便條裡各張牌的份量（作品冊、疊印台交過來的）。 */
+export let handoffWeights = {};
 
 /** 墨池開機時呼叫：拿走交接的牌（沒有就是空的池子），順手清掉舊版一直存著的合成池。 */
 export function takePool() {
@@ -51,6 +53,7 @@ export function takePool() {
   }
   if (!note || !Array.isArray(note.tags) || !(Date.now() - note.at < HANDOFF_MS)) return [];
   handoffFrom = typeof note.from === "string" ? note.from : "";
+  handoffWeights = note.weights && typeof note.weights === "object" ? note.weights : {};
   return note.tags.filter((t) => typeof t === "string");
 }
 export const loadBans = () => read(KEY.bans, []);
@@ -88,6 +91,7 @@ export function saveShots(shots) {
       image: s.image || null,
       // 收進作品冊的那一筆（album-save.js）：成品上顯示「已收藏」。
       albumId: s.albumId || null,
+      weights: s.weights || null,
       // Hires 過的：image 是大圖，baseImage 是原圖（再 Hires 從原圖放大、也可以還原）。
       baseImage: s.baseImage || null,
       hires: s.hires || null,

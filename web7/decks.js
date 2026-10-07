@@ -53,8 +53,9 @@ export function suggestName(tags, zh) {
  *   zh(tag)：牌的中文名。
  *   apply(deck)：套用一組。面板先收起來再呼叫，套用的動畫才看得到。
  *   paste()：「貼上提示詞變成牌」（paste-prompt.js）；有給才出現那一顆。
+ *   weightsNow()：目前調過的份量（weights.js），存牌組時一起存；卡盒沒有份量就不給。
  */
-export function openDecks({ where, current, has, zh, apply, paste }) {
+export function openDecks({ where, current, has, zh, apply, paste, weightsNow = () => ({}) }) {
   const now = current().filter(has);
   const list = el("div", { class: "deck-list", "aria-live": "polite" }, el("p", { class: "deck-note" }, "讀取牌組…"));
   const name = el("input", {
@@ -110,7 +111,7 @@ export function openDecks({ where, current, has, zh, apply, paste }) {
         { class: "deck-main" },
         el("b", { class: "deck-title" }, d.name),
         el("span", { class: "deck-meta" }, `${tags.length} 張${gone ? `（${gone} 張詞庫裡已經沒有）` : ""}`),
-        el("span", { class: "deck-tags" }, tags.slice(0, 8).map(zh).join("・") + (tags.length > 8 ? "…" : ""))
+        el("span", { class: "deck-tags" }, tags.slice(0, 8).map((t) => zh(t) + (d.weights?.[t] ? ` ${d.weights[t]}` : "")).join("・") + (tags.length > 8 ? "…" : ""))
       ),
       el(
         "div",
@@ -190,7 +191,9 @@ export function openDecks({ where, current, has, zh, apply, paste }) {
     const hit = decks.find((d) => d.name === n);
     saveBtn.disabled = true;
     try {
-      const deck = await saveDeck({ id: hit?.id, name: n, tags });
+      const w = weightsNow();
+      const weights = Object.fromEntries(tags.filter((t) => w[t] && w[t] !== 1).map((t) => [t, w[t]]));
+      const deck = await saveDeck({ id: hit?.id, name: n, tags, weights });
       decks = cache || decks;
       paint();
       const fresh = list.querySelector(`.deck-row[data-id="${deck.id}"]`);

@@ -36,7 +36,7 @@ function harness() {
     refuse() {}, toast() {}, sfx: { deal() {}, roll() {} }, recordUses() {}, tagsOfPositive: () => [],
     shotNode: shot => ({ id: shot.id }), enter() {}, trimWall() {},
     S: { saveShots() {} }, generator: { busy: false, pending: 0, enqueue: shot => sent.push(shot.id), stop() {} }, renderGoBar() {}, reducedMotion: () => false, DUR: { micro: 120 },
-    looping: false, infinite: false, hand: null, seedNode: null, discord: null,
+    looping: false, infinite: false, hand: null, seedNode: null, discord: null, weights: new Map(),
     stepper: () => ({}), switchBox: () => ({}), mountSeedControl: () => ({}), renderGoFloat() {},
     el: (tag, attrs, ...children) => ({ tag, attrs, text: children.filter(x => typeof x === "string").join("") }),
     handleLoraKeys: () => false, wfHandleKeys: () => false, anyOverlay: () => false, trashPanel: null,

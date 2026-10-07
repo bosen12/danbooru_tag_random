@@ -14,6 +14,7 @@ import { getSfx } from "./sfx.js";
 import * as S from "./store.js";
 import { tagsOfPositive } from "./usage.js";
 import { removeFromAlbum } from "./album-save.js";
+import { weightsOfPositive } from "./weights.js";
 
 const sfx = getSfx();
 const $ = (id) => document.getElementById(id);
@@ -234,12 +235,15 @@ function openFromHash() {
   openWork(w);
 }
 
-function chips(tags, kind) {
-  return el("div", { class: `album-chips is-${kind}` }, tags.map((t) => el("span", { class: "album-chip", title: t }, zh(t))));
+function chips(tags, kind, weights = {}) {
+  // 調過份量的牌寫上數字（跟合成池牌角的數字一樣）。
+  return el("div", { class: `album-chips is-${kind}` }, tags.map((t) => el("span", { class: "album-chip", title: t }, zh(t) + (weights[t] ? ` ${weights[t]}` : ""))));
 }
 
-function toMochi(tags, label) {
-  S.handOffPool(tags, "album");
+function toMochi(tags, label, w) {
+  // 份量（weights.js）從提示詞讀回來：收藏時調過的牌，帶回去還是那個份量。
+  const all = weightsOfPositive(w?.positive);
+  S.handOffPool(tags, "album", Object.fromEntries(tags.filter((t) => all[t]).map((t) => [t, all[t]])));
   toast(`${label}帶去墨池…`);
   setTimeout(() => (location.href = "./"), reducedMotion() ? 0 : DUR.short);
 }
@@ -302,7 +306,7 @@ function openWork(w) {
       "div",
       { class: "album-info" },
       el("dl", { class: "album-facts" }, facts.flatMap(([k, v]) => [el("dt", {}, k), el("dd", {}, v)])),
-      mine.length ? el("section", {}, el("h3", {}, `你選的牌・${mine.length}`), chips(mine, "mine")) : null,
+      mine.length ? el("section", {}, el("h3", {}, `你選的牌・${mine.length}`), chips(mine, "mine", weightsOfPositive(w.positive))) : null,
       rest.length ? el("section", {}, el("h3", {}, `${mine.length ? "引擎補的" : "這張用到的牌"}・${rest.length}`), chips(rest, "drawn")) : null,
       el("details", { class: "album-pos" }, el("summary", {}, "提示詞"), el("pre", { class: "pos-text" }, w.positive || ""))
     )
@@ -311,10 +315,10 @@ function openWork(w) {
     wide: true,
     foot: [
       mine.length
-        ? el("button", { class: "btn btn-small btn-primary", type: "button", onclick: () => toMochi(mine, `你選的 ${mine.length} 張`) }, "你選的牌帶回墨池")
+        ? el("button", { class: "btn btn-small btn-primary", type: "button", onclick: () => toMochi(mine, `你選的 ${mine.length} 張`, w) }, "你選的牌帶回墨池")
         : null,
       all.length
-        ? el("button", { class: `btn btn-small${mine.length ? "" : " btn-primary"}`, type: "button", onclick: () => toMochi(all, `全部 ${all.length} 張`) }, "全部的牌帶回墨池")
+        ? el("button", { class: `btn btn-small${mine.length ? "" : " btn-primary"}`, type: "button", onclick: () => toMochi(all, `全部 ${all.length} 張`, w) }, "全部的牌帶回墨池")
         : null,
       el(
         "button",

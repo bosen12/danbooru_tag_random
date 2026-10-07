@@ -58,6 +58,12 @@ raises("payload 不是物件要擋", lambda: card_decks.save(["x"]))
 many = card_decks.save({"name": "很多", "tags": ["1girl"] + [f"t{i}" for i in range(100)]})
 ok("名字、牌數有上限", len(many["deck"]["name"]) <= card_decks.MAX_NAME and len(many["deck"]["tags"]) <= card_decks.MAX_TAGS)
 
+w = card_decks.save({"name": "有份量", "tags": ["1girl", "solo"], "weights": {"1girl": 1.2, "solo": 1, "cat ears": 0.7, "bogus": 1.4}})["deck"]
+ok("份量：只留牌組裡有的、不是 1 的", w["weights"] == {"1girl": 1.2})
+w2 = card_decks.save({"name": "份量怪值", "tags": ["1girl", "solo"], "weights": {"1girl": 9, "solo": "x"}})["deck"]
+ok("份量：超出 0.5～1.5、不是數字的不收", w2["weights"] == {})
+ok("讀回來份量還在", next(d for d in card_decks.load() if d["id"] == w["id"])["weights"] == {"1girl": 1.2})
+
 Path(os.environ["CARD_DECKS_PATH"]).write_text("{壞掉的 json", encoding="utf-8")
 ok("檔案壞掉讀成空的，不炸", card_decks.load() == [])
 

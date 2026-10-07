@@ -1992,7 +1992,7 @@ const ALBUM_FIXTURE = [
               readFileSync(join(ROOT, d, "app.js"), "utf8").includes("favButton(shot, { zh, persist: () => S.saveShots(shots) })") &&
               readFileSync(join(ROOT, d, "fuse.js"), "utf8").includes("favButton(p, { zh, persist: savePrints") &&
               readFileSync(join(ROOT, d, "store.js"), "utf8").includes("albumId: s.albumId || null,") &&
-              album.includes('S.handOffPool(tags, "album");') && album.includes("再按一次：連存的圖一起刪") && album.includes("const visible = (w) =>");
+              album.includes('S.handOffPool(tags, "album", ') && album.includes("再按一次：連存的圖一起刪") && album.includes("const visible = (w) =>");
           }));
       ok("貼上提示詞變成牌：詞庫有的變牌、詞庫沒有的只列出來（不另外記）、禁用字不收；墨池（貼上鈕、Ctrl+V）、疊印台、卡盒都從牌組面板進得去（web6、web7）",
         readFileSync(join(ROOT, "web6/paste-prompt.js"), "utf8") === readFileSync(join(ROOT, "web7/paste-prompt.js"), "utf8") &&
@@ -2004,6 +2004,18 @@ const ALBUM_FIXTURE = [
             return readFileSync(join(ROOT, d, "index.html"), "utf8").includes('id="pool-paste"') && app.includes("function applyCards(tags, { replace = true") &&
               app.includes("listenPaste(") && readFileSync(join(ROOT, d, "fuse.js"), "utf8").includes("paste: () => openPastePlate()") &&
               readFileSync(join(ROOT, d, "book.js"), "utf8").includes('where: "卡盒"') && readFileSync(join(ROOT, d, "decks.js"), "utf8").includes("貼上提示詞變成牌…");
+          }));
+      ok("牌的份量：五段 0.7～1.4、牌面右下角寫數字（1.0 不標）、滾輪（停 250ms、頁面沒在捲）／+－／詳情與選單一排；送出 (tag:w)；牌組、貼上、作品冊、疊印台交接都帶份量（web6、web7）",
+        readFileSync(join(ROOT, "web6/weights.js"), "utf8") === readFileSync(join(ROOT, "web7/weights.js"), "utf8") &&
+          readFileSync(join(ROOT, "web6/weights.js"), "utf8").includes("export const WEIGHTS = [0.7, 0.9, 1, 1.2, 1.4];") &&
+          readFileSync(join(ROOT, "card_decks.py"), "utf8").includes("def _clean_weights(") &&
+          ["web6", "web7"].every((d) => {
+            const app = readFileSync(join(ROOT, d, "app.js"), "utf8");
+            const fuse = readFileSync(join(ROOT, d, "fuse.js"), "utf8");
+            return app.includes("weightPositive(drawn.positive,") && app.includes("inPool ? weightRow(") && app.includes("wireWeightInput(node,") &&
+              fuse.includes("function trialPositive(t)") && !fuse.includes("insertTriggerAfterCast(t.positive, currentTriggerText())") && fuse.includes('from === "plate" ? weightRow(') &&
+              readFileSync(join(ROOT, d, "fuse-bed.js"), "utf8").includes("function keepWeights(") && readFileSync(join(ROOT, d, "store.js"), "utf8").includes("export let handoffWeights") &&
+              readFileSync(join(ROOT, d, "card.css"), "utf8").includes(".card-w {");
           }));
       ok("卡冊：沒用過的牌不灰掉；滑鼠停上去有浮空放大卡（web6、web7）",
         ["web6", "web7"].every((d) => {

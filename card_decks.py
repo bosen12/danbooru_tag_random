@@ -40,14 +40,29 @@ def _read() -> list[dict]:
     for d in (data.get("decks") if isinstance(data, dict) else None) or []:
         if not isinstance(d, dict) or not _ID_RE.match(str(d.get("id") or "")):
             continue
-        tags = [str(t) for t in d.get("tags") or [] if isinstance(t, str)]
+        tags = [str(t) for t in d.get("tags") or [] if isinstance(t, str)][:MAX_TAGS]
         out.append({
             "id": d["id"],
             "name": str(d.get("name") or "")[:MAX_NAME] or "未命名",
-            "tags": tags[:MAX_TAGS],
+            "tags": tags,
+            "weights": _clean_weights(d.get("weights"), tags),
             "createdAt": int(d.get("createdAt") or 0),
             "updatedAt": int(d.get("updatedAt") or 0),
         })
+    return out
+
+
+def _clean_weights(raw, tags: list[str]) -> dict:
+    """份量（weights.js）：只留牌組裡有的牌、0.5～1.5、一位小數、不是 1 的。"""
+    out = {}
+    if isinstance(raw, dict):
+        keep = set(tags)
+        for t, w in raw.items():
+            if t not in keep or isinstance(w, bool) or not isinstance(w, (int, float)):
+                continue
+            n = round(float(w), 1)
+            if 0.5 <= n <= 1.5 and n != 1:
+                out[t] = n
     return out
 
 
@@ -93,8 +108,9 @@ def save(payload: dict) -> dict:
     with _LOCK:
         decks = _read()
         hit = next((d for d in decks if d["id"] == rid), None) if _ID_RE.match(rid) else None
+        weights = _clean_weights(payload.get("weights"), tags)
         if hit:
-            hit.update(name=name, tags=tags, updatedAt=now)
+            hit.update(name=name, tags=tags, weights=weights, updatedAt=now)
             deck = hit
         else:
             if len(decks) >= MAX_DECKS:
@@ -103,6 +119,7 @@ def save(payload: dict) -> dict:
                 "id": rid if _ID_RE.match(rid) else "d-" + uuid.uuid4().hex[:12],
                 "name": name,
                 "tags": tags,
+                "weights": weights,
                 "createdAt": int(payload.get("createdAt") or 0) or now,
                 "updatedAt": now,
             }

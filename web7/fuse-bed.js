@@ -23,6 +23,19 @@ export function emptyBed() {
   return { pins: [], carried: {} };
 }
 
+/**
+ * 份量（weights.js）跟著牌走：只留還在版上的、不是 1 的。一張都沒調過就不帶這個欄位
+ * （版的形狀跟以前一樣）。
+ */
+function keepWeights(weights, pins) {
+  const out = {};
+  for (const [t, w] of Object.entries(weights || {})) {
+    const n = Number(w);
+    if (pins.has(t) && Number.isFinite(n) && n !== 1 && n >= 0.5 && n <= 1.5) out[t] = n;
+  }
+  return Object.keys(out).length ? { weights: out } : {};
+}
+
 /** 讀回存檔，或付印時記下的版。舊存檔多一個 lead（以前的主版），這裡直接丟掉。 */
 export function sanitizeBed(raw, has) {
   if (!raw || !Array.isArray(raw.pins)) return emptyBed();
@@ -30,7 +43,7 @@ export function sanitizeBed(raw, has) {
   const set = new Set(pins);
   const carried = {};
   for (const [t, from] of Object.entries(raw.carried || {})) if (set.has(t) && set.has(from)) carried[t] = from;
-  return { pins, carried };
+  return { pins, carried, ...keepWeights(raw.weights, set) };
 }
 
 function erasOf(item) {
@@ -66,7 +79,7 @@ export function placeCard(bed, tag, { lex, applyPin }) {
   for (const t of added) carried[t] = tag;
   delete carried[tag];
   const pins = [...bed.pins.filter((t) => pinned.has(t)), tag, ...added];
-  return { bed: { pins, carried }, events };
+  return { bed: { pins, carried, ...keepWeights(bed.weights, new Set(pins)) }, events };
 }
 
 /** 拿掉一張。被它帶上來的牌一起拿掉（它們本來就是跟著它來的）。 */
@@ -87,7 +100,7 @@ export function removeCard(bed, tag) {
   const carried = {};
   for (const [t, from] of Object.entries(bed.carried)) if (!drop.has(t) && !drop.has(from)) carried[t] = from;
   return {
-    bed: { pins, carried },
+    bed: { pins, carried, ...keepWeights(bed.weights, new Set(pins)) },
     events: [{ kind: "remove", tag, tags: [...drop].filter((t) => bed.pins.includes(t)) }],
   };
 }

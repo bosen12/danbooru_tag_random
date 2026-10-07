@@ -41,6 +41,7 @@ import { buildLibrary, groupChips, createAssets, cardNode, setCardFlag, setEnter
 import { el, openSheet, anyOverlay, toast, runToastAction, ICONS } from "./ui.js";
 import { openDecks } from "./decks.js";
 import { openPaste, listenPaste } from "./paste-prompt.js";
+import { paintWeight, wireWeightInput, weightRow, weightPositive } from "./weights.js";
 import { favButton } from "./album-save.js";
 import { createDrag, inkRing } from "./drag.js";
 import { initMotion, settleMotion, flip, flipBy, leave, enter, confirmButton, gatherHome, flight, seat, refuse, reducedMotion, CURVE, DUR, css } from "./motion.js";
@@ -77,6 +78,10 @@ let lib = null;
 let assets = null;
 let settings = null;
 let pool = new Set();
+// 合成池裡每張牌的份量（weights.js）：只記調過的（不是 1.0 的）。
+let weights = new Map();
+// 被同一格擠掉的牌原本的份量：按「換回」時一起回來。
+const parkedWeights = new Map();
 let bans = new Set();
 let shots = [];
 let infinite = false;
@@ -118,6 +123,7 @@ async function boot() {
   settings = sanitizeSettings(stored || { rating: "general" }, data);
   // 池子不存：重新整理就是空的；只收疊印台剛交過來的那一版。
   pool = new Set(S.takePool().filter((t) => lib.byTag.has(t)));
+  weights = new Map(Object.entries(S.handoffWeights).filter(([t, w]) => pool.has(t) && w !== 1));
   bans = new Set(S.loadBans().filter((t) => lib.byTag.has(t)));
   // 重新整理就把沒印出來的清掉（失敗、取消、停掉的）：以前它們一直留在牆上掛著「再試一次」。
   // 留下的：印好的、只抽牌的（本來就沒要印）、畫到一半還接得回去的。
@@ -915,6 +921,11 @@ function pin(tag) {
   pool = next.pinned;
   bans = next.userBanned;
   const gone = [...before].filter((t) => !pool.has(t));
+  for (const t of gone) if (weights.has(t)) parkedWeights.set(t, weights.get(t));
+  if (parkedWeights.has(tag)) {
+    weights.set(tag, parkedWeights.get(tag));
+    parkedWeights.delete(tag);
+  }
   // 被擠掉的牌要看得到它離開：先記下它在池裡的位置，重畫之後在原地讓它掀起來飄走。
   const leaving = gone.map(poolNode).filter(Boolean).map((n) => ({ node: n, rect: n.getBoundingClientRect() }));
   // 後果寫在池子底下，不是右下角的提示：發生在哪裡就說在哪裡，旁邊給「換回」。
@@ -1125,6 +1136,8 @@ function unban(tag) {
 }
 
 function commitPins(fresh) {
+  // 不在合成池裡的牌不留份量（拿出去、被擠掉的；擠掉的另外記在 parkedWeights）。
+  for (const t of [...weights.keys()]) if (!pool.has(t)) weights.delete(t);
   S.saveBans(bans);
   hand?.update();
   // 說明只講「剛剛那一步」：再動一次池子，舊的換下說明就收掉。
@@ -1135,6 +1148,16 @@ function commitPins(fresh) {
   repaintLibrary();
   renderTrash();
   renderGoFloat();
+}
+
+/** 調一張合成池裡的牌的份量：右下角的數字跳一下、蓋章聲。 */
+function setWeight(tag, w) {
+  if (!pool.has(tag)) return;
+  if ((weights.get(tag) || 1) === w) return;
+  if (w === 1) weights.delete(tag);
+  else weights.set(tag, w);
+  paintWeight(poolNode(tag), w, { pop: true });
+  sfx.stamp?.();
 }
 
 function zh(tag) {
@@ -1237,6 +1260,10 @@ function renderPool(fresh) {
       }
       node.addEventListener("click", () => showCard(t, "pool"));
       drag.attach(node, { tag: t, from: "pool" });
+      // 份量：右下角的數字；電腦上滑鼠停著滾滾輪、或 +／− 調（weights.js）。
+      paintWeight(node, weights.get(t));
+      wireWeightInput(node, { get: () => weights.get(t) || 1, set: (w) => setWeight(t, w) });
+      node.title = node.title ? `${node.title}（滾輪或 +／− 調份量）` : "點開看詳情；滾輪或 +／− 調份量";
       return el(
         "div",
         { class: "pool-slot", style: poolInbound.has(t) ? "visibility: hidden" : undefined },
@@ -1716,8 +1743,11 @@ function makeShot(drawn, seed, poolAtDraw) {
   return {
     id: "s" + shotSeq++,
     seed,
-    positive: insertTriggerAfterCast(drawn.positive, trigger),
+    // 抽牌是同步的（按下去當下就抽完）：直接用現在合成池的份量。
+    positive: insertTriggerAfterCast(weightPositive(drawn.positive, Object.fromEntries(weights)), trigger),
     mine,
+    // 這張圖裡你選的牌調過的份量（成品上的小牌也標數字）。
+    weights: Object.fromEntries([...weights].filter(([t]) => mine.includes(t))),
     drawn: got,
     missing,
     era: drawn.era,
@@ -1912,7 +1942,11 @@ function shotCards(shot, deal) {
     }
     return n;
   };
-  const mineCards = shot.mine.map((t) => dealt(resultCard(t, null)));
+  const mineCards = shot.mine.map((t) => {
+    const n = resultCard(t, null);
+    paintWeight(n, shot.weights?.[t]);
+    return dealt(n);
+  });
   const missCards = (shot.missing || []).filter((t) => lib.byTag.has(t)).map((t) => {
     const n = resultCard(t, null, { kind: "ban", text: "沒進圖" });
     n.dataset.state = "gone";
@@ -2330,7 +2364,14 @@ function showCard(tag, from) {
       "div",
       { class: "detail" },
       art ? el("div", { class: "detail-art" }, el("img", { src: art, alt: card.zh })) : cardNode(card, assets, { tagName: "div" }),
-      el("div", {}, el("p", { class: "tag-en" }, card.tag), el("dl", {}, facts.map(([k, v]) => [el("dt", {}, k), el("dd", {}, v)])))
+      el(
+        "div",
+        {},
+        // 合成池裡的牌：最上面一排份量（手機調份量的地方；電腦也可以在牌上滾滾輪）。
+        inPool ? weightRow(weights.get(tag) || 1, (w) => setWeight(tag, w), el) : null,
+        el("p", { class: "tag-en" }, card.tag),
+        el("dl", {}, facts.map(([k, v]) => [el("dt", {}, k), el("dd", {}, v)]))
+      )
     ),
     {
       foot: [
@@ -2559,7 +2600,7 @@ $("trash").setAttribute("aria-expanded", "false");
 $("trash").innerHTML = ICONS.trash + "<b>0</b><span>廢字簍</span>";
 // 牌組：合成池存成一組、或套用存過的（decks.js；伺服器上一份，手機電腦共用）。
 $("pool-decks").addEventListener("click", () =>
-  openDecks({ where: "合成池", current: () => [...pool], has: (t) => lib.byTag.has(t), zh, apply: applyDeck, paste: () => openPastePool() })
+  openDecks({ where: "合成池", current: () => [...pool], weightsNow: () => Object.fromEntries(weights), has: (t) => lib.byTag.has(t), zh, apply: applyDeck, paste: () => openPastePool() })
 );
 
 // 貼上提示詞變成牌（paste-prompt.js）：合成池旁的「貼上」、牌組面板裡、電腦上在空白處按 Ctrl+V。
@@ -2571,7 +2612,7 @@ function openPastePool(text = "") {
     lexTags: data.tags.map((t) => t.tag),
     isCard: (t) => lib.byTag.has(t),
     zh,
-    apply: (tags, { replace }) => applyCards(tags, { replace, label: "貼上的提示詞" }),
+    apply: (tags, { replace, weights: w }) => applyCards(tags, { replace, label: "貼上的提示詞", weights: w }),
     // 合成池照樣收（牌上蓋「分級擋掉」、抽的時候不用），預覽先說。
     off: (t) => (ratingBlocked(lib.byTag.get(t).item, settings.rating) ? `${RATING_LABEL[settings.rating]}用不了` : bans.has(t) ? "在廢字簍" : null),
   });
@@ -2581,15 +2622,15 @@ listenPaste((text) => {
   if (!pickerOpen) openPastePool(text);
 });
 
-const applyDeck = (deck) => applyCards(deck.tags, { replace: true, label: `牌組「${deck.name}」` });
+const applyDeck = (deck) => applyCards(deck.tags, { replace: true, label: `牌組「${deck.name}」`, weights: deck.weights || {} });
 
 /**
  * 放一組牌進合成池：replace 是換成這一組（牌組、貼上的「換成」），不然加在現在的後面。
  * 照放牌的規矩一張張釘上去（同一格、時代不合的互相讓，帶上該帶的），跟手放的結果一樣；
  * 新來的牌從上面輕輕落定。五秒內可以復原成原本的合成池。
  */
-function applyCards(tags, { replace = true, label = "" } = {}) {
-  const before = { pool: [...pool], bans: [...bans] };
+function applyCards(tags, { replace = true, label = "", weights: w = {} } = {}) {
+  const before = { pool: [...pool], bans: [...bans], weights: new Map(weights) };
   let pinned = replace ? new Set() : new Set(pool);
   let banned = new Set(bans);
   for (const t of tags) {
@@ -2600,6 +2641,8 @@ function applyCards(tags, { replace = true, label = "" } = {}) {
   }
   pool = pinned;
   bans = banned;
+  if (replace) weights = new Map();
+  for (const [t, v] of Object.entries(w)) if (pool.has(t) && v !== 1) weights.set(t, v);
   poolNote = null;
   const fresh = new Set([...pool].filter((t) => replace || !before.pool.includes(t)));
   commitPins();
@@ -2621,6 +2664,7 @@ function applyCards(tags, { replace = true, label = "" } = {}) {
       run: () => {
         pool = new Set(before.pool.filter((t) => lib.byTag.has(t)));
         bans = new Set(before.bans);
+        weights = before.weights;
         commitPins();
       },
     },
@@ -2629,6 +2673,7 @@ function applyCards(tags, { replace = true, label = "" } = {}) {
 
 $("pool-clear").addEventListener("click", () => {
   const before = [...pool];
+  const beforeWeights = new Map(weights);
   if (!before.length) return;
   // 一張接一張收回字盒（從最後放的那張開始），五秒內可以反悔。
   const leaving = before.map(poolNode).filter(Boolean).map((n) => ({ node: n, rect: n.getBoundingClientRect() })).reverse();
@@ -2663,6 +2708,7 @@ $("pool-clear").addEventListener("click", () => {
         });
         if (!matchMedia("(prefers-reduced-motion: reduce)").matches) for (const l of launch) claimPoolInbound(l.t);
         pool = new Set(restore);
+        weights = new Map([...beforeWeights].filter(([t]) => pool.has(t)));
         commitPins();
         // 從手上打出去的先走（托盤正在收攏，等久了會蓋住留下來的牌），字盒的跟著一張一張來。
         const first = launch.filter((l) => l.fromHand);
