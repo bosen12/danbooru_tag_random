@@ -39,6 +39,7 @@ import { HARD_BANNED, applyArtSources } from "./card-art.js";
 import { buildLibrary, groupChips, createAssets, cardNode, cardFacts, setEnterTarget, eagerArt, CARD_SUIT_INFO, CARD_SUITS, RATING_ZH, ERA_ZH } from "./cards.js";
 import { el, openSheet, anyOverlay, toast } from "./ui.js";
 import { mountKeysHelp } from "./keys-help.js";
+import { mountTour } from "./tour.js";
 import { mountGenStatus } from "./gen-status.js";
 import { currentPose, poseButton, onPoseChange } from "./pose.js";
 import { openDecks, loadDecks, cachedDecks } from "./decks.js";
@@ -219,6 +220,8 @@ async function boot() {
   initMotion();
   // 快捷鍵說明（電腦）：頂欄的「?」、按 ? 打開（keys-help.js）。
   mountKeysHelp("fuse");
+  // 新手導覽（頂欄「教學」右邊的「導覽」；第一次來會問要不要走一遍）：tour.js。
+  mountTour("fuse");
   mountGenStatus("fuse");
   // 換了姿勢參考：付印鈕的「這張已經在印／印過」要重算（簽名裡有姿勢）。
   onPoseChange(() => {

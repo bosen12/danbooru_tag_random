@@ -40,6 +40,7 @@ import { buildLibrary, groupChips, createAssets, cardNode, setCardFlag, setEnter
 import { bindArt, artFallback } from "./card-images.js";
 import { el, openSheet, anyOverlay, toast, runToastAction, ICONS } from "./ui.js";
 import { mountKeysHelp } from "./keys-help.js";
+import { mountTour } from "./tour.js";
 import { mountGenStatus } from "./gen-status.js";
 import { currentPose, poseButton } from "./pose.js";
 import { openDecks } from "./decks.js";
@@ -111,6 +112,8 @@ async function boot() {
   initMotion();
   // 快捷鍵說明（電腦）：頂欄的「?」、按 ? 打開（keys-help.js）。
   mountKeysHelp("mochi");
+  // 新手導覽（頂欄「教學」右邊的「導覽」；第一次來會問要不要走一遍）：tour.js。
+  mountTour("mochi");
   mountGenStatus("mochi");
   try {
     const [lexicon, manifest] = await Promise.all([

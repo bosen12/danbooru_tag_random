@@ -2036,6 +2036,18 @@ const ALBUM_FIXTURE = [
           readFileSync(join(ROOT, "web6/pose.js"), "utf8").includes('state.kind === "skeleton" ? { skeleton: true }') &&
           readFileSync(join(ROOT, "server.py"), "utf8").includes('"skeleton": raw.get("skeleton") is True') &&
           ["web6", "web7"].every((d) => readFileSync(join(ROOT, d, "app.js"), "utf8").includes("size: () => ({ w: settings.width, h: settings.height })") && readFileSync(join(ROOT, d, "styles.css"), "utf8").includes(".pe-canvas {")));
+      ok("新手導覽：頂欄「教學」右邊的「導覽」，四個房間各自一步一步（亮出目標、文字小視窗、要動手的步驟做到才往下、找不到目標就略過、手機另一套步驟）；第一次來邀請一次（自動化測試不出現）；導覽層不被彈窗設成 inert（web6、web7）",
+        ["tour.js", "tour-steps.js"].every((f) => readFileSync(join(ROOT, "web6", f), "utf8") === readFileSync(join(ROOT, "web7", f), "utf8")) &&
+          readFileSync(join(ROOT, "web/scroll-lock.js"), "utf8").includes('"tour"]);') &&
+          ["web6", "web7"].every((d) =>
+            [["app.js", "mochi"], ["fuse.js", "fuse"], ["book.js", "book"], ["album.js", "album"]].every(([f, room]) => readFileSync(join(ROOT, d, f), "utf8").includes(`mountTour("${room}");`)) &&
+            readFileSync(join(ROOT, d, "styles.css"), "utf8").includes(".tour-ring {")
+          ) &&
+          (() => {
+            const t = readFileSync(join(ROOT, "web6/tour.js"), "utf8");
+            const st = readFileSync(join(ROOT, "web6/tour-steps.js"), "utf8");
+            return t.includes("navigator.webdriver") && t.includes('.mast-extra[href="tutorial.html"]') && ["MOCHI", "FUSE", "BOOK", "ALBUM"].every((k) => st.includes(`const ${k} = [`)) && st.includes("when: mobile");
+          })());
       ok("卡冊「用它做過的圖」從出圖日誌撈（/api/genlog/bytag）：收藏過的排前面、用作品冊那份圖，撤下的排最後，可以再多看；日誌以前留在成品牆的照樣併進來；點開可以把牌帶回墨池（web6、web7）",
         readFileSync(join(ROOT, "web6/book.js"), "utf8") === readFileSync(join(ROOT, "web7/book.js"), "utf8") &&
           readFileSync(join(ROOT, "server.py"), "utf8").includes('if path == "/api/genlog/bytag":') &&

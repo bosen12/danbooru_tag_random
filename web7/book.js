@@ -14,6 +14,7 @@ import { ratingBlocked, RATING_LABEL } from "./rules/rating.js";
 import { buildLibrary, groupChips, createAssets, cardNode, cardFacts, setCardFlag, eagerArt, CARD_SUIT_INFO, CARD_SUITS } from "./cards.js";
 import { el, openSheet, toast } from "./ui.js";
 import { mountKeysHelp } from "./keys-help.js";
+import { mountTour } from "./tour.js";
 import { mountGenStatus } from "./gen-status.js";
 import { openDecks } from "./decks.js";
 import { openPaste } from "./paste-prompt.js";
@@ -102,6 +103,8 @@ async function boot() {
   initMotion();
   // 快捷鍵說明（電腦）：頂欄的「?」、按 ? 打開（keys-help.js）。
   mountKeysHelp("book");
+  // 新手導覽（頂欄「教學」右邊的「導覽」；第一次來會問要不要走一遍）：tour.js。
+  mountTour("book");
   // 墨池、疊印台正在印的：頂欄看得到，點了回去（gen-status.js）。
   mountGenStatus("book");
   try {
