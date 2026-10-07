@@ -1634,7 +1634,9 @@ function renderGoFloat() {
   // IntersectionObserver 第一次回報可能比 boot() 讀完設定還早。
   if (!float || !settings) return;
   const busy = generator.busy || looping || drawingRounds > 0;
-  const show = !goBarVisible && (shots.length > 0 || pool.size > 0);
+  // 手機：抽並生圖不在畫面上就浮出來，合成池空的也一樣（空的照樣能抽，浮動列寫「全靠抽」）。
+  // Safari 的網址列、工具列吃掉一段高度，一打開主按鈕常常就在畫面外。
+  const show = !goBarVisible && (shots.length > 0 || pool.size > 0 || pickerMQ.matches);
   float.dataset.show = show ? "true" : "false";
   float.inert = !show;
   // 同上：狀態沒變就不換掉底下那排按鈕（不然「停」會閃、按不到）。
@@ -1654,13 +1656,17 @@ function renderGoFloat() {
 function watchGoBar() {
   const bar = $("go-bar");
   if (!bar || typeof IntersectionObserver !== "function") return;
-  new IntersectionObserver(
-    (entries) => {
-      goBarVisible = entries.some((e) => e.isIntersecting);
-      renderGoFloat();
-    },
-    { rootMargin: "-56px 0px 0px 0px" }
-  ).observe(bar);
+  // 「看得到」看的是抽並生圖那顆主按鈕整顆在畫面裡，不是整排露一角就算：
+  // 抽牌那排很高（張數、開關、按鈕、種子），以前露出最上面 4px 浮動列就收起來，主按鈕卻還在畫面外。
+  // 牌排會整排重畫（主按鈕換新的），所以觀察整排、每 10% 回報一次，回報時再量主按鈕。
+  const update = () => {
+    const main = bar.querySelector(".btn-primary");
+    const r = main && main.getBoundingClientRect();
+    goBarVisible = !!(r && r.width && r.top >= 56 && r.bottom <= innerHeight - 8);
+    renderGoFloat();
+  };
+  new IntersectionObserver(update, { threshold: Array.from({ length: 11 }, (_, i) => i / 10) }).observe(bar);
+  addEventListener("resize", update, { passive: true });
 }
 
 function stopAll() {

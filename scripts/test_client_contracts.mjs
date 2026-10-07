@@ -2017,6 +2017,13 @@ const ALBUM_FIXTURE = [
               readFileSync(join(ROOT, d, "fuse-bed.js"), "utf8").includes("function keepWeights(") && readFileSync(join(ROOT, d, "store.js"), "utf8").includes("export let handoffWeights") &&
               readFileSync(join(ROOT, d, "card.css"), "utf8").includes(".card-w {");
           }));
+      ok("手機視窗：浮動抽牌列看主按鈕整顆在不在畫面（Safari 一打開就有）、空池也浮；廢字簍跟著浮動列出現不壓按鈕；24rem 以下頂欄擠回兩行（web6、web7）",
+        ["web6", "web7"].every((d) => {
+          const app = readFileSync(join(ROOT, d, "app.js"), "utf8");
+          const cssText = readFileSync(join(ROOT, d, "styles.css"), "utf8");
+          return app.includes("(shots.length > 0 || pool.size > 0 || pickerMQ.matches)") && app.includes('const main = bar.querySelector(".btn-primary");') &&
+            cssText.includes("廢字簍跟著浮動抽牌列出現") && /@media \(max-width: 24rem\) \{\s*\.mast-controls \{\s*flex-wrap: nowrap;/.test(cssText);
+        }));
       ok("卡冊：沒用過的牌不灰掉；滑鼠停上去有浮空放大卡（web6、web7）",
         ["web6", "web7"].every((d) => {
           const js = readFileSync(join(ROOT, d, "book.js"), "utf8");

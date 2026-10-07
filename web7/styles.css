@@ -4968,3 +4968,47 @@ html[data-booting] :is(#lib-grid, #case-grid, #book-grid):empty::before {
   color: var(--color-muted);
   font-size: var(--text-xs);
 }
+
+/* ---------- 手機：廢字簍跟著浮動抽牌列出現（app.js 的 renderGoFloat） ----------
+ * 以前它一直固定在右下角，抽牌那排捲到底部時會蓋住「只抽牌」的右半邊。
+ * 手機上改成：浮動抽牌列出來時一起出來（排在同一條底線），拖牌的時候（丟進來封鎖）、
+ * 清單打開的時候也在；其他時候讓開。 */
+@media (max-width: 40rem) {
+  .trash {
+    opacity: 0;
+    pointer-events: none;
+    scale: 0.8;
+    transition:
+      opacity var(--dur-short) var(--ease-out),
+      scale var(--dur-short) var(--ease-out),
+      transform var(--dur-short) var(--ease-out),
+      translate var(--dur-medium) var(--ease-out),
+      border-color var(--dur-short) var(--ease-out),
+      background-color var(--dur-short) var(--ease-out);
+  }
+  .go-float[data-show="true"]:not([inert]):not([hidden]) ~ .trash,
+  .trash[data-armed],
+  .trash[data-open="true"] {
+    opacity: 1;
+    pointer-events: auto;
+    scale: 1;
+  }
+}
+
+/* ---------- 小手機（iPhone SE 這類，24rem 以下）：頂欄擠回兩行 ----------
+ * 疊印台比墨池多一顆「規則」：375 寬時分級 126＋工具 251 比可用的 363 多 18px，工具掉到第三行。
+ * 工具鈕最小寬 36 → 32px、分級左右 6 → 5px（點擊範圍還有 32px）；真的放不下就左右滑，不再長出第三行。 */
+@media (max-width: 24rem) {
+  .mast-controls {
+    flex-wrap: nowrap;
+    overflow-x: auto;
+  }
+  .mast-tools .ghost.icon-btn,
+  .mast-tools :is(#lora-pick-btn, #ckpt-pick-btn, #wf-pick-btn) {
+    min-width: 32px;
+    padding-inline: 6px;
+  }
+  .mast .segmented button {
+    padding: 0 5px;
+  }
+}
