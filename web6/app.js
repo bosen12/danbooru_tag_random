@@ -39,6 +39,7 @@ import { HARD_BANNED } from "./card-art.js";
 import { buildLibrary, groupChips, createAssets, cardNode, setCardFlag, setEnterTarget, eagerArt, cardFacts, CARD_SUIT_INFO, CARD_SUITS, RATING_ZH } from "./cards.js";
 import { bindArt, artFallback } from "./card-images.js";
 import { el, openSheet, anyOverlay, toast, runToastAction, ICONS } from "./ui.js";
+import { mountKeysHelp } from "./keys-help.js";
 import { openDecks } from "./decks.js";
 import { openPaste, listenPaste } from "./paste-prompt.js";
 import { paintWeight, wireWeightInput, weightRow, weightPositive } from "./weights.js";
@@ -106,6 +107,8 @@ function settleText(node, text) {
 
 async function boot() {
   initMotion();
+  // 快捷鍵說明（電腦）：頂欄的「?」、按 ? 打開（keys-help.js）。
+  mountKeysHelp("mochi");
   try {
     const [lexicon, manifest] = await Promise.all([
       fetch(document.querySelector('link[rel="preload"][href^="lexicon.json"]')?.href || "lexicon.json").then((r) => r.json()),

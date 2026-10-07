@@ -38,6 +38,7 @@ import { initWorkflow, currentWorkflowId, currentSampling, wfHandleKeys } from "
 import { HARD_BANNED, applyArtSources } from "./card-art.js";
 import { buildLibrary, groupChips, createAssets, cardNode, cardFacts, setEnterTarget, eagerArt, CARD_SUIT_INFO, CARD_SUITS, RATING_ZH, ERA_ZH } from "./cards.js";
 import { el, openSheet, anyOverlay, toast } from "./ui.js";
+import { mountKeysHelp } from "./keys-help.js";
 import { openDecks, loadDecks, cachedDecks } from "./decks.js";
 import { openPaste, listenPaste } from "./paste-prompt.js";
 import { paintWeight, wireWeightInput, weightRow, weightPositive } from "./weights.js";
@@ -213,6 +214,8 @@ function haptic(ms) {
 
 async function boot() {
   initMotion();
+  // 快捷鍵說明（電腦）：頂欄的「?」、按 ? 打開（keys-help.js）。
+  mountKeysHelp("fuse");
   try {
     const [lexicon, man] = await Promise.all([
       fetch(document.querySelector('link[rel="preload"][href^="lexicon.json"]')?.href || "lexicon.json").then((r) => r.json()),

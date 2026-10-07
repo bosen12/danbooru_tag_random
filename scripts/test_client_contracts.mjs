@@ -2024,6 +2024,12 @@ const ALBUM_FIXTURE = [
           return app.includes("(shots.length > 0 || pool.size > 0 || pickerMQ.matches)") && app.includes('const main = bar.querySelector(".btn-primary");') &&
             cssText.includes("廢字簍跟著浮動抽牌列出現") && /@media \(max-width: 24rem\) \{\s*\.mast-controls \{\s*flex-wrap: nowrap;/.test(cssText);
         }));
+      ok("快捷鍵說明：四個房間都掛（頂欄 ?、按 ? 打開，打字時不觸發），照房間列出能用的鍵；手機不出現那顆鈕（web6、web7）",
+        readFileSync(join(ROOT, "web6/keys-help.js"), "utf8") === readFileSync(join(ROOT, "web7/keys-help.js"), "utf8") &&
+          ["web6", "web7"].every((d) =>
+            [["app.js", "mochi"], ["fuse.js", "fuse"], ["book.js", "book"], ["album.js", "album"]].every(([f, room]) => readFileSync(join(ROOT, d, f), "utf8").includes(`mountKeysHelp("${room}");`)) &&
+            readFileSync(join(ROOT, d, "styles.css"), "utf8").includes(".mast-tools .help-btn {")
+          ));
       ok("卡冊：沒用過的牌不灰掉；滑鼠停上去有浮空放大卡（web6、web7）",
         ["web6", "web7"].every((d) => {
           const js = readFileSync(join(ROOT, d, "book.js"), "utf8");

@@ -8,6 +8,7 @@
 import { RATING_LABEL, ratingBlocked } from "./rules/rating.js";
 import { buildLibrary, ERA_ZH } from "./cards.js";
 import { el, openSheet, toast } from "./ui.js";
+import { mountKeysHelp } from "./keys-help.js";
 import { initMotion, settleMotion, seat, refuse, enter, leave, reducedMotion, CURVE, DUR, css } from "./motion.js";
 import { watchLink, LINK_LABEL } from "./gen.js";
 import { getSfx } from "./sfx.js";
@@ -40,6 +41,8 @@ function dateText(iso) {
 
 async function boot() {
   initMotion();
+  // 快捷鍵說明（電腦）：頂欄的「?」、按 ? 打開（keys-help.js）。
+  mountKeysHelp("album");
   try {
     const data = await fetch(document.querySelector('link[rel="preload"][href^="lexicon.json"]')?.href || "lexicon.json").then((r) => r.json());
     lib = buildLibrary(data, { ratingBlocked });

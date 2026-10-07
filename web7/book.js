@@ -13,6 +13,7 @@ import { indexLexicon } from "./engine.js";
 import { ratingBlocked, RATING_LABEL } from "./rules/rating.js";
 import { buildLibrary, groupChips, createAssets, cardNode, cardFacts, setCardFlag, eagerArt, CARD_SUIT_INFO, CARD_SUITS } from "./cards.js";
 import { el, openSheet, toast } from "./ui.js";
+import { mountKeysHelp } from "./keys-help.js";
 import { openDecks } from "./decks.js";
 import { openPaste } from "./paste-prompt.js";
 import { initMotion, settleMotion, seat, refuse, flight, reducedMotion, CURVE, DUR, css } from "./motion.js";
@@ -65,6 +66,8 @@ const fmt = (n) => n.toLocaleString("zh-TW");
 
 async function boot() {
   initMotion();
+  // 快捷鍵說明（電腦）：頂欄的「?」、按 ? 打開（keys-help.js）。
+  mountKeysHelp("book");
   try {
     const [lexicon, manifest] = await Promise.all([
       fetch(document.querySelector('link[rel="preload"][href^="lexicon.json"]')?.href || "lexicon.json").then((r) => r.json()),
