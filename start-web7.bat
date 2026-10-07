@@ -26,6 +26,7 @@ if defined TSIP echo Tailscale http://%TSIP%:%PORT%/
 echo bind      0.0.0.0:%PORT%/
 call "%~dp0scripts\card-art-check.bat"
 call "%~dp0scripts\upscale-model-check.bat"
+call "%~dp0scripts\pose-assets-check.bat"
 start "" "http://127.0.0.1:%PORT%/"
 %PY% server.py
 if errorlevel 1 pause

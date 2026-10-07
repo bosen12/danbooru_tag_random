@@ -1452,6 +1452,8 @@ _pp = server.parse_pose({"name": _pn, "strength": 9, "end": "x"})
 ok("pose: 強度夾在範圍裡、壞的用預設（end 預設 1，照專案主的工作流）", _pp == {"name": _pn, "strength": 1.2, "end": 1.0}, str(_pp))
 ok("pose: 沒給強度就是 1", server.parse_pose({"name": _pn})["strength"] == 1.0)
 _saved_models = server.models_from_comfy
+_saved_ready = server.pose_node_ready
+server.pose_node_ready = lambda: None
 try:
     server.models_from_comfy = lambda kind: ["SDXL\\controlnet-union-sdxl-1.0\\promax.safetensors", "Illustrious-XL ControlNet Openpose\\illustriousXL_v10.safetensors"] if kind == "controlnet" else []
     ok("pose: 先挑 Illustrious 的 OpenPose", server.pose_controlnet() == "Illustrious-XL ControlNet Openpose\\illustriousXL_v10.safetensors")
@@ -1475,6 +1477,22 @@ try:
     ok("pose: prepare_workflow 不認得的參考圖直接忽略", "300" not in _wfw)
 finally:
     server.models_from_comfy = _saved_models
+    server.pose_node_ready = _saved_ready
+_saved_api3 = server.api
+try:
+    server._POSE_NODE_CACHE.update(t=0.0, ok=False)
+    server.api = lambda method, path, body=None, timeout=0: {}
+    try:
+        server.pose_node_ready()
+        ok("pose: ComfyUI 沒裝節點就明講怎麼補", False)
+    except server.PoseError as exc:
+        ok("pose: ComfyUI 沒裝節點就明講怎麼補", "AIO Aux Preprocessor" in str(exc) and "啟動檔" in str(exc))
+    server.api = lambda method, path, body=None, timeout=0: {"AIO_Preprocessor": {}}
+    server.pose_node_ready()
+    ok("pose: 有節點就放行（記一分鐘）", server._POSE_NODE_CACHE["ok"] is True)
+finally:
+    server.api = _saved_api3
+    server._POSE_NODE_CACHE.update(t=0.0, ok=False)
 _saved_upload2 = server.comfy_upload_image
 _got = {}
 try:

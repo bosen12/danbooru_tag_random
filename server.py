@@ -637,7 +637,25 @@ def pose_controlnet() -> str:
         hit = next((n for n, x in low if test(x)), None)
         if hit:
             return hit
-    raise PoseError("ComfyUI 裡找不到 OpenPose（或 Union）的 ControlNet，姿勢參考用不了")
+    raise PoseError("ComfyUI 裡找不到 OpenPose 的 ControlNet：重開啟動檔會自動下載（約 2.5GB），下載完就能用")
+
+
+_POSE_NODE_CACHE = {"t": 0.0, "ok": False}
+
+
+def pose_node_ready() -> None:
+    """ComfyUI 有沒有 AIO Aux Preprocessor（comfyui_controlnet_aux）。沒有就明講怎麼補，不丟 Comfy 的原始錯誤。"""
+    now = time.time()
+    if _POSE_NODE_CACHE["ok"] and now - _POSE_NODE_CACHE["t"] < 60:
+        return
+    try:
+        info = api("GET", f"/object_info/{POSE_PREPROCESSOR['class_type']}", timeout=8)
+    except Exception:
+        return  # 問不到就讓 Comfy 自己說
+    ok = isinstance(info, dict) and POSE_PREPROCESSOR["class_type"] in info
+    _POSE_NODE_CACHE.update(t=now, ok=ok)
+    if not ok:
+        raise PoseError("ComfyUI 還沒有 AIO Aux Preprocessor（comfyui_controlnet_aux 節點）：重開啟動檔會自動裝，裝完重開一次 ComfyUI")
 
 
 def inject_pose(wf: dict, pose: dict, width: int, height: int) -> None:
@@ -646,6 +664,7 @@ def inject_pose(wf: dict, pose: dict, width: int, height: int) -> None:
     ckpt = next((nid for nid, n in wf.items() if isinstance(n, dict) and n.get("class_type") == "CheckpointLoaderSimple"), None)
     if sampler is None or ckpt is None:
         return
+    pose_node_ready()
     net = pose_controlnet()
     ks = wf[sampler]["inputs"]
     wf["300"] = {"class_type": "LoadImage", "inputs": {"image": pose["name"]}}
@@ -700,6 +719,7 @@ def pose_preview(payload: dict) -> dict:
     name = str((payload or {}).get("name") or "")
     if not POSE_NAME_RE.match(name):
         raise PoseError("不是姿勢參考圖")
+    pose_node_ready()
     wf = {
         "1": {"class_type": "LoadImage", "inputs": {"image": name}},
         "2": {"class_type": POSE_PREPROCESSOR["class_type"], "inputs": {"image": ["1", 0], "preprocessor": POSE_PREPROCESSOR["preprocessor"], "resolution": POSE_PREPROCESSOR["resolution"]}},
