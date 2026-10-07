@@ -153,8 +153,7 @@ export function weightRow(current, onPick, el) {
           weightText(w)
         )
       )
-    ),
-    el("span", { class: "weight-hint" }, "淡 ← → 強")
+    )
   );
   return row;
 }

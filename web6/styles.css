@@ -4956,28 +4956,37 @@ html[data-booting] :is(#lib-grid, #case-grid, #book-grid):empty::before {
 }
 
 /* ---------- 牌的詳情：份量一排（weights.js 的 weightRow） ---------- */
+/* 「份量」跟五顆數字同一行；五顆平分可用的寬度，再窄也放得下（疊印台的小選單只有 16rem）。
+ * 在牌的詳情裡橫跨兩欄（grid-column），不擠在右欄。 */
 .weight-row {
+  grid-column: 1 / -1;
   display: flex;
-  flex-wrap: wrap;
   align-items: center;
-  gap: var(--space-xs) var(--space-sm);
-  margin: 0 0 var(--space-sm);
+  gap: var(--space-sm);
+  min-width: 0;
+  margin: 0 0 var(--space-xs);
 }
 .weight-label {
+  flex: none;
   color: var(--color-muted);
   font-size: var(--text-sm);
 }
+.weight-seg {
+  display: flex;
+  flex: 1 1 auto;
+  min-width: 0;
+  /* 電腦上詳情很寬：不要拉成一整條，數字之間太空。 */
+  max-width: 22rem;
+}
 .weight-seg button {
-  min-width: 3em;
+  flex: 1 1 0;
+  min-width: 0;
+  padding-inline: 2px;
   font-family: var(--font-mono);
   font-variant-numeric: tabular-nums;
 }
 .weight-seg button[data-dir="up"][aria-checked="true"] {
   color: var(--color-accent);
-}
-.weight-hint {
-  color: var(--color-muted);
-  font-size: var(--text-xs);
 }
 
 /* ---------- 手機：廢字簍跟著浮動抽牌列出現（app.js 的 renderGoFloat） ----------

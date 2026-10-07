@@ -2369,12 +2369,13 @@ function showCard(tag, from) {
     el(
       "div",
       { class: "detail" },
+      // 合成池裡的牌：最上面一排份量，橫跨整個寬度（手機調份量的地方；電腦也可以在牌上滾滾輪）。
+      // 以前擠在右欄：手機上右欄只剩約 250px，五顆數字放不下、1.4 超出彈窗被切掉。
+      inPool ? weightRow(weights.get(tag) || 1, (w) => setWeight(tag, w), el) : null,
       art ? el("div", { class: "detail-art" }, el("img", { src: art, alt: card.zh })) : cardNode(card, assets, { tagName: "div" }),
       el(
         "div",
         {},
-        // 合成池裡的牌：最上面一排份量（手機調份量的地方；電腦也可以在牌上滾滾輪）。
-        inPool ? weightRow(weights.get(tag) || 1, (w) => setWeight(tag, w), el) : null,
         el("p", { class: "tag-en" }, card.tag),
         el("dl", {}, facts.map(([k, v]) => [el("dt", {}, k), el("dd", {}, v)]))
       )
