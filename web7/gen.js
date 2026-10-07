@@ -295,6 +295,16 @@ export function createGenerator(hooks) {
 }
 
 /**
+ * 出圖日誌的註記（server.py 的 /api/genlog/mark）：成品牆、晾紙繩上單張撤下的記成 "discard"，
+ * 按復原送 null 蓋掉。牌的戰績、模型成績單拿它當「這張不要」。整面清空不算（那是整理，不是嫌棄）。
+ * 送不出去就算了：只是統計少一筆。
+ */
+export function markGenLog(job, mark) {
+  if (!job) return;
+  fetch("/api/genlog/mark", { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ id: job, mark }) }).catch(() => {});
+}
+
+/**
  * 成品在畫面上顯示用的網址：跟伺服器要 webp 小檔（約原圖的 1/12，走 Tailscale 時差很多）。
  * 「開原圖」照舊用原本的網址拿 PNG；印製中的預覽幀（data: URL）不動。
  */

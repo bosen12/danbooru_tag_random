@@ -39,6 +39,7 @@ if str(ROOT) not in sys.path:
 
 import card_usage
 import card_decks
+import gen_log
 import lora_scan
 import recipes
 import workflows
@@ -1777,6 +1778,9 @@ class GenJob:
         self.started = False
         self.failed = False
         self.kept_until = 0.0
+        # 出圖日誌（gen_log.py）：做完時照這份配方記一行；第一格進度的時間用來算真的在畫多久。
+        self.payload = src
+        self.drawing_at: float | None = None
         self.cond = threading.Condition()
         self.log: list[tuple[str, dict]] = []  # 預覽以外的每一則；接回來的人從頭重播
         self.preview: tuple[int, dict] | None = None  # 預覽一張幾十 KB，只留最新的
@@ -1800,6 +1804,7 @@ class GenJob:
         return self
 
     def push(self, event: str, data: dict) -> None:
+        ended = False
         with self.cond:
             if self.finished:
                 return
@@ -1813,6 +1818,8 @@ class GenJob:
                 self.log.append((event, data))
             if event == "progress" and isinstance(data, dict):
                 self.started = True
+                if self.drawing_at is None:
+                    self.drawing_at = time.time()
                 try:
                     self.progress = max(0.0, min(1.0, float(data.get("value") or 0) / float(data.get("max") or 25)))
                 except (TypeError, ValueError):
@@ -1821,7 +1828,22 @@ class GenJob:
                 self.finished = True
                 self.finished_at = time.time()
                 self.failed = event == "error"
+                ended = not self.cancelled
             self.cond.notify_all()
+        if ended:
+            gen_log.record(
+                gen_log.entry_of(
+                    self.id,
+                    self.payload,
+                    event == "done",
+                    data,
+                    origin=self.origin,
+                    kind=self.kind,
+                    created_at=self.created_at,
+                    started_at=self.drawing_at,
+                    finished_at=self.finished_at,
+                )
+            )
 
     def abandoned(self) -> bool:
         with self.cond:
@@ -3446,6 +3468,17 @@ class Handler(BaseHTTPRequestHandler):
         if path == "/api/decks":
             self._json(200, {"ok": True, "decks": card_decks.load()})
             return
+        # 出圖日誌（作品冊的「日誌」）：新的在前，before＝從這個時間（毫秒）之前接著翻。
+        if path == "/api/genlog":
+            qs = urllib.parse.parse_qs(urllib.parse.urlparse(self.path).query)
+            try:
+                limit = int((qs.get("limit") or ["200"])[0])
+                before = int((qs.get("before") or ["0"])[0]) or None
+            except ValueError:
+                self._json(400, {"ok": False, "error": "limit、before 要是數字"})
+                return
+            self._json(200, {"ok": True, **gen_log.page(limit, before)})
+            return
         if path == "/api/gen/active":
             self._json(200, {"ok": True, "jobs": active_jobs(keep=urllib.parse.parse_qs(urllib.parse.urlparse(self.path).query).get("keep") == ["1"])})
             return
@@ -3537,6 +3570,15 @@ class Handler(BaseHTTPRequestHandler):
                 self._json(200, {"ok": True, **card_usage.add(payload)})
             except card_usage.UsageError as exc:
                 self._json(400, {"ok": False, "error": str(exc), "code": "invalid"})
+            return
+        # 出圖日誌的註記：成品牆單張拿掉（"discard"），按復原送 null 蓋掉。
+        if path == "/api/genlog/mark":
+            try:
+                gen_log.mark(payload.get("id"), payload.get("mark"))
+            except ValueError as exc:
+                self._json(400, {"ok": False, "error": str(exc), "code": "invalid"})
+                return
+            self._json(200, {"ok": True})
             return
         if path == "/api/decks":
             try:

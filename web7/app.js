@@ -49,7 +49,7 @@ import { createDrag, inkRing } from "./drag.js";
 import { initMotion, settleMotion, flip, flipBy, leave, enter, confirmButton, gatherHome, flight, seat, refuse, reducedMotion, CURVE, DUR, css } from "./motion.js";
 import { createHand } from "./hand.js";
 import { createTrashPanel } from "./trash-panel.js";
-import { createGenerator, comfyOnline, viewSrc, tabTitle, watchLink, LINK_LABEL } from "./gen.js";
+import { createGenerator, comfyOnline, viewSrc, tabTitle, watchLink, LINK_LABEL, markGenLog } from "./gen.js";
 import { genSeed, mountSeedControl, seedUseButton } from "./seed-control.js";
 import { attachPeek } from "./card-peek.js";
 import { createHires, openHiresPicker, paintHiresVeil, hiresBusy, HIRES_MODES } from "./hires.js";
@@ -2319,11 +2319,14 @@ function removeShot(shot) {
   $("wall-empty").hidden = shots.length > 0;
   S.saveShots(shots);
   renderGoFloat();
+  // 印好的那張單獨撤下：出圖日誌記一筆「不要」（牌的戰績用）。
+  if (shot.status === "done") markGenLog(shot.job, "discard");
   toast("撤下了一張", { action: { label: "復原", key: "Z", run: () => restoreShot(shot, at) } });
 }
 
 function restoreShot(shot, at) {
   if (shots.some((s) => s.id === shot.id)) return;
+  if (shot.status === "done") markGenLog(shot.job, null);
   const i = Math.max(0, Math.min(at, shots.length));
   shots.splice(i, 0, shot);
   const node = shotNode(shot, false);

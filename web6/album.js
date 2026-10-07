@@ -4,6 +4,7 @@
  *   - 找作品：作品名、牌的中文名、提示詞。
  *   - 點一張：大圖、你選的牌、全部的牌、尺寸／種子／底模；把牌帶回墨池、複製 POS、開原圖、從作品冊拿掉。
  *   - 網址帶 #作品編號（收藏完按「打開作品冊」過來）：直接打開那一張。
+ *   - 「日誌」分頁：印過的每一張，不只收藏的（album-log.js）。網址帶 ?tab=log 直接開在日誌。
  */
 import { RATING_LABEL, ratingBlocked } from "./rules/rating.js";
 import { buildLibrary, ERA_ZH } from "./cards.js";
@@ -17,6 +18,7 @@ import * as S from "./store.js";
 import { tagsOfPositive } from "./usage.js";
 import { removeFromAlbum } from "./album-save.js";
 import { weightsOfPositive } from "./weights.js";
+import { createLog, LOG_FILTERS } from "./album-log.js";
 
 const sfx = getSfx();
 const $ = (id) => document.getElementById(id);
@@ -26,6 +28,15 @@ let lib = null;
 let works = [];
 let rating = "general";
 let query = "";
+// 分頁：works（收藏的）／log（印過的每一張）。
+let tab = new URLSearchParams(location.search).get("tab") === "log" ? "log" : "works";
+let logFilter = "all";
+let log = null;
+const TABS = [
+  ["works", "作品"],
+  ["log", "日誌"],
+];
+const PLACEHOLDER = { works: "找作品：牌名、提示詞…", log: "找印過的：牌名、提示詞、底模…" };
 
 const zh = (t) => lib?.byTag.get(t)?.zh || t;
 const fileUrl = (ref) => (ref && ref.file ? `/api/recipes/files/${encodeURIComponent(ref.file)}` : null);
@@ -54,11 +65,24 @@ async function boot() {
     return;
   }
   rating = (S.loadSettings() || {}).rating || "general";
+  log = createLog({
+    lib,
+    zh,
+    isCard: (t) => lib.byTag.has(t),
+    getWorks: () => works,
+    toMochi,
+    reloadWorks: async () => {
+      await load();
+      log.reindex();
+    },
+  });
   renderRating();
+  renderTabs();
   wireSearch();
   wireSound();
   pingLoop();
   await load();
+  if (tab === "log") await log.load();
   render({ deal: true });
   settleMotion();
   openFromHash();
@@ -68,6 +92,11 @@ async function boot() {
     if (document.hidden) return;
     const before = works.map((w) => w.id).join();
     await load();
+    // 日誌開著：回來時也重讀（剛才在墨池又印了幾張）。
+    if (tab === "log") {
+      await log.load();
+      return render();
+    }
     if (works.map((w) => w.id).join() !== before) render();
   });
 }
@@ -171,12 +200,83 @@ function wireSearch() {
   });
 }
 
+/* ================= 分頁 ================= */
+
+function renderTabs() {
+  const box = $("album-tabs");
+  box.replaceChildren(
+    ...TABS.map(([v, label]) =>
+      el(
+        "button",
+        {
+          type: "button",
+          role: "radio",
+          "aria-checked": tab === v ? "true" : "false",
+          dataset: { v },
+          onclick: () => pickTab(v),
+        },
+        label
+      )
+    )
+  );
+  const filters = $("log-filters");
+  filters.hidden = tab !== "log";
+  filters.replaceChildren(
+    ...LOG_FILTERS.map(([v, label]) =>
+      el(
+        "button",
+        {
+          class: "group-chip pressable",
+          type: "button",
+          "aria-pressed": logFilter === v ? "true" : "false",
+          onclick: () => {
+            if (logFilter === v) return;
+            logFilter = v;
+            renderTabs();
+            render();
+          },
+        },
+        label
+      )
+    )
+  );
+  $("album-q").placeholder = PLACEHOLDER[tab];
+}
+
+async function pickTab(v) {
+  if (tab === v) return;
+  tab = v;
+  // 換分頁記在網址上：重新整理、上一頁回來還是這一頁（不推新的歷史，免得上一頁要按好幾次）。
+  const u = new URL(location.href);
+  if (tab === "log") u.searchParams.set("tab", "log");
+  else u.searchParams.delete("tab");
+  history.replaceState(null, "", u.pathname + u.search + u.hash);
+  renderTabs();
+  seat($("album-tabs").querySelector('[aria-checked="true"]'));
+  if (tab === "log" && !log.loaded) {
+    render();
+    await log.load();
+  }
+  render({ deal: true });
+}
+
 /* ================= 大圖牆 ================= */
 
 const visible = (w) => (RANK[w.rating] ?? 2) <= RANK[rating];
 
 function render({ deal = false } = {}) {
   const grid = $("album-grid");
+  const logBox = $("album-log");
+  grid.hidden = tab !== "works";
+  logBox.hidden = tab !== "log";
+  if (tab === "log") {
+    $("album-hint").hidden = true;
+    const r = log.render(logBox, { query, filter: logFilter, rating }, { deal });
+    $("album-sum").textContent = log.loaded && r.total
+      ? `${r.shown} 張${r.more ? "（還有更早的）" : ""}${r.hidden ? `・${r.hidden} 張在${RATING_LABEL[rating]}看不到` : ""}`
+      : "";
+    return;
+  }
   const shown = works.filter((w) => visible(w) && (!query || w._text.includes(query)));
   const hidden = works.filter((w) => !visible(w)).length;
   $("album-hint").hidden = works.length > 0;

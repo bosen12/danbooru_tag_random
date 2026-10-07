@@ -2030,6 +2030,16 @@ const ALBUM_FIXTURE = [
             [["app.js", "mochi"], ["fuse.js", "fuse"], ["book.js", "book"], ["album.js", "album"]].every(([f, room]) => readFileSync(join(ROOT, d, f), "utf8").includes(`mountKeysHelp("${room}");`)) &&
             readFileSync(join(ROOT, d, "styles.css"), "utf8").includes(".mast-tools .help-btn {")
           ));
+      ok("出圖日誌：伺服器記每張印好／印壞（按停不記），作品冊多「日誌」分頁（依日期、篩選、補收藏、帶回墨池）；成品牆／晾紙繩單張撤下記 discard、復原撤回（web6、web7）",
+        readFileSync(join(ROOT, "web6/album-log.js"), "utf8") === readFileSync(join(ROOT, "web7/album-log.js"), "utf8") &&
+          readFileSync(join(ROOT, "server.py"), "utf8").includes('if path == "/api/genlog/mark":') &&
+          ["web6", "web7"].every((d) => {
+            const read = (f) => readFileSync(join(ROOT, d, f), "utf8");
+            return read("album.js").includes("createLog({") && read("album.html").includes('id="album-log"') && read("album.html").includes('id="album-tabs"') &&
+              read("gen.js").includes("export function markGenLog(job, mark)") &&
+              read("app.js").includes('if (shot.status === "done") markGenLog(shot.job, "discard");') && read("app.js").includes('if (shot.status === "done") markGenLog(shot.job, null);') &&
+              read("fuse.js").includes('if (p.status === "done") markGenLog(p.job, "discard");') && read("fuse.js").includes('if (p.status === "done") markGenLog(p.job, null);');
+          }));
       ok("頂欄生圖進度：四個房間都掛，送印帶 origin（墨池、疊印台、Hires）；別頁開著就替沒人接的那張續命，排著的離開再回來接著印；離開頁面砍掉的連線不記成失敗；手機改掛換頁鈕的小圈（web6、web7）",
         readFileSync(join(ROOT, "web6/gen-status.js"), "utf8") === readFileSync(join(ROOT, "web7/gen-status.js"), "utf8") &&
           readFileSync(join(ROOT, "web6/gen-status.js"), "utf8").includes('fetch("/api/gen/active?keep=1"') &&

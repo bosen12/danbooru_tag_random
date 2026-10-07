@@ -11,6 +11,11 @@ import sys
 from pathlib import Path
 
 sys.path.insert(0, str(Path(__file__).resolve().parents[1]))
+import os as _env_os  # noqa: E402
+import tempfile as _env_tmp  # noqa: E402
+
+# 出圖日誌（gen_log.py）：這裡會造假的出圖工作，不能寫進真的 data/gen_log.jsonl。
+_env_os.environ["GEN_LOG_PATH"] = str(Path(_env_tmp.mkdtemp()) / "gen_log.jsonl")
 from server import (  # noqa: E402
     CKPT,
     Handler,
@@ -1330,7 +1335,7 @@ def _events():
     yield ("done", {"image": "/api/image?filename=x.png"})
 
 
-_job = server.GenJob(_events(), {"origin": "mochi", "positive": "1girl"}).start()
+_job = server.GenJob(_events(), {"origin": "mochi", "positive": r"1girl, ganyu \(genshin impact\), (smile:1.2)", "seed": 7, "width": 832, "height": 1216, "ckpt": "a.safetensors", "loras": [{"folder": "style", "file": "ink.safetensors", "strength": 0.8}], "steps": 30}).start()
 for _ in range(200):
     if _job.started:
         break
@@ -1352,6 +1357,60 @@ _act = {j["id"]: j for j in server.active_jobs()}.get(_job.id) or {}
 ok("active: 印好的留著給別頁說「印好了」", _act.get("state") == "done" and _act.get("finishedAt", 0) > 0, str(_act))
 _job.finished_at -= server.GEN_KEEP_DONE_SEC + 1
 ok("active: 太久以前印好的不列", _job.id not in {j["id"] for j in server.active_jobs()})
+
+# ---- 出圖日誌（gen_log.py）：做完記一行，按停的不記；拿掉的註記、復原 ----
+import gen_log as _gl  # noqa: E402
+
+ok("genlog: 測試寫在暫存，不碰真的 data/", "gen_log.jsonl" in str(_gl.LOG_PATH) and str(server.ROOT / "data") not in str(_gl.LOG_PATH), str(_gl.LOG_PATH))
+for _ in range(200):
+    _row = next((r for r in _gl.all_items() if r["id"] == _job.id), None) or {}
+    if _row:
+        break
+    _time.sleep(0.01)
+ok("genlog: 印好的記一行（哪一頁、配方、耗時、圖）", _row.get("ok") is True and _row.get("origin") == "mochi" and _row.get("image") == "/api/image?filename=x.png" and _row.get("width") == 832 and _row.get("steps") == 30 and isinstance(_row.get("ms"), int) and _row.get("drawMs") is not None, str(_row))
+ok("genlog: 提示詞還原成牌的寫法（Comfy 的跳脫拿掉）", _row.get("positive") == "1girl, ganyu (genshin impact), (smile:1.2)", str(_row.get("positive")))
+ok("genlog: LoRA 記資料夾／檔名和強度", _row.get("loras") == [{"folder": "style", "file": "ink.safetensors", "strength": 0.8}], str(_row.get("loras")))
+
+
+def _bad():
+    yield ("error", {"error": "Comfy 爆了"})
+
+
+_b = server.GenJob(_bad(), {"origin": "fuse", "positive": "x", "seed": 1}).start()
+# 日誌在放開鎖之後才寫：等那一行出現，不是等 finished。
+for _ in range(200):
+    _brow = next((r for r in _gl.all_items() if r["id"] == _b.id), None) or {}
+    if _brow:
+        break
+    _time.sleep(0.01)
+ok("genlog: 印壞的也記（帶原因）", _brow.get("ok") is False and _brow.get("error") == "Comfy 爆了" and _brow.get("origin") == "fuse", str(_brow))
+_cg = _th.Event()
+
+
+def _slow():
+    _cg.wait(5)
+    yield ("done", {"image": "/y"})
+
+
+_cj = server.GenJob(_slow(), {"origin": "mochi", "positive": "x"}).start()
+_cj.cancelled = True
+_cj.push("error", {"error": "已取消"})
+_cg.set()
+ok("genlog: 按停的不記", not any(r["id"] == _cj.id for r in _gl.all_items()))
+_gl.mark(_job.id, "discard")
+ok("genlog: 單張拿掉記成 discard", next(r for r in _gl.all_items() if r["id"] == _job.id).get("mark") == "discard")
+_gl.mark(_job.id, None)
+ok("genlog: 復原蓋掉 discard", not next(r for r in _gl.all_items() if r["id"] == _job.id).get("mark"))
+try:
+    _gl.mark(_job.id, "love")
+    ok("genlog: 不認得的註記擋掉", False)
+except ValueError:
+    ok("genlog: 不認得的註記擋掉", True)
+_pg = _gl.page(1)
+ok("genlog: 新的在前、分頁有 more", len(_pg["items"]) == 1 and _pg["more"] and _pg["total"] >= 2 and _pg["items"][0]["at"] >= _gl.page(1, _pg["items"][0]["at"])["items"][0]["at"])
+with open(_gl.LOG_PATH, "a", encoding="utf-8") as _f:
+    _f.write("{壞掉的一行" + chr(10))
+ok("genlog: 壞一行不連累整份", len(_gl.all_items()) >= 2)
 _h = server.GenJob(iter(()), {"origin": "evil", "hires": {"mode": "quick"}})
 ok("active: 不認得的 origin 當空的；Hires 標出來", _h.origin == "" and _h.kind == "hires")
 _c = server.GenJob(iter(()), {"origin": "fuse"})

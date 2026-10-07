@@ -47,7 +47,7 @@ import { favButton } from "./album-save.js";
 import { initMotion, settleMotion, flip, flipBy, leave, gatherHome, flight, enter, seat, refuse, CURVE, DUR, css } from "./motion.js";
 import { createHand } from "./hand.js";
 import { createDrag, inkRing } from "./drag.js";
-import { createGenerator, comfyOnline, viewSrc, tabTitle, watchLink, LINK_LABEL } from "./gen.js";
+import { createGenerator, comfyOnline, viewSrc, tabTitle, watchLink, LINK_LABEL, markGenLog } from "./gen.js";
 import { attachPeek, hidePeek, showPeek } from "./card-peek.js";
 import { createHires, openHiresPicker, paintHiresVeil, hiresBusy } from "./hires.js";
 import * as S from "./store.js";
@@ -2997,6 +2997,8 @@ function openPrint(p) {
           prints = prints.filter((x) => x !== p);
           savePrints();
           sheet.close();
+          // 印好的那張單獨撤下：出圖日誌記一筆「不要」（牌的戰績用）。
+          if (p.status === "done") markGenLog(p.job, "discard");
           // 從繩上掉下來、旁邊的滑過來補位，再給五秒反悔（以前按了就沒了，印好的圖也跟著沒了）。
           const node = $("line-list").querySelector(`.print[data-id="${p.id}"]`);
           const li = node?.closest("li");
@@ -3013,6 +3015,7 @@ function openPrint(p) {
               label: "復原",
               run: () => {
                 if (prints.includes(p)) return;
+                if (p.status === "done") markGenLog(p.job, null);
                 prints.splice(Math.max(0, Math.min(at, prints.length)), 0, p);
                 savePrints();
                 // 放回去的那張當成新夾上去的：往下一落、晃幾下（renderLine 看 lineSeen 決定誰要晃）。
