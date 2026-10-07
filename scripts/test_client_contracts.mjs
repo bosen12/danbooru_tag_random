@@ -2030,6 +2030,14 @@ const ALBUM_FIXTURE = [
             [["app.js", "mochi"], ["fuse.js", "fuse"], ["book.js", "book"], ["album.js", "album"]].every(([f, room]) => readFileSync(join(ROOT, d, f), "utf8").includes(`mountKeysHelp("${room}");`)) &&
             readFileSync(join(ROOT, d, "styles.css"), "utf8").includes(".mast-tools .help-btn {")
           ));
+      ok("疊印台手機挑牌抽屜：字盒收成一行＋挑牌，抽屜裡點牌飛進「卡池 N 張」，完成／暗幕／握把／返回手勢收（window.history，不是撤回的 history），收起捲到新牌；提示框不蓋完成（web6、web7）",
+        ["web6", "web7"].every((d) => {
+          const fuse = readFileSync(join(ROOT, d, "fuse.js"), "utf8");
+          const fcss = readFileSync(join(ROOT, d, "fuse.css"), "utf8");
+          return fuse.includes("function openCasePicker()") && fuse.includes("window.history.pushState({ casePicker: true }") && !fuse.includes("    history.pushState(") &&
+            fuse.includes("tuckIntoCaseFoot(tag, from);") && fuse.includes("function greetPlaced()") && fuse.includes("caseMQ.matches ? openCasePicker()") &&
+            fcss.includes('body[data-picker="open"] .case {') && readFileSync(join(ROOT, d, "styles.css"), "utf8").includes('body[data-picker="open"] .toast {');
+        }));
       ok("卡冊：沒用過的牌不灰掉；滑鼠停上去有浮空放大卡（web6、web7）",
         ["web6", "web7"].every((d) => {
           const js = readFileSync(join(ROOT, d, "book.js"), "utf8");

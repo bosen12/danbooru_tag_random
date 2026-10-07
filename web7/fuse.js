@@ -429,6 +429,7 @@ function commit(next, label, events = []) {
   retrialPicked();
   renderAll(events);
   syncCaseStates();
+  updateCaseFoot();
   // 呼應分頁要看四張試印「常補」什麼：等其他三張抽完（finishTrials）才重畫。
 }
 
@@ -546,7 +547,12 @@ function remove(tag, { viaDrag = false } = {}) {
 
 function toggle(tag, sourceEl) {
   if (bed.pins.includes(tag)) remove(tag);
-  else place(tag, sourceEl);
+  else if (caseOpen) {
+    // 手機抽屜開著：卡池在抽屜後面看不到，牌飛進抽屜底下的「卡池 N 張」。
+    const from = sourceEl && sourceEl.isConnected ? sourceEl.getBoundingClientRect() : null;
+    place(tag, null);
+    tuckIntoCaseFoot(tag, from);
+  } else place(tag, sourceEl);
 }
 
 function startWith(starter, btn = null, { fresh = false, kind = "起手" } = {}) {
@@ -3620,6 +3626,7 @@ function wireChrome() {
   });
   $("undo").addEventListener("click", undo);
   $("decks-btn").addEventListener("click", openDeckSheet);
+  buildCasePicker();
   listenPaste((text) => openPastePlate(text));
   // 牌組讀到了：版還是空的就重畫，「你的牌組」才出現在起手式上面。
   loadDecks().then((d) => {
@@ -3789,7 +3796,202 @@ function watchPoolPill() {
     sync();
   }, { threshold: 0 }).observe($("case"));
   narrow.addEventListener("change", sync);
-  jump.addEventListener("click", () => $("case").scrollIntoView({ behavior: reduced() ? "auto" : "smooth", block: "start" }));
+  // 手機：字盒是抽屜，「字盒」直接拉上來；平板照舊捲下去。
+  jump.addEventListener("click", () => (caseMQ.matches ? openCasePicker() : $("case").scrollIntoView({ behavior: reduced() ? "auto" : "smooth", block: "start" })));
 }
+
+/* ================= 手機：字盒是挑牌抽屜（跟墨池同一套） =================
+ * 窄螢幕上字盒排在卡池、試印、付印之後，加一張牌得捲過一整頁、看結果又要捲回來。
+ * 手機上字盒平常只剩一行「字盒 ［挑牌］」，按了（或角落的「字盒」）從底部拉上來挑；
+ * 抽屜開著時點牌，牌飛進底下「卡池 N 張」；按「完成」、點暗幕、握把往下拉、返回手勢、Esc 都會收。
+ * 收起來時卡池不在畫面上就捲回去，新放上的牌一張張落定。
+ * 握把、底部那條、暗幕跟墨池共用樣式（styles.css 的 body[data-picker="open"]）。 */
+const caseMQ = matchMedia("(max-width: 40rem)");
+let caseOpen = false;
+let caseFrom = null;
+let caseHold = null;
+
+function buildCasePicker() {
+  const box = $("case");
+  box.querySelector(".case-head").append(
+    el("button", { class: "btn btn-small case-open", id: "case-open", type: "button", "aria-controls": "case", onclick: () => openCasePicker() }, "挑牌")
+  );
+  const grip = el("div", { class: "picker-grip", "aria-hidden": "true" });
+  box.prepend(grip);
+  box.append(
+    el(
+      "div",
+      { class: "picker-foot case-foot" },
+      el("span", { class: "picker-count", id: "case-foot-count" }),
+      el("button", { class: "btn btn-primary picker-done", type: "button", onclick: () => closeCasePicker() }, "完成")
+    )
+  );
+  box.after(el("div", { class: "picker-scrim", id: "case-scrim", hidden: true, onclick: () => closeCasePicker() }));
+  caseHold = el("div", { class: "picker-hold", "aria-hidden": "true", hidden: true });
+  box.before(caseHold);
+  swipeCaseDown(grip, box);
+  swipeCaseDown(box.querySelector(".case-head"), box);
+  addEventListener("popstate", () => {
+    if (caseOpen) closeCasePicker({ fromHistory: true });
+  });
+  addEventListener("keydown", (e) => {
+    if (e.key === "Escape" && caseOpen && !pop && !document.querySelector(".overlay")) closeCasePicker();
+  });
+  caseMQ.addEventListener?.("change", () => {
+    if (!caseMQ.matches && caseOpen) closeCasePicker();
+  });
+  updateCaseFoot();
+}
+
+function openCasePicker() {
+  if (caseOpen || !caseMQ.matches) return;
+  closePop();
+  hidePeek();
+  caseOpen = true;
+  caseFrom = new Set(bed.pins);
+  const box = $("case");
+  // 字盒離開版面（變成固定在底部的抽屜）時，原位墊一塊一樣高的空白：背後的頁面不會跳。
+  caseHold.style.height = box.getBoundingClientRect().height + "px";
+  caseHold.hidden = false;
+  document.body.dataset.picker = "open";
+  document.documentElement.style.overflow = "hidden";
+  box.setAttribute("role", "dialog");
+  box.setAttribute("aria-modal", "true");
+  $("case-scrim").hidden = false;
+  // window.history：這個檔案的 history 是撤回的紀錄（commit 的 history.push），不是瀏覽器的。
+  try {
+    window.history.pushState({ casePicker: true }, "");
+  } catch {
+    /* 不能動歷史紀錄就算了：照樣用按鈕收 */
+  }
+  updateCaseFoot();
+  if (!reduced()) {
+    box.animate([{ transform: "translateY(100%)" }, { transform: "none" }], { duration: DUR.long, easing: css(CURVE.out) });
+    $("case-scrim").animate([{ opacity: 0 }, { opacity: 1 }], { duration: DUR.medium, easing: css(CURVE.out) });
+  }
+  box.querySelector(".picker-done")?.focus({ preventScroll: true });
+}
+
+function closeCasePicker({ fromHistory = false } = {}) {
+  if (!caseOpen) return;
+  caseOpen = false;
+  const box = $("case");
+  const done = () => {
+    if (caseOpen) return;
+    delete document.body.dataset.picker;
+    document.documentElement.style.overflow = "";
+    box.removeAttribute("role");
+    box.removeAttribute("aria-modal");
+    box.style.transform = "";
+    $("case-scrim").hidden = true;
+    caseHold.hidden = true;
+    $("case-open")?.focus({ preventScroll: true });
+    greetPlaced();
+  };
+  if (!fromHistory && window.history.state && window.history.state.casePicker) {
+    try {
+      window.history.back();
+    } catch {
+      /* 沒關係 */
+    }
+  }
+  if (reduced()) return done();
+  const from = box.style.transform || "none";
+  const a = box.animate([{ transform: from }, { transform: "translateY(100%)" }], { duration: DUR.short, easing: css(CURVE.exit), fill: "forwards" });
+  $("case-scrim").animate([{ opacity: 1 }, { opacity: 0 }], { duration: DUR.short, easing: css(CURVE.exit), fill: "forwards" });
+  const finish = () => {
+    a.cancel();
+    for (const x of $("case-scrim").getAnimations()) x.cancel();
+    done();
+  };
+  a.onfinish = finish;
+  setTimeout(() => !caseOpen && document.body.dataset.picker && finish(), DUR.short + 80);
+}
+
+/** 握把（或標題列）往下拉：超過 90px 或甩一下就收起，不到就彈回。 */
+function swipeCaseDown(handle, sheet) {
+  if (!handle) return;
+  let drag = null;
+  handle.addEventListener("pointerdown", (e) => {
+    if (!caseOpen || e.pointerType === "mouse" || e.target.closest("button")) return;
+    drag = { id: e.pointerId, y: e.clientY, t: performance.now(), dy: 0 };
+    try {
+      handle.setPointerCapture(e.pointerId);
+    } catch {
+      /* 照樣處理 */
+    }
+  });
+  handle.addEventListener("pointermove", (e) => {
+    if (!drag || e.pointerId !== drag.id) return;
+    const raw = e.clientY - drag.y;
+    drag.dy = raw > 0 ? raw : raw / 6;
+    sheet.style.transform = `translateY(${drag.dy.toFixed(1)}px)`;
+  });
+  const end = (e) => {
+    if (!drag || e.pointerId !== drag.id) return;
+    const { dy, t } = drag;
+    drag = null;
+    const speed = dy / Math.max(1, performance.now() - t);
+    if (dy > 90 || (dy > 24 && speed > 0.6)) return closeCasePicker();
+    if (dy && !reduced()) sheet.animate([{ transform: `translateY(${dy}px)` }, { transform: "none" }], { duration: DUR.medium, easing: css(CURVE.settle) });
+    sheet.style.transform = "";
+  };
+  handle.addEventListener("pointerup", end);
+  handle.addEventListener("pointercancel", end);
+}
+
+function updateCaseFoot() {
+  const n = $("case-foot-count");
+  if (!n) return;
+  const text = bed.pins.length ? `卡池 ${bed.pins.length} 張` : "卡池還是空的";
+  if (n.textContent === text) return;
+  n.textContent = text;
+  if (caseOpen && !reduced()) n.animate([{ transform: "translateY(5px)", opacity: 0.4 }, { transform: "none", opacity: 1 }], { duration: DUR.short, easing: css(CURVE.out) });
+}
+
+/** 抽屜開著時放牌：牌的影子飛進底下那個「卡池 N 張」，數字彈一下（卡池在抽屜後面，看不到）。 */
+function tuckIntoCaseFoot(tag, from) {
+  const card = cardOf(tag);
+  const target = $("case-foot-count");
+  if (!card || !from || !from.width || !target || reduced()) return;
+  const f = cardNode(card, assets, { tagName: "div" });
+  f.classList.add("flying");
+  document.body.append(f);
+  flight(f, { left: from.left, top: from.top, width: from.width, height: from.height }, () => target, {
+    endScale: 0.3,
+    endOpacity: 0.3,
+    arc: 50,
+    zIndex: 120,
+    onLand: () => target.animate([{ transform: "scale(1.15)" }, { transform: "none" }], { duration: DUR.medium, easing: css(CURVE.settle) }),
+  });
+}
+
+/** 抽屜收起來之後：卡池不在畫面上就捲回去，這次新放上的牌一張張浮起、落定。 */
+function greetPlaced() {
+  const from = caseFrom;
+  caseFrom = null;
+  if (!from) return;
+  const added = bed.pins.filter((t) => !from.has(t));
+  if (!added.length) return;
+  // 看的是新放上的牌本身在不在畫面裡（卡池很高，露出下半截不代表看得到上面幾排的新牌）：
+  // 一張都看不到就捲到第一張新牌那裡。
+  const nodes = added.map(plateNode).filter(Boolean);
+  const seen = nodes.some((n) => {
+    const r = n.getBoundingClientRect();
+    return r.bottom > 60 && r.top < innerHeight - 60;
+  });
+  const away = nodes.length && !seen;
+  if (away) nodes[0].scrollIntoView({ behavior: reduced() ? "auto" : "smooth", block: "center" });
+  if (reduced()) return;
+  setTimeout(() => {
+    nodes.slice(0, 12).forEach((n, i) =>
+      n.animate(
+        [{ transform: "translateY(-14px) scale(1.06)", filter: "brightness(1.12)" }, { transform: "none", filter: "none" }],
+        { duration: DUR.long, delay: i * 50, easing: css(CURVE.settle), fill: "backwards" }
+      )
+    );
+  }, away ? DUR.long : DUR.micro);
+}
+
 
 boot();

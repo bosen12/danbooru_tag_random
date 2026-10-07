@@ -5084,3 +5084,10 @@ html[data-booting] :is(#lib-grid, #case-grid, #book-grid):empty::before {
 .keys-help-to {
   color: var(--color-muted);
 }
+
+/* 挑牌抽屜開著（墨池、疊印台）：提示框往上讓到抽屜底下那條「…N 張・完成」的上面，不蓋住「完成」。 */
+@media (max-width: 40rem) {
+  body[data-picker="open"] .toast {
+    bottom: calc(var(--space-sm) + 64px + env(safe-area-inset-bottom));
+  }
+}

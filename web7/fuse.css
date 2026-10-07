@@ -2948,3 +2948,75 @@ body.fuse {
     inset: -4px 0;
   }
 }
+
+/* ---------- 手機：字盒是挑牌抽屜（fuse.js 的 openCasePicker） ----------
+ * 收著：只剩「字盒 N 張 ［挑牌］」一行。打開：字盒本身固定在底部、幾乎全螢幕，牌格自己捲，
+ * 底部一條「卡池 N 張・完成」。握把、底部那條、暗幕跟墨池共用（styles.css 的 body[data-picker]）。 */
+.case-open {
+  display: none;
+}
+
+@media (max-width: 40rem) {
+  .case-head {
+    align-items: center;
+    gap: var(--space-sm);
+  }
+  .case-head .case-count {
+    margin-left: auto;
+  }
+  body:not([data-picker="open"]) .case :is(.case-q, .case-tabs, .case-scroll, .case-groups, .case-grid) {
+    display: none;
+  }
+  body:not([data-picker="open"]) .case {
+    padding-bottom: var(--space-sm);
+  }
+  body:not([data-picker="open"]) .case-open {
+    display: inline-flex;
+    min-height: 44px;
+    padding-inline: var(--space-lg);
+    border-color: var(--color-ink-2);
+    color: var(--color-ink);
+    font-weight: 700;
+  }
+  body[data-picker="open"] .case {
+    position: fixed;
+    left: 0;
+    right: 0;
+    bottom: 0;
+    top: max(44px, 6dvh, calc(env(safe-area-inset-top) + 8px));
+    z-index: 85;
+    display: flex;
+    flex-direction: column;
+    gap: var(--space-xs);
+    margin: 0;
+    padding: 0 var(--space-sm) env(safe-area-inset-bottom);
+    border: 1px solid var(--color-rule);
+    border-bottom: 0;
+    border-radius: var(--radius-lg) var(--radius-lg) 0 0;
+    background: var(--color-paper);
+    box-shadow: 0 -20px 50px -10px var(--color-shade);
+    overflow: hidden;
+    overscroll-behavior: contain;
+  }
+  body[data-picker="open"] .case .case-scroll {
+    display: flex;
+    flex-direction: column;
+    gap: var(--space-xs);
+    flex: 1 1 auto;
+    min-height: 0;
+    overflow-y: auto;
+    overscroll-behavior: contain;
+  }
+  body[data-picker="open"] .case .case-head {
+    touch-action: none;
+  }
+  body[data-picker="open"] .case .case-grid {
+    padding-bottom: var(--space-md);
+  }
+  body[data-picker="open"] .case .picker-foot {
+    margin-inline: calc(var(--space-sm) * -1);
+  }
+  body[data-picker="open"] :is(.pool-pill, .print-float) {
+    visibility: hidden;
+  }
+}
