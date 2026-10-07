@@ -132,7 +132,19 @@ export function openPosePicker({ recent = () => [], rating = () => "general", si
             el(
               "figure",
               {},
-              state.skeleton ? el("img", { src: state.skeleton, alt: "抓到的骨架" }) : el("span", { class: "pose-wait" }, state.skeletonFailed ? "骨架沒抓到" : "抓骨架中…"),
+              state.skeleton
+                ? el("img", {
+                    src: state.skeleton,
+                    alt: "抓到的骨架",
+                    // 骨架預覽是 ComfyUI 的暫存圖：ComfyUI 重開就沒了，重抓一次。
+                    onerror: () => {
+                      if (!state || state.kind === "skeleton") return;
+                      state = { ...state, skeleton: null };
+                      paintNow();
+                      skeleton();
+                    },
+                  })
+                : el("span", { class: "pose-wait" }, state.skeletonFailed ? "骨架沒抓到" : "抓骨架中…"),
               el("figcaption", {}, "抓到的骨架")
             )
           )
@@ -161,6 +173,7 @@ export function openPosePicker({ recent = () => [], rating = () => "general", si
     );
     clear.hidden = !state;
     design.textContent = state?.kind === "skeleton" ? "改這個姿勢" : "打開姿勢編輯器";
+    fromRef.hidden = !state || state.kind === "skeleton";
   }
 
   async function skeleton() {
@@ -201,11 +214,7 @@ export function openPosePicker({ recent = () => [], rating = () => "general", si
 
   // 自己擺：編輯器畫的骨架直接傳上去（PNG），不必再抓骨架。
   const design = el("button", { class: "btn btn-small btn-primary pressable", type: "button" }, "打開姿勢編輯器");
-  design.addEventListener("click", () =>
-    openPoseEditor({
-      size: size(),
-      draft: state?.kind === "skeleton" ? state.draft : null,
-      onDone: async ({ image, thumb, draft }) => {
+  const saveDrawn = async ({ image, thumb, draft }) => {
         if (busy) return;
         busy = true;
         status.textContent = "存姿勢…";
@@ -220,9 +229,28 @@ export function openPosePicker({ recent = () => [], rating = () => "general", si
         } finally {
           busy = false;
         }
-      },
-    })
-  );
+  };
+  design.addEventListener("click", () => openPoseEditor({ size: size(), draft: state?.kind === "skeleton" ? state.draft : null, onDone: saveDrawn }));
+  // 從參考圖開始：伺服器抓骨架座標，放進編輯器接著改，原圖墊在底下。
+  const fromRef = el("button", { class: "btn btn-small pressable", type: "button", title: "把這張參考圖抓到的骨架放進編輯器，自己再調" }, "拿這張的骨架來改");
+  fromRef.addEventListener("click", async () => {
+    if (busy || !state || state.kind === "skeleton") return refuse(fromRef);
+    busy = true;
+    const { w, h } = size();
+    const file = state.name.split("/").pop();
+    const underlay = `/api/image?${new URLSearchParams({ filename: file, subfolder: "danbooru_pose", type: "input" })}`;
+    status.textContent = "抓骨架中…（第一次會久一點）";
+    try {
+      const j = await post("/api/pose/keypoints", { name: state.name, w, h });
+      status.textContent = j.people?.length ? `抓到 ${j.people.length} 個人，拖點來改。` : "沒抓到人：從站姿開始，對著底圖擺。";
+      openPoseEditor({ size: { w, h }, initial: j.people, underlay, onDone: saveDrawn });
+    } catch (err) {
+      refuse(fromRef);
+      status.textContent = `抓不到骨架：${err.message}`;
+    } finally {
+      busy = false;
+    }
+  });
   const file = el("input", { type: "file", accept: "image/*", class: "pose-file", "aria-label": "上傳一張圖當姿勢參考" });
   file.addEventListener("change", () => {
     const f = file.files?.[0];
@@ -276,7 +304,7 @@ export function openPosePicker({ recent = () => [], rating = () => "general", si
     now,
     el("div", { class: "pose-row" }, el("span", { class: "rule-label" }, "強度"), levels, clear),
     status,
-    el("section", {}, el("h3", {}, "自己擺"), el("div", { class: "pose-row" }, design, el("small", { class: "pose-hint" }, "拖骨架擺姿勢，有起手式可以套；可以擺 2～3 個人"))),
+    el("section", {}, el("h3", {}, "自己擺"), el("div", { class: "pose-row" }, design, fromRef, el("small", { class: "pose-hint" }, "拖骨架擺姿勢，有起手式可以套；可以擺 2～3 個人。選了參考圖，可以拿它的骨架來改"))),
     el("section", {}, el("h3", {}, "上傳"), el("div", { class: "pose-row" }, upload, file, el("small", { class: "pose-hint" }, "照片、截圖都可以；網頁會先縮小再傳"))),
     el("section", {}, el("h3", {}, "最近印的"), mine.length ? grid(mine) : el("p", { class: "pose-empty" }, "這裡還沒有印好的。")),
     el("section", {}, el("h3", {}, "作品冊"), albumBox)

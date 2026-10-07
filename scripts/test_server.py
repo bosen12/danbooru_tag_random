@@ -1481,6 +1481,47 @@ try:
 finally:
     server.models_from_comfy = _saved_models
     server.pose_node_ready = _saved_ready
+# ---- 從參考圖抓骨架：openpose_json → 編輯器的點 ----
+_k = [0.0] * 54
+for _i, (_x, _y) in enumerate([(0.5, 0.1), (0.5, 0.2), (0.4, 0.2), (0.35, 0.35), (0.3, 0.5)]):
+    _k[_i * 3:_i * 3 + 3] = [_x, _y, 1.0]
+_ppl = server._kps_people([{"people": [{"pose_keypoints_2d": _k}], "canvas_width": 512, "canvas_height": 768}], 832, 1216)
+ok("pose: 抓到的骨架（0～1 的比例）換成這張畫布的像素", len(_ppl) == 1 and _ppl[0][1][:2] == [416.0, 243.20000000000002] and _ppl[0][1][2] is True, str(_ppl[:1]))
+ok("pose: 沒抓到的點放在脖子、標成藏起來", _ppl[0][10] == [416.0, 243.20000000000002, False])
+_kp = [v * (512 if i % 3 == 0 else 768) if i % 3 != 2 else v for i, v in enumerate(_k)]
+_ppx = server._kps_people([{"people": [{"pose_keypoints_2d": _kp}], "canvas_width": 512, "canvas_height": 768}], 832, 1216)
+ok("pose: 像素座標也照比例換", abs(_ppx[0][1][0] - 416) < 0.01 and abs(_ppx[0][1][1] - 243.2) < 0.01, str(_ppx[0][1]))
+ok("pose: 沒有人、點太少就不算", server._kps_people([], 832, 1216) == [] and server._kps_people([{"people": [{"pose_keypoints_2d": [0.0] * 54}]}], 832, 1216) == [])
+
+# ---- 姿勢參考圖只留最近幾張 ----
+_pd = Path(_env_tmp.mkdtemp())
+import os as _os2  # noqa: E402
+
+for _i in range(5):
+    _f = _pd / f"pose_{_i:016x}.png"
+    _f.write_bytes(b"x")
+    _os2.utime(_f, (1000 + _i, 1000 + _i))
+(_pd / "other.png").write_bytes(b"x")
+_gone = server.prune_pose_inputs(keep=2, folder=_pd, protect={f"pose_{0:016x}.png"})
+ok("pose: 參考圖留最近幾張，佇列裡用著的不刪，別的檔不碰", sorted(_gone) == [f"pose_{1:016x}.png", f"pose_{2:016x}.png"] and (_pd / "other.png").exists(), str(_gone))
+
+# ---- 統計：資料沒變就用上一次的 ----
+_calls = []
+_saved_stats = server.gen_log.stats
+server.gen_log.stats = lambda known, favs: _calls.append(1) or {"total": len(_calls)}
+try:
+    server._STATS_CACHE.update(key=None, value=None)
+    _a = server.genlog_stats()
+    _b = server.genlog_stats()
+    ok("stats: 日誌、作品冊沒變就不重算", _a is _b and len(_calls) == 1)
+    with open(server.gen_log.LOG_PATH, "a", encoding="utf-8") as _f:
+        _f.write("{}" + chr(10))
+    server.genlog_stats()
+    ok("stats: 日誌多一行就重算", len(_calls) == 2)
+finally:
+    server.gen_log.stats = _saved_stats
+    server._STATS_CACHE.update(key=None, value=None)
+
 _saved_api3 = server.api
 try:
     server._POSE_NODE_CACHE.update(t=0.0, ok=False)

@@ -2036,6 +2036,10 @@ const ALBUM_FIXTURE = [
           readFileSync(join(ROOT, "web6/pose.js"), "utf8").includes('state.kind === "skeleton" ? { skeleton: true }') &&
           readFileSync(join(ROOT, "server.py"), "utf8").includes('"skeleton": raw.get("skeleton") is True') &&
           ["web6", "web7"].every((d) => readFileSync(join(ROOT, d, "app.js"), "utf8").includes("size: () => ({ w: settings.width, h: settings.height })") && readFileSync(join(ROOT, d, "styles.css"), "utf8").includes(".pe-canvas {")));
+      ok("姿勢優化：參考圖可以「拿這張的骨架來改」（/api/pose/keypoints，原圖墊底圖）；骨架預覽是暫存圖，破了就重抓（web6、web7）",
+        ["pose.js", "pose-editor.js"].every((f) => readFileSync(join(ROOT, "web6", f), "utf8") === readFileSync(join(ROOT, "web7", f), "utf8")) &&
+          readFileSync(join(ROOT, "web6/pose.js"), "utf8").includes('post("/api/pose/keypoints"') && readFileSync(join(ROOT, "web6/pose-editor.js"), "utf8").includes('"底圖"') &&
+          readFileSync(join(ROOT, "server.py"), "utf8").includes("def prune_pose_inputs(") && readFileSync(join(ROOT, "server.py"), "utf8").includes("def genlog_stats()"));
       ok("姿勢參考的節點與模型：啟動 web6／web7 時檢查，缺了在最小化視窗自動裝 comfyui_controlnet_aux、下載 OpenPose ControlNet（大小＋sha256 才放、可續傳）",
         ["start-web6.bat", "start-web7.bat"].every((f) => readFileSync(join(ROOT, f), "utf8").includes('call "%~dp0scripts\\pose-assets-check.bat"')) &&
           readFileSync(join(ROOT, "scripts/pose-assets-check.bat"), "utf8").includes("fetch_pose_assets.py\" --check") &&

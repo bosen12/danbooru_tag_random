@@ -700,6 +700,57 @@ def inject_pose(wf: dict, pose: dict, width: int, height: int) -> None:
     ks["negative"] = ["305", 1]
 
 
+# 參考圖、編輯器畫的骨架都存在 Comfy 的 input/danbooru_pose：每改一次姿勢多一張，留最近這幾張。
+# 同一張再用一次會重傳（覆蓋、時間變新），常用的不會被清掉。佇列裡正用著的不刪。
+POSE_INPUT_KEEP = 60
+POSE_FILE_RE = re.compile(r"^pose_[0-9a-f]{16}\.(png|jpg|webp)$")
+
+
+def pose_input_dir() -> Path | None:
+    hires = hires_input_dir()
+    return hires.parent / POSE_SUBFOLDER if hires is not None else None
+
+
+def prune_pose_inputs(keep: int = POSE_INPUT_KEEP, folder: Path | None = None, protect: set[str] | None = None) -> list[str]:
+    """刪掉 input/danbooru_pose 裡較舊的參考圖。只在 Comfy 跑在這台、問得到佇列時才動（folder 給了就是測試）。"""
+    if folder is None:
+        if os.environ.get("NO_HIRES_PRUNE") or not comfy_is_local():
+            return []
+        folder = pose_input_dir()
+        if folder is None or not folder.is_dir():
+            return []
+        try:
+            queue = api("GET", "/queue", timeout=5)
+        except Exception:
+            return []
+        protect = set(protect or ())
+        for key in ("queue_running", "queue_pending"):
+            for item in (queue or {}).get(key) or []:
+                prompt = item[2] if isinstance(item, (list, tuple)) and len(item) > 2 else None
+                for node in (prompt or {}).values() if isinstance(prompt, dict) else []:
+                    if isinstance(node, dict) and node.get("class_type") == "LoadImage":
+                        protect.add(str((node.get("inputs") or {}).get("image") or "").replace("\\", "/").split("/")[-1])
+    files = []
+    for path in Path(folder).iterdir():
+        if path.is_file() and POSE_FILE_RE.match(path.name):
+            try:
+                files.append((path.stat().st_mtime, path.name, path))
+            except OSError:
+                continue
+    files.sort()
+    newest = {name for _, name, _ in files[-keep:]} if keep > 0 else set()
+    deleted = []
+    for _, name, path in files:
+        if name in newest or name in (protect or set()):
+            continue
+        try:
+            path.unlink()
+            deleted.append(name)
+        except OSError:
+            continue
+    return deleted
+
+
 def pose_upload(payload: dict) -> dict:
     """{"image": "data:image/...;base64,..."} → 傳進 Comfy 的 input/danbooru_pose，回 {"name"}。"""
     raw = str((payload or {}).get("image") or "")
@@ -717,7 +768,65 @@ def pose_upload(payload: dict) -> dict:
     stored = comfy_upload_image(data, name, subfolder=POSE_SUBFOLDER, mime=f"image/{m.group(1)}")
     if not POSE_NAME_RE.match(stored):
         stored = f"{POSE_SUBFOLDER}/{name}"
+    try:
+        prune_pose_inputs(protect={name})
+    except OSError:
+        pass
     return {"name": stored}
+
+
+def _kps_people(data, w: int, h: int) -> list:
+    """SavePoseKpsAsJsonFile 的內容 → [[ [x, y, on] × 18 ], …]（這張畫布的像素）。
+
+    controlnet_aux 存的座標有的版本是 0～1、有的是像素：全部 ≤ 1 就當成比例。
+    沒抓到的點 [0, 0, 0]：位置放在脖子（沒有脖子就畫面中間），標成藏起來，編輯器裡拉得出來。
+    """
+    frame = data[0] if isinstance(data, list) and data else data if isinstance(data, dict) else {}
+    cw = float(frame.get("canvas_width") or w)
+    ch = float(frame.get("canvas_height") or h)
+    out = []
+    for person in (frame.get("people") or [])[:3]:
+        k = person.get("pose_keypoints_2d") or []
+        if len(k) < 54:
+            continue
+        raw = [(float(k[i * 3]), float(k[i * 3 + 1]), float(k[i * 3 + 2])) for i in range(18)]
+        seen = [(x, y) for x, y, c in raw if c > 0 and (x or y)]
+        if len(seen) < 3:
+            continue
+        unit = max(max(x, y) for x, y in seen) <= 1.01
+        sx, sy = (w, h) if unit else (w / cw, h / ch)
+        pts = [[x * sx, y * sy, bool(c > 0 and (x or y))] for x, y, c in raw]
+        anchor = pts[1] if pts[1][2] else [w / 2, h / 2, False]
+        out.append([p if p[2] else [anchor[0], anchor[1], False] for p in pts])
+    return out
+
+
+def pose_keypoints(payload: dict) -> dict:
+    """參考圖 → 骨架座標（給姿勢編輯器接著改）。裁成這張的比例後用 OpenposePreprocessor 抓，跟出圖時同一種。"""
+    name = str((payload or {}).get("name") or "")
+    if not POSE_NAME_RE.match(name):
+        raise PoseError("不是姿勢參考圖")
+    try:
+        w = max(256, min(2048, int(payload.get("w") or 1024)))
+        h = max(256, min(2048, int(payload.get("h") or 1024)))
+    except (TypeError, ValueError):
+        raise PoseError("尺寸不對")
+    pose_node_ready()
+    wf = {
+        "1": {"class_type": "LoadImage", "inputs": {"image": name}},
+        "2": {"class_type": "ImageScale", "inputs": {"image": ["1", 0], "upscale_method": "lanczos", "width": w, "height": h, "crop": "center"}},
+        "3": {"class_type": "OpenposePreprocessor", "inputs": {"image": ["2", 0], "detect_hand": "disable", "detect_body": "enable", "detect_face": "disable", "resolution": 512}},
+        # 要一個輸出節點整條才會跑；骨架座標 OpenposePreprocessor 自己會放進執行紀錄（openpose_json）。
+        "4": {"class_type": "PreviewImage", "inputs": {"images": ["3", 0]}},
+    }
+    prompt_id = api("POST", "/prompt", {"prompt": wf}, timeout=60)["prompt_id"]
+    hist = wait_done(prompt_id, timeout=180)
+    raw = ((hist.get("outputs") or {}).get("3") or {}).get("openpose_json") or []
+    try:
+        data = json.loads(raw[0]) if raw else []
+    except (ValueError, TypeError):
+        data = []
+    return {"w": w, "h": h, "people": _kps_people(data, w, h)}
 
 
 def pose_preview(payload: dict) -> dict:
@@ -1925,6 +2034,31 @@ def active_jobs(keep: bool = False) -> list[dict]:
         })
     out.sort(key=lambda x: x["createdAt"])
     return out
+
+
+_STATS_CACHE: dict = {"key": None, "value": None}
+
+
+def genlog_stats() -> dict:
+    """牌的戰績、模型成績單、成就用的統計。日誌、作品冊、詞庫都沒變就用上一次算好的
+    （作品冊要把每一件的 JSON 讀一遍，卡冊每換一次排序都會問）。"""
+    def stamp(path) -> tuple:
+        try:
+            st = Path(path).stat()
+            return (st.st_mtime_ns, st.st_size)
+        except OSError:
+            return (0, 0)
+
+    try:
+        n_recipes = sum(1 for _ in Path(recipes.DATA_DIR).glob("*.json"))
+    except OSError:
+        n_recipes = 0
+    key = (stamp(gen_log.LOG_PATH), stamp(recipes.DATA_DIR), n_recipes, stamp(card_usage.LEXICON_PATH))
+    if _STATS_CACHE["key"] == key and _STATS_CACHE["value"] is not None:
+        return _STATS_CACHE["value"]
+    value = gen_log.stats(card_usage._known_tags(), recipes.list_recipes())
+    _STATS_CACHE.update(key=key, value=value)
+    return value
 
 
 class GenJob:
@@ -3632,7 +3766,7 @@ class Handler(BaseHTTPRequestHandler):
         # 出圖日誌（作品冊的「日誌」）：新的在前，before＝從這個時間（毫秒）之前接著翻。
         # 牌的戰績（卡冊）、模型成績單（作品冊）：從日誌和作品冊算。
         if path == "/api/genlog/stats":
-            self._json(200, {"ok": True, **gen_log.stats(card_usage._known_tags(), recipes.list_recipes())})
+            self._json(200, {"ok": True, **genlog_stats()})
             return
         if path == "/api/genlog":
             qs = urllib.parse.parse_qs(urllib.parse.urlparse(self.path).query)
@@ -3737,9 +3871,9 @@ class Handler(BaseHTTPRequestHandler):
                 self._json(400, {"ok": False, "error": str(exc), "code": "invalid"})
             return
         # 姿勢參考：參考圖傳進 Comfy、只跑骨架偵測給人看。
-        if path in ("/api/pose/upload", "/api/pose/preview"):
+        if path in ("/api/pose/upload", "/api/pose/preview", "/api/pose/keypoints"):
             try:
-                out = pose_upload(payload) if path == "/api/pose/upload" else pose_preview(payload)
+                out = {"/api/pose/upload": pose_upload, "/api/pose/preview": pose_preview, "/api/pose/keypoints": pose_keypoints}[path](payload)
             except PoseError as exc:
                 self._json(400, {"ok": False, "error": str(exc), "code": "invalid"})
                 return

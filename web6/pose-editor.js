@@ -7,6 +7,7 @@
  *   - 起手式一鍵套用，再微調；鏡像、轉 ±15°、放大縮小、藏起看不到的點、復原。
  *   - 最多 3 個人（畫 2girls 用）；點誰就選誰。
  *   - 畫布比例跟著現在的尺寸（規則裡的尺寸）。
+ *   - 從參考圖開始：伺服器抓好的骨架（/api/pose/keypoints）直接放進來，原圖淡淡墊在底下對照（「底圖」可關）。
  * 人物的「右」在畫面左邊（面向你）：OpenPose 的慣例。
  */
 import { el, openSheet } from "./ui.js";
@@ -77,6 +78,16 @@ export function drawSkeleton(ctx, people, W, H, { scale = 1, editor = null } = {
   ctx.save();
   ctx.fillStyle = "#000";
   ctx.fillRect(0, 0, W * scale, H * scale);
+  // 底圖（只在編輯器裡）：照伺服器裁參考圖的方式（等比例放大、置中裁掉多的）淡淡墊著。
+  const under = editor?.underlay;
+  if (under && under.complete && under.naturalWidth) {
+    const k = Math.max(W / under.naturalWidth, H / under.naturalHeight);
+    const dw = under.naturalWidth * k;
+    const dh = under.naturalHeight * k;
+    ctx.globalAlpha = 0.38;
+    ctx.drawImage(under, ((W - dw) / 2) * scale, ((H - dh) / 2) * scale, dw * scale, dh * scale);
+    ctx.globalAlpha = 1;
+  }
   // controlnet_aux 在 512 的短邊上畫 4px 的線：放到這張的大小。
   const stick = Math.max(2, (4 * Math.min(W, H)) / 512) * scale;
   const dot = Math.max(2, (4 * Math.min(W, H)) / 512) * scale;
@@ -145,14 +156,18 @@ export function renderSkeleton(people, W, H, { maxSide = 0, type = "image/png", 
 }
 
 /**
- * 打開編輯器。size：{ w, h } 現在的尺寸；draft：上次擺的（{ w, h, people }）；
+ * 打開編輯器。size：{ w, h } 現在的尺寸；draft：上次擺的（{ w, h, people, underlay }）；
+ * initial：從參考圖抓到的骨架（[[ [x, y, on] × 18 ], …]，這張畫布的像素）；underlay：底圖網址。
  * onDone({ image, thumb, draft })：按「用這個姿勢」。
  */
-export function openPoseEditor({ size, draft = null, onDone }) {
+export function openPoseEditor({ size, draft = null, initial = null, underlay = null, onDone }) {
   const W = size.w;
   const H = size.h;
   let people;
-  if (draft && Array.isArray(draft.people) && draft.people.length) {
+  const underSrc = underlay || draft?.underlay || null;
+  if (Array.isArray(initial) && initial.length) {
+    people = initial.slice(0, MAX_PEOPLE).map((pts) => ({ pts: pts.map(([x, y, on]) => ({ x, y, on: on !== false })) }));
+  } else if (draft && Array.isArray(draft.people) && draft.people.length) {
     // 上次是別的尺寸：等比例縮放、置中，不拉變形。
     const k = Math.min(W / draft.w, H / draft.h);
     const ox = (W - draft.w * k) / 2;
@@ -163,6 +178,12 @@ export function openPoseEditor({ size, draft = null, onDone }) {
   }
   let person = 0;
   let sel = null; // { person, joint }
+  let showUnder = !!underSrc;
+  const under = underSrc ? new Image() : null;
+  if (under) {
+    under.onload = () => draw();
+    under.src = underSrc;
+  }
   let linked = true;
   const history = [];
   const remember = () => {
@@ -192,7 +213,7 @@ export function openPoseEditor({ size, draft = null, onDone }) {
   }
 
   function draw() {
-    drawSkeleton(canvas.getContext("2d"), people, W, H, { scale, editor: { sel, handle, person } });
+    drawSkeleton(canvas.getContext("2d"), people, W, H, { scale, editor: { sel, handle, person, underlay: showUnder ? under : null } });
     const s = sel && people[sel.person] ? `${people.length > 1 ? `第 ${sel.person + 1} 個人的` : ""}${JOINT_ZH[sel.joint]}${people[sel.person].pts[sel.joint].on ? "" : "（藏起來了）"}` : "";
     info.textContent = s ? `選到：${s}` : "拖骨架上的點來擺；拖空白處移動整個人。紅橘那側是人物的右手（畫面左邊）。";
     hideBtn.disabled = !sel;
@@ -367,6 +388,12 @@ export function openPoseEditor({ size, draft = null, onDone }) {
     linked = !linked;
     linkBtn.setAttribute("aria-pressed", linked ? "true" : "false");
   });
+  const underBtn = under ? el("button", { class: "chip-toggle pressable", type: "button", "aria-pressed": "true", title: "參考圖淡淡墊在底下對照（送出去的骨架不會有它）" }, "底圖") : null;
+  underBtn?.addEventListener("click", () => {
+    showUnder = !showUnder;
+    underBtn.setAttribute("aria-pressed", showUnder ? "true" : "false");
+    draw();
+  });
   const tools = el(
     "div",
     { class: "pe-tools" },
@@ -386,6 +413,7 @@ export function openPoseEditor({ size, draft = null, onDone }) {
     tool("放大", "整個人放大", () => transform((x, y) => [x * 1.1, y * 1.1])),
     hideBtn,
     linkBtn,
+    underBtn,
     addBtn,
     delBtn,
     undoBtn
@@ -404,7 +432,7 @@ export function openPoseEditor({ size, draft = null, onDone }) {
       class: "btn btn-small btn-primary pressable",
       type: "button",
       onclick: () => {
-        const draftOut = { w: W, h: H, people: clone(people) };
+        const draftOut = { w: W, h: H, people: clone(people), underlay: underSrc };
         sheet.close();
         onDone?.({ image: renderSkeleton(people, W, H), thumb: renderSkeleton(people, W, H, { maxSide: 160, type: "image/jpeg", quality: 0.85 }), draft: draftOut });
       },
