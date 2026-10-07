@@ -2,7 +2,8 @@
  * 姿勢編輯器（姿勢參考面板裡的「自己擺」）：直接拖骨架擺姿勢，畫出來就是標準 OpenPose 骨架圖，
  * 送印時不必再抓一次骨架（server.py 的 pose.skeleton）。
  *   - 18 個點（OpenPose COCO-18），顏色、粗細照 comfyui_controlnet_aux 畫骨架的方式。
- *   - 拖一個點：它底下的部位跟著走（拖手肘，前臂和手一起動；拖脖子，整個人移動）。
+ *   - 拖一個點：它繞著上一節轉，底下的部位整段跟著轉，骨頭長度不變（拖手肘，上臂繞肩膀轉、
+ *     前臂和手跟著轉；拖脖子，整個人移動）。「長度不變」關掉或按住 Shift：整段平移，可以拉長縮短。
  *     「連動」關掉就只動那一點；拖空白處、身體旁邊：整個人移動。
  *   - 起手式一鍵套用，再微調；鏡像、轉 ±15°、放大縮小、藏起看不到的點、復原。
  *   - 最多 3 個人（畫 2girls 用）；點誰就選誰。
@@ -19,6 +20,8 @@ const LIMBS = [[1, 2], [1, 5], [2, 3], [3, 4], [5, 6], [6, 7], [1, 8], [8, 9], [
 const COLORS = [[255, 0, 0], [255, 85, 0], [255, 170, 0], [255, 255, 0], [170, 255, 0], [85, 255, 0], [0, 255, 0], [0, 255, 85], [0, 255, 170], [0, 255, 255], [0, 170, 255], [0, 85, 255], [0, 0, 255], [85, 0, 255], [170, 0, 255], [255, 0, 255], [255, 0, 170], [255, 0, 85]];
 // 拖一個點時跟著走的部位。
 const CHILDREN = { 1: [0, 2, 5, 8, 11], 0: [14, 15], 14: [16], 15: [17], 2: [3], 3: [4], 5: [6], 6: [7], 8: [9], 9: [10], 11: [12], 12: [13] };
+// 上一節（轉動的軸）：脖子沒有，拖脖子就是整個人移動。
+const PARENT = Object.fromEntries(Object.entries(CHILDREN).flatMap(([p, cs]) => cs.map((c) => [c, Number(p)])));
 // 鏡像時左右對調的點。
 const PAIRS = [[2, 5], [3, 6], [4, 7], [8, 11], [9, 12], [10, 13], [14, 15], [16, 17]];
 const MAX_PEOPLE = 3;
@@ -185,6 +188,7 @@ export function openPoseEditor({ size, draft = null, initial = null, underlay = 
     under.src = underSrc;
   }
   let linked = true;
+  let rigid = true; // 骨頭長度不變：拖的點繞著上一節轉
   const history = [];
   const remember = () => {
     history.push(clone(people));
@@ -215,7 +219,7 @@ export function openPoseEditor({ size, draft = null, initial = null, underlay = 
   function draw() {
     drawSkeleton(canvas.getContext("2d"), people, W, H, { scale, editor: { sel, handle, person, underlay: showUnder ? under : null } });
     const s = sel && people[sel.person] ? `${people.length > 1 ? `第 ${sel.person + 1} 個人的` : ""}${JOINT_ZH[sel.joint]}${people[sel.person].pts[sel.joint].on ? "" : "（藏起來了）"}` : "";
-    info.textContent = s ? `選到：${s}` : "拖骨架上的點來擺；拖空白處移動整個人。紅橘那側是人物的右手（畫面左邊）。";
+    info.textContent = s ? `選到：${s}` : "拖骨架上的點來擺（繞著上一節轉，長度不變；按住 Shift 可以拉長縮短）；拖空白處移動整個人。紅橘那側是人物的右手（畫面左邊）。";
     hideBtn.disabled = !sel;
     hideBtn.textContent = sel && !people[sel.person].pts[sel.joint].on ? "顯示這一點" : "藏起這一點";
     delBtn.disabled = people.length <= 1;
@@ -253,7 +257,23 @@ export function openPoseEditor({ size, draft = null, initial = null, underlay = 
     if (h) {
       person = h.person;
       sel = { person: h.person, joint: h.joint };
-      drag = { id: e.pointerId, last: pt, moved: false, joints: linked ? subtree(h.joint) : [h.joint], person: h.person };
+      const pts = people[h.person].pts;
+      const joints = linked ? subtree(h.joint) : [h.joint];
+      const parent = PARENT[h.joint];
+      // 轉動：記下開始時的位置，每一下都從原位算（不會越轉越歪）。手指跟點之間的距離也記著，點不會跳到指尖下。
+      const turn = linked && rigid && !e.shiftKey && parent !== undefined;
+      drag = {
+        id: e.pointerId,
+        last: pt,
+        moved: false,
+        joints,
+        person: h.person,
+        turn,
+        pivot: turn ? { x: pts[parent].x, y: pts[parent].y } : null,
+        grab: { x: pts[h.joint].x - pt.x, y: pts[h.joint].y - pt.y },
+        from: joints.map((j) => ({ x: pts[j].x, y: pts[j].y })),
+        joint: h.joint,
+      };
     } else {
       // 空白處：點到哪個人的範圍裡（放寬一點）就整個人移動。
       const pi = people.findIndex((p) => {
@@ -286,10 +306,29 @@ export function openPoseEditor({ size, draft = null, initial = null, underlay = 
       remember();
       drag.moved = true;
     }
-    for (const j of drag.joints) {
-      const q = people[drag.person].pts[j];
-      q.x = Math.max(0, Math.min(W, q.x + dx));
-      q.y = Math.max(0, Math.min(H, q.y + dy));
+    const pts = people[drag.person].pts;
+    if (drag.turn) {
+      // 拖的點原本在 pivot 的哪個方向 → 現在指向手指的方向：整段轉這麼多度。
+      const o = drag.from[0];
+      const tx = pt.x + drag.grab.x - drag.pivot.x;
+      const ty = pt.y + drag.grab.y - drag.pivot.y;
+      const a = Math.atan2(ty, tx) - Math.atan2(o.y - drag.pivot.y, o.x - drag.pivot.x);
+      const cos = Math.cos(a);
+      const sin = Math.sin(a);
+      drag.joints.forEach((j, i) => {
+        const f = drag.from[i];
+        const x = f.x - drag.pivot.x;
+        const y = f.y - drag.pivot.y;
+        // 轉出畫布的點會拿不回來：夾在畫布裡（只有碰到邊的那幾點長度會稍微變）。
+        pts[j].x = Math.max(0, Math.min(W, drag.pivot.x + x * cos - y * sin));
+        pts[j].y = Math.max(0, Math.min(H, drag.pivot.y + x * sin + y * cos));
+      });
+    } else {
+      for (const j of drag.joints) {
+        const q = pts[j];
+        q.x = Math.max(0, Math.min(W, q.x + dx));
+        q.y = Math.max(0, Math.min(H, q.y + dy));
+      }
     }
     drag.last = pt;
     draw();
@@ -383,7 +422,12 @@ export function openPoseEditor({ size, draft = null, initial = null, underlay = 
     sel = null;
     draw();
   });
-  const linkBtn = el("button", { class: "chip-toggle pressable", type: "button", "aria-pressed": "true", title: "開：拖手肘時前臂和手跟著走。關：只動那一點" }, "連動");
+  const rigidBtn = el("button", { class: "chip-toggle pressable", type: "button", "aria-pressed": "true", title: "開：拖的點繞著上一節轉，手腳不會被拉長縮短。關（或拖的時候按住 Shift）：整段平移，可以拉長縮短" }, "長度不變");
+  rigidBtn.addEventListener("click", () => {
+    rigid = !rigid;
+    rigidBtn.setAttribute("aria-pressed", rigid ? "true" : "false");
+  });
+  const linkBtn = el("button", { class: "chip-toggle pressable", type: "button", "aria-pressed": "true", title: "開：拖手肘時前臂和手跟著動。關：只動那一點" }, "連動");
   linkBtn.addEventListener("click", () => {
     linked = !linked;
     linkBtn.setAttribute("aria-pressed", linked ? "true" : "false");
@@ -412,6 +456,7 @@ export function openPoseEditor({ size, draft = null, initial = null, underlay = 
     tool("縮小", "整個人縮小", () => transform((x, y) => [x * 0.9, y * 0.9])),
     tool("放大", "整個人放大", () => transform((x, y) => [x * 1.1, y * 1.1])),
     hideBtn,
+    rigidBtn,
     linkBtn,
     underBtn,
     addBtn,

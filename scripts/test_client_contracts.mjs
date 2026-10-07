@@ -2036,6 +2036,12 @@ const ALBUM_FIXTURE = [
           readFileSync(join(ROOT, "web6/pose.js"), "utf8").includes('state.kind === "skeleton" ? { skeleton: true }') &&
           readFileSync(join(ROOT, "server.py"), "utf8").includes('"skeleton": raw.get("skeleton") is True') &&
           ["web6", "web7"].every((d) => readFileSync(join(ROOT, d, "app.js"), "utf8").includes("size: () => ({ w: settings.width, h: settings.height })") && readFileSync(join(ROOT, d, "styles.css"), "utf8").includes(".pe-canvas {")));
+      ok("姿勢編輯器：拖點時繞著上一節轉、骨頭長度不變（「長度不變」關掉或按 Shift 才平移拉長），轉的時候點不會跑出畫布（web6、web7）",
+        readFileSync(join(ROOT, "web6/pose-editor.js"), "utf8") === readFileSync(join(ROOT, "web7/pose-editor.js"), "utf8") &&
+          (() => {
+            const e = readFileSync(join(ROOT, "web6/pose-editor.js"), "utf8");
+            return e.includes("const PARENT = ") && e.includes("linked && rigid && !e.shiftKey") && e.includes('"長度不變"') && e.includes("Math.max(0, Math.min(W, drag.pivot.x");
+          })());
       ok("姿勢優化：參考圖可以「拿這張的骨架來改」（/api/pose/keypoints，原圖墊底圖）；骨架預覽是暫存圖，破了就重抓（web6、web7）",
         ["pose.js", "pose-editor.js"].every((f) => readFileSync(join(ROOT, "web6", f), "utf8") === readFileSync(join(ROOT, "web7", f), "utf8")) &&
           readFileSync(join(ROOT, "web6/pose.js"), "utf8").includes('post("/api/pose/keypoints"') && readFileSync(join(ROOT, "web6/pose-editor.js"), "utf8").includes('"底圖"') &&
