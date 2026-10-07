@@ -95,6 +95,8 @@ export function saveShots(shots) {
       loras: s.loras,
       ckpt: s.ckpt,
       workflowId: s.workflowId,
+      // 姿勢參考（pose.js）：這張用的那一份，重印照舊。
+      pose: s.pose || null,
       image: s.image || null,
       // 收進作品冊的那一筆（album-save.js）：成品上顯示「已收藏」。
       albumId: s.albumId || null,

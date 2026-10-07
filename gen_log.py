@@ -92,6 +92,9 @@ def entry_of(job_id: str, payload: dict, ok: bool, data: dict, *, origin: str, k
         e["image"] = str(d.get("image") or "")[:2000]
     else:
         e["error"] = str(d.get("error") or "")[:500]
+    pose = p.get("pose") if isinstance(p.get("pose"), dict) else None
+    if pose and pose.get("name"):
+        e["pose"] = {"name": str(pose["name"])[:200], "strength": _num(pose.get("strength"))}
     if hires:
         e["hires"] = {"mode": str(hires.get("mode") or "")[:20], "scale": _num(hires.get("scale")), "from": str(hires.get("image") or "")[:2000]}
     return e

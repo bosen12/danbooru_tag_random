@@ -2030,6 +2030,14 @@ const ALBUM_FIXTURE = [
             [["app.js", "mochi"], ["fuse.js", "fuse"], ["book.js", "book"], ["album.js", "album"]].every(([f, room]) => readFileSync(join(ROOT, d, f), "utf8").includes(`mountKeysHelp("${room}");`)) &&
             readFileSync(join(ROOT, d, "styles.css"), "utf8").includes(".mast-tools .help-btn {")
           ));
+      ok("姿勢參考：規則裡「姿勢」選一張圖（上傳、最近印的、作品冊），先縮小再傳、看骨架預覽、三檔強度；每張成品記下自己的姿勢、送印帶 pose；疊印台簽名含姿勢（web6、web7）",
+        readFileSync(join(ROOT, "web6/pose.js"), "utf8") === readFileSync(join(ROOT, "web7/pose.js"), "utf8") &&
+          readFileSync(join(ROOT, "server.py"), "utf8").includes('"preprocessor": "OpenposePreprocessor"') &&
+          ["web6", "web7"].every((d) => {
+            const read = (f) => readFileSync(join(ROOT, d, f), "utf8");
+            return read("app.js").includes("pose: shot.pose") && read("app.js").includes('rulePair("姿勢", poseButton(') && read("fuse.js").includes('row("姿勢參考", poseButton(') &&
+              read("fuse.js").includes("${poseSig()}") && read("fuse.js").includes("onPoseChange(() =>") && read("store.js").includes("pose: s.pose || null,") && read("styles.css").includes(".pose-sheet {");
+          }));
       ok("作品冊分輯與相似的作品：作品分頁可依時代、髮色、服裝、場景分段（記住選擇），詳情列出用牌重疊多的作品、點了換過去（web6、web7）",
         ["album.js", "album.css", "album-groups.js"].every((f) => readFileSync(join(ROOT, "web6", f), "utf8") === readFileSync(join(ROOT, "web7", f), "utf8")) &&
           ["web6", "web7"].every((d) => readFileSync(join(ROOT, d, "album.html"), "utf8").includes('id="works-group"')) &&

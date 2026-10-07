@@ -5202,3 +5202,109 @@ html[data-booting] :is(#lib-grid, #case-grid, #book-grid):empty::before {
     animation: gen-badge-breathe var(--dur-breath) var(--ease-in-out) infinite alternate;
   }
 }
+
+/* ---------- 姿勢參考（pose.js） ----------
+ * 規則裡那顆鈕：選了是小縮圖＋強度；面板裡左邊參考圖、右邊抓到的骨架，底下挑圖。 */
+.pose-btn {
+  gap: var(--space-2xs);
+  max-width: 100%;
+}
+.pose-btn[data-on="true"] {
+  border-color: var(--color-pool-2, var(--color-ink-2));
+}
+.pose-btn-thumb {
+  width: 20px;
+  height: 26px;
+  border-radius: 3px;
+  object-fit: cover;
+}
+.pose-btn-warn {
+  color: var(--color-accent);
+  font-size: var(--text-xs);
+  font-weight: 400;
+}
+.pose-sheet {
+  display: grid;
+  gap: var(--space-md);
+}
+.pose-sheet h3 {
+  margin: 0 0 var(--space-xs);
+  color: var(--color-ink-2);
+  font-size: var(--text-sm);
+}
+.pose-note,
+.pose-empty,
+.pose-hint {
+  margin: 0;
+  color: var(--color-muted);
+  font-size: var(--text-sm);
+}
+.pose-hint {
+  font-size: var(--text-xs);
+}
+.pose-status {
+  min-height: 1.4em;
+  margin: 0;
+  font-size: var(--text-sm);
+}
+.pose-status:empty {
+  display: none;
+}
+.pose-pair {
+  display: flex;
+  gap: var(--space-md);
+}
+.pose-pair figure {
+  display: grid;
+  gap: var(--space-2xs);
+  margin: 0;
+}
+.pose-pair img,
+.pose-wait {
+  display: grid;
+  place-items: center;
+  width: 120px;
+  height: 160px;
+  border-radius: var(--radius-sm);
+  background: var(--color-paper-2);
+  color: var(--color-muted);
+  font-size: var(--text-xs);
+  object-fit: contain;
+}
+.pose-pair figcaption {
+  color: var(--color-muted);
+  font-size: var(--text-xs);
+  text-align: center;
+}
+.pose-row {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: var(--space-xs) var(--space-sm);
+}
+.pose-file {
+  display: none;
+}
+.pose-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(72px, 1fr));
+  gap: var(--space-xs);
+}
+.pose-pick {
+  overflow: hidden;
+  aspect-ratio: 3 / 4;
+  padding: 0;
+  border: 1px solid var(--color-rule-2);
+  border-radius: var(--radius-xs);
+  background: var(--color-paper-2);
+  cursor: pointer;
+}
+.pose-pick img {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+}
+.pose-pick:focus-visible {
+  outline: 2px solid var(--color-focus);
+  outline-offset: 2px;
+}

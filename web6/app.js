@@ -41,6 +41,7 @@ import { bindArt, artFallback } from "./card-images.js";
 import { el, openSheet, anyOverlay, toast, runToastAction, ICONS } from "./ui.js";
 import { mountKeysHelp } from "./keys-help.js";
 import { mountGenStatus } from "./gen-status.js";
+import { currentPose, poseButton } from "./pose.js";
 import { openDecks } from "./decks.js";
 import { openPaste, listenPaste } from "./paste-prompt.js";
 import { paintWeight, wireWeightInput, weightRow, weightPositive } from "./weights.js";
@@ -1419,7 +1420,15 @@ function renderRules() {
 
   box.replaceChildren(
     // 標籤跟它的控制項包成一組：窄畫面換行時整組一起走，不會出現「時代」掛在上一行尾、選單在下一行。
-    el("div", { class: "rule-row" }, rulePair("尺度", heatRow), rulePair("時代", eraSel), rulePair("人物", whoRow)),
+    el(
+      "div",
+      { class: "rule-row" },
+      rulePair("尺度", heatRow),
+      rulePair("時代", eraSel),
+      rulePair("人物", whoRow),
+      // 姿勢參考：人物照一張圖的姿勢擺（pose.js）。
+      rulePair("姿勢", poseButton({ recent: poseRecent, wf: currentWorkflowId, rating: () => settings.rating }))
+    ),
     el(
       "details",
       { class: "more-rules", open: moreOpen },
@@ -1433,6 +1442,11 @@ function renderRules() {
       )
     )
   );
+}
+
+/** 姿勢參考的「最近印的」：成品牆上印好的。 */
+function poseRecent() {
+  return shots.filter((s) => s.status === "done" && s.image && !s._gone).map((s) => ({ src: viewSrc(s.image), full: s.image }));
 }
 
 function rulePair(label, control) {
@@ -1502,6 +1516,8 @@ const generator = createGenerator({
     workflowId: shot.workflowId,
     // 工作流面板裡改過的 steps／CFG（沒改就不送，伺服器用預設）。
     ...(shot.sampling || {}),
+    // 姿勢參考（pose.js）：這張抽的時候選的那一份。
+    ...(shot.pose ? { pose: shot.pose } : {}),
   }),
   update: (shot) => {
     tabNote.shot(shot, generator.pending);
@@ -1706,7 +1722,7 @@ function drawBatch(gen) {
     shot: {
       width: settings.width, height: settings.height, rating: settings.rating,
       loras: structuredClone(currentLorasPayload()), ckpt: currentCkpt(), workflowId: currentWorkflowId(),
-      sampling: currentSampling(), trigger: currentTriggerText(),
+      sampling: currentSampling(), pose: currentPose(), trigger: currentTriggerText(),
       // 按下去那一刻合成池的份量：這一輪的每一張都用這一份。
       weights: Object.fromEntries(weights),
     },
@@ -1843,6 +1859,7 @@ function makeShot(drawn, seed, poolAtDraw, snapshot = null) {
     ckpt: snapshot?.ckpt ?? currentCkpt(),
     workflowId: snapshot?.workflowId ?? currentWorkflowId(),
     sampling: snapshot?.sampling ?? currentSampling(),
+    pose: snapshot ? snapshot.pose ?? null : currentPose(),
     status: "drawn",
     note: "",
     image: null,

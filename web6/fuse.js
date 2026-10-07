@@ -40,6 +40,7 @@ import { buildLibrary, groupChips, createAssets, cardNode, cardFacts, setEnterTa
 import { el, openSheet, anyOverlay, toast } from "./ui.js";
 import { mountKeysHelp } from "./keys-help.js";
 import { mountGenStatus } from "./gen-status.js";
+import { currentPose, poseButton, onPoseChange } from "./pose.js";
 import { openDecks, loadDecks, cachedDecks } from "./decks.js";
 import { openPaste, listenPaste } from "./paste-prompt.js";
 import { paintWeight, wireWeightInput, weightRow, weightPositive } from "./weights.js";
@@ -219,6 +220,11 @@ async function boot() {
   // 快捷鍵說明（電腦）：頂欄的「?」、按 ? 打開（keys-help.js）。
   mountKeysHelp("fuse");
   mountGenStatus("fuse");
+  // 換了姿勢參考：付印鈕的「這張已經在印／印過」要重算（簽名裡有姿勢）。
+  onPoseChange(() => {
+    renderPreview();
+    renderPrintBar();
+  });
   try {
     const [lexicon, man] = await Promise.all([
       fetch(document.querySelector('link[rel="preload"][href^="lexicon.json"]')?.href || "lexicon.json").then((r) => r.json()),
@@ -433,7 +439,12 @@ function missReason(tag) {
 const printSeedOf = (t) => genSeed(t.seed);
 // 分級（伺服器照它換負面詞）、模型、LoRA、workflow 也算進去：換了其中一個再按付印是另一張圖，不是「這一張已經在印了」。
 const sigOf = (t) =>
-  t ? `${printSeedOf(t)}|${settings.width}x${settings.height}|${settings.rating}|${t.positive}|${currentCkpt() || ""}|${JSON.stringify(currentLorasPayload() || [])}|${currentWorkflowId() || ""}` : "";
+  t ? `${printSeedOf(t)}|${settings.width}x${settings.height}|${settings.rating}|${t.positive}|${currentCkpt() || ""}|${JSON.stringify(currentLorasPayload() || [])}|${currentWorkflowId() || ""}${poseSig()}` : "";
+// 換了姿勢參考，同一張試印要能再印一張；沒選姿勢時簽名跟以前一樣（舊的作品還對得上）。
+const poseSig = () => {
+  const p = currentPose();
+  return p ? `|pose:${p.name}:${p.strength}` : "";
+};
 
 function printFor(sig) {
   return sig ? prints.find((p) => p.sig === sig) : null;
@@ -752,7 +763,7 @@ let discord = null;
 
 const generator = createGenerator({
   origin: "fuse",
-  payload: (p) => ({ width: p.width, height: p.height, loras: p.loras, ckpt: p.ckpt, rating: p.rating, workflowId: p.workflowId, ...(p.sampling || {}) }),
+  payload: (p) => ({ width: p.width, height: p.height, loras: p.loras, ckpt: p.ckpt, rating: p.rating, workflowId: p.workflowId, ...(p.sampling || {}) , ...(p.pose ? { pose: p.pose } : {}) }),
   update: (p) => {
     tabNote.shot(p, generator.pending);
     paintLineItem(p);
@@ -866,6 +877,8 @@ function printNow() {
     ckpt: currentCkpt(),
     workflowId: currentWorkflowId(),
     sampling: currentSampling(),
+    // 姿勢參考（pose.js）：付印那一刻選的那一份，重印照舊。
+    pose: currentPose(),
     bed: { pins: [...bed.pins], carried: { ...bed.carried } },
     seeds: [...seeds],
     picked,
@@ -966,6 +979,7 @@ function savePrints() {
       ckpt: p.ckpt,
       workflowId: p.workflowId,
       sampling: p.sampling || {},
+      pose: p.pose || null,
       bed: p.bed,
       fixedSeed: !!p.fixedSeed,
       seeds: p.seeds,
@@ -3598,6 +3612,8 @@ function openRules() {
         )
       ),
       row("時代", eraSel),
+      // 姿勢參考：人物照一張圖的姿勢擺（pose.js）。
+      row("姿勢參考", poseButton({ recent: () => prints.filter((p) => p.status === "done" && p.image && !p._gone).map((p) => ({ src: viewSrc(p.image), full: p.image })), wf: currentWorkflowId, rating: () => settings.rating })),
       row("情境", heats),
       row(
         "每段補幾張",

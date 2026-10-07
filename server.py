@@ -529,7 +529,7 @@ def inject_lora(wf: dict, lora_name: str, strength: float) -> None:
 
 
 def build_workflow(positive: str, width: int, height: int, seed: int, loras=None,
-                   ckpt=None, sfw: bool = False, rating=None, steps=None, cfg_scale=None) -> dict:
+                   ckpt=None, sfw: bool = False, rating=None, steps=None, cfg_scale=None, pose=None) -> dict:
     ckpt_name = resolve_ckpt(ckpt)
     wf = {
         "13": {
@@ -577,7 +577,140 @@ def build_workflow(positive: str, width: int, height: int, seed: int, loras=None
     }
     for lora_name, strength in convert_loras(loras):
         inject_lora(wf, lora_name, strength)
+    if pose:
+        inject_pose(wf, pose, int(width), int(height))
     return wf
+
+
+# === 姿勢參考（web6／web7 規則裡的「姿勢」）=================================================
+# 一張參考圖（照片、自己的成品、作品冊的圖）→ 裁成這張的長寬比 → AIO Aux Preprocessor 的
+# OpenposePreprocessor 抓骨架（專案主指定，不用 DWPose）→ OpenPose ControlNet（SetUnionControlNetType=openpose）。
+# 參考圖先由前端縮到 1024 以內，POST /api/pose/upload 傳進 Comfy 的 input/danbooru_pose（檔名是內容雜湊，
+# 同一張不重複傳）；生圖時 payload 帶 {"pose": {"name", "strength", "end"}}。只套在內建工作流。
+# 骨架節點每張都一樣：Comfy 會沿用上一張算好的結果，只有第一張多花幾秒。
+POSE_SUBFOLDER = "danbooru_pose"
+POSE_NAME_RE = re.compile(r"^danbooru_pose/pose_[0-9a-f]{16}\.(png|jpg|webp)$")
+POSE_MAX_BYTES = 4 * 1024 * 1024
+# 預設照專案主試好的那一份：strength 1、end 1。
+POSE_STRENGTH = (0.2, 1.2, 1.0)
+POSE_END = (0.3, 1.0, 1.0)
+POSE_PREPROCESSOR = {"class_type": "AIO_Preprocessor", "preprocessor": "OpenposePreprocessor", "resolution": 512}
+
+
+class PoseError(ValueError):
+    pass
+
+
+def parse_pose(raw) -> dict | None:
+    """payload["pose"] → {"name", "strength", "end"}；沒給（或給的不是參考圖）回 None。"""
+    if not isinstance(raw, dict):
+        return None
+    name = str(raw.get("name") or "").replace("\\", "/")
+    if not POSE_NAME_RE.match(name):
+        return None
+
+    def clamp(v, lo, hi, default):
+        try:
+            x = float(v)
+        except (TypeError, ValueError):
+            return default
+        return default if x != x else max(lo, min(hi, x))
+
+    return {
+        "name": name,
+        "strength": round(clamp(raw.get("strength"), *POSE_STRENGTH), 2),
+        "end": round(clamp(raw.get("end"), *POSE_END), 2),
+    }
+
+
+def pose_controlnet() -> str:
+    """ControlNet 檔名。設定檔 comfy.poseControlNet 可以指定；不然先找 Illustrious 的 OpenPose，
+    再找任何 OpenPose，最後退到 Union。後面一律接 SetUnionControlNetType=openpose（專案主的工作流就是這樣接）。"""
+    names = models_from_comfy("controlnet")
+    want = str(cfg("comfy.poseControlNet", "POSE_CONTROLNET", "") or "").strip()
+    if want:
+        hit = next((n for n in names if n == want or n.replace("\\", "/").endswith(want.replace("\\", "/"))), None)
+        if hit:
+            return hit
+    low = [(n, n.lower()) for n in names]
+    for test in (lambda x: "openpose" in x and "illustrious" in x, lambda x: "openpose" in x, lambda x: "union" in x):
+        hit = next((n for n, x in low if test(x)), None)
+        if hit:
+            return hit
+    raise PoseError("ComfyUI 裡找不到 OpenPose（或 Union）的 ControlNet，姿勢參考用不了")
+
+
+def inject_pose(wf: dict, pose: dict, width: int, height: int) -> None:
+    """在內建工作流的 KSampler 前面接上姿勢：正負提示詞都經過 ControlNetApplyAdvanced。"""
+    sampler = next((nid for nid, n in wf.items() if isinstance(n, dict) and n.get("class_type") == "KSampler"), None)
+    ckpt = next((nid for nid, n in wf.items() if isinstance(n, dict) and n.get("class_type") == "CheckpointLoaderSimple"), None)
+    if sampler is None or ckpt is None:
+        return
+    net = pose_controlnet()
+    ks = wf[sampler]["inputs"]
+    wf["300"] = {"class_type": "LoadImage", "inputs": {"image": pose["name"]}}
+    # 先裁成這一張的長寬比：不然 ControlNet 把骨架硬拉成畫布的比例，手腳會變形。
+    wf["301"] = {"class_type": "ImageScale", "inputs": {"image": ["300", 0], "upscale_method": "lanczos", "width": width, "height": height, "crop": "center"}}
+    wf["302"] = {
+        "class_type": POSE_PREPROCESSOR["class_type"],
+        "inputs": {"image": ["301", 0], "preprocessor": POSE_PREPROCESSOR["preprocessor"], "resolution": POSE_PREPROCESSOR["resolution"]},
+    }
+    wf["303"] = {"class_type": "ControlNetLoader", "inputs": {"control_net_name": net}}
+    wf["304"] = {"class_type": "SetUnionControlNetType", "inputs": {"control_net": ["303", 0], "type": "openpose"}}
+    control = ["304", 0]
+    wf["305"] = {
+        "class_type": "ControlNetApplyAdvanced",
+        "inputs": {
+            "positive": ks["positive"],
+            "negative": ks["negative"],
+            "control_net": control,
+            "image": ["302", 0],
+            "strength": float(pose["strength"]),
+            "start_percent": 0.0,
+            "end_percent": float(pose["end"]),
+            "vae": [ckpt, 2],
+        },
+    }
+    ks["positive"] = ["305", 0]
+    ks["negative"] = ["305", 1]
+
+
+def pose_upload(payload: dict) -> dict:
+    """{"image": "data:image/...;base64,..."} → 傳進 Comfy 的 input/danbooru_pose，回 {"name"}。"""
+    raw = str((payload or {}).get("image") or "")
+    m = re.match(r"^data:image/(png|jpeg|webp);base64,(.+)$", raw, re.S)
+    if not m:
+        raise PoseError("要一張 PNG、JPEG 或 WebP 的圖")
+    try:
+        data = base64.b64decode(m.group(2), validate=False)
+    except (ValueError, TypeError):
+        raise PoseError("圖片壞了")
+    if not data or len(data) > POSE_MAX_BYTES:
+        raise PoseError("圖片太大（上限 4MB；網頁會先縮小，還是太大就換一張）")
+    ext = {"png": "png", "jpeg": "jpg", "webp": "webp"}[m.group(1)]
+    name = f"pose_{hashlib.sha1(data).hexdigest()[:16]}.{ext}"
+    stored = comfy_upload_image(data, name, subfolder=POSE_SUBFOLDER, mime=f"image/{m.group(1)}")
+    if not POSE_NAME_RE.match(stored):
+        stored = f"{POSE_SUBFOLDER}/{name}"
+    return {"name": stored}
+
+
+def pose_preview(payload: dict) -> dict:
+    """只跑骨架偵測給人看：抓到幾個人、手腳對不對。回 {"image": 骨架圖網址}。"""
+    name = str((payload or {}).get("name") or "")
+    if not POSE_NAME_RE.match(name):
+        raise PoseError("不是姿勢參考圖")
+    wf = {
+        "1": {"class_type": "LoadImage", "inputs": {"image": name}},
+        "2": {"class_type": POSE_PREPROCESSOR["class_type"], "inputs": {"image": ["1", 0], "preprocessor": POSE_PREPROCESSOR["preprocessor"], "resolution": POSE_PREPROCESSOR["resolution"]}},
+        "3": {"class_type": "PreviewImage", "inputs": {"images": ["2", 0]}},
+    }
+    prompt_id = api("POST", "/prompt", {"prompt": wf}, timeout=60)["prompt_id"]
+    hist = wait_done(prompt_id, timeout=180)
+    image = first_image_src(hist, ["3"])
+    if not image:
+        raise PoseError("骨架沒畫出來（Comfy 沒有回圖）")
+    return {"image": image}
 
 
 _MODEL_CACHE = {"t": 0.0, "data": {}}
@@ -589,6 +722,7 @@ def models_from_comfy(kind: str) -> list[str]:
         "loras": ("LoraLoader", "lora_name"),
         "vae": ("VAELoader", "vae_name"),
         "upscale": ("UpscaleModelLoader", "model_name"),
+        "controlnet": ("ControlNetLoader", "control_net_name"),
     }
     if kind not in table:
         return []
@@ -911,7 +1045,7 @@ def build_hires_workflow(
     return wf
 
 
-def comfy_upload_image(raw: bytes, filename: str) -> str:
+def comfy_upload_image(raw: bytes, filename: str, subfolder: str = "danbooru_hires", mime: str = "image/png") -> str:
     """把原圖 POST 到 Comfy /upload/image，回 LoadImage 用的名字（含子資料夾）。"""
     boundary = "----danbooruHires" + uuid.uuid4().hex
     chunks = []
@@ -921,13 +1055,13 @@ def comfy_upload_image(raw: bytes, filename: str) -> str:
             f"--{boundary}\r\nContent-Disposition: form-data; name=\"{name}\"\r\n\r\n{value}\r\n".encode("utf-8")
         )
 
-    add_field("subfolder", "danbooru_hires")
+    add_field("subfolder", subfolder)
     add_field("overwrite", "true")
     chunks.append(
         (
             f"--{boundary}\r\n"
             f"Content-Disposition: form-data; name=\"image\"; filename=\"{filename}\"\r\n"
-            f"Content-Type: image/png\r\n\r\n"
+            f"Content-Type: {mime}\r\n\r\n"
         ).encode("utf-8")
         + bytes(raw)
         + b"\r\n"
@@ -1171,6 +1305,7 @@ def prepare_workflow(payload: dict):
             rating=payload.get("rating"),
             steps=payload.get("steps"),
             cfg_scale=payload.get("cfg"),
+            pose=parse_pose(payload.get("pose")),
         )
         return wf, meta
     prof = workflows.get_profile(wid)
@@ -3574,6 +3709,18 @@ class Handler(BaseHTTPRequestHandler):
                 self._json(200, {"ok": True, **card_usage.add(payload)})
             except card_usage.UsageError as exc:
                 self._json(400, {"ok": False, "error": str(exc), "code": "invalid"})
+            return
+        # 姿勢參考：參考圖傳進 Comfy、只跑骨架偵測給人看。
+        if path in ("/api/pose/upload", "/api/pose/preview"):
+            try:
+                out = pose_upload(payload) if path == "/api/pose/upload" else pose_preview(payload)
+            except PoseError as exc:
+                self._json(400, {"ok": False, "error": str(exc), "code": "invalid"})
+                return
+            except Exception as exc:
+                self._json(502, {"ok": False, "error": f"ComfyUI 那邊出錯：{exc}"[:300]})
+                return
+            self._json(200, {"ok": True, **out})
             return
         # 出圖日誌的註記：成品牆單張拿掉（"discard"），按復原送 null 蓋掉。
         if path == "/api/genlog/mark":

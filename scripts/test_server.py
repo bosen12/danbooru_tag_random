@@ -1444,6 +1444,65 @@ ok("stats: 底模成績（張數、收藏、撤下、印壞、平均畫多久、
 ok("stats: LoRA 也各算一份；多的排前面", _ml.get("n") == 1 and _st["models"][0]["name"] == "a", str(_st["models"]))
 ok("stats: 提示詞拆字跟 usage.js 一樣", _gl.tags_of("(smile:1.2), 1girl,1girl ,  (a (b):0.9)") == ["smile", "1girl", "a (b)"])
 _gl.LOG_PATH = _saved_log
+
+# ---- 姿勢參考：parse_pose、接進內建工作流、上傳（Comfy 用假的）----
+_pn = "danbooru_pose/pose_0123456789abcdef.png"
+ok("pose: 沒給、亂給的名字當沒有", server.parse_pose(None) is None and server.parse_pose({"name": "../x.png"}) is None and server.parse_pose({"name": "danbooru_hires/a.png"}) is None)
+_pp = server.parse_pose({"name": _pn, "strength": 9, "end": "x"})
+ok("pose: 強度夾在範圍裡、壞的用預設（end 預設 1，照專案主的工作流）", _pp == {"name": _pn, "strength": 1.2, "end": 1.0}, str(_pp))
+ok("pose: 沒給強度就是 1", server.parse_pose({"name": _pn})["strength"] == 1.0)
+_saved_models = server.models_from_comfy
+try:
+    server.models_from_comfy = lambda kind: ["SDXL\\controlnet-union-sdxl-1.0\\promax.safetensors", "Illustrious-XL ControlNet Openpose\\illustriousXL_v10.safetensors"] if kind == "controlnet" else []
+    ok("pose: 先挑 Illustrious 的 OpenPose", server.pose_controlnet() == "Illustrious-XL ControlNet Openpose\\illustriousXL_v10.safetensors")
+    _wf0 = server.build_workflow("1girl", 832, 1216, 1)
+    _wfp = server.build_workflow("1girl", 832, 1216, 1, loras=[{"folder": "", "file": "a.safetensors", "strength": 1}], pose=server.parse_pose({"name": _pn, "strength": 0.6}))
+    _ks = _wfp["35"]["inputs"]
+    ok("pose: 沒給姿勢，工作流一點都沒變", not any(n in _wf0 for n in ("300", "301", "302", "303", "305")))
+    ok("pose: KSampler 的正負提示詞改走 ControlNet", _ks["positive"] == ["305", 0] and _ks["negative"] == ["305", 1] and _wfp["305"]["inputs"]["positive"][0] in ("36",) and _wfp["305"]["inputs"]["strength"] == 0.6)
+    ok("pose: 參考圖先裁成這張的比例再抓骨架", _wfp["301"]["inputs"]["width"] == 832 and _wfp["301"]["inputs"]["height"] == 1216 and _wfp["301"]["inputs"]["crop"] == "center" and _wfp["302"]["class_type"] == "AIO_Preprocessor" and _wfp["302"]["inputs"]["preprocessor"] == "OpenposePreprocessor" and _wfp["302"]["inputs"]["resolution"] == 512 and _wfp["300"]["inputs"]["image"] == _pn)
+    ok("pose: 跟專案主的工作流一樣接 SetUnionControlNetType=openpose", _wfp["304"]["inputs"] == {"control_net": ["303", 0], "type": "openpose"} and _wfp["305"]["inputs"]["control_net"] == ["304", 0])
+    server.models_from_comfy = lambda kind: ["SDXL\\controlnet-union-sdxl-1.0\\promax.safetensors"] if kind == "controlnet" else []
+    _wfu = server.build_workflow("1girl", 1024, 1024, 1, pose=server.parse_pose({"name": _pn}))
+    ok("pose: 沒有 OpenPose 專用的就退到 Union", _wfu["303"]["inputs"]["control_net_name"].endswith("promax.safetensors") and _wfu["304"]["inputs"]["type"] == "openpose")
+    server.models_from_comfy = lambda kind: []
+    try:
+        server.build_workflow("1girl", 1024, 1024, 1, pose=server.parse_pose({"name": _pn}))
+        ok("pose: 沒有 ControlNet 就明講", False)
+    except server.PoseError as exc:
+        ok("pose: 沒有 ControlNet 就明講", "ControlNet" in str(exc))
+    _wfw, _ = server.prepare_workflow({"positive": "1girl", "seed": 1, "pose": {"name": "evil/../x.png"}})
+    ok("pose: prepare_workflow 不認得的參考圖直接忽略", "300" not in _wfw)
+finally:
+    server.models_from_comfy = _saved_models
+_saved_upload2 = server.comfy_upload_image
+_got = {}
+try:
+    def _fake_upload(data, name, subfolder="danbooru_hires", mime="image/png"):
+        _got.update(name=name, subfolder=subfolder, mime=mime, n=len(data))
+        return f"{subfolder}/{name}"
+
+    server.comfy_upload_image = _fake_upload
+    import base64 as _b64  # noqa: E402
+
+    _r = server.pose_upload({"image": "data:image/jpeg;base64," + _b64.b64encode(b"\xff\xd8fakejpeg").decode()})
+    ok("pose: 上傳到 input/danbooru_pose、檔名是內容雜湊", server.POSE_NAME_RE.match(_r["name"]) is not None and _got["subfolder"] == "danbooru_pose" and _got["mime"] == "image/jpeg" and _r["name"].endswith(".jpg"), str((_r, _got)))
+    for _bad in ({"image": "data:text/html;base64,PGI+"}, {"image": ""}, {}):
+        try:
+            server.pose_upload(_bad)
+            ok("pose: 不是圖片擋掉", False)
+            break
+        except server.PoseError:
+            pass
+    else:
+        ok("pose: 不是圖片擋掉", True)
+    try:
+        server.pose_preview({"name": "../../secret.png"})
+        ok("pose: 骨架預覽只收姿勢參考圖", False)
+    except server.PoseError:
+        ok("pose: 骨架預覽只收姿勢參考圖", True)
+finally:
+    server.comfy_upload_image = _saved_upload2
 _h = server.GenJob(iter(()), {"origin": "evil", "hires": {"mode": "quick"}})
 ok("active: 不認得的 origin 當空的；Hires 標出來", _h.origin == "" and _h.kind == "hires")
 _c = server.GenJob(iter(()), {"origin": "fuse"})
