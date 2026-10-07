@@ -620,6 +620,8 @@ def parse_pose(raw) -> dict | None:
         "name": name,
         "strength": round(clamp(raw.get("strength"), *POSE_STRENGTH), 2),
         "end": round(clamp(raw.get("end"), *POSE_END), 2),
+        # 姿勢編輯器（pose-editor.js）畫的：本身就是 OpenPose 骨架圖，不必再抓一次。
+        "skeleton": raw.get("skeleton") is True,
     }
 
 
@@ -664,16 +666,20 @@ def inject_pose(wf: dict, pose: dict, width: int, height: int) -> None:
     ckpt = next((nid for nid, n in wf.items() if isinstance(n, dict) and n.get("class_type") == "CheckpointLoaderSimple"), None)
     if sampler is None or ckpt is None:
         return
-    pose_node_ready()
+    if not pose.get("skeleton"):
+        pose_node_ready()
     net = pose_controlnet()
     ks = wf[sampler]["inputs"]
     wf["300"] = {"class_type": "LoadImage", "inputs": {"image": pose["name"]}}
     # 先裁成這一張的長寬比：不然 ControlNet 把骨架硬拉成畫布的比例，手腳會變形。
     wf["301"] = {"class_type": "ImageScale", "inputs": {"image": ["300", 0], "upscale_method": "lanczos", "width": width, "height": height, "crop": "center"}}
-    wf["302"] = {
-        "class_type": POSE_PREPROCESSOR["class_type"],
-        "inputs": {"image": ["301", 0], "preprocessor": POSE_PREPROCESSOR["preprocessor"], "resolution": POSE_PREPROCESSOR["resolution"]},
-    }
+    hint = ["301", 0]
+    if not pose.get("skeleton"):
+        wf["302"] = {
+            "class_type": POSE_PREPROCESSOR["class_type"],
+            "inputs": {"image": ["301", 0], "preprocessor": POSE_PREPROCESSOR["preprocessor"], "resolution": POSE_PREPROCESSOR["resolution"]},
+        }
+        hint = ["302", 0]
     wf["303"] = {"class_type": "ControlNetLoader", "inputs": {"control_net_name": net}}
     wf["304"] = {"class_type": "SetUnionControlNetType", "inputs": {"control_net": ["303", 0], "type": "openpose"}}
     control = ["304", 0]
@@ -683,7 +689,7 @@ def inject_pose(wf: dict, pose: dict, width: int, height: int) -> None:
             "positive": ks["positive"],
             "negative": ks["negative"],
             "control_net": control,
-            "image": ["302", 0],
+            "image": hint,
             "strength": float(pose["strength"]),
             "start_percent": 0.0,
             "end_percent": float(pose["end"]),

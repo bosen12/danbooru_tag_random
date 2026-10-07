@@ -1449,7 +1449,7 @@ _gl.LOG_PATH = _saved_log
 _pn = "danbooru_pose/pose_0123456789abcdef.png"
 ok("pose: 沒給、亂給的名字當沒有", server.parse_pose(None) is None and server.parse_pose({"name": "../x.png"}) is None and server.parse_pose({"name": "danbooru_hires/a.png"}) is None)
 _pp = server.parse_pose({"name": _pn, "strength": 9, "end": "x"})
-ok("pose: 強度夾在範圍裡、壞的用預設（end 預設 1，照專案主的工作流）", _pp == {"name": _pn, "strength": 1.2, "end": 1.0}, str(_pp))
+ok("pose: 強度夾在範圍裡、壞的用預設（end 預設 1，照專案主的工作流）", _pp == {"name": _pn, "strength": 1.2, "end": 1.0, "skeleton": False}, str(_pp))
 ok("pose: 沒給強度就是 1", server.parse_pose({"name": _pn})["strength"] == 1.0)
 _saved_models = server.models_from_comfy
 _saved_ready = server.pose_node_ready
@@ -1464,6 +1464,9 @@ try:
     ok("pose: KSampler 的正負提示詞改走 ControlNet", _ks["positive"] == ["305", 0] and _ks["negative"] == ["305", 1] and _wfp["305"]["inputs"]["positive"][0] in ("36",) and _wfp["305"]["inputs"]["strength"] == 0.6)
     ok("pose: 參考圖先裁成這張的比例再抓骨架", _wfp["301"]["inputs"]["width"] == 832 and _wfp["301"]["inputs"]["height"] == 1216 and _wfp["301"]["inputs"]["crop"] == "center" and _wfp["302"]["class_type"] == "AIO_Preprocessor" and _wfp["302"]["inputs"]["preprocessor"] == "OpenposePreprocessor" and _wfp["302"]["inputs"]["resolution"] == 512 and _wfp["300"]["inputs"]["image"] == _pn)
     ok("pose: 跟專案主的工作流一樣接 SetUnionControlNetType=openpose", _wfp["304"]["inputs"] == {"control_net": ["303", 0], "type": "openpose"} and _wfp["305"]["inputs"]["control_net"] == ["304", 0])
+    _wfs = server.build_workflow("1girl", 832, 1216, 1, pose=server.parse_pose({"name": _pn, "skeleton": True}))
+    ok("pose: 編輯器畫的骨架不再抓一次，直接進 ControlNet", "302" not in _wfs and _wfs["305"]["inputs"]["image"] == ["301", 0] and _wfp["305"]["inputs"]["image"] == ["302", 0])
+    ok("pose: skeleton 只認真的 true", server.parse_pose({"name": _pn, "skeleton": "yes"})["skeleton"] is False and server.parse_pose({"name": _pn, "skeleton": True})["skeleton"] is True)
     server.models_from_comfy = lambda kind: ["SDXL\\controlnet-union-sdxl-1.0\\promax.safetensors"] if kind == "controlnet" else []
     _wfu = server.build_workflow("1girl", 1024, 1024, 1, pose=server.parse_pose({"name": _pn}))
     ok("pose: 沒有 OpenPose 專用的就退到 Union", _wfu["303"]["inputs"]["control_net_name"].endswith("promax.safetensors") and _wfu["304"]["inputs"]["type"] == "openpose")

@@ -2030,6 +2030,12 @@ const ALBUM_FIXTURE = [
             [["app.js", "mochi"], ["fuse.js", "fuse"], ["book.js", "book"], ["album.js", "album"]].every(([f, room]) => readFileSync(join(ROOT, d, f), "utf8").includes(`mountKeysHelp("${room}");`)) &&
             readFileSync(join(ROOT, d, "styles.css"), "utf8").includes(".mast-tools .help-btn {")
           ));
+      ok("姿勢編輯器：姿勢面板「自己擺」拖骨架（連動、起手式、鏡像、轉、縮放、藏點、多人、復原），畫成 OpenPose 骨架圖送去、帶 skeleton 不再抓骨架；尺寸跟著規則（web6、web7）",
+        ["pose.js", "pose-editor.js"].every((f) => readFileSync(join(ROOT, "web6", f), "utf8") === readFileSync(join(ROOT, "web7", f), "utf8")) &&
+          readFileSync(join(ROOT, "web6/pose-editor.js"), "utf8").includes("export function openPoseEditor(") &&
+          readFileSync(join(ROOT, "web6/pose.js"), "utf8").includes('state.kind === "skeleton" ? { skeleton: true }') &&
+          readFileSync(join(ROOT, "server.py"), "utf8").includes('"skeleton": raw.get("skeleton") is True') &&
+          ["web6", "web7"].every((d) => readFileSync(join(ROOT, d, "app.js"), "utf8").includes("size: () => ({ w: settings.width, h: settings.height })") && readFileSync(join(ROOT, d, "styles.css"), "utf8").includes(".pe-canvas {")));
       ok("姿勢參考的節點與模型：啟動 web6／web7 時檢查，缺了在最小化視窗自動裝 comfyui_controlnet_aux、下載 OpenPose ControlNet（大小＋sha256 才放、可續傳）",
         ["start-web6.bat", "start-web7.bat"].every((f) => readFileSync(join(ROOT, f), "utf8").includes('call "%~dp0scripts\\pose-assets-check.bat"')) &&
           readFileSync(join(ROOT, "scripts/pose-assets-check.bat"), "utf8").includes("fetch_pose_assets.py\" --check") &&

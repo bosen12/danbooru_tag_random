@@ -1,6 +1,7 @@
 /**
  * 姿勢參考（墨池、疊印台的規則裡）：挑一張圖，人物照它的姿勢擺；臉、衣服、場景還是照牌。
- *   - 來源：上傳一張（照片、截圖都行）、最近印的、作品冊的。
+ *   - 來源：上傳一張（照片、截圖都行）、最近印的、作品冊的，或在姿勢編輯器裡自己擺（pose-editor.js）。
+ *     自己擺的本身就是骨架圖：送印時帶 skeleton，伺服器不再抓一次。
  *   - 圖先在這裡縮到 1024 以內，POST /api/pose/upload 傳進 ComfyUI（server.py 的姿勢參考那段），
  *     再 POST /api/pose/preview 只跑一次骨架偵測，給人看抓到的姿勢對不對。
  *   - 強度三檔：輕（只帶個大概）、中、強（照著擺，預設；跟專案主試好的工作流一樣 strength 1）。
@@ -11,6 +12,7 @@
  */
 import { el, openSheet } from "./ui.js";
 import { refuse, seat, reducedMotion, enter, DUR } from "./motion.js";
+import { openPoseEditor } from "./pose-editor.js";
 
 const POSE_KEY = "mochi.pose.v1";
 const MAX_SIDE = 1024;
@@ -55,7 +57,8 @@ export function onPoseChange(fn) {
 
 /** 送去印的那一份（每張成品記下來）。沒選回 null。 */
 export function currentPose() {
-  return state ? { name: state.name, strength: state.strength, end: 1 } : null;
+  if (!state) return null;
+  return { name: state.name, strength: state.strength, end: 1, ...(state.kind === "skeleton" ? { skeleton: true } : {}) };
 }
 
 const levelName = (s) => (POSE_LEVELS.find(([v]) => Math.abs(v - s) < 0.01) || POSE_LEVELS[2])[1];
@@ -88,7 +91,7 @@ async function post(url, body) {
  * 規則裡那顆鈕：有選就是小縮圖＋「中」，沒選是「不用」。wf()：現在選的工作流（自訂的不套用）。
  * recent()：這個房間最近印好的 [{ src, full }]。
  */
-export function poseButton({ recent = () => [], wf = () => "", rating = () => "general" } = {}) {
+export function poseButton({ recent = () => [], wf = () => "", rating = () => "general", size = () => ({ w: 1024, h: 1024 }) } = {}) {
   const b = el("button", { class: "btn btn-small pose-btn pressable", type: "button", "aria-haspopup": "dialog" });
   const paint = () => {
     // 規則重畫時舊的那顆被換掉了：不再跟著更新（也不留在 listeners 裡）。
@@ -98,7 +101,7 @@ export function poseButton({ recent = () => [], wf = () => "", rating = () => "g
     b.replaceChildren(
       ...[
         state ? el("img", { class: "pose-btn-thumb", src: state.thumb, alt: "" }) : null,
-        el("span", {}, state ? `照這張・${levelName(state.strength)}` : "不用"),
+        el("span", {}, state ? `${state.kind === "skeleton" ? "自己擺的" : "照這張"}・${levelName(state.strength)}` : "不用"),
         state && custom ? el("small", { class: "pose-btn-warn" }, "自訂工作流不套用") : null,
       ].filter(Boolean)
     );
@@ -107,11 +110,11 @@ export function poseButton({ recent = () => [], wf = () => "", rating = () => "g
   };
   paint();
   listeners.add(paint);
-  b.addEventListener("click", () => openPosePicker({ recent, rating }));
+  b.addEventListener("click", () => openPosePicker({ recent, rating, size }));
   return b;
 }
 
-export function openPosePicker({ recent = () => [], rating = () => "general" } = {}) {
+export function openPosePicker({ recent = () => [], rating = () => "general", size = () => ({ w: 1024, h: 1024 }) } = {}) {
   let busy = false;
   const now = el("div", { class: "pose-now" });
   const levels = el("div", { class: "segmented", role: "radiogroup", "aria-label": "照著擺的強度" });
@@ -119,7 +122,9 @@ export function openPosePicker({ recent = () => [], rating = () => "general" } =
 
   function paintNow() {
     now.replaceChildren(
-      state
+      state && state.kind === "skeleton"
+        ? el("div", { class: "pose-pair" }, el("figure", {}, el("img", { src: state.thumb, alt: "你擺的姿勢" }), el("figcaption", {}, "你擺的姿勢")))
+        : state
         ? el(
             "div",
             { class: "pose-pair" },
@@ -155,6 +160,7 @@ export function openPosePicker({ recent = () => [], rating = () => "general" } =
       )
     );
     clear.hidden = !state;
+    design.textContent = state?.kind === "skeleton" ? "改這個姿勢" : "打開姿勢編輯器";
   }
 
   async function skeleton() {
@@ -193,13 +199,37 @@ export function openPosePicker({ recent = () => [], rating = () => "general" } =
     }
   }
 
+  // 自己擺：編輯器畫的骨架直接傳上去（PNG），不必再抓骨架。
+  const design = el("button", { class: "btn btn-small btn-primary pressable", type: "button" }, "打開姿勢編輯器");
+  design.addEventListener("click", () =>
+    openPoseEditor({
+      size: size(),
+      draft: state?.kind === "skeleton" ? state.draft : null,
+      onDone: async ({ image, thumb, draft }) => {
+        if (busy) return;
+        busy = true;
+        status.textContent = "存姿勢…";
+        try {
+          const { name } = await post("/api/pose/upload", { image });
+          state = { name, thumb, strength: state?.strength ?? DEFAULT_LEVEL, kind: "skeleton", skeleton: thumb, draft };
+          changed();
+          paintNow();
+          status.textContent = "好了：之後印的都照你擺的姿勢。";
+        } catch (err) {
+          status.textContent = `存不了這個姿勢：${err.message}`;
+        } finally {
+          busy = false;
+        }
+      },
+    })
+  );
   const file = el("input", { type: "file", accept: "image/*", class: "pose-file", "aria-label": "上傳一張圖當姿勢參考" });
   file.addEventListener("change", () => {
     const f = file.files?.[0];
     if (f) choose(f, upload);
     file.value = "";
   });
-  const upload = el("button", { class: "btn btn-small btn-primary pressable", type: "button", onclick: () => file.click() }, "上傳一張");
+  const upload = el("button", { class: "btn btn-small pressable", type: "button", onclick: () => file.click() }, "上傳一張");
   const clear = el(
     "button",
     {
@@ -246,13 +276,14 @@ export function openPosePicker({ recent = () => [], rating = () => "general" } =
     now,
     el("div", { class: "pose-row" }, el("span", { class: "rule-label" }, "強度"), levels, clear),
     status,
+    el("section", {}, el("h3", {}, "自己擺"), el("div", { class: "pose-row" }, design, el("small", { class: "pose-hint" }, "拖骨架擺姿勢，有起手式可以套；可以擺 2～3 個人"))),
     el("section", {}, el("h3", {}, "上傳"), el("div", { class: "pose-row" }, upload, file, el("small", { class: "pose-hint" }, "照片、截圖都可以；網頁會先縮小再傳"))),
     el("section", {}, el("h3", {}, "最近印的"), mine.length ? grid(mine) : el("p", { class: "pose-empty" }, "這裡還沒有印好的。")),
     el("section", {}, el("h3", {}, "作品冊"), albumBox)
   );
   paintNow();
   openSheet("姿勢參考", body, { wide: true });
-  if (state && !state.skeleton && !state.skeletonFailed) skeleton();
+  if (state && state.kind !== "skeleton" && !state.skeleton && !state.skeletonFailed) skeleton();
   if (!reducedMotion()) [...body.querySelectorAll(".pose-pick")].slice(0, 12).forEach((n, i) => enter(n, { delay: DUR.micro + i * 20 }));
 }
 

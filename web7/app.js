@@ -1424,7 +1424,7 @@ function renderRules() {
       rulePair("時代", eraSel),
       rulePair("人物", whoRow),
       // 姿勢參考：人物照一張圖的姿勢擺（pose.js）。
-      rulePair("姿勢", poseButton({ recent: poseRecent, wf: currentWorkflowId, rating: () => settings.rating }))
+      rulePair("姿勢", poseButton({ recent: poseRecent, wf: currentWorkflowId, rating: () => settings.rating, size: () => ({ w: settings.width, h: settings.height }) }))
     ),
     el(
       "details",

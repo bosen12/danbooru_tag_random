@@ -3567,7 +3567,7 @@ function openRules() {
       ),
       row("時代", eraSel),
       // 姿勢參考：人物照一張圖的姿勢擺（pose.js）。
-      row("姿勢參考", poseButton({ recent: () => prints.filter((p) => p.status === "done" && p.image && !p._gone).map((p) => ({ src: viewSrc(p.image), full: p.image })), wf: currentWorkflowId, rating: () => settings.rating })),
+      row("姿勢參考", poseButton({ recent: () => prints.filter((p) => p.status === "done" && p.image && !p._gone).map((p) => ({ src: viewSrc(p.image), full: p.image })), wf: currentWorkflowId, rating: () => settings.rating, size: () => ({ w: settings.width, h: settings.height }) })),
       row("情境", heats),
       row(
         "每段補幾張",
