@@ -96,7 +96,7 @@ ok("重開後載入了：算好、清掉 LoRA 清單快取", state("lora") == "d
 
 ran = reset({}, lm=True)
 st._lora()
-ok("已經有 LoRA Manager：什麼都不裝", state("lora") == "done" and ran == [], str(ran))
+ok("已經有 LoRA Manager：不裝，只確認「詳情直達」補過", state("lora") == "done" and ran == [("fetch_lora_manager.py", "--patch")], str(ran))
 ran = reset({}, local=False)
 st._lora()
 ok("ComfyUI 在別台：不裝", state("lora") == "skip" and ran == [], str(ran))

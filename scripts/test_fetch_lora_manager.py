@@ -77,6 +77,38 @@ config["comfy"].pop("checkpointDir")
 fl.up.comfy_folders = lambda base: {}
 ok("找不到 ComfyUI：不裝", fl.main(["--check"]) == 0 and fl.main([]) == 0)
 
+# 「詳情」直達：在 LoRA Manager 的 loras.js 補 ?open=。長得跟上游一樣才補，補過不重補。
+node = tmp / "lm"
+js = node / "static" / "js"
+(js / "components" / "shared").mkdir(parents=True)
+(js / "api").mkdir()
+(js / "utils").mkdir()
+(node / "__init__.py").write_text("")
+(js / "components" / "shared" / "ModelModal.js").write_text("export async function showModelModal(model, modelType) {}\n")
+(js / "api" / "apiConfig.js").write_text("export const MODEL_TYPES = { LORA: 'loras' };\n")
+(js / "utils" / "uiHelpers.js").write_text("export function showToast(key, params = {}, type = 'info', fallback = null) {}\n")
+upstream = (
+    "import { appCore } from './core.js';\n\n"
+    "export async function initializeLoraPage() {\n"
+    "    await appCore.initialize();\n"
+    "    const loraPage = new LoraPageManager();\n"
+    "    await loraPage.initialize();\n\n"
+    "    return loraPage;\n"
+    "}\n"
+)
+(js / "loras.js").write_text(upstream, encoding="utf-8")
+ok("詳情直達：照上游的樣子補上", fl.patch_open_param(node) == "patched")
+patched = (js / "loras.js").read_text(encoding="utf-8")
+ok("詳情直達：初始化之後才開、只呼叫一次", patched.count("await openModelFromUrlParam()") == 1
+   and patched.index("await loraPage.initialize();") < patched.index("await openModelFromUrlParam()"))
+ok("詳情直達：補過不重補（LoRA Manager 沒更新就不動）", fl.patch_open_param(node) == "already" and (js / "loras.js").read_text(encoding="utf-8") == patched)
+(js / "loras.js").write_text("console.log('upstream changed');\n", encoding="utf-8")
+ok("詳情直達：檔案跟預期不一樣就不動它", fl.patch_open_param(node) == "unsupported"
+   and (js / "loras.js").read_text(encoding="utf-8") == "console.log('upstream changed');\n")
+(js / "loras.js").write_text(upstream, encoding="utf-8")
+(js / "utils" / "uiHelpers.js").write_text("export function notify() {}\n")
+ok("詳情直達：要用的函式不在了也不補", fl.patch_open_param(node) == "unsupported" and (js / "loras.js").read_text(encoding="utf-8") == upstream)
+
 print()
 print("ok" if not failed else f"{failed} failed")
 sys.exit(1 if failed else 0)
