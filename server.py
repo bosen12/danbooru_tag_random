@@ -4253,7 +4253,7 @@ def start_card_fetch() -> None:
         return
     if fetch_card_art.have_enough():
         return
-    print("cards    插畫還沒有：背景從 GitHub 下載全年齡那一包（約 53MB），好了重新整理網頁就有圖")
+    print("cards    插畫還沒有：背景從 GitHub 下載全年齡那一包（約 100MB），好了重新整理網頁就有圖")
 
     def run() -> None:
         try:

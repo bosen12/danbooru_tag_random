@@ -308,7 +308,7 @@ def main() -> int:
         return 0 if have_enough() else 3
     if not force and have_enough():
         return 0
-    print("Card illustrations are missing. Downloading the all-ages set (about 55 MB) from GitHub...")
+    print("Card illustrations are missing. Downloading the all-ages set (about 100 MB) from GitHub...")
     with tempfile.TemporaryDirectory() as tmpdir:
         zpath = Path(tmpdir) / "card-art.zip"
         try:
