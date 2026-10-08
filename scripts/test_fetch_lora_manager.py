@@ -7,7 +7,7 @@ import sys
 import tempfile
 from pathlib import Path
 
-sys.path.insert(0, str(Path(__file__).resolve().parent))
+sys.path.insert(0, str(Path(__file__).resolve().parents[1] / "scripts"))
 import fetch_lora_manager as fl  # noqa: E402
 
 failed = 0
@@ -97,17 +97,51 @@ upstream = (
     "}\n"
 )
 (js / "loras.js").write_text(upstream, encoding="utf-8")
-ok("詳情直達：照上游的樣子補上", fl.patch_open_param(node) == "patched")
+from unittest.mock import patch
+
+original_write_text = Path.write_text
+
+
+def python39_write_text(self, data, encoding=None, errors=None):
+    """Python 3.9's real signature: no newline keyword."""
+    return original_write_text(self, data, encoding=encoding, errors=errors)
+
+
+with patch.object(Path, "write_text", python39_write_text):
+    try:
+        result = fl.patch_open_param(node)
+    except TypeError as exc:
+        result = str(exc)
+ok("Python 3.9：詳情補丁不使用新版 pathlib 參數", result == "patched", result)
 patched = (js / "loras.js").read_text(encoding="utf-8")
 ok("詳情直達：初始化之後才開、只呼叫一次", patched.count("await openModelFromUrlParam()") == 1
    and patched.index("await loraPage.initialize();") < patched.index("await openModelFromUrlParam()"))
 ok("詳情直達：補過不重補（LoRA Manager 沒更新就不動）", fl.patch_open_param(node) == "already" and (js / "loras.js").read_text(encoding="utf-8") == patched)
+(js / "loras.js").write_text(upstream, encoding="utf-8")
+try:
+    result = fl.patch_open_param(node, check_only=True)
+except TypeError as exc:
+    result = str(exc)
+ok("啟動檢查：只看需不需要補，不改第三方檔案", result == "needed" and (js / "loras.js").read_text(encoding="utf-8") == upstream, result)
 (js / "loras.js").write_text("console.log('upstream changed');\n", encoding="utf-8")
 ok("詳情直達：檔案跟預期不一樣就不動它", fl.patch_open_param(node) == "unsupported"
    and (js / "loras.js").read_text(encoding="utf-8") == "console.log('upstream changed');\n")
 (js / "loras.js").write_text(upstream, encoding="utf-8")
 (js / "utils" / "uiHelpers.js").write_text("export function notify() {}\n")
 ok("詳情直達：要用的函式不在了也不補", fl.patch_open_param(node) == "unsupported" and (js / "loras.js").read_text(encoding="utf-8") == upstream)
+
+# CLI 的退出碼是準備面板判斷成功/失敗的依據；不能把未修改的檔案當作成功。
+import shutil
+cli_root = tmp / "cli/ComfyUI"
+cli_node = cli_root / "custom_nodes/comfyui-lora-manager"
+shutil.copytree(node, cli_node)
+fl.pose.comfy_root = lambda cfg: cli_root
+ok("CLI：補丁不支援時回報失敗", fl.main(["--patch"]) == 1)
+(cli_node / "static/js/utils/uiHelpers.js").write_text("export function showToast() {}\n", encoding="utf-8")
+ok("CLI：成功補上才回 0", fl.main(["--patch"]) == 0)
+ok("CLI：已經有補丁仍算成功", fl.main(["--patch"]) == 0)
+fl.pose.comfy_root = lambda cfg: tmp / "missing"
+ok("CLI：找不到可修改的節點回報失敗", fl.main(["--patch"]) == 1)
 
 print()
 print("ok" if not failed else f"{failed} failed")

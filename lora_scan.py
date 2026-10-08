@@ -73,7 +73,10 @@ def scan_roots():
     pref = preferred_path()
     if pref is None:
         return LORA_ROOT, LORA_ROOT, list(LORA_FOLDERS)
-    roots = comfy_model_dirs("loras") + ([LORA_ROOT] if LORA_ROOT else [])
+    # Settings save a resolved path. ComfyUI can report /var aliases on macOS
+    # or short Windows paths; compare and derive model names in the same form.
+    pref = pref.resolve()
+    roots = [Path(r).resolve() for r in comfy_model_dirs("loras") + ([LORA_ROOT] if LORA_ROOT else [])]
     owner = next((r for r in sorted(roots, key=lambda r: -len(str(r))) if is_under(pref, r)), None)
     return pref, owner or pref, []
 
@@ -341,7 +344,7 @@ def build_lora_list() -> dict:
             else:
                 data["note"] = (
                     f"清單來自 ComfyUI（{len(data['items'])} 個）。"
-                    "想要預覽圖和觸發詞：在 ComfyUI 裝 LoRA Manager（啟動檔會自動裝，裝完重開 ComfyUI），"
+                    "想要預覽圖和觸發詞：在 ComfyUI 裝 LoRA Manager（裝完重開 ComfyUI），"
                     "或在 LoRA 面板的「偏好路徑」選你的 LoRA 資料夾。"
                 )
         except Exception as exc:

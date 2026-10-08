@@ -1,13 +1,15 @@
 // Real web6 pages with isolated API fixtures. Never sends a generation to ComfyUI.
 import assert from 'node:assert/strict';
 import { createServer } from 'node:http';
-import { readFile, mkdir, writeFile } from 'node:fs/promises';
+import { readFile, mkdir, mkdtemp, writeFile } from 'node:fs/promises';
 import { existsSync } from 'node:fs';
 import { resolve, extname, sep } from 'node:path';
 import { createRequire } from 'node:module';
+import { tmpdir } from 'node:os';
 const require = createRequire(import.meta.url);
-const { chromium } = require(process.env.PLAYWRIGHT_MODULE || 'C:/Users/boshe/.cache/codex-runtimes/codex-primary-runtime/dependencies/node/node_modules/playwright');
-const root = resolve(import.meta.dirname, '..'), out = resolve(root, '.planning/web6-language-results');
+const { chromium } = require(process.env.PLAYWRIGHT_MODULE || 'playwright');
+const root = resolve(import.meta.dirname, '..'), out = process.env.BROWSER_RESULTS_DIR || await mkdtemp(resolve(tmpdir(), 'mochi-browser-'));
+const frontend = existsSync(resolve(root, 'web6/index.html')) ? 'web6' : 'web';
 await mkdir(out, { recursive: true });
 const requests = [];
 const at = Date.now(), ref = '/api/image?filename=fixture.svg&type=output';
@@ -37,7 +39,7 @@ const server = createServer(async (req, res) => {
     res.setHeader('Content-Type', 'application/json'); res.end(JSON.stringify(data)); return;
   }
   let name = decodeURIComponent(url.pathname).replace(/^\//, '') || 'index.html';
-  let file = resolve(root, 'web6', name);
+  let file = resolve(root, frontend, name);
   if (!existsSync(file)) file = resolve(root, 'web', name);
   if (!file.startsWith(root + sep)) { res.writeHead(403).end(); return; }
   try {
@@ -69,6 +71,30 @@ async function scan(page, name) {
   return data;
 }
 try {
+  // A fresh clone has no downloaded card manifest. The intro must still
+  // initialize and show its text-card demonstration before setup finishes.
+  {
+    const context = await browser.newContext({ locale: 'en-US', viewport: { width: 1440, height: 960 } });
+    await context.route('https://**/*', (r) => r.abort());
+    await context.route('**/cards/manifest.json', (r) => r.fulfill({ contentType: 'application/json', body: '{}' }));
+    for (const route of ['/intro.html', '/tutorial.html']) {
+      const page = await context.newPage(), errors = [];
+      page.on('pageerror', (e) => errors.push(e.stack || e.message));
+      await page.goto(origin + route);
+      try { await page.waitForFunction(() => !!window.__intro, null, { timeout: 20000 }); }
+      catch (e) { console.log(JSON.stringify({ scenario: route + '-no-card-art', errors })); throw e; }
+      await page.evaluate(() => document.querySelector('#gate').classList.add('is-gone'));
+      if (route === '/intro.html') {
+        await page.evaluate(() => __intro.seek(70));
+        assert.equal(await page.locator('img[src="null"]').count(), 0, 'Image-only scenes must omit missing card-art sources');
+      }
+      await page.evaluate((t) => __intro.seek(t), route === '/intro.html' ? 55 : 52);
+      await scan(page, route + '-no-card-art');
+      assert.deepEqual(errors, [], route + ' initializes and seeks without downloaded card art');
+      await page.close();
+    }
+    await context.close();
+  }
   for (const width of [320, 390, 1440]) {
     const context = await browser.newContext({ locale: 'en-US', viewport: { width, height: 960 }, reducedMotion: 'reduce' });
     await context.route('https://**/*', (r) => r.abort());

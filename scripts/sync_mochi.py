@@ -36,6 +36,22 @@ SCRIPT_FILES = [
     "fetch-cards-window.bat", "upscale-model-check.bat", "fetch-upscale-window.bat", "pose-assets-check.bat",
     "fetch-pose-window.bat", "fetch_lora_manager.py", "lora-manager-check.bat", "fetch-lora-manager-window.bat",
 ]
+TEST_FILES = {
+    "test_i18n.mjs": "test_web6_i18n.mjs",
+    "test_i18n_browser.mjs": "test_web6_i18n_browser.mjs",
+    "test_setup_browser.mjs": "test_mochi_setup_browser.mjs",
+    "test_engine.mjs": "test_engine.mjs",
+    "test_engine_release.mjs": "test_mochi_engine.mjs",
+    "test_setup_tasks.py": "test_setup_tasks.py",
+    "test_fetch_lora_manager.py": "test_fetch_lora_manager.py",
+    "test_fetch_card_art.py": "test_fetch_card_art.py",
+    "test_fetch_upscale.py": "test_fetch_upscale.py",
+    "test_fetch_pose.py": "test_fetch_pose.py",
+    "test_server.py": "test_server.py",
+    "test_launchers.py": "test_mochi_launchers.py",
+    "test_smoke.py": "test_mochi_smoke.py",
+    "run.py": "run_mochi_tests.py",
+}
 # 開源版自己的檔：不覆蓋、也不當成「上游已刪」清掉。
 MOCHI_OWN = {"README.md", "CLAUDE.md", "start.bat", "start.sh", ".gitignore", ".gitattributes", "LICENSE"}
 # three.js 的授權跟著 build 一起帶。
@@ -131,7 +147,8 @@ def plan() -> dict[str, Path]:
         files[f] = ROOT / f
     for f in SCRIPT_FILES:
         files["scripts/" + f] = ROOT / "scripts" / f
-    files["tests/test_i18n.mjs"] = ROOT / "scripts" / "test_web6_i18n.mjs"
+    for target, source in TEST_FILES.items():
+        files["tests/" + target] = ROOT / "scripts" / source
     return files
 
 
@@ -199,7 +216,7 @@ def main() -> int:
     for w in warns:
         print(w)
     if changed or stale:
-        print(f"\n下一步：cd {dest} → node tests/test_i18n.mjs → git diff → commit、push")
+        print(f"\n下一步：cd {dest} → python tests/run.py → git diff → commit、push")
     return 1 if warns else 0
 
 

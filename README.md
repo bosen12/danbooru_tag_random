@@ -23,6 +23,10 @@ Created by / 原作者：[bosen12](https://github.com/bosen12) · Code: GPLv3 (`
 
 ## 架構總覽
 
+墨池的 LoRA Manager 安裝與詳情連結補丁會先問「允許／這次不要／不要再問」。
+「不要再問」會建立 `.no-lora-manager-fetch`，刪除這個檔案即可恢復詢問。
+Windows 的 `start-web6.bat` 尊重事先設定的 `PORT` 與 `HOST`，並要求 Python 3.9 以上。
+
 ```mermaid
 flowchart LR
   subgraph CLIENT[瀏覽器端]
@@ -148,7 +152,7 @@ WEB_DIR=web1 PORT=8788 python3 server.py
 下載會切成 16 段、同時開 6 條連線（GitHub 的 release 伺服器單一連線很慢），斷了下次會接著抓。
 第一次啟動發現沒有插畫時會自動下載、驗 SHA-256、解壓到 `web/cards/`：
 
-- **`start-web6.bat`（墨池）啟動一次就全部做完**：卡面下載、ComfyUI 的 LoRA Manager、放大模型、姿勢參考、烘焙卡面都由伺服器在背景做（`setup_tasks.py`），網頁左下角的面板顯示進度、問要不要裝姿勢參考和烘成人卡面，裝進 ComfyUI 的東西要重開時給一顆「重開 ComfyUI」（透過 ComfyUI-Manager）。ComfyUI 還沒開就等它，一開就接著做，不用再跑一次 bat。卡面下載完接著烘全年齡缺的。過程記在 `data/setup.log`。
+- **`start-web6.bat`（墨池）啟動一次就全部做完**：卡面下載、ComfyUI 的 LoRA Manager、放大模型、姿勢參考、烘焙卡面都由伺服器在背景做（`setup_tasks.py`），網頁左下角的面板顯示進度、先問要不要安裝／修補 LoRA Manager、裝姿勢參考和烘成人卡面，裝進 ComfyUI 的東西要重開時給一顆「重開 ComfyUI」（透過 ComfyUI-Manager）。ComfyUI 還沒開就等它，一開就接著做，不用再跑一次 bat。卡面下載完接著烘全年齡缺的。過程記在 `data/setup.log`。
 - 其他版面的 `start.bat` 等啟動檔照舊：另開一個縮小的「card art download」視窗去抓，網頁照常先開（先是字的佔位牌），視窗說 Done 之後重新整理就有圖。
 - 直接跑 `python3 server.py` 的（macOS / Linux）由伺服器在背景抓，黑窗會印進度。
 - 已經有的圖一張都不覆蓋（唯一的例外：上一版公開包放的、之後重畫過、而且你沒自己重烘過的卡，會換成新畫的）；沒網路就維持佔位牌，下次啟動再試。不想抓：`NO_CARD_FETCH=1`。也可以手動跑 `python3 scripts/fetch_card_art.py`。
@@ -158,7 +162,7 @@ WEB_DIR=web1 PORT=8788 python3 server.py
 
 **5. ComfyUI 的 LoRA Manager、放大模型、姿勢參考。** 墨池在網頁上做（見上一步）；其他版面的啟動檔檢查這些，都裝進你的 ComfyUI：
 
-- [ComfyUI LoRA Manager](https://github.com/willmiao/ComfyUI-Lora-Manager)（custom node）：LoRA 面板的清單、預覽圖、Civitai 觸發詞、底模面板的名稱和預覽圖都從它來。**沒有就自動裝**（git clone 進 `custom_nodes`，再用 ComfyUI 自己的 Python 裝它要的套件），裝完要**重開一次 ComfyUI**。每個有 LoRA 面板的啟動檔都會檢查；只動這台電腦上的 ComfyUI。不要：`NO_LORA_MANAGER_FETCH=1`。
+- [ComfyUI LoRA Manager](https://github.com/willmiao/ComfyUI-Lora-Manager)（custom node）：LoRA 面板的清單、預覽圖、Civitai 觸發詞、底模面板的名稱和預覽圖都從它來。**墨池會先問你要不要裝**（其他版面的啟動檔照舊自動檢查、安裝）：同意後 git clone 進 `custom_nodes`，再用 ComfyUI 自己的 Python 裝它要的套件，裝完要**重開一次 ComfyUI**。每個有 LoRA 面板的啟動檔都會檢查；只動這台電腦上的 ComfyUI。不要：`NO_LORA_MANAGER_FETCH=1`。
 
 - Hires 放大模型 `RealESRGAN_x4plus_anime_6B`（約 18MB）：沒有就在縮小視窗下載到 `models/upscale_models`。不要：`NO_UPSCALE_FETCH=1`。
 - 姿勢參考（`comfyui_controlnet_aux` 節點＋Illustrious OpenPose ControlNet，約 2.5GB，會用 ComfyUI 自己的 Python 裝節點需要的套件）：選用，**會先問**——Y 裝、N 這次不要（20 秒沒回答也是）、A 永遠不問（放一個 `.no-pose-fetch` 檔，刪掉就會再問）。裝完要重開一次 ComfyUI。不要：`NO_POSE_FETCH=1`。
@@ -188,7 +192,7 @@ cp config.example.json config.json
 
 依序：
 
-1. **ComfyUI 的 LoRA Manager**（啟動檔會自動裝）：它掃 ComfyUI 的每個 loras 資料夾（含 `extra_model_paths`），名稱、預覽圖、Civitai 觸發詞、底模都有。預覽圖由本伺服器轉送，手機走 Tailscale 也看得到。面板上的「詳情」在 LoRA Manager **直接打開那一個 LoRA** 的詳情視窗（`/loras?open=資料夾/檔名`），「用 LoRA Manager 管理」開它的清單頁。上游的 LoRA Manager 不吃網址參數，所以 `scripts/fetch_lora_manager.py --patch` 在它的 `static/js/loras.js` 補一小段（跟 flux2klein 那份獨立版的改法一樣；不必重開 ComfyUI）。LoRA Manager 更新會蓋掉，伺服器每次開機、啟動檔都會確認再補；它的檔案改得跟預期不一樣時就不動，「詳情」退回開清單頁。手機（Tailscale）上這些連結指向這台電腦的 ComfyUI，所以 ComfyUI 要用 `--listen` 開才點得開；伺服器會先試連，連不到就把 LoRA Manager 的連結藏起來、「詳情」改開 Civitai（預覽圖由本伺服器轉送，照樣看得到）。
+1. **ComfyUI 的 LoRA Manager**（墨池準備面板可選擇安裝）：它掃 ComfyUI 的每個 loras 資料夾（含 `extra_model_paths`），名稱、預覽圖、Civitai 觸發詞、底模都有。預覽圖由本伺服器轉送，手機走 Tailscale 也看得到。面板上的「詳情」在 LoRA Manager **直接打開那一個 LoRA** 的詳情視窗（`/loras?open=資料夾/檔名`），「用 LoRA Manager 管理」開它的清單頁。上游的 LoRA Manager 不吃網址參數，所以 `scripts/fetch_lora_manager.py --patch` 在它的 `static/js/loras.js` 補一小段（跟 flux2klein 那份獨立版的改法一樣；不必重開 ComfyUI）。LoRA Manager 更新會蓋掉，墨池每次開機會先檢查、取得同意再補（其他版面啟動檔仍按原流程）；它的檔案改得跟預期不一樣時就不動，「詳情」退回開清單頁。手機（Tailscale）上這些連結指向這台電腦的 ComfyUI，所以 ComfyUI 要用 `--listen` 開才點得開；伺服器會先試連，連不到就把 LoRA Manager 的連結藏起來、「詳情」改開 Civitai（預覽圖由本伺服器轉送，照樣看得到）。
 2. 沒有 LoRA Manager、但填了 `loraRoot`：自己掃那個資料夾，讀每個檔旁邊的 `.metadata.json` 和預覽圖。
 3. 都沒有：**問 ComfyUI 要清單**，能選、能送進 workflow，但沒有預覽圖和觸發詞。
 

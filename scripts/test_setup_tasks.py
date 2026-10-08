@@ -81,22 +81,72 @@ st._events["cards_done"].set()
 t.join(2)
 ok("下載好了才檢查要不要烘", not t.is_alive() and ("bake_card_art.py", "--status", "--rating", "general") in ran, str(ran))
 
-# 3. LoRA Manager：沒有就裝，裝完等重開；重開後（不論誰重開的）就算好。
+# 3. LoRA Manager：安裝/修補先問；不妨礙其他準備步驟。
 ran = reset({("fetch_lora_manager.py", "--check"): 3})
 reloaded = []
 st._on_lora_ready = lambda: reloaded.append(1)
-t = threading.Thread(target=st._lora)
+def wait_for(predicate):
+    for _ in range(200):
+        if predicate():
+            return True
+        threading.Event().wait(0.01)
+    return False
+
+
+t = threading.Thread(target=st._lora, daemon=True)
 t.start()
-t.join(0.3)
-ok("LoRA Manager：沒有就裝", ("fetch_lora_manager.py",) in ran, str(ran))
+t.join(0.2)
+ok("LoRA Manager：沒有先問、不自動裝", state("lora") == "ask" and ("fetch_lora_manager.py",) not in ran, str(st._state["lora"]))
+ok("安裝問題不阻擋其餘準備步驟", not t.is_alive())
+if state("lora") == "ask":
+    ok("回答安裝才裝", st.answer("lora", "yes")[0])
+    ok("連按兩次也只接受一次", not st.answer("lora", "yes")[0])
+wait_for(lambda: state("lora") == "restart")
 ok("裝完：等重開 ComfyUI（畫面上有重開鈕）", state("lora") == "restart" and st.snapshot()["restart"], str(st._state["lora"]))
 reset.world["lm"] = True
 t.join(2)
+wait_for(lambda: state("lora") == "done")
 ok("重開後載入了：算好、清掉 LoRA 清單快取", state("lora") == "done" and reloaded == [1], str(st._state["lora"]))
 
 ran = reset({}, lm=True)
 st._lora()
-ok("已經有 LoRA Manager：不裝，只確認「詳情直達」補過", state("lora") == "done" and ran == [("fetch_lora_manager.py", "--patch")], str(ran))
+ok("已經有補丁：只讀檢查，不改檔", state("lora") == "done" and ran == [("fetch_lora_manager.py", "--check-patch")], str(ran))
+ran = reset({("fetch_lora_manager.py", "--check-patch"): 3}, lm=True)
+st._lora()
+ok("第三方檔需要補：先問，不自動修補", state("lora") == "ask" and ("fetch_lora_manager.py", "--patch") not in ran, str(ran))
+if state("lora") == "ask":
+    st.answer("lora", "no")
+ok("略過修補：不改檔", state("lora") == "skip" and ("fetch_lora_manager.py", "--patch") not in ran, str(ran))
+ran = reset({("fetch_lora_manager.py", "--check-patch"): 3}, lm=True)
+st._lora()
+if state("lora") == "ask":
+    st.answer("lora", "yes")
+    wait_for(lambda: state("lora") == "done")
+ok("同意修補：只補 JS，不安裝也不重開", state("lora") == "done" and ("fetch_lora_manager.py", "--patch") in ran and ("fetch_lora_manager.py",) not in ran, str(ran))
+ran = reset({("fetch_lora_manager.py", "--check-patch"): 3, ("fetch_lora_manager.py", "--patch"): 1}, lm=True)
+st._lora()
+st.answer("lora", "yes")
+wait_for(lambda: state("lora") == "error")
+ok("修補失敗：顯示錯誤，不假報已完成", state("lora") == "error", str(st._state["lora"]))
+ran = reset({("fetch_lora_manager.py", "--check"): 3})
+t = threading.Thread(target=st._lora, daemon=True)
+t.start()
+t.join(0.2)
+if state("lora") == "ask":
+    st.answer("lora", "never")
+else:
+    reset.world["lm"] = True
+    t.join(2)
+ok("LoRA 不要再問：寫本機記號", (tmp / ".no-lora-manager-fetch").exists())
+ran = reset({("fetch_lora_manager.py", "--check"): 3})
+t = threading.Thread(target=st._lora, daemon=True)
+t.start()
+t.join(0.2)
+ok("LoRA 有略過記號：不安裝也不問", state("lora") == "skip" and ran == [], str(ran))
+reset.world["lm"] = True
+t.join(2)
+if (tmp / ".no-lora-manager-fetch").exists():
+    (tmp / ".no-lora-manager-fetch").unlink()
 ran = reset({}, local=False)
 st._lora()
 ok("ComfyUI 在別台：不裝", state("lora") == "skip" and ran == [], str(ran))

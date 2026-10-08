@@ -20,7 +20,7 @@
 python scripts/sync_mochi.py --check   # 先看會動哪些檔
 python scripts/sync_mochi.py           # 寫過去
 cd ../danbooru_tag_mochi
-node tests/test_i18n.mjs
+python tests/run.py                    # 開源版自己的測試（核心、伺服器、啟動檔、i18n）；--browser 加跑畫面測試
 git diff                               # 看過再 commit、push
 ```
 
