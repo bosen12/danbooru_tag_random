@@ -2069,8 +2069,11 @@ const ALBUM_FIXTURE = [
         ["pose.js", "pose-editor.js"].every((f) => readFileSync(join(ROOT, "web6", f), "utf8") === readFileSync(join(ROOT, "web7", f), "utf8")) &&
           readFileSync(join(ROOT, "web6/pose.js"), "utf8").includes('post("/api/pose/keypoints"') && readFileSync(join(ROOT, "web6/pose-editor.js"), "utf8").includes('"底圖"') &&
           readFileSync(join(ROOT, "server.py"), "utf8").includes("def prune_pose_inputs(") && readFileSync(join(ROOT, "server.py"), "utf8").includes("def genlog_stats()"));
-      ok("姿勢參考的節點與模型：啟動 web6／web7 時檢查，缺了在最小化視窗自動裝 comfyui_controlnet_aux、下載 OpenPose ControlNet（大小＋sha256 才放、可續傳）",
-        ["start-web6.bat", "start-web7.bat"].every((f) => readFileSync(join(ROOT, f), "utf8").includes('call "%~dp0scripts\\pose-assets-check.bat"')) &&
+      ok("姿勢參考的節點與模型：web7 啟動檔檢查、web6 由伺服器的第一次準備（setup_tasks）檢查並在網頁上先問，缺了自動裝 comfyui_controlnet_aux、下載 OpenPose ControlNet（大小＋sha256 才放、可續傳）",
+        readFileSync(join(ROOT, "start-web7.bat"), "utf8").includes('call "%~dp0scripts\\pose-assets-check.bat"') &&
+          !readFileSync(join(ROOT, "start-web6.bat"), "utf8").includes("-check.bat") &&
+          readFileSync(join(ROOT, "setup_tasks.py"), "utf8").includes('_check("fetch_pose_assets.py")') &&
+          readFileSync(join(ROOT, "web6/setup-panel.js"), "utf8").includes('pose: [["yes"') &&
           readFileSync(join(ROOT, "scripts/pose-assets-check.bat"), "utf8").includes("fetch_pose_assets.py\" --check") &&
           readFileSync(join(ROOT, "scripts/fetch_pose_assets.py"), "utf8").includes('MODEL_SHA256 = "0d8bacf24534dc6f2716f5d0ffa6085571928776f8687565ef290a17d9f3615c"'));
       ok("姿勢參考：規則裡「姿勢」選一張圖（上傳、最近印的、作品冊），先縮小再傳、看骨架預覽、三檔強度；每張成品記下自己的姿勢、送印帶 pose；疊印台簽名含姿勢（web6、web7）",

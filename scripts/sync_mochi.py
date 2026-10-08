@@ -28,7 +28,7 @@ W6 = ROOT / "web6"
 WEB = ROOT / "web"
 
 # 伺服器與它 import 的模組（根目錄）。
-ROOT_FILES = ["server.py", "card_usage.py", "card_decks.py", "gen_log.py", "lora_scan.py", "recipes.py", "workflows.py", "config.example.json"]
+ROOT_FILES = ["server.py", "card_usage.py", "card_decks.py", "gen_log.py", "lora_scan.py", "recipes.py", "setup_tasks.py", "workflows.py", "config.example.json"]
 # 啟動檔與伺服器會叫到的腳本（卡面下載與烘焙、放大模型、姿勢參考、ComfyUI 的 LoRA Manager）。
 SCRIPT_FILES = [
     "app_config.py", "bake_card_art.py", "card_thumbnails.py", "fetch_card_art.py", "fetch_pose_assets.py",
@@ -69,8 +69,9 @@ TEXT_EXT = {".js", ".mjs", ".css", ".json", ".html", ".svg", ".py", ".bat", ".md
 
 
 def tracked(prefix: str) -> list[str]:
-    out = subprocess.run(["git", "ls-files", "-z", prefix], cwd=ROOT, capture_output=True, check=True).stdout
-    return [p for p in out.decode("utf-8").split("\0") if p]
+    """進版控的檔，加上新增還沒 commit、也沒被 .gitignore 擋掉的（同步常在 commit 之前跑）。"""
+    out = subprocess.run(["git", "ls-files", "-z", "--cached", "--others", "--exclude-standard", prefix], cwd=ROOT, capture_output=True, check=True).stdout
+    return sorted({p for p in out.decode("utf-8").split("\0") if p and (ROOT / p).is_file()})
 
 
 def shared_web_files() -> list[str]:

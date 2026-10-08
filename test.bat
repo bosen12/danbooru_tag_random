@@ -102,6 +102,18 @@ if errorlevel 1 (
   pause
   exit /b 1
 )
+echo == first-time setup (web6) ==
+call %PY% scripts\test_setup_tasks.py
+if errorlevel 1 (
+  pause
+  exit /b 1
+)
+echo == ComfyUI LoRA Manager install ==
+call %PY% scripts\test_fetch_lora_manager.py
+if errorlevel 1 (
+  pause
+  exit /b 1
+)
 echo == 3D studio ==
 call node scripts\test_studio.mjs
 if errorlevel 1 (

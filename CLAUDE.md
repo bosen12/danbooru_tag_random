@@ -26,6 +26,10 @@ git diff                               # 看過再 commit、push
 - **發新的卡面包**（`card-art-vN`）：兩個 repo 的 Release 都要發同一個 zip，`scripts/fetch_card_art.py` 的網址各指各的（同步時 `REWRITES` 會換）。
 - 只動到其他版面（web、web1～web5、web7、zipu、game）不用同步。
 
+## 第一次使用的準備（web6）
+
+墨池的第一次準備不寫在 bat 裡：`setup_tasks.py`（伺服器背景執行）＋ `web6/setup-panel.js`（網頁上的進度與詢問）。`start-web6.bat` 只開伺服器。要加新的準備步驟（下載、安裝、要不要問），加在 `setup_tasks.py`，畫面上的字補進 `web6/locales/en.js`，測試在 `scripts/test_setup_tasks.py`。伺服器只有在 `WEB_DIR` 裡有 `setup-panel.js` 時才開這套（其他版面照舊用啟動檔檢查）。
+
 ## 英文版（web6）
 
 程式照舊寫中文，`web6/i18n.js` 在畫面畫好後把中文換成 `web6/locales/en.js` 的英文。

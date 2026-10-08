@@ -146,14 +146,15 @@ WEB_DIR=web1 PORT=8788 python3 server.py
 下載會切成 16 段、同時開 6 條連線（GitHub 的 release 伺服器單一連線很慢），斷了下次會接著抓。
 第一次啟動發現沒有插畫時會自動下載、驗 SHA-256、解壓到 `web/cards/`：
 
-- Windows 的 `start.bat`、`start-web6.bat` 另開一個縮小的「card art download」視窗去抓，網頁照常先開（先是字的佔位牌），視窗說 Done 之後重新整理就有圖。
+- **`start-web6.bat`（墨池）啟動一次就全部做完**：卡面下載、ComfyUI 的 LoRA Manager、放大模型、姿勢參考、烘焙卡面都由伺服器在背景做（`setup_tasks.py`），網頁左下角的面板顯示進度、問要不要裝姿勢參考和烘成人卡面，裝進 ComfyUI 的東西要重開時給一顆「重開 ComfyUI」（透過 ComfyUI-Manager）。ComfyUI 還沒開就等它，一開就接著做，不用再跑一次 bat。卡面下載完接著烘全年齡缺的。過程記在 `data/setup.log`。
+- 其他版面的 `start.bat` 等啟動檔照舊：另開一個縮小的「card art download」視窗去抓，網頁照常先開（先是字的佔位牌），視窗說 Done 之後重新整理就有圖。
 - 直接跑 `python3 server.py` 的（macOS / Linux）由伺服器在背景抓，黑窗會印進度。
 - 已經有的圖一張都不覆蓋（唯一的例外：上一版公開包放的、之後重畫過、而且你沒自己重烘過的卡，會換成新畫的）；沒網路就維持佔位牌，下次啟動再試。不想抓：`NO_CARD_FETCH=1`。也可以手動跑 `python3 scripts/fetch_card_art.py`。
 - 已經有的卡（自己烘的或上一版下載的）照現在詞庫的卡面清單逐張對：都在就不下載，只缺幾張才去抓。
 - 發新版的卡圖包：`python3 scripts/pack_card_art.py 輸出.zip --previous 上一版.zip`，把印出來的大小、SHA-256、張數貼進 `scripts/fetch_card_art.py`。
 - 敏感、色情分級的卡面不公開。ComfyUI 開著時，Windows 的 `start.bat` 會在縮小視窗自動烘還沒有的卡，以及提示詞已經改過的卡。已經烤好、提示詞沒變的不會重烘。不想自動烘：設 `NO_CARD_BAKE=1`，或在專案根目錄放一個 `.no-card-bake` 檔。也可以手動跑 `python3 scripts/bake_card_art.py`。
 
-**5. ComfyUI 的 LoRA Manager、放大模型、姿勢參考。** 啟動檔還會檢查這些，都裝進你的 ComfyUI：
+**5. ComfyUI 的 LoRA Manager、放大模型、姿勢參考。** 墨池在網頁上做（見上一步）；其他版面的啟動檔檢查這些，都裝進你的 ComfyUI：
 
 - [ComfyUI LoRA Manager](https://github.com/willmiao/ComfyUI-Lora-Manager)（custom node）：LoRA 面板的清單、預覽圖、Civitai 觸發詞、底模面板的名稱和預覽圖都從它來。**沒有就自動裝**（git clone 進 `custom_nodes`，再用 ComfyUI 自己的 Python 裝它要的套件），裝完要**重開一次 ComfyUI**。每個有 LoRA 面板的啟動檔都會檢查；只動這台電腦上的 ComfyUI。不要：`NO_LORA_MANAGER_FETCH=1`。
 
