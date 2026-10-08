@@ -1656,6 +1656,50 @@ with server._JOBS_LOCK:
     server._JOBS.pop(_c.id, None)
     server._JOBS.pop(_job.id, None)
 
+# --- 偏好路徑（畫面上選 LoRA／底模資料夾，不必碰 config.json） ---
+_pref_td = Path(tempfile.mkdtemp())
+_lroot = _pref_td / "loras"
+(_lroot / "A").mkdir(parents=True)
+(_lroot / "B").mkdir()
+(_lroot / "A" / "x.safetensors").write_bytes(b"")
+(_lroot / "A" / "x.preview.png").write_bytes(b"png")
+(_lroot / "B" / "y.safetensors").write_bytes(b"")
+_ls = server.lora_scan
+_saved = (_ls.lora_manager_list, _ls.comfy_model_dirs, server.models_from_comfy, server.lm_checkpoints)
+_ls.lora_manager_list = lambda *a, **k: None
+_ls.comfy_model_dirs = lambda kind: [_lroot] if kind == "loras" else []
+try:
+    got = server.set_model_path("lora", str(_lroot / "A"))
+    ok("preferred path: LoRA folder saved with its count", got["count"] == 1 and wfmod.load_settings().get("loraPath") == str((_lroot / "A").resolve()), str(got))
+    _ls.reset_cache()
+    _d = _ls.build_lora_list()
+    _names = [((i["folder"] + "\\") if i["folder"] else "") + i["file"] for i in _d["items"]]
+    ok("preferred path: a subfolder still names LoRAs from ComfyUI's loras root", _names == ["A\\x.safetensors"], str(_names))
+    ok("preferred path: previews inside the folder are served", _ls.preview_path("A", "x.preview.png") is not None)
+    ok("preferred path: files outside the folder are not", _ls.preview_path("B", "y.safetensors") is None and _ls.preview_path("..", "x.png") is None)
+    try:
+        server.set_model_path("lora", str(_pref_td / "missing"))
+        ok("preferred path: a missing folder is refused", False)
+    except ValueError:
+        ok("preferred path: a missing folder is refused", True)
+    ok("preferred path: empty clears it", server.set_model_path("lora", "")["path"] == "" and not wfmod.load_settings().get("loraPath"))
+
+    _croot = _pref_td / "ckpt"
+    (_croot / "sub").mkdir(parents=True)
+    (_croot / "sub" / "m1.safetensors").write_bytes(b"")
+    server.models_from_comfy = lambda kind: ["sub\\m1.safetensors", "other\\m2.safetensors"]
+    server.lm_checkpoints = lambda: {}
+    server.set_model_path("ckpt", str(_croot))
+    _items, _ = server.checkpoints_for_ui()
+    ok("preferred path: checkpoints outside the folder are hidden", [i["ckpt_name"] for i in _items] == ["sub\\m1.safetensors"], str(_items))
+    server.set_model_path("ckpt", "")
+    _items, _ = server.checkpoints_for_ui()
+    ok("preferred path: cleared shows every checkpoint again", len(_items) == 2, str(_items))
+    ok("preferred path: folder window only for a page opened on this computer", server.paths_status("100.64.0.9")["pick"] is False)
+finally:
+    _ls.lora_manager_list, _ls.comfy_model_dirs, server.models_from_comfy, server.lm_checkpoints = _saved
+    _ls.reset_cache()
+
 if failed:
     print(f"\n{failed} failed")
     sys.exit(1)

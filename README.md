@@ -164,7 +164,7 @@ WEB_DIR=web1 PORT=8788 python3 server.py
 
 ## 設定
 
-機器專屬的東西（ComfyUI 在哪、模型和 LoRA 資料夾在哪）都在 **`config.json`**，不用改程式。
+**一般人不需要 `config.json`。** ComfyUI 位址點頂欄的 Comfy 燈號改；LoRA、底模的資料夾在 LoRA／底模面板的「**偏好路徑**」選（點 ComfyUI 回報的資料夾、貼上路徑，或按「選資料夾…」跳出資料夾視窗），只列那個資料夾底下的，存在 `data/settings.json`，比 `config.json` 優先。下面的 `config.json` 是給進階設定（埠號、逾時…）和舊的設定方式用的。
 
 ```bash
 cp config.example.json config.json
