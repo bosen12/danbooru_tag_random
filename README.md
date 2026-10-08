@@ -458,7 +458,7 @@ Windows 也可以雙擊 `test.bat` 跑完整套件（約 20 分鐘，`test_engin
 
 ## 授權
 
-MIT，見 [LICENSE](LICENSE)。詞庫裡的 tag 名稱來自 Danbooru，生成內容的責任在使用者自己。
+MIT，見 [LICENSE](LICENSE)。GitHub Release 下載的卡牌插畫是 [CC BY 4.0](https://creativecommons.org/licenses/by/4.0/deed.zh-hant)：可以自由使用、改作，標示「卡牌插畫出自 danbooru_tag_random（bosen12）」即可。詞庫裡的 tag 名稱來自 Danbooru，生成內容的責任在使用者自己。
 
 ---
 
