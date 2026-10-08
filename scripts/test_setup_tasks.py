@@ -143,6 +143,12 @@ for k in st.ORDER:
 snap = st.snapshot()
 ok("全部好了：沒有進行中的事", not snap["active"] and not snap["restart"], str(snap))
 
+# 7. 腳本印給終端機的英文不上畫面：進度換成中文（英文版再由 en.js 翻），其他行不顯示。
+pt = st.progress_text
+ok("下載進度換成中文", pt("45%   12.3/100.0 MB  2.31 MB/s") == "下載中 45%（12.3/100.0 MB）", pt("45%   12.3/100.0 MB"))
+ok("烘焙進度換成中文", pt("[3/60] ok   red_hair  4.1s") == "烘焙中 3/60")
+ok("認不得的英文不顯示", pt("Card illustrations are missing. Downloading ...") == "")
+
 print()
 print("ok" if not failed else f"{failed} failed")
 sys.exit(1 if failed else 0)

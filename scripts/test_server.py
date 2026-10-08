@@ -16,6 +16,8 @@ import tempfile as _env_tmp  # noqa: E402
 
 # 出圖日誌（gen_log.py）：這裡會造假的出圖工作，不能寫進真的 data/gen_log.jsonl。
 _env_os.environ["GEN_LOG_PATH"] = str(Path(_env_tmp.mkdtemp()) / "gen_log.jsonl")
+# 使用者在網頁上選的偏好路徑、底模（data/settings.json）不能影響測試，也不能被測試改到。
+_env_os.environ["APP_SETTINGS"] = str(Path(_env_tmp.mkdtemp()) / "settings.json")
 from server import (  # noqa: E402
     CKPT,
     Handler,
