@@ -8,7 +8,8 @@
 - `web6/` 底下任何檔
 - web6 會載入的 `web/` 共用檔（`engine.js`、`card-art.js`、`rules/*`、`lexicon.json`、`lora.js`…）
 - `server.py` 與它 import 的 `card_usage.py`、`card_decks.py`、`gen_log.py`、`lora_scan.py`、`recipes.py`、`workflows.py`、`config.example.json`
-- 卡面／放大模型／姿勢參考的腳本（`scripts/fetch_*.py`、`bake_card_art.py`、`card_jobs.json`、`*-check.bat`…）
+- 卡面／放大模型／姿勢參考／LoRA Manager 的腳本（`scripts/fetch_*.py`、`bake_card_art.py`、`card_jobs.json`、`*-check.bat`…）
+- `web/lora.js`、`web/lora.css`、`lora_scan.py`（LoRA／底模面板，所有版面共用）
 - `scripts/test_web6_i18n.mjs`
 
 ```bash
