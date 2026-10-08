@@ -916,6 +916,25 @@ try:
     def _lm_missing(req, timeout=0):
         raise _urllib_request.HTTPError(req.full_url, 404, "Not Found", {}, None)
 
+    # LoRA Manager 的連結要是開網頁那台裝置連得到的：ComfyUI 只聽 127.0.0.1 時，手機（Tailscale）點了打不開 → 不給。
+    import socket as _socket  # noqa: E402
+
+    _only_local = _socket.socket()
+    _only_local.bind(("127.0.0.1", 0))
+    _only_local.listen()
+    _lp = _only_local.getsockname()[1]
+    _old_base = server.comfy_base
+    server.comfy_base = lambda: f"http://127.0.0.1:{_lp}"
+    server._REACH.clear()
+    try:
+        ok("LoRA Manager link: same machine uses 127.0.0.1", server.manager_url_for(f"127.0.0.1:8796", "/loras") == f"http://127.0.0.1:{_lp}/loras")
+        _remote = server.manager_url_for("192.0.2.10:8796", "/loras")
+        ok("LoRA Manager link: ComfyUI only on 127.0.0.1 → no link for another device", _remote == "", _remote)
+    finally:
+        server.comfy_base = _old_base
+        _only_local.close()
+        server._REACH.clear()
+
     _urllib_request.urlopen = _lm_missing
     ok("LoRA Manager not installed: list is None (falls back)", server.lora_scan.lora_manager_list("loras", "http://lm.example:8188") is None)
     ok("LoRA Manager not installed: count is None", server.lora_scan.lora_manager_count("http://lm.example:8188") is None)

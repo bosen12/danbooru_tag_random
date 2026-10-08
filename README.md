@@ -186,7 +186,7 @@ cp config.example.json config.json
 
 依序：
 
-1. **ComfyUI 的 LoRA Manager**（啟動檔會自動裝）：它掃 ComfyUI 的每個 loras 資料夾（含 `extra_model_paths`），名稱、預覽圖、Civitai 觸發詞、底模都有。預覽圖由本伺服器轉送，手機走 Tailscale 也看得到。面板上的「詳情」在 LoRA Manager **直接打開那一個 LoRA** 的詳情視窗（`/loras?open=資料夾/檔名`），「用 LoRA Manager 管理」開它的清單頁。上游的 LoRA Manager 不吃網址參數，所以 `scripts/fetch_lora_manager.py --patch` 在它的 `static/js/loras.js` 補一小段（跟 flux2klein 那份獨立版的改法一樣；不必重開 ComfyUI）。LoRA Manager 更新會蓋掉，伺服器每次開機、啟動檔都會確認再補；它的檔案改得跟預期不一樣時就不動，「詳情」退回開清單頁。
+1. **ComfyUI 的 LoRA Manager**（啟動檔會自動裝）：它掃 ComfyUI 的每個 loras 資料夾（含 `extra_model_paths`），名稱、預覽圖、Civitai 觸發詞、底模都有。預覽圖由本伺服器轉送，手機走 Tailscale 也看得到。面板上的「詳情」在 LoRA Manager **直接打開那一個 LoRA** 的詳情視窗（`/loras?open=資料夾/檔名`），「用 LoRA Manager 管理」開它的清單頁。上游的 LoRA Manager 不吃網址參數，所以 `scripts/fetch_lora_manager.py --patch` 在它的 `static/js/loras.js` 補一小段（跟 flux2klein 那份獨立版的改法一樣；不必重開 ComfyUI）。LoRA Manager 更新會蓋掉，伺服器每次開機、啟動檔都會確認再補；它的檔案改得跟預期不一樣時就不動，「詳情」退回開清單頁。手機（Tailscale）上這些連結指向這台電腦的 ComfyUI，所以 ComfyUI 要用 `--listen` 開才點得開；伺服器會先試連，連不到就把 LoRA Manager 的連結藏起來、「詳情」改開 Civitai（預覽圖由本伺服器轉送，照樣看得到）。
 2. 沒有 LoRA Manager、但填了 `loraRoot`：自己掃那個資料夾，讀每個檔旁邊的 `.metadata.json` 和預覽圖。
 3. 都沒有：**問 ComfyUI 要清單**，能選、能送進 workflow，但沒有預覽圖和觸發詞。
 
