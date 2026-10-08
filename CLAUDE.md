@@ -1,5 +1,9 @@
 # danbooru_tag_random（排字匣）
 
+## 授權
+
+本 repo 與 Mochi 的目前程式發布均採 GPLv3（GPL-3.0-only），見 LICENSE 與 NOTICE。兩邊同步新 GPL 貢獻時必須保留作者、版權及 GPL 聲明，不可重新授權為 MIT。先前已公開的 MIT 程式碼保留原有使用權；卡圖、字型與第三方程式庫維持各自授權。
+
 ## 墨池（web6）改了，要同步到開源版
 
 `web6/` 另外開源成 **`../danbooru_tag_mochi`**（https://github.com/bosen12/danbooru_tag_mochi，public）。那邊是複製，不會自動跟上。

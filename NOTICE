@@ -1,0 +1,36 @@
+danbooru_tag_random / 排字匣
+Original creator: bosen12 — https://github.com/bosen12
+Official project: https://github.com/bosen12/danbooru_tag_random
+Copyright (c) 2026 bosen12
+SPDX-License-Identifier: GPL-3.0-only
+
+This program is free software: you can redistribute it and/or modify it
+under the terms of the GNU General Public License version 3 as published
+by the Free Software Foundation.
+
+This program is distributed in the hope that it will be useful, but
+WITHOUT ANY WARRANTY; without even the implied warranty of
+MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE. See the GNU
+General Public License for more details.
+
+You should have received a copy of the GNU General Public License along
+with this program, in LICENSE. If not, see https://www.gnu.org/licenses/.
+
+License transition — 2026-10-08
+The current distribution uses GPL-3.0-only. Earlier code published
+through revision 52511c6f337c513a7b7fa903fa873be22a3b4447 was under MIT.
+This change does not withdraw the MIT permissions already granted for
+that previously published code. Its original copyright and MIT notice
+are preserved in LICENSES/MIT-prior-versions.txt; this file does not
+grant MIT permission for new GPL-only contributions. The standalone
+Mochi project also uses GPL-3.0-only; preserve GPL contribution notices
+when synchronizing shared code between these repositories.
+
+Separate material and third-party notices
+- Release card illustrations: CC BY 4.0. Credit "card art from
+  danbooru_tag_random by bosen12". See https://creativecommons.org/licenses/by/4.0/.
+- Chiron Hei HK font: SIL Open Font License 1.1; see web6/fonts/OFL.txt.
+- three.js: MIT; see web/vendor/three/LICENSE.
+Keep the copyright and license notices for those components intact.
+ComfyUI, checkpoints, LoRAs and downloaded models retain their own terms;
+this GPL license does not relicense them or user-generated images.

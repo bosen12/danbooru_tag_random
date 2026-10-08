@@ -1,5 +1,7 @@
 # 排字匣 · Danbooru case
 
+Created by / 原作者：[bosen12](https://github.com/bosen12) · Code: GPLv3 (`GPL-3.0-only`)
+
 > **English.** Draw a random set of Danbooru tags and send it straight to a local ComfyUI (WAI / Illustrious SDXL).
 > Needs Python 3.9+ (standard library only) and ComfyUI at `http://127.0.0.1:8188`.
 > Windows: double-click `start-web6.bat` (the card workbench, English or Chinese) and open <http://127.0.0.1:8796>.
@@ -229,7 +231,7 @@ Telegram 的 bot token **不走環境變數**，在畫面右上角的齒輪面�
 
 五套版面都有「選 LoRA」大面板（兩格、分類／搜尋／觸發詞／強度），跟 flux2klein 暗房同一套。生圖時會把勾到的觸發詞拼進 POS，並在 workflow 插入 `LoraLoader`。
 
-ComfyUI LoRA Manager 是另一個專案（GPLv3），不在這個 MIT repo 裡：啟動檔把它裝進**你的** ComfyUI，不隨本專案散布。
+ComfyUI LoRA Manager 是另一個專案（GPLv3），不隨本 repo 發布：啟動檔把它裝進**你的** ComfyUI，不隨本專案散布。
 舊的獨立版 LoRA Manager（埠 7861，`start_lora_manager.bat` 從 flux2klein 啟動）還能用它的「送到 workflow」把 LoRA 推進開著的分頁。
 
 `server.py` 會讀 `config.json`（環境變數優先）。換 checkpoint／換埠也可以只靠上面這張表，不改程式。
@@ -458,7 +460,7 @@ Windows 也可以雙擊 `test.bat` 跑完整套件（約 20 分鐘，`test_engin
 
 ## 授權
 
-MIT，見 [LICENSE](LICENSE)。GitHub Release 下載的卡牌插畫是 [CC BY 4.0](https://creativecommons.org/licenses/by/4.0/deed.zh-hant)：可以自由使用、改作，標示「卡牌插畫出自 danbooru_tag_random（bosen12）」即可。詞庫裡的 tag 名稱來自 Danbooru，生成內容的責任在使用者自己。
+**GNU GPLv3（僅第 3 版，`GPL-3.0-only`）**，見 [LICENSE](LICENSE) 與 [NOTICE](NOTICE)。允許商用；發布修改版時須保留聲明，並依 GPLv3 提供對應原始碼。先前已用 MIT 公開的程式碼保留原有使用權，原聲明保存在 [LICENSES/MIT-prior-versions.txt](LICENSES/MIT-prior-versions.txt)。GitHub Release 下載的卡牌插畫是 [CC BY 4.0](https://creativecommons.org/licenses/by/4.0/deed.zh-hant)：可以自由使用、改作，標示「卡牌插畫出自 danbooru_tag_random（bosen12）」即可。詞庫裡的 tag 名稱來自 Danbooru，生成內容的責任在使用者自己。
 
 ---
 
@@ -867,3 +869,5 @@ token 存在伺服器的 `.secrets/discord.json`（已 gitignore），不會回�
 ```
 
 改完重開伺服器，瀏覽器 Ctrl+F5。
+
+Code is distributed under GNU GPLv3 only (`GPL-3.0-only`). Commercial use is allowed; distributed modified versions must preserve notices and provide corresponding source under GPLv3. Earlier MIT-published code retains those permissions. See [NOTICE](NOTICE) for the transition and separately licensed material. New code contributions use GPLv3; see [CONTRIBUTING.md](CONTRIBUTING.md).
