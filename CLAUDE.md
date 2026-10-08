@@ -25,6 +25,7 @@ git diff                               # 看過再 commit、push
 - 開源版自己的檔不會被蓋：`README.md`（英文在上、中文在下）、`CLAUDE.md`、`start.bat`、`start.sh`、`.gitignore`、`.gitattributes`、`LICENSE`、`.github/`（CI）。功能改了、README 要跟著改的話，到那邊改。
 - **發新的卡面包**（`card-art-vN`）：兩個 repo 的 Release 都要發同一個 zip，`scripts/fetch_card_art.py` 的網址各指各的（同步時 `REWRITES` 會換）。
 - 只動到其他版面（web、web1～web5、web7、zipu、game）不用同步。
+- **開源版合併了外人的 PR**：同步之前先把那些改動搬回這邊，否則同步會蓋掉。`sync_mochi.py --check` 列出的檔如果不是這邊改的，就是還沒搬回來的。
 
 ## 第一次使用的準備（web6）
 
