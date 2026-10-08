@@ -1,5 +1,11 @@
 # 排字匣 · Danbooru case
 
+> **English.** Draw a random set of Danbooru tags and send it straight to a local ComfyUI (WAI / Illustrious SDXL).
+> Needs Python 3.9+ (standard library only) and ComfyUI at `http://127.0.0.1:8188`.
+> Windows: double-click `start-web6.bat` (the card workbench, English or Chinese) and open <http://127.0.0.1:8796>.
+> macOS / Linux: `./start.sh`. Card art downloads on first start.
+> Just want the card workbench? [danbooru_tag_mochi](https://github.com/bosen12/danbooru_tag_mochi) is that part on its own, with an English README.
+
 本機隨機抽一套 Danbooru 標籤，立刻丟進 ComfyUI（WAI / Illustrious）生圖。
 
 中文介面以中文牌名顯示；真正送給 Comfy 的 POS 仍是英文 tag。滑鼠停在中文上會顯示英文。
@@ -89,7 +95,7 @@ cd danbooru_tag_random
 
 **1. 先把 ComfyUI 開起來**，確認瀏覽器打得開 <http://127.0.0.1:8188>。
 
-**2. 告訴排字匣你的 checkpoint 叫什麼。** 這是新 clone 唯一一定要改的東西——預設值是作者機器上的檔名，你的一定不一樣。名字要跟 ComfyUI 的 `CheckpointLoaderSimple` 下拉選單裡**一模一樣**（含子資料夾）。
+**2. 底模不用先設定。** 預設檔名是作者機器上的；你的 ComfyUI 裡沒有它的話，伺服器會從 ComfyUI 的清單挑一個 Illustrious／SDXL 的，之後在頂欄的模型按鈕換。想固定預設值，就設 `COMFY_CKPT`（或 `config.json` 的 `comfy.ckpt`），名字要跟 ComfyUI 的 `CheckpointLoaderSimple` 下拉選單裡**一模一樣**（含子資料夾）。
 
 Windows：
 
@@ -103,7 +109,7 @@ macOS / Linux：
 export COMFY_CKPT=waiIllustriousSDXL_v170.safetensors
 ```
 
-不確定名字？先直接跑第 3 步。checkpoint 對不上時，黑窗會把 ComfyUI 現有的清單印出來給你挑。
+不確定名字？先直接跑第 3 步。checkpoint 對不上時，黑窗會把 ComfyUI 現有的清單印出來。
 
 **3. 開伺服器。**
 
@@ -121,7 +127,7 @@ Windows 可以在檔案總管直接雙擊 `.bat`（不要用記事本打開）�
 | `start-web6.bat` | 墨池：排字匣的卡牌版，把字拖進合成池、引擎抽牌補齊；旁邊的疊印台（`/fuse.html`）把牌照花色疊進六列卡池，看引擎補了什麼再付印 | http://127.0.0.1:8796 |
 | `start_lora_manager.bat` | LoRA Manager（獨立埠，從 flux2klein 啟動） | http://127.0.0.1:7861/loras |
 
-任何系統都可以直接跑（macOS / Linux 只有這條路）：
+macOS / Linux 用 `./start.sh`（開墨池，埠 8796；要別的版面就 `WEB_DIR=web PORT=8787 ./start.sh`）。任何系統也都可以直接跑：
 
 ```bash
 python3 server.py
@@ -136,7 +142,7 @@ WEB_DIR=web1 PORT=8788 python3 server.py
 視窗不要關。改過程式後請 **Ctrl+F5**。
 
 **4. 卡牌插畫會自己下載。** 插畫（墨池、疊印台、排字匣的卡牌模式用的）不在 git 裡，放在 GitHub Release
-[`card-art-v3`](https://github.com/bosen12/danbooru_tag_random/releases/tag/card-art-v3)（全年齡 1160 張，約 55MB；舊版本用的 `card-art-v1`、`v2` 還在）。
+[`card-art-v4`](https://github.com/bosen12/danbooru_tag_random/releases/tag/card-art-v4)（全年齡 1934 個檔，約 100MB；舊版本用的 `card-art-v1`～`v3` 還在）。
 下載會切成 16 段、同時開 6 條連線（GitHub 的 release 伺服器單一連線很慢），斷了下次會接著抓。
 第一次啟動發現沒有插畫時會自動下載、驗 SHA-256、解壓到 `web/cards/`：
 
@@ -146,6 +152,12 @@ WEB_DIR=web1 PORT=8788 python3 server.py
 - 已經有的卡（自己烘的或上一版下載的）照現在詞庫的卡面清單逐張對：都在就不下載，只缺幾張才去抓。
 - 發新版的卡圖包：`python3 scripts/pack_card_art.py 輸出.zip --previous 上一版.zip`，把印出來的大小、SHA-256、張數貼進 `scripts/fetch_card_art.py`。
 - 敏感、色情分級的卡面不公開。ComfyUI 開著時，Windows 的 `start.bat` 會在縮小視窗自動烘還沒有的卡，以及提示詞已經改過的卡。已經烤好、提示詞沒變的不會重烘。不想自動烘：設 `NO_CARD_BAKE=1`，或在專案根目錄放一個 `.no-card-bake` 檔。也可以手動跑 `python3 scripts/bake_card_art.py`。
+
+**5. 墨池的放大模型和姿勢參考。** `start-web6.bat` 還會檢查兩樣東西，都裝進你的 ComfyUI：
+
+- Hires 放大模型 `RealESRGAN_x4plus_anime_6B`（約 18MB）：沒有就在縮小視窗下載到 `models/upscale_models`。不要：`NO_UPSCALE_FETCH=1`。
+- 姿勢參考（`comfyui_controlnet_aux` 節點＋Illustrious OpenPose ControlNet，約 2.5GB，會用 ComfyUI 自己的 Python 裝節點需要的套件）：選用，**會先問**——Y 裝、N 這次不要（20 秒沒回答也是）、A 永遠不問（放一個 `.no-pose-fetch` 檔，刪掉就會再問）。裝完要重開一次 ComfyUI。不要：`NO_POSE_FETCH=1`。
+- macOS / Linux 手動跑 `python3 scripts/fetch_upscale_model.py`、`python3 scripts/fetch_pose_assets.py`。
 
 ## 設定
 
@@ -412,6 +424,10 @@ three.js（MIT，附在 `web/vendor/three/`）是**按需下載**的：不進 3D
 - 不要把 bat 複製到別的資料夾再點；它要跟 `server.py` 同一層。
 - 確認不是「用 Python 打開」而是「用命令提示字元」執行。
 - 仍不行就在本目錄手動跑 `py -3 server.py`，錯誤訊息會留在畫面上。
+
+**黑窗說「埠已經有程式在用」**
+
+多半是同一個版面已經開著（啟動檔點了兩次）：直接開黑窗印的網址就好。要同時開第二份，先設 `PORT=別的埠`。
 
 **右上角一直顯示「Comfy 未連上」**
 

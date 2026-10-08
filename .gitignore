@@ -26,3 +26,5 @@ zipu/art/*.webp
 zipu/art/manifest.json
 # 啟動檔的卡面偵測：選了「以後都不要問」
 .no-card-bake
+# Launcher: "never ask again" for installing pose reference
+.no-pose-fetch

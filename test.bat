@@ -11,7 +11,9 @@ if not defined PY (
 )
 if not defined PY (
   echo Python 3 not found.
-  echo Install Python and tick "Add python.exe to PATH".
+  echo Opening the download page. Install Python 3.9 or newer and tick
+  echo "Add python.exe to PATH" in the installer, then run this file again.
+  start "" "https://www.python.org/downloads/windows/"
   pause
   exit /b 1
 )

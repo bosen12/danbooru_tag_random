@@ -1,8 +1,8 @@
 @echo off
 setlocal EnableExtensions
 cd /d "%~dp0"
-set "WEB_DIR=zipu"
-set "PORT=8795"
+set "WEB_DIR=web"
+set "PORT=8792"
 set "HOST=0.0.0.0"
 set "PYTHONUTF8=1"
 set "PY="
@@ -20,13 +20,14 @@ if not defined PY (
   pause
   exit /b 1
 )
-echo pai-zi-xia  zi-pu (type shop game)
+echo pai-zi-xia  workflow-test
 echo local     http://127.0.0.1:%PORT%/
 set "TSIP="
 if exist "%ProgramFiles%\Tailscale\tailscale.exe" for /f %%I in ('"%ProgramFiles%\Tailscale\tailscale.exe" ip -4 2^>nul') do set "TSIP=%%I"
 if defined TSIP echo Tailscale http://%TSIP%:%PORT%/
 echo bind      0.0.0.0:%PORT%/
-call "%~dp0scripts\card-art-check.bat" extras
+echo branch    grok_4.6  (not main)
+call "%~dp0scripts\upscale-model-check.bat"
 start "" "http://127.0.0.1:%PORT%/"
 %PY% server.py
 if errorlevel 1 pause
