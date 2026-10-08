@@ -1,3 +1,4 @@
+import { dateLocale, english } from "./i18n.js";
 /**
  * 作品冊：收藏的成品（album-save.js 從墨池、疊印台收進來；存在伺服器 recipes.py，圖另存一份）。
  *   - 大圖牆：照每張的長寬比排（album.css 的 columns），新的在前；超出頂端分級的先收起來。
@@ -65,7 +66,7 @@ const tellingOf = (w) => (w._telling ??= cardsOf(w).filter((t) => lib.byTag.get(
 function dateText(iso) {
   const d = new Date(iso);
   if (Number.isNaN(d.getTime())) return "";
-  return d.toLocaleDateString("zh-TW", { year: "numeric", month: "numeric", day: "numeric" });
+  return d.toLocaleDateString(dateLocale, { year: "numeric", month: "numeric", day: "numeric" });
 }
 
 /* ================= 開機 ================= */
@@ -350,7 +351,7 @@ function render({ deal = false } = {}) {
     $("album-hint").hidden = true;
     const r = log.render(logBox, { query, filter: logFilter, rating }, { deal });
     $("album-sum").textContent = log.loaded && r.total
-      ? `${r.shown} 張${r.more ? "（還有更早的）" : ""}${r.hidden ? `・${r.hidden} 張在${RATING_LABEL[rating]}看不到` : ""}`
+      ? `${r.shown}${english ? " images" : " 張"}${r.more ? "（還有更早的）" : ""}${r.hidden ? `・${r.hidden} 張在${RATING_LABEL[rating]}看不到` : ""}`
       : "";
     return;
   }
@@ -413,7 +414,7 @@ function tile(w) {
     "button",
     { class: "album-tile pressable", type: "button", role: "listitem", dataset: { id: w.id }, "aria-label": `${w.name}，${dateText(w.createdAt)}` },
     el("span", { class: "album-frame", style: `aspect-ratio: ${ratio}` }, img),
-    el("span", { class: "album-cap" }, el("b", {}, w.name), el("small", {}, dateText(w.createdAt)))
+    el("span", { class: "album-cap" }, el("b", { dataset: { noI18n: "" } }, w.name), el("small", {}, dateText(w.createdAt)))
   );
   node.addEventListener("click", () => openWork(w));
   return node;
@@ -546,6 +547,7 @@ function openWork(w) {
     )
   );
   const s = openSheet(w.name, body, {
+    translateTitle: false,
     wide: true,
     foot: [
       mine.length

@@ -1816,7 +1816,7 @@ const ALBUM_FIXTURE = [
     ok("工具列鈕：沒牌直接進挑牌，有牌打開／收起托盤；選單和詳情也能加", hand6.includes("function fromButton()") && fuse6.includes("hand?.fromButton()") && app6.includes("hand?.fromButton()") && fuse6.includes('"加入偏好卡牌"') && app6.includes('"加入偏好卡牌"'));
   }
   ok("疊印台的規則鈕也是圖示", fuseHtml.includes('id="rules-btn" type="button" aria-label="規則"') && !fuseHtml.includes(">規則</button>"));
-  ok("池中／封鎖／在池的章：新蓋上去的像橡皮章壓下來，沒變的不重蓋", readFileSync(join(ROOT, "web6/cards.js"), "utf8").includes("old.dataset.kind === flag.kind && old.textContent === flag.text") && fuse6.includes('node.classList.add("is-flag-stamp")'));
+  ok("池中／封鎖／在池的章：新蓋上去的像橡皮章壓下來，沒變的不重蓋", readFileSync(join(ROOT, "web6/cards.js"), "utf8").includes("old.dataset.kind === flag.kind && old.textContent === t(flag.text)") && fuse6.includes('node.classList.add("is-flag-stamp")'));
   ok("疊印台的規則自己一份（跟墨池分開），規則裡可以設每段補幾張", fuse6.includes('settings: "mochi.fuse.settings.v1"') && !fuse6.includes("S.saveSettings(") && fuse6.includes("每段補幾張"));
   {
     const ui = ["web6/app.js", "web6/fuse.js", "web6/hand.js", "web6/motion.js", "web6/ui.js", "web/tab-progress.js", "web6/fuse.html", "web6/index.html"].map((f) => readFileSync(join(ROOT, f), "utf8")).join("\n");
@@ -1971,7 +1971,10 @@ const ALBUM_FIXTURE = [
             cssText.includes(".stepper button::before {") && fuseCss.includes(".case-tab::before {");
         }));
       ok("牌組：三頁共用面板（decks.js，/api/decks）；墨池合成池、疊印台卡池（空白版列出你的牌組、撤回回原版）、卡冊卡盒都能存、能套用（web6、web7）",
-        readFileSync(join(ROOT, "web6/decks.js"), "utf8") === readFileSync(join(ROOT, "web7/decks.js"), "utf8") &&
+        ["web6", "web7"].every((d) => {
+          const decks = readFileSync(join(ROOT, d, "decks.js"), "utf8");
+          return decks.includes("export function openDecks(") && decks.includes('"/api/decks"') && decks.includes("apply(deck)");
+        }) &&
           readFileSync(join(ROOT, "server.py"), "utf8").includes('if path == "/api/decks":') &&
           ["web6", "web7"].every((d) => {
             const app = readFileSync(join(ROOT, d, "app.js"), "utf8");
@@ -1982,8 +1985,10 @@ const ALBUM_FIXTURE = [
               book.includes("function deckToBox(deck)") && book.includes("onclick: openBoxDecks");
           }));
       ok("作品冊：第四個房間（四頁頂欄都有、換頁方向算 3）；墨池成品、疊印台作品詳情有收藏鈕（存伺服器、圖另存、縮圖）；作品冊照分級、能帶牌回墨池、刪除要按兩次（web6、web7）",
-        readFileSync(join(ROOT, "web6/album.js"), "utf8") === readFileSync(join(ROOT, "web7/album.js"), "utf8") &&
-          readFileSync(join(ROOT, "web6/album-save.js"), "utf8") === readFileSync(join(ROOT, "web7/album-save.js"), "utf8") &&
+        ["web6", "web7"].every((d) => {
+          const save = readFileSync(join(ROOT, d, "album-save.js"), "utf8");
+          return ["export function canSave(", "export async function saveToAlbum(", "export function favButton(", "export const removeFromAlbum", "/image`", "DELETE"].every((s) => save.includes(s));
+        }) &&
           readFileSync(join(ROOT, "recipes.py"), "utf8").includes("def save_thumbnail(") &&
           ["web6", "web7"].every((d) => {
             const pages = ["index.html", "fuse.html", "book.html", "album.html"].map((f) => readFileSync(join(ROOT, d, f), "utf8"));
@@ -2049,9 +2054,11 @@ const ALBUM_FIXTURE = [
             return t.includes("navigator.webdriver") && t.includes('.mast-extra[href="tutorial.html"]') && ["MOCHI", "FUSE", "BOOK", "ALBUM"].every((k) => st.includes(`const ${k} = [`)) && st.includes("when: mobile");
           })());
       ok("卡冊「用它做過的圖」從出圖日誌撈（/api/genlog/bytag）：收藏過的排前面、用作品冊那份圖，撤下的排最後，可以再多看；日誌以前留在成品牆的照樣併進來；點開可以把牌帶回墨池（web6、web7）",
-        readFileSync(join(ROOT, "web6/book.js"), "utf8") === readFileSync(join(ROOT, "web7/book.js"), "utf8") &&
-          readFileSync(join(ROOT, "server.py"), "utf8").includes('if path == "/api/genlog/bytag":') &&
-          readFileSync(join(ROOT, "web6/book.js"), "utf8").includes("/api/genlog/bytag?") && readFileSync(join(ROOT, "web6/book.js"), "utf8").includes("function localWorks(card)"));
+        readFileSync(join(ROOT, "server.py"), "utf8").includes('if path == "/api/genlog/bytag":') &&
+          ["web6", "web7"].every((d) => {
+            const book = readFileSync(join(ROOT, d, "book.js"), "utf8");
+            return book.includes("/api/genlog/bytag?") && book.includes("function localWorks(card)");
+          }));
       ok("姿勢編輯器：拖點時繞著上一節轉、骨頭長度不變（「長度不變」關掉或按 Shift 才平移拉長），拖出畫面不壓扁（外圍留一圈邊看得到、拖得回來，「拉回中間」）（web6、web7）",
         readFileSync(join(ROOT, "web6/pose-editor.js"), "utf8") === readFileSync(join(ROOT, "web7/pose-editor.js"), "utf8") &&
           (() => {
@@ -2075,36 +2082,35 @@ const ALBUM_FIXTURE = [
               read("fuse.js").includes("${poseSig()}") && read("fuse.js").includes("onPoseChange(() =>") && read("store.js").includes("pose: s.pose || null,") && read("styles.css").includes(".pose-sheet {");
           }));
       ok("作品冊分輯與相似的作品：作品分頁可依時代、髮色、服裝、場景分段（記住選擇），詳情列出用牌重疊多的作品、點了換過去（web6、web7）",
-        ["album.js", "album.css", "album-groups.js"].every((f) => readFileSync(join(ROOT, "web6", f), "utf8") === readFileSync(join(ROOT, "web7", f), "utf8")) &&
+        ["album.css", "album-groups.js"].every((f) => readFileSync(join(ROOT, "web6", f), "utf8") === readFileSync(join(ROOT, "web7", f), "utf8")) &&
           ["web6", "web7"].every((d) => readFileSync(join(ROOT, d, "album.html"), "utf8").includes('id="works-group"')) &&
-          (() => {
-            const a = readFileSync(join(ROOT, "web6/album.js"), "utf8");
-            const g = readFileSync(join(ROOT, "web6/album-groups.js"), "utf8");
+          ["web6", "web7"].every((d) => {
+            const a = readFileSync(join(ROOT, d, "album.js"), "utf8");
+            const g = readFileSync(join(ROOT, d, "album-groups.js"), "utf8");
             return a.includes("groupWorks(shown,") && a.includes("function similarBox(w, sheetOf)") && g.includes("export function similarWorks(") && g.includes('["place", "場景"]');
-          })());
+          }));
       ok("成就與收集進度：卡冊標題旁「成就 N / M」打開成就牆（每個花色點亮進度、分級成就、解鎖日期），花色圖章外圈一圈點亮進度；新解鎖跳提示、第一次只說總數；只看不擋（web6、web7）",
-        ["book.js", "book.css", "achievements.js"].every((f) => readFileSync(join(ROOT, "web6", f), "utf8") === readFileSync(join(ROOT, "web7", f), "utf8")) &&
+        readFileSync(join(ROOT, "web6/book.css"), "utf8") === readFileSync(join(ROOT, "web7/book.css"), "utf8") &&
           ["web6", "web7"].every((d) => readFileSync(join(ROOT, d, "book.html"), "utf8").includes('id="book-ach"')) &&
-          (() => {
-            const b = readFileSync(join(ROOT, "web6/book.js"), "utf8");
-            const a = readFileSync(join(ROOT, "web6/achievements.js"), "utf8");
+          ["web6", "web7"].every((d) => {
+            const b = readFileSync(join(ROOT, d, "book.js"), "utf8");
+            const a = readFileSync(join(ROOT, d, "achievements.js"), "utf8");
             return b.includes("renderAch({ announceNew: true });") && b.includes("--lit: ${") && a.includes("export function announce(") && a.includes("成就牆開張") && !/ratingBlocked|disabled/.test(a);
-          })());
+          }));
       ok("模型成績單：作品冊多「模型」分頁（每個底模、LoRA：代表作、印好、收藏、撤下、印壞、平均畫多久、常配的牌），點一張跳到日誌只看它印的（web6、web7）",
-        ["album.js", "album.css", "album-models.js", "album-log.js"].every((f) => readFileSync(join(ROOT, "web6", f), "utf8") === readFileSync(join(ROOT, "web7", f), "utf8")) &&
-          (() => {
-            const a = readFileSync(join(ROOT, "web6/album.js"), "utf8");
-            return a.includes('["models", "模型"]') && a.includes("openLogFor: (name) =>") && readFileSync(join(ROOT, "web6/album.html"), "utf8").includes('id="album-models"') && readFileSync(join(ROOT, "web7/album.html"), "utf8").includes('id="album-models"');
-          })());
+        ["web6", "web7"].every((d) => {
+          const a = readFileSync(join(ROOT, d, "album.js"), "utf8");
+          const m = readFileSync(join(ROOT, d, "album-models.js"), "utf8");
+          return a.includes('["models", "模型"]') && a.includes("openLogFor: (name) =>") && m.includes('fetch("/api/genlog/stats"') && m.includes("ctx.openLogFor(m.name)") && readFileSync(join(ROOT, d, "album.html"), "utf8").includes('id="album-models"');
+        }));
       ok("牌的戰績：卡冊多「出好圖」「常撤下」排序（日誌統計 /api/genlog/stats，少於 3 張不排、信賴下界排名），摘要給整體比例，詳情多一行戰績（web6、web7）",
-        readFileSync(join(ROOT, "web6/book.js"), "utf8") === readFileSync(join(ROOT, "web7/book.js"), "utf8") &&
-          readFileSync(join(ROOT, "server.py"), "utf8").includes('if path == "/api/genlog/stats":') &&
-          (() => {
-            const b = readFileSync(join(ROOT, "web6/book.js"), "utf8");
+        readFileSync(join(ROOT, "server.py"), "utf8").includes('if path == "/api/genlog/stats":') &&
+          ["web6", "web7"].every((d) => {
+            const b = readFileSync(join(ROOT, d, "book.js"), "utf8");
             return b.includes('good: "出好圖", bad: "常撤下"') && b.includes("const WAR_MIN = 3;") && b.includes("function lowerBound(") && b.includes("function warText(tag)") && b.includes("整體收藏");
-          })());
+          }));
       ok("出圖日誌：伺服器記每張印好／印壞（按停不記），作品冊多「日誌」分頁（依日期、篩選、補收藏、帶回墨池）；成品牆／晾紙繩單張撤下記 discard、復原撤回（web6、web7）",
-        readFileSync(join(ROOT, "web6/album-log.js"), "utf8") === readFileSync(join(ROOT, "web7/album-log.js"), "utf8") &&
+        ["web6", "web7"].every((d) => readFileSync(join(ROOT, d, "album-log.js"), "utf8").includes("export function createLog(ctx)") && readFileSync(join(ROOT, d, "album-log.js"), "utf8").includes("/api/genlog?limit=")) &&
           readFileSync(join(ROOT, "server.py"), "utf8").includes('if path == "/api/genlog/mark":') &&
           ["web6", "web7"].every((d) => {
             const read = (f) => readFileSync(join(ROOT, d, f), "utf8");

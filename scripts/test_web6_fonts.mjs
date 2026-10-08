@@ -70,6 +70,17 @@ try {
     : await (await fetch(source.fallback_css_url, {headers:{'User-Agent':ua}})).text();
   assert.ok(baselineCss.includes('@font-face'), 'Google CSS baseline is required for comparison');
   await writeFile(resolve(output,'google-baseline.css'),baselineCss);
+  // The full pinned source can contain glyphs absent from Google's web faces.
+  // Compare native rendering where the baseline actually supplies that glyph;
+  // build_web6_fonts.py --verify covers every local outline against the source.
+  const baselineRanges=Array.from(baselineCss.matchAll(/unicode-range:\s*([^;]+)/g)).flatMap(match=>match[1].split(',').map(token=>{
+    const [low,high=low]=token.trim().slice(2).split('-');
+    return [parseInt(low.replaceAll('?','0'),16),parseInt(high.replaceAll('?','F'),16)];
+  }));
+  const comparisonCodes=manifest.unicodes.filter(code=>baselineRanges.some(([low,high])=>code>=low&&code<=high));
+  assert.ok(comparisonCodes.length>1900,'The original UI corpus must remain in the native comparison');
+  results.baselineGlyphs=comparisonCodes.length;
+  results.sourceOnlyGlyphs=manifest.unicodes.filter(code=>!comparisonCodes.includes(code));
   for (const dpr of [1,1.25,2]) {
     const comparisons=[];
     for (const version of ['baseline','local']) {
@@ -97,12 +108,17 @@ try {
           codes.forEach((code,i)=>{const glyph=String.fromCodePoint(code);ctx.fillText(glyph,(i%40)*30,Math.floor(i/40)*(size+12));metrics.push(ctx.measureText(glyph).width);});
           const pixels=ctx.getImageData(0,0,canvas.width,canvas.height).data;
           const digest=Array.from(new Uint8Array(await crypto.subtle.digest('SHA-256',pixels))).map(x=>x.toString(16).padStart(2,'0')).join('');
-          captures.push({weight,size,pixels:digest,metrics});
+          const cells=codes.map((_,i)=>{
+            const bytes=ctx.getImageData((i%40)*30*dpr,Math.floor(i/40)*(size+12)*dpr,30*dpr,(size+12)*dpr).data;
+            let value=2166136261;for(const byte of bytes)value=Math.imul(value^byte,16777619);
+            return value>>>0;
+          });
+          captures.push({weight,size,pixels:digest,metrics,cells});
         }
         const vertical=document.createElement('div');vertical.textContent='墨池疊印台容衣姿景風鏡表';vertical.style.cssText='font:800 18px "Chiron Hei HK";writing-mode:vertical-rl;text-orientation:upright;width:max-content;letter-spacing:.02em';document.body.append(vertical);
         await document.fonts.load('800 18px "Chiron Hei HK"',vertical.textContent);await document.fonts.ready;
         return {dpr:devicePixelRatio,captures,vertical:vertical.getBoundingClientRect().toJSON(),probe:getComputedStyle(document.querySelector('#probe')).font};
-      },{codes:manifest.unicodes});
+      },{codes:comparisonCodes});
       const cdp=await context.newCDPSession(page);await cdp.send('DOM.enable');await cdp.send('CSS.enable');
       const document=await cdp.send('DOM.getDocument');
       const node=await cdp.send('DOM.querySelector',{nodeId:document.root.nodeId,selector:'#probe'});
@@ -129,14 +145,17 @@ try {
       }
       await context.close();
     }
-    assert.deepEqual(comparisons[0].data,comparisons[1].data,`All ${manifest.unicodes.length} glyphs must have identical native pixels/advances/vertical geometry at DPR ${dpr}`);
+    const differing=[...new Set(comparisons[0].data.captures.flatMap((capture,j)=>capture.cells.map((value,i)=>value!==comparisons[1].data.captures[j].cells[i]?comparisonCodes[i]:null).filter(value=>value!==null)))];
+    assert.equal(differing.length,0,`Native pixel differences at DPR ${dpr}: ${differing.map(code=>`U+${code.toString(16).toUpperCase()} ${String.fromCodePoint(code)}`).join(', ')}`);
+    assert.deepEqual(comparisons[0].data,comparisons[1].data,`All ${comparisonCodes.length} baseline glyphs must have identical native pixels/advances/vertical geometry at DPR ${dpr}`);
     assert.equal(comparisons[0].screenshot,comparisons[1].screenshot,`Native screenshot mismatch at DPR ${dpr}`);
-    results.tests.push({dpr,...Object.fromEntries(comparisons.map(c=>[c.version,{...c,data:{...c.data,captures:c.data.captures.map(({metrics,...x})=>x)}}]))});
+    results.tests.push({dpr,...Object.fromEntries(comparisons.map(c=>[c.version,{...c,data:{...c.data,captures:c.data.captures.map(({metrics,cells,...x})=>x)}}]))});
   }
   // The actual index/fuse DOM must use this font on the heading and cards. Keep
   // network/server services stubbed; no Comfy workflow or generation can run.
   for(const filename of ['index.html','fuse.html']) {
-    const context=await browser.newContext({viewport:{width:1440,height:1000},deviceScaleFactor:1.25,reducedMotion:'reduce'});
+    // The Chiron assertion targets the Traditional Chinese edition.
+    const context=await browser.newContext({locale:'zh-TW',viewport:{width:1440,height:1000},deviceScaleFactor:1.25,reducedMotion:'reduce'});
     const fontRequests=[];
     await context.route('https://fonts.googleapis.com/**',async route=>route.fulfill({body:'',contentType:'text/css'}));
     await context.route('https://fonts.gstatic.com/**',async route=>{fontRequests.push(route.request().url());await route.abort();});
@@ -153,10 +172,23 @@ try {
       assert.ok(fonts.fonts.length&&fonts.fonts.every(f=>f.isCustomFont&&/Chiron|昭源/.test(f.familyName)),`${filename} ${selector} must render downloaded Chiron`);
       rendered.push({selector,...style,fonts:fonts.fonts});
     }
-    assert.equal(fontRequests.length,1,`${filename} initial Chiron request must be only the local subset`);
+    const missing = await page.evaluate((covered) => {
+      const points = new Set(covered), result = new Set(), walker = document.createTreeWalker(document.body, NodeFilter.SHOW_TEXT);
+      while (walker.nextNode()) {
+        const n = walker.currentNode, p = n.parentElement;
+        if (!p || p.closest('script,style') || !getComputedStyle(p).fontFamily.includes('Chiron')) continue;
+        for (const c of n.data) if (!points.has(c.codePointAt(0)) && c.codePointAt(0)>127) result.add(`${c} in ${p.className}`);
+      }
+      for(const p of document.querySelectorAll('*')) for(const pseudo of ['::before','::after']) {
+        const style=getComputedStyle(p,pseudo);
+        if(style.fontFamily.includes('Chiron')) for(const c of style.content) if(!points.has(c.codePointAt(0))&&c.codePointAt(0)>127) result.add(`${c} in ${p.className}${pseudo}`);
+      }
+      return [...result].join('');
+    }, manifest.unicodes);
+    assert.equal(fontRequests.length,1,`${filename} initial Chiron request must be only the local subset: ${JSON.stringify(fontRequests)}; missing: ${missing}`);
     results.pages.push({filename,dpr:1.25,fontRequests,bytes:manifest.bytes,rendered});await context.close();
   }
   await writeFile(resolve(output,'results.json'),JSON.stringify(results,null,2)+'\n');
-  console.log(`PASS: ${manifest.unicodes.length} glyphs at 700/800, 12/24/42px, native DPR 1/1.25/2; identical pixels, metrics and vertical layout.`);
+  console.log(`PASS: ${results.baselineGlyphs} baseline glyphs at 700/800, 12/24/42px, native DPR 1/1.25/2; identical pixels, metrics and vertical layout. ${results.sourceOnlyGlyphs.length} source-only glyph(s) are covered by the pinned-source verifier.`);
   console.log(JSON.stringify(results.tests.map(x=>({dpr:x.dpr,baselineBytes:x.baseline.requested.reduce((a,f)=>a+f.bytes,0),baselineGzipBytes:x.baseline.requested.reduce((a,f)=>a+(f.gzipBytes||f.bytes),0),localBytes:x.local.requested[0].bytes,futureGlyph:x.local.fallback})),null,2));
 } finally {await browser.close();await new Promise(r=>server.close(r));}

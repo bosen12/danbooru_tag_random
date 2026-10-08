@@ -1,3 +1,4 @@
+import { dateLocale } from "./i18n.js";
 /**
  * 作品冊的「日誌」：印過的每一張（伺服器的 gen_log.py，/api/genlog），不只收藏的。
  * 成品牆只留 80 張、沒收藏的過一陣子就找不到了；這裡一直查得到，還能補收藏、把牌帶回墨池。
@@ -45,10 +46,11 @@ function dayLabel(at) {
   if (dayKey(at) === dayKey(today)) return "今天";
   if (dayKey(at) === dayKey(y)) return "昨天";
   const wd = "日一二三四五六"[d.getDay()];
+  if (dateLocale === "en-US") return d.toLocaleDateString(dateLocale, { weekday: "short", month: "short", day: "numeric", ...(d.getFullYear() !== today.getFullYear() ? { year: "numeric" } : {}) });
   return `${d.getFullYear() === today.getFullYear() ? "" : d.getFullYear() + " 年 "}${d.getMonth() + 1} 月 ${d.getDate()} 日（${wd}）`;
 }
 
-const clock = (at) => new Date(at).toLocaleTimeString("zh-TW", { hour: "2-digit", minute: "2-digit", hour12: false });
+const clock = (at) => new Date(at).toLocaleTimeString(dateLocale, { hour: "2-digit", minute: "2-digit", hour12: false });
 
 /** 作品冊那一筆跟日誌那一張是不是同一張：種子一樣、用到的牌一樣。 */
 export const favKey = (seed, positive, isCard) => `${seed}|${tagsOfPositive(positive).filter(isCard).sort().join(",")}`;

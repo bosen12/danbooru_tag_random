@@ -713,7 +713,8 @@ body #wf-pick-btn.has {
 
 @media (min-width: 64rem) {
   .layout {
-    grid-template-columns: minmax(18rem, 25rem) minmax(0, 1fr);
+    /* 中英文字盒一樣寬（牌寬 96px 起跳見 .lib-grid）：一排三張，卡面插畫看得清楚。 */
+    grid-template-columns: minmax(20rem, 26rem) minmax(0, 1fr);
     align-items: start;
   }
   .library {
@@ -958,7 +959,7 @@ body #wf-pick-btn.has {
 
 .lib-grid {
   display: grid;
-  grid-template-columns: repeat(auto-fill, minmax(76px, 1fr));
+  grid-template-columns: repeat(auto-fill, minmax(96px, 1fr));
   gap: var(--space-xs);
   align-content: start;
   padding: var(--space-xs) var(--space-md) var(--space-md);

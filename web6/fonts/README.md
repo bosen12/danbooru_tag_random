@@ -1,8 +1,9 @@
 # WEB6 Chiron Hei HK
 
-The display family, card typography, glyphs, weights, and layout remain unchanged.
+The Traditional Chinese display family, glyphs and font weights are preserved.
+The English edition uses system fonts and horizontal card labels.
 `../fonts.css` serves one local variable WOFF2 for current WEB6 source text and the
-lexicon. It covers 1,944 codepoints and is 768,940 bytes. The full source `wght`
+lexicon. It covers 2,229 codepoints and is 875,064 bytes. The full source `wght`
 axis (200–900), hinting, names, and layout features are retained; CSS exposes the
 same requested weights 700–800 as the previous Google Fonts stylesheet.
 
@@ -67,11 +68,13 @@ Recorded verification in `.planning/font-browser-results/results.json`:
 
 - Every subset glyph's outline and horizontal/vertical metrics exactly match the
   pinned source at 700 and 800; global font metrics and axes also match.
-- All 1,944 glyphs have identical native canvas pixels and advances against the
+- All 2,228 glyphs supplied by the baseline have identical native canvas pixels and advances against the
   original Google Chrome font CSS at 700/800, 12/24/42px, DPR 1/1.25/2. Native
   screenshots and vertical text geometry match, without resizing screenshots.
+  The additional source glyph U+3400 (a regex range endpoint in the source corpus)
+  is absent from Google's web faces and is checked against the pinned TTF.
 - Actual index/fuse heading and card-name glyphs use downloaded Chiron. Each
-  initial page requests exactly one 768,940-byte Chiron font, including at native
+  initial page requests exactly one 875,064-byte Chiron font, including at native
   Windows-style DPR 1.25. Other fonts and backend services are stubbed for this
   isolated font contract; this is not a full application screenshot comparison.
 - New character `U+9F4F` renders Chiron at both 700/800 and fetches one shared
@@ -79,7 +82,7 @@ Recorded verification in `.planning/font-browser-results/results.json`:
 
 The previous browser-specific broad Chinese files were 4,776,956 bytes (Chrome
 TTF; 3,007,102 bytes with gzip) and 2,308,488 bytes (Safari WOFF2). The new local
-font CSS is 199,009 bytes, or 61,628 bytes with gzip. WOFF2 is already compressed;
+font CSS is 198,904 bytes, or 61,539 bytes with gzip. WOFF2 is already compressed;
 gzip adds bytes to the local font and should be skipped. The exhaustive all-source-character
 fixture also exercises rare symbols/comments and causes more upstream requests;
 its transfer totals should not be reported as an initial-page measurement.

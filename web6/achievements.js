@@ -1,3 +1,4 @@
+import { dateLocale } from "./i18n.js";
 /**
  * 卡冊的成就牆：收集進度（每個花色點亮幾張）＋成就（分銅、銀、金、白金幾級）。
  * 只看不擋：沒解鎖的牌照樣能用，成就不鎖任何東西。
@@ -168,10 +169,10 @@ export function openWall(f, list) {
               "span",
               { class: "ach-progress" },
               el("span", { class: "ach-bar", style: `--lit: ${pctOf(a.value, goal)}` }, el("i")),
-              el("small", {}, `${a.value.toLocaleString("zh-TW")} / ${goal.toLocaleString("zh-TW")}${a.unit === "%" ? "" : " "}${a.unit}`)
+              el("small", {}, `${a.value.toLocaleString(dateLocale)} / ${goal.toLocaleString(dateLocale)}${a.unit === "%" ? "" : " "}${a.unit}`)
             )
           : null,
-        at ? el("small", { class: "ach-at" }, `解鎖於 ${new Date(at).toLocaleDateString("zh-TW")}`) : null
+        at ? el("small", { class: "ach-at" }, `解鎖於 ${new Date(at).toLocaleDateString(dateLocale)}`) : null
       )
     );
   });

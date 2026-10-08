@@ -11,6 +11,7 @@ import { EZ, seg, lerp, quad, spring, esc, mk, put, setHTML, V, SW, SH, env, mak
 import { bar, BEAT } from "./tutorial-score.js";
 import { ratingBlocked } from "./rules/rating.js";
 import { CARD_SUIT_INFO, cardFacts } from "./cards.js";
+import { english, t as translate } from "./i18n.js";
 
 export const b = bar;
 export const B = BEAT;
@@ -37,11 +38,11 @@ export function visibleIn(card, { rating = "general", era = "modern" } = {}) {
 /** 字盒的一個視圖：花色／小分類／搜尋字，加上分級、時代。 */
 export function viewList({ suit = "all", group = "", q = "", rating = "general", era = "modern" } = {}) {
   const Q = q.toLowerCase();
-  return env.lib.cards.filter((c) => visibleIn(c, { rating, era }) && env.assets.art(c.tag) && (suit === "all" || c.suit === suit) && (!group || c.group === group) && (!Q || c.zh.toLowerCase().includes(Q) || c.tag.includes(Q)));
+  return env.lib.cards.filter((c) => visibleIn(c, { rating, era }) && env.assets.art(c.tag) && (suit === "all" || c.suit === suit) && (!group || c.group === group || c.item.group === group) && (!Q || c.zh.toLowerCase().includes(Q) || c.tag.includes(Q)));
 }
 export function countOf(opts) {
   const Q = (opts.q || "").toLowerCase();
-  return env.lib.cards.filter((c) => visibleIn(c, opts) && (!opts.suit || opts.suit === "all" || c.suit === opts.suit) && (!opts.group || c.group === opts.group) && (!Q || c.zh.toLowerCase().includes(Q) || c.tag.includes(Q))).length;
+  return env.lib.cards.filter((c) => visibleIn(c, opts) && (!opts.suit || opts.suit === "all" || c.suit === opts.suit) && (!opts.group || c.group === opts.group || c.item.group === opts.group) && (!Q || c.zh.toLowerCase().includes(Q) || c.tag.includes(Q))).length;
 }
 
 /* ================= 建畫面 ================= */
@@ -252,7 +253,10 @@ export function buildLibrary(m) {
     // 選了花色才有小分類晶片（一排排的，會把底下的牌往下推）。
     let chips = null;
     let gridDy = 0;
-    const groups = opts.suit && opts.suit !== "all" && !extra.noChips ? [...new Map(viewList({ ...opts, group: "", q: "" }).map((c) => [c.group, [c.groupZh, c.seal]])).entries()].slice(0, 6) : [];
+    // The scripted tour uses stable engine groups. Subcategories can move cards
+    // (for example, cherry blossoms now lives in Plants) without changing the tour.
+    const engineOrder = new Map(Object.values(env.data.groupOrder).flat().map((g, i) => [g, i]));
+    const groups = opts.suit && opts.suit !== "all" && !extra.noChips ? [...new Map(viewList({ ...opts, group: "", q: "" }).map((c) => [c.item.group, [env.data.groupZh[c.item.group] || c.groupZh, c.seal]])).entries()].sort((a, b) => (engineOrder.get(a[0]) ?? 999) - (engineOrder.get(b[0]) ?? 999)).slice(0, 6) : [];
     if (groups.length >= 2) {
       chips = box(O, "tb", -767, -190, 370, null, "");
       chips.style.display = "flex";
@@ -573,6 +577,11 @@ export function buildSearch(m) {
   s.focusAt = (t0, t1) => s.focus.push([t0, t1]);
   /** 從 t 起一個字一個字打出來（每個字 per 秒）；回傳打完的時間。 */
   s.type = (t, text, per = 0.22) => {
+    if (english) {
+      const translated = translate(text);
+      per *= Math.max(1, text.length - 1) / Math.max(1, translated.length - 1);
+      text = translated;
+    }
     const chars = [...text];
     chars.forEach((_, i) => push({ t: t + i * per, text: chars.slice(0, i + 1).join(""), sel: false, key: true }));
     return t + (chars.length - 1) * per;

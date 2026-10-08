@@ -1,6 +1,7 @@
 /** 墨池的畫面零件：建元素、遮罩、提示、滑鼠停留說明。只產生 DOM，不管流程。 */
 import { lockScroll, unlockScroll } from "./scroll-lock.js";
 import { DUR, CURVE, css, reducedMotion } from "./motion.js";
+import { translateTree } from "./i18n.js";
 
 export function el(tag, props = {}, ...children) {
   const node = document.createElement(tag);
@@ -18,7 +19,7 @@ export function el(tag, props = {}, ...children) {
     if (c === null || c === undefined || c === false) continue;
     node.append(c instanceof Node ? c : document.createTextNode(String(c)));
   }
-  return node;
+  return translateTree(node);
 }
 
 export const ICONS = {
@@ -30,7 +31,7 @@ export const ICONS = {
 
 let openOverlays = [];
 
-export function openSheet(title, body, { wide = false, onClose, foot } = {}) {
+export function openSheet(title, body, { wide = false, onClose, foot, translateTitle = true } = {}) {
   const lastFocus = document.activeElement;
   const titleId = "sheet-" + Math.random().toString(36).slice(2, 8);
   const closeBtn = el("button", { class: "sheet-close", type: "button", "aria-label": "關閉", html: ICONS.close });
@@ -40,7 +41,7 @@ export function openSheet(title, body, { wide = false, onClose, foot } = {}) {
     "div",
     { class: wide ? "sheet sheet-wide" : "sheet", role: "dialog", "aria-modal": "true", "aria-labelledby": titleId },
     grip,
-    el("h2", { id: titleId }, title),
+    el("h2", { id: titleId, dataset: translateTitle ? {} : { noI18n: "" } }, title),
     closeBtn,
     body,
     foot && foot.filter(Boolean).length ? el("div", { class: "sheet-foot" }, foot) : null

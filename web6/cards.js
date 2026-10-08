@@ -6,6 +6,7 @@ import { isCard, cardSuit, ratingTier, artFile, artSources, artUrl, groupSeal, C
 import { el } from "./ui.js";
 import { miniSet, bindArt, artFallback } from "./card-images.js";
 import { DUR, CURVE, css, reducedMotion } from "./motion.js";
+import { english, registerLexicon, t } from "./i18n.js";
 
 export { CARD_SUIT_INFO, CARD_SUITS };
 
@@ -23,6 +24,7 @@ export const RATING_ZH = { general: "全年齡", sensitive: "敏感", explicit: 
 
 /** 詞庫 → 卡牌。順序照詞庫，所以同一類的字會排在一起。 */
 export function buildLibrary(data, { ratingBlocked }) {
+  registerLexicon(data);
   const cards = [];
   const byTag = new Map();
   for (const item of data.tags) {
@@ -145,7 +147,7 @@ export function cardNode(card, assets, { tagName = "button", flag, src } = {}) {
     el(
       "span",
       { class: "card-art", "aria-hidden": "true" },
-      art ? artImg(assets.sources ? assets.sources(card.tag) : { src: art }, assets.mini?.(card.tag)) : el("span", { class: "card-glyph" }, [...card.zh][0]),
+      art ? artImg(assets.sources ? assets.sources(card.tag) : { src: art }, assets.mini?.(card.tag)) : el("span", { class: "card-glyph" }, english ? card.tag.slice(0, 2).toUpperCase() : [...card.zh][0]),
       flag ? el("span", { class: "card-flag", dataset: { kind: flag.kind } }, flag.text) : null,
       src ? el("span", { class: "card-flag", dataset: { kind: "src" } }, src) : null
     )
@@ -207,7 +209,7 @@ export function setEnterTarget(grid, on) {
 export function setCardFlag(node, flag) {
   const old = node.querySelector(".card-flag:not([data-kind='src'])");
   // 沒變就不動：字盒每動一次整排重新上標，不這樣的話每個章都會重蓋一次。
-  if (old && flag && old.dataset.kind === flag.kind && old.textContent === flag.text) return;
+  if (old && flag && old.dataset.kind === flag.kind && old.textContent === t(flag.text)) return;
   old?.remove();
   if (!flag) return;
   const stampNow = !!node.isConnected;

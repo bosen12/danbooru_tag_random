@@ -1,3 +1,4 @@
+import { dateLocale, english } from "./i18n.js";
 /**
  * 作品冊的「模型」：每個底模、每個 LoRA 一張成績單（伺服器 /api/genlog/stats 從出圖日誌算）。
  *   代表作（收藏過的優先）、印好幾張、收藏幾成、撤下幾成、印壞幾張、平均畫多久、常配的牌、最近一次。
@@ -15,7 +16,7 @@ const pct = (k, n) => (n ? Math.round((k / n) * 100) : 0);
 function ago(at) {
   if (!at) return "—";
   const d = Math.floor((Date.now() - at) / 86400000);
-  return d <= 0 ? "今天" : d === 1 ? "昨天" : d < 30 ? `${d} 天前` : new Date(at).toLocaleDateString("zh-TW", { month: "numeric", day: "numeric" });
+  return d <= 0 ? "今天" : d === 1 ? "昨天" : d < 30 ? `${d} 天前` : new Date(at).toLocaleDateString(dateLocale, { month: "numeric", day: "numeric" });
 }
 
 /** ctx：{ zh, isCard, sectionOf(tag), openLogFor(name) } */
@@ -41,10 +42,10 @@ export function createModels(ctx) {
       ? el("span", { class: "model-art", style: best.width && best.height ? `aspect-ratio: ${best.width} / ${best.height}` : "" }, el("img", { src: viewSrc(best.image), alt: "", loading: "lazy", decoding: "async", onerror: (e) => e.currentTarget.parentElement.replaceChildren(el("small", {}, "原圖不在了")) }))
       : el("span", { class: "model-art is-empty" }, el("small", {}, m.best ? "代表作在這一級分級看不到" : "還沒有印好的"));
     const facts = [
-      ["印好", `${m.n} 張`],
+      ["印好", english ? `${m.n} images` : `${m.n} 張`],
       ["收藏", `${pct(m.fav, m.n)}%`, m.fav ? "good" : ""],
       ["撤下", `${pct(m.discard, m.n)}%`, m.discard ? "bad" : ""],
-      ["印壞", `${m.failed} 張`, m.failed ? "bad" : ""],
+      ["印壞", english ? `${m.failed} images` : `${m.failed} 張`, m.failed ? "bad" : ""],
       ["平均畫", m.drawMs ? secs(m.drawMs) : "—"],
       ["最近", ago(m.last)],
     ];
@@ -59,7 +60,7 @@ export function createModels(ctx) {
       el(
         "span",
         { class: "model-body" },
-        el("b", { class: "model-name" }, m.name),
+        el("b", { class: "model-name", dataset: { noI18n: "" } }, m.name),
         el("span", { class: "model-facts" }, facts.map(([k, v, tone]) => el("span", { class: "model-fact", dataset: tone ? { tone } : {} }, el("small", {}, k), el("b", {}, v)))),
         cards.length ? el("span", { class: "model-cards" }, el("small", {}, "常配的牌"), el("span", { class: "album-chips" }, cards.map((t) => el("span", { class: "album-chip", title: t }, ctx.zh(t))))) : null
       )

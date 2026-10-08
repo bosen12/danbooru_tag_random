@@ -11,6 +11,7 @@
  * 進行中的狀態掛在 target.hi（不存檔）；做好的結果是 target.hires（存檔）。
  */
 import { el } from "./ui.js";
+import { t as translate } from "./i18n.js";
 import { createGenerator } from "./gen.js";
 import { currentHiresSampling } from "./workflow.js";
 import { seat, refuse, reducedMotion, DUR, CURVE, css } from "./motion.js";
@@ -446,7 +447,7 @@ export function paintHiresVeil(frame, t, { onCancel, onDismiss }) {
   veil.style.setProperty("--p", String(hi.status === "running" ? hi.progress || 0 : 0));
   const text = veil.querySelector(".hv-text");
   const label = hiresLabel(t);
-  if (text.textContent !== label) text.textContent = label;
+  if (text.textContent !== translate(label)) text.textContent = label;
   const act = veil.querySelector(".hv-act");
   const failed = hi.status === "failed";
   act.textContent = failed ? "知道了" : "停";

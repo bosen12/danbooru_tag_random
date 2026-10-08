@@ -30,6 +30,7 @@ import { EZ, seg, lerp, quad, spring, esc, mk, track, put, setHTML, rng } from "
 import { createGL } from "./film-gl.js";
 import { makeText } from "./film-text.js";
 import * as idata from "./intro-data.js";
+import { english, t as translate } from "./i18n.js";
 
 const $ = (id) => document.getElementById(id);
 /** 兩分鐘版的小節（96 BPM）。搬過來的場景裡的時間都是用它算的。 */
@@ -708,7 +709,7 @@ function buildMochi(data) {
     const f = EZ.inOut(seg(t, 50.4, 55.0));
     meter.firstChild.style.transform = `scaleX(${f.toFixed(3)})`;
     const step = Math.max(1, Math.round(f * 25));
-    const s = f < 1 ? `繪製 ${step}/25 · ComfyUI 即時預覽` : "好了 · done";
+    const s = translate(f < 1 ? `繪製 ${step}/25 · ComfyUI 即時預覽` : "好了 · done");
     if (mLabel.textContent !== s) mLabel.textContent = s;
     put(meterBox, { x: 0, y: 490, o: p * (1 - q) });
   }, meterBox);
@@ -1008,10 +1009,10 @@ function buildSearch(data) {
   const text = mk("span", "sbox-text", box);
   const caret = mk("i", "sbox-caret", box);
   const TYPE = [
-    [48.9, "紅"],
-    [49.2, "紅髮"],
-    [51.15, "和"],
-    [51.45, "和服"],
+    [48.9, english ? "red" : "紅"],
+    [49.2, english ? "red hair" : "紅髮"],
+    [51.15, english ? "ki" : "和"],
+    [51.45, english ? "kimono" : "和服"],
   ];
   for (const [t] of TYPE) S.cue({ t, kind: "tick", gain: 0.06 });
   const ENTER1 = obar(20);
@@ -1698,7 +1699,7 @@ function buildMontage(data) {
     act(W, (v) => {
       const p = EZ.out(seg(v, 0, 0.4));
       const n = Math.floor(seg(v, 0.2, 0.2 + LINES.length * 0.22) * LINES.length + 0.001);
-      setHTML(body, LINES.slice(0, n).map(([s, c]) => `<span class="${c}">${esc(s)}</span>`).join("\n") + (Math.floor(v * 3) % 2 ? "▍" : ""));
+      setHTML(body, LINES.slice(0, n).map(([s, c]) => `<span class="${c}">${esc(translate(s))}</span>`).join("\n") + (Math.floor(v * 3) % 2 ? "▍" : ""));
       put(term, { x: -150, y: -20, ry: 10, o: p });
     }, term);
     const mit = mk("div", "w mit", g, "MIT<small>開源 · 自由改</small>");
@@ -2101,7 +2102,7 @@ async function boot() {
   status.textContent = "排星河 · Building the galaxy";
   gl = await createGL(
     $("gl"),
-    glCards.map((c) => ({ zh: c.zh, glyph: CARD_SUIT_INFO[c.suit].glyph, color: COLOR[c.suit], suitIndex: CARD_SUITS.indexOf(c.suit), src: thumbOf(c.tag) })),
+    glCards.map((c) => ({ zh: english ? c.tag : c.zh, glyph: english ? ["C", "A", "W", "P", "S", "F"][CARD_SUITS.indexOf(c.suit)] : CARD_SUIT_INFO[c.suit].glyph, color: COLOR[c.suit], suitIndex: CARD_SUITS.indexOf(c.suit), src: thumbOf(c.tag) })),
     {
       onProgress(done, total) {
         loadBar.style.transform = `scaleX(${((done / total) * 0.5).toFixed(3)})`;

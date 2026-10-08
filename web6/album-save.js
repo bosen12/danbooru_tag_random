@@ -5,6 +5,7 @@
  */
 import { el, toast } from "./ui.js";
 import { refuse, reducedMotion, DUR, CURVE, css } from "./motion.js";
+import { english } from "./i18n.js";
 
 /** 這張收得了嗎：印好了、圖是 ComfyUI 輸出的那一張。 */
 export function canSave(item) {
@@ -26,7 +27,7 @@ async function call(url, method, body) {
 /** 作品的名字：你放的牌（沒有就抽到的前幾張）的中文名。 */
 export function workName(item, zh) {
   const tags = (item.mine && item.mine.length ? item.mine : (item.drawn || []).map((d) => d.tag || d)).slice(0, 3);
-  return tags.length ? tags.map(zh).join("・") + ((item.mine || []).length > 3 ? "…" : "") : `seed ${item.seed}`;
+  return tags.length ? tags.map((tag) => english ? tag : zh(tag)).join(english ? " · " : "・") + ((item.mine || []).length > 3 ? "…" : "") : `seed ${item.seed}`;
 }
 
 /** 存進作品冊，回傳伺服器上的那一筆。圖片複製不成就把剛建的那筆刪掉（沒有圖的作品沒有意義）。 */

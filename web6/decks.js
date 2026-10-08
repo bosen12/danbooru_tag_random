@@ -109,7 +109,7 @@ export function openDecks({ where, current, has, zh, apply, paste, weightsNow = 
       el(
         "div",
         { class: "deck-main" },
-        el("b", { class: "deck-title" }, d.name),
+        el("b", { class: "deck-title", dataset: { noI18n: "" } }, d.name),
         el("span", { class: "deck-meta" }, `${tags.length} 張${gone ? `（${gone} 張詞庫裡已經沒有）` : ""}`),
         el("span", { class: "deck-tags" }, tags.slice(0, 8).map((t) => zh(t) + (d.weights?.[t] ? ` ${d.weights[t]}` : "")).join("・") + (tags.length > 8 ? "…" : ""))
       ),

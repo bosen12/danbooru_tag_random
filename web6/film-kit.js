@@ -3,6 +3,7 @@
  * 全部只看時間 t —— 同一個 t 永遠畫出同一格，所以可以任意快轉、倒轉、一格一格輸出。
  */
 import { bezier, CURVE } from "./motion.js";
+import { translateTree } from "./i18n.js";
 
 export const EZ = Object.fromEntries(Object.entries(CURVE).map(([k, c]) => [k, bezier(c)]));
 EZ.lin = (p) => p;
@@ -40,7 +41,7 @@ export function mk(tag, cls, parent, html) {
   if (cls) n.className = cls;
   if (html !== undefined) n.innerHTML = html;
   if (parent) parent.append(n);
-  return n;
+  return translateTree(n);
 }
 
 /** 關鍵格軌道：[[t, {x, y, …}, 曲線?], …]，兩格之間用後面那一格的曲線（預設 inOut）。 */
@@ -77,6 +78,7 @@ export function put(el, { x = 0, y = 0, z = 0, rx = 0, ry = 0, rz = 0, s = 1, o 
 export function setHTML(el, html) {
   if (el._html !== html) {
     el.innerHTML = html;
+    translateTree(el);
     el._html = html;
   }
 }

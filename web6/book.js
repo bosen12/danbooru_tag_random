@@ -1,3 +1,4 @@
+import { dateLocale } from "./i18n.js";
 /**
  * 卡冊：每張牌進過幾張圖。
  *
@@ -95,7 +96,7 @@ function saveUi() {
 
 const countOf = (tag) => usage.counts[tag] || 0;
 const lastOf = (tag) => usage.last[tag] || 0;
-const fmt = (n) => n.toLocaleString("zh-TW");
+const fmt = (n) => n.toLocaleString(dateLocale);
 
 /* ================= 開機 ================= */
 
@@ -774,7 +775,7 @@ function ago(ms) {
   if (h < 24) return `${h} 小時前`;
   const days = Math.round(h / 24);
   if (days < 31) return `${days} 天前`;
-  return new Date(ms).toLocaleDateString("zh-TW");
+  return new Date(ms).toLocaleDateString(dateLocale);
 }
 
 function openCard(card, srcNode) {
@@ -939,7 +940,7 @@ function workTile(x, i) {
       type: "button",
       dataset: { fav: x.fav ? "true" : "false", discard: x.mark === "discard" ? "true" : "false" },
       style: `--i: ${Math.min(i, 12)}; aspect-ratio: ${x.width || 1} / ${x.height || 1}`,
-      "aria-label": `${x.room}的成品${x.fav ? "（收藏過）" : x.mark === "discard" ? "（撤下過）" : ""}，${new Date(x.at).toLocaleString("zh-TW")}，點一下放大`,
+      "aria-label": `${x.room}的成品${x.fav ? "（收藏過）" : x.mark === "discard" ? "（撤下過）" : ""}，${new Date(x.at).toLocaleString(dateLocale)}，點一下放大`,
       onclick: (e) => openWork(x, e.currentTarget),
     },
     img,
@@ -1025,7 +1026,7 @@ function openWork(x, thumb) {
       "div",
       { class: "book-work-full" },
       big,
-      el("p", { class: "tag-en" }, [x.width && x.height ? `${x.width}×${x.height}` : "", x.seed != null ? `seed ${x.seed}` : "", new Date(x.at).toLocaleString("zh-TW"), x.fav ? "★ 收藏過" : x.mark === "discard" ? "撤下過" : ""].filter(Boolean).join("・")),
+      el("p", { class: "tag-en" }, [x.width && x.height ? `${x.width}×${x.height}` : "", x.seed != null ? `seed ${x.seed}` : "", new Date(x.at).toLocaleString(dateLocale), x.fav ? "★ 收藏過" : x.mark === "discard" ? "撤下過" : ""].filter(Boolean).join("・")),
       cards.length ? el("p", { class: "book-work-cards" }, cards.map((t) => lib.byTag.get(t).zh).join("・")) : null
     ),
     {

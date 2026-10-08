@@ -59,6 +59,7 @@ import * as S from "./store.js";
 import { recordUses } from "./usage.js";
 import { getSfx } from "./sfx.js";
 import { mountDiscord } from "./discord-link.js";
+import { t, takeLanguageState } from "./i18n.js";
 
 const sfx = getSfx();
 // 聲音引擎第一次建立要幾十毫秒：第一個手勢時先在下一輪建好，等真的要出聲時已經在了。
@@ -98,6 +99,7 @@ const $ = (id) => document.getElementById(id);
 
 // 數字換版時只讓字面輕輕落定，讀屏仍直接讀到最後的數值。
 function settleText(node, text) {
+  text = t(text);
   if (!node || node.textContent === text) return;
   node.textContent = text;
   if (!reducedMotion()) node.animate(
@@ -134,6 +136,11 @@ async function boot() {
   // 池子不存：重新整理就是空的；只收疊印台剛交過來的那一版。
   pool = new Set(S.takePool().filter((t) => lib.byTag.has(t)));
   weights = new Map(Object.entries(S.handoffWeights).filter(([t, w]) => pool.has(t) && w !== 1));
+  const languageState = takeLanguageState();
+  if (languageState) {
+    pool = new Set((languageState.pool || []).filter((tag) => lib.byTag.has(tag)));
+    weights = new Map(Object.entries(languageState.weights || {}).filter(([tag]) => pool.has(tag)));
+  }
   bans = new Set(S.loadBans().filter((t) => lib.byTag.has(t)));
   // 重新整理就把沒印出來的清掉（失敗、取消、停掉的）：以前它們一直留在牆上掛著「再試一次」。
   // 留下的：印好的、只抽牌的（本來就沒要印）、畫到一半還接得回去的、剛剛還排著的（去別頁晃一下回來）。
@@ -176,6 +183,10 @@ async function boot() {
   if (matchMedia("(hover: none)").matches) $("lib-q").placeholder = $("lib-q").placeholder.replace(/（按[^）]*）/, "");
   document.addEventListener("keydown", onKey);
   settleMotion();
+  addEventListener("mochi:before-language-change", (event) => {
+    event.detail.state = { pool: [...pool], weights: Object.fromEntries(weights) };
+    S.saveShots(shots);
+  });
 }
 
 function saveSettings() {
@@ -246,7 +257,7 @@ function renderLibraryChrome() {
       el(
         "button",
         { class: "suit-tab pressable", type: "button", style: `--suit: var(--suit-${s})`, "aria-pressed": ui.suit === s ? "true" : "false", onclick: (e) => pickSuit(s, e.currentTarget) },
-        el("b", { "aria-hidden": "true" }, CARD_SUIT_INFO[s].glyph),
+        el("b", { class: "suit-glyph", "aria-hidden": "true" }, CARD_SUIT_INFO[s].glyph),
         CARD_SUIT_INFO[s].zh
       )
     )
@@ -467,7 +478,7 @@ function updatePickerFoot() {
   if (!n) return;
   const count = [...pool].filter((t) => lib.byTag.has(t)).length;
   const text = count ? `合成池 ${count} 張` : "合成池還是空的";
-  if (n.textContent !== text) {
+  if (n.textContent !== t(text)) {
     n.textContent = text;
     if (pickerOpen && !reducedMotion()) n.animate([{ transform: "translateY(5px)", opacity: 0.4 }, { transform: "none", opacity: 1 }], { duration: DUR.short, easing: css(CURVE.out) });
   }
@@ -1377,7 +1388,7 @@ function renderRules() {
             const focused = document.activeElement === e.currentTarget;
             setSettings({ girl: k !== "boy", boy: k !== "girl" });
             renderRules();
-            const selected = $("rules").querySelector('[aria-label="畫面裡有誰"] [aria-checked="true"]');
+            const selected = $("rules").querySelector(`[aria-label="${t("畫面裡有誰")}"] [aria-checked="true"]`);
             if (focused) selected?.focus({ preventScroll: true });
             seat(selected);
             renderLibrary();

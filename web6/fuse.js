@@ -58,6 +58,7 @@ import { REGISTERS, REGISTER_ROLE, emptyBed, sanitizeBed, placeCard, removeCard,
 import { createSfx } from "./fuse-sfx.js";
 import { genSeed, isFixedSeed, mountSeedControl, onSeedChange, restoreSeed, seedState, seedUseButton, useSeed } from "./seed-control.js";
 import { mountDiscord } from "./discord-link.js";
+import { t as translate, takeLanguageState } from "./i18n.js";
 
 const $ = (id) => document.getElementById(id);
 const LETTERS = ["A", "B", "C", "D"];
@@ -247,6 +248,13 @@ async function boot() {
   bed = emptyBed();
   seeds = freshSeeds();
   picked = 0;
+  const languageState = takeLanguageState();
+  if (languageState) {
+    bed = sanitizeBed(languageState.bed, (tag) => lib.byTag.has(tag));
+    seeds = languageState.seeds || seeds;
+    picked = languageState.picked || 0;
+    history = languageState.history || [];
+  }
   for (const k of FK_OLD) {
     try {
       localStorage.removeItem(k);
@@ -306,6 +314,10 @@ async function boot() {
   watchPrintBar();
   setTimeout(sweepPrints, 1500);
   settleMotion();
+  addEventListener("mochi:before-language-change", (event) => {
+    event.detail.state = { bed, seeds, picked, history };
+    savePrints();
+  });
 
   if (new URLSearchParams(location.search).has("debug")) {
     window.fuse = { get bed() { return bed; }, get trials() { return trials; }, get prints() { return prints; }, place, remove, undo, pick, reroll, printNow };
@@ -1843,7 +1855,7 @@ function deckStarters() {
           { class: "starter-arts", "aria-hidden": "true" },
           d.tags.filter((tg) => assets.art(tg)).slice(0, 3).map((tg) => applyArtSources(el("img", { alt: "" }), assets.sources(tg)))
         ),
-        el("span", { class: "starter-name" }, d.name),
+        el("span", { class: "starter-name", dataset: { noI18n: "" } }, d.name),
         el("span", { class: "starter-tags" }, d.tags.map(zh).join("・"))
       )
     )
@@ -2693,17 +2705,17 @@ function renderPrintBar() {
     bar.dataset.key = key;
     const setText = (sel, text) => {
       const n = bar.querySelector(sel);
-      if (n && n.textContent !== text) n.textContent = text;
+      if (n && n.textContent !== translate(text)) n.textContent = text;
     };
     setText(".pb-letter", t.letter);
     setText(".pb-title", `試印 ${t.letter}`);
     setText(".pb-sum", summary.join("・"));
     setText(".pb-detail", detail.join("・"));
-    if (go.textContent !== label) go.textContent = label;
+    if (go.textContent !== translate(label)) go.textContent = label;
     return syncPrintFloat();
   }
   if (bar.dataset.key === key && go) {
-    if (go.textContent !== label) go.textContent = label;
+    if (go.textContent !== translate(label)) go.textContent = label;
     if (busy) go.style.setProperty("--p", String(p.status === "running" ? p.progress || 0 : 0));
     if (hiBusy) go.style.setProperty("--p", String(p.hi.status === "running" ? p.hi.progress || 0 : 0));
     return syncPrintFloat();
@@ -4027,7 +4039,7 @@ function updateCaseFoot() {
   const n = $("case-foot-count");
   if (!n) return;
   const text = bed.pins.length ? `卡池 ${bed.pins.length} 張` : "卡池還是空的";
-  if (n.textContent === text) return;
+  if (n.textContent === translate(text)) return;
   n.textContent = text;
   if (caseOpen && !reduced()) n.animate([{ transform: "translateY(5px)", opacity: 0.4 }, { transform: "none", opacity: 1 }], { duration: DUR.short, easing: css(CURVE.out) });
 }

@@ -36,7 +36,7 @@ async function install(page){
     };
   });
 }
-async function ready(page,fuse){await page.waitForFunction(fuse?()=>document.body.classList.contains('fuse')&&document.querySelector('.fav-hand')&&document.querySelector('#trials')?.childElementCount===4:()=>!document.body.classList.contains('fuse')&&document.querySelector('.fav-hand')&&document.querySelector('#lib-grid')?.childElementCount>0);}
+async function ready(page,fuse){await page.waitForFunction(fuse?()=>document.body?.classList.contains('fuse')&&document.querySelector('.fav-hand')&&document.querySelector('#trials')?.childElementCount===4:()=>document.body&&!document.body.classList.contains('fuse')&&document.querySelector('.fav-hand')&&document.querySelector('#lib-grid')?.childElementCount>0);}
 async function settled(page){await page.waitForFunction(()=>!document.getAnimations().some(a=>a.id==='web6-page-enter'));await page.evaluate(()=>document.fonts.ready);await page.waitForTimeout(180);}
 async function geometry(page){return page.evaluate(()=>[...document.querySelectorAll('.mast,.library .panel-head,.case-head,#pool .panel-head,.plate-head,.pool-well,.register,.rules,.go-bar,.fav-hand,.go-float,.lib-grid > .card:nth-child(-n+18),.case-grid > .card:nth-child(-n+18)')].map(n=>{
   // 動畫收尾偶爾留下 1e-5px 等級的殘值（translate: -50% -2.4e-05px）：0.01px 以下當 0，不算幾何改變。

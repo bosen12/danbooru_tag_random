@@ -7,12 +7,14 @@
  * zh 裡用 *…* 包起來的字是重點色。跟其他東西一樣只看時間 t：on(win, update, el) 由呼叫的人提供。
  */
 import { EZ, seg, lerp, spring, esc, mk } from "./film-kit.js";
+import { english, t } from "./i18n.js";
 
 const ANCHOR = { center: "translate(-50%, -50%)", right: "translate(-100%, -50%)", left: "translate(0, -50%)" };
 
 /** hud：字幕放進哪一層；on：登記「這段時間要更新」的函式（影片時間）。回傳的四個函式都可以用 { on, parent } 蓋掉預設。 */
 export function makeText({ hud, on: defaultOn }) {
   function kinetic({ cls, zh, en = "", x, y, align = "left", inAt, outAt, st = 0.03, rule = false, drift = 0, on = defaultOn, parent = hud }) {
+    if (english) { zh = (en || t(zh.replace(/\*/g, ""))).replace(/\bMochi\b/g, "Ink Pool"); en = ""; st = Math.min(st, 0.045); }
     const box = mk("div", "k " + cls, parent);
     box.style.left = x + "px";
     box.style.top = y + "px";
@@ -20,7 +22,8 @@ export function makeText({ hud, on: defaultOn }) {
     const zhEl = mk("span", "zh", box);
     const chars = [];
     let hl = false;
-    for (const c of [...zh]) {
+    for (const c of english ? zh.split(/(\s+)/) : [...zh]) {
+      if (english && /^\s+$/.test(c)) { zhEl.append(document.createTextNode(c)); continue; }
       if (c === "*") {
         hl = !hl;
         continue;
@@ -62,6 +65,7 @@ export function makeText({ hud, on: defaultOn }) {
   const say = (zh, en, inAt, outAt, o = {}) => kinetic({ cls: "k-say", zh, en, x: 960, y: 952, align: "center", inAt, outAt, st: 0.022, ...o });
 
   function slam({ zh, en = "", sub = "", x = 960, y = 500, inAt, outAt, align = "center", cls = "", on = defaultOn, parent = hud }) {
+    if (english) { zh = en || t(zh.replace(/\*/g, "")); en = ""; sub = t(sub.replace(/\*/g, "")); }
     const box = mk("div", "k k-slam " + cls, parent);
     box.style.left = x + "px";
     box.style.top = y + "px";
@@ -97,6 +101,7 @@ export function makeText({ hud, on: defaultOn }) {
   }
 
   function chapter(num, zh, en, inAt, outAt, { on = defaultOn, parent = hud } = {}) {
+    if (english) { zh = en || t(zh); en = ""; }
     const box = mk("div", "k k-chap", parent, `<b>${esc(num)}</b><span>${esc(zh)}<small>${esc(en)}</small></span>`);
     box.style.left = "96px";
     box.style.top = "118px";

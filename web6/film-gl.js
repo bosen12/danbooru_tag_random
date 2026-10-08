@@ -12,6 +12,7 @@
 import * as THREE from "./vendor/three/build/three.module.min.js";
 import { EZ, seg, lerp, track, rng, life } from "./film-kit.js";
 import { bar } from "./film-score.js";
+import { english } from "./i18n.js";
 
 const CW = 128;
 const CH = 187;
@@ -46,10 +47,10 @@ function drawCard(g, i, card, img) {
   g.clip();
   g.fillStyle = "#1c2029";
   g.fillRect(0, 0, CW, CH);
-  const ax = 32;
+  const ax = english ? 2 : 32;
   if (img) {
     const w = CW - ax - 2;
-    const h = CH - 4;
+    const h = CH - (english ? 56 : 4);
     const s = Math.max(w / img.naturalWidth, h / img.naturalHeight);
     const dw = img.naturalWidth * s;
     const dh = img.naturalHeight * s;
@@ -70,15 +71,35 @@ function drawCard(g, i, card, img) {
     g.textBaseline = "middle";
     g.fillText([...card.zh][0], ax + (CW - ax) / 2, CH / 2);
   }
-  g.fillStyle = card.color;
-  g.fillRect(0, 0, 30, CH);
-  g.fillStyle = "#12151b";
-  g.textAlign = "center";
-  g.textBaseline = "middle";
-  g.font = '800 17px "Chiron Hei HK", "Noto Sans TC", sans-serif';
-  g.fillText(card.glyph, 16, 20);
-  g.font = '700 14px "Chiron Hei HK", "Noto Sans TC", sans-serif';
-  [...card.zh].slice(0, 7).forEach((ch, k) => g.fillText(ch, 16, 44 + k * 17));
+  if (english) {
+    const y = CH - 54;
+    g.fillStyle = "#e9e1cd";
+    g.fillRect(0, y, CW, 54);
+    g.fillStyle = card.color;
+    g.fillRect(0, y, CW, 3);
+    g.fillStyle = "#24252a";
+    g.textAlign = "left";
+    g.textBaseline = "top";
+    g.font = '700 12px "Segoe UI", sans-serif';
+    g.fillText(card.glyph, 7, y + 9);
+    const lines = [""];
+    for (const word of card.zh.split(" ")) {
+      const line = lines.length - 1, candidate = lines[line] ? lines[line] + " " + word : word;
+      if (g.measureText(candidate).width > 92 && lines[line]) lines.push(word);
+      else lines[line] = candidate;
+    }
+    lines.slice(0, 3).forEach((line, i) => g.fillText(line, 24, y + 8 + i * 13, 98));
+  } else {
+    g.fillStyle = card.color;
+    g.fillRect(0, 0, 30, CH);
+    g.fillStyle = "#12151b";
+    g.textAlign = "center";
+    g.textBaseline = "middle";
+    g.font = '800 17px "Chiron Hei HK", "Noto Sans TC", sans-serif';
+    g.fillText(card.glyph, 16, 20);
+    g.font = '700 14px "Chiron Hei HK", "Noto Sans TC", sans-serif';
+    [...card.zh].slice(0, 7).forEach((ch, k) => g.fillText(ch, 16, 44 + k * 17));
+  }
   g.restore();
   roundRect(g, 2, 2, CW - 4, CH - 4, 10);
   g.strokeStyle = "rgba(255,255,255,0.22)";
