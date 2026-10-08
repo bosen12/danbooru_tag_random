@@ -863,6 +863,62 @@ try:
     names = server.lora_scan.lora_names_from_comfy()
     ok("LoRA discovery uses saved Comfy URL", _lora_urls == [("http://saved.example:9191/base/object_info/LoraLoader", 10)], str(_lora_urls))
     ok("LoRA discovery still parses names", names == ["style\\saved.safetensors"], str(names))
+
+    # ComfyUI 的 LoRA Manager：分頁抓完、對成 /api/loras 的格式；lora_name = folder\檔名。
+    _lm_pages = {
+        1: {"items": [
+            {"model_name": "Pretty Name", "file_name": "b", "file_path": "E:/loras/Character/sub/b.safetensors", "folder": "Character/sub",
+             "preview_url": "/api/lm/previews?path=E%3A%2Floras%2FCharacter%2Fsub%2Fb.preview.mp4", "base_model": "Illustrious",
+             "civitai": {"id": 22, "modelId": 11, "trainedWords": ["<lora:b:1> girl b, red dress", "smile"]}},
+            {"model_name": "Hidden", "file_path": "E:/loras/style/x.safetensors", "folder": "style", "exclude": True},
+        ], "total_pages": 2},
+        2: {"items": [{"model_name": "", "file_path": "E:/loras/a.safetensors", "folder": "", "preview_url": "", "civitai": {}}], "total_pages": 2},
+    }
+    _lm_seen = []
+
+    class _JsonResp:
+        def __init__(self, data):
+            self._b = json.dumps(data).encode()
+
+        def __enter__(self):
+            return self
+
+        def __exit__(self, *_a):
+            return False
+
+        def read(self):
+            return self._b
+
+    def _lm_urlopen(req, timeout=0):
+        url = req.full_url
+        _lm_seen.append(url)
+        page = int(url.split("page=")[1].split("&")[0])
+        return _JsonResp(_lm_pages[page])
+
+    _urllib_request.urlopen = _lm_urlopen
+    raw = server.lora_scan.lora_manager_list("loras", "http://lm.example:8188")
+    ok("LoRA Manager: every page is fetched", len(raw or []) == 3 and len(_lm_seen) == 2, str(_lm_seen))
+    _keep_folders = list(server.lora_scan.LORA_FOLDERS)
+    server.lora_scan.LORA_FOLDERS[:] = []
+    lm = server.lora_scan.from_lora_manager(raw)
+    server.lora_scan.LORA_FOLDERS[:] = _keep_folders
+    names = [((i["folder"].replace("/", "\\") + "\\") if i["folder"] else "") + i["file"] for i in lm["items"]]
+    ok("LoRA Manager: lora_name is folder\\file, excluded ones dropped", names == ["a.safetensors", "Character\\sub\\b.safetensors"], str(names))
+    b = lm["items"][1]
+    ok("LoRA Manager: trigger words without <lora:…>", b["trainedWords"] == ["girl b, red dress", "smile"], str(b["trainedWords"]))
+    ok("LoRA Manager: title, base model, Civitai ids", (b["title"], b["base_model"], b["civitai"]) == ("Pretty Name", "Illustrious", {"modelId": 11, "versionId": 22}), str(b))
+    ok("LoRA Manager: preview goes through this server, name keeps the video extension",
+       b["previewUrl"].startswith("/api/lora-preview?lm=%2Fapi%2Flm%2Fpreviews%3F") and b["preview"] == "b.preview.mp4", str(b))
+    ok("LoRA Manager: no preview, no previewUrl", lm["items"][0]["previewUrl"] is None and lm["items"][0]["preview"] is None)
+    ok("LoRA Manager: only its preview endpoint is proxied",
+       server.lora_scan.lm_preview_src("/api/lm/previews?path=x.png") and not server.lora_scan.lm_preview_src("/prompt") and not server.lora_scan.lm_preview_src("http://evil/api/lm/previews?"))
+
+    def _lm_missing(req, timeout=0):
+        raise _urllib_request.HTTPError(req.full_url, 404, "Not Found", {}, None)
+
+    _urllib_request.urlopen = _lm_missing
+    ok("LoRA Manager not installed: list is None (falls back)", server.lora_scan.lora_manager_list("loras", "http://lm.example:8188") is None)
+    ok("LoRA Manager not installed: count is None", server.lora_scan.lora_manager_count("http://lm.example:8188") is None)
 finally:
     _urllib_request.urlopen = _old_urlopen
     if _old_comfy_env is not None:

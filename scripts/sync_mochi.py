@@ -29,12 +29,12 @@ WEB = ROOT / "web"
 
 # 伺服器與它 import 的模組（根目錄）。
 ROOT_FILES = ["server.py", "card_usage.py", "card_decks.py", "gen_log.py", "lora_scan.py", "recipes.py", "workflows.py", "config.example.json"]
-# 啟動檔與伺服器會叫到的腳本（卡面下載與烘焙、放大模型、姿勢參考）。
+# 啟動檔與伺服器會叫到的腳本（卡面下載與烘焙、放大模型、姿勢參考、ComfyUI 的 LoRA Manager）。
 SCRIPT_FILES = [
     "app_config.py", "bake_card_art.py", "card_thumbnails.py", "fetch_card_art.py", "fetch_pose_assets.py",
     "fetch_upscale_model.py", "card_art.mjs", "card_jobs.json", "card-art-check.bat", "bake-cards-window.bat",
     "fetch-cards-window.bat", "upscale-model-check.bat", "fetch-upscale-window.bat", "pose-assets-check.bat",
-    "fetch-pose-window.bat",
+    "fetch-pose-window.bat", "fetch_lora_manager.py", "lora-manager-check.bat", "fetch-lora-manager-window.bat",
 ]
 # 開源版自己的檔：不覆蓋、也不當成「上游已刪」清掉。
 MOCHI_OWN = {"README.md", "CLAUDE.md", "start.bat", "start.sh", ".gitignore", ".gitattributes", "LICENSE"}

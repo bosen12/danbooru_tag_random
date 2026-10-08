@@ -153,11 +153,13 @@ WEB_DIR=web1 PORT=8788 python3 server.py
 - 發新版的卡圖包：`python3 scripts/pack_card_art.py 輸出.zip --previous 上一版.zip`，把印出來的大小、SHA-256、張數貼進 `scripts/fetch_card_art.py`。
 - 敏感、色情分級的卡面不公開。ComfyUI 開著時，Windows 的 `start.bat` 會在縮小視窗自動烘還沒有的卡，以及提示詞已經改過的卡。已經烤好、提示詞沒變的不會重烘。不想自動烘：設 `NO_CARD_BAKE=1`，或在專案根目錄放一個 `.no-card-bake` 檔。也可以手動跑 `python3 scripts/bake_card_art.py`。
 
-**5. 墨池的放大模型和姿勢參考。** `start-web6.bat` 還會檢查兩樣東西，都裝進你的 ComfyUI：
+**5. ComfyUI 的 LoRA Manager、放大模型、姿勢參考。** 啟動檔還會檢查這些，都裝進你的 ComfyUI：
+
+- [ComfyUI LoRA Manager](https://github.com/willmiao/ComfyUI-Lora-Manager)（custom node）：LoRA 面板的清單、預覽圖、Civitai 觸發詞、底模面板的名稱和預覽圖都從它來。**沒有就自動裝**（git clone 進 `custom_nodes`，再用 ComfyUI 自己的 Python 裝它要的套件），裝完要**重開一次 ComfyUI**。每個有 LoRA 面板的啟動檔都會檢查；只動這台電腦上的 ComfyUI。不要：`NO_LORA_MANAGER_FETCH=1`。
 
 - Hires 放大模型 `RealESRGAN_x4plus_anime_6B`（約 18MB）：沒有就在縮小視窗下載到 `models/upscale_models`。不要：`NO_UPSCALE_FETCH=1`。
 - 姿勢參考（`comfyui_controlnet_aux` 節點＋Illustrious OpenPose ControlNet，約 2.5GB，會用 ComfyUI 自己的 Python 裝節點需要的套件）：選用，**會先問**——Y 裝、N 這次不要（20 秒沒回答也是）、A 永遠不問（放一個 `.no-pose-fetch` 檔，刪掉就會再問）。裝完要重開一次 ComfyUI。不要：`NO_POSE_FETCH=1`。
-- macOS / Linux 手動跑 `python3 scripts/fetch_upscale_model.py`、`python3 scripts/fetch_pose_assets.py`。
+- macOS / Linux 手動跑 `python3 scripts/fetch_lora_manager.py`、`python3 scripts/fetch_upscale_model.py`、`python3 scripts/fetch_pose_assets.py`。
 
 ## 設定
 
@@ -177,17 +179,17 @@ cp config.example.json config.json
 | `config.json` 的位置 | 說明 |
 |---|---|
 | `comfy.ckpt` | 內建 workflow 的預設底模檔名，要跟 ComfyUI 選單裡的字**一模一樣** |
-| `paths.loraRoot` | LoRA 收藏根目錄。**留空的話會改問 ComfyUI**，見下面 |
+| `paths.loraRoot` | LoRA 收藏根目錄。ComfyUI 有 LoRA Manager 時用不到，見下面 |
 
-### LoRA 清單：三種設定深度
+### LoRA 清單從哪來
 
-| `loraRoot` | `loraFolders` | 結果 |
-|---|---|---|
-| 留空 | — | **問 ComfyUI 要清單**，它認得的全都列出來。能選、能送進 workflow，但沒有預覽圖和觸發詞（那要讀本機檔案旁邊的 metadata） |
-| 有填 | 留空 | 掃那個資料夾底下**所有**子資料夾，外加直接放在根目錄的鬆散檔案。分類就是資料夾名字 |
-| 有填 | 有填 | 只掃你列出來的那幾個資料夾 |
+依序：
 
-換句話說**兩個都不填也能用**。清單為什麼是空的、或為什麼沒有預覽圖，畫面上會直接講。
+1. **ComfyUI 的 LoRA Manager**（啟動檔會自動裝）：它掃 ComfyUI 的每個 loras 資料夾（含 `extra_model_paths`），名稱、預覽圖、Civitai 觸發詞、底模都有。預覽圖由本伺服器轉送，手機走 Tailscale 也看得到。面板上的「詳情」開 Civitai 的模型頁，「用 LoRA Manager 管理」開 ComfyUI 的 `/loras`。
+2. 沒有 LoRA Manager、但填了 `loraRoot`：自己掃那個資料夾，讀每個檔旁邊的 `.metadata.json` 和預覽圖。
+3. 都沒有：**問 ComfyUI 要清單**，能選、能送進 workflow，但沒有預覽圖和觸發詞。
+
+`loraFolders` 有填的話，不管從哪來都只列那幾個分類（第一層資料夾）。清單為什麼是空的、或為什麼沒有預覽圖，畫面上會直接講。底模面板也一樣：名稱和預覽圖先看 LoRA Manager，再看 `checkpointDir`。
 
 `comfy.checkpointDir` 沒填 → 底模預覽圖沒有，清單仍問 ComfyUI。生圖本身不受影響。
 它指的是 `checkpointPrefix` 那一層（例如 `…\models\checkpoints\illurtrious`）；填成整個 `…\models\checkpoints` 也行，伺服器會自動接上 prefix 子資料夾。
@@ -226,7 +228,8 @@ Telegram 的 bot token **不走環境變數**，在畫面右上角的齒輪面�
 
 五套版面都有「選 LoRA」大面板（兩格、分類／搜尋／觸發詞／強度），跟 flux2klein 暗房同一套。生圖時會把勾到的觸發詞拼進 POS，並在 workflow 插入 `LoraLoader`。
 
-LoRA Manager 是獨立程式（埠 7861），不在這個 MIT repo 裡（它是 GPLv3，在 `C:\projects\flux2klein\lora-manager`）。雙擊 `start_lora_manager.bat` 會去啟動那一份。在 Manager 裡點「送到 workflow」，開著的排字匣分頁會自動選入。
+ComfyUI LoRA Manager 是另一個專案（GPLv3），不在這個 MIT repo 裡：啟動檔把它裝進**你的** ComfyUI，不隨本專案散布。
+舊的獨立版 LoRA Manager（埠 7861，`start_lora_manager.bat` 從 flux2klein 啟動）還能用它的「送到 workflow」把 LoRA 推進開著的分頁。
 
 `server.py` 會讀 `config.json`（環境變數優先）。換 checkpoint／換埠也可以只靠上面這張表，不改程式。
 
