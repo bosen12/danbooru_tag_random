@@ -43,6 +43,8 @@ CLOTHING_STATE = {
     "restraints",
     "milking machine",
     "breast pump",
+    # 乳頭吸盤是器具，跟吸乳器一樣。不列進來會被 widen 成三檔。
+    "nipple suction cups",
     # 第二輪：刑具、口塞變體、跳蛋變體、束縛衣。不列進來會被 widen 成三檔。
     "rope",
     "cuffs",
@@ -898,6 +900,15 @@ SEX_ACT = {
     "dildo riding",
     "prostate milking",
     "reverse fellatio",
+    # 胸部互動這批裡，本身就是一輪主行為的。普通摸、吸、綁不進這裡。
+    "assisted paizuri",
+    "nursing paizuri",
+    "paizuri while penetrated",
+    "folding paizuri",
+    "pecjob",
+    "nursing fingering",
+    "reverse nursing fingering",
+    "reverse nursing handjob",
 }
 
 SOLO_SEX_ACT = {
@@ -1428,6 +1439,8 @@ def apply_relations(tag: str, implies: list[str], bind: list[str], mutex, sectio
 NARROW_HEAT = {
     "looking at penis": ["flash", "sex"],
     "penis awe": ["sex"],
+    # expression 會把熱度攤成三檔。驚嘆胸是看見胸部的反應，不停在誘惑。
+    "breast awe": ["flash", "sex"],
     # 衣物不在 CLOTHING_STATE 會被 widen_heat 攤成三檔。這些是性愛當下或事後的物件，
     # 不該在誘惑裡當配件。一般的 condom 維持三檔，那是已經出貨的行為。
     "used condom": ["sex"],
@@ -4760,6 +4773,295 @@ def extra_csv_round6() -> list[dict]:
     ]
 
 
+def extra_breast_grab() -> list[dict]:
+    """兩份胸部互動 CSV（2026-10-09）。118 個 in_lexicon=no，都向 Danbooru 核過現役。
+
+    熱度、父子、人手跟任務單不完全一樣的地方記在討論區。這裡只留會讓字抽不到的幾條：
+    - 單人對自己的嘴（自吸、舔自己乳頭）不帶出需要 pair 的父標籤。
+    - 隔衣玩乳不帶出 nipple stimulation。那個父標籤是露點，隔衣不該把它寫進來。
+    - 臉埋進胸不帶出 head between breasts。那個父標籤要男生，女女就整筆被拒。
+    - 乳頭吸盤是器具，跟吸乳器一樣放衣服。CLOTHING_STATE 另有一行，不然熱度會被攤成三檔。
+    - 雙手按胸口只靠 mutexExtra 佔既有的 both_arms、hand_g。引擎裡的手勢名單不能改。
+    """
+    heats = {
+        "all": list(HEATS),
+        "hot": ["tease", "flash", "sex"],
+        "flash": ["flash", "sex"],
+        "sex": ["sex"],
+    }
+    girl = ("female",)
+    boy = ("male",)
+    pair_f = ("female", "pair")
+    pair_m = ("male", "pair")
+    two_f = ("female", "2female")
+    two_m = ("male", "2male")
+    hetero = ("female", "male", "pair")
+    grp = ("group",)
+    grp_f = ("female", "group")
+    grp_ff = ("female", "group", "2female")
+    grp_ffm = ("female", "male", "group", "2female")
+    hands = ("both_arms", "hand_g")
+
+    def row(tag, section, zh, heat, gate="any", needs=(), implies=(), layer="normal", extra=()):
+        out = {
+            "tag": tag,
+            "section": section,
+            "gate": gate,
+            "heat": list(heats[heat]),
+            "mutex": None,
+            "bind": [],
+            "implies": list(implies),
+            "layer": layer,
+            "era": ["any"],
+            "needs": list(needs),
+            "zh": zh,
+        }
+        if extra:
+            out["mutexExtra"] = list(extra)
+        return out
+
+    rows = [
+        # ---- 自己的胸。特徵，不是兩人動作。
+        row("presenting own breasts", "feature", "捧胸獻上", "hot", "female", girl),
+        row("handsfree breast squeeze", "feature", "無手擠胸", "hot", "female", girl),
+        row("poking own breast", "feature", "戳自己胸", "hot", "female", girl),
+        row("sucking own breasts", "feature", "自吸乳房", "sex", "female", girl, layer="skin"),
+        row("spread nipple", "feature", "撥開乳頭", "flash", "female", girl, layer="skin"),
+        row("licking own nipple", "feature", "舔自己乳頭", "sex", "female", girl, layer="skin"),
+        row("self milking", "feature", "自己擠奶", "flash", "female", girl, ("lactation",)),
+        row("lactating into container", "feature", "擠進容器", "flash", "female", girl, ("lactation",)),
+        row("excessive lactation", "feature", "大量泌乳", "flash", "female", girl, ("lactation",)),
+        row("projectile lactation", "feature", "噴乳", "flash", "female", girl, ("lactation",)),
+        row("grabbing own pectoral", "feature", "抓自己胸肌", "hot", "male", boy),
+        row("pectoral squeeze", "feature", "擠胸肌", "hot", "male", boy),
+        row("pectoral lift", "feature", "托起胸肌", "hot", "male", boy),
+        row("pectoral press", "feature", "胸肌貼壓", "hot", "male", boy),
+        # ---- 手放在胸口。跟「手按胸口」「雙手捧胸」同一格，佔住那兩隻手。
+        row("hands on own chest", "pose", "按胸口", "all", extra=hands),
+        row("groping motion", "pose", "揉胸手勢", "hot", extra=hands),
+        row("hand on another's chest", "pose", "按對方胸", "hot", needs=("pair",)),
+        row("hands on another's chest", "pose", "雙手按胸", "hot", needs=("pair",), extra=("both_arms",)),
+        row("guiding hand", "pose", "拉手引導", "hot", needs=("pair",)),
+        # ---- 隔著衣服、沒有露點。手伸進某件衣服跟「手伸進衣服裡」一樣，只在走光以上。
+        row("hand under shirt", "pose", "手探上衣", "flash", implies=("shirt", "hand under clothes")),
+        row("hand in bra", "pose", "手探胸罩", "flash", "female", girl, ("bra",)),
+        row("hand in own bra", "pose", "手探自己胸罩", "flash", "female", girl, ("bra",)),
+        row("hand in another's bra", "pose", "手探她胸罩", "flash", "female", pair_f, ("bra",)),
+        row("hand in bikini", "pose", "手探泳裝", "flash", "female", girl),
+        row("hand in another's shirt", "pose", "手探她衫", "flash", needs=("pair",)),
+        row("hand in another's clothes", "pose", "手探她衣", "flash", needs=("pair",)),
+        row("imminent grope", "pose", "快摸", "flash", needs=("pair",)),
+        row("surrounded by hands", "pose", "被手包圍", "flash", needs=grp),
+        row("nipple guessing game (meme)", "pose", "猜乳頭", "flash", "female", girl),
+        row("pectoral docking", "pose", "胸肌相抵", "flash", "male", two_m, ("pectoral press",)),
+        # ---- 貼著、量、搔。名字裡有 breasts 的全年齡本來就會被擋；沒有的維持誘惑。
+        row("face to breasts", "pose", "臉貼乳", "hot", "female", pair_f),
+        row("breasts on head", "pose", "胸當枕", "hot", "female", pair_f, ("breast rest",)),
+        row("breasts on another's back", "pose", "胸壓背", "hot", "female", pair_f, ("breast press",)),
+        row("breast pillow", "pose", "胸枕", "hot", "female", pair_f),
+        row("cheek-to-breast", "pose", "臉頰貼胸", "hot", "female", pair_f),
+        row("imminent breast grab", "pose", "快抓胸", "hot", "female", pair_f),
+        row("covering another's breasts", "pose", "遮她的胸", "hot", "female", pair_f),
+        row("tickling breasts", "pose", "搔乳房", "hot", "female", pair_f),
+        row("torso grab", "pose", "抓軀幹", "hot", needs=("pair",)),
+        row("weighing breasts", "pose", "掂胸", "hot", "female", girl),
+        row("finger between breasts", "pose", "指插乳溝", "hot", "female", girl),
+        row("bust measuring", "pose", "量胸圍", "hot", "female", girl),
+        row("breasts on shoulders", "pose", "胸擱肩", "hot", "female", pair_f),
+        row("breast shake", "pose", "搖乳房", "hot", "female", girl),
+        row("fanning breasts", "pose", "搧胸", "hot", "female", girl),
+        row("wiping breasts", "pose", "擦乳房", "hot", "female", girl),
+        # ---- 胸貼胸。露點的接觸只在性愛。不帶出要男生的乳壓臉、頭埋乳溝。
+        row("symmetrical docking", "pose", "胸貼胸", "sex", "female", two_f, ("breast press",)),
+        row("asymmetrical docking", "pose", "錯胸", "sex", "female", two_f, ("breast press",)),
+        row("breast on breast", "pose", "胸疊胸", "sex", "female", two_f),
+        row("nipple-to-nipple", "pose", "乳頭相抵", "sex", "female", two_f, layer="skin"),
+        row("nipples pressed together", "pose", "乳頭互抵", "sex", "female", two_f, layer="skin"),
+        row("breast-to-pectoral docking", "pose", "胸壓胸肌", "sex", needs=hetero),
+        row("grabbed breast over shoulder", "pose", "肩後抓胸", "sex", "female", pair_f, ("grabbing another's breast",)),
+        # ---- 摸到乳頭或明確的性接觸。flash+sex 的這幾個同時在 groups.SEX，不然會掉進走光。
+        row("nipple rub", "pose", "搓乳頭", "flash", "female", girl, ("nipple stimulation",), "skin"),
+        row("nipple rub through clothes", "pose", "隔衣搓乳", "flash", "female", girl, ("nipple rub",)),
+        row("nipple tweak through clothes", "pose", "隔衣捏乳", "flash", "female", girl, ("nipple tweak",)),
+        row("nipple stimulation through clothes", "pose", "隔衣玩乳", "flash", "female", girl),
+        row("nipple flick", "pose", "彈乳頭", "flash", "female", girl, ("nipple stimulation",), "skin"),
+        row("nipple press", "pose", "按乳頭", "flash", "female", girl, ("nipple stimulation",), "skin"),
+        row("nipple push", "pose", "推乳頭", "flash", "female", girl, ("nipple stimulation",), "skin"),
+        row("finger on nipple", "pose", "指按乳頭", "flash", "female", girl, layer="skin"),
+        row("tickling nipples", "pose", "搔乳頭", "flash", "female", pair_f, layer="skin"),
+        row("poking another's breast", "pose", "戳她的胸", "flash", "female", pair_f),
+        row("pectoral grab", "pose", "抓胸肌", "flash", "male", pair_m),
+        row("breast massage", "pose", "按摩乳房", "flash", "female", pair_f),
+        row("breast pull", "pose", "拉乳房", "sex", "female", girl),
+        row("hand grabbing both breasts", "pose", "單手抓雙乳", "flash", "female", girl),
+        row("areola measuring", "pose", "量乳暈", "flash", "female", girl, layer="skin"),
+        row("nipple stimulation (female on male)", "pose", "女玩男乳", "flash", needs=("male", "female"), layer="skin"),
+        row("hand milking", "pose", "手擠奶", "flash", "female", pair_f, ("lactation",)),
+        row("forced lactation", "pose", "強迫泌乳", "flash", "female", pair_f, ("lactation",)),
+        row("slapping with breasts", "pose", "用胸甩人", "sex", "female", pair_f),
+        row("breast crush", "pose", "胸壓碎", "sex", "female", pair_f),
+        # ---- 嘴。隔衣吸乳只在性愛，因為它帶出的吸吮乳房本身只在性愛。
+        row("face between breasts", "pose", "埋胸", "sex", "female", pair_f),
+        row("licking breast", "pose", "舔乳房", "sex", "female", pair_f, ("licking",)),
+        row("biting nipple", "pose", "咬乳頭", "sex", "female", pair_f, ("nipple stimulation",), "skin"),
+        row("biting breast", "pose", "咬乳房", "sex", "female", pair_f),
+        row("kissing breast", "pose", "親乳房", "sex", "female", pair_f),
+        row("sucking both nipples", "pose", "同時吸雙乳", "sex", "female", pair_f, layer="skin"),
+        row("mutual breast sucking", "pose", "互吸乳房", "sex", "female", two_f, ("breast sucking",)),
+        row("breast sucking through clothes", "pose", "隔衣吸乳", "sex", "female", pair_f, ("breast sucking",)),
+        row("sucking male nipple", "pose", "吸男乳頭", "sex", "male", pair_m, layer="skin"),
+        row("penis to breast", "pose", "陰莖蹭胸", "sex", "female", hetero),
+        row("penis under breasts", "pose", "陰莖從下", "sex", "female", hetero),
+        row("penis over breasts", "pose", "陰莖擱胸", "sex", "female", hetero),
+        row("twisted breasts", "pose", "扭轉雙乳", "sex", "female", hetero),
+        row("folding paizuri", "pose", "對折乳交", "sex", "female", hetero, ("paizuri",)),
+        row("nursing paizuri", "pose", "哺乳乳交", "sex", "female", hetero, ("paizuri",)),
+        row("assisted paizuri", "pose", "幫忙乳交", "sex", "female", ("female", "male", "pair", "group", "2female"), ("paizuri",)),
+        row("paizuri while penetrated", "pose", "插入中乳交", "sex", "female", ("female", "male", "pair", "group", "2male"), ("paizuri",)),
+        row("nursing fingering", "pose", "哺乳指交", "sex", "female", pair_f, ("fingering",)),
+        row("reverse nursing fingering", "pose", "反哺乳指交", "sex", "female", pair_f, ("fingering",)),
+        row("reverse nursing handjob", "pose", "反哺乳手交", "sex", needs=hetero, implies=("handjob",)),
+        row("pecjob", "pose", "胸肌夾莖", "sex", "male", ("male", "2male", "pair")),
+        # ---- 三個人以上。group 只保證三人。多個女生做同一件事的加 2female，卡片才不會畫成多個男生。
+        row("grabbing multiple others' breasts", "pose", "抓多人胸", "sex", "female", grp_ffm),
+        row("cooperative breast sucking", "pose", "合力吸乳", "sex", "female", grp_ff),
+        row("cooperative nipple licking", "pose", "合力舔乳", "sex", "female", grp_ffm, layer="skin"),
+        row("sucking on multiple breasts", "pose", "吸多人胸", "sex", "female", grp_ffm),
+        row("cooperative breast smother", "pose", "合力悶胸", "sex", "female", grp_ff, ("teamwork (sexual)",)),
+        row("teamwork (sexual)", "pose", "協力性事", "sex", needs=("group", "2female")),
+        row("take your pick", "pose", "任君挑選", "sex", needs=("group", "2female")),
+        row("breast pile", "pose", "乳堆", "sex", "female", grp_ff),
+        row("surrounded by breasts", "pose", "被胸包圍", "sex", "female", ("female", "2female", "crowd")),
+        # ---- 拘束、踩、打。只在性愛。
+        row("bound breasts", "pose", "綁胸", "sex", "female", girl),
+        row("tied breast", "pose", "綁住乳房", "sex", "female", girl),
+        row("slapping breasts", "pose", "拍打乳房", "sex", "female", pair_f),
+        row("breast punch", "pose", "揍乳房", "sex", "female", pair_f),
+        row("foot on another's breast", "pose", "腳踩乳房", "sex", "female", pair_f),
+        row("nipple torture", "pose", "虐乳頭", "sex", "female", girl, ("nipple stimulation",), "skin"),
+        row("tied nipples", "pose", "綁乳頭", "sex", "female", girl, layer="skin"),
+        row("nipple weights", "pose", "乳頭吊重", "sex", "female", girl, layer="skin"),
+        row("nipple leash", "pose", "乳頭牽繩", "sex", "female", girl, layer="skin"),
+        row("nipple injection", "pose", "乳頭注射", "sex", "female", girl, ("nipple stimulation",), "skin"),
+        # ---- 觸手。父標籤 tentacles 要女生，所以這幾個也要。
+        row("tentacle between breasts", "pose", "觸手夾乳", "sex", "female", girl, ("tentacles",)),
+        row("grabbed by tentacles", "pose", "觸手抓住", "sex", "female", girl, ("tentacles",)),
+        row("tentacles under clothes", "pose", "觸手入衣", "sex", "female", girl, ("tentacles",)),
+        row("suction tentacles", "pose", "吸盤觸手", "sex", "female", girl, ("tentacles",)),
+        # ---- 器具。不是動作。
+        row("nipple suction cups", "clothing", "乳頭吸盤", "sex", "female", girl, ("lactation",), "accessory"),
+    ]
+    tags = [r["tag"] for r in rows]
+    labels = [r["zh"] for r in rows]
+    if len(tags) != 118 or len(set(tags)) != 118:
+        raise SystemExit(f"extra_breast_grab count {len(tags)} unique {len(set(tags))}")
+    if len(set(labels)) != 118:
+        raise SystemExit("extra_breast_grab zh collide")
+    for r in rows:
+        if not 2 <= len(r["zh"]) <= 6:
+            raise SystemExit(f"zh length {r['tag']} {r['zh']}")
+    return rows
+
+
+def extra_breast_grab_r3() -> list[dict]:
+    """第三、四輪 CSV（2026-10-09）。38 個都向 Danbooru 核過現役，沒有一個已在詞庫。
+
+    會讓整筆抽不到的，這裡不帶：
+    - 掀胸罩不帶 clothes lift。父標籤要外衣，身上只有胸罩時會整筆被拒。
+    - 拉運動內衣、拉吊帶背心不帶 clothes pull。運動內衣不算外衣；背心跟外衣搶同一格，
+      而且父標籤驗的時候背心還沒寫進去。
+    - 頭夾胸肌不帶 head between breasts，也不帶詞庫裡沒有的 between pectorals。
+    - 拉穿洞不帶 nipple rings。那個父標籤是性愛、女生、配件，耳洞一拉就被拒。
+    """
+    heats = {
+        "all": list(HEATS),
+        "flash": ["flash", "sex"],
+        "sex": ["sex"],
+    }
+    girl = ("female",)
+    pair = ("pair",)
+    pair_f = ("female", "pair")
+    pair_m = ("male", "pair")
+    two_f = ("female", "2female")
+    modern = ["modern"]
+    fantasy = ["medieval", "modern"]
+
+    def row(tag, section, zh, heat, gate="any", needs=(), implies=(), era=None, mutex=None):
+        return {
+            "tag": tag,
+            "section": section,
+            "gate": gate,
+            "heat": list(heats[heat]),
+            "mutex": mutex,
+            "bind": [],
+            "implies": list(implies),
+            "layer": "normal",
+            "era": list(era) if era else ["any"],
+            "needs": list(needs),
+            "zh": zh,
+        }
+
+    rows = [
+        # ---- 角色自己的手。不是畫面外伸進來的那隻，也不是性愛動作。
+        row("animal hands", "feature", "獸掌", "all"),
+        row("extra arms", "feature", "多手臂", "all"),
+        row("extra hands", "feature", "多手", "all"),
+        row("clawed hands", "feature", "爪手", "all"),
+        row("mechanical hands", "feature", "機械手", "all", era=fantasy),
+        # ---- 自己的姿勢。
+        row("against mirror", "pose", "貼鏡子", "all", implies=("mirror",)),
+        row("arm across chest", "pose", "橫擋胸", "all"),
+        row("self hug", "pose", "抱自己", "all"),
+        # ---- 兩人以上的身體接觸。沒有露點，跟擁抱同一檔。
+        row("arm hug", "pose", "抱手臂", "all", needs=pair),
+        row("head hug", "pose", "抱住頭", "all", needs=pair),
+        row("double arm hug", "pose", "雙抱手臂", "all", needs=("group", "2female")),
+        row("caress", "pose", "撫摸", "all", needs=pair),
+        row("girl sandwich", "pose", "兩女夾中", "all", "female", ("female", "group", "2female"), ("sandwiched",)),
+        row("head on chest", "pose", "頭靠胸", "all", needs=pair),
+        row("breast envy", "pose", "羨慕胸", "all", "female", pair_f),
+        row("breast contest", "pose", "比胸圍", "all", "female", two_f),
+        row("face to pecs", "pose", "臉貼胸肌", "all", "male", pair_m),
+        # ---- 畫面裡的手。不是這個人的身體。wiki 沒有寫成抓胸，所以三檔都進。
+        row("disembodied hand", "pose", "浮空手", "all"),
+        row("shadow hands", "pose", "影子手", "all"),
+        row("giant hand", "pose", "巨手", "all"),
+        row("too many hands", "pose", "一堆手", "all"),
+        # ---- 名字裡沒有 breast。放進走光，全年齡牌包才不會收到比胸、胸上放東西。
+        row("bust chart", "pose", "排比胸", "flash", "female", ("female", "2female", "crowd")),
+        row("tawawa challenge", "pose", "胸上平衡", "flash", "female", girl, era=modern),
+        # ---- 掀、拉、滑。跟拉下胸罩一樣不佔衣服動作格。衣服本身靠衣服鍵或父標籤。
+        row("bra lift", "pose", "掀胸罩", "flash", "female", girl, ("bra",), modern),
+        row("bra slip", "pose", "胸罩滑落", "flash", "female", girl, ("bra",), modern),
+        row("sports bra pull", "pose", "拉運動內衣", "flash", "female", girl, ("sports bra",), modern),
+        row("leotard pull", "pose", "拉緊身衣", "flash", "female", girl, ("leotard",), modern),
+        row("bikini top pull", "pose", "拉比基尼上衣", "flash", "female", girl, ("bikini", "clothes pull"), modern),
+        row("camisole pull", "pose", "拉吊帶背心", "flash", "female", girl, ("camisole",), modern),
+        row("strap pull", "pose", "拉衣帶", "flash", "female", girl, era=modern),
+        row("double strap slip", "pose", "雙帶滑落", "flash", "female", girl, ("strap slip",)),
+        row("piercing pull", "pose", "拉穿洞", "flash", implies=("piercing",)),
+        row("oppai challenge", "pose", "露胸挑戰", "flash", "female", girl, ("flashing",), modern),
+        row("arm between breasts", "pose", "手臂夾胸", "flash", "female", girl, ("between breasts",)),
+        row("covering one breast", "pose", "遮一邊胸", "flash", "female", girl, ("covering privates",)),
+        # ---- 表情。mutex 讓它跟其他臉互斥；熱度由 NARROW_HEAT 釘住。
+        row("breast awe", "pose", "驚嘆胸", "flash", needs=pair_f, mutex="expression"),
+        # ---- 胸是男生的。頭埋進去跟頭埋乳溝同一檔，但不要求女生。
+        row("head between pecs", "pose", "頭夾胸肌", "sex", "male", pair_m),
+        # ---- wiki：性場面裡把男方畫成看不見，好露出伴侶。不是一種種族。
+        row("invisible man", "pose", "隱形人", "sex", "male", pair_m),
+    ]
+    tags = [r["tag"] for r in rows]
+    labels = [r["zh"] for r in rows]
+    if len(tags) != 38 or len(set(tags)) != 38:
+        raise SystemExit(f"extra_breast_grab_r3 count {len(tags)} unique {len(set(tags))}")
+    if len(set(labels)) != 38:
+        raise SystemExit("extra_breast_grab_r3 zh collide")
+    for r in rows:
+        if not 2 <= len(r["zh"]) <= 6:
+            raise SystemExit(f"zh length {r['tag']} {r['zh']}")
+    return rows
+
+
 def main() -> None:
     rows: list[dict] = []
     for path in sorted(PARTS.glob("*.json")):
@@ -4788,6 +5090,8 @@ def main() -> None:
     rows.extend(extra_csv_round4())
     rows.extend(extra_csv_round5())
     rows.extend(extra_csv_round6())
+    rows.extend(extra_breast_grab())
+    rows.extend(extra_breast_grab_r3())
     rows.extend(extra_loli_tags())
     rows.extend(extra_shota_tags())
     rows.extend(extra_style_tags())

@@ -100,6 +100,41 @@ const tagsOf = (positive) => positive.split(",").map((s) => s.trim());
   ok("觸手性交的牌有觸手、沒有 yaoi", !!tentacle && tagsOf(tentacle.positive).includes("tentacles") && !(tentacle.negative || "").includes("yaoi"), tentacle?.positive);
   const nurse = jobs.find((x) => x.tag === "nursing handjob");
   ok("乳交手交的牌看得到手交", !!nurse && tagsOf(nurse.positive).includes("handjob") && tagsOf(nurse.positive).includes("1boy"), nurse?.positive);
+  // group 預設是一個女生加多個男生。下面這些 Danbooru 上是多個女生，或是兩個男生、沒有女生。
+  const castOfJob = (tag) => tagsOf(jobs.find((x) => x.tag === tag)?.positive || "");
+  const castCases = [
+    ["teamwork (sexual)", ["2girls", "1boy", "multiple girls", "full body"], ["multiple boys", "yuri", "1girl"]],
+    ["girl sandwich", ["3girls", "multiple girls", "sandwiched"], ["yuri", "1boy", "multiple boys"]],
+    ["bust chart", ["4girls", "multiple girls", "full body"], ["1boy", "multiple boys"]],
+    ["surrounded by breasts", ["4girls", "multiple girls", "full body"], ["1boy", "multiple boys"]],
+    ["cooperative breast smother", ["3girls", "multiple girls", "teamwork (sexual)", "full body"], ["multiple boys", "1boy"]],
+    ["cooperative breast sucking", ["3girls", "multiple girls"], ["multiple boys", "1boy"]],
+    ["breast pile", ["3girls", "multiple girls"], ["multiple boys", "1boy"]],
+    ["take your pick", ["3girls", "multiple girls"], ["multiple boys", "1boy"]],
+    ["double arm hug", ["3girls", "multiple girls"], ["multiple boys", "1boy"]],
+    ["sandwiched", ["3girls", "multiple girls"], ["multiple boys", "yuri"]],
+    ["group picture", ["3girls", "multiple girls", "full body"], ["multiple boys"]],
+    ["grabbing multiple others' breasts", ["2girls", "1boy"], ["multiple boys", "yuri"]],
+    ["cooperative nipple licking", ["2girls", "1boy"], ["multiple boys", "yuri"]],
+    ["sucking on multiple breasts", ["2girls", "1boy"], ["multiple boys", "yuri"]],
+    ["assisted paizuri", ["2girls", "1boy", "multiple girls", "paizuri", "full body"], ["multiple boys"]],
+    ["paizuri while penetrated", ["1girl", "2boys", "paizuri"], ["multiple girls", "multiple boys"]],
+    ["pecjob", ["2boys"], ["1girl", "multiple girls"]],
+    ["pectoral docking", ["2boys"], ["1girl", "multiple girls"]],
+    ["gangbang", ["1girl", "multiple boys"], ["multiple girls", "2girls"]],
+    ["threesome", ["1girl", "multiple boys"], ["multiple girls"]],
+    ["group sex", ["1girl", "multiple boys"], ["multiple girls"]],
+    ["surrounded by hands", ["1girl", "multiple boys"], ["multiple girls"]],
+    ["ffm threesome", ["2girls", "1boy"], ["yuri", "multiple boys"]],
+    ["mmf threesome", ["1girl", "2boys"], ["multiple girls"]],
+    ["cooperative handjob", ["2girls", "1boy"], ["multiple boys", "yuri"]],
+  ];
+  for (const [tag, want, forbid] of castCases) {
+    const tags = castOfJob(tag);
+    const missing = want.filter((w) => !tags.includes(w));
+    const hit = forbid.filter((w) => tags.includes(w));
+    ok(`${tag} 的人數`, tags.length > 0 && !missing.length && !hit.length, `missing=${missing.join("/")} forbid=${hit.join("/")} :: ${tags.slice(0, 12).join(", ")}`);
+  }
 }
 
 /* ---------- 分級尾巴 ---------- */

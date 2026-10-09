@@ -54,9 +54,11 @@ const GOLD = {
   // 2026-10-05 第六次：第三輪 104 個現役詞進池。這張抽到卷髮、腕銬、筆電，仍是 1girl solo。
   // 2026-10-06：第四輪、地點與第五輪進池。這張換成發光頭髮、鼻血、洋裝、山。仍是 1girl solo。
   // 2026-10-06 第六輪：CSV 119 個現役詞進池（袖長、蝴蝶結、緞帶、花、獸耳這些）。仍是 1girl solo，沒有男生或人類陰莖。
+  // 2026-10-09：胸部互動 118 個現役詞進池。這張換成裸體、眼罩、球場。仍是 1girl solo，沒有男生或人類陰莖。
+  // 2026-10-09 第二次：第三、四輪 38 個現役詞進池。這張換成衝浪衣、百褶裙、隔衣自慰、太空船。仍是 1girl solo，沒有男生或人類陰莖。
   1: {
-    rng: 642,
-    pos: "1girl, solo, pixie cut, orange eyes, grey hair, sidelocks, large breasts, mole on breast, nose blush, superhero costume, halterneck, pantyhose, denim, puffy short sleeves, puffy sleeves, short sleeves, indian style, upside-down, looking around, crazy smile, tape bondage, bondage, wax play, masturbation, simple background, spotlight, winter, curry, handgun, gun, palm tree, nsfw, explicit, masterpiece, best quality, amazing quality",
+    rng: 699,
+    pos: "1girl, solo, pixie cut, orange eyes, grey hair, sidelocks, large breasts, blunt bangs, wet hair, split-color hair, rash guard, pleated skirt, skirt, garter straps, shiny clothes, maid apron, masturbation through clothes, reclining, fisheye, peeking out, peeking, evil smile, spacecraft, space, twilight, shadow, diffraction spikes, lantern festival, nsfw, explicit, masterpiece, best quality, amazing quality",
   },
   // 2026-09-29：路人進了環境池，同一顆亂數落到別的環境字，後面的姿勢跟著換。
   // seed 42 少了束縛和手銬（手銬是束縛之後才拉的），多了咬唇。seed 100 花瓣換成剪影。
@@ -69,18 +71,22 @@ const GOLD = {
   // 2026-10-06：第四輪、地點與第五輪進池。這張換成自由女神、超級英雄裝、拉鍊。仍是 1girl solo，沒有男生或人類陰莖。
   // 2026-10-06 第六輪：CSV 119 個現役詞進池（袖長、蝴蝶結、緞帶、花、獸耳這些）。仍是 1girl solo，沒有男生或人類陰莖。
   // 2026-10-06：花紋衣服拿掉、駕駛員服換成機甲駕駛服。衣服池少一個疊層，這張換成破襯衫、藍內褲、屈膝禮。仍是 1girl solo，沒有男生或人類陰莖。
+  // 2026-10-09：胸部互動 118 個現役詞進池。這張換成羽毛翅膀、紫洋裝、指交、晴空塔。仍是 1girl solo，沒有男生或人類陰莖。
+  // 2026-10-09 第二次：第三、四輪 38 個現役詞進池。這張換成大量泌乳、觸手夾乳、玄關。仍是 1girl solo，沒有男生或人類陰莖。
   42: {
-    rng: 671,
-    pos: "1girl, solo, very short hair, yellow eyes, aqua hair, undercut, medium breasts, whip marks, huge ass, ass tattoo, microskirt, skirt, oversized clothes, torn shirt, shirt, blue panties, panties, female masturbation, curtsey, standing, from behind, looking down, ahegao, canyon, outdoors, twilight, sunlight, rickshaw, traffic light, nsfw, explicit, masterpiece, best quality, amazing quality",
+    rng: 689,
+    pos: "1girl, solo, very short hair, yellow eyes, aqua hair, undercut, huge breasts, hair flower, excessive lactation, lactation, completely nude, jewelry, glasses, neck ribbon, ribbon, masturbation, squatting, portrait, averting eyes, naughty face, tentacle between breasts, tentacles, genkan, indoors, twilight, moonlight, confetti, nsfw, explicit, masterpiece, best quality, amazing quality",
   },
   // 2026-10-05 第五次：女僕圍裙是布料疊層，不占連身裙。仍是 1girl solo。
   // 2026-10-05 第六次：爆炸頭跟長裙、探頭偷看。仍是 1girl solo。
   // 2026-10-06：第四輪、地點與第五輪進池。這張換成巫女、逛街、都市風景。仍是 1girl solo。
   // 2026-10-06 第二次：購物的場地補上店家。這張仍是逛街，都市風景換成市集攤。仍是 1girl solo，沒有男生或人類陰莖。
   // 2026-10-06 第六輪：CSV 119 個現役詞進池（袖長、蝴蝶結、緞帶、花、獸耳這些）。仍是 1girl solo，沒有男生或人類陰莖。
+  // 2026-10-09：胸部互動 118 個現役詞進池。這張抽到搧胸，背景有人群，所以是 solo focus 不是 solo。沒有男生或人類陰莖。
+  // 2026-10-09 第二次：第三、四輪 38 個現役詞進池。這張沒有人群，回到 solo。沒有男生或人類陰莖。
   100: {
-    rng: 709,
-    pos: "1girl, solo, medium hair, grey eyes, white hair, sidelocks, medium breasts, lipstick mark on neck, lipstick mark, closed eyes, tears, red shirt, shirt, garter straps, zipper pull tab, watch, long skirt, skirt, archery, curtsey, standing, cowboy shot, crying, head on pillow, sports court, outdoors, twilight, spotlight, water, halloween, pillow, bow (weapon), nsfw, explicit, masterpiece, best quality, amazing quality",
+    rng: 732,
+    pos: "1girl, solo, medium hair, grey eyes, white hair, sidelocks, gigantic breasts, nose blush, tareme, plump, crop top, single thighhigh, thighhighs, dolphin shorts, shorts, archery, falling, full body, looking at mirror, confident, struggling, sports court, outdoors, cherry blossoms, sunset, sunbeam, mooncake, bow (weapon), nsfw, explicit, masterpiece, best quality, amazing quality",
   },
   // 2026-09-29 第三次：這張是性愛。淋浴間換成海邊，衣服和光線跟著換。仍是 1girl solo。
   // 2026-10-04（9a087a5）：帶衣物名的姿勢（hand in panties 這類）在候選階段就要先有對的衣服，
@@ -93,9 +99,11 @@ const GOLD = {
   // 2026-10-05 第六次：油頭後梳佔髮型格，咬痕、褲裝、計程車。仍是 1girl solo。
   // 2026-10-06：第四輪、地點與第五輪進池。這張換成後台、武士刀、地藏。仍是 1girl solo，沒有男生或人類陰莖。
   // 2026-10-06 第六輪：CSV 119 個現役詞進池（袖長、蝴蝶結、緞帶、花、獸耳這些）。仍是 1girl solo，沒有男生或人類陰莖。
+  // 2026-10-09：胸部互動 118 個現役詞進池。這張抽到舔自己乳頭。仍是 1girl solo，沒有男生或人類陰莖。
+  // 2026-10-09 第二次：第三、四輪 38 個現役詞進池。這張換成花店、坐在物件上。仍是 1girl solo，沒有男生或人類陰莖。
   999: {
-    rng: 709,
-    pos: "1girl, solo, long hair, glowing eyes, grey hair, blunt bangs, gigantic breasts, branded, mascara, red lips, lipstick, nude, choker, masquerade mask, mask, latex gloves, gloves, earrings, bag, nipple rings, piercing, masturbation, curtsey, standing, close-up, sideways glance, flustered, space, dusk, ceiling light, autumn leaves, film grain, lollipop, nsfw, explicit, masterpiece, best quality, amazing quality",
+    rng: 699,
+    pos: "1girl, solo, long hair, glowing eyes, grey hair, blunt bangs, flat chest, parted hair, muscular female, muscular, toned, nude, sunglasses, tooth necklace, necklace, hairband, bag, nipple rings, piercing, masturbation, sitting on object, sitting, pov, looking at viewer, flustered, flower shop, indoors, shop, dusk, city lights, cake, nsfw, explicit, masterpiece, best quality, amazing quality",
   },
   // 2026-09-23：走光補抽改成「所有成立的走光動作同一池、衣服吻合的權重 10」之後，
   // 這張的走光動作從 exhibitionism 換成 cameltoe（她穿 thong，吻合），場景跟著換。
@@ -106,9 +114,11 @@ const GOLD = {
   // 2026-10-06：第四輪、地點與第五輪進池。這張換成公園、下雨、走開帶出走路。仍是 1girl solo，沒有男生或人類陰莖。
   // 2026-10-06 第二次：畫畫可以在女僕咖啡廳。這張從公園換成女僕咖啡廳和咖啡廳。仍是 1girl solo，沒有男生或人類陰莖。
   // 2026-10-06 第六輪：CSV 119 個現役詞進池（袖長、蝴蝶結、緞帶、花、獸耳這些）。仍是 1girl solo，沒有男生或人類陰莖。
+  // 2026-10-09：胸部互動 118 個現役詞進池。這張換成辦公室、解開的襯衫。仍是 1girl solo，沒有男生或人類陰莖。
+  // 2026-10-09 第二次：第三、四輪 38 個現役詞進池。這張換成粉紅胸罩、手探胸罩、教室。仍是 1girl solo，沒有男生或人類陰莖。
   2026: {
-    rng: 702,
-    pos: "1girl, solo, bob cut, purple eyes, white hair, glowing hair, flat chest, yandere, messy hair, long eyelashes, sleeveless shirt, shirt, micro shorts, shorts, lolita fashion, watch, reading, falling, over shoulder, sideways glance, confident, downblouse, book, clubroom, indoors, dusk, lamp, strawberry, nsfw, explicit, masterpiece, best quality, amazing quality",
+    rng: 716,
+    pos: "1girl, solo, bob cut, purple eyes, white hair, glowing hair, huge breasts, bangs pinned back, tomboy, scar, backless outfit, pink bra, bra, leather, sailor collar, loafers, reading, indian style, portrait, looking outside, drunk, hand in bra, book, classroom, indoors, twilight, ceiling light, graffiti, nsfw, explicit, masterpiece, best quality, amazing quality",
   },
 };
 
@@ -293,7 +303,15 @@ const MATRIX_SEEDS = 200;
 // 2026-10-06：patterned clothing 停用且沒有後繼，拿掉。pilot suit 拆成三種衣服，
 // 這一格換成 mecha pilot suit。種子 1、999 逐字沒變。42、100、2026 換了衣服，
 // 仍是 1girl solo，沒有男生，也沒有人類陰莖。指紋 bc0ae058 → f55bf037。
-const MATRIX_GOLD = "f55bf037";
+// 2026-10-09：胸部互動 118 個現役詞進池。單人女性能進的是自己摸自己、隔衣、泌乳狀態這類；
+// 要兩人、男生或三個人的不進這五張預設。五張仍沒有男生或人類陰莖。
+// seed 100 因為背景人群變成 solo focus。指紋 f55bf037 → c9efb1fa。
+// 2026-10-09 第二次：第三、四輪 38 個現役詞進池。五張仍是 1girl solo，沒有男生或人類陰莖。
+// seed 100 這次沒有人群，回到 solo。指紋 c9efb1fa → 132b101b。
+// 2026-10-09 第三次：協力性事這類 group 的人數。多個女生的標籤加上 2female；
+// 排比胸、被胸包圍改成至少四個人。五張預設金標逐字沒變，仍是 1girl solo。
+// 指紋 132b101b → 09132e6e。
+const MATRIX_GOLD = "09132e6e";
 
 function matrixSettings(over) {
   const s = defaultSettings(data);

@@ -217,6 +217,9 @@ BODY_ANY = {
     "backboob",
     "cleft of venus",
     "stomach",
+    # 名字裡沒有 breast／nipple，子字串規則收不進 body_f。
+    "self milking",
+    "lactating into container",
 }
 
 SKY = {
@@ -661,6 +664,24 @@ SEX = {
     "cum on food",
     "nyotaimori",
     "underwater sex",
+    # 胸部互動：heat 是 flash+sex 的性接觸。不進這個集合會被收成走光。
+    "nipple rub",
+    "nipple rub through clothes",
+    "nipple tweak through clothes",
+    "nipple stimulation through clothes",
+    "nipple flick",
+    "nipple press",
+    "nipple push",
+    "finger on nipple",
+    "tickling nipples",
+    "poking another's breast",
+    "pectoral grab",
+    "breast massage",
+    "hand grabbing both breasts",
+    "areola measuring",
+    "hand milking",
+    "forced lactation",
+    "nipple stimulation (female on male)",
 }
 
 
