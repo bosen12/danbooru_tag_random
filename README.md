@@ -208,12 +208,17 @@ cp config.example.json config.json
 
 預設仍是專案內建的 Illustrious 流程。要改用自己的圖：
 
-1. 在 ComfyUI 用 **檔案 → 匯出工作流 (API)**（不是一般 Save）。
-2. 點狀態列的 Comfy 指示燈或「工作流」，把 JSON 拖進面板（或選檔）。
-3. 指定 Positive Prompt 要寫進哪個 node / input。其餘欄位預設 Keep workflow value。
-4. Generate 只改 mapping 指定的欄位，原始 JSON 不會被改。
+1. 打開頂欄的「工作流」，把 **ComfyUI 用那套工作流畫的任何一張 PNG** 拖進面板（圖裡就存著工作流）。
+   也可以用 ComfyUI 的 **檔案 → 匯出工作流 (API)** 存 JSON 再拖進來。
+2. 正向提示詞寫進哪個節點會自動猜（取樣器的 positive 那一個），猜不到再點一下指定。
+3. 面板的「種子、尺寸、底模」一區說明排字匣會改什麼：
+   - 種子：每個取樣器都換（KSamplerAdvanced 的 noise_seed、兩段式 Hires、從 Primitive 接的種子都算），作品冊記的種子就是實際用的。
+   - 尺寸：有 EmptyLatentImage／EmptySD3LatentImage 就照規則裡的尺寸。
+   - 底模：預設保留工作流自己的（頂欄的底模名稱會劃掉）；按「用頂欄選的」改成跟著頂欄。
+4. LoRA 面板選的 LoRA：工作流沒有 LoRA 節點、或沒有指定要改哪個，就自動接在底模後面，工作流自己的 LoRA 照留。
+5. 出圖時只改上面這些，存著的原始工作流不會被改。
 
-一般 ComfyUI workflow（有 `nodes` / `links`）會被拒絕並提示改匯出 API 格式。複雜圖（ControlNet、upscale、custom nodes）只要不刪 node，都可以只注入 prompt。
+只存了編輯器格式（有 `nodes` / `links`）的 JSON 不能直接用，請改拖 PNG 或匯出 API 格式。複雜圖（ControlNet、upscale、custom nodes）只要不刪 node，都可以只注入 prompt。
 
 其他常用的：`comfy.api`（ComfyUI 位置，畫面也可以改）、`comfy.checkpointDir`（只給底模預覽圖）、
 `server.port` / `server.host` / `server.allowNet`、`paths.webDir`（版面 `web`／`web1`／`web2`／`web3`）、
