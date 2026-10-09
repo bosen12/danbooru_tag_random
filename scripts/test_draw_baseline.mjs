@@ -73,9 +73,10 @@ const GOLD = {
   // 2026-10-06：花紋衣服拿掉、駕駛員服換成機甲駕駛服。衣服池少一個疊層，這張換成破襯衫、藍內褲、屈膝禮。仍是 1girl solo，沒有男生或人類陰莖。
   // 2026-10-09：胸部互動 118 個現役詞進池。這張換成羽毛翅膀、紫洋裝、指交、晴空塔。仍是 1girl solo，沒有男生或人類陰莖。
   // 2026-10-09 第二次：第三、四輪 38 個現役詞進池。這張換成大量泌乳、觸手夾乳、玄關。仍是 1girl solo，沒有男生或人類陰莖。
+  // 2026-10-09 第四次：正常場景不再自己補手的構圖母題（HAND_MOTIF）。這張只有觸手夾乳換成乳頭牽繩。仍是 1girl solo，沒有男生或人類陰莖。
   42: {
     rng: 689,
-    pos: "1girl, solo, very short hair, yellow eyes, aqua hair, undercut, huge breasts, hair flower, excessive lactation, lactation, completely nude, jewelry, glasses, neck ribbon, ribbon, masturbation, squatting, portrait, averting eyes, naughty face, tentacle between breasts, tentacles, genkan, indoors, twilight, moonlight, confetti, nsfw, explicit, masterpiece, best quality, amazing quality",
+    pos: "1girl, solo, very short hair, yellow eyes, aqua hair, undercut, huge breasts, hair flower, excessive lactation, lactation, completely nude, jewelry, glasses, neck ribbon, ribbon, masturbation, squatting, portrait, averting eyes, naughty face, nipple leash, genkan, indoors, twilight, moonlight, confetti, nsfw, explicit, masterpiece, best quality, amazing quality",
   },
   // 2026-10-05 第五次：女僕圍裙是布料疊層，不占連身裙。仍是 1girl solo。
   // 2026-10-05 第六次：爆炸頭跟長裙、探頭偷看。仍是 1girl solo。
@@ -84,9 +85,10 @@ const GOLD = {
   // 2026-10-06 第六輪：CSV 119 個現役詞進池（袖長、蝴蝶結、緞帶、花、獸耳這些）。仍是 1girl solo，沒有男生或人類陰莖。
   // 2026-10-09：胸部互動 118 個現役詞進池。這張抽到搧胸，背景有人群，所以是 solo focus 不是 solo。沒有男生或人類陰莖。
   // 2026-10-09 第二次：第三、四輪 38 個現役詞進池。這張沒有人群，回到 solo。沒有男生或人類陰莖。
+  // 2026-10-09 第四次：正常場景不再自己補手的構圖母題（HAND_MOTIF）。這張只有一個字變：掙扎換成抬腿。仍是 1girl solo，沒有男生或人類陰莖。
   100: {
     rng: 732,
-    pos: "1girl, solo, medium hair, grey eyes, white hair, sidelocks, gigantic breasts, nose blush, tareme, plump, crop top, single thighhigh, thighhighs, dolphin shorts, shorts, archery, falling, full body, looking at mirror, confident, struggling, sports court, outdoors, cherry blossoms, sunset, sunbeam, mooncake, bow (weapon), nsfw, explicit, masterpiece, best quality, amazing quality",
+    pos: "1girl, solo, medium hair, grey eyes, white hair, sidelocks, gigantic breasts, nose blush, tareme, plump, crop top, single thighhigh, thighhighs, dolphin shorts, shorts, archery, falling, full body, looking at mirror, confident, leg up, sports court, outdoors, cherry blossoms, sunset, sunbeam, mooncake, bow (weapon), nsfw, explicit, masterpiece, best quality, amazing quality",
   },
   // 2026-09-29 第三次：這張是性愛。淋浴間換成海邊，衣服和光線跟著換。仍是 1girl solo。
   // 2026-10-04（9a087a5）：帶衣物名的姿勢（hand in panties 這類）在候選階段就要先有對的衣服，
@@ -311,7 +313,9 @@ const MATRIX_SEEDS = 200;
 // 2026-10-09 第三次：協力性事這類 group 的人數。多個女生的標籤加上 2female；
 // 排比胸、被胸包圍改成至少四個人。五張預設金標逐字沒變，仍是 1girl solo。
 // 指紋 132b101b → 09132e6e。
-const MATRIX_GOLD = "09132e6e";
+// 2026-10-09 第四次：正常場景不再自己補影子手、巨手、一堆手、浮空手（HAND_MOTIF），姿勢池少四個字。
+// 指紋 09132e6e → c64b8aed。
+const MATRIX_GOLD = "c64b8aed";
 
 function matrixSettings(over) {
   const s = defaultSettings(data);
