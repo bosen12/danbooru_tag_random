@@ -3,7 +3,7 @@
 Created by / 原作者：[bosen12](https://github.com/bosen12) · Code: GPLv3 (`GPL-3.0-only`)
 
 > **English.** Draw a random set of Danbooru tags and send it straight to a local ComfyUI (WAI / Illustrious SDXL).
-> Needs Python 3.9+ (standard library only) and ComfyUI at `http://127.0.0.1:8188`.
+> Needs Python 3.9+ (standard library only) and ComfyUI (found automatically at `127.0.0.1:8188` or ComfyUI Desktop's `127.0.0.1:8000`).
 > Windows: double-click `start-web6.bat` (the card workbench, English or Chinese) and open <http://127.0.0.1:8796>.
 > macOS / Linux: `./start.sh`. Card art downloads on first start.
 > Just want the card workbench? [danbooru_tag_mochi](https://github.com/bosen12/danbooru_tag_mochi) is that part on its own, with an English README.
@@ -87,7 +87,7 @@ flowchart LR
 | | 版本 | 為什麼 |
 |---|---|---|
 | **Python** | 3.9 以上 | 跑 `server.py`。沒有第三方套件，標準函式庫就夠 |
-| **ComfyUI** | 跑在 `http://127.0.0.1:8188` | 真正生圖的是它 |
+| **ComfyUI** | 自動找 `127.0.0.1:8188`，或 ComfyUI Desktop 的 `8000` | 真正生圖的是它 |
 | **SDXL checkpoint** | 建議 WAI / Illustrious 系列 | 詞庫是照 Danbooru tag 調的 |
 | 瀏覽器 | 近三年的 Chrome / Edge / Firefox / Safari | 用到 `:has()`、`popover`、`oklch()` |
 | Node.js（選用） | 18 以上 | 只有跑抽牌測試才需要 |
@@ -99,7 +99,7 @@ git clone https://github.com/bosen12/danbooru_tag_random.git
 cd danbooru_tag_random
 ```
 
-**1. 先把 ComfyUI 開起來**，確認瀏覽器打得開 <http://127.0.0.1:8188>。
+**1. 先把 ComfyUI 開起來**。一般版（8188）和 ComfyUI Desktop（8000）都會自動找到；在別的位址就點頂欄的 Comfy 燈號填網址。
 
 **2. 底模不用先設定。** 預設檔名是作者機器上的；你的 ComfyUI 裡沒有它的話，伺服器會從 ComfyUI 的清單挑一個 Illustrious／SDXL 的，之後在頂欄的模型按鈕換。想固定預設值，就設 `COMFY_CKPT`（或 `config.json` 的 `comfy.ckpt`），名字要跟 ComfyUI 的 `CheckpointLoaderSimple` 下拉選單裡**一模一樣**（含子資料夾）。
 
@@ -179,7 +179,7 @@ cp config.example.json config.json
 然後把 `config.json` 裡的路徑改成你自己的。`config.json` 已經 gitignore，不會被推出去；
 `config.example.json` 才是版控裡的範本。每一項留空就退回內建預設值。
 
-新 clone 通常只要 ComfyUI 開在 `http://127.0.0.1:8188`。底模清單改問 ComfyUI，不必填安裝路徑。畫面右上「Comfy…」或「工作流」可改網址、匯入自己的 API workflow。
+新 clone 通常只要 ComfyUI 開著（8188 或 Desktop 的 8000 會自動找到）。底模清單改問 ComfyUI，不必填安裝路徑。畫面右上「Comfy…」或「工作流」可改網址、匯入自己的 API workflow。
 
 若清單仍對不上，再改：
 
@@ -229,7 +229,7 @@ cp config.example.json config.json
 | 環境變數 | 預設 | 說明 |
 |----------|------|------|
 | `COMFY_CKPT` | `illurtrious\waiIllustriousSDXL_v170.safetensors` | **新 clone 一定要改。** 要跟 ComfyUI 選單裡的字一樣 |
-| `COMFY_API` | `http://127.0.0.1:8188` | ComfyUI 位置 |
+| `COMFY_API` | 自動找 8188、8000 | ComfyUI 位置 |
 | `WEB_DIR` | `web` | 版面：`web`／`web1`／`web2`／`web3`／`web5`／`web6`／`zipu` |
 | `PORT` | `8787` | |
 | `HOST` | `127.0.0.1`（`start*.bat` 設成 `0.0.0.0`） | |
