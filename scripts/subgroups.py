@@ -14,6 +14,7 @@
 SPLIT = {
     ("quality", "style"),
     ("subject", "extra"),
+    ("subject", "character"),
     ("feature", "hair_style"),
     ("feature", "eyes"),
     ("feature", "body_f"),
@@ -73,6 +74,11 @@ SUBS = {
             "solo", "solo focus", "multiple girls", "multiple boys", "no humans",
         ]),
         ("pairing", "配對", ["hetero", "yuri"]),
+        # 角色不逐條抄在這裡：1758 筆在 scripts/characters.json，merge 帶 sub 進來。
+        # 空清單代表「不靠這張表點名」，拆開的小分類仍要有這三格，不然字盒沒有位置。
+        ("char_anime", "角色・動畫漫畫", []),
+        ("char_game", "角色・遊戲", []),
+        ("char_other", "角色・其他", []),
     ],
     "feature": [
         ("hair_len", "髮長", None),
@@ -884,6 +890,11 @@ def assign_sub(item: dict) -> str | None:
     hit = _EXPLICIT.get((sec, tag))
     if hit:
         return hit
+    # 角色的細分類寫在 characters.json（char_anime／char_game／char_other），
+    # 不把一千多個名字抄進上面的清單。只接受這個段已經登記的 id。
+    hinted = item.get("sub")
+    if hinted and hinted in SUB_ORDER.get(sec, []) and (sec, grp) in SPLIT:
+        return hinted
     if (sec, grp) in SPLIT:
         return None
     return grp

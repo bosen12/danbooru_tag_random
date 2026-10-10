@@ -6,6 +6,7 @@
  *   node scripts/verify_danbooru_tags.mjs --sports-only        # 只驗 allSportTags() 的清單
  *   node scripts/verify_danbooru_tags.mjs --retry 40          # API 掛掉時重試幾輪（每輪間隔 30 秒）
  *   node scripts/verify_danbooru_tags.mjs --max-created 2025  # 另外標出建立年份晚於 2025 的
+ *   node scripts/verify_danbooru_tags.mjs --category 4 a b    # 改收這個分類（4 角色、3 版權）
  *   node scripts/verify_danbooru_tags.mjs a b c               # 只驗指定 tag（空格格式）
  *
  * 專案內是空格格式，API 是底線格式，這裡自動轉換。
@@ -121,9 +122,10 @@ const toPos = (t) => t.replace(/_/g, " ");
 /**
  * 解析 CLI 參數。
  *
- * @returns {{ retries: number, maxCreatedYear: number|null, tags: string[] }}
+ * @returns {{ retries: number, maxCreatedYear: number|null, category: number, tags: string[] }}
  *   retries        --retry 的輪數，預設 0（維持既有的寬鬆解析）
  *   maxCreatedYear --max-created 的年份，沒給就是 null
+ *   category       --category 要收的 Danbooru 分類，預設 0（一般 tag）
  *   tags           位置參數；空陣列代表「用 allSportTags() 的完整清單」
  * @throws {CliError} 參數不合法時，訊息可直接印給使用者看
  */
@@ -131,6 +133,7 @@ export function parseArgs(argv) {
   const args = Array.isArray(argv) ? argv : [];
   let retries = 0;
   let maxCreatedYear = null;
+  let category = 0;
   let all = true;
   const tags = [];
 
@@ -145,6 +148,10 @@ export function parseArgs(argv) {
       maxCreatedYear = parseYear(args[++i]);
       continue;
     }
+    if (a === "--category") {
+      category = parseCategory(args[++i]);
+      continue;
+    }
     if (a === "--all") {
       // 保留相容：--all 現在是預設，給它一個 no-op 以免舊指令壞掉。
       all = true;
@@ -156,7 +163,7 @@ export function parseArgs(argv) {
     }
     if (a === "--help" || a === "-h") {
       throw new CliError(
-        "用法：node scripts/verify_danbooru_tags.mjs [--retry N] [--max-created YYYY] [--sports-only] [tag ...]"
+        "用法：node scripts/verify_danbooru_tags.mjs [--retry N] [--max-created YYYY] [--category N] [--sports-only] [tag ...]"
       );
     }
     if (typeof a === "string" && a.startsWith("--")) {
@@ -165,7 +172,23 @@ export function parseArgs(argv) {
     tags.push(a);
   }
 
-  return { retries, maxCreatedYear, all, tags };
+  return { retries, maxCreatedYear, category, all, tags };
+}
+
+/** --category 的值：Danbooru 分類 0～5。沒給時呼叫端維持 0。 */
+function parseCategory(raw) {
+  if (raw === undefined || raw === null || raw === "") {
+    throw new CliError("--category 需要一個分類編號，例如 --category 4");
+  }
+  const s = String(raw).trim();
+  if (!/^\d+$/.test(s)) {
+    throw new CliError(`--category 需要整數，收到「${raw}」`);
+  }
+  const n = Number(s);
+  if (!Number.isInteger(n) || n < 0 || n > 5) {
+    throw new CliError(`--category 必須是 0 到 5，收到「${raw}」`);
+  }
+  return n;
 }
 
 /** --max-created 的值：必須是四位數整數。不合法就丟 CliError。 */
@@ -184,10 +207,18 @@ function parseYear(raw) {
   return n;
 }
 
-/** API 回來的一筆紀錄是否可用。回 "ok" 或不可用的原因。 */
-export function verdict(row) {
+/**
+ * API 回來的一筆紀錄是否可用。回 "ok" 或不可用的原因。
+ * expectedCategory 預設 0（一般 tag）。--category 4／3 用來驗角色和版權，
+ * 沒傳的時候訊息與判斷跟以前一樣。
+ */
+export function verdict(row, expectedCategory = 0) {
   if (!row) return "不存在";
-  if (row.category !== 0) return `category ${row.category}（不是一般 tag）`;
+  const expect = Number.isInteger(expectedCategory) ? expectedCategory : 0;
+  if (row.category !== expect) {
+    if (expect === 0) return `category ${row.category}（不是一般 tag）`;
+    return `category ${row.category}（不是 category ${expect}）`;
+  }
   if (row.is_deprecated) return "deprecated";
   if (!(row.post_count > 0)) return `post_count ${row.post_count}`;
   return "ok";
@@ -208,8 +239,8 @@ export function createdYear(createdAt) {
  *   負向與正向尾巴可以是 category 5（meta）—— lowres、jpeg artifacts 這種
  *   本來就是 meta，拿「必須 category 0」去判它們無效是套錯規則。
  */
-function toRecord(tag, row, metaOk) {
-  const v = verdict(row);
+function toRecord(tag, row, metaOk, expectedCategory = 0) {
+  const v = verdict(row, expectedCategory);
   const metaFine = metaOk && metaOk.has(tag) && row && row.category === 5
     && !row.is_deprecated && row.post_count > 0;
   return {
@@ -227,7 +258,7 @@ function toRecord(tag, row, metaOk) {
  * @param wanted    要驗的 tag（空格格式）
  * @param forbidden 禁用清單
  * @param found     Map<tag, row>，row 是 Danbooru API 的一筆紀錄
- * @param options   { maxCreatedYear?: number|null }
+ * @param options   { maxCreatedYear?: number|null, category?: number }
  *
  * newerThanCutoff 只收「已經通過（ok）但建立年份晚於門檻」的 tag：
  *   - 等於門檻年份不算晚
@@ -241,6 +272,7 @@ export function buildReport(wanted, forbidden, found, options = {}) {
       : options.maxCreatedYear;
   const get = (t) => (found && typeof found.get === "function" ? found.get(t) : undefined);
   const metaOk = options.metaOk instanceof Set ? options.metaOk : null;
+  const expectedCategory = Number.isInteger(options.category) ? options.category : 0;
 
   const report = {
     checkedAt: new Date().toISOString(),
@@ -253,7 +285,7 @@ export function buildReport(wanted, forbidden, found, options = {}) {
   };
 
   for (const t of wanted || []) {
-    const rec = toRecord(t, get(t), metaOk);
+    const rec = toRecord(t, get(t), metaOk, expectedCategory);
     // 模型字彙不受 Danbooru 有效性約束，也沒有 created_at 可以比年份。
     if (MODEL_VOCAB.has(t)) {
       rec.modelVocab = true;
@@ -275,7 +307,7 @@ export function buildReport(wanted, forbidden, found, options = {}) {
   }
 
   for (const t of forbidden || []) {
-    const rec = toRecord(t, get(t), metaOk);
+    const rec = toRecord(t, get(t), metaOk, expectedCategory);
     if (rec.verdict === "ok") report.forbiddenNowFine.push(rec);
     else report.forbiddenStillBad.push(rec);
   }
@@ -424,6 +456,7 @@ async function main(argv) {
   const report = buildReport(wanted, FORBIDDEN, found, {
     maxCreatedYear: opts.maxCreatedYear,
     metaOk: prompts,
+    category: opts.category,
   });
 
   writeFileSync(OUT, JSON.stringify(report, null, 2), "utf8");

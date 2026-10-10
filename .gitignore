@@ -28,4 +28,5 @@ zipu/art/manifest.json
 .no-card-bake
 # Launcher: "never ask again" for installing pose reference
 .no-pose-fetch
+.no-character-bake
 .no-lora-manager-fetch

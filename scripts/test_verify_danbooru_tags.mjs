@@ -360,6 +360,48 @@ eq("createdYear 壞格式", createdYear("not-a-date"), null);
     buildReport(["ugly"], [], g, { metaOk: new Set(["ugly"]) }).bad.map((x) => x.tag), ["ugly"]);
 }
 
+// --- --category ------------------------------------------------------------
+// 預設仍只收 category 0。--category 4 改收角色，--category 3 改收版權。
+// deprecated 與 post_count 0 照樣不通過。
+{
+  eq("parseArgs 預設 category 是 0", parseArgs([]).category, 0);
+  eq("parseArgs --category 4", parseArgs(["--category", "4", "yor briar"]).category, 4);
+  eq("parseArgs --category 不吃掉後面的 tag", parseArgs(["--category", "3", "spy x family"]).tags, ["spy x family"]);
+  const badCat = threw(() => parseArgs(["--category", "9"]));
+  ok("parseArgs --category 超出 0～5 會丟錯", badCat instanceof CliError && /category/.test(badCat.message));
+  const missingCat = threw(() => parseArgs(["--category"]));
+  ok("parseArgs --category 沒給值會丟錯", missingCat instanceof CliError && /category/.test(missingCat.message));
+
+  const charRow = {
+    name: "yor_briar",
+    category: 4,
+    is_deprecated: false,
+    post_count: 100,
+    created_at: "2019-01-01T00:00:00.000+09:00",
+  };
+  const found = new Map([["yor briar", charRow]]);
+  const strict = buildReport(["yor briar"], [], found, {});
+  eq("沒給 category 時角色 tag 仍不通過", strict.bad.map((x) => x.tag), ["yor briar"]);
+  ok("沒給 category 時原因仍是「不是一般 tag」", (strict.bad[0].verdict || "").includes("不是一般 tag"));
+
+  const asChar = buildReport(["yor briar"], [], found, { category: 4 });
+  eq("category 4 時角色 tag 通過", asChar.ok.map((x) => x.tag), ["yor briar"]);
+  eq("category 4 通過的 verdict 是 ok", asChar.ok[0].verdict, "ok");
+  eq("verdict 第二參數指定分類", verdict(charRow, 4), "ok");
+
+  const general = new Map([["tennis", row({ name: "tennis", category: 0 })]]);
+  const notGeneral = buildReport(["tennis"], [], general, { category: 4 });
+  ok("category 4 時一般 tag 不通過", (notGeneral.bad[0].verdict || "").includes("category 0"));
+
+  const dead = new Map([
+    ["gone", { name: "gone", category: 4, is_deprecated: true, post_count: 10, created_at: null }],
+    ["empty", { name: "empty", category: 4, is_deprecated: false, post_count: 0, created_at: null }],
+  ]);
+  eq("category 4 仍擋 deprecated 與 0 張",
+    buildReport(["gone", "empty"], [], dead, { category: 4 }).bad.map((x) => x.tag).sort(),
+    ["empty", "gone"]);
+}
+
 if (failed) {
   console.error(`\n${failed} failed`);
   process.exit(1);

@@ -1708,6 +1708,18 @@ def norm(item: dict) -> dict | None:
         era = list(ERA_OF[tag])
     needs = [x for x in needs if x in NEED_KEYS]
     heat = widen_heat(tag, section, mutex, layer, heat)
+    group_input = {
+        "tag": tag,
+        "section": section,
+        "gate": gate,
+        "heat": heat,
+        "mutex": mutex,
+        "layer": layer,
+        "era": era,
+    }
+    # 角色不靠 mutex 分類。extra_character_tags() 帶 group=character 進來。
+    if item.get("group") == "character":
+        group_input["group"] = "character"
     out = {
         "tag": tag,
         "section": section,
@@ -1718,18 +1730,19 @@ def norm(item: dict) -> dict | None:
         "implies": implies,
         "layer": layer,
         "era": era,
-        "group": assign_group(
-            {
-                "tag": tag,
-                "section": section,
-                "gate": gate,
-                "heat": heat,
-                "mutex": mutex,
-                "layer": layer,
-                "era": era,
-            }
-        ),
+        "group": assign_group(group_input),
     }
+    # 卡面與作品。只有角色條目帶這兩欄，Opus 的卡面與「加入系列名」會讀。
+    series = str(item.get("series") or "").strip()
+    card_positive = str(item.get("cardPositive") or "").strip()
+    if series:
+        out["series"] = series
+    if card_positive:
+        out["cardPositive"] = card_positive
+    # 細分類。assign_sub 只在拆開的小分類（角色）採用已登記的 id。
+    hinted_sub = item.get("sub")
+    if isinstance(hinted_sub, str) and hinted_sub:
+        out["sub"] = hinted_sub
     if needs:
         out["needs"] = needs
     if mutex_extra:
@@ -5120,6 +5133,67 @@ def extra_breast_grab_r3() -> list[dict]:
     return rows
 
 
+def load_characters() -> list[dict]:
+    path = Path(__file__).with_name("characters.json")
+    data = json.loads(path.read_text(encoding="utf-8"))
+    if not isinstance(data, list):
+        raise SystemExit("scripts/characters.json 必須是陣列")
+    return data
+
+
+def extra_character_tags() -> list[dict]:
+    """characters.json 裡 character_ban 為 false 的角色。被 ban 的不進詞庫。
+
+    角色之間不互斥：一張圖可以釘好幾個。髮色髮型瞳色的互斥由 Opus 在引擎做，
+    這裡不寫 mutexExtra，不然兩個角色會搶同一格。
+    """
+    rows = []
+    for c in load_characters():
+        if c.get("character_ban") is not False:
+            continue
+        gender = c.get("gender")
+        if gender not in ("female", "male"):
+            raise SystemExit(f"角色性別必須是 female 或 male：{c.get('tag')}")
+        sub = c.get("sub")
+        if sub not in ("char_anime", "char_game", "char_other"):
+            raise SystemExit(f"角色細分類不合法：{c.get('tag')} {sub}")
+        tag = str(c.get("tag") or "").strip()
+        series = str(c.get("series") or "").strip()
+        card_positive = str(c.get("cardPositive") or "").strip()
+        if not tag or not series or not card_positive:
+            raise SystemExit(f"角色缺 tag／series／cardPositive：{tag}")
+        rows.append({
+            "tag": tag,
+            "zh": c.get("zh") or "",
+            "section": "subject",
+            "group": "character",
+            "sub": sub,
+            "gate": gender,
+            "needs": [gender],
+            "heat": ["tease", "flash", "sex"],
+            "mutex": None,
+            "bind": [],
+            "implies": [],
+            "layer": "normal",
+            "era": ["any"],
+            "series": series,
+            "cardPositive": card_positive,
+        })
+    return rows
+
+
+def character_ban_tags() -> list[str]:
+    """被 ban 的角色 tag。排序、去重，寫進 lexicon 頂層 characterBan。"""
+    tags = []
+    for c in load_characters():
+        if c.get("character_ban") is not True:
+            continue
+        tag = str(c.get("tag") or "").strip().lower().replace("_", " ")
+        if tag:
+            tags.append(tag)
+    return sorted(set(tags))
+
+
 def main() -> None:
     rows: list[dict] = []
     for path in sorted(PARTS.glob("*.json")):
@@ -5156,6 +5230,7 @@ def main() -> None:
     rows.extend(extra_style_tags())
     rows.extend(extra_quality_boost_tags())
     rows.extend(extra_look_tags())
+    rows.extend(extra_character_tags())
 
     old_zh: dict[str, str] = {}
     if OUT.exists():
@@ -5330,6 +5405,8 @@ def main() -> None:
         "eraAnchors": ERA_ANCHORS,
         "eraAnchorAlts": ERA_ANCHOR_ALTS,
         "zh": top_zh,
+        # 第一關擋下的角色。不進 tags，貼上提示詞與手打也由引擎擋（Opus）。
+        "characterBan": character_ban_tags(),
         "tags": unique,
     }
     OUT.write_text(json.dumps(data, ensure_ascii=False, indent=2), encoding="utf-8")

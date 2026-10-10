@@ -2,7 +2,7 @@
 
 GROUP_ORDER = {
     "quality": ["fixed", "style", "boost"],
-    "subject": ["count_f", "count_m", "extra"],
+    "subject": ["count_f", "count_m", "character", "extra"],
     "feature": [
         "hair_len",
         "hair_color",
@@ -39,6 +39,7 @@ GROUP_ZH = {
     "boost": "解析／美感",
     "count_f": "人數・女",
     "count_m": "人數・男",
+    "character": "角色",
     "extra": "其他",
     "hair_len": "髮長",
     "hair_color": "髮色",
@@ -699,6 +700,9 @@ def assign_group(item: dict) -> str:
         return "style"
 
     if sec == "subject":
+        # 角色卡自己一格。人數與「其他」仍走 mutex；沒標 character 的維持原樣。
+        if item.get("group") == "character":
+            return "character"
         if mx == "female_count":
             return "count_f"
         if mx == "male_count":

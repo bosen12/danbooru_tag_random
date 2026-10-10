@@ -2657,6 +2657,7 @@ function openPastePool(text = "") {
     where: "合成池",
     text,
     lexTags: data.tags.map((t) => t.tag),
+    banned: data.characterBan || [],
     isCard: (t) => lib.byTag.has(t),
     zh,
     apply: (tags, { replace, weights: w }) => applyCards(tags, { replace, label: "貼上的提示詞", weights: w }),

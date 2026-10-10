@@ -1764,6 +1764,7 @@ function openPastePlate(text = "") {
     where: "卡池",
     text,
     lexTags: data.tags.map((t) => t.tag),
+    banned: data.characterBan || [],
     isCard: (t) => lib.byTag.has(t),
     zh,
     apply: (tags, { replace, weights: w }) => applyDeck({ name: "貼上的提示詞", tags, weights: w }, null, { fresh: replace, kind: "貼上", label: "貼上的提示詞" }),
