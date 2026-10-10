@@ -107,6 +107,8 @@ try {
         nodes[1].style.setProperty('--card-w', '92px');
         row.append(...nodes);
         await Promise.all([...row.querySelectorAll('img')].map(loaded));
+        // 圖到齊的標記（data-ready，收掉等待掃光）是之後加的，舊版不會標：兩邊一樣標上再比版面。
+        for (const i of row.querySelectorAll('img')) i.dataset.ready = '1';
         await frames();
         out[name] = nodes.map((n) => [...n.querySelectorAll('*'), n].map((x) => {
           const r = x.getBoundingClientRect(); const s = getComputedStyle(x);
