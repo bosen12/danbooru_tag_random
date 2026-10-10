@@ -10,6 +10,49 @@
 改這裡不會改到抽取：引擎只在必抽時看細分類（必抽「地點・住家」就從住家抽）。
 """
 
+import json
+import re
+from collections import Counter
+from pathlib import Path
+
+_HERE = Path(__file__).resolve().parent
+
+
+def character_sub_id(series: str) -> str:
+    """角色的細分類 id：一部作品一格（char_arknights、char_fate_series…）。"""
+    return "char_" + re.sub(r"[^a-z0-9]+", "_", str(series).lower()).strip("_")
+
+
+def _character_rows() -> tuple[list, dict]:
+    """角色依作品分格（scripts/characters.json 能用的角色），角色多的作品排前面。
+    中文、英文短名在 scripts/character_series.json。回傳 (SUBS 的列, {id: 英文})。"""
+    try:
+        chars = json.loads((_HERE / "characters.json").read_text(encoding="utf-8"))
+        names = json.loads((_HERE / "character_series.json").read_text(encoding="utf-8"))
+    except (OSError, ValueError):
+        return [], {}
+    first = {}
+    medium = {}
+    for i, c in enumerate(chars):
+        first.setdefault(c.get("series"), i)
+        medium.setdefault(c.get("series"), Counter())[c.get("sub") or "char_other"] += 1
+    count = Counter(c.get("series") for c in chars if c.get("character_ban") is False and c.get("series"))
+    # 動漫在前、遊戲、其他（VOCALOID）；同一類裡角色多的作品排前面。
+    # 字盒把同一個「・」前綴連成一串：「動漫：鬼滅之刃 航海王…」「遊戲：原神 明日方舟…」。
+    kinds = {"char_anime": (0, "動漫", "Anime"), "char_game": (1, "遊戲", "Games"), "char_other": (2, "其他", "Other")}
+    kind = lambda x: kinds.get(medium[x].most_common(1)[0][0], kinds["char_other"])  # noqa: E731
+    rows, en = [], {}
+    for series in sorted(count, key=lambda x: (kind(x)[0], -count[x], first.get(x, 0))):
+        zh, english = (names.get(series) or [series, series])[:2]
+        _, fam_zh, fam_en = kind(series)
+        sid = character_sub_id(series)
+        rows.append((sid, f"{fam_zh}・{zh}", []))
+        en[sid] = f"{fam_en} · {english}"
+    return rows, en
+
+
+_CHAR_ROWS, CHARACTER_SUB_EN = _character_rows()
+
 # 拆開的小分類。這些 group 的字都要被下面的 SUBS 收走。
 SPLIT = {
     ("quality", "style"),
@@ -74,11 +117,9 @@ SUBS = {
             "solo", "solo focus", "multiple girls", "multiple boys", "no humans",
         ]),
         ("pairing", "配對", ["hetero", "yuri"]),
-        # 角色不逐條抄在這裡：1758 筆在 scripts/characters.json，merge 帶 sub 進來。
-        # 空清單代表「不靠這張表點名」，拆開的小分類仍要有這三格，不然字盒沒有位置。
-        ("char_anime", "角色・動畫漫畫", []),
-        ("char_game", "角色・遊戲", []),
-        ("char_other", "角色・其他", []),
+        # 角色一部作品一格（_character_rows，從 scripts/characters.json 算）：不逐條抄名字，
+        # merge 帶 sub（character_sub_id）進來。空清單代表「不靠這張表點名」。
+        *_CHAR_ROWS,
     ],
     "feature": [
         ("hair_len", "髮長", None),
@@ -890,8 +931,8 @@ def assign_sub(item: dict) -> str | None:
     hit = _EXPLICIT.get((sec, tag))
     if hit:
         return hit
-    # 角色的細分類寫在 characters.json（char_anime／char_game／char_other），
-    # 不把一千多個名字抄進上面的清單。只接受這個段已經登記的 id。
+    # 角色的細分類是作品（character_sub_id），merge 帶進來，
+    # 不把幾百個名字抄進上面的清單。只接受這個段已經登記的 id。
     hinted = item.get("sub")
     if hinted and hinted in SUB_ORDER.get(sec, []) and (sec, grp) in SPLIT:
         return hinted

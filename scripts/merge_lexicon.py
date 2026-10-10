@@ -8,7 +8,7 @@ from pathlib import Path
 
 sys.path.insert(0, str(Path(__file__).resolve().parent))
 from groups import GROUP_ORDER, GROUP_ZH, assign_group
-from subgroups import SUB_ORDER, SUB_ZH, assign_sub, check_subs
+from subgroups import CHARACTER_SUB_EN, SUB_ORDER, SUB_ZH, assign_sub, character_sub_id, check_subs
 
 ROOT = Path(__file__).resolve().parents[1]
 PARTS = ROOT / "web" / "lexicon_parts"
@@ -5154,11 +5154,10 @@ def extra_character_tags() -> list[dict]:
         gender = c.get("gender")
         if gender not in ("female", "male"):
             raise SystemExit(f"角色性別必須是 female 或 male：{c.get('tag')}")
-        sub = c.get("sub")
-        if sub not in ("char_anime", "char_game", "char_other"):
-            raise SystemExit(f"角色細分類不合法：{c.get('tag')} {sub}")
         tag = str(c.get("tag") or "").strip()
         series = str(c.get("series") or "").strip()
+        # 細分類照作品分（專案主 2026-10-10：要能照動畫、遊戲名稱找）。
+        sub = character_sub_id(series)
         card_positive = str(c.get("cardPositive") or "").strip()
         if not tag or not series or not card_positive:
             raise SystemExit(f"角色缺 tag／series／cardPositive：{tag}")
@@ -5400,6 +5399,8 @@ def main() -> None:
         },
         "groupOrder": GROUP_ORDER,
         "groupZh": {**GROUP_ZH, **SUB_ZH},
+        # 角色作品格的英文（web6/i18n.js 用；其他分類的英文在 web6/locales/groups.js）。
+        "groupEn": CHARACTER_SUB_EN,
         # 字盒、左欄、必抽照這個順序列細分類；引擎的骨架格仍看 groupOrder。
         "subOrder": SUB_ORDER,
         "eraAnchors": ERA_ANCHORS,
