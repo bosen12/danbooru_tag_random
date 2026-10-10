@@ -148,7 +148,7 @@ WEB_DIR=web1 PORT=8788 python3 server.py
 視窗不要關。改過程式後請 **Ctrl+F5**。
 
 **4. 卡牌插畫會自己下載。** 插畫（墨池、疊印台、排字匣的卡牌模式用的）不在 git 裡，放在 GitHub Release
-[`card-art-v4`](https://github.com/bosen12/danbooru_tag_random/releases/tag/card-art-v4)（全年齡 1934 個檔，約 100MB；舊版本用的 `card-art-v1`～`v3` 還在）。
+[`card-art-v5`](https://github.com/bosen12/danbooru_tag_random/releases/tag/card-art-v5)（全年齡 1963 個檔，約 101MB；舊版本用的 `card-art-v1`～`v4` 還在）。
 下載會切成 16 段、同時開 6 條連線（GitHub 的 release 伺服器單一連線很慢），斷了下次會接著抓。
 第一次啟動發現沒有插畫時會自動下載、驗 SHA-256、解壓到 `web/cards/`：
 
