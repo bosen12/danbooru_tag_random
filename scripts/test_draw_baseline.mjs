@@ -315,7 +315,9 @@ const MATRIX_SEEDS = 200;
 // 指紋 132b101b → 09132e6e。
 // 2026-10-09 第四次：正常場景不再自己補影子手、巨手、一堆手、浮空手（HAND_MOTIF），姿勢池少四個字。
 // 指紋 09132e6e → c64b8aed。
-const MATRIX_GOLD = "c64b8aed";
+// 2026-10-10：兩人互動補 25 個字（並肩、面對面、靠肩、擊掌、同撐傘…），雙人以上的姿勢池變大。
+// 指紋 c64b8aed → 614e0ef8。
+const MATRIX_GOLD = "614e0ef8";
 
 function matrixSettings(over) {
   const s = defaultSettings(data);

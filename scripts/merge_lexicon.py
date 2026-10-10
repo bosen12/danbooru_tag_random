@@ -4963,6 +4963,64 @@ def extra_breast_grab() -> list[dict]:
     return rows
 
 
+def extra_pair_contact() -> list[dict]:
+    """兩人以上的站位與小接觸（2026-10-10）。24 個都向 Danbooru 核過現役（category 0、千張以上）。
+
+    角色類別實測時，兩個角色並排要靠 side-by-side 才站得開；詞庫原本只有擁抱、牽手這種大動作，
+    缺「並肩、面對面、靠肩、貼臉、擊掌」這種穿著衣服、三檔都成立的日常互動。
+    """
+    pair = ("pair",)
+    group = ("group",)
+    modern = ["modern"]
+
+    def row(tag, section, zh, needs=pair, implies=(), era=None):
+        return {
+            "tag": tag,
+            "section": section,
+            "gate": "any",
+            "heat": list(HEATS),
+            "mutex": None,
+            "bind": [],
+            "implies": list(implies),
+            "layer": "normal",
+            "era": list(era) if era else ["any"],
+            "needs": list(needs),
+            "zh": zh,
+        }
+
+    return [
+        # ---- 站位：兩個人在畫面裡怎麼擺。
+        row("side-by-side", "pose", "並肩"),
+        row("face-to-face", "pose", "面對面", implies=("facing another",)),
+        row("facing another", "pose", "面向對方"),
+        row("symmetrical pose", "pose", "對稱姿勢"),
+        row("lineup", "pose", "排排站", needs=group),
+        # ---- 靠在一起。
+        row("head on another's shoulder", "pose", "靠肩"),
+        row("cheek-to-cheek", "pose", "貼臉"),
+        row("heads together", "pose", "頭靠頭"),
+        row("forehead-to-forehead", "pose", "碰額頭"),
+        row("leaning on person", "pose", "倚靠對方"),
+        row("group hug", "pose", "團抱", needs=group),
+        # ---- 手：搭、摟、拉、摸。
+        row("arm around shoulder", "pose", "摟肩"),
+        row("hand on another's waist", "pose", "摟腰"),
+        row("hands on another's shoulders", "pose", "雙手搭肩"),
+        row("holding another's arm", "pose", "拉手臂"),
+        row("headpat", "pose", "摸頭"),
+        row("cheek poking", "pose", "戳臉頰"),
+        row("pointing at another", "pose", "指著對方"),
+        row("high five", "pose", "擊掌"),
+        row("fist bump", "pose", "碰拳"),
+        row("whispering", "pose", "耳語"),
+        # ---- 共用一樣東西。
+        row("shared umbrella", "pose", "同撐傘", implies=("umbrella",)),
+        row("shared scarf", "pose", "共圍巾", implies=("scarf",)),
+        row("shared earphones", "pose", "共聽耳機", implies=("earbuds",), era=modern),
+        # ---- 關係。
+        row("matching outfits", "feature", "同款穿搭"),
+    ]
+
 def extra_breast_grab_r3() -> list[dict]:
     """第三、四輪 CSV（2026-10-09）。38 個都向 Danbooru 核過現役，沒有一個已在詞庫。
 
@@ -5092,6 +5150,7 @@ def main() -> None:
     rows.extend(extra_csv_round6())
     rows.extend(extra_breast_grab())
     rows.extend(extra_breast_grab_r3())
+    rows.extend(extra_pair_contact())
     rows.extend(extra_loli_tags())
     rows.extend(extra_shota_tags())
     rows.extend(extra_style_tags())

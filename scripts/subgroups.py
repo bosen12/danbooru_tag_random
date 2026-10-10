@@ -221,6 +221,7 @@ SUBS = {
             "couple", "husband and wife", "family", "siblings", "sisters", "brothers", "twins",
             "mother and daughter", "mother and son", "father and daughter", "yaoi",
             "age difference", "height difference", "size difference", "group picture",
+            "matching outfits",
         ]),
     ],
     "pose": [
@@ -298,6 +299,12 @@ SUBS = {
             "lifting person", "kissing neck",
             "hand on another's chest", "hands on another's chest", "guiding hand",
             "arm hug", "head hug", "double arm hug", "caress", "girl sandwich", "head on chest",
+            "side-by-side", "face-to-face", "facing another", "symmetrical pose", "lineup",
+            "head on another's shoulder", "cheek-to-cheek", "heads together", "forehead-to-forehead",
+            "leaning on person", "group hug", "arm around shoulder", "hand on another's waist",
+            "hands on another's shoulders", "holding another's arm", "headpat", "cheek poking",
+            "pointing at another", "high five", "fist bump", "whispering",
+            "shared umbrella", "shared scarf", "shared earphones",
         ]),
         ("pose_act", "動作・小動作", [
             "adjusting hair", "tying hair", "adjusting clothes", "adjusting eyewear",
