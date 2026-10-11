@@ -1739,13 +1739,18 @@ const ALBUM_FIXTURE = [
       const cards6 = readFileSync(join(ROOT, "web6/cards.js"), "utf8");
       ok("找牌框：Enter 放上第一張（注音選字的 Enter 不算，已經在的不拿下來），字全選著接著打；↓ 走進字盒", fuse6.includes("function caseSearchKeys(e)") && app6.includes("function libSearchKeys(e)") && fuse6.includes("e.isComposing || e.keyCode === 229") && app6.includes("e.isComposing || e.keyCode === 229") && fuse6.includes("q.select();") && app6.includes("q.select();"));
       ok("找牌框打了字：第一張標出「按 Enter 就是它」（兩個房間共用 setEnterTarget）", cards6.includes("export function setEnterTarget(grid, on)") && fuse6.includes('setEnterTarget($("case-grid")') && app6.includes('setEnterTarget($("lib-grid")') && css6.includes(".enter-chip {"));
+      // 2026-10-11：角色頁的作品籤（動漫、遊戲）七十幾顆，家族名改成「動漫 41 ▸」按鈕，預設收著。
+      const fold = ["web6/app.js", "web6/book.js", "web7/book.js"].map((f) => readFileSync(join(ROOT, f), "utf8"));
+      const caseFold = ["web6/fuse.js", "web7/fuse.js"].map((f) => readFileSync(join(ROOT, f), "utf8"));
+      ok("角色頁的動漫、遊戲兩串預設收著，點家族名才展開；選中的作品那串自動開（字盒、卡冊、疊印台都是）", ["web6/cards.js", "web7/cards.js"].every((f) => readFileSync(join(ROOT, f), "utf8").includes("const open = famOpen.has(r.fam) ? famOpen.get(r.fam) : has;")) && fold.every((s) => s.includes('{ fold: ui.suit === "chara", picked: ui.group }')) && caseFold.every((s) => s.includes('{ fold: caseTab === "chara", picked: caseGroup }')) && ["web6/styles.css", "web7/styles.css"].every((f) => readFileSync(join(ROOT, f), "utf8").replace(/\r\n/g, "\n").includes('.chip-run[data-fold="shut"] > .group-chip {\n  display: none;')) && readFileSync(join(ROOT, "web6/locale.css"), "utf8").includes('.chip-fam:not(.chip-fold)::after { content: ":"; }'));
       ok("墨池字盒：只有一張在 Tab 順序裡，方向鍵走，第一排往上回到搜尋框（疊印台也是）", app6.includes("function libKeys(e)") && app6.includes('$("lib-grid").onkeydown = libKeys;') && app6.includes('if (e.key === "ArrowUp" && i < cols) return void $("lib-q").focus();') && fuse6.includes('if (e.key === "ArrowUp" && i < cols) return void $("case-q").focus();'));
     }
     {
       const fuseCss6 = readFileSync(join(ROOT, "web6/fuse.css"), "utf8").replace(/\r\n/g, "\n");
       ok("疊印台牌的選單：主要動作排第一、拿到焦點，加入偏好卡牌排後面", fuse6.includes('el("div", { class: "pop-acts" }, [...acts, handAct(tag, anchor)])'));
       ok("疊印台牌的選單：兩邊都放不下（手機）就開在牌的下面／上面，不蓋住那張牌", fuse6.includes('pop.dataset.side = below ? "below" : "above";') && fuseCss6.includes("@keyframes pop-in-below") && fuseCss6.includes('.pop:is([data-side="below"], [data-side="above"])::before'));
-      ok("疊印台字盒換花色、換小分類：捲回最上面、前二十張依序發進來；放牌、打字重畫不發", fuse6.includes("let dealCase = false;") && fuse6.includes("const deal = dealCase;") && (fuse6.match(/dealCase = true;/g) || []).length === 2);
+      // 2026-10-11：角色頁的性別篩選（全部／女／男）也算換分類，第三處。
+      ok("疊印台字盒換花色、換小分類、換性別：捲回最上面、前二十張依序發進來；放牌、打字重畫不發", fuse6.includes("let dealCase = false;") && fuse6.includes("const deal = dealCase;") && (fuse6.match(/dealCase = true;/g) || []).length === 3);
       ok("手機上卡池的說明自己一行，不被按鈕擠成好幾行", /@media \(max-width: 40rem\) \{\n  \.plate-sub \{\n    grid-row: 2;/.test(fuseCss6));
     }
     {
