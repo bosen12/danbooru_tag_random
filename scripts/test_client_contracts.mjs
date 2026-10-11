@@ -1743,6 +1743,14 @@ const ALBUM_FIXTURE = [
       const fold = ["web6/app.js", "web6/book.js", "web7/book.js"].map((f) => readFileSync(join(ROOT, f), "utf8"));
       const caseFold = ["web6/fuse.js", "web7/fuse.js"].map((f) => readFileSync(join(ROOT, f), "utf8"));
       ok("角色頁的動漫、遊戲兩串預設收著，點家族名才展開；選中的作品那串自動開（字盒、卡冊、疊印台都是）", ["web6/cards.js", "web7/cards.js"].every((f) => readFileSync(join(ROOT, f), "utf8").includes("const open = famOpen.has(r.fam) ? famOpen.get(r.fam) : has;")) && fold.every((s) => s.includes('{ fold: ui.suit === "chara", picked: ui.group }')) && caseFold.every((s) => s.includes('{ fold: caseTab === "chara", picked: caseGroup }')) && ["web6/styles.css", "web7/styles.css"].every((f) => readFileSync(join(ROOT, f), "utf8").replace(/\r\n/g, "\n").includes('.chip-run[data-fold="shut"] > .group-chip {\n  display: none;')) && readFileSync(join(ROOT, "web6/locale.css"), "utf8").includes('.chip-fam:not(.chip-fold)::after { content: ":"; }'));
+      // 2026-10-11 深度檢查：手機上收著的串一串佔一行（卡冊角色頁五行才見到牌）、兩個「全部」並排、疊印台找牌搜不到作品名。
+      const styles67 = ["web6/styles.css", "web7/styles.css"].map((f) => readFileSync(join(ROOT, f), "utf8").replace(/\r\n/g, "\n"));
+      ok("手機上收著的作品串不佔整行，跟「全部」排同一行", styles67.every((s) => s.includes('  .chip-run[data-fold="shut"] {\n    flex-basis: auto;\n  }')));
+      ok("角色頁的作品籤前面有「系列：」標頭，不跟性別的「全部」並排混淆（字盒、卡冊、疊印台）", [...fold, ...caseFold].every((s) => s.includes("seriesRun(all)")));
+      ok("疊印台找牌跟字盒同一套比對：角色牌對得上作品名（one piece、jojo）", caseFold.every((s) => s.includes("if (q) list = list.filter((c) => cardMatches(c, q) || (c.groupZh || \"\").toLowerCase().includes(q));")));
+      ok("字盒、疊印台篩了作品往下捲：選中的籤看不見就露一顆「航海王 ✕」", ["web6/cards.js", "web7/cards.js"].every((f) => readFileSync(join(ROOT, f), "utf8").includes("export function groupNow(box, chips)")) && app6.includes('libNow ||= groupNow($("lib-group-now"), chips);') && caseFold.every((s) => s.includes('caseNow ||= groupNow($("case-group-now"), box);')) && styles67.every((s) => s.includes('.group-now:is([hidden], :not([data-out="true"])) {\n  display: none;')));
+      const setup6 = readFileSync(join(ROOT, "web6/setup-panel.js"), "utf8");
+      ok("第一次準備的面板：收合記在分頁裡（換頁不再展開、手機上不蓋頁首），冒出新的問題才打開", setup6.includes('const COLLAPSED_KEY = "mochi.setup.collapsed";') && setup6.includes("if (asking && asking !== stored(ASKED_KEY)) setCollapsed(false);"));
       ok("墨池字盒：只有一張在 Tab 順序裡，方向鍵走，第一排往上回到搜尋框（疊印台也是）", app6.includes("function libKeys(e)") && app6.includes('$("lib-grid").onkeydown = libKeys;') && app6.includes('if (e.key === "ArrowUp" && i < cols) return void $("lib-q").focus();') && fuse6.includes('if (e.key === "ArrowUp" && i < cols) return void $("case-q").focus();'));
     }
     {
