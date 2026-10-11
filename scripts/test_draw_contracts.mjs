@@ -73,7 +73,8 @@ const NEEDS = [
   ["bunk bed", ["bedroom", "hotel room", "kids room"], ["bedroom"]],
   ["frying pan", ["cooking", "kitchen"], ["cooking"]],
   ["golf club", ["golf", "golf course"], ["golf course"]],
-  ["tennis racket", ["tennis", "tennis court", "sports court", "school gym"], ["tennis court"]],
+  // 網球服也提供 tennis 身分；沒有具體場地時，引擎允許持拍而未指定打球動作。
+  ["tennis racket", ["tennis", "tennis uniform", "tennis court", "sports court", "school gym"], ["tennis court"]],
   ["bowling ball", ["bowling alley"], ["bowling alley"]],
   // 語料那批道具。它們原本一個前提都沒有，於是散落到任何地方 —— 實測 4200 張裡
   // desk lamp 有 93% 出現在沒有桌子書房臥室的場合、nightstand／poker table／
@@ -543,7 +544,7 @@ const WATER_SRC = [
   const POSE = ["pose:body", "pose:face", "pose:camera", "pose:gaze", "pose:activity"];
   const mk = (patch) => sanitizeSettings({ ...base, rating: "explicit", heats: ["tease"], ...patch }, data);
 
-  ok("骨架：sanitize 只留骨架格", JSON.stringify(mk({ offGroups: ["pose:camera", "pose:sex", "bogus", 3] }).offGroups) === '["pose:camera"]', JSON.stringify(mk({ offGroups: ["pose:camera", "pose:sex"] }).offGroups));
+  ok("選格：sanitize 留有效種類，包含性愛", JSON.stringify(mk({ offGroups: ["pose:camera", "pose:sex", "bogus", 3] }).offGroups) === '["pose:camera","pose:sex"]', JSON.stringify(mk({ offGroups: ["pose:camera", "pose:sex"] }).offGroups));
 
   // 舊存檔：只有數字、沒有開關 —— 也要照數字走。
   const one = mk({ counts: { ...base.counts, pose: 1 } });
@@ -573,7 +574,7 @@ const WATER_SRC = [
   const two = mk({ ...cam, ...stepSkeleton(cam, "pose", 2) });
   ok("骨架：1 → 2 保留鏡頭、再亮優先序第一格", JSON.stringify(skeletonLit(two, "pose")) === '["pose:body","pose:camera"]', JSON.stringify(skeletonLit(two, "pose")));
   const full = mk({ ...two, ...stepSkeleton(two, "pose", 5) });
-  ok("骨架：按到 5 全亮、姿勢的開關清掉", skeletonLit(full, "pose").length === 5 && !full.offGroups.some((k) => k.startsWith("pose:")), JSON.stringify(full.offGroups));
+  ok("選格：按到 5 回自由補抽、姿勢的開關清掉", skeletonLit(full, "pose").length === SKELETON.pose.length && !full.offGroups.some((k) => k.startsWith("pose:")), JSON.stringify(full.offGroups));
   const down = mk({ ...full, ...stepSkeleton(full, "pose", 3) });
   ok("骨架：5 → 3 從最後面熄（視線、活動）", JSON.stringify(skeletonLit(down, "pose")) === '["pose:body","pose:face","pose:camera"]', JSON.stringify(skeletonLit(down, "pose")));
 
@@ -602,13 +603,13 @@ const WATER_SRC = [
   }
   ok("骨架：必抽照樣抽得到", mustHit === 50, `視線 ${mustHit}/50`);
 
-  // 性愛：姿勢 1 也照樣有性愛動作（尺度管，不是骨架）。
+  // 性愛尺度不再繞過選格：姿勢 1 預設身體姿勢，不自行補性愛動作。
   const sex = mk({ heats: ["sex"], counts: { ...base.counts, pose: 1 } });
   let sexHit = 0;
   for (let i = 0; i < 60; i++) {
     if (String(draw(sex, [], i).positive).split(", ").some((t) => sectionGroup(t) === "pose:sex")) sexHit += 1;
   }
-  ok("骨架：性愛尺度姿勢 1 仍有性愛動作", sexHit / 60 > 0.9, `${sexHit}/60`);
+  ok("選格：性愛尺度姿勢 1 不額外補性愛動作", sexHit === 0, `${sexHit}/60`);
 
   // 服裝：門檻 5（預設值）。設 1～4 只補亮著的種類、每種一件；5 以上照舊自由補。
   // 預設順序每一級都是完整的一套（連身 → 腿襪 → 飾品 → 鞋履），換成上衣就是不完整的穿法。

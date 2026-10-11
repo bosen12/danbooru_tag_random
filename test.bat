@@ -102,6 +102,17 @@ if errorlevel 1 (
   pause
   exit /b 1
 )
+echo == web6 composition UX ==
+call node scripts\test_supplement.mjs
+if errorlevel 1 (
+  pause
+  exit /b 1
+)
+call node scripts\test_web6_ux.mjs
+if errorlevel 1 (
+  pause
+  exit /b 1
+)
 echo == first-time setup (web6) ==
 call %PY% scripts\test_setup_tasks.py
 if errorlevel 1 (

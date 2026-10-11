@@ -4,6 +4,7 @@
 單元測試驗不到的東西在這裡驗：心跳有沒有送、websocket 幀被 2 秒逾時切開之後
 預覽圖還原不還原得回來、客戶端半途走人 Comfy 會不會收到 /interrupt。
 不需要真的 ComfyUI，也不碰外網。
+只有明確設 HIRES_LIVE=1 時，才額外連線真 ComfyUI 產生測試圖片。
 """
 from __future__ import annotations
 
@@ -232,6 +233,16 @@ class FakeComfy(threading.Thread):
         conn.sendall(text_frame({"type": "executed", "data": {"node": self.save_node}}))
         time.sleep(6)
 
+    def _plan_chatty(self, conn: socket.socket) -> None:
+        # 完成通知比 history 早到，之後其他工作一直廣播，socket 永遠不會安靜 2 秒。
+        conn.sendall(text_frame({"type": "execution_success", "data": {"prompt_id": "p1"}}))
+        time.sleep(1)
+        self.have_image.set()
+        until = time.time() + 12
+        while time.time() < until:
+            conn.sendall(text_frame({"type": "progress", "data": {"prompt_id": "another-job", "value": 9, "max": 10}}))
+            time.sleep(0.1)
+
     def _plan_torn(self, conn: socket.socket) -> None:
         # 一張預覽被切成兩半，中間停 3 秒 —— 跨過 gen_via_ws 的 2 秒 socket timeout。
         # 舊的 Ws.recv() 會在這裡把已經吃掉的幀頭弄丟，之後整條串流永久錯位。
@@ -458,6 +469,13 @@ ok(
     str(done),
 )
 ok("順利時主控台沒有 traceback", "Traceback" not in log, log[-800:])
+
+# 完成紀錄補查不能等 websocket 安靜；也不能把別人的進度畫在自己的圖上。
+_chatty_start = time.time()
+events, comfy, log = run("chatty")
+ok("其他工作連續廣播仍能補收成品", events[-1][0] == "done", str(events))
+ok("補收完成不等廣播停止", time.time() - _chatty_start < 9, str(time.time() - _chatty_start))
+ok("其他工作的進度不混到自己這張", not any(ev == "progress" for ev, _ in events), str(events))
 
 # === 2. Comfy 長時間靜默 → 心跳要自己跑出來 ==================================
 events, comfy, log = run("quiet")
@@ -960,9 +978,11 @@ def _png_wh(blob: bytes):
     return struct.unpack(">II", blob[16:24])
 
 
-# === 11. 真 Comfy 才跑：quick ×1.25。HIRES_LIVE_DEEP=1 再跑一次深度。 ==========
+# === 11. 明確 opt-in 才用真 Comfy：HIRES_LIVE=1；DEEP=1 再跑一次深度。 =======
 _REAL = os.environ.get("COMFY_API", "http://127.0.0.1:8188").rstrip("/")
-if not _comfy_up(_REAL):
+if os.environ.get("HIRES_LIVE") != "1":
+    print("skip real hires (set HIRES_LIVE=1 to explicitly opt in)")
+elif not _comfy_up(_REAL):
     print(f"skip real hires (Comfy not up at {_REAL})")
 else:
     _port = 8897 if _can_bind(8897) else 0
