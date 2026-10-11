@@ -1747,6 +1747,11 @@ const ALBUM_FIXTURE = [
       const styles67 = ["web6/styles.css", "web7/styles.css"].map((f) => readFileSync(join(ROOT, f), "utf8").replace(/\r\n/g, "\n"));
       const cards67 = ["web6/cards.js", "web7/cards.js"].map((f) => readFileSync(join(ROOT, f), "utf8"));
       ok("點「動漫」「遊戲」開合有過場：籤列高度慢慢長／收、後面的串滑過去、籤依序淡進來；收合先淡出；減少動態就直接切", cards67.every((s) => s.includes("function foldMotion(run, chips, open)") && s.includes("if (reducedMotion()) return apply();") && s.includes("box.animate([{ height: `${h0}px` }, { height: `${h1}px` }]")) && styles67.every((s) => s.includes("  align-content: flex-start;") && s.includes(".chip-series {\n  flex-basis: 100%;\n}")));
+      // 2026-10-11：卡冊換花色卡將近一秒（每張牌都是 container query 容器，grid 一重排就每張重算樣式）。
+      const cardCss6 = readFileSync(join(ROOT, "web6/card.css"), "utf8").replace(/\r\n/g, "\n");
+      const locale6 = readFileSync(join(ROOT, "web6/locale.css"), "utf8");
+      ok("同樣寬的一整格牌（卡冊、字盒、疊印台字盒）量一次牌寬寫在格子上，牌不當容器；英文底條也跟著換", cards67[0].includes("export function sizeCards(grid)") && readFileSync(join(ROOT, "web6/book.js"), "utf8").includes('sizeCards($("book-grid"));') && app6.includes('sizeCards($("lib-grid"));') && caseFold[0].includes('sizeCards($("case-grid"));') && cardCss6.includes("[data-sized] .card {\n  container-type: normal;\n  --card-f: calc(var(--card-cq) * 12.5);") && locale6.includes('html[lang="en"] [data-sized] .card { container-type: normal; }') && locale6.includes('html[lang="en"] [data-sized] .card-spine { --u: max(8px, calc(var(--card-cq) * 9)); }'));
+      ok("合成池空的時候就留一張牌的高度：放第一張牌，底下的規則、抽牌列不會被推一下", styles67[0].includes("min-height: max(150px, calc(var(--pool-card-w) * 702 / 480 + 2 * var(--space-md)));"));
       ok("手機上收著的作品串不佔整行，跟「全部」排同一行", styles67.every((s) => s.includes('  .chip-run[data-fold="shut"] {\n    flex-basis: auto;\n  }')));
       ok("角色頁的作品籤前面有「系列：」標頭，不跟性別的「全部」並排混淆（字盒、卡冊、疊印台）", [...fold, ...caseFold].every((s) => s.includes("seriesRun(all)")));
       ok("疊印台找牌跟字盒同一套比對：角色牌對得上作品名（one piece、jojo）", caseFold.every((s) => s.includes("if (q) list = list.filter((c) => cardMatches(c, q) || (c.groupZh || \"\").toLowerCase().includes(q));")));
