@@ -300,7 +300,29 @@ export function artPrompt(world, card) {
   return uniq(parts.filter(Boolean).join(", ").split(", ")).join(", ") + ", " + ART_TAIL;
 }
 
+// 跟 web/card-art.js 的 artFile 同一套。表情符號清完會撞名，字母夠的字（含 v、69）不動。
+const SYMBOL_FILE = {
+  "^ ^": "sym_eyes_smile",
+  "> <": "sym_eyes_shut",
+  "@ @": "sym_eyes_dizzy",
+  "+ +": "sym_eyes_cross",
+  "= =": "sym_eyes_flat",
+  ":<": "sym_mouth_upset",
+  ";)": "sym_wink",
+  ":>": "sym_mouth_smug",
+  ":/": "sym_mouth_flat",
+  ">:)": "sym_mouth_evil",
+  "^^^": "sym_emotion_lines",
+  ";o": "sym_wink_o",
+  ":o": "sym_mouth_o",
+  ":d": "sym_mouth_d",
+  ";d": "sym_wink_d",
+  "d:": "sym_mouth_shock",
+};
+
 export function artFile(tag) {
+  const named = SYMBOL_FILE[tag];
+  if (named) return named + ".webp";
   return tag.replace(/[^a-z0-9]+/gi, "_").replace(/^_+|_+$/g, "").toLowerCase() + ".webp";
 }
 

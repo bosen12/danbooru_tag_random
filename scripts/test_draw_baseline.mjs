@@ -56,9 +56,10 @@ const GOLD = {
   // 2026-10-06 第六輪：CSV 119 個現役詞進池（袖長、蝴蝶結、緞帶、花、獸耳這些）。仍是 1girl solo，沒有男生或人類陰莖。
   // 2026-10-09：胸部互動 118 個現役詞進池。這張換成裸體、眼罩、球場。仍是 1girl solo，沒有男生或人類陰莖。
   // 2026-10-09 第二次：第三、四輪 38 個現役詞進池。這張換成衝浪衣、百褶裙、隔衣自慰、太空船。仍是 1girl solo，沒有男生或人類陰莖。
+  // 2026-10-12：Grok 的角色追加、一般標籤、焦點共 648 個字進池（Opus 驗收時修了時代、室內外、日夜、眼睛出框）。這張換成裙裡短褲、自慰、泳池梯、柳橙。仍是 1girl solo，沒有男生或人類陰莖。
   1: {
-    rng: 699,
-    pos: "1girl, solo, pixie cut, orange eyes, grey hair, sidelocks, large breasts, blunt bangs, wet hair, split-color hair, rash guard, pleated skirt, skirt, garter straps, shiny clothes, maid apron, masturbation through clothes, reclining, fisheye, peeking out, peeking, evil smile, spacecraft, space, twilight, shadow, diffraction spikes, lantern festival, nsfw, explicit, masterpiece, best quality, amazing quality",
+    rng: 917,
+    pos: "1girl, solo, pixie cut, orange eyes, grey hair, hair slicked back, medium breasts, bruise, pink skin, colored skin, shorts under skirt, skirt, formal clothes, no panties, vest, masturbation, kneeling, from behind, looking at breasts, >:), interspecies, pool ladder, indoors, evening, city lights, orange (fruit), fruit, food, tiles, nsfw, explicit, masterpiece, best quality, amazing quality",
   },
   // 2026-09-29：路人進了環境池，同一顆亂數落到別的環境字，後面的姿勢跟著換。
   // seed 42 少了束縛和手銬（手銬是束縛之後才拉的），多了咬唇。seed 100 花瓣換成剪影。
@@ -74,9 +75,10 @@ const GOLD = {
   // 2026-10-09：胸部互動 118 個現役詞進池。這張換成羽毛翅膀、紫洋裝、指交、晴空塔。仍是 1girl solo，沒有男生或人類陰莖。
   // 2026-10-09 第二次：第三、四輪 38 個現役詞進池。這張換成大量泌乳、觸手夾乳、玄關。仍是 1girl solo，沒有男生或人類陰莖。
   // 2026-10-09 第四次：正常場景不再自己補手的構圖母題（HAND_MOTIF）。這張只有觸手夾乳換成乳頭牽繩。仍是 1girl solo，沒有男生或人類陰莖。
+  // 2026-10-12：Grok 的角色追加、一般標籤、焦點共 648 個字進池（Opus 驗收時修了時代、室內外、日夜、眼睛出框）。這張換成瞇眼笑、哥德風、自由女神。瞇眼笑是閉眼，沒有視線。仍是 1girl solo，沒有男生或人類陰莖。
   42: {
-    rng: 689,
-    pos: "1girl, solo, very short hair, yellow eyes, aqua hair, undercut, huge breasts, hair flower, excessive lactation, lactation, completely nude, jewelry, glasses, neck ribbon, ribbon, masturbation, squatting, portrait, averting eyes, naughty face, nipple leash, genkan, indoors, twilight, moonlight, confetti, nsfw, explicit, masterpiece, best quality, amazing quality",
+    rng: 938,
+    pos: "1girl, solo, very short hair, yellow eyes, aqua hair, sidelocks, large breasts, tsurime, long legs, ^ ^, camisole, plaid clothes, animal costume, goth fashion, ankle socks, socks, pencil skirt, skirt, shibari, bound wrists, female masturbation, knees to chest, facing away, evil smile, hogtie, bondage, fingering, statue of liberty, outdoors, twilight, dark, european architecture, graffiti, nsfw, explicit, masterpiece, best quality, amazing quality",
   },
   // 2026-10-05 第五次：女僕圍裙是布料疊層，不占連身裙。仍是 1girl solo。
   // 2026-10-05 第六次：爆炸頭跟長裙、探頭偷看。仍是 1girl solo。
@@ -86,9 +88,10 @@ const GOLD = {
   // 2026-10-09：胸部互動 118 個現役詞進池。這張抽到搧胸，背景有人群，所以是 solo focus 不是 solo。沒有男生或人類陰莖。
   // 2026-10-09 第二次：第三、四輪 38 個現役詞進池。這張沒有人群，回到 solo。沒有男生或人類陰莖。
   // 2026-10-09 第四次：正常場景不再自己補手的構圖母題（HAND_MOTIF）。這張只有一個字變：掙扎換成抬腿。仍是 1girl solo，沒有男生或人類陰莖。
+  // 2026-10-12：Grok 的角色追加、一般標籤、焦點共 648 個字進池（Opus 驗收時修了時代、室內外、日夜、眼睛出框）。這張換成吃東西、端著托盤、帳篷。仍是 1girl solo，沒有男生或人類陰莖。
   100: {
-    rng: 732,
-    pos: "1girl, solo, medium hair, grey eyes, white hair, sidelocks, gigantic breasts, nose blush, tareme, plump, crop top, single thighhigh, thighhighs, dolphin shorts, shorts, archery, falling, full body, looking at mirror, confident, leg up, sports court, outdoors, cherry blossoms, sunset, sunbeam, mooncake, bow (weapon), nsfw, explicit, masterpiece, best quality, amazing quality",
+    rng: 973,
+    pos: "1girl, solo, medium hair, grey eyes, white hair, swept bangs, flat chest, hair scrunchie, diamond-shaped pupils, petite, yume kawaii, over-kneehighs, kneehighs, layered sleeves, eating, plantar flexion, pov crotch, looking at viewer, laughing, holding tray, tent, outdoors, sunset, underlighting, fork, tray, nsfw, explicit, masterpiece, best quality, amazing quality",
   },
   // 2026-09-29 第三次：這張是性愛。淋浴間換成海邊，衣服和光線跟著換。仍是 1girl solo。
   // 2026-10-04（9a087a5）：帶衣物名的姿勢（hand in panties 這類）在候選階段就要先有對的衣服，
@@ -103,9 +106,10 @@ const GOLD = {
   // 2026-10-06 第六輪：CSV 119 個現役詞進池（袖長、蝴蝶結、緞帶、花、獸耳這些）。仍是 1girl solo，沒有男生或人類陰莖。
   // 2026-10-09：胸部互動 118 個現役詞進池。這張抽到舔自己乳頭。仍是 1girl solo，沒有男生或人類陰莖。
   // 2026-10-09 第二次：第三、四輪 38 個現役詞進池。這張換成花店、坐在物件上。仍是 1girl solo，沒有男生或人類陰莖。
+  // 2026-10-12：Grok 的角色追加、一般標籤、焦點共 648 個字進池（Opus 驗收時修了時代、室內外、日夜、眼睛出框）。這張換成泳裝、耳麥、艾菲爾鐵塔、花卉焦點。仍是 1girl solo，沒有男生或人類陰莖。
   999: {
-    rng: 699,
-    pos: "1girl, solo, long hair, glowing eyes, grey hair, blunt bangs, flat chest, parted hair, muscular female, muscular, toned, nude, sunglasses, tooth necklace, necklace, hairband, bag, nipple rings, piercing, masturbation, sitting on object, sitting, pov, looking at viewer, flustered, flower shop, indoors, shop, dusk, city lights, cake, nsfw, explicit, masterpiece, best quality, amazing quality",
+    rng: 974,
+    pos: "1girl, solo, long hair, glowing eyes, grey hair, asymmetrical hair, large breasts, colored eyelashes, eyelashes, blue eyeshadow, eyeshadow, blue lips, lipstick, casual one-piece swimsuit, one-piece swimsuit, swimsuit, headset, headphones, missing legwear, bag, nipple rings, piercing, masturbation through clothes, on back, straight-on, peeking out, peeking, >:), eiffel tower, outdoors, dusk, sunlight, flower focus, flower, magic circle, nsfw, explicit, masterpiece, best quality, amazing quality",
   },
   // 2026-09-23：走光補抽改成「所有成立的走光動作同一池、衣服吻合的權重 10」之後，
   // 這張的走光動作從 exhibitionism 換成 cameltoe（她穿 thong，吻合），場景跟著換。
@@ -118,9 +122,10 @@ const GOLD = {
   // 2026-10-06 第六輪：CSV 119 個現役詞進池（袖長、蝴蝶結、緞帶、花、獸耳這些）。仍是 1girl solo，沒有男生或人類陰莖。
   // 2026-10-09：胸部互動 118 個現役詞進池。這張換成辦公室、解開的襯衫。仍是 1girl solo，沒有男生或人類陰莖。
   // 2026-10-09 第二次：第三、四輪 38 個現役詞進池。這張換成粉紅胸罩、手探胸罩、教室。仍是 1girl solo，沒有男生或人類陰莖。
+  // 2026-10-12：Grok 的角色追加、一般標籤、焦點共 648 個字進池（Opus 驗收時修了時代、室內外、日夜、眼睛出框）。這張換成釣魚、泳池。仍是 1girl solo，沒有男生或人類陰莖。
   2026: {
-    rng: 716,
-    pos: "1girl, solo, bob cut, purple eyes, white hair, glowing hair, huge breasts, bangs pinned back, tomboy, scar, backless outfit, pink bra, bra, leather, sailor collar, loafers, reading, indian style, portrait, looking outside, drunk, hand in bra, book, classroom, indoors, twilight, ceiling light, graffiti, nsfw, explicit, masterpiece, best quality, amazing quality",
+    rng: 962,
+    pos: "1girl, solo, bob cut, purple eyes, white hair, crossed bangs, large breasts, mole on cheek, mole, flying sweatdrops, backboob, green sweater, sweater, breast pocket, pocket, pants, white socks, socks, fishing, crossed ankles, pov, looking at viewer, drunk, hand under clothes, outdoors, fishing rod, pool, dusk, underlighting, mirror, nsfw, explicit, masterpiece, best quality, amazing quality",
   },
 };
 
@@ -317,7 +322,9 @@ const MATRIX_SEEDS = 200;
 // 指紋 09132e6e → c64b8aed。
 // 2026-10-10：兩人互動補 25 個字（並肩、面對面、靠肩、擊掌、同撐傘…），雙人以上的姿勢池變大。
 // 指紋 c64b8aed → 614e0ef8。
-const MATRIX_GOLD = "614e0ef8";
+// 2026-10-12：Grok 的 648 個字進池；Opus 驗收補上時代、室內外天空、日夜光源、眼睛出框、正常場景的非人五官。
+// 同日再補：全裸字不接在要衣服的走光動作後、看手機不配要拿別的道具的活動、編髮環佔髮型格。指紋 614e0ef8 → 556b9a5f。
+const MATRIX_GOLD = "a68766ae";
 
 function matrixSettings(over) {
   const s = defaultSettings(data);

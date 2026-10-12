@@ -367,6 +367,8 @@ SUFFIX_COMPOUND_EXCEPTIONS = {
     "collar": ("sailor collar", "frilled collar", "high collar", "fur collar"),
     # 大衣只有現代。毛皮大衣要在維多利亞也能抽，再帶出 coat 會整筆被拒。
     "coat": ("fur coat",),
+    # 摘下來放在旁邊，不是頭上的帽子。
+    "hat": ("unworn hat",),
 }
 
 SUFFIX_PARENT = (
@@ -1545,18 +1547,26 @@ def inherit_eras(tags: list[dict]) -> None:
 # 由 engine.js 的 allow() 檢查：圖上已經有某一種，就不再補別種的零件。
 # 沒有種類的字（獸耳、尾巴、精靈、吸血鬼……）跟誰都能放。
 KIND = {
-    "cat": ["cat girl", "cat boy", "cat ears", "cat tail"],
-    "fox": ["fox girl", "fox boy", "kitsune", "fox ears", "fox tail"],
+    "cat": ["cat girl", "cat boy", "cat ears", "cat tail", "nekomata"],
+    "fox": ["fox girl", "fox boy", "kitsune", "fox ears", "fox tail", "kyuubi"],
     "rabbit": ["rabbit girl", "rabbit boy", "rabbit ears", "rabbit tail"],
-    "horse": ["horse girl", "horse boy", "horse ears", "horse tail"],
+    "horse": ["horse girl", "horse boy", "horse ears", "horse tail", "centaur", "centauroid"],
     "wolf": ["wolf girl", "wolf boy", "werewolf", "wolf ears"],
     "dog": ["dog girl", "dog boy", "dog ears"],
-    "dragon": ["dragon girl", "dragon boy", "dragon horns"],
+    "dragon": ["dragon girl", "dragon boy", "dragon horns", "dragon", "eastern dragon", "western dragon", "dragon wings"],
     "demon": ["demon", "demon girl", "demon boy", "demon horns", "demon tail", "demon wings"],
-    "cow": ["cow girl"],
-    "tiger": ["tiger boy"],
-    "lion": ["lion boy"],
-    "bear": ["bear boy"],
+    "cow": ["cow girl", "cow ears"],
+    "tiger": ["tiger boy", "tiger ears"],
+    "lion": ["lion boy", "lion ears"],
+    "bear": ["bear boy", "bear ears"],
+    "mouse": ["mouse ears"],
+    "raccoon": ["raccoon ears"],
+    "deer": ["deer ears"],
+    "sheep": ["sheep ears"],
+    "goat": ["goat ears"],
+    "squirrel": ["squirrel ears"],
+    "bat": ["bat ears"],
+    "panda": ["panda ears"],
     "shark": ["shark boy"],
     "tanuki": ["tanuki"],
     "fairy": ["fairy", "fairy wings"],
@@ -1590,6 +1600,12 @@ MUTEX_EXTRA_PATCH = {
     "hood": ["hood_on"],
     "halterneck": ["strap"],
     "winter": ["season"],
+    # 白皙、深膚、極深、黑膚的膚色格在 engine.js 已經補上。晒黑沒有，會跟白皙疊。
+    "tan": ["skin_tone"],
+    "red lips": ["lip_color"],
+    "headphones": ["ear_audio"],
+    "earbuds": ["ear_audio"],
+    "headset": ["ear_audio"],
 }
 
 # 既有的字補上 Danbooru 的父子關係，讓新加的父標籤跟著出現、也不跟子標籤互斥。
@@ -1604,6 +1620,10 @@ IMPLIES.update({
     "floral print kimono": ["print kimono", "floral print"],
     "angel wings": ["wings", "feathered wings"],
     "green skin": ["colored skin"],
+    # 新的「騎乘」跟既有的騎馬、騎車、講電話佔同一格，要接成父子才不會互相趕出去。
+    "horseback riding": ["riding"],
+    "riding bicycle": ["riding"],
+    "talking on phone": ["talking"],
 })
 
 def norm(item: dict) -> dict | None:
@@ -5193,6 +5213,27 @@ def character_ban_tags() -> list[str]:
     return sorted(set(tags))
 
 
+def extra_suggestion_tags() -> list[dict]:
+    """general_tags_suggestions.csv（2026-10-12）。
+
+    欄位是從同組抄來的，不照 CSV 的類別。逐項重看過 gate、mutex、implies、時代。
+    """
+    from suggestion_tags import build
+    return build()
+
+
+def extra_more_tags() -> list[dict]:
+    """more_general_tags.csv（2026-10-12）。不讀 CSV，不照它的類別。"""
+    from more_tags import build
+    return build()
+
+
+def extra_focus_tags() -> list[dict]:
+    """focus_tags.csv（2026-10-12）。部位焦點與主題焦點各一格，不佔鏡頭。"""
+    from focus_tags import build
+    return build()
+
+
 def main() -> None:
     rows: list[dict] = []
     for path in sorted(PARTS.glob("*.json")):
@@ -5221,6 +5262,9 @@ def main() -> None:
     rows.extend(extra_csv_round4())
     rows.extend(extra_csv_round5())
     rows.extend(extra_csv_round6())
+    rows.extend(extra_suggestion_tags())
+    rows.extend(extra_more_tags())
+    rows.extend(extra_focus_tags())
     rows.extend(extra_breast_grab())
     rows.extend(extra_breast_grab_r3())
     rows.extend(extra_pair_contact())

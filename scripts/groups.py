@@ -187,6 +187,66 @@ FABRIC = {
     "fur collar",
     "highleg",
     "bare arms",
+    # 2026-10-12：袖子的顏色與裁法疊在衣服上，不佔上衣。無袖外套／毛衣／和服不在這裡。
+    "white sleeves",
+    "black sleeves",
+    "blue sleeves",
+    "red sleeves",
+    "purple sleeves",
+    "pink sleeves",
+    "green sleeves",
+    "grey sleeves",
+    "ribbon-trimmed sleeves",
+    "sleeve cuffs",
+    "fur-trimmed sleeves",
+    "striped sleeves",
+    "torn sleeves",
+    "short over long sleeves",
+    "single sleeve",
+    "single detached sleeve",
+    "sleeves pushed up",
+    "three-quarter sleeves",
+    "sleeves past fingers",
+    "puffy detached sleeves",
+    "gold trim",
+    "lapels",
+    "legwear garter",
+    # 2026-10-12：花紋和穿搭風格疊在衣服上。印花襯衫是上衣，印花結是蝴蝶結，不在這裡。
+    "pinstripe pattern",
+    "camouflage",
+    "tiger print",
+    "flag print",
+    "food print",
+    "leopard print",
+    "leaf print",
+    "egasumi",
+    "bat print",
+    "tiger stripes",
+    "cross print",
+    "cherry blossom print",
+    "crescent print",
+    "seigaiha",
+    "yagasuri",
+    "meandros",
+    "bear print",
+    "honeycomb (pattern)",
+    "sakuramon",
+    "musical note print",
+    "asa no ha (pattern)",
+    "bird print",
+    "kikkoumon",
+    "winter clothes",
+    "goth fashion",
+    "jirai kei",
+    "yume kawaii",
+    "arabian clothes",
+    "ouji fashion",
+    "biker clothes",
+    "ainu clothes",
+    "y2k fashion",
+    "cyber fashion",
+    "streetwear",
+    "punk",
 }
 
 MAKEUP = {
@@ -201,6 +261,17 @@ MAKEUP = {
     "fingernails",
     "black nails",
     "blue nails",
+    # 2026-10-12：帶 eye 的眼影會先被眼睛規則收走，不必列在這裡。
+    "long fingernails",
+    "toenail polish",
+    "facepaint",
+    "hikimayu",
+    "runny makeup",
+    "pink lips",
+    "purple lips",
+    "black lips",
+    "blue lips",
+    "green lips",
 }
 
 BODY_ANY = {
@@ -235,6 +306,12 @@ SKY = {
     "moon",
     "milky way",
     "clear sky",
+    "star (sky)",
+    "crescent moon",
+    "gradient sky",
+    "purple sky",
+    "red sky",
+    "sky focus",
 }
 
 HAIR_STYLE = {
@@ -281,6 +358,22 @@ HAIR_STYLE = {
     "cornrows",
     "spiked hair",
     "hair behind ear",
+    # 2026-10-12：跟主髮型疊的細節。主髮型自己佔 hair_style 格，不進這組。
+    "alternate hairstyle",
+    "blunt ends",
+    "curtained hair",
+    "hair down",
+    "flipped hair",
+    "asymmetrical hair",
+    "hair up",
+    "braided hair rings",
+    "big hair",
+    "convenient hair",
+    "hair pulled back",
+    "huge ahoge",
+    "heart ahoge",
+    "single sidelock",
+    "single hair intake",
 }
 
 HAIR_COLOR_LOOK = {
@@ -289,6 +382,9 @@ HAIR_COLOR_LOOK = {
     "two-tone hair",
     "colored inner hair",
     "split-color hair",
+    "colored tips",
+    "alternate hair color",
+    "roots (hair)",
 }
 
 BODY_HAIR = {
@@ -358,6 +454,17 @@ FACE = {
     "upper teeth only",
     "wavy mouth",
     "shaded face",
+    # 2026-10-12：跟笑容疊，不佔表情格。
+    "dot nose",
+    "nose",
+    "no nose",
+    "raised eyebrows",
+    "raised inner eyebrows",
+    "eyebrows hidden by hair",
+    "^^^",
+    "full-face blush",
+    "multiple expressions",
+    "mouth drool",
 }
 
 SKIN = {
@@ -416,6 +523,24 @@ SKIN = {
     "nosebleed",
     "colored skin",
     "light blush",
+    # 2026-10-12：膚色。獸毛和鱗片是非人特徵，不進這裡。
+    "white skin",
+    "blue skin",
+    "grey skin",
+    "red skin",
+    "purple skin",
+    "pink skin",
+    "yellow skin",
+    "orange skin",
+    "aqua skin",
+    "metal skin",
+    "multicolored skin",
+    "two-tone skin",
+    "colored extremities",
+    "patchwork skin",
+    "albino",
+    "sticker on face",
+    "lipstick mark on face",
 }
 
 SEX = {
@@ -741,6 +866,12 @@ def assign_group(item: dict) -> str:
             "eyelashes", "eyeshadow", "heterochromia", "tareme", "tsurime",
             "symbol-shaped pupils", "slit pupils", "dilated pupils",
             "star-shaped pupils", "bright pupils", "white pupils",
+            # 名字裡沒有 eye。不要用「pupil」子字串，否則愛心瞳會從 other 被改走。
+            "^ ^", "> <", "@ @", "+ +", "= =", "o o", ";o", "sanpaku",
+            "black sclera", "yellow sclera",
+            "red pupils", "pink pupils", "no pupils", "constricted pupils",
+            "cross-shaped pupils", "diamond-shaped pupils", "mismatched pupils",
+            "blinking", "aegyo sal",
         }:
             return "eyes"
         if tag in BODY_HAIR:
@@ -814,7 +945,8 @@ def assign_group(item: dict) -> str:
     if sec == "pose":
         # 前景模糊、黑邊、透視、對稱是畫面處理，不佔鏡頭格，也不能掉進誘惑。
         # foreshortening 的互斥名也叫 perspective，那是另一個字，不要混在一起。
-        if tag in {"blurry foreground", "letterboxed", "perspective", "symmetry"}:
+        # 畫面處理跟倒影焦點要能在鏡頭架上找到，但不佔鏡頭那一格。
+        if tag in {"blurry foreground", "letterboxed", "perspective", "symmetry", "reflection focus"}:
             return "camera"
         if mx == "body_pose":
             return "body"
@@ -903,7 +1035,8 @@ def assign_group(item: dict) -> str:
             return "weather"
         if tag in SKY:
             return "sky"
-        if mx in ("lighting", "silhouette") or "light" in tag:
+        # 手電筒名字裡有 light，但它是拿在手上的道具（held_prop），不是光線。
+        if mx in ("lighting", "silhouette") or ("light" in tag and mx != "held_prop"):
             return "light"
         return "other"
 
