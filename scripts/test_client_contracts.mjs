@@ -18,8 +18,20 @@
 import { existsSync, readFileSync } from "fs";
 import { dirname, join } from "path";
 import { fileURLToPath, pathToFileURL } from "url";
+import { registerHooks } from "module";
 
 const ROOT = join(dirname(fileURLToPath(import.meta.url)), "..");
+// web6 的 card-art.js 是伺服器從 web/ 送過去的共用檔，web6 資料夾裡沒有實體檔。
+// motion.js → card-images.js → ./card-art.js 在 node 裡要指回 web/（2026-10-12：飛行副本改用 cloneCard 之後才有這條鏈）。
+registerHooks({
+  resolve(specifier, context, next) {
+    const parent = context.parentURL ? fileURLToPath(context.parentURL) : "";
+    if (specifier === "./card-art.js" && dirname(parent) === join(ROOT, "web6")) {
+      return next(pathToFileURL(join(ROOT, "web/card-art.js")).href, context);
+    }
+    return next(specifier, context);
+  },
+});
 // 反斜線在這個專案的編輯路徑上被吃掉過太多次，換行一律用碼點組，不寫字面值。
 const NL = String.fromCharCode(10);
 const CR = String.fromCharCode(13);
@@ -1675,8 +1687,8 @@ const ALBUM_FIXTURE = [
   ok("疊印台拿下／撤回／清版：牌飛回字盒（不再原地往上飄走），撤回的牌從字盒飛回來", fuse6.includes("function flyHome(snap, delay = 0)") && fuse6.includes("snaps.forEach((s, i) => flyHome(s, i * 60));") && fuse6.includes("flyIn(l.t, l.rect, { delay,"));
   ok("墨池被擠掉的牌也飛回字盒", app6.includes("const homeNow = () => (hand?.has(tag) && hand.nodeOf(tag)) || libCardNode(tag);") && app6.includes("leaving.forEach((l, i) => liftOut(l, i * 60));"));
   {
-    const m = fuse6.replace(/\r\n/g, "\n").match(/const STARTERS = (\[[\s\S]*?\n\]);/);
-    const starters = m ? eval(m[1]) : [];
+    // 2026-10-12：起手組合搬到 web6/starters.js，墨池跟疊印台共用。
+    const { STARTERS: starters } = await import(pathToFileURL(join(ROOT, "web6/starters.js")).href);
     ok("疊印台起手組合 20 組以上，每次隨機三組、可以換一組", starters.length >= 20 && fuse6.includes("function pickStarters(") && fuse6.includes("換一組"), `目前 ${starters.length} 組`);
   }
   ok("重新整理清掉沒印出來的（墨池、疊印台；剛剛還排著的除外）；疊印台取消的不掛上繩子", app6.includes('s.status === "done" || s.status === "drawn" || (s.live && s.job) || S.stillWaiting(s)') && fuse6.includes('.filter((p) => p.status === "done" || (p.live && p.job) || S.stillWaiting(p))') && fuse6.includes('else if (p.status === "cancelled") dropCancelled(p);'));
@@ -1756,7 +1768,7 @@ const ALBUM_FIXTURE = [
       ok("角色頁的作品籤前面有「系列：」標頭，不跟性別的「全部」並排混淆（字盒、卡冊、疊印台）", [...fold, ...caseFold].every((s) => s.includes("seriesRun(all)")));
       ok("疊印台找牌跟字盒同一套比對：角色牌對得上作品名（one piece、jojo）", caseFold.every((s) => s.includes("if (q) list = list.filter((c) => cardMatches(c, q) || (c.groupZh || \"\").toLowerCase().includes(q));")));
       ok("字盒、疊印台篩了作品往下捲：選中的籤看不見就浮出一顆「航海王」清除鈕（不佔位置、淡入，離開比進來快）", ["web6/cards.js", "web7/cards.js"].every((f) => readFileSync(join(ROOT, f), "utf8").includes("export function groupNow(box, chips)")) && app6.includes('libNow ||= groupNow($("lib-group-now"), chips);') && caseFold.every((s) => s.includes('caseNow ||= groupNow($("case-group-now"), box);')) && styles67.every((s) => s.includes(".group-now {\n  position: relative;\n  z-index: 3;\n  height: 0;") && s.includes('.group-now:not([data-out="true"]) > .group-chip {\n  visibility: hidden;')));
-      ok("第一次準備的面板收合／展開：大小從舊的長到新的，展開時清單淡進來；內容換好才量", ((setupPanel) => setupPanel.includes("function setCollapsed(v) {\n  const was = box.getBoundingClientRect();") && setupPanel.indexOf("if (asking && asking !== stored(ASKED_KEY)) setCollapsed(false);") > setupPanel.indexOf("foot.hidden = !acts.length;"))(readFileSync(join(ROOT, "web6/setup-panel.js"), "utf8")));
+      ok("第一次準備的面板收合／展開：大小從舊的長到新的，展開時清單淡進來；內容換好才量", ((setupPanel) => setupPanel.includes("function setCollapsed(v) {\n  const was = box.getBoundingClientRect();") && setupPanel.indexOf("if (asking && asking !== stored(ASKED_KEY)) setCollapsed(false);") > setupPanel.indexOf("foot.hidden = !acts.length;"))(readFileSync(join(ROOT, "web6/setup-panel.js"), "utf8").replace(/\r\n/g, "\n")));
       const setup6 = readFileSync(join(ROOT, "web6/setup-panel.js"), "utf8");
       ok("第一次準備的面板：收合記在分頁裡（換頁不再展開、手機上不蓋頁首），冒出新的問題才打開", setup6.includes('const COLLAPSED_KEY = "mochi.setup.collapsed";') && setup6.includes("if (asking && asking !== stored(ASKED_KEY)) setCollapsed(false);"));
       ok("墨池字盒：只有一張在 Tab 順序裡，方向鍵走，第一排往上回到搜尋框（疊印台也是）", app6.includes("function libKeys(e)") && app6.includes('$("lib-grid").onkeydown = libKeys;') && app6.includes('if (e.key === "ArrowUp" && i < cols) return void $("lib-q").focus();') && fuse6.includes('if (e.key === "ArrowUp" && i < cols) return void $("case-q").focus();'));
@@ -1903,7 +1915,7 @@ const ALBUM_FIXTURE = [
       ok("卡冊的卡盒：牌上的＋放進盒子（飛進去、蓋盒中章）、盒子點開能拿掉、全部放進墨池走交接便條（web6、web7）",
         ["web6", "web7"].every((d) => {
           const js = readFileSync(join(ROOT, d, "book.js"), "utf8");
-          return js.includes('const BOX_KEY = "mochi.book.box.v1";') && js.includes("flight(ghost") && js.includes('kind: "box", text: "盒中"') && js.includes('S.handOffPool(box, "book");') && js.includes("leaveAndFlip(grid, slot)") &&
+          return js.includes('const BOX_KEY = "mochi.book.box.v1";') && js.includes("flight(ghost") && js.includes('kind: "box", text: "盒中"') && js.includes('S.handOffPool(box, "book")') && js.includes("leaveAndFlip(grid, slot)") &&
             readFileSync(join(ROOT, d, "app.js"), "utf8").includes("function greetHandoff()") &&
             readFileSync(join(ROOT, d, "store.js"), "utf8").includes("export let handoffFrom");
         }));
