@@ -101,6 +101,11 @@ def main() -> int:
         if history:
             z.writestr(zipfile.ZipInfo("cards/previous.json", date_time=stamp), json.dumps(history, ensure_ascii=False, indent=1, sort_keys=True))
     h = hashlib.sha256(out.read_bytes()).hexdigest()
+    # 包裡有哪些卡、各是哪一版提示詞：fetch_card_art.py 用它判斷「缺的那些包裡補得到嗎」，
+    # 補不到（詞庫比包新）就不下載，直接交給烘焙。跟 URL、SIZE、SHA256 一起 commit。
+    listing = {k: v.get("positive", "") for k, v in sorted(general.items())}
+    (ROOT / "scripts" / "card_art_pack.json").write_text(json.dumps(listing, ensure_ascii=False, indent=1) + "\n", encoding="utf-8")
+    print("list    scripts/card_art_pack.json")
     print(f"cards   {len(general)}")
     print(f"size    {out.stat().st_size}")
     print(f"sha256  {h}")
