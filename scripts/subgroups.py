@@ -31,6 +31,15 @@ def _character_rows() -> tuple[list, dict]:
         names = json.loads((_HERE / "character_series.json").read_text(encoding="utf-8"))
     except (OSError, ValueError):
         return [], {}
+    # 每一部作品都要有中文短名，連目前只有禁用角色、畫面上看不到的也要：以後放行一個角色，
+    # 那部作品的籤才不會掉回英文（2026-10-12 專案主：「全部系列都要做」）。中文名不能是純英文。
+    missing = sorted({c.get("series") for c in chars if c.get("series") and c.get("series") not in names})
+    english = sorted(k for k, v in names.items() if not re.search(r"[^\x00-\x7f！：〈〉]", str(v[0])))
+    if missing or english:
+        raise SystemExit(
+            "scripts/character_series.json 要補中文短名："
+            + "、".join(missing + english)
+        )
     first = {}
     medium = {}
     for i, c in enumerate(chars):
