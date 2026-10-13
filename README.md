@@ -166,7 +166,7 @@ WEB_DIR=web1 PORT=8788 python3 server.py
 
 - Hires 放大模型 `RealESRGAN_x4plus_anime_6B`（約 18MB）：沒有就在縮小視窗下載到 `models/upscale_models`。不要：`NO_UPSCALE_FETCH=1`。
 - 姿勢參考（`comfyui_controlnet_aux` 節點＋Illustrious OpenPose ControlNet，約 2.5GB，會用 ComfyUI 自己的 Python 裝節點需要的套件）：選用，**會先問**——Y 裝、N 這次不要（20 秒沒回答也是）、A 永遠不問（放一個 `.no-pose-fetch` 檔，刪掉就會再問）。裝完要重開一次 ComfyUI。不要：`NO_POSE_FETCH=1`。
-- 修臉（只有墨池：Impact Pack＋Impact Subpack 節點、`face_yolov8m.pt` 臉部偵測模型，約 50MB）：選用，墨池的第一次準備面板**會先問**——安裝、這次不要、不要再問（放一個 `.no-face-fetch` 檔，刪掉就會再問）。裝完要重開一次 ComfyUI，成品下 Hires 旁邊就有「修臉」。不要：`NO_FACE_FETCH=1`。
+- 修臉（只有墨池：Impact Pack＋Impact Subpack 節點、`face_yolov8m.pt` 臉部偵測模型、SAM `sam_vit_b`，約 425MB；有 SAM 只重畫臉的形狀，瀏海、髮飾不跟著變）：選用，墨池的第一次準備面板**會先問**——安裝、這次不要、不要再問（放一個 `.no-face-fetch` 檔，刪掉就會再問）。裝完要重開一次 ComfyUI，成品下 Hires 旁邊就有「修臉」。不要：`NO_FACE_FETCH=1`。
 - macOS / Linux 手動跑 `python3 scripts/fetch_lora_manager.py`、`python3 scripts/fetch_upscale_model.py`、`python3 scripts/fetch_pose_assets.py`、`python3 scripts/fetch_face_detailer.py`。
 
 ## 設定
