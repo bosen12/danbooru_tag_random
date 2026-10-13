@@ -25,6 +25,21 @@ import urllib.request
 from pathlib import Path
 
 ROOT = Path(__file__).resolve().parents[1]
+
+
+def _real_data_fingerprint() -> dict:
+    """真資料（data/ 底下的日誌、次數、牌組、作品、設定）：跑完要跟開始時一模一樣。"""
+    out = {}
+    data = ROOT / "data"
+    if data.is_dir():
+        for p in data.rglob("*"):
+            if p.is_file() and "webp-cache" not in p.parts and p.suffix in (".json", ".jsonl", ".log", ".webp", ".png"):
+                st = p.stat()
+                out[str(p.relative_to(ROOT))] = (st.st_size, st.st_mtime_ns)
+    return out
+
+
+_REAL_BEFORE = _real_data_fingerprint()
 GUID = b"258EAFA5-E914-47DA-95CA-C5AB0DC85B11"
 
 failed = 0
@@ -297,6 +312,15 @@ def start_server(comfy_port: int, extra_env=None):
         WORKFLOW_DATA_DIR=tempfile.mkdtemp(),
         APP_SETTINGS=str(Path(tempfile.mkdtemp()) / "settings.json"),
         WEBP_CACHE_DIR=tempfile.mkdtemp(),
+        # 會寫的東西全部寫到暫存資料夾：出圖日誌、使用次數、牌組、作品冊。
+        # 以前漏了日誌，假的 1girl／out.png 跑進真的作品冊日誌和模型成績單。
+        GEN_LOG_PATH=str(Path(tempfile.mkdtemp()) / "gen_log.jsonl"),
+        CARD_USAGE_PATH=str(Path(tempfile.mkdtemp()) / "card_usage.json"),
+        CARD_DECKS_PATH=str(Path(tempfile.mkdtemp()) / "card_decks.json"),
+        RECIPE_DATA_DIR=tempfile.mkdtemp(),
+        # 第一次準備（會下載、裝東西、寫 data/setup.log）、清 ComfyUI 的 Hires 暫存：測試都不碰。
+        NO_SETUP="1",
+        NO_HIRES_PRUNE="1",
         # 測試起的伺服器不要去 GitHub 抓卡面（剛 clone 下來沒有插畫時會）。
         NO_CARD_FETCH="1",
         **(extra_env or {}),
@@ -887,7 +911,7 @@ try:
             "hires": {
                 "mode": "quick",
                 "scale": 1.25,
-                "image": "/api/image?filename=out.png&type=output&h=abcdabcdabcdabcd",
+                "image": "/api/image?filename=out.png&type=output&h=" + hashlib.sha1(comfy.view_body).hexdigest()[:16],
             },
         },
     )
@@ -905,6 +929,24 @@ try:
         str(posted.get("50")),
     )
     ok("原圖有先上傳", comfy.uploaded)
+
+    # 同一個檔名、內容換了（ComfyUI 輸出資料夾清過、編號重用）：Hires、修臉、收藏都要拒絕，不能拿別張圖做。
+    other = hashlib.sha1(b"another image").hexdigest()[:16]
+    comfy.uploaded = False
+    for mode in ("quick", "face"):
+        wrong = sse_events(port, timeout=20, payload={"positive": "1girl", "hires": {"mode": mode, "scale": 1.5, "image": "/api/image?filename=out.png&type=output&h=" + other}})
+        ok(f"hires {mode}：檔名被別張圖用掉就拒絕", bool(wrong) and wrong[-1][0] == "error" and "換成別張" in str(wrong[-1][1].get("error")), str(wrong))
+    ok("hires／修臉：拒絕的不會上傳別張圖", not comfy.uploaded)
+    code, rec = http_json(port, "POST", "/api/recipes", {"name": "指紋測試", "positive": "1girl", "seed": 1})
+    rid = (rec.get("recipe") or {}).get("id") if code == 200 else None
+    ok("收藏：建得出一筆", bool(rid), str((code, rec)))
+    if rid:
+        code, body = http_json(port, "POST", f"/api/recipes/{rid}/image", {"filename": "out.png", "type": "output", "h": other})
+        ok("收藏：檔名被別張圖用掉就不收（409）", code == 409 and body.get("code") == "gone", str((code, body)))
+        code, body = http_json(port, "POST", f"/api/recipes/{rid}/image", {"filename": "out.png", "type": "output", "h": hashlib.sha1(comfy.view_body).hexdigest()[:16]})
+        ok("收藏：指紋對得上照收", code == 200, str((code, body)))
+        code, body = http_json(port, "POST", f"/api/recipes/{rid}/image", {"filename": "out.png", "type": "output"})
+        ok("收藏：沒帶指紋的舊網址照舊收", code == 200, str((code, body)))
 finally:
     proc.terminate()
     try:
@@ -1070,6 +1112,10 @@ else:
         _rlog = _proc.stdout.read() or ""
     ok("real hires：主控台沒有 traceback", "Traceback" not in _rlog, _rlog[-800:])
 
+
+_real_after = _real_data_fingerprint()
+ok("真資料（data/）跑完一個檔都沒動", _real_after == _REAL_BEFORE,
+   str(sorted(k for k in set(_real_after) | set(_REAL_BEFORE) if _real_after.get(k) != _REAL_BEFORE.get(k))[:10]))
 
 if failed:
     print(f"\n{failed} failed")

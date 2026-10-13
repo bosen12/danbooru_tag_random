@@ -1864,6 +1864,14 @@ const ALBUM_FIXTURE = [
     ok("Hires 永遠從原圖放大（baseImage），不會拿放大過的再放大", hires6.includes("image: t.baseImage || t.image"));
     ok("Hires 快速預設 1.5、深度預設 2，倍率上限跟伺服器一樣（每邊 4096、總像素一半）", /quick: \{ zh: "快速", def: 1\.5/.test(hires6) && /deep: \{ zh: "深度", def: 2,/.test(hires6) && hires6.includes("const SIDE_MAX = 4096;") && hires6.includes("(4096 * 4096) / 2"));
     ok("Hires 的大圖換在原本那張的位置、存檔帶原圖（墨池、疊印台）", store6h.includes("baseImage: s.baseImage || null") && fuse6h.includes("baseImage: p.baseImage || null"));
+    {
+      const run = readFileSync(join(ROOT, "scripts/run_mochi_tests.py"), "utf8");
+      const quick = run.slice(0, run.indexOf('if "--full"'));
+      const sources = [...quick.matchAll(/\("[^"]+", "([^"]+)"\)/g)].map((m) => m[1]);
+      const bat = readFileSync(join(ROOT, "test.bat"), "utf8");
+      const missing = sources.filter((f) => !bat.includes("scripts\\" + f));
+      ok("test.bat 跑的包含開源版的快速測試（run_mochi_tests.py 的清單）：兩邊驗的範圍不會漂開" + (missing.length ? `；缺 ${missing.join("、")}` : ""), sources.length > 5 && !missing.length);
+    }
     ok("同種子重印、原檔不在重印都不帶 Hires 和修臉的結果", app6h.split("hi: null, hires: null, face: null, baseImage: null").length === 3);
     ok("墨池成品的「放大」鈕換成 Hires（點圖仍是放大）；疊印台印好的那張付印鈕變成 Hires", !app6h.includes('onclick: () => showShot(shot) }, "放大")') && app6h.includes("onclick: (e) => openHires(shot, e.currentTarget)") && fuse6h.includes('if (p && p.status === "done") return openHires(p, btn);') && fuse6h.includes("onclick: (e) => printAction(e.currentTarget)"));
     ok("原檔被刪（404／410）才算不在：墨池成品換成說明＋照原樣再印／撤下，疊印台繩上寫原檔已刪、付印鈕變再印一次；開頁面閒下來時逐張問（no-cache 重新驗證）", readFileSync(join(ROOT, "web6/gone.js"), "utf8").includes('return r.status === 404 || r.status === 410;') && readFileSync(join(ROOT, "web6/gone.js"), "utf8").includes('fetch(src, { cache: "no-cache" })') && readFileSync(join(ROOT, "web6/app.js"), "utf8").includes("setTimeout(sweepShots, 1500);") && fuse6h.includes("setTimeout(sweepPrints, 1500);") && fuse6h.includes('} else if (p && p._gone) label = "再印一次";'));

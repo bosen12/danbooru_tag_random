@@ -131,6 +131,49 @@ if errorlevel 1 (
   pause
   exit /b 1
 )
+echo == card art / upscale / pose install ==
+call %PY% scripts\test_fetch_card_art.py
+if errorlevel 1 (
+  pause
+  exit /b 1
+)
+call %PY% scripts\test_fetch_upscale.py
+if errorlevel 1 (
+  pause
+  exit /b 1
+)
+call %PY% scripts\test_fetch_pose.py
+if errorlevel 1 (
+  pause
+  exit /b 1
+)
+echo == generation completion, jobs, usage sync (web6) ==
+call %PY% scripts\test_gen_completion.py
+if errorlevel 1 (
+  pause
+  exit /b 1
+)
+call node scripts\test_web6_jobs.mjs
+if errorlevel 1 (
+  pause
+  exit /b 1
+)
+echo == Mochi release: engine, launchers, clean-copy smoke ==
+call node scripts\test_mochi_engine.mjs
+if errorlevel 1 (
+  pause
+  exit /b 1
+)
+call %PY% scripts\test_mochi_launchers.py
+if errorlevel 1 (
+  pause
+  exit /b 1
+)
+call %PY% scripts\test_mochi_smoke.py
+if errorlevel 1 (
+  pause
+  exit /b 1
+)
 echo == 3D studio ==
 call node scripts\test_studio.mjs
 if errorlevel 1 (

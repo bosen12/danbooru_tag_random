@@ -3,6 +3,7 @@
 
     python scripts/sync_mochi.py              # 同步到 ../danbooru_tag_mochi
     python scripts/sync_mochi.py --check      # 只列出會變的檔，不寫
+    python scripts/sync_mochi.py --check --strict   # 同上，有差異就回 1（CI 用）
     python scripts/sync_mochi.py --to D:\\x    # 別的位置
 
 開源版的結構：本專案的 web6/ 和它用到的 web/ 共用檔合成一個 web/（伺服器本來就是先找
@@ -28,7 +29,7 @@ W6 = ROOT / "web6"
 WEB = ROOT / "web"
 
 # 伺服器與它 import 的模組（根目錄）。
-ROOT_FILES = ["server.py", "card_usage.py", "card_decks.py", "gen_log.py", "lora_scan.py", "recipes.py", "setup_tasks.py", "workflows.py", "config.example.json"]
+ROOT_FILES = ["server.py", "card_usage.py", "card_decks.py", "file_lock.py", "gen_log.py", "lora_scan.py", "recipes.py", "setup_tasks.py", "workflows.py", "config.example.json"]
 # 啟動檔與伺服器會叫到的腳本（卡面下載與烘焙、放大模型、姿勢參考、修臉節點、ComfyUI 的 LoRA Manager）。
 SCRIPT_FILES = [
     "app_config.py", "bake_card_art.py", "card_thumbnails.py", "fetch_card_art.py", "card_art_pack.json", "fetch_pose_assets.py", "fetch_face_detailer.py",
@@ -166,6 +167,7 @@ def main() -> int:
     ap = argparse.ArgumentParser(description=__doc__.split("\n")[0])
     ap.add_argument("--to", default=str(ROOT.parent / "danbooru_tag_mochi"))
     ap.add_argument("--check", action="store_true", help="只列出會變的檔，不寫")
+    ap.add_argument("--strict", action="store_true", help="跟 --check 一起用：有任何要更新、要刪的檔就回 1（給 CI 擋忘了同步）")
     args = ap.parse_args()
     dest = Path(args.to)
     if not (dest / ".git").is_dir():
@@ -177,7 +179,7 @@ def main() -> int:
     for path, old, new in REWRITES:
         rewrites.setdefault(path, []).append((old, new))
 
-    changed, warns = [], []
+    changed, warns, pending = [], [], []
     for rel, src in sorted(files.items()):
         if rel in MOCHI_OWN:
             continue
@@ -201,9 +203,7 @@ def main() -> int:
             have = have.replace(b"\r\n", b"\n")  # 工作目錄可能是 CRLF：git 看起來一樣就不算變
         if have != data:
             changed.append(rel)
-            if not args.check:
-                out.parent.mkdir(parents=True, exist_ok=True)
-                out.write_bytes(data)
+            pending.append((out, data))
 
     # 上游刪掉的：開源版 web/ 底下有、這次計畫裡沒有的（卡面圖不算）。
     stale = sorted(
@@ -211,8 +211,17 @@ def main() -> int:
         for p in (dest / "web").rglob("*")
         if p.is_file() and not p.relative_to(dest / "web").as_posix().startswith("cards/") and p.relative_to(dest).as_posix() not in files
     )
-    for rel in stale:
-        if not args.check:
+    # 有 WARN（REWRITES 對不上）就一個檔都不寫：以前先寫完才印 WARN，開源版那幾行已經被換成這邊的字樣。
+    if warns and not args.check:
+        for w in warns:
+            print(w)
+        print("REWRITES 有對不上的：一個檔都沒寫。先改 sync_mochi.py 的 REWRITES 再同步。")
+        return 1
+    if not args.check:
+        for out, data in pending:
+            out.parent.mkdir(parents=True, exist_ok=True)
+            out.write_bytes(data)
+        for rel in stale:
             (dest / rel).unlink()
 
     verb = "會更新" if args.check else "更新"
@@ -227,7 +236,9 @@ def main() -> int:
         print(w)
     if changed or stale:
         print(f"\n下一步：cd {dest} → python tests/run.py → git diff → commit、push")
-    return 1 if warns else 0
+    if warns:
+        return 1
+    return 1 if args.check and args.strict and (changed or stale) else 0
 
 
 if __name__ == "__main__":
