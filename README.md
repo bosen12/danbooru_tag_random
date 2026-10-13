@@ -223,7 +223,7 @@ cp config.example.json config.json
 
 其他常用的：`comfy.api`（ComfyUI 位置，畫面也可以改）、`comfy.checkpointDir`（只給底模預覽圖）、
 `server.port` / `server.host` / `server.allowNet`、`paths.webDir`（版面 `web`／`web1`／`web2`／`web3`）、
-`client.streamIdleMs`（Comfy 靜默多久就放棄該張；**慢顯卡例如 AMD ROCm 建議調大**，見〈跑到一半自己停〉）、`output.keep`（ComfyUI 的 output/danbooru_case 只留最近幾張，預設 100，舊的移到資源回收筒；收進作品冊的另有一份；0 不清）。
+`client.streamIdleMs`（Comfy 靜默多久就放棄該張；**慢顯卡例如 AMD ROCm 建議調大**，見〈跑到一半自己停〉）、`output.keep`（ComfyUI 的 output/danbooru_case 只留最近幾張，預設 200，舊的移到資源回收筒；收進作品冊的另有一份；0 不清）。
 
 環境變數仍然可用，而且**優先於 `config.json`**，所以既有的啟動腳本不會壞：
 
