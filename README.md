@@ -160,13 +160,14 @@ WEB_DIR=web1 PORT=8788 python3 server.py
 - 發新版的卡圖包：`python3 scripts/pack_card_art.py 輸出.zip --previous 上一版.zip`，把印出來的大小、SHA-256、張數貼進 `scripts/fetch_card_art.py`。
 - 敏感、色情分級的卡面不公開。ComfyUI 開著時，Windows 的 `start.bat` 會在縮小視窗自動烘還沒有的卡，以及提示詞已經改過的卡。已經烤好、提示詞沒變的不會重烘。不想自動烘：設 `NO_CARD_BAKE=1`，或在專案根目錄放一個 `.no-card-bake` 檔。也可以手動跑 `python3 scripts/bake_card_art.py`。
 
-**5. ComfyUI 的 LoRA Manager、放大模型、姿勢參考。** 墨池在網頁上做（見上一步）；其他版面的啟動檔檢查這些，都裝進你的 ComfyUI：
+**5. ComfyUI 的 LoRA Manager、放大模型、姿勢參考、修臉。** 墨池在網頁上做（見上一步）；其他版面的啟動檔檢查這些，都裝進你的 ComfyUI：
 
 - [ComfyUI LoRA Manager](https://github.com/willmiao/ComfyUI-Lora-Manager)（custom node）：LoRA 面板的清單、預覽圖、Civitai 觸發詞、底模面板的名稱和預覽圖都從它來。**墨池會先問你要不要裝**（其他版面的啟動檔照舊自動檢查、安裝）：同意後 git clone 進 `custom_nodes`，再用 ComfyUI 自己的 Python 裝它要的套件，裝完要**重開一次 ComfyUI**。每個有 LoRA 面板的啟動檔都會檢查；只動這台電腦上的 ComfyUI。不要：`NO_LORA_MANAGER_FETCH=1`。
 
 - Hires 放大模型 `RealESRGAN_x4plus_anime_6B`（約 18MB）：沒有就在縮小視窗下載到 `models/upscale_models`。不要：`NO_UPSCALE_FETCH=1`。
 - 姿勢參考（`comfyui_controlnet_aux` 節點＋Illustrious OpenPose ControlNet，約 2.5GB，會用 ComfyUI 自己的 Python 裝節點需要的套件）：選用，**會先問**——Y 裝、N 這次不要（20 秒沒回答也是）、A 永遠不問（放一個 `.no-pose-fetch` 檔，刪掉就會再問）。裝完要重開一次 ComfyUI。不要：`NO_POSE_FETCH=1`。
-- macOS / Linux 手動跑 `python3 scripts/fetch_lora_manager.py`、`python3 scripts/fetch_upscale_model.py`、`python3 scripts/fetch_pose_assets.py`。
+- 修臉（只有墨池：Impact Pack＋Impact Subpack 節點、`face_yolov8m.pt` 臉部偵測模型，約 50MB）：選用，墨池的第一次準備面板**會先問**——安裝、這次不要、不要再問（放一個 `.no-face-fetch` 檔，刪掉就會再問）。裝完要重開一次 ComfyUI，成品下 Hires 旁邊就有「修臉」。不要：`NO_FACE_FETCH=1`。
+- macOS / Linux 手動跑 `python3 scripts/fetch_lora_manager.py`、`python3 scripts/fetch_upscale_model.py`、`python3 scripts/fetch_pose_assets.py`、`python3 scripts/fetch_face_detailer.py`。
 
 ## 設定
 
