@@ -125,6 +125,12 @@ if errorlevel 1 (
   pause
   exit /b 1
 )
+echo == FaceDetailer install ==
+call %PY% scripts\test_fetch_face.py
+if errorlevel 1 (
+  pause
+  exit /b 1
+)
 echo == 3D studio ==
 call node scripts\test_studio.mjs
 if errorlevel 1 (
