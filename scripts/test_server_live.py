@@ -321,6 +321,8 @@ def start_server(comfy_port: int, extra_env=None):
         # 第一次準備（會下載、裝東西、寫 data/setup.log）、清 ComfyUI 的 Hires 暫存：測試都不碰。
         NO_SETUP="1",
         NO_HIRES_PRUNE="1",
+        # 也不准清 ComfyUI 的 output（假的 ComfyUI 一樣是 127.0.0.1，真的設定檔會指到真的 output）。
+        NO_OUTPUT_PRUNE="1",
         # 測試起的伺服器不要去 GitHub 抓卡面（剛 clone 下來沒有插畫時會）。
         NO_CARD_FETCH="1",
         **(extra_env or {}),
