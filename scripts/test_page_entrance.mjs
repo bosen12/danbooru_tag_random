@@ -3,13 +3,13 @@ import {readFileSync} from 'node:fs';
 import {test} from 'node:test';
 import vm from 'node:vm';
 
-function runtime({reduce=false, hidden=false, history=false, vt=false, vtPlayed=false, scroll=0}={}) {
+function runtime({reduce=false, hidden=false, history=false, vt=false, vtPlayed=false, scroll=0, late=false}={}) {
   const events=[], frames=new Map(), listeners=new Map(), documentListeners=new Map(), mediaListeners=new Set(), pending=[];
   let id=0;
   const media={matches:reduce,addEventListener:(type,fn)=>mediaListeners.add(fn),removeEventListener:(type,fn)=>mediaListeners.delete(fn)};
   const node=(name,top=100)=>({name,isConnected:true, getBoundingClientRect(){events.push('read');return {top,left:20,right:100,bottom:top+60,width:80,height:60};},animate(keyframes,options){events.push('write');let finish;const finished=new Promise(r=>finish=r);const animation={keyframes,options,finished,cancelled:false,cancel(){this.cancelled=true;},finish};pending.push(animation);this.animation=animation;return animation;}});
   const mast=node('mast',10),cards=Array.from({length:18},(_,i)=>node('card'+i)),offscreen=node('offscreen',1000);
-  const document={hidden,documentElement:{dataset:{...(vt?{vtIn:'fwd'}:{}),...(vtPlayed?{vtPlayed:'true'}:{})}},addEventListener:(type,fn)=>documentListeners.set(type,fn),removeEventListener:(type,fn)=>{if(documentListeners.get(type)===fn)documentListeners.delete(type);},querySelectorAll(selector){if(selector.includes('.mast'))return [mast];if(selector.includes('.lib-grid'))return [...cards,offscreen];if(selector.includes('.pool-well'))return [node('pool')];return [];}};
+  const document={hidden,documentElement:{dataset:{entering:'',...(late?{enterLate:''}:{}),...(vt?{vtIn:'fwd'}:{}),...(vtPlayed?{vtPlayed:'true'}:{})}},addEventListener:(type,fn)=>documentListeners.set(type,fn),removeEventListener:(type,fn)=>{if(documentListeners.get(type)===fn)documentListeners.delete(type);},querySelectorAll(selector){if(selector.includes('.mast'))return [mast];if(selector.includes('.lib-grid'))return [...cards,offscreen];if(selector.includes('.pool-well'))return [node('pool')];return [];}};
   const window={scrollY:scroll,innerWidth:390,innerHeight:852,addEventListener(type,fn){listeners.set(type,fn);},removeEventListener(type,fn){if(listeners.get(type)===fn)listeners.delete(type);}};
   const context={document,window,innerWidth:390,innerHeight:852,matchMedia:()=>media,performance:{getEntriesByType:()=>[{type:history?'back_forward':'navigate'}]},getSfx:()=>({}),requestAnimationFrame(fn){const n=++id;frames.set(n,fn);return n;},cancelAnimationFrame(n){frames.delete(n);},setTimeout,clearTimeout,queueMicrotask,console};
   const source=readFileSync(new URL('../web6/motion.js',import.meta.url),'utf8').replace(/^import .*;\r?$/gm,'').replace(/\bexport /g,'');
@@ -20,7 +20,8 @@ function runtime({reduce=false, hidden=false, history=false, vt=false, vtPlayed=
 
 test('opening batches measurements before animation and caps/staggers visible cards',()=>{
   const r=runtime();r.playPageEntrance();r.flush();
-  assert.ok(r.mast.animation);assert.ok(r.cards.every(n=>n.animation));assert.equal(r.offscreen.animation,undefined);
+  // 2026-10-13：頂欄從第一個畫面就在（開機掃光掛在它底下），不再演；演了會先消失再浮上來。
+  assert.equal(r.mast.animation,undefined);assert.ok(r.cards.every(n=>n.animation));assert.equal(r.offscreen.animation,undefined);
   assert.ok(r.pending.length<=38);assert.equal(r.events.slice(r.events.indexOf('write')).includes('read'),false);
   const delays=r.cards.map(n=>n.animation.options.delay);assert.ok(delays.every((d,i)=>i===0||d>delays[i-1]));
   assert.ok(r.pending.every(a=>a.options.duration+a.options.delay<650));
@@ -54,4 +55,15 @@ test('changing reduced motion while entering cancels every effect',()=>{
 test('switching to a background tab lands immediately and removes its visibility listener',()=>{
   const r=runtime();r.playPageEntrance();r.flush();r.document.hidden=true;r.documentListeners.get('visibilitychange')();
   assert.ok(r.pending.every(a=>a.cancelled));assert.equal(r.documentListeners.size,0);assert.equal(r.listeners.size,0);
+});
+// <head> 先藏著要演的幾塊（html[data-entering]）：演的時候動畫已從透明開始才拿掉，不演時馬上拿掉。
+test('the first-paint veil lifts once the entrance animations exist',()=>{
+  const r=runtime();r.playPageEntrance();assert.ok('entering' in r.document.documentElement.dataset);
+  r.flush();assert.ok(r.pending.length>0);assert.equal('entering' in r.document.documentElement.dataset,false);
+});
+for(const [name,options] of [['reduced motion',{reduce:true}],['view transition',{vt:true}],['data later than the veil',{late:true}]])test(name+' lifts the veil without animating',()=>{
+  const r=runtime(options);r.playPageEntrance();r.flush();assert.equal(r.pending.length,0);assert.equal('entering' in r.document.documentElement.dataset,false);
+});
+test('input before the first frame lifts the veil',()=>{
+  const r=runtime();r.playPageEntrance();r.listeners.get('pointerdown')({});assert.equal('entering' in r.document.documentElement.dataset,false);
 });

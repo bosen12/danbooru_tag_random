@@ -53,7 +53,9 @@ try{
         page.on('pageerror',e=>errors.push(e.message));await install(page);await page.goto(url);await ready(page,fuse);
         await page.waitForFunction(()=>entryRecords.length>0);
         const records=await page.evaluate(()=>entryRecords);assert.ok(records.length<=38);assert.ok(records.every(r=>!r.fixed));
-        assert.ok(records.some(r=>r.className.includes('mast')));assert.ok(records.every(r=>r.options.delay+r.options.duration<650));
+        // 2026-10-13：頂欄從第一個畫面就在，不演（演了會先消失再浮上來）；進場一開始，<head> 掛的遮罩就拿掉。
+        assert.ok(!records.some(r=>/(^|\s)mast(\s|$)/.test(r.className)));assert.ok(records.every(r=>r.options.delay+r.options.duration<650));
+        assert.equal(await page.evaluate(()=>'entering' in document.documentElement.dataset),false);
         await page.evaluate(()=>document.getAnimations().filter(a=>a.id==='web6-page-enter').forEach(a=>{a.pause();a.currentTime=150;}));
         await page.screenshot({path:resolve(out,`${engine}-${width}-${fuse?'fuse':'mochi'}-enter.png`)});
         await page.evaluate(()=>document.getAnimations().filter(a=>a.id==='web6-page-enter').forEach(a=>a.finish()));await settled(page);
