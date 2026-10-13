@@ -194,6 +194,9 @@ class FakeComfy(threading.Thread):
                 )
                 return
             if path.startswith("/view"):
+                if self.view_body is None:  # 原圖已經被清掉（output 只留最近的圖）
+                    conn.sendall(b"HTTP/1.1 404 Not Found\r\nContent-Length: 0\r\nConnection: close\r\n\r\n")
+                    return
                 self._raw(conn, self.view_body, "image/png")
                 return
             self._json(conn, {})
@@ -949,6 +952,11 @@ try:
         ok("收藏：指紋對得上照收", code == 200, str((code, body)))
         code, body = http_json(port, "POST", f"/api/recipes/{rid}/image", {"filename": "out.png", "type": "output"})
         ok("收藏：沒帶指紋的舊網址照舊收", code == 200, str((code, body)))
+        saved_view = comfy.view_body
+        comfy.view_body = None  # 假 ComfyUI 回 404：原圖已經被清掉
+        code, body = http_json(port, "POST", f"/api/recipes/{rid}/image", {"filename": "gone.png", "type": "output"})
+        comfy.view_body = saved_view
+        ok("收藏：原圖已經不在 output（404）就說清楚（410）", code == 410 and body.get("code") == "gone", str((code, body)))
 finally:
     proc.terminate()
     try:
