@@ -234,9 +234,9 @@ else {
     }
   };
   const by = new Map(data.tags.map((t) => [t.tag, t]));
-  const share = (era, mutex, N) => {
-    const m = new Map();
-    let total = 0;
+  // 一輪抽 N 張，同時數好幾種 mutex（鞋子、布料一起數，不各抽一遍）。
+  const shares = (era, mutexes, N) => {
+    const out = new Map(mutexes.map((x) => [x, { m: new Map(), total: 0 }]));
     const casts = [{ girl: true, boy: false }, { girl: false, boy: true }, { girl: true, boy: true }];
     const heats = [["activity"], ["tease"], ["flash"], ["sex"], ["tease", "flash", "sex"]];
     for (let i = 0; i < N; i += 1) {
@@ -249,21 +249,31 @@ else {
         sceneMode: ["normal", "diverse", "weird"][Math.floor(i / 3) % 3],
       };
       const seed = 940000 + i;
-      const out = drawOne(lex, s, new Set(), new Set(), mulberry32(seed), seed);
-      for (const t of out.sections.clothing) {
-        if (by.get(t)?.mutex !== mutex) continue;
-        m.set(t, (m.get(t) || 0) + 1);
-        total += 1;
+      const drawn = drawOne(lex, s, new Set(), new Set(), mulberry32(seed), seed);
+      for (const t of drawn.sections.clothing) {
+        const bucket = out.get(by.get(t)?.mutex);
+        if (!bucket) continue;
+        bucket.m.set(t, (bucket.m.get(t) || 0) + 1);
+        bucket.total += 1;
       }
     }
-    const [top, n] = [...m].sort((a, b) => b[1] - a[1])[0] || ["-", 0];
-    return { top, pct: total ? n / total : 0, m, total };
+    for (const b of out.values()) {
+      const [top, n] = [...b.m].sort((a, c) => c[1] - a[1])[0] || ["-", 0];
+      Object.assign(b, { top, pct: b.total ? n / b.total : 0 });
+    }
+    return out;
   };
-  const feet = share("modern", "feet", 1500);
+  const share = (era, mutex, N) => shares(era, [mutex], N).get(mutex);
+  // 布料現在只在「更多種類」或自由補抽時才出現（2026-10 一千五百張只有 18 張有布料）：
+  // 抽太少，latex 佔幾成全看運氣（18 張裡 7 張就是 39%）。抽 8000 張、至少要有 60 個樣本才算數；
+  // 8000 張時 latex 約 21%（以前加權壓在它身上是 53%），門檻 30% 才不會因為詞庫小改就翻來翻去。
+  const modern = shares("modern", ["feet", "fabric"], 8000);
+  const feet = modern.get("feet");
   report("現代的鞋子沒有一雙超過 35%", feet.pct < 0.35, `${feet.top} ${(feet.pct * 100).toFixed(0)}%`);
   report("現代的 sneakers 不再獨佔（< 25%）", (feet.m.get("sneakers") || 0) / feet.total < 0.25, `sneakers ${(((feet.m.get("sneakers") || 0) / feet.total) * 100).toFixed(0)}%`);
-  const fabric = share("modern", "fabric", 1500);
-  report("現代的 latex 不再獨佔（< 25%）", (fabric.m.get("latex") || 0) / fabric.total < 0.25, `latex ${(((fabric.m.get("latex") || 0) / fabric.total) * 100).toFixed(0)}%`);
+  const fabric = modern.get("fabric");
+  report("現代的布料樣本夠多（≥ 60 個）", fabric.total >= 60, `只有 ${fabric.total} 個`);
+  report("現代的 latex 不再獨佔（< 30%）", (fabric.m.get("latex") || 0) / fabric.total < 0.3, `latex ${(((fabric.m.get("latex") || 0) / fabric.total) * 100).toFixed(0)}%（${fabric.total} 個樣本）`);
   // 反方向：古代的時代專屬加權照舊 —— 江戶的鞋子仍以木屐／草履為主。
   const edo = share("edo", "feet", 900);
   const edoOwn = ["geta", "zouri"].reduce((a, t) => a + (edo.m.get(t) || 0), 0) / edo.total;

@@ -13,7 +13,10 @@ const {PNG} = require(process.env.PNGJS_MODULE || 'C:/Users/boshe/.cache/codex-r
 const pixelmatchModule = require(process.env.PIXELMATCH_MODULE || 'C:/Users/boshe/.cache/codex-runtimes/codex-primary-runtime/dependencies/node/node_modules/pixelmatch');
 const pixelmatch = pixelmatchModule.default || pixelmatchModule;
 const root = resolve(import.meta.dirname, '..');
-const baselineRef = '8a6a7da';
+// 比的是「上一個 commit」：這支是「純重構不准改樣子」的守門（例如 CSS 搬家、選擇器改寫）。
+// 以前寫死 2026-10-05 的 8a6a7da，之後每一次有意的樣式修改都讓它失敗，就沒人看它了。
+// 有意改樣式就照常改、commit；要做純重構時，改之前先 commit，這支就會抓出不小心改到的地方。
+const baselineRef = process.env.STYLE_BASELINE || 'HEAD';
 const baseline = new Map(['card.css','styles.css','fuse.css','hand.js'].map(name => [name, execFileSync('git',['show',`${baselineRef}:web6/${name}`],{cwd:root,maxBuffer:2**22})]));
 // Apply only the intentional mobile toast placement to the historical fixture;
 // all other visual/motion declarations must still match. Actual toast/tray gaps,
@@ -28,7 +31,8 @@ const mobileToastPlacement = `@media (max-width: 640px) {
 }
 
 `;
-baseline.set('styles.css', Buffer.from(baseline.get('styles.css').toString().replace('/* 帶「復原」鈕的提示要點得到。 */', mobileToastPlacement + '/* 帶「復原」鈕的提示要點得到。 */')));
+// 舊基準（8a6a7da）還沒有手機提示框的位置，才要補進去；基準已經有了（HEAD）就不再補第二份。
+if (!baseline.get('styles.css').toString().includes('body .toast {')) baseline.set('styles.css', Buffer.from(baseline.get('styles.css').toString().replace('/* 帶「復原」鈕的提示要點得到。 */', mobileToastPlacement + '/* 帶「復原」鈕的提示要點得到。 */')));
 const out = resolve(root,'.planning/style-browser-results');
 await mkdir(out,{recursive:true});
 const server = createServer(async(req,res)=>{
@@ -119,8 +123,8 @@ try{
     await page.evaluate(()=>{mochi.settings.n=1;mochi.drawBatch(false);});await page.waitForFunction(()=>document.querySelector('#wall-head').dataset.hasShots==='true');await checkState();
     await page.evaluate(()=>document.querySelector('#wall').scrollIntoView({block:'start'}));await page.waitForTimeout(300);
     const float=await page.evaluate(()=>{const f=document.querySelector('.go-float');return{show:f.dataset.show,inert:f.inert};});assert.equal(float.inert,float.show!=='true');
-    await page.locator('.page-switch a[href="fuse.html"]').click();await page.waitForFunction(()=>document.body.classList.contains('fuse')&&document.querySelector('.fav-hand')?.dataset.open!==undefined);await checkState();
-    await page.locator('.page-switch a[href="./"]').click();await page.waitForFunction(()=>!document.body.classList.contains('fuse')&&document.querySelector('.fav-hand')?.dataset.open!==undefined);await checkState();
+    await page.locator('.page-switch a[href="fuse.html"]').click();await page.waitForFunction(()=>document.body?.classList.contains('fuse')&&document.querySelector('.fav-hand')?.dataset.open!==undefined);await checkState();
+    await page.locator('.page-switch a[href="./"]').click();await page.waitForFunction(()=>document.body&&!document.body.classList.contains('fuse')&&document.querySelector('.fav-hand')?.dataset.open!==undefined);await checkState();
     assert.deepEqual(errors,[],'real page navigation errors');results.smoke.push({width,pages:['mochi','fuse','mochi'],wallLifecycle:true,float});await page.close();
   }
   for(const cards of [0,60])for(const version of ['baseline','current']){
