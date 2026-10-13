@@ -28,7 +28,7 @@ git diff                               # 看過再 commit、push
 - 開源版有幾處字樣不一樣（啟動檔叫 `start.bat`、預設埠 8796、卡面從自己的 Release 下載、影片裡的 clone 網址），寫在腳本的 `REWRITES`。印出 **WARN** 代表這邊改到那幾行：去改 `REWRITES`，不要到那邊手改。
 - 開源版的 `tests/` 也是從這邊複製的（對照表在 `sync_mochi.py` 的 `TEST_FILES`，例如 `tests/test_engine_release.mjs` ← `scripts/test_mochi_engine.mjs`）：要改那邊的測試，改這邊的來源檔。
 - 開源版自己的檔不會被蓋：`README.md`（英文在上、中文在下）、`CLAUDE.md`、`start.bat`、`start.sh`、`.gitignore`、`.gitattributes`、`LICENSE`、`.github/`（CI）。功能改了、README 要跟著改的話，到那邊改。
-- **發新的卡面包**（`card-art-vN`）：兩個 repo 的 Release 都要發同一個 zip，`scripts/fetch_card_art.py` 的網址各指各的（同步時 `REWRITES` 會換）。
+- **發新的卡面包**（`card-art-vN`）：`python scripts/pack_card_art.py 輸出資料夾 --previous 上一版的縮圖包.zip` 打出縮圖包、原圖包兩個 zip（v7 起；新使用者先抓 30 MB 縮圖就有圖）。兩個 repo 的 Release 都要發同樣兩個檔，`scripts/fetch_card_art.py` 的 `BASE`、`THUMBS`、`FULL` 跟著換（網址同步時 `REWRITES` 會換）。
 - 只動到其他版面（web、web1～web5、web7、zipu、game）不用同步。
 - **開源版合併了外人的 PR**：同步之前先把那些改動搬回這邊，否則同步會蓋掉。`sync_mochi.py --check` 列出的檔如果不是這邊改的，就是還沒搬回來的。
 
