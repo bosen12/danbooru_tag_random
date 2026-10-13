@@ -157,7 +157,7 @@ WEB_DIR=web1 PORT=8788 python3 server.py
 - 直接跑 `python3 server.py` 的（macOS / Linux）由伺服器在背景抓，黑窗會印進度。
 - 已經有的圖一張都不覆蓋（唯一的例外：上一版公開包放的、之後重畫過、而且你沒自己重烘過的卡，會換成新畫的）；沒網路就維持佔位牌，下次啟動再試。不想抓：`NO_CARD_FETCH=1`。也可以手動跑 `python3 scripts/fetch_card_art.py`。
 - 已經有的卡（自己烘的或上一版下載的）照現在詞庫的卡面清單逐張對：都在就不下載，只缺幾張才去抓。
-- 發新版的卡圖包：`python3 scripts/pack_card_art.py 輸出.zip --previous 上一版.zip`，把印出來的大小、SHA-256、張數貼進 `scripts/fetch_card_art.py`。
+- 發新版的卡圖包：`python3 scripts/pack_card_art.py 輸出資料夾 --previous 上一版的縮圖包.zip`，會打出縮圖包、原圖包兩個 zip（新使用者先抓 30 MB 的縮圖就有圖），把印出來的大小、SHA-256、張數貼進 `scripts/fetch_card_art.py` 的 `THUMBS`、`FULL`，`BASE` 換成新的 tag。兩個 repo 的 Release 都要發同樣的兩個檔。
 - 敏感、色情分級的卡面不公開。ComfyUI 開著時，Windows 的 `start.bat` 會在縮小視窗自動烘還沒有的卡，以及提示詞已經改過的卡。已經烤好、提示詞沒變的不會重烘。不想自動烘：設 `NO_CARD_BAKE=1`，或在專案根目錄放一個 `.no-card-bake` 檔。也可以手動跑 `python3 scripts/bake_card_art.py`。
 
 **5. ComfyUI 的 LoRA Manager、放大模型、姿勢參考、修臉。** 墨池在網頁上做（見上一步）；其他版面的啟動檔檢查這些，都裝進你的 ComfyUI：
