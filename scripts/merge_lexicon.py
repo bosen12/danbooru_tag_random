@@ -5249,6 +5249,9 @@ def add_alt_names(unique: list[dict]) -> list[dict]:
     index = {t["tag"]: i for i, t in enumerate(unique)}
     after: dict[int, list[dict]] = {}
     seen_alt: set[str] = set()
+    # keep: "alt"（Grok 實測只認新名的那幾組）：只留新名字那張，原卡拿掉；舊存檔裡的原名由
+    # lexicon.json 的 renamed 換成新名（web6/tag-renames.js、card_usage.py）。
+    replaced: set[int] = set()
     for p in pairs:
         src, alt = p["tag"], p["alt"]
         if src not in index:
@@ -5259,15 +5262,26 @@ def add_alt_names(unique: list[dict]) -> list[dict]:
         base = unique[index[src]]
         clone = json.loads(json.dumps(base, ensure_ascii=False))
         clone["tag"] = alt
-        clone["altOf"] = src
+        if p.get("keep") == "alt":
+            clone["replaces"] = src
+            replaced.add(index[src])
+        else:
+            clone["altOf"] = src
         if clone.get("cardPositive"):
             clone["cardPositive"] = ", ".join(alt if x.strip() == src else x.strip() for x in clone["cardPositive"].split(","))
         after.setdefault(index[src], []).append(clone)
     out: list[dict] = []
     for i, t in enumerate(unique):
-        out.append(t)
+        if i not in replaced:
+            out.append(t)
         out.extend(after.get(i, []))
     return out
+
+
+def renamed_by_alt_names() -> dict[str, str]:
+    """keep: "alt" 的那幾組：原名 -> 留下來的新名。"""
+    pairs = json.loads(ALT_NAMES.read_text(encoding="utf-8")).get("pairs") or []
+    return {p["tag"]: p["alt"] for p in pairs if p.get("keep") == "alt"}
 
 
 def main() -> None:
@@ -5490,6 +5504,9 @@ def main() -> None:
         "zh": top_zh,
         # 第一關擋下的角色。不進 tags，貼上提示詞與手打也由引擎擋（Opus）。
         "characterBan": character_ban_tags(),
+        # 換過名的字（原名 -> 現在用的；alt_names.json 的 keep: "alt"）：存著的舊名讀到就換。
+        # 網頁那份在 web6/tag-renames.js，伺服器在 card_usage.py；兩邊要一致（測試守著）。
+        "renamed": dict(sorted(renamed_by_alt_names().items())),
         "tags": unique,
     }
     OUT.write_text(json.dumps(data, ensure_ascii=False, indent=2), encoding="utf-8")

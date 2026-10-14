@@ -89,4 +89,22 @@ ok("兩個程序同時寫：次數精確相加（60＋60）", usage_after["count
 ok("兩個程序同時寫：牌組一組都不少（60＋60）", len(decks_after) == 120)
 ok("兩個程序同時寫：沒有留下暫存檔", not list(race.glob("*.tmp")))
 
+# 詞庫換過名的字（lexicon.json 的 renamed，2026-10-14 底模實測只認新名的那幾組）：存著的舊名讀出來就是新名，
+# 次數併進新名；牌組裡的舊名、份量也一起換。
+ren = Path(tempfile.mkdtemp())
+ren_lex = ren / "lexicon.json"
+ren_lex.write_text(json.dumps({"tags": [{"tag": "no legwear"}, {"tag": "solo"}], "renamed": {"missing legwear": "no legwear"}}), encoding="utf-8")
+card_usage.LEXICON_PATH = ren_lex
+card_usage.USAGE_PATH = ren / "usage.json"
+card_usage.USAGE_PATH.write_text(json.dumps({"counts": {"missing legwear": 3, "no legwear": 2, "solo": 1}, "mine": {"missing legwear": 1}, "last": {"missing legwear": 900, "no legwear": 500}}), encoding="utf-8")
+got = card_usage.load()
+ok("使用次數：舊名的次數併進新名", got["counts"] == {"no legwear": 5, "solo": 1} and got["mine"] == {"no legwear": 1})
+ok("使用次數：最近一次取較晚的", got["last"] == {"no legwear": 900})
+import card_decks  # noqa: E402
+card_decks.DECKS_PATH = ren / "decks.json"
+card_decks.DECKS_PATH.write_text(json.dumps({"decks": [{"id": "deck-old1", "name": "舊", "tags": ["missing legwear", "solo", "no legwear"], "weights": {"missing legwear": 1.3}}]}), encoding="utf-8")
+d = card_decks.load()[0]
+ok("牌組：舊名換成新名、不重複", d["tags"] == ["no legwear", "solo"])
+ok("牌組：份量跟著換名", d["weights"] == {"no legwear": 1.3})
+
 sys.exit(1 if failed else 0)

@@ -505,15 +505,23 @@ function ok(name, rows) {
 }
 
 // ---- 同一個概念的另一個名字（scripts/alt_names.json，2026-10-14）----------------------
-// WAI v17 實測後專案主決定不刪字：Danbooru 併掉的舊名、實測畫得出來的替代字另外加成卡，
-// 跟原卡同中文名、緊接在原卡後面（字盒裡並排）。實測過的字一個都不准不見。
+// WAI v17 實測後：Danbooru 併掉的舊名、實測畫得出來的替代字加成卡，跟原卡同中文名、緊接在原卡後面。
+// keep: "alt" 的（Grok 實測只認新名）只留新名那張，原卡不准出現，lexicon.json 的 renamed 要對得上。
+// 實測過、沒換名的字一個都不准不見。
 {
   const pairs = JSON.parse(readFileSync(join(ROOT, "scripts", "alt_names.json"), "utf8")).pairs || [];
   const order = new Map(data.tags.map((t, i) => [t.tag, i]));
   const bad = [];
-  for (const { tag, alt } of pairs) {
+  const renamed = {};
+  for (const { tag, alt, keep } of pairs) {
     const a = by.get(tag);
     const b = by.get(alt);
+    if (keep === "alt") {
+      renamed[tag] = alt;
+      if (a) bad.push(`「${tag}」只認新名，原卡應該拿掉`);
+      if (!b || b.replaces !== tag) bad.push(`「${alt}」不在詞庫，或 replaces 不是「${tag}」`);
+      continue;
+    }
     if (!a || !b) {
       bad.push(`「${tag}」或「${alt}」不在詞庫`);
       continue;
@@ -525,11 +533,13 @@ function ok(name, rows) {
     const between = data.tags.slice(order.get(tag) + 1, order.get(alt));
     if (order.get(alt) < order.get(tag) || between.some((t) => t.altOf !== tag)) bad.push(`「${alt}」沒有排在「${tag}」旁邊`);
   }
-  ok(`alt_names.json 的 ${pairs.length} 個另名都在詞庫、同中文、同一格、排在原卡旁邊`, bad);
+  ok(`alt_names.json 的 ${pairs.length} 組都照規則進詞庫（同中文並排，或只留新名）`, bad);
+  const same = JSON.stringify(Object.entries(data.renamed || {}).sort()) === JSON.stringify(Object.entries(renamed).sort());
+  ok("lexicon.json 的 renamed 跟 alt_names.json 的 keep: alt 一致", same ? [] : [`renamed=${JSON.stringify(data.renamed)}`]);
   const audit = JSON.parse(readFileSync(join(ROOT, "scripts", "model_vocab_audit_v17.json"), "utf8"));
   ok(
-    "v17 實測過的字都還在詞庫（決定是不刪）",
-    Object.keys(audit.tags || {}).filter((t) => !by.has(t)).map((t) => `「${t}」不在詞庫`)
+    "v17 實測過的字都還在詞庫（換名的看新名）",
+    Object.keys(audit.tags || {}).filter((t) => !by.has(renamed[t] || t)).map((t) => `「${t}」不在詞庫`)
   );
 }
 

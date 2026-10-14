@@ -1343,6 +1343,12 @@ def main() -> None:
             item["zh"] = src["zh"]
             if item["tag"] in missing:
                 missing.remove(item["tag"])
+        # 頂替原卡的新名字（keep: "alt"）：沿用原卡的中文。原卡已經不在詞庫，照原名查中文表。
+        if item.get("replaces") and item["tag"] in missing:
+            zh = auto_zh(item["replaces"])
+            if zh:
+                item["zh"] = zh
+                missing.remove(item["tag"])
     data["zh"] = {
         t: ZH[t]
         for t in list(data["quality"]) + list(data["nsfwTail"]) + list(data["alwaysEnv"]) + list(QUALITY_BOOST)

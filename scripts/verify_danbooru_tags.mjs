@@ -102,16 +102,13 @@ export const MODEL_VOCAB = new Set([
   // --- 2026-10-14：WAI v17 實測之後的決定（scripts/alt_names.json、model_vocab_audit_v17.json）----
   //
   // 專案主決定不刪字，而是把 Danbooru 併掉的舊名（現在 0 張）加成同中文名的卡，
-  // 放在原卡旁邊：模型訓練時看到的多半是舊名。實測有的畫得出來（no legwear、
-  // sleeves past elbows、eraser head、kyoto、gothic…），有的一樣畫不出來，但照決定都留。
+  // 放在原卡旁邊：模型訓練時看到的多半是舊名。Grok 逐組實測後，模型認不得的那個名字拿掉
+  // （只認新名的刪原名、只認原名或兩個都不認得的不加新名），留下來的都是實測認得的。
   // cum pool：2026-10 併進 cum puddle（兩個名字實測都 5/5），現名照留。
   "cum pool",
   "kyoto",
   "double breast sucking",
-  "foot on breast",
-  "kodona",
   "no legwear",
-  "no headwear",
   "nipple biting",
   "gothic",
   "goth girl",
@@ -119,14 +116,10 @@ export const MODEL_VOCAB = new Set([
   "lifted by self",
   "clothes only",
   "sleeves past elbows",
-  "y2k (fashion)",
-  "self breast sucking",
-  "sitting between lap",
   "presenting breasts",
   "plugsuit",
   "eraser head (boku no hero academia)",
   "marcille",
-  "falin thorden",
   "falin thorden (tallman)",
   "laios thorden",
   "marcille donato (dungeon lord)",

@@ -57,10 +57,10 @@ const GOLD = {
   // 2026-10-09：胸部互動 118 個現役詞進池。這張換成裸體、眼罩、球場。仍是 1girl solo，沒有男生或人類陰莖。
   // 2026-10-09 第二次：第三、四輪 38 個現役詞進池。這張換成衝浪衣、百褶裙、隔衣自慰、太空船。仍是 1girl solo，沒有男生或人類陰莖。
   // 2026-10-12：Grok 的角色追加、一般標籤、焦點共 648 個字進池（Opus 驗收時修了時代、室內外、日夜、眼睛出框）。這張換成裙裡短褲、自慰、泳池梯、柳橙。仍是 1girl solo，沒有男生或人類陰莖。
-  // 2026-10-14：WAI v17 實測後，Danbooru 併掉的舊名和替代字加成同中文名的卡（scripts/alt_names.json，29 張），池子變大；截肢補動作、上衣補下著在收尾後再補一次。仍是 1girl solo，沒有男生或人類陰莖。
+  // 2026-10-14：WAI v17 實測後，Danbooru 併掉的舊名和替代字加成同中文名的卡（scripts/alt_names.json；Grok 逐組實測後留 22 組，其中 7 組只留新名），池子變大；截肢補動作、上衣補下著在收尾後再補一次。仍是 1girl solo，沒有男生或人類陰莖。
   1: {
-    rng: 935,
-    pos: "1girl, solo, pixie cut, orange eyes, grey hair, hair slicked back, medium breasts, breast rest, blush stickers, animal penis, shirt, loafers, white skirt, skirt, bra, juliet sleeves, long sleeves, puffy sleeves, masturbation, falling, full body, looking at object, nervous, licking lips, volcano, outdoors, rain, sunrise, underlighting, clothes only, nsfw, explicit, masterpiece, best quality, amazing quality",
+    rng: 918,
+    pos: "1girl, solo, pixie cut, orange eyes, grey hair, hair slicked back, medium breasts, toned, ribs, animal penis, latex bodysuit, bodysuit, high heels, halterneck, denim, female masturbation, kneeling, from behind, looking at breasts, >:), holding card, pool ladder, indoors, evening, city lights, strawberry, new year, nsfw, explicit, masterpiece, best quality, amazing quality",
   },
   // 2026-09-29：路人進了環境池，同一顆亂數落到別的環境字，後面的姿勢跟著換。
   // seed 42 少了束縛和手銬（手銬是束縛之後才拉的），多了咬唇。seed 100 花瓣換成剪影。
@@ -77,10 +77,10 @@ const GOLD = {
   // 2026-10-09 第二次：第三、四輪 38 個現役詞進池。這張換成大量泌乳、觸手夾乳、玄關。仍是 1girl solo，沒有男生或人類陰莖。
   // 2026-10-09 第四次：正常場景不再自己補手的構圖母題（HAND_MOTIF）。這張只有觸手夾乳換成乳頭牽繩。仍是 1girl solo，沒有男生或人類陰莖。
   // 2026-10-12：Grok 的角色追加、一般標籤、焦點共 648 個字進池（Opus 驗收時修了時代、室內外、日夜、眼睛出框）。這張換成瞇眼笑、哥德風、自由女神。瞇眼笑是閉眼，沒有視線。仍是 1girl solo，沒有男生或人類陰莖。
-  // 2026-10-14：WAI v17 實測後，Danbooru 併掉的舊名和替代字加成同中文名的卡（scripts/alt_names.json，29 張），池子變大；截肢補動作、上衣補下著在收尾後再補一次。仍是 1girl solo，沒有男生或人類陰莖。
+  // 2026-10-14：WAI v17 實測後，Danbooru 併掉的舊名和替代字加成同中文名的卡（scripts/alt_names.json；Grok 逐組實測後留 22 組，其中 7 組只留新名），池子變大；截肢補動作、上衣補下著在收尾後再補一次。仍是 1girl solo，沒有男生或人類陰莖。
   42: {
-    rng: 951,
-    pos: "1girl, solo, very short hair, yellow eyes, aqua hair, sidelocks, large breasts, freckles, single sidelock, inverted nipples, turtleneck, yume kawaii, long coat, coat, striped panties, panties, skirt, masturbation, sitting on object, sitting, facing away, looking at mirror, :q, streetcar, outdoors, sunrise, dappled sunlight, sparks, scissors, nsfw, explicit, masterpiece, best quality, amazing quality",
+    rng: 952,
+    pos: "1girl, solo, very short hair, yellow eyes, aqua hair, sidelocks, large breasts, hair between eyes, bindi, forehead mark, facial mark, long legs, nude, red hat, hat, semi-rimless eyewear, glasses, red bowtie, bowtie, high heels, masturbation, kicking, profile, averting eyes, :q, hip focus, streetcar, outdoors, sunrise, dappled sunlight, sparks, scissors, nsfw, explicit, masterpiece, best quality, amazing quality",
   },
   // 2026-10-05 第五次：女僕圍裙是布料疊層，不占連身裙。仍是 1girl solo。
   // 2026-10-05 第六次：爆炸頭跟長裙、探頭偷看。仍是 1girl solo。
@@ -91,10 +91,10 @@ const GOLD = {
   // 2026-10-09 第二次：第三、四輪 38 個現役詞進池。這張沒有人群，回到 solo。沒有男生或人類陰莖。
   // 2026-10-09 第四次：正常場景不再自己補手的構圖母題（HAND_MOTIF）。這張只有一個字變：掙扎換成抬腿。仍是 1girl solo，沒有男生或人類陰莖。
   // 2026-10-12：Grok 的角色追加、一般標籤、焦點共 648 個字進池（Opus 驗收時修了時代、室內外、日夜、眼睛出框）。這張換成吃東西、端著托盤、帳篷。仍是 1girl solo，沒有男生或人類陰莖。
-  // 2026-10-14：WAI v17 實測後，Danbooru 併掉的舊名和替代字加成同中文名的卡（scripts/alt_names.json，29 張），池子變大；截肢補動作、上衣補下著在收尾後再補一次。仍是 1girl solo，沒有男生或人類陰莖。
+  // 2026-10-14：WAI v17 實測後，Danbooru 併掉的舊名和替代字加成同中文名的卡（scripts/alt_names.json；Grok 逐組實測後留 22 組，其中 7 組只留新名），池子變大；截肢補動作、上衣補下著在收尾後再補一次。仍是 1girl solo，沒有男生或人類陰莖。
   100: {
     rng: 976,
-    pos: "1girl, solo, medium hair, grey eyes, white hair, swept bangs, flat chest, alternate hair color, nervous sweating, sweat, narrow waist, teeth, evening gown, dress, kodona, stiletto heels, high heels, eating, fighting stance, portrait, looking outside, smug, upper teeth only, cafeteria, indoors, evening, ceiling light, vending machine, breathing fire, fire, nsfw, explicit, masterpiece, best quality, amazing quality",
+    pos: "1girl, solo, medium hair, grey eyes, white hair, swept bangs, flat chest, alternate hair color, nervous sweating, sweat, narrow waist, evening gown, dress, yume kawaii, over-kneehighs, kneehighs, eating, fighting stance, portrait, looking outside, smug, shaded face, cafeteria, indoors, evening, ceiling light, vending machine, breathing fire, fire, nsfw, explicit, masterpiece, best quality, amazing quality",
   },
   // 2026-09-29 第三次：這張是性愛。淋浴間換成海邊，衣服和光線跟著換。仍是 1girl solo。
   // 2026-10-04（9a087a5）：帶衣物名的姿勢（hand in panties 這類）在候選階段就要先有對的衣服，
@@ -110,10 +110,10 @@ const GOLD = {
   // 2026-10-09：胸部互動 118 個現役詞進池。這張抽到舔自己乳頭。仍是 1girl solo，沒有男生或人類陰莖。
   // 2026-10-09 第二次：第三、四輪 38 個現役詞進池。這張換成花店、坐在物件上。仍是 1girl solo，沒有男生或人類陰莖。
   // 2026-10-12：Grok 的角色追加、一般標籤、焦點共 648 個字進池（Opus 驗收時修了時代、室內外、日夜、眼睛出框）。這張換成泳裝、耳麥、艾菲爾鐵塔、花卉焦點。仍是 1girl solo，沒有男生或人類陰莖。
-  // 2026-10-14：WAI v17 實測後，Danbooru 併掉的舊名和替代字加成同中文名的卡（scripts/alt_names.json，29 張），池子變大；截肢補動作、上衣補下著在收尾後再補一次。仍是 1girl solo，沒有男生或人類陰莖。
+  // 2026-10-14：WAI v17 實測後，Danbooru 併掉的舊名和替代字加成同中文名的卡（scripts/alt_names.json；Grok 逐組實測後留 22 組，其中 7 組只留新名），池子變大；截肢補動作、上衣補下著在收尾後再補一次。仍是 1girl solo，沒有男生或人類陰莖。
   999: {
-    rng: 970,
-    pos: "1girl, solo, long hair, glowing eyes, grey hair, asymmetrical hair, large breasts, braided hair rings, grey skin, colored skin, puffy nipples, dirndl, german clothes, goth fashion, frilled apron, sneakers, bag, nipple rings, piercing, masturbation, sitting on object, sitting, facing away, peeking out, peeking, yawning, nightclub, indoors, sunrise, world war ii, nsfw, explicit, masterpiece, best quality, amazing quality",
+    rng: 944,
+    pos: "1girl, solo, long hair, glowing eyes, grey hair, asymmetrical hair, large breasts, thigh strap, nipples, mascara, jersey, lace trim, meandros, micro shorts, shorts, no panties, bag, nipple rings, piercing, female masturbation, handstand, vanishing point, looking down, embarrassed, moaning, greyscale with colored background, simple background, light rays, lens flare, brazilian flag, world war ii, nsfw, explicit, masterpiece, best quality, amazing quality",
   },
   // 2026-09-23：走光補抽改成「所有成立的走光動作同一池、衣服吻合的權重 10」之後，
   // 這張的走光動作從 exhibitionism 換成 cameltoe（她穿 thong，吻合），場景跟著換。
@@ -127,10 +127,10 @@ const GOLD = {
   // 2026-10-09：胸部互動 118 個現役詞進池。這張換成辦公室、解開的襯衫。仍是 1girl solo，沒有男生或人類陰莖。
   // 2026-10-09 第二次：第三、四輪 38 個現役詞進池。這張換成粉紅胸罩、手探胸罩、教室。仍是 1girl solo，沒有男生或人類陰莖。
   // 2026-10-12：Grok 的角色追加、一般標籤、焦點共 648 個字進池（Opus 驗收時修了時代、室內外、日夜、眼睛出框）。這張換成釣魚、泳池。仍是 1girl solo，沒有男生或人類陰莖。
-  // 2026-10-14：WAI v17 實測後，Danbooru 併掉的舊名和替代字加成同中文名的卡（scripts/alt_names.json，29 張），池子變大；截肢補動作、上衣補下著在收尾後再補一次。仍是 1girl solo，沒有男生或人類陰莖。
+  // 2026-10-14：WAI v17 實測後，Danbooru 併掉的舊名和替代字加成同中文名的卡（scripts/alt_names.json；Grok 逐組實測後留 22 組，其中 7 組只留新名），池子變大；截肢補動作、上衣補下著在收尾後再補一次。仍是 1girl solo，沒有男生或人類陰莖。
   2026: {
     rng: 960,
-    pos: "1girl, solo, bob cut, purple eyes, white hair, crossed bangs, large breasts, hair up, sun tattoo, > <, skirt, off shoulder, shiny clothes, bra, bare shoulders, fishing, indian style, close-up, raised eyebrow, hand under clothes, hickey, outdoors, fishing rod, pool, evening, moonlight, shooting star, starry sky, nsfw, explicit, masterpiece, best quality, amazing quality",
+    pos: "1girl, solo, bob cut, purple eyes, white hair, crossed bangs, large breasts, hair up, sun tattoo, > <, skirt, off shoulder, denim, bra, bare shoulders, fishing, indian style, close-up, raised eyebrow, hand under clothes, hickey, outdoors, fishing rod, pool, evening, moonlight, shooting star, starry sky, nsfw, explicit, masterpiece, best quality, amazing quality",
   },
 };
 
@@ -329,8 +329,8 @@ const MATRIX_SEEDS = 200;
 // 指紋 c64b8aed → 614e0ef8。
 // 2026-10-12：Grok 的 648 個字進池；Opus 驗收補上時代、室內外天空、日夜光源、眼睛出框、正常場景的非人五官。
 // 同日再補：全裸字不接在要衣服的走光動作後、看手機不配要拿別的道具的活動、編髮環佔髮型格。指紋 614e0ef8 → 556b9a5f。
-// 2026-10-14：舊名、替代字加成同中文名的卡（alt_names.json），截肢補動作、上衣補下著在收尾後再補一次。指紋 a68766ae → c5f6b554。
-const MATRIX_GOLD = "c5f6b554";
+// 2026-10-14：舊名、替代字加成同中文名的卡（alt_names.json），截肢補動作、上衣補下著在收尾後再補一次。指紋 a68766ae → 0988bd1b。
+const MATRIX_GOLD = "0988bd1b";
 
 function matrixSettings(over) {
   const s = defaultSettings(data);
