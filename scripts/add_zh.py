@@ -1335,6 +1335,14 @@ def main() -> None:
                 missing.append(item["tag"])
                 zh = item["tag"]
         item["zh"] = zh
+    # 同一個概念的另一個名字（alt_names.json，merge 時標了 altOf）：中文跟原卡一樣，字盒裡兩張並排看得出是同一件事。
+    by_tag = {t["tag"]: t for t in data["tags"]}
+    for item in data["tags"]:
+        src = by_tag.get(item.get("altOf") or "")
+        if src:
+            item["zh"] = src["zh"]
+            if item["tag"] in missing:
+                missing.remove(item["tag"])
     data["zh"] = {
         t: ZH[t]
         for t in list(data["quality"]) + list(data["nsfwTail"]) + list(data["alwaysEnv"]) + list(QUALITY_BOOST)

@@ -398,6 +398,8 @@ function ok(name, rows) {
     for (const t of data.tags) {
       const z = (t.zh || "").trim();
       if (!z) continue;
+      // 同一個概念的另一個名字（alt_names.json）刻意跟原卡同中文、並排，不算撞名。
+      if (t.altOf) continue;
       if (!seen.has(z)) seen.set(z, []);
       seen.get(z).push(t.tag);
     }
@@ -500,6 +502,35 @@ function ok(name, rows) {
   // 反面：如果整份都是 0，上面那條會假通過，所以也要求數字是真的
   const zero = [...need].filter((s) => counts[s] === 0).map((s) => `「${s}」的 token 數是 0`);
   ok("token 數不是一片 0", zero);
+}
+
+// ---- 同一個概念的另一個名字（scripts/alt_names.json，2026-10-14）----------------------
+// WAI v17 實測後專案主決定不刪字：Danbooru 併掉的舊名、實測畫得出來的替代字另外加成卡，
+// 跟原卡同中文名、緊接在原卡後面（字盒裡並排）。實測過的字一個都不准不見。
+{
+  const pairs = JSON.parse(readFileSync(join(ROOT, "scripts", "alt_names.json"), "utf8")).pairs || [];
+  const order = new Map(data.tags.map((t, i) => [t.tag, i]));
+  const bad = [];
+  for (const { tag, alt } of pairs) {
+    const a = by.get(tag);
+    const b = by.get(alt);
+    if (!a || !b) {
+      bad.push(`「${tag}」或「${alt}」不在詞庫`);
+      continue;
+    }
+    if (b.altOf !== tag) bad.push(`「${alt}」的 altOf 不是「${tag}」`);
+    if (a.zh !== b.zh) bad.push(`「${alt}」中文「${b.zh}」跟「${tag}」的「${a.zh}」不一樣`);
+    if (a.section !== b.section || a.group !== b.group || a.sub !== b.sub) bad.push(`「${alt}」跟「${tag}」不在同一格`);
+    // 緊接在原卡後面：中間只能夾著同一張原卡的其他名字。
+    const between = data.tags.slice(order.get(tag) + 1, order.get(alt));
+    if (order.get(alt) < order.get(tag) || between.some((t) => t.altOf !== tag)) bad.push(`「${alt}」沒有排在「${tag}」旁邊`);
+  }
+  ok(`alt_names.json 的 ${pairs.length} 個另名都在詞庫、同中文、同一格、排在原卡旁邊`, bad);
+  const audit = JSON.parse(readFileSync(join(ROOT, "scripts", "model_vocab_audit_v17.json"), "utf8"));
+  ok(
+    "v17 實測過的字都還在詞庫（決定是不刪）",
+    Object.keys(audit.tags || {}).filter((t) => !by.has(t)).map((t) => `「${t}」不在詞庫`)
+  );
 }
 
 if (failed) {

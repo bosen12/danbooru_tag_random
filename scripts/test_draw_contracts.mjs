@@ -594,8 +594,10 @@ const WATER_SRC = [
   for (let i = 0; i < 80; i++) if (poseOf(draw(twoPin, ["looking at viewer"], i)).some((t) => sectionGroup(t) === "pose:body")) bodyToo += 1;
   ok("骨架：姿勢 2 釘了視線 → 再補身體姿勢", bodyToo / 80 > 0.9, `${bodyToo}/80`);
   const noCounts = { ...base, counts: { feature: 8, clothing: 5, env: 6 } };
-  const d0 = draw(noCounts, [], 0);
-  ok("骨架：設定沒給姿勢的數字 → 跟以前一樣全補", poseOf(d0).length >= 4, d0.positive);
+  // 以前只看一顆種子。2026-10-14 詞庫多了 29 張同名卡，那一顆剛好抽到閉眼（不給視線）只剩 3 格 ——
+  // 是那一張的合理結果，不是沒補。改看 20 顆：絕大多數要補滿 4 格以上。
+  const full0 = Array.from({ length: 20 }, (_, i) => poseOf(draw(noCounts, [], i)).length);
+  ok("骨架：設定沒給姿勢的數字 → 跟以前一樣全補", full0.filter((n) => n >= 4).length >= 17, full0.join(","));
 
   const must = mk({ ...one, mustDraw: { "pose:gaze": 1 } });
   let mustHit = 0;

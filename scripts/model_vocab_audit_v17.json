@@ -1,0 +1,1743 @@
+{
+  "model": "waiIllustriousSDXL_v170",
+  "date": "2026-10-14",
+  "seeds": [
+    1383,
+    20261014,
+    1,
+    42,
+    777
+  ],
+  "rule": "D 對 C，五張三張以上才算有；D 1～2/5 才加 E (tag:1.4)",
+  "tags": {
+    "kyoto (city)": {
+      "verdict": "literal",
+      "scores": {
+        "A": "5/5",
+        "B": "5/5",
+        "C": "0/5",
+        "D": "5/5",
+        "F": "5/5"
+      },
+      "action": "keep",
+      "layer": 1,
+      "note": "跳脫後五張是町家。靠字面 kyoto，不換。"
+    },
+    "cooperative breast sucking": {
+      "verdict": "learned",
+      "scores": {
+        "A": "0/5",
+        "C": "0/5",
+        "D": "5/5"
+      },
+      "action": "keep",
+      "layer": 1,
+      "note": "A、B 用對照表：卡面有 standing、full body，三人站著、手扶胸口，嘴沒含住。"
+    },
+    "foot on another's breast": {
+      "verdict": "not_learned",
+      "scores": {
+        "A": "0/5",
+        "B": "0/5",
+        "C": "0/5",
+        "D": "0/5",
+        "F": "1/5"
+      },
+      "action": "keep",
+      "layer": 1,
+      "note": "靠字面 foot。",
+      "suggested": "delete"
+    },
+    "ouji fashion": {
+      "verdict": "not_learned",
+      "scores": {
+        "A": "0/5",
+        "B": "0/5",
+        "C": "0/5",
+        "D": "0/5",
+        "F": "0/5"
+      },
+      "action": "keep",
+      "layer": 1,
+      "note": "襯衫洋裝、裙子。",
+      "suggested": "delete"
+    },
+    "missing legwear": {
+      "verdict": "old_name",
+      "scores": {
+        "A": "0/5",
+        "B": "5/5",
+        "C": "0/5",
+        "D": "0/5",
+        "F": "5/5"
+      },
+      "action": "keep",
+      "layer": 1,
+      "note": "現名五張都穿著大腿襪或襪子，畫反。",
+      "rename_to": "no legwear",
+      "suggested": "rename"
+    },
+    "missing headwear": {
+      "verdict": "not_learned",
+      "scores": {
+        "A": "1/5",
+        "B": "0/5",
+        "C": "0/5",
+        "D": "1/5",
+        "F": "0/5"
+      },
+      "action": "keep",
+      "layer": 1,
+      "note": "沒戴帽是預設，B、F、C 的光頭不算這個 tag。",
+      "suggested": "delete"
+    },
+    "biting nipple": {
+      "verdict": "not_learned",
+      "scores": {
+        "A": "0/5",
+        "B": "0/5",
+        "C": "0/5",
+        "D": "0/5",
+        "F": "0/5"
+      },
+      "action": "keep",
+      "layer": 1,
+      "note": "原圖：嘴在胸口側面或脖子上，乳頭露在嘴外面；不然就是用手捏。",
+      "suggested": "delete"
+    },
+    "aizawa shota": {
+      "verdict": "old_name",
+      "scores": {
+        "A": "0/5",
+        "B": "5/5",
+        "C": "0/5",
+        "D": "0/5",
+        "F": "5/5"
+      },
+      "action": "keep",
+      "layer": 1,
+      "note": "最小提示詞只有 `eraser head \\(boku no hero academia\\)`，沒有另寫作品名。",
+      "rename_to": "eraser head (boku no hero academia)",
+      "suggested": "rename"
+    },
+    "washitsu": {
+      "verdict": "not_learned",
+      "scores": {
+        "A": "0/5",
+        "C": "0/5",
+        "D": "0/5"
+      },
+      "action": "keep",
+      "layer": 1,
+      "note": "A、C 是走廊、拱廳。",
+      "suggested": "delete"
+    },
+    "paizuri gesture": {
+      "verdict": "not_learned",
+      "scores": {
+        "D": "2/5",
+        "E": "0/5",
+        "C": "0/5"
+      },
+      "action": "keep",
+      "layer": 1,
+      "note": "D 有兩張在乳溝前比出圓洞，其餘是 OK、比耶。",
+      "suggested": "delete"
+    },
+    "nipple suction cups": {
+      "verdict": "not_learned",
+      "scores": {
+        "A": "0/5",
+        "C": "0/5",
+        "D": "0/5"
+      },
+      "action": "keep",
+      "layer": 1,
+      "note": "A、D 是觸手吸盤加奶，沒有罩在乳頭上的杯子。",
+      "suggested": "delete"
+    },
+    "handsfree breast squeeze": {
+      "verdict": "not_learned",
+      "scores": {
+        "A": "0/5",
+        "C": "0/5",
+        "D": "0/5"
+      },
+      "action": "keep",
+      "layer": 1,
+      "note": "五張都是用手抓著擠，畫反。",
+      "suggested": "delete"
+    },
+    "hand in own bra": {
+      "verdict": "not_learned",
+      "scores": {
+        "A": "0/5",
+        "C": "0/5",
+        "D": "0/5"
+      },
+      "action": "keep",
+      "layer": 1,
+      "note": "手都在罩杯外面。",
+      "suggested": "delete"
+    },
+    "hand in another's bra": {
+      "verdict": "not_learned",
+      "scores": {
+        "A": "0/5",
+        "C": "0/5",
+        "D": "0/5"
+      },
+      "action": "keep",
+      "layer": 1,
+      "note": "男方的手在罩杯外面或腰上。",
+      "suggested": "delete"
+    },
+    "wiping breasts": {
+      "verdict": "not_learned",
+      "scores": {
+        "A": "2/5",
+        "C": "0/5",
+        "D": "0/5"
+      },
+      "action": "keep",
+      "layer": 1,
+      "note": "D 五張都在擦臉、擦眼。",
+      "suggested": "delete"
+    },
+    "hand grabbing both breasts": {
+      "verdict": "not_learned",
+      "scores": {
+        "A": "0/5",
+        "C": "0/5",
+        "D": "0/5"
+      },
+      "action": "keep",
+      "layer": 1,
+      "note": "五張都是兩手各抓一邊，沒有一隻手同時抓兩邊。",
+      "suggested": "delete"
+    },
+    "surrounded by breasts": {
+      "verdict": "not_learned",
+      "scores": {
+        "A": "0/5",
+        "C": "0/5",
+        "D": "1/5",
+        "E": "2/5"
+      },
+      "action": "keep",
+      "layer": 1,
+      "note": "A、C 都是四人並排，這個字沒有作用。",
+      "suggested": "delete"
+    },
+    "nipple guessing game (meme)": {
+      "verdict": "not_learned",
+      "scores": {
+        "A": "0/5",
+        "C": "0/5",
+        "D": "0/5"
+      },
+      "action": "keep",
+      "layer": 1,
+      "note": "五張都是一個人指著或捏自己的乳頭。",
+      "suggested": "delete"
+    },
+    "colored extremities": {
+      "verdict": "not_learned",
+      "scores": {
+        "A": "0/5",
+        "C": "0/5",
+        "D": "0/5"
+      },
+      "action": "keep",
+      "layer": 1,
+      "note": "青色手套或護甲，不是膚色不同。",
+      "suggested": "delete"
+    },
+    "amphora": {
+      "verdict": "not_learned",
+      "scores": {},
+      "action": "keep",
+      "layer": 1,
+      "note": "13 張，卡面是金罐子。",
+      "suggested": "delete"
+    },
+    "taipei 101": {
+      "verdict": "not_learned",
+      "scores": {},
+      "action": "keep",
+      "layer": 1,
+      "note": "29 張，卡面是普通街道高樓。",
+      "suggested": "delete"
+    },
+    "cum pool": {
+      "verdict": "learned",
+      "scores": {
+        "A": "5/5",
+        "B": "5/5",
+        "C": "5/5",
+        "D": "5/5",
+        "F": "5/5"
+      },
+      "action": "whitelist",
+      "layer": 1,
+      "note": "C 不能當對照：拿掉這個字之後卡面還有 excessive cum、cum，五張仍有水窪。"
+    },
+    "hairpin": {
+      "verdict": "learned",
+      "scores": {
+        "A": "4/5",
+        "B": "5/5",
+        "C": "0/5",
+        "D": "5/5",
+        "F": "5/5"
+      },
+      "action": "keep",
+      "layer": 1,
+      "note": "兩個名字都畫出小髮夾，分不出簪和夾。"
+    },
+    "drawing (action)": {
+      "verdict": "learned",
+      "scores": {
+        "A": "3/5",
+        "C": "0/5",
+        "D": "3/5"
+      },
+      "action": "keep",
+      "layer": 2,
+      "note": ""
+    },
+    "goth fashion": {
+      "verdict": "learned",
+      "scores": {
+        "A": "5/5",
+        "B": "5/5",
+        "C": "0/5",
+        "D": "5/5",
+        "F": "5/5"
+      },
+      "action": "keep",
+      "layer": 2,
+      "note": "兩個名字都畫得出哥德。"
+    },
+    "looking through own legs": {
+      "verdict": "learned",
+      "scores": {
+        "A": "5/5",
+        "B": "5/5",
+        "C": "0/5",
+        "D": "5/5",
+        "F": "5/5"
+      },
+      "action": "keep",
+      "layer": 2,
+      "note": "不換 `looking through legs`。"
+    },
+    "half up braid": {
+      "verdict": "learned",
+      "scores": {
+        "A": "4/5",
+        "C": "0/5",
+        "D": "5/5"
+      },
+      "action": "keep",
+      "layer": 2,
+      "note": "D 五張原圖都是一半扎起來編成辮、其餘放下。"
+    },
+    "lifting own clothes": {
+      "verdict": "learned",
+      "scores": {
+        "A": "4/5",
+        "B": "4/5",
+        "C": "0/5",
+        "D": "3/5",
+        "F": "4/5"
+      },
+      "action": "keep",
+      "layer": 2,
+      "note": "兩個名字都會。"
+    },
+    "playing video games": {
+      "verdict": "learned",
+      "scores": {
+        "A": "5/5",
+        "C": "5/5",
+        "D": "4/5"
+      },
+      "action": "keep",
+      "layer": 2,
+      "note": "C 不能當對照：拿掉之後父字 playing games 還在。"
+    },
+    "cyber fashion": {
+      "verdict": "learned",
+      "scores": {
+        "A": "5/5",
+        "C": "0/5",
+        "D": "5/5"
+      },
+      "action": "keep",
+      "layer": 2,
+      "note": ""
+    },
+    "hawaiian clothes": {
+      "verdict": "learned",
+      "scores": {
+        "A": "5/5",
+        "C": "0/5",
+        "D": "5/5"
+      },
+      "action": "keep",
+      "layer": 2,
+      "note": ""
+    },
+    "mecha pilot suit": {
+      "verdict": "learned",
+      "scores": {
+        "A": "5/5",
+        "C": "0/5",
+        "D": "5/5"
+      },
+      "action": "keep",
+      "layer": 2,
+      "note": ""
+    },
+    "ancient egyptian clothes": {
+      "verdict": "learned",
+      "scores": {
+        "A": "5/5",
+        "C": "0/5",
+        "D": "5/5"
+      },
+      "action": "keep",
+      "layer": 2,
+      "note": ""
+    },
+    "star symbol background": {
+      "verdict": "learned",
+      "scores": {
+        "A": "5/5",
+        "C": "0/5",
+        "D": "4/5"
+      },
+      "action": "keep",
+      "layer": 2,
+      "note": "D 的種子 1 是夜空的點，不算。"
+    },
+    "starry sky background": {
+      "verdict": "learned",
+      "scores": {
+        "A": "5/5",
+        "C": "5/5",
+        "D": "5/5"
+      },
+      "action": "keep",
+      "layer": 2,
+      "note": "C 父字還在。"
+    },
+    "clothes focus": {
+      "verdict": "learned",
+      "scores": {
+        "A": "1/5",
+        "B": "0/5",
+        "C": "0/5",
+        "D": "5/5",
+        "F": "5/5"
+      },
+      "action": "keep",
+      "layer": 2,
+      "note": "A、B 是風景，衣服被淹掉。"
+    },
+    "nipple rub through clothes": {
+      "verdict": "learned",
+      "scores": {
+        "A": "5/5",
+        "C": "0/5",
+        "D": "5/5"
+      },
+      "action": "keep",
+      "layer": 2,
+      "note": "C 父字留下的是裸的搓，隔著衣服這件事沒了。"
+    },
+    "nipple stimulation through clothes": {
+      "verdict": "learned",
+      "scores": {
+        "A": "5/5",
+        "C": "0/5",
+        "D": "5/5"
+      },
+      "action": "keep",
+      "layer": 2,
+      "note": "同上，C 變成裸的。"
+    },
+    "plugsuit (evangelion)": {
+      "verdict": "learned",
+      "scores": {
+        "A": "5/5",
+        "C": "0/5",
+        "D": "5/5"
+      },
+      "action": "keep",
+      "layer": 2,
+      "note": "C 父字 bodysuit 畫成普通科幻衣。"
+    },
+    "faux retro artstyle": {
+      "verdict": "learned",
+      "scores": {
+        "A": "5/5",
+        "C": "5/5",
+        "D": "5/5"
+      },
+      "action": "keep",
+      "layer": 2,
+      "note": "A、C 都像 90 年代，是父字 retro artstyle。"
+    },
+    "poking another's breast": {
+      "verdict": "learned",
+      "scores": {
+        "A": "1/5",
+        "C": "0/5",
+        "D": "3/5"
+      },
+      "action": "keep",
+      "layer": 2,
+      "note": "D 原圖：1383、1、777 是食指按在乳頭上；20261014、42 是抓。"
+    },
+    "poking own breast": {
+      "verdict": "learned",
+      "scores": {
+        "A": "4/5",
+        "C": "0/5",
+        "D": "4/5"
+      },
+      "action": "keep",
+      "layer": 2,
+      "note": "D 原圖五張裡 777 是托，不算。"
+    },
+    "breast-to-pectoral docking": {
+      "verdict": "learned",
+      "scores": {
+        "A": "5/5",
+        "C": "0/5",
+        "D": "5/5"
+      },
+      "action": "keep",
+      "layer": 2,
+      "note": ""
+    },
+    "sitting between legs": {
+      "verdict": "learned",
+      "scores": {
+        "A": "4/5",
+        "B": "4/5",
+        "C": "0/5",
+        "D": "5/5",
+        "F": "1/5"
+      },
+      "action": "keep",
+      "layer": 2,
+      "note": "D 的 777 原圖是人坐在對方張開的兩腿中間。"
+    },
+    "sports court": {
+      "verdict": "learned",
+      "scores": {
+        "A": "5/5",
+        "C": "0/5",
+        "D": "5/5"
+      },
+      "action": "keep",
+      "layer": 2,
+      "note": "C 是森林。"
+    },
+    "fitness gym": {
+      "verdict": "learned",
+      "scores": {
+        "A": "2/5",
+        "C": "0/5",
+        "D": "5/5"
+      },
+      "action": "keep",
+      "layer": 2,
+      "note": "A 多半是空的學校體育館。"
+    },
+    "grabbed by tentacles": {
+      "verdict": "learned",
+      "scores": {
+        "A": "5/5",
+        "C": "5/5",
+        "D": "5/5"
+      },
+      "action": "keep",
+      "layer": 2,
+      "note": "C 父字 tentacles 還在。"
+    },
+    "cumdrip from penis": {
+      "verdict": "learned",
+      "scores": {
+        "A": "5/5",
+        "C": "5/5",
+        "D": "4/5"
+      },
+      "action": "keep",
+      "layer": 2,
+      "note": "C 父字 cumdrip、penis 還在。"
+    },
+    "presenting own breasts": {
+      "verdict": "learned",
+      "scores": {
+        "A": "2/5",
+        "C": "0/5",
+        "D": "5/5"
+      },
+      "action": "keep",
+      "layer": 2,
+      "note": "D 是用手把自己的胸托起來送出去。"
+    },
+    "sucking own breasts": {
+      "verdict": "learned",
+      "scores": {
+        "A": "0/5",
+        "B": "0/5",
+        "C": "0/5",
+        "D": "4/5",
+        "F": "2/5"
+      },
+      "action": "keep",
+      "layer": 2,
+      "note": "原圖。"
+    },
+    "teamwork (sexual)": {
+      "verdict": "learned",
+      "scores": {
+        "A": "5/5",
+        "C": "0/5",
+        "D": "5/5"
+      },
+      "action": "keep",
+      "layer": 2,
+      "note": "兩個人對同一人做同一件事才算。"
+    },
+    "three-quarter sleeves": {
+      "verdict": "old_name",
+      "scores": {
+        "A": "0/5",
+        "C": "0/5",
+        "D": "0/5",
+        "F": "5/5"
+      },
+      "action": "keep",
+      "layer": 2,
+      "note": "原圖。",
+      "rename_to": "sleeves past elbows",
+      "suggested": "rename"
+    },
+    "tickling breasts": {
+      "verdict": "not_learned",
+      "scores": {
+        "A": "1/5",
+        "C": "0/5",
+        "D": "2/5",
+        "E": "2/5"
+      },
+      "action": "keep",
+      "layer": 2,
+      "note": "原圖。",
+      "suggested": "delete"
+    },
+    "window light": {
+      "verdict": "not_learned",
+      "scores": {
+        "A": "1/5",
+        "C": "0/5",
+        "D": "2/5",
+        "E": "2/5"
+      },
+      "action": "keep",
+      "layer": 2,
+      "note": "原圖。",
+      "suggested": "delete"
+    },
+    "raised inner eyebrows": {
+      "verdict": "not_learned",
+      "scores": {
+        "A": "0/5",
+        "C": "0/5",
+        "D": "1/5",
+        "E": "0/5"
+      },
+      "action": "keep",
+      "layer": 2,
+      "note": "原圖。",
+      "suggested": "delete"
+    },
+    "y2k fashion": {
+      "verdict": "not_learned",
+      "scores": {
+        "A": "0/5",
+        "B": "0/5",
+        "C": "0/5",
+        "D": "0/5",
+        "F": "0/5"
+      },
+      "action": "keep",
+      "layer": 2,
+      "note": "原圖 D、F。",
+      "suggested": "delete"
+    },
+    "cooperative nipple licking": {
+      "verdict": "not_learned",
+      "scores": {
+        "A": "0/5",
+        "C": "0/5",
+        "D": "0/5"
+      },
+      "action": "keep",
+      "layer": 2,
+      "note": "嘴沒有在乳頭上。",
+      "suggested": "delete"
+    },
+    "retrofuturism": {
+      "verdict": "not_learned",
+      "scores": {
+        "A": "0/5",
+        "C": "0/5",
+        "D": "0/5"
+      },
+      "action": "keep",
+      "layer": 2,
+      "note": "現代科幻裝甲，不是 1950 年代想像的未來。",
+      "suggested": "delete"
+    },
+    "steppee focus": {
+      "verdict": "not_learned",
+      "scores": {
+        "A": "0/5",
+        "C": "0/5",
+        "D": "0/5"
+      },
+      "action": "keep",
+      "layer": 2,
+      "note": "普通成人情侶。",
+      "suggested": "delete"
+    },
+    "folding paizuri": {
+      "verdict": "not_learned",
+      "scores": {
+        "A": "0/5",
+        "C": "0/5",
+        "D": "0/5"
+      },
+      "action": "keep",
+      "layer": 2,
+      "note": "A、C、D 都是普通乳交。",
+      "suggested": "delete"
+    },
+    "grabbing multiple others' breasts": {
+      "verdict": "not_learned",
+      "scores": {
+        "A": "1/5",
+        "C": "0/5",
+        "D": "0/5"
+      },
+      "action": "keep",
+      "layer": 2,
+      "note": "要一個人抓一個以上其他人的胸。",
+      "suggested": "delete"
+    },
+    "nipple stimulation (female on male)": {
+      "verdict": "not_learned",
+      "scores": {
+        "A": "0/5",
+        "C": "0/5",
+        "D": "0/5"
+      },
+      "action": "keep",
+      "layer": 2,
+      "note": "畫成男的抓女的胸。",
+      "suggested": "delete"
+    },
+    "suction tentacles": {
+      "verdict": "literal",
+      "scores": {
+        "A": "5/5",
+        "C": "5/5",
+        "D": "5/5"
+      },
+      "action": "keep",
+      "layer": 2,
+      "note": "詞庫定義是帶吸盤的觸手。"
+    },
+    "marcille donato": {
+      "verdict": "learned",
+      "scores": {
+        "A": "5/5",
+        "C": "0/5",
+        "D": "5/5"
+      },
+      "action": "keep",
+      "layer": 2,
+      "note": "精靈、金髮紅繩雙辮、綠眼、藍斗篷。"
+    },
+    "eris greyrat (adult)": {
+      "verdict": "learned",
+      "scores": {
+        "A": "5/5",
+        "C": "0/5",
+        "D": "5/5"
+      },
+      "action": "keep",
+      "layer": 2,
+      "note": "紅髮、黑頭帶、紅眼。"
+    },
+    "tingyun (harmony) (honkai: star rail)": {
+      "verdict": "learned",
+      "scores": {
+        "A": "5/5",
+        "B": "5/5",
+        "C": "0/5",
+        "D": "5/5",
+        "F": "5/5"
+      },
+      "action": "keep",
+      "layer": 2,
+      "note": "和聲版就是棕髮、紅髮尾、綠眼、狐耳、棕衣紅繩。"
+    },
+    "acheron (honkai: star rail)": {
+      "verdict": "learned",
+      "scores": {
+        "A": "5/5",
+        "C": "0/5",
+        "D": "5/5"
+      },
+      "action": "keep",
+      "layer": 2,
+      "note": "紫髮紫眼、白外套、黑束帶。"
+    },
+    "chiori (genshin impact)": {
+      "verdict": "learned",
+      "scores": {
+        "A": "5/5",
+        "C": "0/5",
+        "D": "5/5"
+      },
+      "action": "keep",
+      "layer": 2,
+      "note": "黑髮金尖、紅橙花飾、黃灰和服、紅眼。"
+    },
+    "sunday (honkai: star rail)": {
+      "verdict": "learned",
+      "scores": {
+        "A": "5/5",
+        "C": "0/5",
+        "D": "5/5"
+      },
+      "action": "keep",
+      "layer": 2,
+      "note": "淺藍銀髮、光環、小翼、星形胸針。"
+    },
+    "robin (honkai: star rail)": {
+      "verdict": "learned",
+      "scores": {
+        "A": "5/5",
+        "C": "0/5",
+        "D": "5/5"
+      },
+      "action": "keep",
+      "layer": 2,
+      "note": "淺藍銀髮、光環、小翼、紫花禮服。"
+    },
+    "xianyun (genshin impact)": {
+      "verdict": "learned",
+      "scores": {
+        "A": "5/5",
+        "C": "0/5",
+        "D": "5/5"
+      },
+      "action": "keep",
+      "layer": 2,
+      "note": "青髮、紅眼鏡、鶴飾。"
+    },
+    "shu (arknights)": {
+      "verdict": "learned",
+      "scores": {
+        "A": "5/5",
+        "C": "0/5",
+        "D": "5/5"
+      },
+      "action": "keep",
+      "layer": 2,
+      "note": "銀金髮、樹枝角、木珠、格紋胸衣。"
+    },
+    "boothill (honkai: star rail)": {
+      "verdict": "learned",
+      "scores": {
+        "A": "5/5",
+        "C": "0/5",
+        "D": "5/5"
+      },
+      "action": "keep",
+      "layer": 2,
+      "note": "牛仔帽、黑白髮、紅眼、機械軀幹。"
+    },
+    "falin touden": {
+      "verdict": "learned",
+      "scores": {
+        "A": "5/5",
+        "C": "0/5",
+        "D": "5/5"
+      },
+      "action": "keep",
+      "layer": 2,
+      "note": "短金髮、金眼、沒有尖耳。"
+    },
+    "falin touden (tallman)": {
+      "verdict": "learned",
+      "scores": {
+        "A": "5/5",
+        "B": "5/5",
+        "C": "0/5",
+        "D": "5/5",
+        "F": "5/5"
+      },
+      "action": "keep",
+      "layer": 2,
+      "note": "塔爾曼就是沒有羽毛的法琳。"
+    },
+    "laios touden": {
+      "verdict": "learned",
+      "scores": {
+        "A": "5/5",
+        "C": "0/5",
+        "D": "5/5"
+      },
+      "action": "keep",
+      "layer": 2,
+      "note": "短金髮、金眼、高領鎧甲。"
+    },
+    "alsace (azur lane)": {
+      "verdict": "learned",
+      "scores": {
+        "A": "5/5",
+        "C": "0/5",
+        "D": "4/5"
+      },
+      "action": "keep",
+      "layer": 2,
+      "note": "淺藍長髮、藍眼、白軍裝、十字頸飾。"
+    },
+    "t-head trainer (umamusume)": {
+      "verdict": "learned",
+      "scores": {
+        "A": "4/5",
+        "C": "0/5",
+        "D": "4/5"
+      },
+      "action": "keep",
+      "layer": 2,
+      "note": "白臉、上面一個黃 T。"
+    },
+    "prosciutto (jojo)": {
+      "verdict": "learned",
+      "scores": {
+        "A": "5/5",
+        "C": "0/5",
+        "D": "5/5"
+      },
+      "action": "keep",
+      "layer": 2,
+      "note": "金髮兩撮、紫金格紋西裝。"
+    },
+    "cu chulainn (lancer) (fate)": {
+      "verdict": "learned",
+      "scores": {
+        "A": "5/5",
+        "B": "5/5",
+        "C": "0/5",
+        "D": "5/5",
+        "F": "5/5"
+      },
+      "action": "keep",
+      "layer": 2,
+      "note": "藍髮、紅眼。"
+    },
+    "hex maniac (pokemon xy)": {
+      "verdict": "learned",
+      "scores": {
+        "A": "5/5",
+        "C": "0/5",
+        "D": "5/5"
+      },
+      "action": "keep",
+      "layer": 2,
+      "note": "紫髮蓋額、紫眼、黑高領、那張笑。"
+    },
+    "acheron (slashed dream) (honkai: star rail)": {
+      "verdict": "not_learned",
+      "scores": {
+        "A": "0/5",
+        "B": "0/5",
+        "C": "0/5",
+        "D": "0/5",
+        "F": "0/5"
+      },
+      "action": "keep",
+      "layer": 2,
+      "note": "靠字面 acheron。",
+      "suggested": "delete"
+    },
+    "marcille donato (lord)": {
+      "verdict": "not_learned",
+      "scores": {
+        "A": "0/5",
+        "B": "0/5",
+        "C": "0/5",
+        "D": "0/5",
+        "F": "0/5"
+      },
+      "action": "keep",
+      "layer": 2,
+      "note": "靠字面。",
+      "suggested": "delete"
+    },
+    "final form frieza": {
+      "verdict": "not_learned",
+      "scores": {
+        "A": "3/5",
+        "B": "5/5",
+        "C": "0/5",
+        "D": "0/5",
+        "F": "5/5"
+      },
+      "action": "keep",
+      "layer": 2,
+      "note": "計的是沒有角的最終型態。",
+      "suggested": "delete"
+    },
+    "scathach-skadi (fate)": {
+      "verdict": "not_learned",
+      "scores": {
+        "A": "0/5",
+        "C": "0/5",
+        "D": "0/5"
+      },
+      "action": "keep",
+      "layer": 2,
+      "note": "靠字面 scathach，畫錯人。",
+      "suggested": "delete"
+    },
+    "taihou (forbidden fruit) (azur lane)": {
+      "verdict": "not_learned",
+      "scores": {
+        "A": "0/5",
+        "B": "0/5",
+        "C": "0/5",
+        "D": "0/5",
+        "F": "0/5"
+      },
+      "action": "keep",
+      "layer": 2,
+      "note": "靠字面 fruit。",
+      "suggested": "delete"
+    },
+    "sunday (sacerdos' relived ordeal) (honkai: star rail)": {
+      "verdict": "not_learned",
+      "scores": {
+        "A": "0/5",
+        "B": "0/5",
+        "C": "0/5",
+        "D": "0/5",
+        "F": "0/5"
+      },
+      "action": "keep",
+      "layer": 2,
+      "note": "靠字面 sunday。",
+      "suggested": "delete"
+    },
+    "shion (tensura)": {
+      "verdict": "not_learned",
+      "scores": {
+        "A": "1/5",
+        "C": "1/5",
+        "D": "1/5",
+        "E": "1/5"
+      },
+      "action": "keep",
+      "layer": 2,
+      "note": "認的是紫髮單角馬尾。",
+      "suggested": "delete"
+    },
+    "conveyor belt sushi": {
+      "verdict": "learned",
+      "scores": {
+        "A": "0/5",
+        "C": "0/5",
+        "D": "3/5"
+      },
+      "action": "keep",
+      "layer": 3,
+      "note": "壽司要在輸送帶上。"
+    },
+    "excessive lactation": {
+      "verdict": "learned",
+      "scores": {
+        "A": "5/5",
+        "C": "2/5",
+        "D": "5/5"
+      },
+      "action": "keep",
+      "layer": 3,
+      "note": "要比普通泌乳猛。"
+    },
+    "nipple injection": {
+      "verdict": "learned",
+      "scores": {
+        "A": "4/5",
+        "C": "0/5",
+        "D": "5/5"
+      },
+      "action": "keep",
+      "layer": 3,
+      "note": "針要進乳頭。"
+    },
+    "breast sucking through clothes": {
+      "verdict": "learned",
+      "scores": {
+        "A": "3/5",
+        "C": "0/5",
+        "D": "4/5"
+      },
+      "action": "keep",
+      "layer": 3,
+      "note": "嘴要含在還穿着的胸上。"
+    },
+    "tentacle between breasts": {
+      "verdict": "learned",
+      "scores": {
+        "A": "3/5",
+        "C": "0/5",
+        "D": "4/5"
+      },
+      "action": "keep",
+      "layer": 3,
+      "note": "要在乳溝裡，纏身不算。"
+    },
+    "rickshaw": {
+      "verdict": "weak",
+      "scores": {
+        "A": "5/5",
+        "C": "0/5",
+        "D": "1/5",
+        "E": "4/5"
+      },
+      "action": "keep",
+      "layer": 3,
+      "note": "兩輪、有篷、人拉的客車才算。"
+    },
+    "nipple leash": {
+      "verdict": "weak",
+      "scores": {
+        "A": "0/5",
+        "C": "0/5",
+        "D": "2/5",
+        "E": "4/5"
+      },
+      "action": "keep",
+      "layer": 3,
+      "note": "牽繩本身要扣在乳頭上。"
+    },
+    "clinic": {
+      "verdict": "not_learned",
+      "scores": {
+        "A": "0/5",
+        "C": "0/5",
+        "D": "0/5"
+      },
+      "action": "keep",
+      "layer": 3,
+      "note": "A 是空走廊。",
+      "suggested": "delete"
+    },
+    "rock garden": {
+      "verdict": "not_learned",
+      "scores": {
+        "A": "0/5",
+        "C": "0/5",
+        "D": "0/5"
+      },
+      "action": "keep",
+      "layer": 3,
+      "note": "靠字面。",
+      "suggested": "delete"
+    },
+    "oasis": {
+      "verdict": "not_learned",
+      "scores": {
+        "A": "0/5",
+        "C": "0/5",
+        "D": "1/5",
+        "E": "0/5"
+      },
+      "action": "keep",
+      "layer": 3,
+      "note": "要沙漠裡同時有水和植物。",
+      "suggested": "delete"
+    },
+    "colonnade": {
+      "verdict": "not_learned",
+      "scores": {
+        "A": "0/5",
+        "C": "0/5",
+        "D": "0/5"
+      },
+      "action": "keep",
+      "layer": 3,
+      "note": "A 是林間路。",
+      "suggested": "delete"
+    },
+    "shuttlecock": {
+      "verdict": "not_learned",
+      "scores": {
+        "A": "0/5",
+        "C": "0/5",
+        "D": "0/5"
+      },
+      "action": "keep",
+      "layer": 3,
+      "note": "畫成裝飾尖頂，不是羽毛球。",
+      "suggested": "delete"
+    },
+    "ofuro": {
+      "verdict": "not_learned",
+      "scores": {
+        "A": "0/5",
+        "C": "0/5",
+        "D": "0/5"
+      },
+      "action": "keep",
+      "layer": 3,
+      "note": "A、C 是磁磚浴池，父字 bath。",
+      "suggested": "delete"
+    },
+    "ruqun": {
+      "verdict": "not_learned",
+      "scores": {
+        "A": "0/5",
+        "C": "0/5",
+        "D": "0/5"
+      },
+      "action": "keep",
+      "layer": 3,
+      "note": "A 和 C 都是泛用漢服，父字 hanfu、chinese clothes。",
+      "suggested": "delete"
+    },
+    "tied breast": {
+      "verdict": "not_learned",
+      "scores": {
+        "A": "0/5",
+        "C": "0/5",
+        "D": "0/5"
+      },
+      "action": "keep",
+      "layer": 3,
+      "note": "靠字面。",
+      "suggested": "delete"
+    },
+    "fanning breasts": {
+      "verdict": "not_learned",
+      "scores": {
+        "A": "0/5",
+        "C": "0/5",
+        "D": "0/5"
+      },
+      "action": "keep",
+      "layer": 3,
+      "note": "手在臉旁邊揮。",
+      "suggested": "delete"
+    },
+    "weighing breasts": {
+      "verdict": "not_learned",
+      "scores": {
+        "A": "0/5",
+        "C": "0/5",
+        "D": "0/5"
+      },
+      "action": "keep",
+      "layer": 3,
+      "note": "靠字面。",
+      "suggested": "delete"
+    },
+    "breast crush": {
+      "verdict": "not_learned",
+      "scores": {
+        "A": "0/5",
+        "C": "0/5",
+        "D": "0/5"
+      },
+      "action": "keep",
+      "layer": 3,
+      "note": "是按和抓，不是壓扁。",
+      "suggested": "delete"
+    },
+    "breast punch": {
+      "verdict": "not_learned",
+      "scores": {
+        "A": "0/5",
+        "C": "0/5",
+        "D": "0/5"
+      },
+      "action": "keep",
+      "layer": 3,
+      "note": "對照表是抓。",
+      "suggested": "delete"
+    },
+    "penis under breasts": {
+      "verdict": "not_learned",
+      "scores": {
+        "A": "0/5",
+        "C": "0/5",
+        "D": "0/5"
+      },
+      "action": "keep",
+      "layer": 3,
+      "note": "畫反。",
+      "suggested": "delete"
+    },
+    "navel penetration": {
+      "verdict": "not_learned",
+      "scores": {
+        "A": "0/5",
+        "C": "0/5",
+        "D": "0/5"
+      },
+      "action": "keep",
+      "layer": 3,
+      "note": "接觸在下身，肚臍是空的。",
+      "suggested": "delete"
+    },
+    "hand in another's shirt": {
+      "verdict": "not_learned",
+      "scores": {
+        "A": "0/5",
+        "C": "0/5",
+        "D": "0/5"
+      },
+      "action": "keep",
+      "layer": 3,
+      "note": "手在腰上，在衣服外面。",
+      "suggested": "delete"
+    },
+    "breasts on shoulders": {
+      "verdict": "not_learned",
+      "scores": {
+        "A": "0/5",
+        "C": "0/5",
+        "D": "0/5"
+      },
+      "action": "keep",
+      "layer": 3,
+      "note": "普通擁抱。",
+      "suggested": "delete"
+    },
+    "slapping with breasts": {
+      "verdict": "not_learned",
+      "scores": {
+        "A": "0/5",
+        "C": "0/5",
+        "D": "0/5"
+      },
+      "action": "keep",
+      "layer": 3,
+      "note": "是抓。",
+      "suggested": "delete"
+    },
+    "breast pile": {
+      "verdict": "not_learned",
+      "scores": {
+        "A": "0/5",
+        "C": "0/5",
+        "D": "0/5"
+      },
+      "action": "keep",
+      "layer": 3,
+      "note": "靠字面。",
+      "suggested": "delete"
+    },
+    "breast pull": {
+      "verdict": "not_learned",
+      "scores": {
+        "A": "0/5",
+        "C": "0/5",
+        "D": "0/5"
+      },
+      "action": "keep",
+      "layer": 3,
+      "note": "從下面托，沒有拉開。",
+      "suggested": "delete"
+    },
+    "twisted breasts": {
+      "verdict": "not_learned",
+      "scores": {
+        "A": "0/5",
+        "C": "0/5",
+        "D": "0/5"
+      },
+      "action": "keep",
+      "layer": 3,
+      "note": "普通胸型，沒有轉。",
+      "suggested": "delete"
+    },
+    "imminent grope": {
+      "verdict": "not_learned",
+      "scores": {
+        "A": "0/5",
+        "C": "0/5",
+        "D": "0/5"
+      },
+      "action": "keep",
+      "layer": 3,
+      "note": "靠字面。",
+      "suggested": "delete"
+    },
+    "tied nipples": {
+      "verdict": "not_learned",
+      "scores": {
+        "A": "0/5",
+        "C": "0/5",
+        "D": "0/5"
+      },
+      "action": "keep",
+      "layer": 3,
+      "note": "靠字面。",
+      "suggested": "delete"
+    },
+    "slapping breasts": {
+      "verdict": "not_learned",
+      "scores": {
+        "A": "0/5",
+        "C": "0/5",
+        "D": "0/5"
+      },
+      "action": "keep",
+      "layer": 3,
+      "note": "對照表是抓。",
+      "suggested": "delete"
+    },
+    "unbirthing": {
+      "verdict": "not_learned",
+      "scores": {
+        "A": "0/5",
+        "C": "0/5",
+        "D": "1/5",
+        "E": "0/5"
+      },
+      "action": "keep",
+      "layer": 3,
+      "note": "卡面本身是 1girl, solo。拿掉 solo 重跑，D 1/5、E 0/5，沒有人穩定被收進身體。",
+      "suggested": "delete"
+    },
+    "spread nipple": {
+      "verdict": "not_learned",
+      "scores": {
+        "A": "0/5",
+        "C": "0/5",
+        "D": "0/5"
+      },
+      "action": "keep",
+      "layer": 3,
+      "note": "靠字面。",
+      "suggested": "delete"
+    },
+    "areola measuring": {
+      "verdict": "not_learned",
+      "scores": {
+        "A": "0/5",
+        "C": "0/5",
+        "D": "0/5"
+      },
+      "action": "keep",
+      "layer": 3,
+      "note": "靠字面。",
+      "suggested": "delete"
+    },
+    "sucking both nipples": {
+      "verdict": "not_learned",
+      "scores": {
+        "A": "0/5",
+        "C": "0/5",
+        "D": "0/5"
+      },
+      "action": "keep",
+      "layer": 3,
+      "note": "只有一張嘴。",
+      "suggested": "delete"
+    },
+    "sucking on multiple breasts": {
+      "verdict": "not_learned",
+      "scores": {
+        "A": "0/5",
+        "C": "0/5",
+        "D": "0/5"
+      },
+      "action": "keep",
+      "layer": 3,
+      "note": "群像。",
+      "suggested": "delete"
+    },
+    "nipple push": {
+      "verdict": "not_learned",
+      "scores": {
+        "A": "0/5",
+        "C": "0/5",
+        "D": "0/5"
+      },
+      "action": "keep",
+      "layer": 3,
+      "note": "是捏。",
+      "suggested": "delete"
+    },
+    "nursing paizuri": {
+      "verdict": "not_learned",
+      "scores": {
+        "A": "0/5",
+        "C": "0/5",
+        "D": "0/5"
+      },
+      "action": "keep",
+      "layer": 3,
+      "note": "靠字面 paizuri。",
+      "suggested": "delete"
+    },
+    "paizuri while penetrated": {
+      "verdict": "not_learned",
+      "scores": {
+        "A": "0/5",
+        "C": "0/5",
+        "D": "0/5"
+      },
+      "action": "keep",
+      "layer": 3,
+      "note": "靠字面 paizuri。",
+      "suggested": "delete"
+    },
+    "mutual breast sucking": {
+      "verdict": "not_learned",
+      "scores": {
+        "A": "0/5",
+        "C": "0/5",
+        "D": "0/5"
+      },
+      "action": "keep",
+      "layer": 3,
+      "note": "最多單向。",
+      "suggested": "delete"
+    },
+    "hand in bra": {
+      "verdict": "not_learned",
+      "scores": {
+        "A": "0/5",
+        "C": "0/5",
+        "D": "0/5"
+      },
+      "action": "keep",
+      "layer": 3,
+      "note": "手在罩杯外面。",
+      "suggested": "delete"
+    },
+    "forniphilia": {
+      "verdict": "not_learned",
+      "scores": {
+        "A": "0/5",
+        "C": "0/5",
+        "D": "0/5"
+      },
+      "action": "keep",
+      "layer": 3,
+      "note": "D 是人在床上。",
+      "suggested": "delete"
+    },
+    "urethral fingering": {
+      "verdict": "not_learned",
+      "scores": {
+        "A": "0/5",
+        "C": "0/5",
+        "D": "0/5"
+      },
+      "action": "keep",
+      "layer": 3,
+      "note": "靠字面 urethral。",
+      "suggested": "delete"
+    },
+    "assisted paizuri": {
+      "verdict": "not_learned",
+      "scores": {
+        "A": "0/5",
+        "C": "0/5",
+        "D": "0/5"
+      },
+      "action": "keep",
+      "layer": 3,
+      "note": "第二個人站在旁邊，手不在胸上。",
+      "suggested": "delete"
+    },
+    "internet cafe": {
+      "verdict": "card_ok",
+      "scores": {},
+      "action": "keep",
+      "layer": 3,
+      "note": "卡面有，沒有生圖。"
+    },
+    "planetarium": {
+      "verdict": "card_ok",
+      "scores": {},
+      "action": "keep",
+      "layer": 3,
+      "note": "卡面有，沒有生圖。"
+    },
+    "courtyard": {
+      "verdict": "card_ok",
+      "scores": {},
+      "action": "keep",
+      "layer": 3,
+      "note": "卡面有，沒有生圖。"
+    },
+    "bowling alley": {
+      "verdict": "card_ok",
+      "scores": {},
+      "action": "keep",
+      "layer": 3,
+      "note": "卡面有，沒有生圖。"
+    },
+    "golf course": {
+      "verdict": "card_ok",
+      "scores": {},
+      "action": "keep",
+      "layer": 3,
+      "note": "卡面有，沒有生圖。"
+    },
+    "kobold": {
+      "verdict": "card_ok",
+      "scores": {},
+      "action": "keep",
+      "layer": 3,
+      "note": "卡面有，沒有生圖。"
+    },
+    "janitor": {
+      "verdict": "card_ok",
+      "scores": {},
+      "action": "keep",
+      "layer": 3,
+      "note": "卡面有，沒有生圖。"
+    },
+    "troll": {
+      "verdict": "card_ok",
+      "scores": {},
+      "action": "keep",
+      "layer": 3,
+      "note": "卡面有，沒有生圖。"
+    },
+    "underwater city": {
+      "verdict": "card_ok",
+      "scores": {},
+      "action": "keep",
+      "layer": 3,
+      "note": "卡面有，沒有生圖。"
+    },
+    "badminton": {
+      "verdict": "card_ok",
+      "scores": {},
+      "action": "keep",
+      "layer": 3,
+      "note": "卡面有，沒有生圖。"
+    },
+    "vacuum bed": {
+      "verdict": "card_ok",
+      "scores": {},
+      "action": "keep",
+      "layer": 3,
+      "note": "卡面有，沒有生圖。"
+    },
+    "grinding": {
+      "verdict": "card_ok",
+      "scores": {},
+      "action": "keep",
+      "layer": 3,
+      "note": "卡面有，沒有生圖。"
+    },
+    "finger on nipple": {
+      "verdict": "card_ok",
+      "scores": {},
+      "action": "keep",
+      "layer": 3,
+      "note": "卡面有，沒有生圖。"
+    },
+    "penis over breasts": {
+      "verdict": "card_ok",
+      "scores": {},
+      "action": "keep",
+      "layer": 3,
+      "note": "卡面有，沒有生圖。"
+    },
+    "nipple weights": {
+      "verdict": "card_ok",
+      "scores": {},
+      "action": "keep",
+      "layer": 3,
+      "note": "卡面有，沒有生圖。"
+    },
+    "cooperative breast smother": {
+      "verdict": "card_ok",
+      "scores": {},
+      "action": "keep",
+      "layer": 3,
+      "note": "卡面有，沒有生圖。"
+    },
+    "finger between breasts": {
+      "verdict": "card_ok",
+      "scores": {},
+      "action": "keep",
+      "layer": 3,
+      "note": "卡面有，沒有生圖。"
+    },
+    "breast shake": {
+      "verdict": "card_ok",
+      "scores": {},
+      "action": "keep",
+      "layer": 3,
+      "note": "卡面有，沒有生圖。"
+    },
+    "kissing breast": {
+      "verdict": "card_ok",
+      "scores": {},
+      "action": "keep",
+      "layer": 3,
+      "note": "卡面有，沒有生圖。"
+    },
+    "licking own nipple": {
+      "verdict": "card_ok",
+      "scores": {},
+      "action": "keep",
+      "layer": 3,
+      "note": "卡面有，沒有生圖。"
+    },
+    "stomach (organ)": {
+      "verdict": "card_ok",
+      "scores": {},
+      "action": "keep",
+      "layer": 3,
+      "note": "卡面有，沒有生圖。"
+    },
+    "breast massage": {
+      "verdict": "card_ok",
+      "scores": {},
+      "action": "keep",
+      "layer": 3,
+      "note": "第一次稽核卡面有，這次不重開。不在第三層那 64 個裡。"
+    },
+    "digestion": {
+      "verdict": "card_ok",
+      "scores": {},
+      "action": "keep",
+      "layer": 3,
+      "note": "第一次稽核卡面有，這次不重開。不在第三層那 64 個裡。"
+    }
+  },
+  "decision": "2026-10-14 專案主：實測畫不出來的字不刪、照舊抽；能找到的舊名（Danbooru 併掉、現在 0 張）和替代字另外加成同中文名的卡，擺在原卡旁邊（scripts/alt_names.json）。下面的 action 是 Grok 當初的建議，留著當紀錄；詞庫照 decision 做。"
+}

@@ -5234,6 +5234,42 @@ def extra_focus_tags() -> list[dict]:
     return build()
 
 
+ALT_NAMES = Path(__file__).with_name("alt_names.json")
+
+
+def add_alt_names(unique: list[dict]) -> list[dict]:
+    """同一個概念的另一個名字（scripts/alt_names.json）：照原卡複製一份、只換字，擺在原卡後面。
+
+    2026-10-14 專案主決定：底模（WAI v17）實測畫不出來的字不刪，改成把 Danbooru 併掉的舊名
+    （模型訓練時多半看到的是舊名）和實測畫得出來的替代字一起加進來。中文名跟原卡一樣，
+    字盒裡兩張並排；兩張都抽得到（mutex 照抄：同一格的字一張圖只會有一個）。
+    角色卡的 cardPositive 跟著換成新的名字。
+    """
+    pairs = json.loads(ALT_NAMES.read_text(encoding="utf-8")).get("pairs") or []
+    index = {t["tag"]: i for i, t in enumerate(unique)}
+    after: dict[int, list[dict]] = {}
+    seen_alt: set[str] = set()
+    for p in pairs:
+        src, alt = p["tag"], p["alt"]
+        if src not in index:
+            raise SystemExit(f"alt_names.json：「{src}」不在詞庫，不能加它的另一個名字「{alt}」")
+        if alt in index or alt in seen_alt:
+            raise SystemExit(f"alt_names.json：「{alt}」已經在詞庫了")
+        seen_alt.add(alt)
+        base = unique[index[src]]
+        clone = json.loads(json.dumps(base, ensure_ascii=False))
+        clone["tag"] = alt
+        clone["altOf"] = src
+        if clone.get("cardPositive"):
+            clone["cardPositive"] = ", ".join(alt if x.strip() == src else x.strip() for x in clone["cardPositive"].split(","))
+        after.setdefault(index[src], []).append(clone)
+    out: list[dict] = []
+    for i, t in enumerate(unique):
+        out.append(t)
+        out.extend(after.get(i, []))
+    return out
+
+
 def main() -> None:
     rows: list[dict] = []
     for path in sorted(PARTS.glob("*.json")):
@@ -5321,6 +5357,8 @@ def main() -> None:
             if k == "group":
                 out["sub"] = sub
         unique[i] = out
+
+    unique = add_alt_names(unique)
 
     by_sec: dict[str, int] = {}
     for t in unique:

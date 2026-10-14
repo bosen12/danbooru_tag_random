@@ -98,6 +98,41 @@ export const MODEL_VOCAB = new Set([
   // 模型學到的是替代字，而替代字全部已經在詞庫裡跟舊名搶同一格。
   "presenting", "hand in panties", "hands on own breasts", "inset",
   "ass grab", "breast hold", "cel shading",
+
+  // --- 2026-10-14：WAI v17 實測之後的決定（scripts/alt_names.json、model_vocab_audit_v17.json）----
+  //
+  // 專案主決定不刪字，而是把 Danbooru 併掉的舊名（現在 0 張）加成同中文名的卡，
+  // 放在原卡旁邊：模型訓練時看到的多半是舊名。實測有的畫得出來（no legwear、
+  // sleeves past elbows、eraser head、kyoto、gothic…），有的一樣畫不出來，但照決定都留。
+  // cum pool：2026-10 併進 cum puddle（兩個名字實測都 5/5），現名照留。
+  "cum pool",
+  "kyoto",
+  "double breast sucking",
+  "foot on breast",
+  "kodona",
+  "no legwear",
+  "no headwear",
+  "nipple biting",
+  "gothic",
+  "goth girl",
+  "looking through legs",
+  "lifted by self",
+  "clothes only",
+  "sleeves past elbows",
+  "y2k (fashion)",
+  "self breast sucking",
+  "sitting between lap",
+  "presenting breasts",
+  "plugsuit",
+  "eraser head (boku no hero academia)",
+  "marcille",
+  "falin thorden",
+  "falin thorden (tallman)",
+  "laios thorden",
+  "marcille donato (dungeon lord)",
+  "t-head trainer",
+  "taihou (forbidden feast) (azur lane)",
+  "shion (tensei shitara slime datta ken)",
 ]);
 
 // 使用者點名必須擋掉的：deprecated、post_count 0、或 alias 舊名。
