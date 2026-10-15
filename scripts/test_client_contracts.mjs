@@ -1684,6 +1684,7 @@ const ALBUM_FIXTURE = [
   ok("墨池／疊印台：分段選項有滑塊、數字增減會滾（motion.js 自動套用）", motion6.includes("function syncThumbs(") && motion6.includes("function syncSteppers(") && app6.includes("initMotion();") && fuse6.includes("initMotion();"));
   ok("撤下成品／從繩上撤下：縮掉、旁邊讓位，五秒內可以復原", ui6.includes("action = null") && app6.includes('toast("撤下了一張", { action: { label: "復原"') && fuse6.includes('toast("從繩上撤下了一張"') && fuse6.includes("lineSeen?.delete(p.id);"));
   ok("墨池：複製 POS 按鈕自己說已複製；同種子重印讓位＋進場；收起的牌先收再藏、底下的成品滑過去補位（攤開也是）；換花色發牌", app6.includes("confirmButton(btn)") && app6.includes("flip($(\"wall\"), () => $(\"wall\").prepend(node));") && app6.includes("if (toggle.getAttribute(\"aria-expanded\") === \"false\") flip(toggle.closest(\".wall\"), () => (box.hidden = true));") && app6.includes("if (now && wasHidden) flip(toggle.closest(\".wall\"), () => (cards.hidden = false));") && app6.includes("dealLibrary = true;"));
+  ok("墨池：「一次」張數一按，主按鈕和浮動列上的 ×N 當場跟著換（不必等整排重畫）", app6.includes("syncGoCount(was);") && app6.includes('document.querySelectorAll("#go-bar .btn-primary .count, #go-float .btn-primary .count")'));
   ok("疊印台拿下／撤回／清版：牌飛回字盒（不再原地往上飄走），撤回的牌從字盒飛回來", fuse6.includes("function flyHome(snap, delay = 0)") && fuse6.includes("snaps.forEach((s, i) => flyHome(s, i * 60));") && fuse6.includes("flyIn(l.t, l.rect, { delay,"));
   ok("墨池被擠掉的牌也飛回字盒", app6.includes("const homeNow = () => (hand?.has(tag) && hand.nodeOf(tag)) || libCardNode(tag);") && app6.includes("leaving.forEach((l, i) => liftOut(l, i * 60));"));
   {
