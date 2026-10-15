@@ -46,6 +46,7 @@ import { bindArt, artFallback } from "./card-images.js";
 import { el, openSheet, anyOverlay, toast, runToastAction, ICONS, syncChoices } from "./ui.js";
 import { mountKeysHelp } from "./keys-help.js";
 import { mountTour } from "./tour.js";
+import { mountScreensaver } from "./screensaver.js";
 import { mountGenStatus } from "./gen-status.js";
 import { currentPose, poseButton } from "./pose.js";
 import { openDecks } from "./decks.js";
@@ -127,6 +128,7 @@ async function boot() {
   mountKeysHelp("mochi");
   // 新手導覽（頂欄「教學」右邊的「導覽」；第一次來會問要不要走一遍）：tour.js。
   mountTour("mochi");
+  mountScreensaver();
   mountGenStatus("mochi");
   try {
     const [lexicon, manifest] = await Promise.all([
