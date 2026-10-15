@@ -37,7 +37,8 @@ async function install(page){
   });
 }
 async function ready(page,fuse){await page.waitForFunction(fuse?()=>document.body?.classList.contains('fuse')&&document.querySelector('.fav-hand')&&document.querySelector('#trials')?.childElementCount===4:()=>document.body&&!document.body.classList.contains('fuse')&&document.querySelector('.fav-hand')&&document.querySelector('#lib-grid')?.childElementCount>0);}
-async function settled(page){await page.waitForFunction(()=>!document.getAnimations().some(a=>a.id==='web6-page-enter'));await page.evaluate(()=>document.fonts.ready);await page.waitForTimeout(180);}
+// 落定＝進場跑完，而且沒有任何動畫或過渡還在跑（手機的浮動抽牌列在進場結束後才滑出來，只等進場會量到它滑到一半）。
+async function settled(page){await page.waitForFunction(()=>!document.getAnimations().some(a=>a.id==='web6-page-enter'));await page.evaluate(()=>document.fonts.ready);await page.waitForTimeout(180);await page.waitForFunction(()=>!document.getAnimations().some(a=>a.playState==='running'&&!(a.effect?.getComputedTiming?.().iterations===Infinity)),null,{timeout:5000}).catch(()=>{});}
 async function geometry(page){return page.evaluate(()=>[...document.querySelectorAll('.mast,.library .panel-head,.case-head,#pool .panel-head,.plate-head,.pool-well,.register,.rules,.go-bar,.fav-hand,.go-float,.lib-grid > .card:nth-child(-n+18),.case-grid > .card:nth-child(-n+18)')].map(n=>{
   // 動畫收尾偶爾留下 1e-5px 等級的殘值（translate: -50% -2.4e-05px）：0.01px 以下當 0，不算幾何改變。
   const tidy=(v)=>String(v).replace(/-?\d+(\.\d+)?e-\d+px/g,'0px').replace(/ 0px$/,'').replace(/^0px$/,'none');
