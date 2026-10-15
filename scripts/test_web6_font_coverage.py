@@ -43,7 +43,7 @@ class FontCoverage(unittest.TestCase):
         self.assertNotIn("googleapis", css)
         self.assertIn('font-family: "Noto Serif TC";', css)
         self.assertTrue(fonts.SERIF.is_file())
-        for name, _ in fonts.PLEX:
+        for name, _ in fonts.PLEX + fonts.PLEX_SANS:
             self.assertTrue((fonts.FONT.parent / name).is_file(), name)
             self.assertIn(f"fonts/{name}?v=", css)
 
