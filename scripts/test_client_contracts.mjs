@@ -1740,7 +1740,7 @@ const ALBUM_FIXTURE = [
       ok("托盤：拖著經過先空出插入的那一格，放在哪就插在哪（托盤上的牌＝換位置），滿了收不下", hand6.includes("function hover(x, tag)") && hand6.includes("function drop(tag, x)") && hand6.includes("function insertAt(tag, at)") && fuse6.includes("if (!hand.drop(p.tag, at?.x)) return false;") && app6.includes("if (!hand.drop(p.tag, at?.x)) return false;") && fuse6.includes('onMove: (zone, p, x) => hand?.hover(zone === "hand" ? x : null, p.tag)') && app6.includes('onMove: (zone, p, x) => hand?.hover(zone === "hand" ? x : null, p.tag)'));
       ok("托盤收著或沒有牌：拖牌時變成「放這裡加入」的標籤", css6.includes('body[data-dragging="true"] .fav-hand[data-hidden="true"][data-droppable="true"]') && css6.includes('content: "放這裡加入"'));
       ok("托盤鍵盤：只有一張在 Tab 順序裡，方向鍵移動、Shift＋方向鍵排順序，出牌／拿掉後焦點留在托盤", hand6.includes("function focusCard(card)") && hand6.includes("e.shiftKey && (e.key === \"ArrowLeft\" || e.key === \"ArrowRight\")") && hand6.includes("if (i >= 0) refocus(i);") && hand6.includes("x.tabIndex = -1;"));
-      ok("托盤的牌也有放大卡，開在牌的正上方", hand6.includes('fan.dataset.peek = "above"') && peek.includes(`anchor.closest("[data-peek='above']")`) && fuse6.includes("attachPeek(hand.fan") && app6.includes("hand?.fan]) attachPeek("));
+      ok("托盤的牌也有放大卡，開在牌的正上方", hand6.includes('fan.dataset.peek = "above"') && peek.includes(`anchor.closest("[data-peek='above']")`) && fuse6.includes("attachPeek(hand.fan") && app6.includes("hand?.fan]) {") && app6.includes('attachPeek(root, ".card[data-tag]", peekInfo);'));
     }
     // 2026-09-30：托盤收成中間的小膠囊時，右下角的廢字簍跟它碰不到，不必讓（以前照讓，浮在內容中間）；
     // 左下的「卡池」跟膠囊會撞，一律讓。托盤打開（佔滿底邊）時兩個都讓。
@@ -1990,6 +1990,18 @@ const ALBUM_FIXTURE = [
         ok("畫廊版的卡選中、清空只原地改記號，不整片重畫（不然每張圖重載一次會閃）",
           lora.includes("return refreshGalleryMarks(box);") && lora.includes("box._gallery?.key === loraGalleryKey(q)"));
         const motionRaw = models.split("\n").filter((line) => /(transition|animation)(-duration)?\s*:|^\s+[a-z-]+ \d/.test(line) && /\b\d+(\.\d+)?m?s\b\s+(var\(--ease|ease|linear|cubic)/.test(line));
+        {
+          // 2026-10-16：牌拿在手上（滑過跟著游標傾斜、插畫上一道反光；只動滑鼠底下那一張）、抽牌的主秀（牌一張張飛進新的那一格）。
+          const tilt = readFileSync(join(ROOT, "web6/card-tilt.js"), "utf8");
+          const card = readFileSync(join(ROOT, "web6/card.css"), "utf8");
+          const app = readFileSync(join(ROOT, "web6/app.js"), "utf8");
+          ok("牌的手感：card-tilt.js 只在電腦、沒開減少動態時掛；只有滑鼠底下那張是 3D（data-tilt），按下去先放平",
+            tilt.includes('matchMedia("(hover: hover) and (pointer: fine)")') && tilt.includes("REDUCED.matches") && tilt.includes("pressed = true;") &&
+              card.includes('.card[data-tilt="on"] {') && card.includes("perspective(560px) rotateX(var(--rx, 0deg)) rotateY(var(--ry, 0deg))") &&
+              ["app.js", "fuse.js", "book.js"].every((f) => readFileSync(join(ROOT, "web6", f), "utf8").includes('import { attachTilt } from "./card-tilt.js";')));
+          ok("抽牌的主秀：手動按（不是無限抽自動接）、電腦上才演，牌飛進最上面那一格、最後一張落地那一格暈開墨光",
+            app.includes("if (!narrow && !intent.auto && epoch === drawEpoch) {") && app.includes("function dealInto(shot, node)") && app.includes('frame.classList.add("is-dealt");'));
+        }
         ok("models.css 的轉場、動畫也用時間 token", !motionRaw.length && !/cubic-bezier\(/.test(models), motionRaw.join(" | "));
       }
       ok("回饋：分級擋掉的尺度點得到（aria-disabled），點了說為什麼、頂端分級亮一下；疊印台放牌擠掉別張時畫面上說、給撤回（web6、web7）",
