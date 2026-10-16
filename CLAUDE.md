@@ -15,6 +15,7 @@
 - 卡面／放大模型／姿勢參考／LoRA Manager 的腳本（`scripts/fetch_*.py`、`bake_card_art.py`、`card_jobs.json`、`*-check.bat`…）
 - `web/lora.js`、`web/lora.css`、`lora_scan.py`（LoRA／底模面板，所有版面共用）
 - `scripts/test_web6_i18n.mjs`
+- 詞庫的原料與重做腳本（`web/lexicon_parts/`、`merge_lexicon.py` 和它 import 的模組、`add_zh.py`、`characters.json`、`character_series.json`、`alt_names.json`…，清單在 `sync_mochi.py` 的 `LEXICON_FILES`）。詞庫腳本多讀一個新檔時，`LEXICON_FILES` 和 `scripts/test_lexicon_rebuild.py` 的清單都要補，不然開源版重做不出來
 
 ```bash
 python scripts/sync_mochi.py --check   # 先看會動哪些檔

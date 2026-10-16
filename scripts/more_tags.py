@@ -8,6 +8,8 @@ Danbooru 皆為現役 category 0、有圖、沒有別名。
 作品內地點、真實地點、拿著、時尚、聲優。
 """
 
+from __future__ import annotations
+
 
 def _row(tag, zh, section, mutex=None, layer="normal", era=None, gate="any",
          implies=(), extra=(), needs=(), bind=()):

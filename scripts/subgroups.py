@@ -10,6 +10,8 @@
 改這裡不會改到抽取：引擎只在必抽時看細分類（必抽「地點・住家」就從住家抽）。
 """
 
+from __future__ import annotations
+
 import json
 import re
 from collections import Counter

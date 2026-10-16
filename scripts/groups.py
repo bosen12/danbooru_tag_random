@@ -1,5 +1,7 @@
 """Assign a display subgroup to each tag. One source of truth for merge + UI order."""
 
+from __future__ import annotations
+
 GROUP_ORDER = {
     "quality": ["fixed", "style", "boost"],
     "subject": ["count_f", "count_m", "character", "extra"],

@@ -5,6 +5,8 @@ CSV 的類別、gate、heat、mutex 是從同組抄來的，不能照用。
 這裡逐項重設。Danbooru 皆為現役 category 0。中文撞名的已改掉。
 """
 
+from __future__ import annotations
+
 
 def _row(tag, zh, section, mutex=None, layer="normal", era=None, gate="any",
          implies=(), extra=(), needs=(), bind=()):

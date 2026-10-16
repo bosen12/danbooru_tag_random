@@ -37,6 +37,14 @@ SCRIPT_FILES = [
     "fetch-cards-window.bat", "upscale-model-check.bat", "fetch-upscale-window.bat", "pose-assets-check.bat",
     "fetch-pose-window.bat", "fetch_lora_manager.py", "lora-manager-check.bat", "fetch-lora-manager-window.bat",
 ]
+# 詞庫的原料與重做的腳本：web/lexicon_parts（另外整個帶）＋這些 → merge_lexicon.py、add_zh.py 重產 web/lexicon.json。
+# characters.json 是角色的完整資料（作品、禁用與原因、貼文數）。tests/test_lexicon_rebuild.py 會在暫存資料夾只拿這些重做一次，
+# 對得上 web/lexicon.json 才算帶齊（那支測試裡有同一份清單）。
+LEXICON_FILES = [
+    "merge_lexicon.py", "groups.py", "subgroups.py", "suggestion_tags.py", "more_tags.py", "focus_tags.py", "add_zh.py",
+    "characters.json", "character_series.json", "alt_names.json",
+    "export_lexicon_xlsx.py", "verify_danbooru_tags.mjs",
+]
 TEST_FILES = {
     "test_i18n.mjs": "test_web6_i18n.mjs",
     "test_i18n_browser.mjs": "test_web6_i18n_browser.mjs",
@@ -61,6 +69,7 @@ TEST_FILES = {
     "test_server.py": "test_server.py",
     "test_launchers.py": "test_mochi_launchers.py",
     "test_smoke.py": "test_mochi_smoke.py",
+    "test_lexicon_rebuild.py": "test_lexicon_rebuild.py",
     "run.py": "run_mochi_tests.py",
 }
 # 開源版自己的檔：不覆蓋、也不當成「上游已刪」清掉。
@@ -156,8 +165,10 @@ def plan() -> dict[str, Path]:
         files.setdefault("web/" + rel, WEB / rel)
     for f in ROOT_FILES:
         files[f] = ROOT / f
-    for f in SCRIPT_FILES:
+    for f in SCRIPT_FILES + LEXICON_FILES:
         files["scripts/" + f] = ROOT / "scripts" / f
+    for rel in tracked("web/lexicon_parts"):
+        files[rel] = ROOT / rel
     for target, source in TEST_FILES.items():
         files["tests/" + target] = ROOT / "scripts" / source
     return files

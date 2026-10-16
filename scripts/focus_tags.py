@@ -16,6 +16,8 @@ CSV 的「構圖／主體／身體部位」只當提示，互斥按畫面怎麼�
 其他性別焦點不收：沒有可畫的內容，又會落在有性別的人身上。
 """
 
+from __future__ import annotations
+
 
 def _row(tag, zh, section, mutex=None, layer="normal", era=None, gate="any",
          implies=(), extra=(), needs=(), heat=None):
