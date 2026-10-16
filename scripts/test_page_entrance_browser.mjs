@@ -27,6 +27,9 @@ async function install(page){
     localStorage.setItem('mochi.fuse.settings.v1',JSON.stringify({rating:'general',n:1}));
     localStorage.setItem('mochi.hand.v1',JSON.stringify(['1girl']));
     localStorage.setItem('mochi.fuse.hand.v1',JSON.stringify(['1girl']));
+    // <head> 的開機腳本：詞庫 600ms 內沒讀完就不演進場（enterLate）。無頭 WebKit 在這台慢，常常超過 —— 只把那一次的期限放寬，
+    // 量的是進場本身，不是開機速度（真的慢的時候不演，是設計）。
+    {const st=window.setTimeout;let once=false;window.setTimeout=function(f,d,...a){if(!once&&d===600){once=true;d=8000;}return st.call(this,f,d,...a);};}
     window.entryRecords=[];window.hadViewTransition=false;
     addEventListener('pagereveal',e=>{window.hadViewTransition=!!e.viewTransition;});
     const animate=Element.prototype.animate;
@@ -51,7 +54,8 @@ try{
       for(const width of [393,1280])for(const fuse of [false,true]){
         const path=fuse?'fuse.html':'index.html',url=origin+'/web6/'+path+'?debug';
         const page=await browser.newPage({viewport:{width,height:852},reducedMotion:'no-preference'}),errors=[];
-        page.on('pageerror',e=>errors.push(e.message));await install(page);await page.goto(url);await ready(page,fuse);
+        // WebKit：重新整理時還在等的長輪詢（/api/lora-push?wait=25）被取消，會報成「due to access control checks」；不是頁面的錯。
+        page.on('pageerror',e=>{if(/\/api\/[\w-]+.* due to access control checks\.$/.test(e.message))return;errors.push(e.message);});await install(page);await page.goto(url);await ready(page,fuse);
         await page.waitForFunction(()=>entryRecords.length>0);
         const records=await page.evaluate(()=>entryRecords);assert.ok(records.length<=38);assert.ok(records.every(r=>!r.fixed));
         // 2026-10-13：頂欄從第一個畫面就在，不演（演了會先消失再浮上來）；進場一開始，<head> 掛的遮罩就拿掉。
