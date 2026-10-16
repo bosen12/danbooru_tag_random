@@ -7,6 +7,7 @@ from pathlib import Path
 
 tmp = Path(tempfile.mkdtemp())
 os.environ["CARD_DECKS_PATH"] = str(tmp / "decks.json")
+os.environ["CARD_FAV_CHARS_PATH"] = str(tmp / "fav_chars.json")
 lex = tmp / "lexicon.json"
 lex.write_text(json.dumps({"tags": [{"tag": "1girl"}, {"tag": "solo"}, {"tag": "cat ears"}]}), encoding="utf-8")
 os.environ["CARD_USAGE_LEXICON"] = str(lex)
@@ -66,6 +67,22 @@ ok("讀回來份量還在", next(d for d in card_decks.load() if d["id"] == w["i
 
 Path(os.environ["CARD_DECKS_PATH"]).write_text("{壞掉的 json", encoding="utf-8")
 ok("檔案壞掉讀成空的，不炸", card_decks.load() == [])
+
+# 偏好角色：伺服器上一份（所有裝置共用）。沒存過 saved=False（瀏覽器會把自己那份搬上來）；存了照順序、去重、空陣列也算存過。
+f0 = card_decks.load_fav_chars()
+ok("偏好角色：還沒存過 saved=False、空的", f0["saved"] is False and f0["tags"] == [])
+f1 = card_decks.save_fav_chars({"tags": ["hatsune miku", "kagamine rin", "hatsune miku", 3, "", "  "]})
+ok("偏好角色：照順序、去重、不是字串的不收", f1["tags"] == ["hatsune miku", "kagamine rin"] and f1["saved"])
+ok("偏好角色：讀回來一樣", card_decks.load_fav_chars()["tags"] == ["hatsune miku", "kagamine rin"] and card_decks.load_fav_chars()["saved"])
+card_decks.save_fav_chars({"tags": []})
+ok("偏好角色：清空也算存過（別台不會再把舊的搬回來）", card_decks.load_fav_chars() == {**card_decks.load_fav_chars(), "tags": [], "saved": True})
+try:
+    card_decks.save_fav_chars({"tags": "miku"})
+    ok("偏好角色：tags 不是陣列要擋", False)
+except card_decks.DeckError:
+    ok("偏好角色：tags 不是陣列要擋", True)
+Path(os.environ["CARD_FAV_CHARS_PATH"]).write_text("{壞掉", encoding="utf-8")
+ok("偏好角色：檔案壞掉當成沒存過（瀏覽器那份會補上來）", card_decks.load_fav_chars()["saved"] is False)
 
 print("all ok" if not failed else f"{failed} failed")
 sys.exit(1 if failed else 0)

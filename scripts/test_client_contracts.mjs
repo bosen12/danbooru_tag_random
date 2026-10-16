@@ -1967,11 +1967,31 @@ const ALBUM_FIXTURE = [
           return htmlText.includes('<div class="case-scroll" id="case-scroll">') && /\.case-scroll \{\s*display: flex;/.test(cssText) &&
             js.includes("caseBackToTop(true);") && js.includes("function caseBackToTop(all = false)");
         }));
-      ok("手機：LoRA／底模彈窗清單 62dvh、目前選擇 26dvh（工作流不動），分類籤一排左右滑（web6、web7）",
-        ["web6", "web7"].every((d) => {
+      ok("手機：LoRA／底模彈窗清單 62dvh、目前選擇 26dvh（工作流不動），分類籤一排左右滑（web7）",
+        ["web7"].every((d) => {
           const cssText = readFileSync(join(ROOT, d, "styles.css"), "utf8");
           return cssText.includes(".lora-modal:not(.wf-modal) .lm-left {") && cssText.includes(".lora-modal .lm-cats {");
-        }));
+        })
+      );
+      {
+        // 墨池的三個面板是畫廊版：web/lora.js、web/workflow.js 的 gallery 模式＋web6/models.css（其他版面不傳 gallery，照舊）。
+        const lora = readFileSync(join(ROOT, "web/lora.js"), "utf8");
+        const wf = readFileSync(join(ROOT, "web/workflow.js"), "utf8");
+        const models = readFileSync(join(ROOT, "web6/models.css"), "utf8");
+        const pages = ["index.html", "fuse.html"].map((f) => readFileSync(join(ROOT, "web6", f), "utf8"));
+        const inits = ["app.js", "fuse.js"].map((f) => readFileSync(join(ROOT, "web6", f), "utf8"));
+        ok("墨池的 LoRA／底模／工作流面板是畫廊版（大圖網格、捲到底自動多載、選中飛進右邊的槽），樣式在 models.css",
+          inits.every((t) => t.includes("initLoraPicker({ gallery: true, motion: { DUR, CURVE, css } })") && t.includes("initWorkflow({ sampling: true, faceFix: true, gallery: true, motion: { DUR, CURVE, css } })")) &&
+            pages.every((t) => t.indexOf('href="models.css"') > t.indexOf('href="lora.css"')) &&
+            lora.includes("function renderLoraGallery(box, items, q, deal)") && lora.includes("function flyToSeat(from, to)") && lora.includes("function refreshGalleryMarks(box)") &&
+            models.includes(".lg-grid") && models.includes("@keyframes lg-deal") && models.includes("@keyframes lg-seal"));
+        ok("墨池的 ComfyUI 網址在頂欄燈號的小窗（可以按「自動找」回到 8188／8000 自動偵測）",
+          wf.includes("function openComfyPop()") && wf.includes('id="comfy-pop-auto"') && wf.includes("saveComfy({ auto: true })") && models.includes(".comfy-pop {"));
+        ok("畫廊版的卡選中、清空只原地改記號，不整片重畫（不然每張圖重載一次會閃）",
+          lora.includes("return refreshGalleryMarks(box);") && lora.includes("box._gallery?.key === loraGalleryKey(q)"));
+        const motionRaw = models.split("\n").filter((line) => /(transition|animation)(-duration)?\s*:|^\s+[a-z-]+ \d/.test(line) && /\b\d+(\.\d+)?m?s\b\s+(var\(--ease|ease|linear|cubic)/.test(line));
+        ok("models.css 的轉場、動畫也用時間 token", !motionRaw.length && !/cubic-bezier\(/.test(models), motionRaw.join(" | "));
+      }
       ok("回饋：分級擋掉的尺度點得到（aria-disabled），點了說為什麼、頂端分級亮一下；疊印台放牌擠掉別張時畫面上說、給撤回（web6、web7）",
         ["web6", "web7"].every((d) => {
           const app = readFileSync(join(ROOT, d, "app.js"), "utf8");

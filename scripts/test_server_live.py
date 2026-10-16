@@ -320,6 +320,7 @@ def start_server(comfy_port: int, extra_env=None):
         GEN_LOG_PATH=str(Path(tempfile.mkdtemp()) / "gen_log.jsonl"),
         CARD_USAGE_PATH=str(Path(tempfile.mkdtemp()) / "card_usage.json"),
         CARD_DECKS_PATH=str(Path(tempfile.mkdtemp()) / "card_decks.json"),
+        CARD_FAV_CHARS_PATH=str(Path(tempfile.mkdtemp()) / "fav_chars.json"),
         RECIPE_DATA_DIR=tempfile.mkdtemp(),
         # 第一次準備（會下載、裝東西、寫 data/setup.log）、清 ComfyUI 的 Hires 暫存：測試都不碰。
         NO_SETUP="1",
