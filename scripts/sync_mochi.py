@@ -59,6 +59,7 @@ TEST_FILES = {
     "test_collection_interactions_browser.mjs": "test_web6_collection_interactions_browser.mjs",
     "test_gen_completion.py": "test_gen_completion.py",
     "test_engine.mjs": "test_engine.mjs",
+    "test_engine_shards.mjs": "test_engine_shards.mjs",
     "test_engine_release.mjs": "test_mochi_engine.mjs",
     "test_setup_tasks.py": "test_setup_tasks.py",
     "test_fetch_lora_manager.py": "test_fetch_lora_manager.py",

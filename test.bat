@@ -24,8 +24,8 @@ if errorlevel 1 (
   pause
   exit /b 1
 )
-echo == engine ==
-call node scripts\test_engine.mjs
+echo == engine (split, runs in parallel) ==
+call node scripts\test_engine_shards.mjs
 if errorlevel 1 (
   pause
   exit /b 1
