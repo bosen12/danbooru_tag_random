@@ -2105,8 +2105,14 @@ const ALBUM_FIXTURE = [
             cssText.includes("廢字簍跟著浮動抽牌列出現") && /@media \(max-width: 24rem\) \{\s*\.mast-controls \{\s*flex-wrap: nowrap;/.test(cssText);
         }));
       ok("快捷鍵說明：四個房間都掛（頂欄 ?、按 ? 打開，打字時不觸發），照房間列出能用的鍵；手機不出現那顆鈕（web6、web7）",
-        // 2026-10-17 web6 疊印台的付印改成 G（跟墨池一樣 G＝會生圖）；web7 還是 P。其他一字不差。
-        readFileSync(join(ROOT, "web6/keys-help.js"), "utf8").replace('["G", "付印"]', '["P", "付印"]') === readFileSync(join(ROOT, "web7/keys-help.js"), "utf8") &&
+        // web6 跟 web7 刻意不同的幾行（其他一字不差）：
+        //   2026-10-17 疊印台的付印改成 G（跟墨池一樣 G＝會生圖），web7 還是 P；
+        //   2026-10-18 墨池的 Z／Ctrl+Z 也撿回剛封鎖、拿出的那張，字盒的 Delete 寫進說明。
+        [
+          ['["G", "付印"]', '["P", "付印"]'],
+          ['["Z", "復原（Ctrl Z 也可以）：提示上的「復原」；沒有的話撿回剛才封鎖、拿出的那一張"]', '["Z", "提示上有「復原」時：復原（清空合成池、撤下成品…）"]'],
+          ['\n      ["Delete", "字盒的牌：丟進廢字簍（按 Z 撿回來）"],', ""],
+        ].reduce((text, [a, b]) => text.replace(a, b), readFileSync(join(ROOT, "web6/keys-help.js"), "utf8")) === readFileSync(join(ROOT, "web7/keys-help.js"), "utf8") &&
           ["web6", "web7"].every((d) =>
             [["app.js", "mochi"], ["fuse.js", "fuse"], ["book.js", "book"], ["album.js", "album"]].every(([f, room]) => readFileSync(join(ROOT, d, f), "utf8").includes(`mountKeysHelp("${room}");`)) &&
             readFileSync(join(ROOT, d, "styles.css"), "utf8").includes(".mast-tools .help-btn {")
