@@ -2011,7 +2011,8 @@ const ALBUM_FIXTURE = [
           const cssText = readFileSync(join(ROOT, d, "styles.css"), "utf8");
           return app.includes("function explainBlockedHeat(h, btn, rating)") && fuse.includes("function explainBlockedHeat(h, btn, rating)") &&
             !app.includes("disabled: heatBlockedByRating(h, settings.rating),") && !fuse.includes("disabled: blocked || undefined,") &&
-            fuse.includes("replacedNote(tag, events);") && fuse.includes('toast(parts.join("；"), { action: { label: "撤回", run: undo } });') &&
+            fuse.includes("replacedNote(tag, events);") && // 2026-10-17 web6 的撤回提示改走 toastUndo（只撤它講的那一步，撤過或又動過就收掉）；web7 還是舊寫法。
+            (d === "web6" ? fuse.includes('toastUndo(parts.join("；"));') && fuse.includes("function dropStaleUndo()") : fuse.includes('toast(parts.join("；"), { action: { label: "撤回", run: undo } });')) &&
             cssText.includes(".segmented.is-hint {") && cssText.includes('.chip-toggle[aria-disabled="true"] {');
         }));
       ok("狀態：無限抽／同一個人有說明，一次 1 張時開同一個人會說沒作用；手機斷線時頂欄露出字；提示框不再只拿半個螢幕寬（web6、web7）",
@@ -2104,7 +2105,8 @@ const ALBUM_FIXTURE = [
             cssText.includes("廢字簍跟著浮動抽牌列出現") && /@media \(max-width: 24rem\) \{\s*\.mast-controls \{\s*flex-wrap: nowrap;/.test(cssText);
         }));
       ok("快捷鍵說明：四個房間都掛（頂欄 ?、按 ? 打開，打字時不觸發），照房間列出能用的鍵；手機不出現那顆鈕（web6、web7）",
-        readFileSync(join(ROOT, "web6/keys-help.js"), "utf8") === readFileSync(join(ROOT, "web7/keys-help.js"), "utf8") &&
+        // 2026-10-17 web6 疊印台的付印改成 G（跟墨池一樣 G＝會生圖）；web7 還是 P。其他一字不差。
+        readFileSync(join(ROOT, "web6/keys-help.js"), "utf8").replace('["G", "付印"]', '["P", "付印"]') === readFileSync(join(ROOT, "web7/keys-help.js"), "utf8") &&
           ["web6", "web7"].every((d) =>
             [["app.js", "mochi"], ["fuse.js", "fuse"], ["book.js", "book"], ["album.js", "album"]].every(([f, room]) => readFileSync(join(ROOT, d, f), "utf8").includes(`mountKeysHelp("${room}");`)) &&
             readFileSync(join(ROOT, d, "styles.css"), "utf8").includes(".mast-tools .help-btn {")
