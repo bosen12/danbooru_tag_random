@@ -107,4 +107,22 @@ d = card_decks.load()[0]
 ok("牌組：舊名換成新名、不重複", d["tags"] == ["no legwear", "solo"])
 ok("牌組：份量跟著換名", d["weights"] == {"no legwear": 1.3})
 
+# 存檔壞掉不能讀成空的：整晚無限抽每一輪都在寫，空的那份會把幾千次的紀錄一次蓋掉（2026-10-18 實測只砍掉最後 5 個字就全歸零）。
+import file_lock  # noqa: E402
+bad_dir = Path(tempfile.mkdtemp())
+card_usage.USAGE_PATH = bad_dir / "usage.json"
+card_usage.add({"entries": [{"id": "e-bad-1", "tags": ["solo"], "mine": []}]})
+kept = card_usage.load()["counts"]
+text = card_usage.USAGE_PATH.read_text(encoding="utf-8")
+card_usage.USAGE_PATH.write_text(text[:-5], encoding="utf-8")
+ok("使用次數：檔案壞掉用 .bak 換回，不歸零", kept and card_usage.load()["counts"] == kept)
+card_usage.USAGE_PATH.write_text("", encoding="utf-8")
+(bad_dir / "usage.json.bak").write_text("{", encoding="utf-8")
+try:
+    card_usage.add({"entries": [{"id": "e-bad-2", "tags": ["solo"], "mine": []}]})
+    ok("使用次數：正本和備份都壞了就拒絕寫入（StoreCorrupt），不用空的蓋掉", False)
+except file_lock.StoreCorrupt:
+    ok("使用次數：正本和備份都壞了就拒絕寫入（StoreCorrupt），不用空的蓋掉", True)
+ok("使用次數：壞的那份改名留著", any(p.name.startswith("usage.json.corrupt-") for p in bad_dir.iterdir()))
+
 sys.exit(1 if failed else 0)

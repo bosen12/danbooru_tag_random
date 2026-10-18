@@ -65,8 +65,21 @@ w2 = card_decks.save({"name": "份量怪值", "tags": ["1girl", "solo"], "weight
 ok("份量：超出 0.5～1.5、不是數字的不收", w2["weights"] == {})
 ok("讀回來份量還在", next(d for d in card_decks.load() if d["id"] == w["id"])["weights"] == {"1girl": 1.2})
 
-Path(os.environ["CARD_DECKS_PATH"]).write_text("{壞掉的 json", encoding="utf-8")
-ok("檔案壞掉讀成空的，不炸", card_decks.load() == [])
+# 檔案壞掉不能讀成空的：下一次存牌組會用空的那份把整份蓋掉。每次寫入都同步一份 .bak，壞了用它換回來。
+import file_lock  # noqa: E402
+decks_before = card_decks.load()
+deck_path = Path(os.environ["CARD_DECKS_PATH"])
+deck_path.write_text("{壞掉的 json", encoding="utf-8")
+ok("檔案壞掉：用 .bak 換回最新那份，不會變成空的", bool(decks_before) and card_decks.load() == decks_before)
+ok("檔案壞掉：壞的那份改名留著（.corrupt-時間）", any(p.name.startswith("decks.json.corrupt-") for p in tmp.iterdir()))
+deck_path.write_text("{又壞了", encoding="utf-8")
+Path(str(deck_path) + ".bak").write_text("{備份也壞了", encoding="utf-8")
+try:
+    card_decks.load()
+    ok("正本和備份都壞了：丟 StoreCorrupt（伺服器回 503），不當成空的", False)
+except file_lock.StoreCorrupt:
+    ok("正本和備份都壞了：丟 StoreCorrupt（伺服器回 503），不當成空的", True)
+ok("正本和備份都壞了：之後從空的開始（壞的已經改名留著）", card_decks.load() == [])
 
 # 偏好角色：伺服器上一份（所有裝置共用）。沒存過 saved=False（瀏覽器會把自己那份搬上來）；存了照順序、去重、空陣列也算存過。
 f0 = card_decks.load_fav_chars()
@@ -81,8 +94,12 @@ try:
     ok("偏好角色：tags 不是陣列要擋", False)
 except card_decks.DeckError:
     ok("偏好角色：tags 不是陣列要擋", True)
+card_decks.save_fav_chars({"tags": ["hatsune miku"]})
 Path(os.environ["CARD_FAV_CHARS_PATH"]).write_text("{壞掉", encoding="utf-8")
-ok("偏好角色：檔案壞掉當成沒存過（瀏覽器那份會補上來）", card_decks.load_fav_chars()["saved"] is False)
+ok("偏好角色：檔案壞掉用 .bak 換回來", card_decks.load_fav_chars()["tags"] == ["hatsune miku"])
+Path(os.environ["CARD_FAV_CHARS_PATH"]).write_text("{壞掉", encoding="utf-8")
+Path(os.environ["CARD_FAV_CHARS_PATH"] + ".bak").write_text("{也壞", encoding="utf-8")
+ok("偏好角色：備份也壞了就當成沒存過（瀏覽器那份會補上來）", card_decks.load_fav_chars()["saved"] is False)
 
 print("all ok" if not failed else f"{failed} failed")
 sys.exit(1 if failed else 0)

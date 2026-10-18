@@ -1663,7 +1663,8 @@ const ALBUM_FIXTURE = [
   }
   ok("排字匣網路斷掉的那張不算連續失敗，等網路回來接著抽", boot.includes("lastFailNet = true;") && boot.includes("} else if (!aborting && lastFailNet) {") && boot.includes("async function waitForLink("));
   ok("無限抽開跑時剛好斷線：等，不直接停", boot.includes('isInfinite() && downReason === "net" && (await waitForLink(waitNet))'));
-  ok("墨池／疊印台佇列：網路斷掉的不算失敗，等網路回來、畫面說一聲", gen6.includes("if (!ok && shot.netFail) {") && gen6.includes("await waitOnline(") && readFileSync(join(ROOT, "web6/fuse.js"), "utf8").includes("NET_WAIT_TEXT") && readFileSync(join(ROOT, "web6/app.js"), "utf8").includes("waiting: (on) =>"));
+  ok("墨池／疊印台佇列：網路斷掉的不算失敗，等網路回來、畫面說一聲", // 2026-10-18：連不到主機的那張排回最前面等網路回來（runOne 回 "net"），不管後面有沒有排著的。
+    gen6.includes('if (ok === "net") {') && gen6.includes("await waitOnline(() => !halted && queue[0] === shot") && readFileSync(join(ROOT, "web6/fuse.js"), "utf8").includes("NET_WAIT_TEXT") && readFileSync(join(ROOT, "web6/app.js"), "utf8").includes("waiting: (on) =>"));
   const bootCss = readFileSync(join(ROOT, "web/boot.css"), "utf8");
   ok("排字匣預覽幀交疊（上一幀墊底，新的一幀淡進來）", boot.includes("function underlay(el, img)") && bootCss.includes(".shot-img.is-pv-in"));
   ok("排字匣成品從預覽上顯影、等解碼好才開始", boot.includes('img.classList.add("is-developed")') && bootCss.includes("@keyframes shot-develop"));
@@ -2030,7 +2031,7 @@ const ALBUM_FIXTURE = [
           const bookCss = readFileSync(join(ROOT, d, "book.css"), "utf8");
           return ["index.html", "fuse.html", "book.html"].every((f) => readFileSync(join(ROOT, d, f), "utf8").includes('document.documentElement.dataset.booting = "";')) &&
             cssText.includes("html[data-booting] .mast::after {") && motion.includes("delete document.documentElement.dataset.booting;") &&
-            gen.includes("function netFailText(err)") && gen.includes(": netFailText(err);") &&
+            gen.includes("function netFailText(err)") && gen.includes("netFailText(err)") &&
             /\.book-q:focus-visible \{\s*outline: 2px solid var\(--color-focus\);/.test(bookCss);
         }));
       ok("第三輪：卡冊記住看到哪一張（換頁回來停原地）；手機頂欄往上滑就冒出來；抽屜收起後新牌落定；觸控的小按鈕擴點擊範圍（web6、web7）",
@@ -2125,7 +2126,7 @@ const ALBUM_FIXTURE = [
           ["web6", "web7"].every((d) => readFileSync(join(ROOT, d, "app.js"), "utf8").includes("size: () => ({ w: settings.width, h: settings.height })") && readFileSync(join(ROOT, d, "styles.css"), "utf8").includes(".pe-canvas {")));
       ok("新手導覽：頂欄「教學」右邊的「導覽」，四個房間各自一步一步（亮出目標、文字小視窗、要動手的步驟做到才往下、找不到目標就略過、手機另一套步驟）；第一次來邀請一次（自動化測試不出現）；導覽層不被彈窗設成 inert（web6、web7）",
         ["tour.js", "tour-steps.js"].every((f) => readFileSync(join(ROOT, "web6", f), "utf8") === readFileSync(join(ROOT, "web7", f), "utf8")) &&
-          readFileSync(join(ROOT, "web/scroll-lock.js"), "utf8").includes('"tour"]);') &&
+          readFileSync(join(ROOT, "web/scroll-lock.js"), "utf8").includes('"tour", "toast"]);') &&
           ["web6", "web7"].every((d) =>
             [["app.js", "mochi"], ["fuse.js", "fuse"], ["book.js", "book"], ["album.js", "album"]].every(([f, room]) => readFileSync(join(ROOT, d, f), "utf8").includes(`mountTour("${room}");`)) &&
             readFileSync(join(ROOT, d, "styles.css"), "utf8").includes(".tour-ring {")
