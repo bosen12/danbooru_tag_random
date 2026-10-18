@@ -138,9 +138,11 @@ try {
           return probe.getBoundingClientRect().toJSON();
         },testGlyph);
         const fallbackFonts=await cdp.send('CSS.getPlatformFontsForNode',{nodeId:node.nodeId});
-        assert.ok(fallbackFonts.fonts.length && fallbackFonts.fonts.every(f=>f.isCustomFont && /Chiron|昭源/.test(f.familyName)),`New vocabulary U+${testGlyph.toString(16)} must render original Chiron, not system fallback: ${JSON.stringify(fallbackFonts.fonts)} requests: ${JSON.stringify(requested.slice(before))}`);
-        const extra=requested.slice(before);assert.equal(extra.length,1,'One new glyph must load only its one complementary shard, shared by weights');
-        assert.ok(extra[0].bytes<100000,'One future glyph must not fetch the broad Chinese/full font');
+        // WEB6 makes no Google Fonts requests: text outside the local subset (new vocabulary
+        // before a rebuild, user deck names) draws in the system fallback chain.
+        const extra=requested.slice(before);
+        assert.equal(extra.length,0,`New vocabulary U+${testGlyph.toString(16)} must not fetch any font: ${JSON.stringify(extra)}`);
+        assert.ok(fallbackFonts.fonts.length && fallbackFonts.fonts.every(f=>!f.isCustomFont),`New vocabulary U+${testGlyph.toString(16)} outside the subset must use the system fallback: ${JSON.stringify(fallbackFonts.fonts)}`);
         comparisons.at(-1).fallback={code:`U+${testGlyph.toString(16).toUpperCase()}`,requested:extra,fonts:fallbackFonts.fonts,rect:fallback};
       }
       await context.close();

@@ -165,7 +165,7 @@ def build_serif(args):
     font.save(SERIF, reorderTables=True)
     manifest = {"sha256": digest(SERIF.read_bytes()), "bytes": SERIF.stat().st_size, "source": SERIF_SOURCE["url"],
                 "source_sha256": SERIF_SOURCE["sha256"], "weight": SERIF_WEIGHT, "unicodes": sorted(included)}
-    SERIF_MANIFEST.write_text(json.dumps(manifest, ensure_ascii=False, indent=2) + "\n", encoding="utf-8")
+    SERIF_MANIFEST.write_text(json.dumps(manifest, ensure_ascii=False, indent=2) + "\n", encoding="utf-8", newline="\n")
     print(f"Film serif: {manifest['bytes']:,} bytes, {len(included):,} codepoints.")
 
 
@@ -198,7 +198,7 @@ def build_sung(args):
     font.save(SUNG, reorderTables=True)
     manifest = {"sha256": digest(SUNG.read_bytes()), "bytes": SUNG.stat().st_size, "source": SUNG_SOURCE["url"],
                 "source_sha256": SUNG_SOURCE["sha256"], "unicodes": sorted(included)}
-    SUNG_MANIFEST.write_text(json.dumps(manifest, ensure_ascii=False, indent=2) + "\n", encoding="utf-8")
+    SUNG_MANIFEST.write_text(json.dumps(manifest, ensure_ascii=False, indent=2) + "\n", encoding="utf-8", newline="\n")
     print(f"Heading Sung: {manifest['bytes']:,} bytes, {len(included):,} codepoints.")
 
 
@@ -268,7 +268,7 @@ def build(args, metadata):
                 "source_sha256": metadata["source_sha256"], "unicodes": sorted(included),
                 "corpus_files": files, "axes": [{"tag": a.axisTag, "min": a.minValue, "default": a.defaultValue, "max": a.maxValue} for a in font["fvar"].axes],
                 "fonttools": "4.61.1", "brotli": "1.2.0"}
-    MANIFEST.write_text(json.dumps(manifest, ensure_ascii=False, indent=2) + "\n", encoding="utf-8")
+    MANIFEST.write_text(json.dumps(manifest, ensure_ascii=False, indent=2) + "\n", encoding="utf-8", newline="\n")
     CSS.write_text(css_text(included, metadata), encoding="utf-8", newline="\n")
     check(metadata)
 
