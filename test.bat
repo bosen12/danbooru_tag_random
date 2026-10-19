@@ -278,6 +278,12 @@ if errorlevel 1 (
   pause
   exit /b 1
 )
+echo == discord routes ==
+%PY% scripts\test_discord_routes.py
+if errorlevel 1 (
+  pause
+  exit /b 1
+)
 echo == workflow profiles ==
 %PY% scripts\test_workflows.py
 if errorlevel 1 (
