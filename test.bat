@@ -113,6 +113,12 @@ if errorlevel 1 (
   pause
   exit /b 1
 )
+echo == era mix / rating free ==
+call node scripts\test_era_mix_rating_free.mjs
+if errorlevel 1 (
+  pause
+  exit /b 1
+)
 echo == first-time setup (web6) ==
 call %PY% scripts\test_setup_tasks.py
 if errorlevel 1 (
