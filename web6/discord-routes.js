@@ -480,7 +480,13 @@ function searchBox({ label, max, placeholder, items, hits, add, drop, modeKey, e
         el("strong", { dataset: { noI18n: "" } }, h.label),
         el("small", { dataset: { noI18n: "" } }, h.sub)
       );
-      b.addEventListener("pointerenter", () => ((active = i), paintActive()));
+      // 只有滑鼠真的動了才換選中的那一筆：結果清單剛冒出來正好在停著的游標底下時，瀏覽器也會發 pointerenter，
+      // 選中的那筆被換掉、按 Enter 加到的就不是剛才打的那個（實際碰到過：打「間諜」加成了洛伊德）。
+      b.addEventListener("pointermove", () => {
+        if (active === i) return;
+        active = i;
+        paintActive();
+      });
       results.append(el("li", {}, b));
     });
     paintActive();
