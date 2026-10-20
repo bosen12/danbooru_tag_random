@@ -2217,7 +2217,9 @@ const ALBUM_FIXTURE = [
               read("gen.js").includes("origin: hooks.origin") && read("hires.js").includes("origin: hooks.origin,") &&
               read("gen.js").includes("if (leaving && !(err instanceof GenError)) return false;") &&
               read("store.js").includes("waiting: isWaiting(s),") && read("fuse.js").includes("waiting: S.isWaiting(p),") &&
-              read("app.js").includes("for (const s of waiting) generator.enqueue(s);") && read("fuse.js").includes("const waiting = prints.filter((p) => p._waiting).reverse();") &&
+              // web6 改成只由一個分頁接著印（tab-sync.js 的 whenPrinter），web7 還是開頁就接。
+              (read("app.js").includes("for (const s of waiting) generator.enqueue(s);") || (read("app.js").includes("for (const s of waitNow) generator.enqueue(s);") && read("app.js").includes('whenPrinter("mochi"'))) &&
+              (read("fuse.js").includes("const waiting = prints.filter((p) => p._waiting).reverse();") || (read("fuse.js").includes("S.stillWaiting(stored.get(p.id)) : p._waiting)).reverse();") && read("fuse.js").includes('whenPrinter("fuse"'))) &&
               css.includes(".page-switch a[data-gen] .page-switch-gen {") && /\.mast-tools \.gen-badge \{\s*display: none;/.test(css);
           }));
       ok("疊印台手機挑牌抽屜：字盒收成一行＋挑牌，抽屜裡點牌飛進「卡池 N 張」，完成／暗幕／握把／返回手勢收（window.history，不是撤回的 history），收起捲到新牌；提示框不蓋完成（web6、web7）",

@@ -119,6 +119,12 @@ if errorlevel 1 (
   pause
   exit /b 1
 )
+echo == tab sync ==
+call node scripts\test_tab_sync.mjs
+if errorlevel 1 (
+  pause
+  exit /b 1
+)
 echo == first-time setup (web6) ==
 call %PY% scripts\test_setup_tasks.py
 if errorlevel 1 (
