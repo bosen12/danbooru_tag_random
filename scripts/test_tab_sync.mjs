@@ -1,8 +1,11 @@
 // 兩個分頁一起開時的存檔合併（web6/tab-sync.js 的 makeShelf、settingsToWrite）。
 // 以前每個分頁把記憶體裡那份整個寫回去：A 收藏、做完 Hires，B 一存就蓋回舊版；在卡冊換的分級被墨池寫回去。
 import assert from "node:assert/strict";
+import { existsSync } from "node:fs";
 import { test } from "node:test";
-import { makeShelf, settingsToWrite } from "../web6/tab-sync.js";
+// 這邊在 web6/，開源版（tests/ 是從這裡複製過去的）在 web/。
+const here = new URL("../web6/tab-sync.js", import.meta.url);
+const { makeShelf, settingsToWrite } = await import(existsSync(here) ? here : new URL("../web/tab-sync.js", import.meta.url));
 
 function storage() {
   let data = [];
