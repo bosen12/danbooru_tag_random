@@ -49,6 +49,7 @@ TEST_FILES = {
     "test_discord_routes.py": "test_discord_routes.py",
     "test_era_mix_rating_free.mjs": "test_era_mix_rating_free.mjs",
     "test_tab_sync.mjs": "test_tab_sync.mjs",
+    "test_card_search.mjs": "test_card_search.mjs",
     "test_discord_routes_browser.mjs": "test_web6_discord_routes_browser.mjs",
     "test_i18n.mjs": "test_web6_i18n.mjs",
     "test_i18n_browser.mjs": "test_web6_i18n_browser.mjs",
@@ -81,7 +82,7 @@ TEST_FILES = {
 # 開源版自己的檔：不覆蓋、也不當成「上游已刪」清掉。
 MOCHI_OWN = {"README.md", "CLAUDE.md", "start.bat", "start.sh", ".gitignore", ".gitattributes", "LICENSE"}
 # three.js 的授權跟著 build 一起帶。
-EXTRA_WEB = ["vendor/three/LICENSE"]
+EXTRA_WEB = ["vendor/three/LICENSE", "vendor/opencc/LICENSE", "vendor/opencc/NOTICE"]
 
 # (開源版的路徑, 原字串, 換成) —— 原字串找不到就印 WARN。
 REWRITES = [

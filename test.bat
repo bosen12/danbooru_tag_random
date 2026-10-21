@@ -125,6 +125,12 @@ if errorlevel 1 (
   pause
   exit /b 1
 )
+echo == card search ==
+call node scripts\test_card_search.mjs
+if errorlevel 1 (
+  pause
+  exit /b 1
+)
 echo == fuse trial scheduling ==
 call node scripts\test_fuse_scheduling.mjs
 if errorlevel 1 (
