@@ -61,6 +61,7 @@ TEST_FILES = {
     "test_motion_details_browser.mjs": "test_web6_motion_details_browser.mjs",
     "test_shared_interactions_browser.mjs": "test_web6_shared_interactions_browser.mjs",
     "test_collection_interactions_browser.mjs": "test_web6_collection_interactions_browser.mjs",
+    "test_deep_ux_browser.mjs": "test_web6_deep_ux_browser.mjs",
     "test_gen_completion.py": "test_gen_completion.py",
     "test_engine.mjs": "test_engine.mjs",
     "test_engine_shards.mjs": "test_engine_shards.mjs",
