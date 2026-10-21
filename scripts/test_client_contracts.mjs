@@ -1696,7 +1696,9 @@ const ALBUM_FIXTURE = [
   ok("重新整理清掉沒印出來的（墨池、疊印台；剛剛還排著的除外）；疊印台取消的不掛上繩子", app6.includes('s.status === "done" || s.status === "drawn" || (s.live && s.job) || S.stillWaiting(s)') && fuse6.includes('.filter((p) => p.status === "done" || (p.live && p.job) || S.stillWaiting(p))') && fuse6.includes('else if (p.status === "cancelled") dropCancelled(p);'));
   const drag6 = readFileSync(join(ROOT, "web6/drag.js"), "utf8");
   ok("整塊重畫也讓位（flipBy 用牌名認人）：墨池合成池、疊印台卡池（卡池捲出畫面時不量）；影子收下從影子的位置滑進去", motion6.includes("export function flipBy(") && app6.includes('flipBy($("pool-well"), ".pool-slot"') && fuse6.includes('(plateSeen ? flipBy : (_box, _sel, _key, mutate) => mutate())(box, ".plate-card, .ghost-card", cardKey') && fuse6.includes('alias: (k) => (k.startsWith("p:") ? "g:" + k.slice(2) : null)'));
-  ok("首屏兩包 JSON：fetch 跟 preload 用同一個（帶版本的）網址，不會下載兩次", app6.includes(`fetch(document.querySelector('link[rel="preload"][href^="lexicon.json"]')?.href || "lexicon.json")`) && fuse6.includes(`fetch(document.querySelector('link[rel="preload"][href^="cards/manifest.json"]')?.href || "cards/manifest.json")`));
+  ok("首屏兩包 JSON：fetch 跟 preload 用同一個（帶版本的）網址，不會下載兩次", (app6.includes(`fetch(document.querySelector('link[rel="preload"][href^="lexicon.json"]')?.href || "lexicon.json")`) || (app6.includes(`const lexUrl = document.querySelector('link[rel="preload"][href^="lexicon.json"]')?.href || "lexicon.json";`) && app6.includes("fetch(lexUrl)"))) && fuse6.includes(`fetch(document.querySelector('link[rel="preload"][href^="cards/manifest.json"]')?.href || "cards/manifest.json")`));
+  // 背景執行緒（draw-pool.js）的詞庫要等這邊抓完（進了快取）才去讀，不然第一次開頁會下載兩次。
+  ok("背景抽牌的 worker 在詞庫抓到之後才叫它去讀", [app6, fuse6].every((s) => s.indexOf("warmDrawWorker(") > s.indexOf("data = lexicon;") && s.indexOf("data = lexicon;") > 0));
   {
     const loraSrc = readFileSync(join(ROOT, "web", "lora.js"), "utf8");
     ok("LoRA 清單：失敗或伺服器回 error 都不快取空清單（下次開選單再問）", loraSrc.includes("if (!got.error) GEN_LORAS = got.items || [];") && !/catch \(e\) \{\s*GEN_LORAS = \[\];/.test(loraSrc));
