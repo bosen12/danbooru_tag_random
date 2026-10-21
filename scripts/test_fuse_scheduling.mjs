@@ -4,7 +4,7 @@ import { readFileSync } from 'node:fs';
 import { test } from 'node:test';
 import vm from 'node:vm';
 import { indexLexicon, sanitizeSettings } from '../web/engine.js';
-import { drawWithSeed } from '../web/draw-with-seed.js';
+import { drawWithSeed, withEffectiveHeats } from '../web/draw-with-seed.js';
 import { HARD_BANNED, isCard } from '../web/card-art.js';
 
 const source = readFileSync(new URL('../web6/fuse.js', import.meta.url), 'utf8');
@@ -24,6 +24,8 @@ function fixture(picked = 0) {
   const document = { hidden: false, flight: null, querySelector() { return this.flight; } };
   const context = vm.createContext({
     lex, lib, HARD_BANNED, document,
+    // 偏好角色（fav-chars.js）、實際尺度（draw-with-seed.js）：retrial 抽之前套上；這裡沒有偏好角色。
+    withFavChars: s => s, withEffectiveHeats,
     LETTERS: ['A', 'B', 'C', 'D'],
     SECTION_ORDER: ['subject', 'feature', 'clothing', 'pose', 'env', 'style', 'quality'],
     settings: sanitizeSettings({ rating: 'general' }, data),

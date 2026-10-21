@@ -10,7 +10,7 @@ function harness() {
   // Keep the batch's private state with its actual function, independently of page boot.
   const declarations = text.slice(text.lastIndexOf("let shotSeq", begin), begin);
   const frames = new Map(), timers = new Map(), records = [], nodes = [], sent = [], wall = { prepend(n) { nodes.unshift(n); } };
-  const bar = { dataset: {}, children: [], get childElementCount() { return this.children.length; }, replaceChildren(...children) { this.children = children; } };
+  const bar = { dataset: {}, children: [], querySelector() { return null; }, querySelectorAll() { return []; }, get childElementCount() { return this.children.length; }, replaceChildren(...children) { this.children = children; } };
   const wallHead = { dataset: {} }, wallEmpty = { hidden: false };
   let clock = 0, seed = 0, sequence = 0;
   const ctx = {
@@ -32,13 +32,15 @@ function harness() {
     },
     makeShot(drawn, seed, pins, snapshot) { return { id: "s" + seed, positive: drawn.positive, seed, width: snapshot?.width ?? ctx.settings.width, pins: [...pins], mine: [...pins], drawn: [] }; },
     currentTriggerText: () => "trigger", currentLorasPayload: () => [], currentCkpt: () => "model", currentWorkflowId: () => "wf", currentSampling: () => ({ steps: 19, cfg: 4 }),
+    // 後來加的：姿勢參考、偏好角色、實際尺度、背景執行緒抽牌（這裡回 null，照舊在這邊抽，才數得到每一張）。
+    currentPose: () => null, withFavChars: s => s, withEffectiveHeats: s => s, drawInWorker: async () => null, hasDrawWorker: () => false, renderOverreach() {}, syncHandBtn() {}, afterPaint: fn => fn(), matchMedia: () => ({ matches: false }), innerHeight: 800, flip: (n, f) => f(),
     $: id => id === "wall" ? wall : id === "go-bar" ? bar : id === "wall-head" ? wallHead : id === "wall-empty" ? wallEmpty : {},
     refuse() {}, toast() {}, sfx: { deal() {}, roll() {} }, recordUses() {}, tagsOfPositive: () => [],
-    shotNode: shot => ({ id: shot.id }), enter() {}, trimWall() {},
+    shotNode: shot => ({ id: shot.id, querySelector: () => null }), enter() {}, trimWall() {},
     S: { saveShots() {} }, generator: { busy: false, pending: 0, enqueue: shot => sent.push(shot.id), stop() {} }, renderGoBar() {}, reducedMotion: () => false, DUR: { micro: 120 },
     looping: false, infinite: false, hand: null, seedNode: null, discord: null, weights: new Map(),
     stepper: () => ({}), switchBox: () => ({}), mountSeedControl: () => ({}), renderGoFloat() {},
-    el: (tag, attrs, ...children) => ({ tag, attrs, text: children.filter(x => typeof x === "string").join("") }),
+    el: (tag, attrs, ...children) => ({ tag, attrs, children: children.flat().filter(x => x && typeof x === "object"), text: children.filter(x => typeof x === "string").join("") }),
     handleLoraKeys: () => false, wfHandleKeys: () => false, anyOverlay: () => false, trashPanel: null,
   };
   vm.createContext(ctx);
@@ -47,10 +49,16 @@ function harness() {
   vm.runInContext(declarations + text.slice(begin, end) + "\nthis.drawBatch = drawBatch", ctx);
   return {
     ctx, records, frames, timers, sent, nodes, bar,
-    wireControls() { for (const name of ["goStatusText", "renderGoStatus", "renderGoBar", "stopAll", "onKey"]) { const start = text.indexOf("function " + name + "("); const finish = text.indexOf("\n}", start); vm.runInContext(text.slice(start, finish + 2), ctx); } },
+    wireControls() { for (const name of ["goStatusText", "renderGoStatus", "renderGoBar", "stopAll", "onKey"]) { /* 只抓最外層那一支（詳情視窗裡也有一支同名的 onKey） */ const start = text.indexOf("\nfunction " + name + "(") + 1; const finish = text.indexOf("\n}", start); vm.runInContext(text.slice(start, finish + 2), ctx); } },
     async drain() { for (let i = 0; i < 200; i++) { const pending = [...frames.values()]; frames.clear(); for (const fn of pending) fn(clock); await Promise.resolve(); } },
   };
 }
+
+// 抽牌列的按鈕不一定在最外層（「停」放在 go-actions 那一小段裡）：往下層找。
+const findText = (nodes, text) => { for (const n of nodes || []) { if (n && n.text === text) return n; const c = n && findText(n.children, text); if (c) return c; } return null; };
+// 按下去到真的開始抽之間有幾個非同步的步（排進抽牌佇列、等按下的樣子畫出來 afterPaint）：
+// 等到第一張抽出來為止，不寫死只等一拍。
+const settle = async (h) => { for (let i = 0; i < 20 && !h.records.length; i++) await Promise.resolve(); };
 
 test("large batches yield to the next painted frame instead of blocking the whole round", async () => {
   const h = harness();
@@ -89,7 +97,7 @@ test("rapid round requests run in order without interleaving seeded draws", asyn
 test("a frame wait has a task fallback if the tab becomes hidden", async () => {
   const h = harness();
   const pending = h.ctx.drawBatch(false);
-  await Promise.resolve();
+  await settle(h);
   assert(h.frames.size > 0);
   h.ctx.document.hidden = true;
   assert(h.timers.size > 0, "rAF alone can stall when the tab is hidden during its wait");
@@ -106,7 +114,7 @@ test("a frame wait has a task fallback if the tab becomes hidden", async () => {
 test("stop during an unfinished round does not submit jobs or start queued rounds", async () => {
   const h = harness();
   const a = h.ctx.drawBatch(true), b = h.ctx.drawBatch(true);
-  await Promise.resolve();
+  await settle(h);
   assert(h.records.length > 0 && h.records.length < 12);
   vm.runInContext("drawEpoch++", h.ctx);
   await h.drain(); await Promise.all([a, b]);
@@ -117,21 +125,21 @@ test("stop during an unfinished round does not submit jobs or start queued round
 test("the actual idle-page Stop button cancels preparation before generation", async () => {
   const h = harness(); h.wireControls();
   h.ctx.renderGoBar();
-  assert(!h.bar.children.some(n => n.text === "停"));
+  assert(!!!findText(h.bar.children, "停"));
   const pending = h.ctx.drawBatch(true);
-  await Promise.resolve();
-  const stop = h.bar.children.find(n => n.text === "停");
+  await settle(h);
+  const stop = findText(h.bar.children, "停");
   assert(stop, "Stop must be available while draws are being prepared");
   stop.attrs.onclick();
   await h.drain(); await pending;
   assert.equal(h.sent.length, 0);
-  assert(!h.bar.children.some(n => n.text === "停"));
+  assert(!!!findText(h.bar.children, "停"));
 });
 
 test("the actual Escape handler cancels an idle-page draw round", async () => {
   const h = harness(); h.wireControls();
   const pending = h.ctx.drawBatch(true);
-  await Promise.resolve();
+  await settle(h);
   h.ctx.onKey({ key: "Escape", target: { tagName: "BUTTON" } });
   await h.drain(); await pending;
   assert.equal(h.sent.length, 0);

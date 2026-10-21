@@ -125,6 +125,18 @@ if errorlevel 1 (
   pause
   exit /b 1
 )
+echo == fuse trial scheduling ==
+call node scripts\test_fuse_scheduling.mjs
+if errorlevel 1 (
+  pause
+  exit /b 1
+)
+echo == mochi draw batches ==
+call node scripts\test_web6_batch.mjs
+if errorlevel 1 (
+  pause
+  exit /b 1
+)
 echo == first-time setup (web6) ==
 call %PY% scripts\test_setup_tasks.py
 if errorlevel 1 (
