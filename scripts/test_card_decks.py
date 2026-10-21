@@ -94,6 +94,13 @@ try:
     ok("偏好角色：tags 不是陣列要擋", False)
 except card_decks.DeckError:
     ok("偏好角色：tags 不是陣列要擋", True)
+# 原本沒有檔案（換了一份資料夾跑、被刪掉）卻只收到改動：回 fresh，網頁會把它那整份合起來再送一次（2026-10-21 偏好角色被蓋掉）。
+for _p in (Path(os.environ["CARD_FAV_CHARS_PATH"]), Path(os.environ["CARD_FAV_CHARS_PATH"] + ".bak")):
+    _p.unlink(missing_ok=True)
+_fresh = card_decks.save_fav_chars({"add": ["android 18"]})
+ok("偏好角色：沒有檔案時只收到改動，回 fresh", _fresh.get("fresh") is True and _fresh["tags"] == ["android 18"])
+ok("偏好角色：有檔案之後就不再 fresh", "fresh" not in card_decks.save_fav_chars({"add": ["hado nejire"]}))
+ok("偏好角色：整份送上來不算 fresh", "fresh" not in card_decks.save_fav_chars({"tags": ["yor briar", "android 18"]}))
 card_decks.save_fav_chars({"tags": ["hatsune miku"]})
 Path(os.environ["CARD_FAV_CHARS_PATH"]).write_text("{壞掉", encoding="utf-8")
 ok("偏好角色：檔案壞掉用 .bak 換回來", card_decks.load_fav_chars()["tags"] == ["hatsune miku"])

@@ -50,6 +50,7 @@ TEST_FILES = {
     "test_era_mix_rating_free.mjs": "test_era_mix_rating_free.mjs",
     "test_tab_sync.mjs": "test_tab_sync.mjs",
     "test_card_search.mjs": "test_card_search.mjs",
+    "test_fav_chars_sync.mjs": "test_fav_chars_sync.mjs",
     "test_discord_routes_browser.mjs": "test_web6_discord_routes_browser.mjs",
     "test_i18n.mjs": "test_web6_i18n.mjs",
     "test_i18n_browser.mjs": "test_web6_i18n_browser.mjs",
