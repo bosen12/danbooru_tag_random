@@ -39,6 +39,8 @@ function harness() {
     shotNode: shot => ({ id: shot.id, querySelector: () => null }), enter() {}, trimWall() {},
     S: { saveShots() {} }, generator: { busy: false, pending: 0, enqueue: shot => sent.push(shot.id), stop() {} }, renderGoBar() {}, reducedMotion: () => false, DUR: { micro: 120 },
     looping: false, infinite: false, hand: null, seedNode: null, discord: null, weights: new Map(),
+    // 無限抽「印幾張停」（ui.loopMax，0＝不限）：這裡不限。
+    ui: { loopMax: 0 }, loopSent: 0, loopMaxPicker: () => ({}),
     stepper: () => ({}), switchBox: () => ({}), mountSeedControl: () => ({}), renderGoFloat() {},
     el: (tag, attrs, ...children) => ({ tag, attrs, children: children.flat().filter(x => x && typeof x === "object"), text: children.filter(x => typeof x === "string").join("") }),
     handleLoraKeys: () => false, wfHandleKeys: () => false, anyOverlay: () => false, trashPanel: null,
@@ -80,6 +82,27 @@ test("a yielded batch freezes its intent, model fields and pinned identity", asy
   assert(h.records.slice(1).every(r => r.pins.includes("identity") && r.banned.includes("other")));
   assert.deepEqual(h.sent, Array.from({ length: 12 }, (_, i) => "s" + (i + 1)));
   assert.deepEqual(h.nodes.map(n => n.id), Array.from({ length: 12 }, (_, i) => "s" + (i + 1)));
+});
+
+test("continuous generation with a count limit: a manual press starts the count and the last round only draws what is left", async () => {
+  const h = harness();
+  h.ctx.infinite = true;
+  h.ctx.ui.loopMax = 10;
+  h.ctx.loopSent = 7; // 上一趟剩下的數字：自己按的那一下從 0 算起
+  let pending = h.ctx.drawBatch(true);
+  await h.drain(); await pending;
+  assert.equal(h.sent.length, 10, "12 per round is capped to the 10 that were set");
+  assert.equal(h.ctx.loopSent, 10);
+  h.ctx.ui.loopMax = 20;
+  h.ctx.loopSent = 16;
+  pending = h.ctx.drawBatch(true, { auto: true });
+  await h.drain(); await pending;
+  assert.equal(h.sent.length, 14, "an automatic round draws only the 4 left");
+  assert.equal(h.ctx.loopSent, 20);
+  h.ctx.infinite = false;
+  pending = h.ctx.drawBatch(true);
+  await h.drain(); await pending;
+  assert.equal(h.sent.length, 26, "without continuous generation the limit does not apply");
 });
 
 test("rapid round requests run in order without interleaving seeded draws", async () => {

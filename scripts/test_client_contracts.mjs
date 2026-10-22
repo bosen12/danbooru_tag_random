@@ -2024,7 +2024,7 @@ const ALBUM_FIXTURE = [
         ["web6", "web7"].every((d) => {
           const app = readFileSync(join(ROOT, d, "app.js"), "utf8");
           const cssText = readFileSync(join(ROOT, d, "styles.css"), "utf8");
-          return app.includes('"同一個人：一次 2 張以上才有作用"') && app.includes("function renderGoStatus()") && app.includes('"抽完一輪自動接著抽下一輪，一直到按「停」"') &&
+          return app.includes('"同一個人：一次 2 張以上才有作用"') && app.includes("function renderGoStatus()") && (app.includes('"抽完一輪自動接著抽下一輪，一直到按「停」"') || app.includes('"抽完一輪自動接著抽下一輪，一直到按「停」，或印到右邊設定的張數"')) &&
             cssText.includes('.ping[data-ok="0"] span {') && /\.toast \{[^}]*width: max-content;/.test(cssText);
         }));
       ok("開機中有交代（頂欄掃光、空牌格寫正在讀詞庫，settleMotion 收掉、15 秒保底）；連不到主機不再顯示英文 Failed to fetch；卡冊找牌框有焦點外框（web6、web7）",

@@ -14,7 +14,7 @@ const lex = indexLexicon(data);
 const lib = { byTag: new Map(data.tags.filter(isCard).map(t => [t.tag, t])) };
 const copy = value => JSON.parse(JSON.stringify(value));
 
-function fixture(picked = 0) {
+function fixture(picked = 0, { worker = null } = {}) {
   let next = 0;
   let task = 0;
   const timers = new Map();
@@ -43,6 +43,9 @@ function fixture(picked = 0) {
     refreshInk() { paints.push('ink'); },
     renderTrials() { paints.push('trials'); },
     renderCase() { paints.push('case'); },
+    // 背景執行緒（draw-pool.js）：worker 給的話剩下的試印丟給它抽；沒給就是開不了 worker，全在這邊抽。
+    hasDrawWorker: () => !!worker,
+    drawInWorker: req => (worker ? worker(req) : Promise.resolve(null)),
   });
   vm.runInContext(retrialSource + '\nthis.api = { retrial, retrialPicked, finishTrials, settleTrials, get pending() { return trialsPending && [...trialsPending]; }, get known() { return knownTrials(); } };', context);
   const run = fn => { task++; fn(); };
@@ -208,6 +211,77 @@ test('replacement while waiting for a flight ignores the older waiting callbacks
   const results = copy(f.context.trials);
   f.api.retrial();
   assert.deepEqual(copy(f.context.trials), results);
+});
+
+/** 假的背景執行緒：收到的請求先排著，測試決定什麼時候、回什麼。抽法跟 draw-worker.js 一樣（同一支引擎）。 */
+function fakeWorker() {
+  const asked = [];
+  const worker = req => new Promise(resolve => asked.push({ req, resolve }));
+  const answer = (k = 0, override) => {
+    const { req, resolve } = asked[k];
+    resolve(override !== undefined ? override : req.seeds.map(seed => {
+      const d = drawWithSeed(lex, req.settings, new Set(req.pins), new Set(req.banned), seed);
+      return { positive: d.positive, era: d.era, heat: d.heat, sections: d.sections, eraClash: d.eraClash || [] };
+    }));
+  };
+  return { worker, asked, answer };
+}
+const settle = async () => { for (let i = 0; i < 5; i++) await Promise.resolve(); };
+
+test('with a draw worker the remaining trials go there in one batch and match the main-thread result', async () => {
+  for (const selected of [0, 2]) {
+    const w = fakeWorker();
+    const f = fixture(selected, { worker: w.worker });
+    const expected = copy(f.context.trials);
+    f.api.retrialPicked();
+    assert.deepEqual(f.draws.map(d => d.seed), [f.context.seeds[selected]], 'Only the selected trial is drawn here');
+    assert.equal(w.asked.length, 0, 'The worker is asked only after the click frame is out');
+    f.frame(); f.timer(0);
+    assert.equal(w.asked.length, 1);
+    assert.deepEqual(copy(w.asked[0].req.seeds), copy(f.context.seeds.filter((_, i) => i !== selected)));
+    assert.equal(f.frames.size + f.timers.size, 0, 'No main-thread draw tasks are queued');
+    w.answer();
+    await settle();
+    assert.equal(f.draws.length, 1, 'Main thread drew nothing else');
+    assert.deepEqual(copy(f.context.trials), expected, 'Worker results are the same trials');
+    assert.deepEqual(f.paints, ['ink', 'trials', 'case']);
+    assert.equal(f.api.pending, null);
+  }
+});
+
+test('a worker answer for a replaced bed is dropped; a failed worker falls back to drawing here', async () => {
+  const w = fakeWorker();
+  const f = fixture(0, { worker: w.worker });
+  f.api.retrialPicked();
+  f.frame(); f.timer(0);
+  f.context.bed = { pins: ['umbrella', 'rain'], carried: {} };
+  f.api.retrialPicked();
+  f.timer(250);
+  assert.equal(w.asked.length, 2, 'Background tab still asks via the fallback timer');
+  w.answer(0);
+  await settle();
+  assert.deepEqual(f.paints, [], 'Stale answer must not publish');
+  assert.equal(f.api.pending.length, 3);
+  w.answer(1, null);
+  await settle();
+  for (let i = 0; i < 3; i++) { f.frame(); f.timer(0); }
+  assert.equal(f.api.pending, null);
+  const results = copy(f.context.trials);
+  f.api.retrial();
+  assert.deepEqual(copy(f.context.trials), results, 'Fallback draws equal a full redraw');
+});
+
+test('rules changed by another path while the worker drew: its answer is not used', async () => {
+  const w = fakeWorker();
+  const f = fixture(1, { worker: w.worker });
+  f.api.retrialPicked();
+  f.frame(); f.timer(0);
+  f.context.bans = new Set(['umbrella']);
+  w.answer(0);
+  await settle();
+  assert.equal(f.api.pending.length, 3, 'Answer drawn with the old bans is ignored');
+  for (let i = 0; i < 3; i++) { f.frame(); f.timer(0); }
+  assert.equal(f.api.pending, null);
 });
 
 if (process.argv.includes('--browser')) {
