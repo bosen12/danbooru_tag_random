@@ -51,6 +51,7 @@ TEST_FILES = {
     "test_tab_sync.mjs": "test_tab_sync.mjs",
     "test_card_search.mjs": "test_card_search.mjs",
     "test_fav_chars_sync.mjs": "test_fav_chars_sync.mjs",
+    "test_gen_log_cap.py": "test_gen_log_cap.py",
     "test_discord_routes_browser.mjs": "test_web6_discord_routes_browser.mjs",
     "test_i18n.mjs": "test_web6_i18n.mjs",
     "test_i18n_browser.mjs": "test_web6_i18n_browser.mjs",

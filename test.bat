@@ -314,6 +314,12 @@ if errorlevel 1 (
   pause
   exit /b 1
 )
+echo == gen log cap ==
+%PY% scripts\test_gen_log_cap.py
+if errorlevel 1 (
+  pause
+  exit /b 1
+)
 echo == discord routes ==
 %PY% scripts\test_discord_routes.py
 if errorlevel 1 (
