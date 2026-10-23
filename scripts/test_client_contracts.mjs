@@ -74,6 +74,7 @@ const {
   joinTriggerParts,
   slotTriggerText,
   loraPollDelay,
+  loraFailDelay,
   loraStrengthFromSpec,
   applyRecipeModels,
   currentLorasPayload,
@@ -557,6 +558,7 @@ function ok(name, cond, detail) {
   ok("前景輪詢是 2500ms", loraPollDelay(false, 8000) === 2500);
   ok("背景輪詢會拉長", loraPollDelay(true, 2500) === 4000);
   ok("背景輪詢有上限", loraPollDelay(true, 30000) === 30000);
+  ok("LoRA 推送連不上時一次比一次等久（2.6 秒起）、最多 30 秒", loraFailDelay(0) === 2560 && loraFailDelay(2560) === 4096 && loraFailDelay(30000) === 30000);
 }
 
 {
