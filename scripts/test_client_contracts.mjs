@@ -2020,6 +2020,14 @@ const ALBUM_FIXTURE = [
             (d === "web6" ? fuse.includes('toastUndo(parts.join("；"));') && fuse.includes("function dropStaleUndo()") : fuse.includes('toast(parts.join("；"), { action: { label: "撤回", run: undo } });')) &&
             cssText.includes(".segmented.is-hint {") && cssText.includes('.chip-toggle[aria-disabled="true"] {');
         }));
+      ok("排隊的成品也攤著牌（等前面的印完、排隊中），開始畫時牌合起來；畫框只拿自己那張圖，不會把手牌的插畫當成品圖拿掉（web6）",
+        (() => {
+          const app = readFileSync(join(ROOT, "web6/app.js"), "utf8");
+          const cssText = readFileSync(join(ROOT, "web6/styles.css"), "utf8");
+          return app.includes("function holdsHand(shot)") && app.includes("function mergeHand(frame, hand)") && app.includes("if (oldHand && !handNow) mergeHand(frame, oldHand);") &&
+            app.includes('let img = frame.querySelector(":scope > img:not(.shot-under)");') && !app.includes('let img = frame.querySelector("img");') &&
+            cssText.includes(".shot-merge {") && cssText.includes("@keyframes hand-ready");
+        })());
       ok("狀態：無限抽／同一個人有說明，一次 1 張時開同一個人會說沒作用；手機斷線時頂欄露出字；提示框不再只拿半個螢幕寬（web6、web7）",
         ["web6", "web7"].every((d) => {
           const app = readFileSync(join(ROOT, d, "app.js"), "utf8");
