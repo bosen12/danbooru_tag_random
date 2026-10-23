@@ -59,9 +59,11 @@ const GOLD = {
   // 2026-10-12：Grok 的角色追加、一般標籤、焦點共 648 個字進池（Opus 驗收時修了時代、室內外、日夜、眼睛出框）。這張換成裙裡短褲、自慰、泳池梯、柳橙。仍是 1girl solo，沒有男生或人類陰莖。
   // 2026-10-14：WAI v17 實測後，Danbooru 併掉的舊名和替代字加成同中文名的卡（scripts/alt_names.json；Grok 逐組實測後留 22 組，其中 7 組只留新名），池子變大；截肢補動作、上衣補下著在收尾後再補一次。仍是 1girl solo，沒有男生或人類陰莖。
   // 2026-10-16：細肩帶背心算上衣，拉吊帶背心沒穿著它就不進池，池子變小、亂數落到別的牌。仍是 1girl solo。
+  // 2026-10-23：摔角、觀眾、公開場合 28 個字進池。這張換成鉛筆裙、伊莉莎白塔。仍是 1girl solo，動物陰莖不是男生。
+  // 2026-10-23 第二輪：主人指定加回 12 個字、族裔這批進池，六招進 FIGHT_PLACE。這張換成戰鬥架勢、大自然；背景有人群，所以是 solo focus。仍是 1girl，沒有男生或人類陰莖。
   1: {
-    rng: 918,
-    pos: "1girl, solo, pixie cut, orange eyes, grey hair, hair slicked back, medium breasts, toned, ribs, animal penis, latex bodysuit, bodysuit, high heels, halterneck, denim, female masturbation, kneeling, from behind, looking at breasts, >:), holding paper, pool ladder, indoors, evening, city lights, strawberry, new year, nsfw, explicit, masterpiece, best quality, amazing quality",
+    rng: 935,
+    pos: "1girl, solo focus, pixie cut, orange eyes, grey hair, hair slicked back, medium breasts, lips, tsurime, albino, short shorts, shorts, leggings, unbuttoned shirt, shirt, panties, masturbation, fighting stance, profile, looking down, nervous, wax play, nature, outdoors, twilight, lamppost, sky focus, sky, crowd, nsfw, explicit, masterpiece, best quality, amazing quality",
   },
   // 2026-09-29：路人進了環境池，同一顆亂數落到別的環境字，後面的姿勢跟著換。
   // seed 42 少了束縛和手銬（手銬是束縛之後才拉的），多了咬唇。seed 100 花瓣換成剪影。
@@ -80,9 +82,11 @@ const GOLD = {
   // 2026-10-12：Grok 的角色追加、一般標籤、焦點共 648 個字進池（Opus 驗收時修了時代、室內外、日夜、眼睛出框）。這張換成瞇眼笑、哥德風、自由女神。瞇眼笑是閉眼，沒有視線。仍是 1girl solo，沒有男生或人類陰莖。
   // 2026-10-14：WAI v17 實測後，Danbooru 併掉的舊名和替代字加成同中文名的卡（scripts/alt_names.json；Grok 逐組實測後留 22 組，其中 7 組只留新名），池子變大；截肢補動作、上衣補下著在收尾後再補一次。仍是 1girl solo，沒有男生或人類陰莖。
   // 2026-10-16：細肩帶背心算上衣，拉吊帶背心沒穿著它就不進池，池子變小、亂數落到別的牌。仍是 1girl solo。
+  // 2026-10-23：摔角、觀眾、公開場合 28 個字進池。這張換成藍帽、地鐵站。仍是 1girl solo，沒有男生或人類陰莖。
+  // 2026-10-23 第二輪：主人指定加回 12 個字、族裔這批進池，六招進 FIGHT_PLACE。這張換成籃球服、天堂。仍是 1girl solo，沒有男生或人類陰莖。
   42: {
-    rng: 952,
-    pos: "1girl, solo, very short hair, yellow eyes, aqua hair, sidelocks, large breasts, hair between eyes, bindi, forehead mark, facial mark, long legs, nude, red hat, hat, semi-rimless eyewear, glasses, red bowtie, bowtie, high heels, masturbation, kicking, profile, averting eyes, :q, foot focus, streetcar, outdoors, sunrise, dappled sunlight, sparks, scissors, nsfw, explicit, masterpiece, best quality, amazing quality",
+    rng: 957,
+    pos: "1girl, solo, very short hair, yellow eyes, aqua hair, sidelocks, large breasts, breast expansion, purple lips, lipstick, dreadlocks, basketball uniform, sportswear, bra, gothic, pantyhose, masturbation through clothes, outstretched arm, cropped torso, looking afar, evil smile, crazy eyes, heaven, outdoors, sunrise, shade, pizza, can, nsfw, explicit, masterpiece, best quality, amazing quality",
   },
   // 2026-10-05 第五次：女僕圍裙是布料疊層，不占連身裙。仍是 1girl solo。
   // 2026-10-05 第六次：爆炸頭跟長裙、探頭偷看。仍是 1girl solo。
@@ -94,9 +98,13 @@ const GOLD = {
   // 2026-10-09 第四次：正常場景不再自己補手的構圖母題（HAND_MOTIF）。這張只有一個字變：掙扎換成抬腿。仍是 1girl solo，沒有男生或人類陰莖。
   // 2026-10-12：Grok 的角色追加、一般標籤、焦點共 648 個字進池（Opus 驗收時修了時代、室內外、日夜、眼睛出框）。這張換成吃東西、端著托盤、帳篷。仍是 1girl solo，沒有男生或人類陰莖。
   // 2026-10-14：WAI v17 實測後，Danbooru 併掉的舊名和替代字加成同中文名的卡（scripts/alt_names.json；Grok 逐組實測後留 22 組，其中 7 組只留新名），池子變大；截肢補動作、上衣補下著在收尾後再補一次。仍是 1girl solo，沒有男生或人類陰莖。
+  // 2026-10-23：摔角、觀眾、公開場合 28 個字進池。這張換成高領背心、下廚。仍是 1girl solo，沒有男生或人類陰莖。
+  // 2026-10-23 驗收：觀眾、擁擠進 CROWD_TAGS（私密場地不放），廚房的場景池少兩張，後面落點挪一格：
+  // lifted by self、tray 換成 holding bottle、麵。仍是 1girl solo，沒有男生或人類陰莖。
+  // 2026-10-23 第二輪：主人指定加回 12 個字、族裔這批進池，六招進 FIGHT_PLACE。這張換成韓服、托胸。仍是 1girl solo，沒有男生或人類陰莖。
   100: {
-    rng: 976,
-    pos: "1girl, solo, medium hair, grey eyes, white hair, swept bangs, flat chest, alternate hair color, nervous sweating, sweat, narrow waist, evening gown, dress, yume kawaii, over-kneehighs, kneehighs, eating, fighting stance, portrait, looking outside, smug, shaded face, cafeteria, indoors, evening, ceiling light, vending machine, breathing fire, fire, nsfw, explicit, masterpiece, best quality, amazing quality",
+    rng: 983,
+    pos: "1girl, solo, medium hair, grey eyes, white hair, swept bangs, flat chest, scar on cheek, scar, red lips, lipstick, presenting breasts, hanbok, korean clothes, asa no ha (pattern), fishnet thighhighs, thighhighs, platform sandals, sandals, cooking, hugging object, vanishing point, looking down, chestnut mouth, hair focus, frying pan, indoors, day, shadow, breathing fire, fire, kitchen, nsfw, explicit, masterpiece, best quality, amazing quality",
   },
   // 2026-09-29 第三次：這張是性愛。淋浴間換成海邊，衣服和光線跟著換。仍是 1girl solo。
   // 2026-10-04（9a087a5）：帶衣物名的姿勢（hand in panties 這類）在候選階段就要先有對的衣服，
@@ -113,9 +121,11 @@ const GOLD = {
   // 2026-10-09 第二次：第三、四輪 38 個現役詞進池。這張換成花店、坐在物件上。仍是 1girl solo，沒有男生或人類陰莖。
   // 2026-10-12：Grok 的角色追加、一般標籤、焦點共 648 個字進池（Opus 驗收時修了時代、室內外、日夜、眼睛出框）。這張換成泳裝、耳麥、艾菲爾鐵塔、花卉焦點。仍是 1girl solo，沒有男生或人類陰莖。
   // 2026-10-14：WAI v17 實測後，Danbooru 併掉的舊名和替代字加成同中文名的卡（scripts/alt_names.json；Grok 逐組實測後留 22 組，其中 7 組只留新名），池子變大；截肢補動作、上衣補下著在收尾後再補一次。仍是 1girl solo，沒有男生或人類陰莖。
+  // 2026-10-23：摔角、觀眾、公開場合 28 個字進池。這張換成連身襪、實驗室。仍是 1girl solo，沒有男生或人類陰莖。
+  // 2026-10-23 第二輪：主人指定加回 12 個字、族裔這批進池，六招進 FIGHT_PLACE。這張換成條紋衫、踢腿、房子。仍是 1girl solo，沒有男生或人類陰莖。
   999: {
-    rng: 944,
-    pos: "1girl, solo, long hair, glowing eyes, grey hair, asymmetrical hair, large breasts, thigh strap, nipples, mascara, jersey, lace trim, meandros, micro shorts, shorts, no panties, bag, nipple rings, piercing, female masturbation, handstand, vanishing point, looking down, embarrassed, moaning, greyscale with colored background, simple background, light rays, lens flare, brazilian flag, world war ii, nsfw, explicit, masterpiece, best quality, amazing quality",
+    rng: 991,
+    pos: "1girl, solo, long hair, glowing eyes, grey hair, asymmetrical hair, large breasts, body blush, tally, nervous sweating, sweat, striped shirt, shirt, panties aside, formal clothes, torn thighhighs, thighhighs, buruma, sportswear, bag, nipple rings, piercing, female masturbation, kicking, very wide shot, looking at object, crazy smile, finger on nipple, house, outdoors, sunset, light rays, flower, power lines, nsfw, explicit, masterpiece, best quality, amazing quality",
   },
   // 2026-09-23：走光補抽改成「所有成立的走光動作同一池、衣服吻合的權重 10」之後，
   // 這張的走光動作從 exhibitionism 換成 cameltoe（她穿 thong，吻合），場景跟著換。
@@ -131,9 +141,11 @@ const GOLD = {
   // 2026-10-12：Grok 的角色追加、一般標籤、焦點共 648 個字進池（Opus 驗收時修了時代、室內外、日夜、眼睛出框）。這張換成釣魚、泳池。仍是 1girl solo，沒有男生或人類陰莖。
   // 2026-10-14：WAI v17 實測後，Danbooru 併掉的舊名和替代字加成同中文名的卡（scripts/alt_names.json；Grok 逐組實測後留 22 組，其中 7 組只留新名），池子變大；截肢補動作、上衣補下著在收尾後再補一次。仍是 1girl solo，沒有男生或人類陰莖。
   // 2026-10-16：細肩帶背心算上衣，拉吊帶背心沒穿著它就不進池，池子變小、亂數落到別的牌。仍是 1girl solo。
+  // 2026-10-23：摔角、觀眾、公開場合 28 個字進池。這張換成直播、泳池梯。仍是 1girl solo，沒有男生或人類陰莖。
+  // 2026-10-23 第二輪：主人指定加回 12 個字、族裔這批進池，六招進 FIGHT_PLACE。這張換成連身泳裝、旋轉木馬。仍是 1girl solo，沒有男生或人類陰莖。
   2026: {
-    rng: 960,
-    pos: "1girl, solo, bob cut, purple eyes, white hair, crossed bangs, large breasts, hair up, sun tattoo, > <, skirt, off shoulder, denim, bra, bare shoulders, fishing, indian style, close-up, raised eyebrow, hand under clothes, spread ass, outdoors, fishing rod, pool, evening, moonlight, shooting star, starry sky, nsfw, explicit, masterpiece, best quality, amazing quality",
+    rng: 970,
+    pos: "1girl, solo, bob cut, purple eyes, white hair, crossed bangs, large breasts, @ @, toenail polish, nail polish, closed eyes, casual one-piece swimsuit, one-piece swimsuit, swimsuit, biker clothes, maid apron, livestream, lying, isometric, nervous smile, arm between breasts, between breasts, cellphone, carousel, outdoors, day, shade, pizza, nsfw, explicit, masterpiece, best quality, amazing quality",
   },
 };
 
@@ -334,7 +346,12 @@ const MATRIX_SEEDS = 200;
 // 同日再補：全裸字不接在要衣服的走光動作後、看手機不配要拿別的道具的活動、編髮環佔髮型格。指紋 614e0ef8 → 556b9a5f。
 // 2026-10-14：舊名、替代字加成同中文名的卡（alt_names.json），截肢補動作、上衣補下著在收尾後再補一次。指紋 a68766ae → 0988bd1b。
 // 2026-10-16：細肩帶背心算上衣（GARMENT_KEYS 加 camisole）：拉吊帶背心要穿著它才進池，穿著它也不再配比基尼的動作。指紋 0988bd1b → 75c293f7。
-const MATRIX_GOLD = "75c293f7";
+// 2026-10-23：摔角、觀眾、公開場合 28 個字進池。指紋 75c293f7 → 89eb4660。
+// 2026-10-23 驗收：觀眾、擁擠照人群處理；公開自慰、公開綁縛不進私密場地；摔角、相撲、武術、綜合格鬥限場地（FIGHT_PLACE）；
+// 加油歡呼帶彩球；摔角服、拳擊頭盔的父字不再被剝；武術也能在海邊練；打鬥類活動進 AWAKE_ACT（睡著不能打）。89eb4660 → 467c4554。
+// 2026-10-23 第二輪：主人指定加回的 12 個字、族裔這批（東亞人、南亞人與舊名、印度服飾、中東建築、男女對打），六招進 FIGHT_PLACE。467c4554 → eb9023be。
+// 2026-10-23 驗收：背摔、倒插也進摔角的場地（Grok 的建議）；八招不限時代，場地補上各時代的庭院、寺廟、戰場、競技場、城堡、酒館、街頭（HOLD_PLACE）。eb9023be → ac710745。
+const MATRIX_GOLD = "ac710745";
 
 function matrixSettings(over) {
   const s = defaultSettings(data);
