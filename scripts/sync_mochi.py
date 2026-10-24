@@ -29,10 +29,10 @@ W6 = ROOT / "web6"
 WEB = ROOT / "web"
 
 # 伺服器與它 import 的模組（根目錄）。
-ROOT_FILES = ["server.py", "card_usage.py", "card_decks.py", "discord_routes.py", "file_lock.py", "gen_log.py", "lora_scan.py", "recipes.py", "setup_tasks.py", "workflows.py", "config.example.json"]
+ROOT_FILES = ["server.py", "card_usage.py", "card_decks.py", "discord_routes.py", "file_lock.py", "gen_log.py", "lora_scan.py", "recipes.py", "image_parse.py", "setup_tasks.py", "workflows.py", "config.example.json"]
 # 啟動檔與伺服器會叫到的腳本（卡面下載與烘焙、放大模型、姿勢參考、修臉節點、ComfyUI 的 LoRA Manager）。
 SCRIPT_FILES = [
-    "app_config.py", "bake_card_art.py", "card_thumbnails.py", "fetch_card_art.py", "card_art_pack.json", "fetch_pose_assets.py", "fetch_face_detailer.py",
+    "app_config.py", "bake_card_art.py", "card_thumbnails.py", "fetch_card_art.py", "card_art_pack.json", "fetch_pose_assets.py", "fetch_face_detailer.py", "fetch_tagger.py",
     "fetch_upscale_model.py", "card_art.mjs", "card_jobs.json", "card-art-check.bat", "bake-cards-window.bat",
     "fetch-cards-window.bat", "upscale-model-check.bat", "fetch-upscale-window.bat", "pose-assets-check.bat",
     "fetch-pose-window.bat", "fetch_lora_manager.py", "lora-manager-check.bat", "fetch-lora-manager-window.bat",
@@ -70,11 +70,13 @@ TEST_FILES = {
     "test_engine_shards.mjs": "test_engine_shards.mjs",
     "test_engine_release.mjs": "test_mochi_engine.mjs",
     "test_setup_tasks.py": "test_setup_tasks.py",
+    "test_image_parse.py": "test_image_parse.py",
     "test_fetch_lora_manager.py": "test_fetch_lora_manager.py",
     "test_fetch_card_art.py": "test_fetch_card_art.py",
     "test_fetch_upscale.py": "test_fetch_upscale.py",
     "test_fetch_pose.py": "test_fetch_pose.py",
     "test_fetch_face.py": "test_fetch_face.py",
+    "test_fetch_tagger.py": "test_fetch_tagger.py",
     "test_server.py": "test_server.py",
     "test_launchers.py": "test_mochi_launchers.py",
     "test_smoke.py": "test_mochi_smoke.py",

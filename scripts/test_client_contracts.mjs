@@ -2277,6 +2277,28 @@ const ALBUM_FIXTURE = [
   ok("排字匣不送全域中斷（空的 {}）", !boot.includes('body: "{}"') && !boot.includes("prompt_id: jobPromptId } : {}"));
 }
 
+{
+  // 2026-10-24：解析池（web6/parse.html）。圖丟進 WD14 Tagger、字對詞庫變牌，帶去合成池或疊印台。
+  const read = (f) => readFileSync(join(ROOT, f), "utf8");
+  const parse = read("web6/parse.js");
+  const html = read("web6/parse.html");
+  const server = read("server.py");
+  ok("解析池：五個房間的頂欄都有它、換版方向表是第五個（解析池 4）",
+    ["index.html", "fuse.html", "book.html", "album.html", "parse.html"].every((f) => {
+      const h = read("web6/" + f);
+      return h.includes('href="parse.html"') && h.includes("/parse\\.html$/.test(u) ? 4");
+    }) && html.includes('<a href="parse.html" aria-current="page">') && read("web6/prerender.js").includes('["parse", "parse.html"]'));
+  ok("解析池：跟「貼上提示詞」同一套比對（parsePrompt），帶走用交接便條（合成池 from=parse、疊印台也寫 from）",
+    parse.includes('import { parsePrompt } from "./paste-prompt.js"') && parse.includes('S.handOffPool(tags, "parse")') && parse.includes('S.handOffFuse(tags, {}, "parse")') &&
+      read("web6/app.js").includes('parse: "解析池" }[S.handoffFrom]') && read("web6/fuse.js").includes('handoff.from === "parse"'));
+  ok("解析池：設定存在瀏覽器、每次解析一起送；伺服器只收 /api/parse，插到佇列最前面、跑完刪自己的歷史",
+    parse.includes('const SETTINGS_KEY = "mochi.parse.v1"') && parse.includes("settings: tagger()") &&
+      server.includes('if path == "/api/parse":') && server.includes('{"prompt": wf, "front": True}') && server.includes('api("POST", "/history", {"delete": [pid]}'));
+  ok("解析池：第一次準備會偵測 WD14 Tagger 節點和模型，缺了問要不要裝",
+    read("setup_tasks.py").includes('_check("fetch_tagger.py")') && read("web6/setup-panel.js").includes("tagger: [[") && read("scripts/fetch_tagger.py").includes('MODEL = "wd-vit-tagger-v3"'));
+  ok("解析池：手機頂欄五格一排", read("web6/locale.css").includes(".page-switch { order: 3; width: 100%; display: grid; grid-template-columns: repeat(5, minmax(0, 1fr)); }"));
+}
+
 if (failed) {
   console.error(NL + failed + " failed");
   process.exit(1);
