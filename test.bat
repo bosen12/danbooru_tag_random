@@ -24,6 +24,18 @@ if errorlevel 1 (
   pause
   exit /b 1
 )
+rem Default: run every stage below at once (scripts\test_parallel.mjs reads this list),
+rem keep going on failure and list all failures at the end. "test.bat serial" = old one-by-one run.
+rem goto, not a nested if-block: cmd /c drops exit /b codes set inside nested blocks.
+if /i "%~1"=="serial" goto serial
+set "TEST_PY=%PY%"
+call node scripts\test_parallel.mjs %*
+if errorlevel 1 (
+  pause
+  exit /b 1
+)
+exit /b 0
+:serial
 echo == engine (split, runs in parallel) ==
 call node scripts\test_engine_shards.mjs
 if errorlevel 1 (
@@ -155,6 +167,12 @@ if errorlevel 1 (
   pause
   exit /b 1
 )
+echo == image parse (web6) ==
+call %PY% scripts\test_image_parse.py
+if errorlevel 1 (
+  pause
+  exit /b 1
+)
 echo == ComfyUI LoRA Manager install ==
 call %PY% scripts\test_fetch_lora_manager.py
 if errorlevel 1 (
@@ -163,6 +181,11 @@ if errorlevel 1 (
 )
 echo == FaceDetailer install ==
 call %PY% scripts\test_fetch_face.py
+if errorlevel 1 (
+  pause
+  exit /b 1
+)
+call %PY% scripts\test_fetch_tagger.py
 if errorlevel 1 (
   pause
   exit /b 1
