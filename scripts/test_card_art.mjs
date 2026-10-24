@@ -51,8 +51,9 @@ const tagsOf = (positive) => positive.split(",").map((s) => s.trim());
   const young = jobs.filter((j) => {
     const t = tagsOf(j.positive);
     if (!t.some((x) => MULTI.test(x))) return false;
-    const girls = t.some((x) => /girl|yuri/.test(x));
-    const boys = t.some((x) => /boy/.test(x));
+    // 前面不能是字母：2026-10-24「cowboy shot」被 /boy/ 當成男生（clothed female nude female 那張）；2boys 照樣算。
+    const girls = t.some((x) => /(?:^|[^a-z])girls?\b|^yuri$/.test(x));
+    const boys = t.some((x) => /(?:^|[^a-z])boys?\b/.test(x));
     return (girls && !t.includes("mature female")) || (boys && !t.includes("mature male"));
   });
   ok("多人（同性別兩個以上）的插畫都帶 mature female／male", !young.length, young.slice(0, 4).map((j) => `${j.tag}: ${j.positive}`).join("\n  "));

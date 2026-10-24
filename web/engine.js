@@ -3919,6 +3919,9 @@ const BREAST_WEIGHT = {
   "gigantic breasts": 5,
 };
 
+/** 會繫腰帶的和服類（2026-10-24）：kimono、yukata 結尾的字和振袖；敞開的和服不算。 */
+const KIMONO_WAIST = (tag) => tag !== "open kimono" && (/(?:^|\s)(?:kimono|yukata)$/.test(tag) || tag === "furisode");
+
 function takeFromPool(pool, count, rand, commit, prefer, allow, mPre) {
   if (mPre && mPre.taken && mPre.taken.size) {
     pool = prefilterPoolByMutex(mPre.idx, mPre.taken, pool).kept;
@@ -6901,6 +6904,13 @@ function drawOneImpl(lex, settings, pinned, userBanned, rand, seed, opts) {
       }
       return true;
     });
+    // 和服、浴衣、振袖繫腰帶：腰那一格只靠通用補格的話，衣服字越多輪到它的機會越小（江戶 3000 張
+    // obi 從 46 掉到 12、sash 從 43 掉到 8）。穿著和服、腰還空著時擲一次。亂數只在這種圖多抽一次。
+    // obi 只有江戶、sash 是江戶＋古中國：別的時代 allow 擋掉，等於沒事。敞開的和服不繫。
+    if (!mutexTaken.has("waist") && someUsed((it) => KIMONO_WAIST(it.tag)) && rand() < 0.4) {
+      const belts = lex.bySection.clothing.filter((item) => (item.tag === "obi" || item.tag === "sash") && allow(item));
+      takeFromPool(belts, 1, rand, commit, null, allow, mPre);
+    }
   }
 
   // 這裡曾經有一段「只穿內衣就補兩格內衣」。量過之後拿掉了：A/B 跑同一批 seed，
