@@ -839,7 +839,8 @@ function listNow() {
   const out = lastFound.list.slice();
   if (isWar()) out.sort((a, b) => warScore(b.tag) - warScore(a.tag) || warOf(b.tag)[0] - warOf(a.tag)[0] || order.get(a.tag) - order.get(b.tag));
   // 沒有日期的排最後。同一天維持字盒順序（花色 → 細分類）。
-  else if (ui.order === "new") out.sort((a, b) => (b.added || "").localeCompare(a.added || "") || order.get(a.tag) - order.get(b.tag));
+  // 沒有日期的：詞庫剛加、還沒重跑 scripts/tag_dates.py 的字，其實是最新的。新到舊排最前面，舊到新排最後。
+  else if (ui.order === "new") out.sort((a, b) => (b.added || "9999-99-99").localeCompare(a.added || "9999-99-99") || order.get(a.tag) - order.get(b.tag));
   else if (ui.order === "old") out.sort((a, b) => (a.added || "9999-99-99").localeCompare(b.added || "9999-99-99") || order.get(a.tag) - order.get(b.tag));
   // 次數一樣時：多到少看誰最近用過，少到多照字盒的順序（花色 → 細分類）。
   else if (ui.order === "desc") out.sort((a, b) => countOf(b.tag) - countOf(a.tag) || lastOf(b.tag) - lastOf(a.tag) || order.get(a.tag) - order.get(b.tag));
