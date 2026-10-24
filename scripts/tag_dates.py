@@ -1,7 +1,7 @@
 #!/usr/bin/env python3
 """從 git 記錄寫出每張卡的加入日：web/tag_dates.json。
 
-日期是這個字第一次出現的作者日（YYYY-MM-DD）。看這些檔裡的 tag 字串：
+日期是這個字第一次出現的作者時間（YYYY-MM-DDTHH:MM，本機時區；畫面上只顯示日期）。看這些檔裡的 tag 字串：
 web/lexicon.json（含 characterBan）、web/lexicon_parts、scripts/characters.json、
 以及 merge／建議池腳本裡的 row()。改過名的字（lexicon 的 renamed）沿用舊名更早的那天。
 
@@ -56,8 +56,10 @@ def wanted_now() -> tuple[dict, set[str], dict]:
 
 
 def commits() -> list[tuple[str, str, list[str]]]:
+    # 記到分鐘（本機時區）：同一天進來好幾批時（2026-10-24 一天四批 1090 張），卡冊「新到舊」才分得出先後。
+    # 畫面上照樣只顯示日期（book.js 取前 10 個字）。
     raw = subprocess.check_output(
-        ["git", "log", "--reverse", "--pretty=format:%H %as", "--name-only", "--", *PATHS],
+        ["git", "log", "--reverse", "--date=format-local:%Y-%m-%dT%H:%M", "--pretty=format:%H %ad", "--name-only", "--", *PATHS],
         cwd=ROOT,
     ).decode("utf-8", "replace")
     out: list[tuple[str, str, list[str]]] = []
