@@ -5694,7 +5694,8 @@ function indoorOutdoorClash(have) {
     // 2026-10-23 第二輪：主人指定加回 12 個字、族裔這批進池，六招限摔角場地。這張換成籃球服、天堂。仍是 1girl solo，沒有男生或人類陰莖。
     // 2026-10-24 第三輪：口塞、衣外繩縛、綁法、俘虜進池。這張多了性玩具、拉珠，披薩換成月餅。仍是 1girl solo，沒有男生或人類陰莖。
     // 2026-10-24 第四輪：468 張新卡進池（Codex），Opus 驗收補上早晨／夜晚、室內外規則與戶外傢俱格，整張換過。仍是 1girl solo，沒有男生或人類陰莖。
-    "1girl, solo, very short hair, yellow eyes, aqua hair, long sidelocks, sidelocks, small breasts, two side up, nervous sweating, sweat, maid, platform shoes, shoes, toeless legwear, single sleeve, animal costume, female masturbation, legs apart, out of frame, looking at mirror, come hither, nyotaimori, food on body, kitchen, indoors, sunrise, shadow, motorcycle, full-length mirror, mirror, nsfw, explicit, masterpiece, best quality, amazing quality");
+    // 2026-10-24 Grok 建議池 558 張進池（Opus 驗收），整張換過。仍是 1girl solo，沒有男生或人類陰莖。
+    "1girl, solo, very short hair, yellow eyes, aqua hair, blunt bangs, small breasts, long legs, thick thighs, body blush, miko, panties around one leg, garter belt, frilled apron, striped bra, bra, female masturbation, bowlegged pose, upside-down, looking around, laughing, orgasm, cockpit, indoors, on bench, day, dappled sunlight, diffraction spikes, nsfw, explicit, masterpiece, best quality, amazing quality"
   ok("drawOne exposes shadow diagnostics", Array.isArray(shadowIntegrationDraw.shadowViolations));
 
   const eatProneShadow = validateSupportShadow({

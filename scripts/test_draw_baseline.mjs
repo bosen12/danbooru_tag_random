@@ -21,6 +21,7 @@ function ok(name, cond, detail) {
 
 const GOLD = {
   // 2026-10-24 第四輪驗收（Opus）：早晨／夜晚、室內外規則補上新字，戶外也擲傢俱格，五張全換。仍是 1girl solo，沒有 1boy、沒有陰莖。
+  // 2026-10-24 Grok 建議池 558 張（Opus 驗收）：候選池變大，亂數順序跟著變，五張全換。仍是 1girl solo，沒有 1boy、沒有陰莖。
   // 2026-10-24 第四輪合併：新增 468 張場景、衣服、特徵與姿勢卡，候選池位移。
   // 重新檢查五張 POS／人數後更新金標與 RNG；同輪也更新 supplement 的 30 列（見討論區）。
   // 2026-09-26：詞庫加進背景、用色、打光、畫面特效、構圖共 47 個字，場地前面多了一格
@@ -66,8 +67,8 @@ const GOLD = {
   // 2026-10-23 第二輪：主人指定加回 12 個字、族裔這批進池，六招進 FIGHT_PLACE。這張換成戰鬥架勢、大自然；背景有人群，所以是 solo focus。仍是 1girl，沒有男生或人類陰莖。
   // 2026-10-24 第三輪：口塞、衣外繩縛、綁法、俘虜進池。人群離開，回到 solo；蠟刑換成被撞見，天空換成雪。仍是 1girl，沒有男生或人類陰莖。
   1: {
-    rng: 1157,
-    pos: "1girl, solo, pixie cut, orange eyes, grey hair, mohawk, medium breasts, red nails, long legs, blunt bangs, nightgown, lace-trimmed panties, panties, bra, red choker, choker, denim, pasties, masturbation, looking through own legs, isometric, looking at mirror, exhausted, one breast out, living room, indoors, on bench, sunset, lamp, magic circle, nsfw, explicit, masterpiece, best quality, amazing quality",
+    rng: 1414,
+    pos: "1girl, solo, pixie cut, orange eyes, grey hair, crossed bangs, large breasts, nail art, dark nipples, tramp stamp, tears, denim skirt, skirt, micro panties, panties, jacket on shoulders, kneehighs, pasties, fingering, sitting on stairs, sitting, cropped torso, looking down, crying with eyes open, crying, rural, outdoors, overcast, morning, dim lighting, palm leaf, nsfw, explicit, masterpiece, best quality, amazing quality",
   },
   // 2026-09-29：路人進了環境池，同一顆亂數落到別的環境字，後面的姿勢跟著換。
   // seed 42 少了束縛和手銬（手銬是束縛之後才拉的），多了咬唇。seed 100 花瓣換成剪影。
@@ -90,8 +91,8 @@ const GOLD = {
   // 2026-10-23 第二輪：主人指定加回 12 個字、族裔這批進池，六招進 FIGHT_PLACE。這張換成籃球服、天堂。仍是 1girl solo，沒有男生或人類陰莖。
   // 2026-10-24 第三輪：口塞、衣外繩縛、綁法、俘虜進池。這張多了性玩具、拉珠，披薩換成月餅。仍是 1girl solo，沒有男生或人類陰莖。
   42: {
-    rng: 1192,
-    pos: "1girl, solo, very short hair, yellow eyes, aqua hair, long sidelocks, sidelocks, small breasts, two side up, nervous sweating, sweat, maid, platform shoes, shoes, toeless legwear, single sleeve, animal costume, female masturbation, legs apart, out of frame, looking at mirror, come hither, nyotaimori, food on body, kitchen, indoors, sunrise, shadow, motorcycle, full-length mirror, mirror, nsfw, explicit, masterpiece, best quality, amazing quality",
+    rng: 1396,
+    pos: "1girl, solo, very short hair, yellow eyes, aqua hair, blunt bangs, small breasts, long legs, thick thighs, body blush, miko, panties around one leg, garter belt, frilled apron, striped bra, bra, female masturbation, bowlegged pose, upside-down, looking around, laughing, orgasm, cockpit, indoors, on bench, day, dappled sunlight, diffraction spikes, nsfw, explicit, masterpiece, best quality, amazing quality",
   },
   // 2026-10-05 第五次：女僕圍裙是布料疊層，不占連身裙。仍是 1girl solo。
   // 2026-10-05 第六次：爆炸頭跟長裙、探頭偷看。仍是 1girl solo。
@@ -109,8 +110,8 @@ const GOLD = {
   // 2026-10-23 第二輪：主人指定加回 12 個字、族裔這批進池，六招進 FIGHT_PLACE。這張換成韓服、托胸。仍是 1girl solo，沒有男生或人類陰莖。
   // 2026-10-24 第三輪：口塞、衣外繩縛、綁法、俘虜進池。頭髮焦點換成眼睛焦點，噴火換成花束。仍是 1girl solo，沒有男生或人類陰莖。
   100: {
-    rng: 1191,
-    pos: "1girl, solo, medium hair, grey eyes, white hair, hair bun, medium breasts, breast bondage, swept bangs, orange nails, tank top, asa no ha (pattern), dolphin shorts, shorts, asymmetrical legwear, purple panties, panties, livestream, pigeon-toed, out of frame, looking at viewer, d:, hand on own hip, cellphone, kitchen, indoors, night, city lights, on floor, nsfw, explicit, masterpiece, best quality, amazing quality",
+    rng: 1407,
+    pos: "1girl, solo, medium hair, grey eyes, white hair, inverted bob, large breasts, hair scrunchie, backboob, unitard, biker clothes, thighband pantyhose, pantyhose, frilled apron, pole dancing, split, cropped torso, peeking out, peeking, grin, stage, indoors, evening, motor vehicle, nsfw, explicit, masterpiece, best quality, amazing quality",
   },
   // 2026-09-29 第三次：這張是性愛。淋浴間換成海邊，衣服和光線跟著換。仍是 1girl solo。
   // 2026-10-04（9a087a5）：帶衣物名的姿勢（hand in panties 這類）在候選階段就要先有對的衣服，
@@ -131,8 +132,8 @@ const GOLD = {
   // 2026-10-23 第二輪：主人指定加回 12 個字、族裔這批進池，六招進 FIGHT_PLACE。這張換成條紋衫、踢腿、房子。仍是 1girl solo，沒有男生或人類陰莖。
   // 2026-10-24 第三輪：口塞、衣外繩縛、綁法、俘虜進池。運動短褲換成裙裡短褲，點乳頭換成肚臍插入。仍是 1girl solo，沒有男生或人類陰莖。
   999: {
-    rng: 1195,
-    pos: "1girl, solo, long hair, glowing eyes, grey hair, long bangs, large breasts, sweat, wet hair, solid oval eyes, sweater vest, vest, raglan sleeves, shorts, sailor collar, bag, nipple rings, piercing, masturbation, knees to chest, pov, looking at viewer, laughing, oppai challenge, flashing, elevator, indoors, evening, ceiling light, fruit, food, fork, nsfw, explicit, masterpiece, best quality, amazing quality",
+    rng: 1466,
+    pos: "1girl, solo, long hair, glowing eyes, grey hair, alternate hairstyle, large breasts, blunt tresses, swept bangs, nipple piercing, two-tone dress, dress, seigaiha, fur collar, fur trim, polka dot bra, bra, bag, nipple rings, piercing, masturbation through clothes, flexing, isometric, blank stare, raised eyebrow, watson cross, canal, outdoors, twilight, backlighting, tray, reflective floor, nsfw, explicit, masterpiece, best quality, amazing quality",
   },
   // 2026-09-23：走光補抽改成「所有成立的走光動作同一池、衣服吻合的權重 10」之後，
   // 這張的走光動作從 exhibitionism 換成 cameltoe（她穿 thong，吻合），場景跟著換。
@@ -152,8 +153,8 @@ const GOLD = {
   // 2026-10-23 第二輪：主人指定加回 12 個字、族裔這批進池，六招進 FIGHT_PLACE。這張換成連身泳裝、旋轉木馬。仍是 1girl solo，沒有男生或人類陰莖。
   // 2026-10-24 第三輪：口塞、衣外繩縛、綁法、俘虜進池。披薩換成啤酒杯。仍是 1girl solo，沒有男生或人類陰莖。
   2026: {
-    rng: 1238,
-    pos: "1girl, solo, bob cut, purple eyes, white hair, parted hair, huge breasts, yellow skin, colored skin, plump, colored sclera, gym shirt, shirt, animal print, dolphin shorts, shorts, zipper, tennis, split, multiple views, looking at animal, glaring, shirt pull, school gym, indoors, sunset, ceiling light, pillow, tablecloth, tennis racket, nsfw, explicit, masterpiece, best quality, amazing quality",
+    rng: 974,
+    pos: "1girl, solo, bob cut, purple eyes, white hair, hair over breasts, medium breasts, huge nipples, unusually open eyes, pink eyeshadow, eyeshadow, hawaiian clothes, blue sports bra, sports bra, brown thighhighs, thighhighs, sakuramon, no panties, cheering, indian style, foot out of frame, looking up, confident, clothing aside, pom pom (cheerleading), karaoke box, indoors, on couch, dusk, dark, nsfw, explicit, masterpiece, best quality, amazing quality",
   },
 };
 
@@ -366,7 +367,8 @@ const MATRIX_SEEDS = 200;
 // 2026-10-24 第四輪驗收（Opus）：早晨進白天、紅月／星座只在夜裡、新天空與戶外景物進室外表、版面類只在釘了才出現、
 // 戶外也擲傢俱格（地上、長椅、鞦韆）。704bdc35 → fdc19d02。
 // 同日：有顏色的皮鞋、靴子、涼鞋限定時代（江戶不再抽到黑皮鞋、白靴子）。fdc19d02 → cb8b5a38。
-const MATRIX_GOLD = "cb8b5a38";
+// 同日：Grok 建議池 558 張新字進候選池（版面、改寫角色的字只在釘了才出現）。cb8b5a38 → 73524ddc。
+const MATRIX_GOLD = "73524ddc";
 
 function matrixSettings(over) {
   const s = defaultSettings(data);
