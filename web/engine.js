@@ -592,6 +592,14 @@ const MOUTH_EXTRA = new Set([
   "moaning",
   "condom in mouth",
   "blowing kiss",
+  // 2026-10-24：這些字嘴是張開的。閉著的嘴、封口的口塞不能再疊。
+  "uvula",
+  "spitting",
+  "long tongue",
+  "forked tongue",
+  "colored tongue",
+  "blue tongue",
+  "lower teeth only",
 ]);
 const OUTDOOR_LEFTOVER = new Set([
   "tree",
@@ -3874,6 +3882,12 @@ const ODD_MOTIF = new Set([
   // 和無臉女性，只在釘了才出現。
   "3d background", "black border", "white border", "outside border", "pillarboxed",
   "zoom layer", "chibi inset", "reference inset", "faceless female",
+  // 2026-10-24：性暗示是整張圖的語氣，不是一個動作。正常模式只在釘了才出現。
+  "sexually suggestive",
+  // 2026-10-24：設定圖、轉面、並排、拼貼會改掉整張版面；複製人、動物化會改掉畫裡的人。
+  // 正常模式只在釘了才出現。四格、兩格、三格、單格、無對白漫畫沒過圖測，不收。
+  "reference sheet", "turnaround", "column lineup", "collage",
+  "clone", "animalization",
 ]);
 // 只當父字用的動作：騎乘要有騎的東西（騎馬、騎車、騎掃帚帶出來）。自己被抽到時
 // 畫面沒有坐騎（以前 41 張裡 11 張）。釘它、必抽照收。
@@ -3883,7 +3897,7 @@ const FEATURE_LOUD = new Set([
   "pregnant", "quadruple amputee", "giantess", "minigirl", "old woman", "old man", "obese", "fat man",
   "blood from mouth", "blood on face", "nosebleed", "injury", "whip marks", "bite mark",
   "symbol-shaped pupils", "star-shaped pupils", "ringed eyes", "white pupils", "glowing hair",
-  "green skin", "colored skin", "genderswap", "futanari", "saliva", "saliva trail",
+  "green skin", "colored skin", "genderswap", "genderswap (mtf)", "genderswap (ftm)", "futanari", "saliva", "saliva trail",
   // 2026-10-12：十種新膚色都帶出 colored skin，有色皮膚從 11/1500 跳到 98/1500。
   "blue skin", "grey skin", "red skin", "purple skin", "pink skin", "yellow skin",
   "orange skin", "aqua skin", "multicolored skin", "two-tone skin", "colored extremities",
