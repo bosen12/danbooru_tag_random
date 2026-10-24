@@ -156,7 +156,9 @@ const WATER_SRC = [
     // 80 張現在只看得到三次，低於「至少看過 5 次」。規則還在，樣本不夠。
     // 第六輪（2026-10-06）環境池又多了幾個字，床頭櫃、購物車 80 張只剩 4、3 次，同樣放大。
     // 2026-10-12：648 個新字進池，保齡球 80 張只剩 4 次，一樣放大。
-    const n = prop === "poker table" || prop === "nightstand" || prop === "shopping cart" || prop === "bowling ball" ? 400 : 80;
+    // 2026-10-24 第四輪：468 個新字，方向盤（釘車內）80 張 0 次、聖誕樹（釘客廳）1 次；400 張各 5、14 次。
+    const BIG = ["poker table", "nightstand", "shopping cart", "bowling ball", "steering wheel", "christmas tree"];
+    const n = BIG.includes(prop) ? 400 : 80;
     for (const mode of ["normal", "diverse"]) sweep(mk({ sceneMode: mode }), trigger, n, 500000);
   }
 

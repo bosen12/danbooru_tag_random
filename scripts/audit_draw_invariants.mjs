@@ -1042,7 +1042,10 @@ FAIL 性行為互斥  ×${bad}/${N}`);
 // 只守「填得到」會放過站在沙發上的人，只守「填得對」的話整格是空的也算通過。
 {
   const N = 260;
-  const FURN = ["on bed", "on chair", "on couch", "bunk bed", "on desk", "under table"];
+  // 2026-10-24 第四輪：這一格多了在地板上、在桌面上、在長椅上、在地面上、在鞦韆上。數整格（詞庫裡 group 是
+  // furniture 的全部），不是只數原本那六個；戶外坐得上去的（地上、長椅、鞦韆）配室外是對的，不算錯。
+  const FURN = data.tags.filter((t) => t.group === "furniture").map((t) => t.tag);
+  const OUTDOOR_SEAT = new Set(["on ground", "on bench", "on swing"]);
   const UPRIGHT = ["standing", "walking", "running", "jumping", "standing split"];
   let drew = 0;
   let withFurn = 0;
@@ -1073,14 +1076,18 @@ FAIL 性行為互斥  ×${bad}/${N}`);
           upright += 1;
           if (!firstBad) firstBad = { seed, why: `${f.join("+")} 配 ${up.join("+")}`, pos: names.join(", ") };
         }
-        if (names.includes("outdoors")) {
+        if (names.includes("outdoors") && f.some((x) => !OUTDOOR_SEAT.has(x))) {
           outdoor += 1;
           if (!firstBad) firstBad = { seed, why: `${f.join("+")} 配 outdoors`, pos: names.join(", ") };
+        }
+        if (names.includes("indoors") && f.some((x) => x === "on ground" || x === "on swing")) {
+          outdoor += 1;
+          if (!firstBad) firstBad = { seed, why: `${f.join("+")} 配 indoors`, pos: names.join(", ") };
         }
       }
     }
   }
-  // 實測約 112/6240（1.8%）、六種都出現過。門檻取 40 張與 4 種：
+  // 實測約 112/6240（1.8%）、六種都出現過（2026-10-24 第四輪後整格約 685/6240、12 種）。門檻取 40 張與 4 種：
   // 離實測有餘裕，離「結構性餓死」的 24 張／基準線很遠。
   const enough = withFurn >= 40 && kinds.size >= 4;
   if (enough && upright === 0 && outdoor === 0) {
