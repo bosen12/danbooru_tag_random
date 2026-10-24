@@ -8,7 +8,7 @@ import { cloneCard } from "./card-images.js";
  *
  * 次數由墨池、疊印台記（usage.js）：墨池每抽出一張、疊印台每付印一張，用到的牌各加一。
  * 這一頁只讀、排、看：
- *   - 多到少／少到多，花色、細分類、找字、只看用過的。
+ *   - 多到少／少到多、新到舊／舊到新，花色、細分類、找字、只看用過的、含禁用。
  *   - 換排序、換花色時，還在畫面上的牌從舊位置滑到新位置（FLIP），新來的錯開浮上來。
  *   - 點一張牌：牌飛進詳情，大數字從 0 數上來，看你親手放幾次、引擎補幾次、最近一次。
  *     「帶去墨池」把它放進墨池的合成池（store.js 的交接便條）再換版過去。
@@ -52,8 +52,18 @@ const CHUNK = matchMedia("(max-width: 40rem)").matches ? 24 : 72;
 // 捲動時補的那一批小一點：新格子第一次要算樣式、排版（一張牌二十幾個節點），72 張擠在同一格
 // 要 30～40ms，捲動時看得出頓一下。24 張一批，下一批由觀察器在下一格接著補（提前兩屏，來得及）。
 const MORE_CHUNK = 24;
-const ORDER_ZH = { desc: "多到少", asc: "少到多", good: "出好圖", bad: "常撤下" };
-const ORDER_MARK = { desc: "↓", asc: "↑", good: "★", bad: "✕" };
+const ORDER_ZH = { desc: "多到少", asc: "少到多", good: "出好圖", bad: "常撤下", new: "新到舊", old: "舊到新" };
+const ORDER_MARK = { desc: "↓", asc: "↑", good: "★", bad: "✕", new: "↓", old: "↑" };
+// 禁用角色的原因（跟詞庫表同一套說法）。
+const BAN_REASON = {
+  minor: "未滿 18 歲",
+  student: "學生",
+  childlike: "外觀像兒童",
+  real_person: "真人／VTuber",
+  non_human: "非人形",
+  unsure: "年齡查不到或沒把握",
+};
+const banReason = (card) => BAN_REASON[card.reason] || "禁用";
 // 牌的戰績（出好圖／常撤下）：印好的圖裡，用了這張牌的有幾成被收藏、幾成被單張撤下。
 // 從出圖日誌算（server.py 的 /api/genlog/stats），所以只算有日誌之後印的。
 // 少於 WAR_MIN 張的不排（印 1 張收 1 張就 100%，沒意義）；排的時候用信賴下界，
@@ -62,6 +72,7 @@ const WAR_MIN = 3;
 let war = null;
 const warOf = (tag) => (war && war.cards[tag]) || [0, 0, 0];
 const isWar = () => ui.order === "good" || ui.order === "bad";
+const isDate = () => ui.order === "new" || ui.order === "old";
 function lowerBound(k, n, z = 1.28) {
   if (!n) return 0;
   const p = k / n;
@@ -99,7 +110,7 @@ let list = [];
 let shown = 0;
 // 牌的節點留著重用：換排序時同一張牌是同一個節點，才滑得過去，圖也不必重載。
 const cells = new Map();
-const ui = S.typedLike({ suit: "all", group: "", query: "", order: "desc", usedOnly: false, charGender: "" }, readUi());
+const ui = S.typedLike({ suit: "all", group: "", query: "", order: "desc", usedOnly: false, showBanned: false, charGender: "" }, readUi());
 // 搜尋字跟著這個分頁走（store.js 的 saveTab／loadTab，跟合成池同一套）：去墨池放一張牌再回來，剛才找的字還在，
 // 「回到剛才看的地方」（spotSig 裡有搜尋字）也對得上。重新整理照舊是空的；離開太久（半小時）不帶回來。
 const QUERY_TAB = "mochi.book.query.v1";
@@ -121,9 +132,50 @@ function readUi() {
 }
 function saveUi() {
   try {
-    localStorage.setItem(UI_KEY, JSON.stringify({ suit: ui.suit, group: ui.group, order: ui.order, usedOnly: ui.usedOnly, charGender: ui.charGender }));
+    localStorage.setItem(UI_KEY, JSON.stringify({ suit: ui.suit, group: ui.group, order: ui.order, usedOnly: ui.usedOnly, showBanned: ui.showBanned, charGender: ui.charGender }));
   } catch {
     /* 存不了就算了 */
+  }
+}
+
+/** 加入日（web/tag_dates.json）貼到牌上，並把禁用角色補進卡冊。不進詞庫的抽牌清單。 */
+function attachDates(lib, dates) {
+  const added = (dates && dates.added) || {};
+  for (const card of lib.cards) card.added = added[card.tag] || "";
+  for (const row of (dates && dates.banned) || []) {
+    const tag = row && row.tag;
+    if (!tag || lib.byTag.has(tag) || tag === "loli" || tag === "shota") continue;
+    const gate = row.gate === "female" || row.gate === "male" ? row.gate : "any";
+    const card = {
+      tag,
+      zh: row.zh || tag,
+      suit: "chara",
+      group: row.group || "character",
+      groupZh: row.groupZh || "角色",
+      seal: null,
+      rating: "general",
+      gate,
+      eras: ["any"],
+      added: row.added || added[tag] || "",
+      banned: true,
+      reason: row.reason || "",
+      item: {
+        tag,
+        zh: row.zh || tag,
+        section: "subject",
+        group: "character",
+        sub: row.group || "character",
+        series: row.series || "",
+        gate,
+        era: ["any"],
+        heat: ["tease"],
+        implies: [],
+        bind: [],
+        mutex: null,
+      },
+    };
+    lib.cards.push(card);
+    lib.byTag.set(tag, card);
   }
 }
 
@@ -143,13 +195,15 @@ async function boot() {
   // 墨池、疊印台正在印的：頂欄看得到，點了回去（gen-status.js）。
   mountGenStatus("book");
   try {
-    const [lexicon, manifest] = await Promise.all([
+    const [lexicon, manifest, dates] = await Promise.all([
       fetch(document.querySelector('link[rel="preload"][href^="lexicon.json"]')?.href || "lexicon.json").then((r) => r.json()),
       fetch(document.querySelector('link[rel="preload"][href^="cards/manifest.json"]')?.href || "cards/manifest.json").then((r) => (r.ok ? r.json() : {})).catch(() => ({})),
+      fetch(document.querySelector('link[rel="preload"][href^="tag_dates.json"]')?.href || "tag_dates.json").then((r) => (r.ok ? r.json() : {})).catch(() => ({})),
     ]);
     data = lexicon;
     lex = indexLexicon(data);
     lib = buildLibrary(data, { ratingBlocked });
+    attachDates(lib, dates);
     assets = createAssets(manifest);
   } catch (err) {
     // 連線問題（手機網路斷一下、伺服器沒開）：說「連不到主機」、給重試；不是叫人用 start-web6.bat 開。
@@ -193,6 +247,7 @@ async function boot() {
   });
   renderSort();
   renderUsedToggle();
+  renderBannedToggle();
   renderSuits();
   wireSearch();
   mountMiniBar();
@@ -304,7 +359,7 @@ function wireSound() {
 
 let sumShown = { used: 0, total: 0 };
 function renderSummary({ count = false } = {}) {
-  const pool = lib.cards.filter(visibleCard);
+  const pool = lib.cards.filter(drawable);
   const used = pool.filter((c) => countOf(c.tag) > 0).length;
   const total = pool.reduce((n, c) => n + countOf(c.tag), 0);
   const box = $("book-sum");
@@ -533,6 +588,20 @@ function renderSort() {
   );
 }
 
+function renderBannedToggle() {
+  const b = $("book-banned");
+  b.setAttribute("aria-pressed", ui.showBanned ? "true" : "false");
+  b.onclick = () => {
+    ui.showBanned = !ui.showBanned;
+    saveUi();
+    b.setAttribute("aria-pressed", ui.showBanned ? "true" : "false");
+    seat(b);
+    backToTop();
+    renderSuits();
+    render();
+  };
+}
+
 function renderUsedToggle() {
   const b = $("book-used");
   b.setAttribute("aria-pressed", ui.usedOnly ? "true" : "false");
@@ -592,7 +661,7 @@ function wireSearch() {
 const MINI_MQ = "(max-width: 40rem)";
 
 function filtersOn() {
-  return ui.suit !== "all" || !!ui.group || !!ui.query || ui.usedOnly || !!ui.charGender;
+  return ui.suit !== "all" || !!ui.group || !!ui.query || ui.usedOnly || ui.showBanned || !!ui.charGender;
 }
 
 function clearFilters() {
@@ -600,11 +669,13 @@ function clearFilters() {
   ui.group = "";
   ui.query = "";
   ui.usedOnly = false;
+  ui.showBanned = false;
   ui.charGender = "";
   $("book-q").value = "";
   saveUi();
   renderSuits();
   renderUsedToggle();
+  renderBannedToggle();
   render();
   renderSummary();
 }
@@ -722,7 +793,11 @@ function mountMiniBar() {
 
 /* ================= 牌格 ================= */
 
+/** 能拿去抽的牌。禁用角色只在卡冊裡查日期，不進使用統計、名次、成就。 */
+const drawable = (card) => !card.banned && !ratingBlocked(card.item, seeRating());
+
 function visibleCard(card) {
+  if (card.banned) return ui.showBanned;
   return !ratingBlocked(card.item, seeRating());
 }
 
@@ -763,6 +838,9 @@ function listNow() {
   if (lastFound.mode !== "all") return lastFound.list;
   const out = lastFound.list.slice();
   if (isWar()) out.sort((a, b) => warScore(b.tag) - warScore(a.tag) || warOf(b.tag)[0] - warOf(a.tag)[0] || order.get(a.tag) - order.get(b.tag));
+  // 沒有日期的排最後。同一天維持字盒順序（花色 → 細分類）。
+  else if (ui.order === "new") out.sort((a, b) => (b.added || "").localeCompare(a.added || "") || order.get(a.tag) - order.get(b.tag));
+  else if (ui.order === "old") out.sort((a, b) => (a.added || "9999-99-99").localeCompare(b.added || "9999-99-99") || order.get(a.tag) - order.get(b.tag));
   // 次數一樣時：多到少看誰最近用過，少到多照字盒的順序（花色 → 細分類）。
   else if (ui.order === "desc") out.sort((a, b) => countOf(b.tag) - countOf(a.tag) || lastOf(b.tag) - lastOf(a.tag) || order.get(a.tag) - order.get(b.tag));
   else out.sort((a, b) => countOf(a.tag) - countOf(b.tag) || order.get(a.tag) - order.get(b.tag));
@@ -777,13 +855,15 @@ function listNow() {
 function cellOf(card) {
   let cell = cells.get(card.tag);
   if (!cell) {
-    const node = cardNode(card, assets);
+    // 禁用角色不接卡面：舊圖就算還在磁碟上，也不在卡冊裡顯示。
+    const node = cardNode(card, card.banned ? { art: () => null, sources: () => null, mini: () => null } : assets);
     node.addEventListener("click", () => openCard(card, node));
     const n = el("b", { class: "book-n" });
-    const meta = el("span", { class: "book-meta" }, n, el("span", { class: "book-unit" }));
-    cell = el("div", { class: "book-cell", role: "listitem", dataset: { tag: card.tag } }, node, meta, boxAddButton(card));
+    const meta = el("span", { class: "book-meta" }, n, el("span", { class: "book-unit" }), el("span", { class: "book-when" }));
+    // 禁用角色沒有卡盒、也沒有愛心：不能帶去抽。
+    cell = el("div", { class: "book-cell", role: "listitem", dataset: { tag: card.tag } }, node, meta, card.banned ? null : boxAddButton(card));
     // 角色牌：左下角一顆愛心（點一下加進偏好角色），也可以直接拖到畫面右緣的愛心。
-    if (card.suit === "chara") {
+    if (card.suit === "chara" && !card.banned) {
       cell.append(favAddButton(card));
       paintFavChar(node, card.tag);
       favDrag().attach(node, { tag: card.tag, from: "book" });
@@ -796,21 +876,34 @@ function cellOf(card) {
 function paintCell(cell, card, rank) {
   const c = countOf(card.tag);
   cell.dataset.unused = c ? "false" : "true";
+  cell.dataset.banned = card.banned ? "true" : "false";
   const n = cell.querySelector(".book-n");
   const unit = cell.querySelector(".book-unit");
+  const when = cell.querySelector(".book-when");
   if (isWar()) {
-    // 戰績：大字是幾成，小字是「收藏（撤下）・印過幾張」。
+    // 戰績：大字是幾成，小字是「收藏（撤下）・印過幾張」。日期留在第三行。
     const [w, fav, drop] = warOf(card.tag);
     const k = ui.order === "good" ? fav : drop;
     cell.dataset.war = ui.order;
     cell.dataset.warZero = k ? "false" : "true";
+    delete cell.dataset.face;
     n.textContent = `${pct(k, w)}%`;
     unit.textContent = `${ui.order === "good" ? "收藏" : "撤下"}・${fmt(w)} 張`;
+    when.textContent = card.added || "";
+  } else if (isDate()) {
+    delete cell.dataset.war;
+    delete cell.dataset.warZero;
+    cell.dataset.face = "date";
+    n.textContent = card.added || "—";
+    unit.textContent = card.added ? "加入" : "沒有日期";
+    when.textContent = c ? `${fmt(c)} 次` : "未使用";
   } else {
     delete cell.dataset.war;
     delete cell.dataset.warZero;
+    delete cell.dataset.face;
     n.textContent = c ? fmt(c) : "—";
     unit.textContent = c ? "次" : "未使用";
+    when.textContent = card.added || "";
   }
   const old = cell.querySelector(".book-rank");
   if (rank) {
@@ -821,17 +914,21 @@ function paintCell(cell, card, rank) {
       cell._stampRank = true;
     }
   } else old?.remove();
-  paintBoxMark(cell, card.tag);
+  if (card.banned) setCardFlag(cell.querySelector(".card"), { kind: "ban", text: "禁用" });
+  else paintBoxMark(cell, card.tag);
   const [w, fav, drop] = warOf(card.tag);
+  const addedNote = card.added ? `，${card.added} 加入` : "";
   cell
     .querySelector(".card")
     .setAttribute(
       "aria-description",
       isWar()
-        ? `印過 ${w} 張，收藏 ${fav} 張、撤下 ${drop} 張${rank ? `，第 ${rank} 名` : ""}`
+        ? `印過 ${w} 張，收藏 ${fav} 張、撤下 ${drop} 張${rank ? `，第 ${rank} 名` : ""}${addedNote}`
         : c
-          ? `用過 ${c} 次${rank ? `，第 ${rank} 名` : ""}`
-          : "還沒用過"
+          ? `用過 ${c} 次${rank ? `，第 ${rank} 名` : ""}${addedNote}`
+          : card.added
+            ? `還沒用過，${card.added} 加入`
+            : "還沒用過"
     );
 }
 
@@ -964,7 +1061,18 @@ function emptyNote() {
   const any = Object.keys(usage.counts).length;
   // 搜得到、只是被分級擋住：以前只說「沒有符合的牌」，看起來像詞庫裡沒有這張。
   const q = ui.query.toLowerCase();
-  const hidden = q ? lib.cards.filter((c) => !visibleCard(c) && cardMatches(c, q)) : [];
+  const hidden = q ? lib.cards.filter((c) => !c.banned && ratingBlocked(c.item, seeRating()) && cardMatches(c, q)) : [];
+  const bannedHits = q && !ui.showBanned ? lib.cards.filter((c) => c.banned && cardMatches(c, q)) : [];
+  if (!hidden.length && bannedHits.length) {
+    const first = bannedHits[0];
+    return el(
+      "div",
+      { class: "book-empty" },
+      el("b", {}, bannedHits.length > 1 ? `一共 ${bannedHits.length} 張禁用角色被藏著` : `「${first.zh}」是禁用角色`),
+      el("span", {}, "打開「含禁用」才看得到。"),
+      el("div", { class: "book-empty-acts" }, el("button", { class: "btn btn-small", type: "button", onclick: () => $("book-banned")?.click() }, "含禁用"))
+    );
+  }
   if (hidden.length) {
     const need = hidden.some((c) => !ratingBlocked(c.item, "sensitive")) ? "sensitive" : "explicit";
     const first = hidden[0];
@@ -1010,7 +1118,7 @@ function emptyNote() {
  * 一樣、半小時內，就把牌畫到那一張、捲回去。分頁自己一份（sessionStorage）。 */
 const SPOT_KEY = "mochi.book.spot.v1";
 const SPOT_TTL = 30 * 60 * 1000;
-const spotSig = () => JSON.stringify([ui.suit, ui.group, ui.order, ui.usedOnly, ui.query, seeRating()]);
+const spotSig = () => JSON.stringify([ui.suit, ui.group, ui.order, ui.usedOnly, ui.showBanned, ui.query, seeRating()]);
 
 function saveSpot() {
   // 手機的頂欄不黏，捲下去就離開畫面（底緣變負的）：最少從畫面頂端算。
@@ -1104,6 +1212,8 @@ function peekInfo(node) {
   if (!card) return null;
   const c = countOf(card.tag);
   const facts = cardFacts(card, lex, data).filter(([k]) => k !== "分級");
+  facts.unshift(["加入", card.added || "沒有日期"]);
+  if (card.banned) facts.unshift(["禁用", banReason(card)]);
   facts.unshift(["用過", c ? `${fmt(c)} 次・最近 ${ago(lastOf(card.tag))}` : "還沒用過"]);
   return {
     zh: card.zh,
@@ -1144,10 +1254,10 @@ function openCard(card, srcNode) {
   sfx.tap?.();
   const c = countOf(card.tag);
   const mine = usage.mine[card.tag] || 0;
-  const pool = lib.cards.filter(visibleCard);
+  const pool = lib.cards.filter(drawable);
   const all = rankIn(card, pool);
   const inSuit = rankIn(card, pool.filter((x) => x.suit === card.suit));
-  const art = assets.art(card.tag);
+  const art = card.banned ? null : assets.art(card.tag);
   const big = el("b", { class: "book-big-n" }, c ? "0" : "—");
   const stats = el(
     "dl",
@@ -1160,6 +1270,10 @@ function openCard(card, srcNode) {
     el("dd", {}, `${Math.max(0, c - mine)} 次`),
     el("dt", {}, "最近一次"),
     el("dd", {}, ago(usage.last[card.tag] || 0)),
+    el("dt", {}, "加入"),
+    el("dd", {}, card.added || "沒有日期"),
+    card.banned ? el("dt", {}, "禁用") : null,
+    card.banned ? el("dd", {}, banReason(card)) : null,
     el("dt", {}, "戰績"),
     el("dd", { class: "book-war" }, warText(card.tag))
   );
@@ -1184,12 +1298,13 @@ function openCard(card, srcNode) {
           c ? el("i", { class: "book-bar-fill", "aria-hidden": "true" }) : null
         ),
         stats,
-        el("dl", {}, cardFacts(card, lex, data).map(([k, v]) => [el("dt", {}, k), el("dd", {}, v)]))
+        el("dl", {}, cardFacts(card, lex, data).map(([k, v]) => [el("dt", {}, k), el("dd", {}, v)])),
+        card.banned ? el("p", { class: "book-ban-note" }, "這張是禁用角色，不能帶去墨池，也不能放進卡盒。") : null
       ),
       worksOf(card)
     ),
     {
-      foot: [
+      foot: card.banned ? [] : [
         el(
           "button",
           {
@@ -1230,7 +1345,7 @@ function openCard(card, srcNode) {
 /* ---------- 成就牆（achievements.js） ---------- */
 
 function achNow() {
-  const f = measure({ cards: lib.cards.filter(visibleCard), usage, war });
+  const f = measure({ cards: lib.cards.filter(drawable), usage, war });
   return [f, evaluate(f)];
 }
 
@@ -1574,6 +1689,7 @@ function paintBoxMark(cell, tag) {
 }
 
 function toggleBox(card, fromNode) {
+  if (card.banned) return;
   if (inBox(card.tag)) {
     box = box.filter((t) => t !== card.tag);
     saveBox();

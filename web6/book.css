@@ -179,7 +179,7 @@
   /* 捲出畫面的格子不排版、不繪製：捲到底時格子上千，以前每補一批牌整片網格都要重排
    * （1972 格重排一次 2.4 秒），越往下越卡、搜尋拆掉重畫也慢。auto 記得排過的實際高度，捲回來不跳。 */
   content-visibility: auto;
-  contain-intrinsic-size: auto 96px auto 190px;
+  contain-intrinsic-size: auto 96px auto 208px;
   /* 名次章蓋下去會放大一下、牌有陰影：content-visibility 會裁掉溢出去的，留一點邊。 */
   overflow-clip-margin: 12px;
 }
@@ -194,6 +194,8 @@
 
 .book-meta {
   display: inline-flex;
+  flex-wrap: wrap;
+  justify-content: center;
   align-items: baseline;
   gap: 3px;
   min-height: 1.4em;
@@ -208,6 +210,35 @@
   font-family: var(--font-mono);
   font-size: var(--text-sm);
   font-weight: 500;
+}
+
+/* 加入日。排日期時大字就是日期，這一行改顯示用過幾次。 */
+.book-when {
+  flex: 1 0 100%;
+  text-align: center;
+  font-family: var(--font-mono);
+  font-size: 10px;
+  line-height: 1.3;
+  color: var(--color-muted);
+}
+
+.book-when:empty {
+  display: none;
+}
+
+.book-cell[data-face="date"] .book-n {
+  font-size: 11px;
+  letter-spacing: -0.03em;
+}
+
+.card-flag[data-kind="ban"] {
+  color: var(--color-ink-2);
+}
+
+.book-ban-note {
+  margin: 0.6em 0 0;
+  color: var(--color-ink-2);
+  font-size: var(--text-sm);
 }
 
 .book-cell[data-unused="true"] .book-n {
@@ -955,10 +986,10 @@
   }
   #book-sort:empty {
     flex-basis: 100%;
-    min-height: 38px;
+    min-height: 76px;
   }
   html[lang="en"] #book-sort:empty {
-    min-height: 70px;
+    min-height: 108px;
   }
   /* 「成就 4 / 11」：一開始跟標題同一排，張數一寫上去就被擠到下一排（又長高 33px）。一開始就放第二排。 */
   .book-title::after {
@@ -1001,17 +1032,26 @@
   .book-order {
     display: contents;
   }
-  #book-used {
+  #book-used,
+  #book-banned {
     order: 1;
+  }
+  #book-used {
     margin-left: auto;
   }
   #book-sort {
     order: 2;
+    display: flex;
+    flex-wrap: wrap;
     flex-basis: 100%;
+    width: 100%;
     margin-top: var(--space-2xs);
   }
+  #book-sort > button {
+    flex: 1 1 30%;
+  }
   /* 花色還沒畫（開頁那一下）：「只看用過的」先不出來，免得自己佔一排、畫好再縮回去把牌往上拉。 */
-  .book-bar:has(#book-suits:empty) #book-used {
+  .book-bar:has(#book-suits:empty) :is(#book-used, #book-banned) {
     display: none;
   }
   .book-hint {
