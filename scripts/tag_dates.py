@@ -45,6 +45,8 @@ HARD = {
     "kindergarten uniform",
     "tomoeda elementary school uniform",
     "children",
+    "child carry",
+    "child",
 }
 FAM = {"char_anime": "動漫", "char_game": "遊戲", "char_other": "其他"}
 

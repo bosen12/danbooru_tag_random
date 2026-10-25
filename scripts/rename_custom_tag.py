@@ -66,6 +66,8 @@ MINOR_BLOCK = {
     "kindergarten uniform",
     "tomoeda elementary school uniform",
     "children",
+    "child carry",
+    "child",
 }
 
 

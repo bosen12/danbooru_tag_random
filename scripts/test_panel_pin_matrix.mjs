@@ -92,6 +92,8 @@ function tagsOf(drawn) {
 // forcePin 或 reconcile 只要開始靜默吃 pin，這裡會直接列出詞與模式。
 {
   const misses = [];
+  const SCENE_DROP = new Set(["swimsuit under clothes", "underwear only"]);
+  const BATH_SCENE = new Set(["showering", "bathing", "shared bathing", "bath", "bathtub", "bubble bath", "onsen", "ofuro", "bathhouse", "sauna", "shower (place)"]);
   let draws = 0;
   for (const mode of ["normal", "diverse", "weird"]) {
     for (let index = 0; index < data.tags.length; index += 1) {
@@ -119,9 +121,15 @@ function tagsOf(drawn) {
       settings.drawJob = true;
       settings.counts = { subject: 10, feature: 10, pose: 10, clothing: 10, env: 10 };
       const seed = 760000 + index;
-      const drawn = drawOne(lex, settings, new Set([item.tag]), new Set(), mulberry32(seed), seed);
+      const drawn = drawOne(lex, settings, new Set([item.tag]), new Set(), mulberry32(seed), seed, { trace: true });
       draws += 1;
-      if (!tagsOf(drawn).has(item.tag)) misses.push(`${mode}/${item.tag}: ${drawn.positive}`);
+      const got = tagsOf(drawn);
+      // 場景說了算（engine.js reconcile 的註解）：洗澡、淋浴時沒有外衣，「衣服底下的泳裝」「只穿內衣」
+      // 會被收尾拿掉，卡片上顯示「釘選未入」。只放過這兩個字、只在真的是浴場、而且 trace 寫著是收尾拿的。
+      // 2026-10-26 測量、抱人、量陰莖進池後，diverse 的 swimsuit under clothes 抽到淋浴。
+      const sceneDrop = SCENE_DROP.has(item.tag) && [...BATH_SCENE].some((t) => got.has(t))
+        && drawn.trace.rejected.some((r) => r.tag === item.tag && r.reason === "reconcile");
+      if (!got.has(item.tag) && !sceneDrop) misses.push(`${mode}/${item.tag}: ${drawn.positive}`);
     }
     const childSeed = 760000 + data.tags.length;
     const childDrawn = drawOne(lex, { ...defaultSettings(data), rating: "explicit", sceneMode: mode, girl: true, boy: true }, new Set(["children"]), new Set(), mulberry32(childSeed), childSeed);

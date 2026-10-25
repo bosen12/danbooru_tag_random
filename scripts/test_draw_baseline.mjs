@@ -109,9 +109,10 @@ const GOLD = {
   // lifted by self、tray 換成 holding bottle、麵。仍是 1girl solo，沒有男生或人類陰莖。
   // 2026-10-23 第二輪：主人指定加回 12 個字、族裔這批進池，六招進 FIGHT_PLACE。這張換成韓服、托胸。仍是 1girl solo，沒有男生或人類陰莖。
   // 2026-10-24 第三輪：口塞、衣外繩縛、綁法、俘虜進池。頭髮焦點換成眼睛焦點，噴火換成花束。仍是 1girl solo，沒有男生或人類陰莖。
+  // 2026-10-26：測量、抱人（一般牌）、量陰莖進池，候選池變大、亂數位移。這張換成滑雪、雪山。仍是 1girl solo，沒有男生或人類陰莖。
   100: {
-    rng: 1407,
-    pos: "1girl, solo, medium hair, grey eyes, white hair, inverted bob, large breasts, hair scrunchie, backboob, unitard, biker clothes, thighband pantyhose, pantyhose, frilled apron, pole dancing, split, cropped torso, peeking out, peeking, grin, stage, indoors, evening, motor vehicle, nsfw, explicit, masterpiece, best quality, amazing quality",
+    rng: 1423,
+    pos: "1girl, solo, medium hair, grey eyes, white hair, inverted bob, large breasts, hair scrunchie, thick eyebrows, flaming eye, racing suit, print thighhighs, thighhighs, white coat, coat, biker clothes, skiing, head back, worm's eye view, from below, averting eyes, furrowed brow, outdoors, snow, mountain, dusk, city lights, rice bowl, nsfw, explicit, masterpiece, best quality, amazing quality",
   },
   // 2026-09-29 第三次：這張是性愛。淋浴間換成海邊，衣服和光線跟著換。仍是 1girl solo。
   // 2026-10-04（9a087a5）：帶衣物名的姿勢（hand in panties 這類）在候選階段就要先有對的衣服，
@@ -152,9 +153,10 @@ const GOLD = {
   // 2026-10-23：摔角、觀眾、公開場合 28 個字進池。這張換成直播、泳池梯。仍是 1girl solo，沒有男生或人類陰莖。
   // 2026-10-23 第二輪：主人指定加回 12 個字、族裔這批進池，六招進 FIGHT_PLACE。這張換成連身泳裝、旋轉木馬。仍是 1girl solo，沒有男生或人類陰莖。
   // 2026-10-24 第三輪：口塞、衣外繩縛、綁法、俘虜進池。披薩換成啤酒杯。仍是 1girl solo，沒有男生或人類陰莖。
+  // 2026-10-26：測量、抱人（一般牌）、量陰莖進池，候選池變大、亂數位移。這張換成韓服、拍照、女僕咖啡廳。仍是 1girl solo，沒有男生或人類陰莖。
   2026: {
-    rng: 974,
-    pos: "1girl, solo, bob cut, purple eyes, white hair, hair over breasts, medium breasts, huge nipples, unusually open eyes, pink eyeshadow, eyeshadow, hawaiian clothes, blue sports bra, sports bra, brown thighhighs, thighhighs, sakuramon, no panties, cheering, indian style, foot out of frame, looking up, confident, clothing aside, pom pom (cheerleading), karaoke box, indoors, on couch, dusk, dark, nsfw, explicit, masterpiece, best quality, amazing quality",
+    rng: 965,
+    pos: "1girl, solo, bob cut, purple eyes, white hair, hair over breasts, medium breasts, framed breasts, tan, albino, hanbok, korean clothes, vertical-striped clothes, goth girl, blue sports bra, sports bra, taking picture, crossed ankles, very wide shot, upturned eyes, nervous, sports bra lift, camera, maid cafe, indoors, cafe, sunrise, light rays, nsfw, explicit, masterpiece, best quality, amazing quality",
   },
 };
 
@@ -368,7 +370,8 @@ const MATRIX_SEEDS = 200;
 // 戶外也擲傢俱格（地上、長椅、鞦韆）。704bdc35 → fdc19d02。
 // 同日：有顏色的皮鞋、靴子、涼鞋限定時代（江戶不再抽到黑皮鞋、白靴子）。fdc19d02 → cb8b5a38。
 // 同日：Grok 建議池 558 張新字進候選池（版面、改寫角色的字只在釘了才出現）。cb8b5a38 → 73524ddc。
-const MATRIX_GOLD = "73524ddc";
+// 2026-10-26：測量、量陰莖、抱人進候選池（抱人從封鎖拿出來改成一般牌）；child、child carry 進詞庫但封鎖、不進池。73524ddc → 455f5403。
+const MATRIX_GOLD = "455f5403";
 
 function matrixSettings(over) {
   const s = defaultSettings(data);

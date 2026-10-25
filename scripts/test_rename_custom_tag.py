@@ -69,6 +69,8 @@ for _name in (
     "toddlercon", "toddlersex", "mother and child", "father and child",
     "carrying baby", "kindergarten uniform", "tomoeda elementary school uniform",
     "children",
+    "child carry",
+    "child",
 ):
     eq(f"{_name} refused", new_tag_ok(_name), "banned")
     eq(f"{_name} not harvested", harvest_banned(norm_tag(_name.replace(" ", "_"))), True)

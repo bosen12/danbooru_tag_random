@@ -59,6 +59,8 @@ def hard_banned() -> set[str]:
         "kindergarten uniform",
         "tomoeda elementary school uniform",
         "children",
+        "child carry",
+        "child",
     }
     if not need <= banned:
         raise SystemExit("HARD_BANNED 少了 " + "、".join(sorted(need - banned)) + "，不打包")
