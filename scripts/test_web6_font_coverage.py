@@ -50,7 +50,7 @@ class FontCoverage(unittest.TestCase):
             self.assertIn(f"fonts/{name}?v=", css)
 
     def test_pages_make_no_google_font_requests(self):
-        for filename in ("index.html", "fuse.html", "book.html", "album.html", "intro.html", "tutorial.html"):
+        for filename in ("index.html", "fuse.html", "book.html", "album.html", "parse.html", "arch.html", "intro.html", "tutorial.html"):
             html = (fonts.ROOT / "web6" / filename).read_text(encoding="utf-8")
             self.assertIn('href="fonts.css"', html)
             self.assertNotIn("fonts.googleapis.com", html)

@@ -90,7 +90,7 @@ EXTRA_WEB = ["vendor/three/LICENSE", "vendor/opencc/LICENSE", "vendor/opencc/NOT
 
 # (開源版的路徑, 原字串, 換成) —— 原字串找不到就印 WARN。
 REWRITES = [
-    *[(f"web/{f}", "start-web6.bat", "start.bat") for f in ("album.js", "app.js", "book.js", "fuse.js", "film.js", "locales/en.js")],
+    *[(f"web/{f}", "start-web6.bat", "start.bat") for f in ("album.js", "app.js", "arch.html", "arch.js", "book.js", "fuse.js", "film.js", "locales/en.js")],
     ("web/locales/en.js", "Start or restart the web6 server.", "Start or restart the server."),
     ("web/i18n.js", "Changes apply to all web6 pages.", "Changes apply to every page."),
     ("web/i18n.js", "切換會套用到 web6 所有頁面。", "切換會套用到所有頁面。"),
