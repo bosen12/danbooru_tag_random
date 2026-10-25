@@ -7,6 +7,7 @@ from pathlib import Path
 
 sys.path.insert(0, str(Path(__file__).resolve().parent))
 from rename_custom_tag import new_tag_ok, replace_token
+from harvest_prompts import banned as harvest_banned, norm_tag
 
 failed = 0
 
@@ -63,7 +64,24 @@ eq("loli refused", new_tag_ok("loli"), "banned")
 eq("child refused", new_tag_ok("child"), "banned")
 eq("teen refused", new_tag_ok("teen"), "banned")
 eq("shotacon refused", new_tag_ok("shotacon"), "banned")
-eq("taken name refused", new_tag_ok("kokod"), "exists")
+for _name in (
+    "aged down", "onee-shota", "oppai loli", "baby", "kodomo doushi",
+    "toddlercon", "toddlersex", "mother and child", "father and child",
+    "carrying baby", "kindergarten uniform", "tomoeda elementary school uniform",
+    "children",
+):
+    eq(f"{_name} refused", new_tag_ok(_name), "banned")
+    eq(f"{_name} not harvested", harvest_banned(norm_tag(_name.replace(" ", "_"))), True)
+ok("babydoll is not banned", new_tag_ok("babydoll") != "banned")
+ok("mother and daughter is not a ban", new_tag_ok("mother and daughter") != "banned")
+ok("sisters is not a ban", new_tag_ok("sisters") != "banned")
+ok("family is not a ban", new_tag_ok("family") != "banned")
+ok("school uniform is not a ban", new_tag_ok("school uniform") != "banned")
+ok("serafuku is not a ban", new_tag_ok("serafuku") != "banned")
+ok("gakuran is not a ban", new_tag_ok("gakuran") != "banned")
+for _name in ("babydoll", "mother and daughter", "sisters", "family", "school uniform", "serafuku", "gakuran"):
+    eq(f"{_name} can still be harvested", harvest_banned(norm_tag(_name)), False)
+eq("taken name refused", new_tag_ok("blue eyes"), "exists")
 eq("taken short male refused", new_tag_ok("short male"), "exists")
 eq("ok unused name", new_tag_ok("zznn"), None)
 eq("underscore folds to space", new_tag_ok("short_male"), "exists")

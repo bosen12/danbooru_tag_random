@@ -2,11 +2,13 @@
 import { readFileSync } from "fs";
 import { dirname, join } from "path";
 import { fileURLToPath } from "url";
+import { HARD_BANNED } from "../web/card-art.js";
 import { ERAS, defaultSettings, drawOne, indexLexicon, mulberry32 } from "../web/engine.js";
 
 const ROOT = join(dirname(fileURLToPath(import.meta.url)), "..");
 const data = JSON.parse(readFileSync(join(ROOT, "web", "lexicon.json"), "utf8"));
 const lex = indexLexicon(data);
+const NEVER = new Set(HARD_BANNED);
 
 let failed = 0;
 function ok(name, cond, detail = "") {
@@ -95,12 +97,13 @@ function tagsOf(drawn) {
     for (let index = 0; index < data.tags.length; index += 1) {
       const item = data.tags[index];
       if (item.section === "quality") continue;
-      // loli、shota 永遠不輸出（engine.js NEVER_DRAW），釘了也不給：這兩個反過來要確定沒出現。
-      if (item.tag === "loli" || item.tag === "shota") {
+      // HARD_BANNED 永遠不輸出（engine.js NEVER_DRAW），釘了也不給：反過來要確定沒出現。
+      if (NEVER.has(item.tag)) {
         const seed = 760000 + index;
         const drawn = drawOne(lex, { ...defaultSettings(data), rating: "explicit", sceneMode: mode, girl: true, boy: true }, new Set([item.tag]), new Set(), mulberry32(seed), seed);
         draws += 1;
-        if (tagsOf(drawn).has(item.tag)) misses.push(`${mode}/${item.tag} 應該永遠不出現: ${drawn.positive}`);
+        const got = tagsOf(drawn);
+        for (const tag of NEVER) if (got.has(tag)) misses.push(`${mode}/${item.tag} 應該永遠不出現，卻有 ${tag}: ${drawn.positive}`);
         continue;
       }
       const needs = new Set(item.needs || []);
@@ -120,6 +123,10 @@ function tagsOf(drawn) {
       draws += 1;
       if (!tagsOf(drawn).has(item.tag)) misses.push(`${mode}/${item.tag}: ${drawn.positive}`);
     }
+    const childSeed = 760000 + data.tags.length;
+    const childDrawn = drawOne(lex, { ...defaultSettings(data), rating: "explicit", sceneMode: mode, girl: true, boy: true }, new Set(["children"]), new Set(), mulberry32(childSeed), childSeed);
+    draws += 1;
+    if (tagsOf(childDrawn).has("children")) misses.push(`${mode}/children 應該永遠不出現: ${childDrawn.positive}`);
   }
   ok(`單 pin authority（${draws} 張）`, misses.length === 0, misses.slice(0, 10).join("\n  "));
 }

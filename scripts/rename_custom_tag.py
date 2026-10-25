@@ -51,11 +51,29 @@ def lexicon_tags() -> set[str]:
     return {str(t.get("tag") or "") for t in data.get("tags") or []}
 
 
+# 整字。子字串會誤傷 babydoll、mother and daughter、school uniform。
+MINOR_BLOCK = {
+    "aged down",
+    "onee-shota",
+    "oppai loli",
+    "baby",
+    "kodomo doushi",
+    "toddlercon",
+    "toddlersex",
+    "mother and child",
+    "father and child",
+    "carrying baby",
+    "kindergarten uniform",
+    "tomoeda elementary school uniform",
+    "children",
+}
+
+
 def new_tag_ok(tag: str) -> str | None:
     name = norm_tag(tag)
     if not name:
         return "empty"
-    if name in BANNED or any(part in BANNED for part in name.split()):
+    if name in BANNED or name in MINOR_BLOCK or any(part in BANNED for part in name.split()):
         return "banned"
     if "loli" in name or "shota" in name:
         return "banned"

@@ -29,7 +29,23 @@ PATHS = [
     "scripts/focus_tags.py",
 ]
 # 底線封鎖的字永遠不做牌（web/card-art.js 的 HARD_BANNED）。
-HARD = {"loli", "shota"}
+HARD = {
+    "loli",
+    "shota",
+    "aged down",
+    "onee-shota",
+    "oppai loli",
+    "baby",
+    "kodomo doushi",
+    "toddlercon",
+    "toddlersex",
+    "mother and child",
+    "father and child",
+    "carrying baby",
+    "kindergarten uniform",
+    "tomoeda elementary school uniform",
+    "children",
+}
 FAM = {"char_anime": "動漫", "char_game": "遊戲", "char_other": "其他"}
 
 TAG_RE = re.compile(rb'"tag"\s*:\s*"([^"\\]+)"')

@@ -5,8 +5,9 @@
  * 秒跑完，不需要 ComfyUI。
  */
 import { existsSync, readFileSync } from "fs";
+import { register } from "node:module";
 import { dirname, join } from "path";
-import { fileURLToPath } from "url";
+import { fileURLToPath, pathToFileURL } from "url";
 import { cardArtJobs, jobsFileText, JOBS_FILE } from "./card_art.mjs";
 import { HARD_BANNED, isCard, artPrompt, artFile, cardSuit, CARD_SUITS } from "../web/card-art.js";
 
@@ -25,7 +26,12 @@ const tagsOf = (positive) => positive.split(",").map((s) => s.trim());
 
 /* ---------- 底線封鎖 ---------- */
 {
-  ok("底線封鎖清單有 loli、shota", HARD_BANNED.includes("loli") && HARD_BANNED.includes("shota"));
+  const minor = [
+    "loli", "shota", "aged down", "onee-shota", "oppai loli", "baby", "kodomo doushi",
+    "toddlercon", "toddlersex", "mother and child", "father and child", "carrying baby",
+    "kindergarten uniform", "tomoeda elementary school uniform", "children",
+  ];
+  ok("底線封鎖是這 15 個字", HARD_BANNED.length === minor.length && minor.every((t) => HARD_BANNED.includes(t)), HARD_BANNED.join(", "));
   for (const t of HARD_BANNED) {
     const item = byTag.get(t) || { tag: t, section: "subject", group: "other" };
     ok(`「${t}」不是牌`, !isCard(item));
@@ -33,6 +39,12 @@ const tagsOf = (positive) => positive.split(",").map((s) => s.trim());
   }
   const leaked = jobs.filter((j) => tagsOf(j.positive).some((t) => HARD_BANNED.includes(t)));
   ok("沒有任何插畫 prompt 帶到底線封鎖的字", !leaked.length, leaked.slice(0, 3).map((j) => j.tag).join(", "));
+  ok("children 維持不進詞庫", !byTag.has("children"));
+  ok("其餘十四個封鎖字都有詞庫分類", minor.filter((t) => t !== "children").every((t) => {
+    const item = byTag.get(t);
+    return item?.group && item?.sub && item.sub !== "other";
+  }));
+  ok("封鎖制服不帶出一般制服", ["kindergarten uniform", "tomoeda elementary school uniform"].every((t) => !byTag.get(t)?.implies.includes("school uniform")));
 }
 
 /* ---------- 畫人一定畫成年人 ---------- */
@@ -191,6 +203,40 @@ const tagsOf = (positive) => positive.split(",").map((s) => s.trim());
   } else {
     console.log("skip manifest（web/cards 還沒烤）");
   }
+}
+
+/* ---------- 貼上提示詞：封鎖字進不收，一般制服與母女照舊 ---------- */
+{
+  register(pathToFileURL(join(ROOT, "scripts", "resolve_shared_web.mjs")).href);
+  // parsePrompt 會載入 weights.js；純 parser 測試沒有瀏覽器的 scroll 事件。
+  const savedAddEventListener = globalThis.addEventListener;
+  globalThis.addEventListener = () => {};
+  const { parsePrompt } = await import("../web6/paste-prompt.js");
+  if (savedAddEventListener) globalThis.addEventListener = savedAddEventListener;
+  else delete globalThis.addEventListener;
+  const lexTags = data.tags.map((t) => t.tag);
+  const isCardTag = (tag) => {
+    const item = byTag.get(tag);
+    return !!item && isCard(item);
+  };
+  const zh = (tag) => byTag.get(tag)?.zh || tag;
+  const opts = { lexTags, isCard: isCardTag, zh, banned: [] };
+  const sample = parsePrompt("1girl, oppai_loli, baby", opts);
+  ok(
+    "貼上 1girl, oppai_loli, baby：兩個封鎖字不收，1girl 仍是牌",
+    sample.cards.some((c) => c.tag === "1girl") && sample.blocked.length === 2,
+    `cards=${sample.cards.map((c) => c.tag).join(",")} blocked=${sample.blocked.join("|")}`,
+  );
+  const names = [
+    "loli", "shota", "aged down", "onee-shota", "oppai loli", "baby", "kodomo doushi",
+    "toddlercon", "toddlersex", "mother and child", "father and child", "carrying baby",
+    "kindergarten uniform", "tomoeda elementary school uniform", "children",
+  ];
+  const full = parsePrompt(names.map((t) => t.replace(/ /g, "_")).join(", "), opts);
+  const missed = names.filter((t) => !full.blocked.some((raw) => raw.replace(/_/g, " ") === t));
+  ok("貼上十五個封鎖字都進不收", !missed.length && full.cards.length === 0, missed.join(", ") || full.blocked.join("|"));
+  const keep = parsePrompt("1girl, mother_and_daughter, school_uniform, serafuku, gakuran, babydoll, sisters, family", opts);
+  ok("貼上母女、姊妹、家人、一般制服、babydoll 不會被擋", keep.blocked.length === 0, keep.blocked.join("|"));
 }
 
 if (failed) {

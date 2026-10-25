@@ -308,8 +308,26 @@ def norm_tag(name: str) -> str:
     return str(name or "").strip().lower().replace("_", " ")
 
 
+# 整字才擋。baby／mother／father／child／uniform／school／elementary 不能放進上面的子字串表。
+HARD_EXACT = {
+    "aged down",
+    "onee-shota",
+    "oppai loli",
+    "baby",
+    "kodomo doushi",
+    "toddlercon",
+    "toddlersex",
+    "mother and child",
+    "father and child",
+    "carrying baby",
+    "kindergarten uniform",
+    "tomoeda elementary school uniform",
+    "children",
+}
+
+
 def banned(tag: str) -> bool:
-    if tag in BANNED or tag in SKIP_TAGS:
+    if tag in BANNED or tag in SKIP_TAGS or tag in HARD_EXACT:
         return True
     return any(s in tag for s in BANNED_SUB)
 

@@ -42,9 +42,26 @@ def hard_banned() -> set[str]:
     if not m:
         raise SystemExit("找不到 web/card-art.js 的 HARD_BANNED，不打包")
     banned = set(re.findall(r'"([^"]+)"', m.group(1)))
-    # 底線本身被改掉（例如換成亂碼）也不打包：公開包絕不能放進這兩張。
-    if not {"loli", "shota"} <= banned:
-        raise SystemExit("HARD_BANNED 少了 loli／shota，不打包")
+    # 底線本身被改掉（例如換成亂碼）也不打包：公開包絕不能放進這些字。
+    need = {
+        "loli",
+        "shota",
+        "aged down",
+        "onee-shota",
+        "oppai loli",
+        "baby",
+        "kodomo doushi",
+        "toddlercon",
+        "toddlersex",
+        "mother and child",
+        "father and child",
+        "carrying baby",
+        "kindergarten uniform",
+        "tomoeda elementary school uniform",
+        "children",
+    }
+    if not need <= banned:
+        raise SystemExit("HARD_BANNED 少了 " + "、".join(sorted(need - banned)) + "，不打包")
     return banned
 
 
