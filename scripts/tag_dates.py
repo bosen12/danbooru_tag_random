@@ -32,9 +32,10 @@ PATHS = [
 
 FAM = {"char_anime": "動漫", "char_game": "遊戲", "char_other": "其他"}
 
-TAG_RE = re.compile(rb'"tag"\s*:\s*"([^"\\]+)"')
+# JSON 字串裡可能有跳脫字元：\m/ 這種顏文字在檔案裡是 "\\m/"。整段抓下來再用 json 還原。
+TAG_RE = re.compile(rb'"tag"\s*:\s*"((?:[^"\\]|\\.)+)"')
 BAN_RE = re.compile(rb'"characterBan"\s*:\s*\[(.*?)\]', re.S)
-QUOTED_RE = re.compile(rb'"([^"\\]*)"')
+QUOTED_RE = re.compile(rb'"((?:[^"\\]|\\.)*)"')
 ROW_RE = re.compile(rb"""row\(\s*['"]([^'"]+)['"]""")
 
 
@@ -82,14 +83,22 @@ def commits() -> list[tuple[str, str, list[str]]]:
     return out
 
 
+def unjson(m: bytes) -> str:
+    """JSON 字串的內容（不含引號）還原成原本的字。"""
+    try:
+        return json.loads(b'"' + m + b'"')
+    except ValueError:
+        return m.decode("utf-8", "replace")
+
+
 def strings_of(path: str, blob: bytes) -> set[str]:
-    found = {norm(m.decode("utf-8", "replace")) for m in TAG_RE.findall(blob)}
+    found = {norm(unjson(m)) for m in TAG_RE.findall(blob)}
     if path.endswith(".py"):
         found.update(norm(m.decode("utf-8", "replace")) for m in ROW_RE.findall(blob))
     if path.endswith("lexicon.json"):
         ban = BAN_RE.search(blob)
         if ban:
-            found.update(norm(m.decode("utf-8", "replace")) for m in QUOTED_RE.findall(ban.group(1)))
+            found.update(norm(unjson(m)) for m in QUOTED_RE.findall(ban.group(1)))
     found.discard("")
     return found
 
