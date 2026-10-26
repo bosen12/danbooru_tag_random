@@ -65,6 +65,12 @@ MINOR_BLOCK = {
     "carrying baby",
     "kindergarten uniform",
     "tomoeda elementary school uniform",
+    "tokyo-3 middle school uniform",
+    "mitakihara school uniform",
+    "tokiwadai school uniform",
+    "nanamori school uniform",
+    "sakugawa school uniform",
+    "nanairogaoka middle school uniform",
     "children",
     "child carry",
     "child",
@@ -77,7 +83,15 @@ def new_tag_ok(tag: str) -> str | None:
         return "empty"
     if name in BANNED or name in MINOR_BLOCK or any(part in BANNED for part in name.split()):
         return "banned"
-    if "loli" in name or "shota" in name:
+    # 整字或詞綴。lolita、wa lolita 不是 loli；shotacon、onee-shota 仍是。
+    def _minor_token(part: str) -> bool:
+        if part in {"loli", "shota"}:
+            return True
+        if part.startswith("shota") or part.endswith("shota"):
+            return True
+        return "loli" in part and "lolita" not in part
+
+    if any(_minor_token(part) for part in name.split()):
         return "banned"
     if name in lexicon_tags():
         return "exists"

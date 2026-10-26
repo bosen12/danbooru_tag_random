@@ -268,7 +268,9 @@ else {
   // 抽太少，latex 佔幾成全看運氣（18 張裡 7 張就是 39%）。抽 8000 張、至少要有 60 個樣本才算數；
   // 8000 張時 latex 約 21%（以前加權壓在它身上是 53%），門檻 30% 才不會因為詞庫小改就翻來翻去。
   // 8000 → 12000（2026-10-14）：詞庫多了 29 張同名卡（alt_names.json），8000 張只剩 53 個布料樣本。
-  const modern = shares("modern", ["feet", "fabric"], 12000);
+  // 12000 → 16000（2026-10-26）：衣服一批加了一百多個沒有互斥格的布料，衣服額度先被它們拿走，
+  // mutex=fabric 的樣本 12000 張只剩 55 個。門檻仍是 60，樣本放大。
+  const modern = shares("modern", ["feet", "fabric"], 16000);
   const feet = modern.get("feet");
   report("現代的鞋子沒有一雙超過 35%", feet.pct < 0.35, `${feet.top} ${(feet.pct * 100).toFixed(0)}%`);
   report("現代的 sneakers 不再獨佔（< 25%）", (feet.m.get("sneakers") || 0) / feet.total < 0.25, `sneakers ${(((feet.m.get("sneakers") || 0) / feet.total) * 100).toFixed(0)}%`);

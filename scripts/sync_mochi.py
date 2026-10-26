@@ -42,6 +42,7 @@ SCRIPT_FILES = [
 # 對得上 web/lexicon.json 才算帶齊（那支測試裡有同一份清單）。
 LEXICON_FILES = [
     "merge_lexicon.py", "groups.py", "subgroups.py", "suggestion_tags.py", "more_tags.py", "focus_tags.py", "add_zh.py",
+    "grok_20261026_tags.py",
     "characters.json", "character_series.json", "alt_names.json",
     "export_lexicon_xlsx.py", "verify_danbooru_tags.mjs",
 ]

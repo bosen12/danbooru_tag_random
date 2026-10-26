@@ -67,9 +67,11 @@ const GOLD = {
   // 2026-10-23 第二輪：主人指定加回 12 個字、族裔這批進池，六招進 FIGHT_PLACE。這張換成戰鬥架勢、大自然；背景有人群，所以是 solo focus。仍是 1girl，沒有男生或人類陰莖。
   // 2026-10-24 第三輪：口塞、衣外繩縛、綁法、俘虜進池。人群離開，回到 solo；蠟刑換成被撞見，天空換成雪。仍是 1girl，沒有男生或人類陰莖。
   // 2026-10-26 第二次：57 個日常物品（尺、捲尺、文具、工具、梳妝、電器）進環境池，亂數位移。這張換成鄉間、陰天、啤酒節。仍是 1girl solo，沒有男生或人類陰莖。
+  // 2026-10-26 第三次：衣服 1402 張進池（作品制服只在釘了才出現），花紋前綴跟顏色一樣不再吃時代加權。這張換成多帶比基尼下身、雙面外套、羽毛袖、楓葉。仍是 1girl solo，沒有男生或人類陰莖。
+  // 2026-10-26 第四次：脫下、圍在腰上、衣服底下的狀態不再帶出那件衣服；裙式比基尼不再帶出連身比基尼。羽毛袖換成星座印花。仍是 1girl solo，沒有男生或人類陰莖。
   1: {
-    rng: 1433,
-    pos: "1girl, solo, pixie cut, orange eyes, grey hair, crossed bangs, large breasts, nail art, dark nipples, tramp stamp, tears, denim skirt, skirt, micro panties, panties, jacket on shoulders, kneehighs, pasties, fingering, sitting on stairs, sitting, cropped torso, looking down, crying with eyes open, crying, rural, outdoors, overcast, morning, dim lighting, oktoberfest, nsfw, explicit, masterpiece, best quality, amazing quality",
+    rng: 912,
+    pos: "1girl, solo, pixie cut, orange eyes, grey hair, crossed bangs, large breasts, nail art, dark nipples, tramp stamp, tears, multi-strapped bikini bottom, bikini, two-sided jacket, jacket, constellation print, halterneck, fingering, sitting on stairs, sitting, cropped torso, looking down, crying with eyes open, crying, rural, outdoors, maple leaf, autumn leaves, on ground, morning, tree shade, shade, nsfw, explicit, masterpiece, best quality, amazing quality",
   },
   // 2026-09-29：路人進了環境池，同一顆亂數落到別的環境字，後面的姿勢跟著換。
   // seed 42 少了束縛和手銬（手銬是束縛之後才拉的），多了咬唇。seed 100 花瓣換成剪影。
@@ -92,9 +94,11 @@ const GOLD = {
   // 2026-10-23 第二輪：主人指定加回 12 個字、族裔這批進池，六招進 FIGHT_PLACE。這張換成籃球服、天堂。仍是 1girl solo，沒有男生或人類陰莖。
   // 2026-10-24 第三輪：口塞、衣外繩縛、綁法、俘虜進池。這張多了性玩具、拉珠，披薩換成月餅。仍是 1girl solo，沒有男生或人類陰莖。
   // 2026-10-26 第二次：57 個日常物品（尺、捲尺、文具、工具、梳妝、電器）進環境池，亂數位移。這張換成駕駛艙、長椅。仍是 1girl solo，沒有男生或人類陰莖。
+  // 2026-10-26 第三次：衣服 1402 張進池，花紋前綴降權。駕駛艙、長椅、產卵留著，衣服換成襯衫、丹寧短褲、王子服。仍是 1girl solo，沒有男生或人類陰莖。
+  // 2026-10-26 第四次：衣服狀態不再把那件衣服穿回去。這張換成夢可愛、踢腿、飛機。仍是 1girl solo，沒有男生或人類陰莖。
   42: {
-    rng: 1415,
-    pos: "1girl, solo, very short hair, yellow eyes, aqua hair, blunt bangs, small breasts, long legs, thick thighs, body blush, miko, panties around one leg, garter belt, frilled apron, striped bra, bra, female masturbation, bowlegged pose, upside-down, looking around, laughing, egg laying, cockpit, indoors, on bench, day, dappled sunlight, spilling, nsfw, explicit, masterpiece, best quality, amazing quality",
+    rng: 1391,
+    pos: "1girl, solo, very short hair, yellow eyes, aqua hair, blunt bangs, small breasts, long legs, thick thighs, body blush, blouse, denim shorts, denim, shorts, kneehighs, yume kawaii, cable knit, masturbation through clothes, kicking, other focus, peeking, :q, anal prolapse, prolapse, polka dot background, dim lighting, spoken musical note, aircraft, rug, winter, nsfw, explicit, masterpiece, best quality, amazing quality",
   },
   // 2026-10-05 第五次：女僕圍裙是布料疊層，不占連身裙。仍是 1girl solo。
   // 2026-10-05 第六次：爆炸頭跟長裙、探頭偷看。仍是 1girl solo。
@@ -113,9 +117,11 @@ const GOLD = {
   // 2026-10-24 第三輪：口塞、衣外繩縛、綁法、俘虜進池。頭髮焦點換成眼睛焦點，噴火換成花束。仍是 1girl solo，沒有男生或人類陰莖。
   // 2026-10-26：測量、抱人（一般牌）、量陰莖進池，候選池變大、亂數位移。這張換成滑雪、雪山。仍是 1girl solo，沒有男生或人類陰莖。
   // 2026-10-26 第二次：57 個日常物品（尺、捲尺、文具、工具、梳妝、電器）進環境池，亂數位移。只有最後的米飯碗換成景深。仍是 1girl solo，沒有男生或人類陰莖。
+  // 2026-10-26 第三次：衣服 1402 張進池，花紋前綴降權。滑雪和雪山留著，衣服換成裙下短褲、黑抹胸、雙面大衣。仍是 1girl solo，沒有男生或人類陰莖。
+  // 2026-10-26 第四次：衣服狀態不再把那件衣服穿回去。滑雪和雪山留著，上衣換成格紋襯衫、連帽運動外套。仍是 1girl solo，沒有男生或人類陰莖。
   100: {
     rng: 1442,
-    pos: "1girl, solo, medium hair, grey eyes, white hair, inverted bob, large breasts, hair scrunchie, thick eyebrows, flaming eye, racing suit, print thighhighs, thighhighs, white coat, coat, biker clothes, skiing, head back, worm's eye view, from below, averting eyes, furrowed brow, outdoors, snow, mountain, dusk, city lights, depth of field, nsfw, explicit, masterpiece, best quality, amazing quality",
+    pos: "1girl, solo, medium hair, grey eyes, white hair, inverted bob, large breasts, hair scrunchie, thick eyebrows, flaming eye, shorts under skirt, skirt, checkered shirt, shirt, hooded track jacket, track jacket, jacket, multiple bracelets, skiing, head back, worm's eye view, from below, averting eyes, furrowed brow, outdoors, snow, mountain, dusk, city lights, depth of field, nsfw, explicit, masterpiece, best quality, amazing quality",
   },
   // 2026-09-29 第三次：這張是性愛。淋浴間換成海邊，衣服和光線跟著換。仍是 1girl solo。
   // 2026-10-04（9a087a5）：帶衣物名的姿勢（hand in panties 這類）在候選階段就要先有對的衣服，
@@ -136,9 +142,11 @@ const GOLD = {
   // 2026-10-23 第二輪：主人指定加回 12 個字、族裔這批進池，六招進 FIGHT_PLACE。這張換成條紋衫、踢腿、房子。仍是 1girl solo，沒有男生或人類陰莖。
   // 2026-10-24 第三輪：口塞、衣外繩縛、綁法、俘虜進池。運動短褲換成裙裡短褲，點乳頭換成肚臍插入。仍是 1girl solo，沒有男生或人類陰莖。
   // 2026-10-26 第二次：57 個日常物品（尺、捲尺、文具、工具、梳妝、電器）進環境池，亂數位移。這張換成運河、黃昏。仍是 1girl solo，沒有男生或人類陰莖。
+  // 2026-10-26 第三次：衣服 1402 張進池，花紋前綴降權。運河留著，衣服換成運動緊身衣、蕾絲邊過膝襪、繩式胸罩。仍是 1girl solo，沒有男生或人類陰莖。
+  // 2026-10-26 第四次：衣服狀態不再把那件衣服穿回去。運河留著，過膝襪換成紅色褲襪、女僕裝。仍是 1girl solo，沒有男生或人類陰莖。
   999: {
-    rng: 1487,
-    pos: "1girl, solo, long hair, glowing eyes, grey hair, alternate hairstyle, large breasts, blunt tresses, swept bangs, nipple piercing, two-tone dress, dress, seigaiha, fur collar, fur trim, polka dot bra, bra, bag, nipple rings, piercing, masturbation through clothes, flexing, isometric, blank stare, raised eyebrow, pet play, canal, outdoors, twilight, backlighting, slime (substance), star (sky), nsfw, explicit, masterpiece, best quality, amazing quality",
+    rng: 1485,
+    pos: "1girl, solo, long hair, glowing eyes, grey hair, alternate hairstyle, large breasts, blunt tresses, swept bangs, nipple piercing, athletic leotard, leotard, red pantyhose, pantyhose, enmaided, string bra, bra, bag, nipple rings, piercing, masturbation through clothes, flexing, isometric, blank stare, raised eyebrow, bouncing, canal, outdoors, twilight, backlighting, slime (substance), star (sky), nsfw, explicit, masterpiece, best quality, amazing quality",
   },
   // 2026-09-23：走光補抽改成「所有成立的走光動作同一池、衣服吻合的權重 10」之後，
   // 這張的走光動作從 exhibitionism 換成 cameltoe（她穿 thong，吻合），場景跟著換。
@@ -158,9 +166,11 @@ const GOLD = {
   // 2026-10-23 第二輪：主人指定加回 12 個字、族裔這批進池，六招進 FIGHT_PLACE。這張換成連身泳裝、旋轉木馬。仍是 1girl solo，沒有男生或人類陰莖。
   // 2026-10-24 第三輪：口塞、衣外繩縛、綁法、俘虜進池。披薩換成啤酒杯。仍是 1girl solo，沒有男生或人類陰莖。
   // 2026-10-26：測量、抱人（一般牌）、量陰莖進池，候選池變大、亂數位移。這張換成韓服、拍照、女僕咖啡廳。仍是 1girl solo，沒有男生或人類陰莖。
+  // 2026-10-26 第三次：衣服 1402 張進池，花紋前綴降權。這張換成開襟帽衫、透視裙、教堂。仍是 1girl solo，沒有男生或人類陰莖。
+  // 2026-10-26 第四次：衣服狀態不再把那件衣服穿回去。這張換成捲起的褲子、白色水手領、道場。仍是 1girl solo，沒有男生或人類陰莖。
   2026: {
-    rng: 965,
-    pos: "1girl, solo, bob cut, purple eyes, white hair, hair over breasts, medium breasts, framed breasts, tan, albino, hanbok, korean clothes, vertical-striped clothes, goth girl, blue sports bra, sports bra, taking picture, crossed ankles, very wide shot, upturned eyes, nervous, sports bra lift, camera, maid cafe, indoors, cafe, sunrise, light rays, nsfw, explicit, masterpiece, best quality, amazing quality",
+    rng: 1472,
+    pos: "1girl, solo, bob cut, purple eyes, white hair, hair over breasts, medium breasts, framed breasts, tan, albino, hood up, open hoodie, hoodie, pants rolled up, pants, brown choker, choker, white sailor collar, sailor collar, taking picture, spread arms, vanishing point, staring, dot mouth, breast slip, cellphone, dojo, indoors, evening, dappled sunlight, vines, nsfw, explicit, masterpiece, best quality, amazing quality",
   },
 };
 
@@ -376,7 +386,9 @@ const MATRIX_SEEDS = 200;
 // 同日：Grok 建議池 558 張新字進候選池（版面、改寫角色的字只在釘了才出現）。cb8b5a38 → 73524ddc。
 // 2026-10-26：測量、量陰莖、抱人進候選池（抱人從封鎖拿出來改成一般牌）；child、child carry 進詞庫但封鎖、不進池。73524ddc → 455f5403。
 // 2026-10-26 第二次：57 個日常物品進環境池（拿在手上的佔 held_prop）。455f5403 → b8a442d6。
-const MATRIX_GOLD = "b8a442d6";
+// 2026-10-26 第三次：衣服 1402 張進池，花紋前綴跟顏色一樣降權。新披風不進古希臘。單人女的情境沒有男生；性愛檔出現的陰莖都是動物陰莖。b8a442d6 → eaeec8a7。
+// 2026-10-26 第四次：脫下、圍在腰上、衣服底下不再帶出那件衣服；裙式比基尼、比基尼上衣不再帶出連身比基尼；皮鞋不再帶出洋裝。單人女的情境沒有男生；性愛檔的陰莖都是動物陰莖。eaeec8a7 → 7a85ff77。
+const MATRIX_GOLD = "7a85ff77";
 
 function matrixSettings(over) {
   const s = defaultSettings(data);

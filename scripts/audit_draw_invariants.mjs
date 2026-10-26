@@ -1133,7 +1133,12 @@ FAIL 性行為互斥  ×${bad}/${N}`);
   const N = 220;
   const NAKED_ONLY = ["naked sweater", "naked shirt", "naked apron", "naked towel", "naked coat", "naked jacket"];
   const BODY_GROUP = new Set(["onepiece", "top", "bottom", "underwear", "era"]);
-  const isSwim = (t) => t.includes("bikini") || t.includes("swimsuit");
+  // 脫在旁邊、穿在衣服底下的不是身上那件泳衣。unworn swimsuit 含 swimsuit，
+  // 會被看成泳衣，然後跟本來就穿的內褲一起被判成「泳衣配內衣」。
+  const isSwim = (t) =>
+    !t.startsWith("unworn ") &&
+    !t.includes(" under clothes") &&
+    (t.includes("bikini") || t.includes("swimsuit"));
   let drew = 0;
   let twoMain = 0;
   let nakedBad = 0;

@@ -68,6 +68,12 @@ for _name in (
     "aged down", "onee-shota", "oppai loli", "baby", "kodomo doushi",
     "toddlercon", "toddlersex", "mother and child", "father and child",
     "carrying baby", "kindergarten uniform", "tomoeda elementary school uniform",
+    "tokyo-3 middle school uniform",
+    "mitakihara school uniform",
+    "tokiwadai school uniform",
+    "nanamori school uniform",
+    "sakugawa school uniform",
+    "nanairogaoka middle school uniform",
     "children",
     "child carry",
     "child",
@@ -75,6 +81,8 @@ for _name in (
     eq(f"{_name} refused", new_tag_ok(_name), "banned")
     eq(f"{_name} not harvested", harvest_banned(norm_tag(_name.replace(" ", "_"))), True)
 ok("babydoll is not banned", new_tag_ok("babydoll") != "banned")
+ok("lolita hairband is not banned", new_tag_ok("lolita hairband") != "banned")
+ok("wa lolita is not banned", new_tag_ok("wa lolita") != "banned")
 ok("mother and daughter is not a ban", new_tag_ok("mother and daughter") != "banned")
 ok("sisters is not a ban", new_tag_ok("sisters") != "banned")
 ok("family is not a ban", new_tag_ok("family") != "banned")

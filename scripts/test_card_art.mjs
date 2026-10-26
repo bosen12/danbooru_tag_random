@@ -30,9 +30,15 @@ const tagsOf = (positive) => positive.split(",").map((s) => s.trim());
     "loli", "shota", "aged down", "onee-shota", "oppai loli", "baby", "kodomo doushi",
     "toddlercon", "toddlersex", "mother and child", "father and child", "carrying baby",
     "kindergarten uniform", "tomoeda elementary school uniform", "children",
+    "tokyo-3 middle school uniform",
+    "mitakihara school uniform",
+    "tokiwadai school uniform",
+    "nanamori school uniform",
+    "sakugawa school uniform",
+    "nanairogaoka middle school uniform",
     "child carry", "child",
   ];
-  ok("底線封鎖是這 17 個字", HARD_BANNED.length === minor.length && minor.every((t) => HARD_BANNED.includes(t)), HARD_BANNED.join(", "));
+  ok("底線封鎖名單跟 HARD_BANNED 一致", HARD_BANNED.length === minor.length && minor.every((t) => HARD_BANNED.includes(t)), HARD_BANNED.join(", "));
   for (const t of HARD_BANNED) {
     const item = byTag.get(t) || { tag: t, section: "subject", group: "other" };
     ok(`「${t}」不是牌`, !isCard(item));
@@ -43,11 +49,15 @@ const tagsOf = (positive) => positive.split(",").map((s) => s.trim());
   ok("children 維持不進詞庫", !byTag.has("children"));
   ok("child 照 loli 進詞庫（不被 BANNED 丟掉）", byTag.get("child")?.zh === "孩童");
   ok("carrying person 是一般的牌（2026-10-25 拿出封鎖）", isCard(byTag.get("carrying person")) && !HARD_BANNED.includes("carrying person"));
-  ok("其餘十六個封鎖字都有詞庫分類", minor.filter((t) => t !== "children").every((t) => {
+  ok("封鎖字除了 children 都有詞庫分類", minor.filter((t) => t !== "children").every((t) => {
     const item = byTag.get(t);
     return item?.group && item?.sub && item.sub !== "other";
   }));
-  ok("封鎖制服不帶出一般制服", ["kindergarten uniform", "tomoeda elementary school uniform"].every((t) => !byTag.get(t)?.implies.includes("school uniform")));
+  ok("封鎖制服不帶出一般制服", [
+    "kindergarten uniform", "tomoeda elementary school uniform",
+    "tokyo-3 middle school uniform", "mitakihara school uniform", "tokiwadai school uniform",
+    "nanamori school uniform", "sakugawa school uniform", "nanairogaoka middle school uniform",
+  ].every((t) => !byTag.get(t)?.implies.includes("school uniform")));
 }
 
 /* ---------- 畫人一定畫成年人 ---------- */
@@ -234,11 +244,17 @@ const tagsOf = (positive) => positive.split(",").map((s) => s.trim());
     "loli", "shota", "aged down", "onee-shota", "oppai loli", "baby", "kodomo doushi",
     "toddlercon", "toddlersex", "mother and child", "father and child", "carrying baby",
     "kindergarten uniform", "tomoeda elementary school uniform", "children",
+    "tokyo-3 middle school uniform",
+    "mitakihara school uniform",
+    "tokiwadai school uniform",
+    "nanamori school uniform",
+    "sakugawa school uniform",
+    "nanairogaoka middle school uniform",
     "child carry", "child",
   ];
   const full = parsePrompt(names.map((t) => t.replace(/ /g, "_")).join(", "), opts);
   const missed = names.filter((t) => !full.blocked.some((raw) => raw.replace(/_/g, " ") === t));
-  ok("貼上十七個封鎖字都進不收", !missed.length && full.cards.length === 0, missed.join(", ") || full.blocked.join("|"));
+  ok("貼上封鎖字都進不收", !missed.length && full.cards.length === 0, missed.join(", ") || full.blocked.join("|"));
   const keep = parsePrompt("1girl, mother_and_daughter, school_uniform, serafuku, gakuran, babydoll, sisters, family", opts);
   ok("貼上母女、姊妹、家人、一般制服、babydoll 不會被擋", keep.blocked.length === 0, keep.blocked.join("|"));
 }

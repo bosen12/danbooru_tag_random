@@ -158,8 +158,10 @@ const WATER_SRC = [
     // 2026-10-12：648 個新字進池，保齡球 80 張只剩 4 次，一樣放大。
     // 2026-10-24 第四輪：468 個新字，方向盤（釘車內）80 張 0 次、聖誕樹（釘客廳）1 次；400 張各 5、14 次。
     // 2026-10-26：測量、抱人、量陰莖進池，水槽、櫃台、麥克風架、白板 80 張各剩 4 次，一樣放大。
+    // 2026-10-26 衣服一批：保齡球不是球館帶出來的，跟環境字搶名額。釘球館 400 張、兩種模式合計只剩 3 次。再放大。
     const BIG = ["poker table", "nightstand", "shopping cart", "bowling ball", "steering wheel", "christmas tree", "sink", "counter", "microphone stand", "whiteboard"];
-    const n = BIG.includes(prop) ? 400 : 80;
+    const BIGGER = ["bowling ball"];
+    const n = BIGGER.includes(prop) ? 2000 : BIG.includes(prop) ? 400 : 80;
     for (const mode of ["normal", "diverse"]) sweep(mk({ sceneMode: mode }), trigger, n, 500000);
   }
 
