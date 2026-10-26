@@ -28,42 +28,21 @@ PATHS = [
     "scripts/more_tags.py",
     "scripts/focus_tags.py",
 ]
-# 底線封鎖的字永遠不做牌（web/card-art.js 的 HARD_BANNED）。
-HARD = {
-    "loli",
-    "shota",
-    "aged down",
-    "onee-shota",
-    "oppai loli",
-    "baby",
-    "kodomo doushi",
-    "toddlercon",
-    "toddlersex",
-    "mother and child",
-    "father and child",
-    "carrying baby",
-    "kindergarten uniform",
-    "tomoeda elementary school uniform",
-    "tokyo-3 middle school uniform",
-    "mitakihara school uniform",
-    "tokiwadai school uniform",
-    "nanamori school uniform",
-    "sakugawa school uniform",
-    "nanairogaoka middle school uniform",
-    "raimon",
-    "pacifier",
-    "diaper",
-    "bib",
-    "onesie",
-    "training bra",
-    "age progression",
-    "age comparison",
-    "parent and child",
-    "father and son",
-    "children",
-    "child carry",
-    "child",
-}
+
+
+# 底線封鎖的字永遠不做牌，連卡冊「含禁用」的字牌也不給。名單只有一份：web/card-art.js 的 HARD_BANNED。
+def hard_banned() -> set[str]:
+    src = (ROOT / "web" / "card-art.js").read_text(encoding="utf-8")
+    m = re.search(r"HARD_BANNED\s*=\s*Object\.freeze\(\[([^\]]*)\]\)", src)
+    if not m:
+        raise SystemExit("找不到 web/card-art.js 的 HARD_BANNED")
+    words = set(re.findall(r'"([^"]+)"', m.group(1)))
+    if "loli" not in words:
+        raise SystemExit("web/card-art.js 的 HARD_BANNED 讀起來不對（沒有 loli）")
+    return words
+
+
+HARD = hard_banned()
 FAM = {"char_anime": "動漫", "char_game": "遊戲", "char_other": "其他"}
 
 TAG_RE = re.compile(rb'"tag"\s*:\s*"([^"\\]+)"')
