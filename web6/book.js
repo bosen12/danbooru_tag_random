@@ -1779,9 +1779,14 @@ function workTile(x, i, onGone) {
     alt: "",
     loading: "lazy",
     decoding: "async",
-    onerror: (e) => {
+    onerror: async (e) => {
       // ComfyUI 那邊把原圖刪了（又沒收藏）：這一格整個拿掉，張數也不算它（2026-10-26 專案主：自己清掉）。
-      e.currentTarget.closest(".book-work")?.remove();
+      // 只認 404（伺服器說原圖不在了）；ComfyUI 沒開是 502，那時候圖都還在，不能整排清掉。
+      const tile = e.currentTarget.closest(".book-work");
+      const r = await fetch(src, { cache: "no-store" }).catch(() => null);
+      r?.body?.cancel().catch(() => {});
+      if (r?.status !== 404) return;
+      tile?.remove();
       onGone?.(x);
     },
   });
