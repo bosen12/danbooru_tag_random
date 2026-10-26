@@ -5,7 +5,8 @@
 web/lexicon.json（含 characterBan）、web/lexicon_parts、scripts/characters.json、
 以及 merge／建議池腳本裡的 row()。改過名的字（lexicon 的 renamed）沿用舊名更早的那天。
 
-禁用角色一併寫進 banned，卡冊才列得出來。不寫 cardPositive，也不把 loli／shota 做成牌。
+禁用角色一併寫進 banned，卡冊才列得出來。不寫 cardPositive。
+封鎖字（web/card-art.js 的 HARD_BANNED）不在這裡另外擋：抽牌、卡面、伺服器那幾層已經擋住。
 
     python scripts/tag_dates.py
 """
@@ -29,20 +30,6 @@ PATHS = [
     "scripts/focus_tags.py",
 ]
 
-
-# 底線封鎖的字永遠不做牌，連卡冊「含禁用」的字牌也不給。名單只有一份：web/card-art.js 的 HARD_BANNED。
-def hard_banned() -> set[str]:
-    src = (ROOT / "web" / "card-art.js").read_text(encoding="utf-8")
-    m = re.search(r"HARD_BANNED\s*=\s*Object\.freeze\(\[([^\]]*)\]\)", src)
-    if not m:
-        raise SystemExit("找不到 web/card-art.js 的 HARD_BANNED")
-    words = set(re.findall(r'"([^"]+)"', m.group(1)))
-    if "loli" not in words:
-        raise SystemExit("web/card-art.js 的 HARD_BANNED 讀起來不對（沒有 loli）")
-    return words
-
-
-HARD = hard_banned()
 FAM = {"char_anime": "動漫", "char_game": "遊戲", "char_other": "其他"}
 
 TAG_RE = re.compile(rb'"tag"\s*:\s*"([^"\\]+)"')
@@ -165,8 +152,6 @@ def banned_cards(lex: dict, first: dict[str, str]) -> list[dict]:
     group_zh = lex.get("groupZh") or {}
     rows = []
     for tag in sorted(norm(t) for t in lex.get("characterBan") or [] if t):
-        if tag in HARD:
-            continue
         c = by_tag.get(tag) or {}
         series = str(c.get("series") or "")
         group = character_sub_id(series) if series else "character"
