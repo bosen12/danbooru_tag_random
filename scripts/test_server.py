@@ -615,6 +615,16 @@ _minor = [
     "nanamori school uniform",
     "sakugawa school uniform",
     "nanairogaoka middle school uniform",
+    "raimon",
+    "pacifier",
+    "diaper",
+    "bib",
+    "onesie",
+    "training bra",
+    "age progression",
+    "age comparison",
+    "parent and child",
+    "father and son",
     "children",
     "child carry",
     "child",
@@ -624,6 +634,7 @@ ok("十五個新封鎖字都擋得到（底線、權重括號），含 children�
 ok("babydoll 不會被 baby 誤擋", _bip("1girl, babydoll") == [])
 ok("carrying、carrying person、princess carry、piggyback 照舊能送", _bip("carrying, carrying person, princess carry, piggyback") == [])
 ok("mother and daughter、sisters、family 不是封鎖字", _bip("mother and daughter, sisters, family") == [])
+ok("child's drawing、miniboy、mini person、brother and sister、teacher and student 不是封鎖字", _bip("child's drawing, miniboy, mini person, brother and sister, teacher and student") == [])
 ok("school uniform、serafuku、gakuran 照舊能送", _bip("school uniform, serafuku, gakuran") == [])
 ok("能用的角色不擋（自己的括號留著）", _bip("((makima (chainsaw man))), yor briar") == [])
 try:

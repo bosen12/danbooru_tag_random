@@ -74,6 +74,16 @@ for _name in (
     "nanamori school uniform",
     "sakugawa school uniform",
     "nanairogaoka middle school uniform",
+    "raimon",
+    "pacifier",
+    "diaper",
+    "bib",
+    "onesie",
+    "training bra",
+    "age progression",
+    "age comparison",
+    "parent and child",
+    "father and son",
     "children",
     "child carry",
     "child",
@@ -86,6 +96,11 @@ ok("wa lolita is not banned", new_tag_ok("wa lolita") != "banned")
 ok("mother and daughter is not a ban", new_tag_ok("mother and daughter") != "banned")
 ok("sisters is not a ban", new_tag_ok("sisters") != "banned")
 ok("family is not a ban", new_tag_ok("family") != "banned")
+ok("child's drawing is not a ban", new_tag_ok("child's drawing") != "banned")
+ok("miniboy is not a ban", new_tag_ok("miniboy") != "banned")
+ok("mini person is not a ban", new_tag_ok("mini person") != "banned")
+ok("brother and sister is not a ban", new_tag_ok("brother and sister") != "banned")
+ok("teacher and student is not a ban", new_tag_ok("teacher and student") != "banned")
 ok("school uniform is not a ban", new_tag_ok("school uniform") != "banned")
 ok("serafuku is not a ban", new_tag_ok("serafuku") != "banned")
 ok("gakuran is not a ban", new_tag_ok("gakuran") != "banned")

@@ -2,8 +2,9 @@
 /**
  * 抽取不變式稽核。跑大量 drawOne()，檢查輸出有沒有違反下面這份**人工維護**的語意規格。
  *
- *   node scripts/audit_draw_invariants.mjs          預設 2000 張，進 test.bat
+ *   node scripts/audit_draw_invariants.mjs          預設 2000 張。單獨跑仍是這支。
  *   node scripts/audit_draw_invariants.mjs 20000    手動深度稽核
+ *   test.bat 改走 test_block_shards.mjs，把頂層區塊拆開同時跑。張數與門檻仍以這支為準。
  *
  * 設計上的三條規矩（Codex 2026-09-13 裁決）：
  *
@@ -1044,8 +1045,10 @@ FAIL 性行為互斥  ×${bad}/${N}`);
   const N = 260;
   // 2026-10-24 第四輪：這一格多了在地板上、在桌面上、在長椅上、在地面上、在鞦韆上。數整格（詞庫裡 group 是
   // furniture 的全部），不是只數原本那六個；戶外坐得上去的（地上、長椅、鞦韆）配室外是對的，不算錯。
+  // 2026-10-26 環境一批：引擎 OUTDOOR_FURN 再加欄杆、輪椅、墊子、鞦韆本體。配室外是對的。
+  // 站姿仍必須是 0。王座、凳子、蒲團、暖桌、浴凳這些室內傢俱不在這份名單裡。
   const FURN = data.tags.filter((t) => t.group === "furniture").map((t) => t.tag);
-  const OUTDOOR_SEAT = new Set(["on ground", "on bench", "on swing"]);
+  const OUTDOOR_SEAT = new Set(["on ground", "on bench", "on swing", "swing", "on railing", "wheelchair", "mat"]);
   const UPRIGHT = ["standing", "walking", "running", "jumping", "standing split"];
   let drew = 0;
   let withFurn = 0;

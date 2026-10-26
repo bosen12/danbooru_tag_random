@@ -5,6 +5,11 @@ import { fileURLToPath } from "url";
 import { HARD_BANNED } from "../web/card-art.js";
 import { ERAS, defaultSettings, drawOne, indexLexicon, mulberry32 } from "../web/engine.js";
 
+// 分片（test_loop_shards.mjs）只拆「每個詞釘一次」那個迴圈。種子是 760000+詞的位置，跟走訪順序無關。
+const DRAW_PART = process.env.DRAW_PART || "";
+const DRAW_SHARD = Number(process.env.DRAW_SHARD || 0);
+const DRAW_SHARDS = Math.max(1, Number(process.env.DRAW_SHARDS || 1));
+
 const ROOT = join(dirname(fileURLToPath(import.meta.url)), "..");
 const data = JSON.parse(readFileSync(join(ROOT, "web", "lexicon.json"), "utf8"));
 const lex = indexLexicon(data);
@@ -23,6 +28,29 @@ function tagsOf(drawn) {
   return new Set(drawn.positive.split(",").map((raw) => raw.trim().replace(/^\(/, "").replace(/:[\d.]+\)$/, "")));
 }
 
+function childMiss(mode) {
+  const childSeed = 760000 + data.tags.length;
+  const childDrawn = drawOne(lex, { ...defaultSettings(data), rating: "explicit", sceneMode: mode, girl: true, boy: true }, new Set(["children"]), new Set(), mulberry32(childSeed), childSeed);
+  return tagsOf(childDrawn).has("children") ? [`${mode}/children 應該永遠不出現: ${childDrawn.positive}`] : [];
+}
+
+if (DRAW_PART === "assert") {
+  const payload = JSON.parse(readFileSync(process.env.DRAW_RESULT, "utf8"));
+  const misses = [...payload.misses];
+  let draws = payload.draws;
+  for (const mode of ["normal", "diverse", "weird"]) {
+    misses.push(...childMiss(mode));
+    draws += 1;
+  }
+  ok(`單 pin authority（${draws} 張）`, misses.length === 0, misses.slice(0, 10).join("\n  "));
+  if (failed) {
+    console.error(`\n${failed} failed`);
+    process.exit(1);
+  }
+  process.exit(0);
+}
+
+if (DRAW_PART !== "heavy") {
 // 左側面板所有會改 admissibility 的主要維度。每格用兩個固定 seed，不追求統計顯著，
 // 而是守住「任何合法組合都抽得動、沒有 hard contradiction／support orphan」。
 {
@@ -87,7 +115,9 @@ function tagsOf(drawn) {
     ok(`${section} 多樣性底線`, unique[section].size >= floor, `${unique[section].size} < ${floor}`);
   }
 }
+}
 
+if (DRAW_PART !== "rest") {
 // 每一個非 quality 詞都用自己的合法 heat/era/cast 單獨釘選，並跨三種 sceneMode。
 // forcePin 或 reconcile 只要開始靜默吃 pin，這裡會直接列出詞與模式。
 {
@@ -96,7 +126,8 @@ function tagsOf(drawn) {
   const BATH_SCENE = new Set(["showering", "bathing", "shared bathing", "bath", "bathtub", "bubble bath", "onsen", "ofuro", "bathhouse", "sauna", "shower (place)"]);
   let draws = 0;
   for (const mode of ["normal", "diverse", "weird"]) {
-    for (let index = 0; index < data.tags.length; index += 1) {
+    // 分片時每個程序只走自己的詞。種子仍是 760000+index。
+    for (let index = DRAW_SHARD; index < data.tags.length; index += DRAW_SHARDS) {
       const item = data.tags[index];
       if (item.section === "quality") continue;
       // HARD_BANNED 永遠不輸出（engine.js NEVER_DRAW），釘了也不給：反過來要確定沒出現。
@@ -131,14 +162,20 @@ function tagsOf(drawn) {
         && drawn.trace.rejected.some((r) => r.tag === item.tag && r.reason === "reconcile");
       if (!got.has(item.tag) && !sceneDrop) misses.push(`${mode}/${item.tag}: ${drawn.positive}`);
     }
-    const childSeed = 760000 + data.tags.length;
-    const childDrawn = drawOne(lex, { ...defaultSettings(data), rating: "explicit", sceneMode: mode, girl: true, boy: true }, new Set(["children"]), new Set(), mulberry32(childSeed), childSeed);
-    draws += 1;
-    if (tagsOf(childDrawn).has("children")) misses.push(`${mode}/children 應該永遠不出現: ${childDrawn.positive}`);
+    if (DRAW_PART !== "heavy") {
+      misses.push(...childMiss(mode));
+      draws += 1;
+    }
+  }
+  if (DRAW_PART === "heavy") {
+    console.log("__SHARD__" + JSON.stringify({ misses, draws }));
+    process.exit(0);
   }
   ok(`單 pin authority（${draws} 張）`, misses.length === 0, misses.slice(0, 10).join("\n  "));
 }
+}
 
+if (DRAW_PART !== "heavy") {
 // 代表性的跨 section 合法組合。這些不是反射 engine 內部表格，而是使用者會在左欄
 // 實際做出的 pin 組合；兩個字都必須留下。
 {
@@ -186,6 +223,7 @@ function tagsOf(drawn) {
   const report = drawn.mustReport.find((row) => row.key === "feature:face");
   ok("pin×mustDraw 衝突不硬湊", tagsOf(drawn).has("head out of frame") && report?.got === 0 && report.want === 1,
     `report=${JSON.stringify(report)} POS=${drawn.positive}`);
+}
 }
 
 if (failed) {

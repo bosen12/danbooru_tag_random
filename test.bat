@@ -67,7 +67,7 @@ if errorlevel 1 (
   exit /b 1
 )
 echo == panel and pin matrix ==
-call node scripts\test_panel_pin_matrix.mjs
+call node scripts\test_loop_shards.mjs panel
 if errorlevel 1 (
   pause
   exit /b 1
@@ -79,13 +79,13 @@ if errorlevel 1 (
   exit /b 1
 )
 echo == draw invariants ==
-call node scripts\audit_draw_invariants.mjs
+call node scripts\test_block_shards.mjs scripts\audit_draw_invariants.mjs
 if errorlevel 1 (
   pause
   exit /b 1
 )
 echo == clothing reachability ==
-call node scripts\test_clothing_reachability.mjs
+call node scripts\test_loop_shards.mjs clothing
 if errorlevel 1 (
   pause
   exit /b 1
@@ -97,7 +97,7 @@ if errorlevel 1 (
   exit /b 1
 )
 echo == draw contracts ==
-call node scripts\test_draw_contracts.mjs
+call node scripts\test_loop_shards.mjs contracts
 if errorlevel 1 (
   pause
   exit /b 1

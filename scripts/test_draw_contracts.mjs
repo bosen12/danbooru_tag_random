@@ -58,6 +58,12 @@ function ok(name, cond, detail) {
   }
 }
 
+// 分片（test_loop_shards.mjs）把孤兒檢查的每一張拆開抽。種子仍是 seed0+i。
+// 父程序把 fired 加總之後才套「至少 5 次」。單獨跑這支時份數是 1。
+const DRAW_PART = process.env.DRAW_PART || "";
+const DRAW_SHARD = Number(process.env.DRAW_SHARD || 0);
+const DRAW_SHARDS = Math.max(1, Number(process.env.DRAW_SHARDS || 1));
+
 // --- 1. 孤兒檢查 -----------------------------------------------------------
 // 每條：這個字出現在最終 POS 時，至少要有一個前提也在。
 // 只列 engine.js 真的有宣告 gate 的（可引用的既有契約），不自己發明。
@@ -71,7 +77,8 @@ const NEEDS = [
   ["hard hat", ["construction worker", "construction site"], ["construction worker"]],
   ["lab coat", ["scientist", "laboratory", "doctor", "clinic", "hospital"], ["scientist"]],
   ["bunk bed", ["bedroom", "hotel room", "kids room"], ["bedroom"]],
-  ["frying pan", ["cooking", "kitchen"], ["cooking"]],
+  // holding frying pan 會帶出平底鍋。人可以拿著鍋、人不在廚房（2026-10-26 姿勢一批）。
+  ["frying pan", ["cooking", "kitchen", "holding frying pan"], ["cooking"]],
   ["golf club", ["golf", "golf course"], ["golf course"]],
   // 網球服也提供 tennis 身分；沒有具體場地時，引擎允許持拍而未指定打球動作。
   ["tennis racket", ["tennis", "tennis uniform", "tennis court", "sports court", "school gym"], ["tennis court"]],
@@ -87,7 +94,8 @@ const NEEDS = [
   ["counter", ["kitchen", "cafe", "bar (place)", "restaurant", "convenience store", "supermarket", "izakaya"], ["kitchen"]],
   ["steering wheel", ["car", "car interior", "driving", "cockpit", "airplane interior", "racing suit"], ["car interior"]],
   ["shopping cart", ["supermarket", "convenience store", "shopping", "market"], ["supermarket"]],
-  ["microphone stand", ["singing", "karaoke", "karaoke box", "bar (place)", "livestream"], ["karaoke box"]],
+  // holding microphone stand 會帶出麥克風架，跟唱歌場合是兩條路。
+  ["microphone stand", ["singing", "karaoke", "karaoke box", "bar (place)", "livestream", "holding microphone stand"], ["karaoke box"]],
   ["whiteboard", ["classroom", "office", "teacher", "laboratory", "studying"], ["classroom"]],
   ["christmas tree", ["christmas", "winter", "living room"], ["living room"]],
 ];
@@ -105,6 +113,42 @@ const WATER_SRC = [
   "after bathing", "wet", "wet hair", "wet clothes", "steaming body",
 ];
 
+function assertOrphans(orphans, fired, sample, drawn) {
+  if (!orphans.size) {
+    ok(`reconcile 之後沒有孤兒（${drawn} 張 × ${NEEDS.length + 1} 條前提）`, true);
+  } else {
+    for (const [k, n] of orphans) ok(`reconcile 孤兒：${k}`, false, `${n} 次\n  ${sample.get(k)}`);
+  }
+  const never = [...NEEDS.map(([p]) => p), "水上動作"].filter((k) => !(fired.get(k) > 0));
+  ok(
+    "孤兒檢查的每一條規則都真的被跑到",
+    never.length === 0,
+    never.length ? `這幾條一次都沒觸發，等於沒測：${never.join("、")}` : ""
+  );
+  const thin = [...NEEDS.map(([p]) => p), "水上動作"].filter((k) => (fired.get(k) || 0) < 5);
+  ok(
+    "孤兒檢查的每一條規則樣本都夠（≥5 次）",
+    thin.length === 0,
+    thin.length ? `樣本太少：${thin.map((k) => `${k}(${fired.get(k) || 0})`).join("、")}` : ""
+  );
+}
+
+if (DRAW_PART === "assert") {
+  const payload = JSON.parse(readFileSync(process.env.DRAW_RESULT, "utf8"));
+  assertOrphans(
+    new Map(Object.entries(payload.orphans || {})),
+    new Map(Object.entries(payload.fired || {})),
+    new Map(Object.entries(payload.sample || {})),
+    Number(payload.drawn) || 0,
+  );
+  if (failed) {
+    console.error(`\n${failed} failed`);
+    process.exit(1);
+  }
+  process.exit(0);
+}
+
+if (DRAW_PART !== "rest") {
 {
   const mk = (over) =>
     Object.assign(JSON.parse(JSON.stringify(base)), {
@@ -120,7 +164,8 @@ const WATER_SRC = [
 
   const sweep = (settings, pins, n, seed0) => {
     const pinned = new Set(pins);
-    for (let i = 1; i <= n; i++) {
+    // 分片時 i 走 1+shard, 1+shard+份數, …。seed0+i 跟整支單跑是同一批。
+    for (let i = 1 + DRAW_SHARD; i <= n; i += DRAW_SHARDS) {
       const out = drawOne(lex, settings, pinned, new Set(), mulberry32(seed0 + i), seed0 + i);
       const names = new Set(
         out.positive.split(",").map((x) => x.trim().replace(/^\(/, "").replace(/:[\d.]+\)$/, ""))
@@ -159,31 +204,30 @@ const WATER_SRC = [
     // 2026-10-24 第四輪：468 個新字，方向盤（釘車內）80 張 0 次、聖誕樹（釘客廳）1 次；400 張各 5、14 次。
     // 2026-10-26：測量、抱人、量陰莖進池，水槽、櫃台、麥克風架、白板 80 張各剩 4 次，一樣放大。
     // 2026-10-26 衣服一批：保齡球不是球館帶出來的，跟環境字搶名額。釘球館 400 張、兩種模式合計只剩 3 次。再放大。
+    // 2026-10-26 環境一批：環境池變大。購物車 400 張、兩種模式合計 4 次（約 0.5%）；聖誕樹合計 2 次（約 0.25%）。
+    // 門檻仍是至少 5 次。購物車放到 2000（兩種模式合計預期約 20 次），聖誕樹放到 4000（預期約 20 次）。
     const BIG = ["poker table", "nightstand", "shopping cart", "bowling ball", "steering wheel", "christmas tree", "sink", "counter", "microphone stand", "whiteboard"];
-    const BIGGER = ["bowling ball"];
-    const n = BIGGER.includes(prop) ? 2000 : BIG.includes(prop) ? 400 : 80;
+    // 2026-10-26 品質一批：釘賭場、兩種模式各 400 張，牌桌合計只剩 3 次（約 0.4%）。門檻仍是至少 5 次。
+    // 放到 2000，跟保齡球、購物車一樣（兩種模式合計預期約 15 次）。
+    const BIGGER = ["bowling ball", "shopping cart", "poker table"];
+    const HUGE = ["christmas tree"];
+    const n = HUGE.includes(prop) ? 4000 : BIGGER.includes(prop) ? 2000 : BIG.includes(prop) ? 400 : 80;
     for (const mode of ["normal", "diverse"]) sweep(mk({ sceneMode: mode }), trigger, n, 500000);
   }
 
-  if (!orphans.size) {
-    ok(`reconcile 之後沒有孤兒（${drawn} 張 × ${NEEDS.length + 1} 條前提）`, true);
-  } else {
-    for (const [k, n] of orphans) ok(`reconcile 孤兒：${k}`, false, `${n} 次\n  ${sample.get(k)}`);
+  if (DRAW_PART === "heavy") {
+    console.log("__SHARD__" + JSON.stringify({
+      orphans: Object.fromEntries(orphans),
+      fired: Object.fromEntries(fired),
+      sample: Object.fromEntries(sample),
+      drawn,
+    }));
+    process.exit(0);
   }
 
-  // 覆蓋率：沒被觸發過的規則＝那句「沒有孤兒」對它而言是空話。
-  const never = [...NEEDS.map(([p]) => p), "水上動作"].filter((k) => !(fired.get(k) > 0));
-  ok(
-    "孤兒檢查的每一條規則都真的被跑到",
-    never.length === 0,
-    never.length ? `這幾條一次都沒觸發，等於沒測：${never.join("、")}` : ""
-  );
-  const thin = [...NEEDS.map(([p]) => p), "水上動作"].filter((k) => (fired.get(k) || 0) < 5);
-  ok(
-    "孤兒檢查的每一條規則樣本都夠（≥5 次）",
-    thin.length === 0,
-    thin.length ? `樣本太少：${thin.map((k) => `${k}(${fired.get(k) || 0})`).join("、")}` : ""
-  );
+  // 覆蓋率：沒被觸發過的規則＝那句「沒有孤兒」對它而言是空話。加總後才套至少 5 次。
+  assertOrphans(orphans, fired, sample, drawn);
+}
 }
 
 // --- 2. 設定邊界 -----------------------------------------------------------

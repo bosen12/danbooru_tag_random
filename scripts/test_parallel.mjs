@@ -3,7 +3,8 @@
  * 整套測試同時跑（test.bat 預設走這裡；test.bat serial 照舊一段一段跑）。
  *
  * 清單就是 test.bat 裡 `echo == 名稱 ==` 底下那幾行 call：這裡讀 test.bat，不另外列，加新測試只改 test.bat。
- *   - 每一段一個子程序，同時跑幾段看 CPU 核心數（-j 改）。引擎那段自己會再分 10 份，算 10 格。
+ *   - 每一段一個子程序，同時跑幾段看 CPU 核心數（-j 改）。引擎那段自己會再分多份，算同樣多格。
+ *     抽樣不變式、面板、衣服可達、抽樣契約也各自分開跑，格數照它們實際開的進程算，避免把 24 格塞爆。
  *   - 上次跑得久的先開跑（時間記在暫存資料夾），最後一段不會是剛好排到的大塊頭。
  *   - 失敗不中斷：全部跑完一次列出哪幾段失敗、各自最後幾行輸出。
  *   - server live（比對 data/、開伺服器）和 draw baselines（量速度）等別段都跑完才單獨跑。
@@ -29,6 +30,8 @@ const arg = (name) => {
 };
 const SLOTS = Math.max(2, Number(arg("-j")) || availableParallelism());
 const ENGINE_SHARDS = Math.min(10, Math.max(2, SLOTS - 4));
+// 慢的統計段：每段 4 份就夠把最重的迴圈拆開，又留得出格子給引擎。核心少就少分幾份。
+const STAT_SHARDS = Math.min(4, Math.max(2, Math.floor(SLOTS / 6)));
 // test.bat 找到的 Python（python 或 py -3）。
 const PY = (process.env.TEST_PY || (process.platform === "win32" ? "python" : "python3")).trim().split(/\s+/);
 // 最後單獨跑的段（名稱）：server live 比對 data/、開伺服器；draw baselines 量抽一張要幾毫秒，
@@ -76,10 +79,23 @@ if (process.argv.includes("--failed")) {
   const keys = only.toLowerCase().split(",").map((s) => s.trim()).filter(Boolean);
   list = list.filter((s) => keys.some((k) => s.name.toLowerCase().includes(k)));
 }
+function shardPlan(cmd) {
+  const script = String(cmd[1] || "").replaceAll("\\", "/");
+  if (script.endsWith("test_engine_shards.mjs")) return { j: ENGINE_SHARDS, cost: ENGINE_SHARDS };
+  if (script.endsWith("test_block_shards.mjs")) return { j: STAT_SHARDS, cost: STAT_SHARDS };
+  // 迴圈分片另外還有一份跑其餘檢查。
+  if (script.endsWith("test_loop_shards.mjs")) return { j: STAT_SHARDS, cost: STAT_SHARDS + 1 };
+  return null;
+}
 for (const s of list) {
-  // 引擎那段：多分幾份，佔同樣多格。
-  s.cmds = s.cmds.map((c) => (c[1].endsWith("test_engine_shards.mjs") ? [...c, "-j", String(ENGINE_SHARDS)] : c));
-  s.cost = s.cmds.some((c) => c[1].endsWith("test_engine_shards.mjs")) ? ENGINE_SHARDS : 1;
+  let cost = 1;
+  s.cmds = s.cmds.map((c) => {
+    const plan = shardPlan(c);
+    if (!plan) return c;
+    cost = Math.max(cost, plan.cost);
+    return [...c, "-j", String(plan.j)];
+  });
+  s.cost = cost;
   s.guess = cache.secs?.[s.name] ?? (s.cost > 1 ? 600 : 30);
 }
 mkdirSync(LOGS, { recursive: true });
@@ -145,7 +161,7 @@ async function pool(items) {
   });
 }
 
-console.log(`同時跑：${list.length} 段，最多 ${SLOTS} 格（引擎分 ${ENGINE_SHARDS} 份）。輸出在 ${LOGS}`);
+console.log(`同時跑：${list.length} 段，最多 ${SLOTS} 格（引擎分 ${ENGINE_SHARDS} 份，慢的統計段分 ${STAT_SHARDS} 份）。輸出在 ${LOGS}`);
 await pool(list.filter((s) => !ALONE.has(s.name)));
 for (const s of list.filter((s) => ALONE.has(s.name))) await runStage(s);
 

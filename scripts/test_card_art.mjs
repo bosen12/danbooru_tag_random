@@ -36,6 +36,16 @@ const tagsOf = (positive) => positive.split(",").map((s) => s.trim());
     "nanamori school uniform",
     "sakugawa school uniform",
     "nanairogaoka middle school uniform",
+    "raimon",
+    "pacifier",
+    "diaper",
+    "bib",
+    "onesie",
+    "training bra",
+    "age progression",
+    "age comparison",
+    "parent and child",
+    "father and son",
     "child carry", "child",
   ];
   ok("底線封鎖名單跟 HARD_BANNED 一致", HARD_BANNED.length === minor.length && minor.every((t) => HARD_BANNED.includes(t)), HARD_BANNED.join(", "));
@@ -58,6 +68,7 @@ const tagsOf = (positive) => positive.split(",").map((s) => s.trim());
     "tokyo-3 middle school uniform", "mitakihara school uniform", "tokiwadai school uniform",
     "nanamori school uniform", "sakugawa school uniform", "nanairogaoka middle school uniform",
   ].every((t) => !byTag.get(t)?.implies.includes("school uniform")));
+  ok("發育期胸罩不帶出胸罩", !(byTag.get("training bra")?.implies || []).includes("bra"));
 }
 
 /* ---------- 畫人一定畫成年人 ---------- */
@@ -250,6 +261,16 @@ const tagsOf = (positive) => positive.split(",").map((s) => s.trim());
     "nanamori school uniform",
     "sakugawa school uniform",
     "nanairogaoka middle school uniform",
+    "raimon",
+    "pacifier",
+    "diaper",
+    "bib",
+    "onesie",
+    "training bra",
+    "age progression",
+    "age comparison",
+    "parent and child",
+    "father and son",
     "child carry", "child",
   ];
   const full = parsePrompt(names.map((t) => t.replace(/ /g, "_")).join(", "), opts);

@@ -8,6 +8,48 @@ import {
   mulberry32,
 } from "../web/engine.js";
 
+// 分片（test_loop_shards.mjs）把 16000／4000 張拆開抽，次數加總後才套下面這些門檻。
+// 單獨跑這支時 DRAW_PART 是空的，迴圈跟以前一樣從 0 走到 N。
+const DRAW_PART = process.env.DRAW_PART || "";
+const DRAW_SHARD = Number(process.env.DRAW_SHARD || 0);
+const DRAW_SHARDS = Math.max(1, Number(process.env.DRAW_SHARDS || 1));
+
+function clothBucket(raw) {
+  const m = new Map(Object.entries(raw.counts || {}));
+  const ranked = [...m.entries()].sort((a, c) => c[1] - a[1]);
+  const [top, n] = ranked[0] || ["-", 0];
+  const total = raw.total || 0;
+  return { m, total, top, pct: total ? n / total : 0 };
+}
+
+function assertClothBuckets(feet, fabric, edo) {
+  let nFail = 0;
+  const report = (name, cond, detail) => {
+    if (cond) console.log(`ok   ${name}`);
+    else {
+      nFail += 1;
+      console.error(`FAIL ${name}${detail ? " — " + detail : ""}`);
+    }
+  };
+  report("現代的鞋子沒有一雙超過 35%", feet.pct < 0.35, `${feet.top} ${(feet.pct * 100).toFixed(0)}%`);
+  report("現代的 sneakers 不再獨佔（< 25%）", (feet.m.get("sneakers") || 0) / feet.total < 0.25, `sneakers ${(((feet.m.get("sneakers") || 0) / feet.total) * 100).toFixed(0)}%`);
+  report("現代的布料樣本夠多（≥ 60 個）", fabric.total >= 60, `只有 ${fabric.total} 個`);
+  report("現代的 latex 不再獨佔（< 30%）", (fabric.m.get("latex") || 0) / fabric.total < 0.3, `latex ${(((fabric.m.get("latex") || 0) / fabric.total) * 100).toFixed(0)}%（${fabric.total} 個樣本）`);
+  const edoOwn = ["geta", "zouri"].reduce((a, t) => a + (edo.m.get(t) || 0), 0) / edo.total;
+  report("江戶的鞋子仍以木屐／草履為主（≥ 60%）", edoOwn >= 0.6, `${(edoOwn * 100).toFixed(0)}%`);
+  return nFail;
+}
+
+if (DRAW_PART === "assert") {
+  const payload = JSON.parse(readFileSync(process.env.DRAW_RESULT, "utf8"));
+  const nFail = assertClothBuckets(
+    clothBucket(payload.modern.feet),
+    clothBucket(payload.modern.fabric),
+    clothBucket(payload.edo),
+  );
+  process.exit(nFail ? 1 : 0);
+}
+
 const ROOT = join(dirname(fileURLToPath(import.meta.url)), "..");
 const data = JSON.parse(readFileSync(join(ROOT, "web", "lexicon.json"), "utf8"));
 const lex = indexLexicon(data);
@@ -21,6 +63,8 @@ settings.lockScene = false;
 settings.drawJob = true;
 settings.counts = { subject: 10, feature: 10, pose: 10, clothing: 10, env: 10 };
 
+let failed = 0;
+if (DRAW_PART !== "heavy") {
 const families = {
   top: new Set(["white shirt", "blue shirt", "black shirt", "green shirt", "pink shirt", "red shirt"]),
   bottom: new Set(["black skirt", "blue skirt", "brown skirt", "white skirt", "blue pants", "black pants"]),
@@ -48,7 +92,6 @@ for (let i = 0; i < 1200; i += 1) {
   if (tags.has("long sleeves") && tags.has("short sleeves")) sleeveClashes += 1;
 }
 
-let failed = 0;
 for (const [family, tags] of seen) {
   if (tags.size) {
     console.log(`ok   clothing ${family} color variants are reachable: ${[...tags].join(", ")}`);
@@ -219,27 +262,25 @@ else {
     `shirt pull ${n("shirt pull")}/${N} = ${((n("shirt pull") / N) * 100).toFixed(1)}%`,
   );
 }
+}
 
+if (DRAW_PART !== "rest") {
 // --- 現代的鞋子與布料：時代專屬加權不該讓一兩個字獨佔 ---------------------------------
 // clothingPrefer 讓「這個時代專屬」的衣服權重 30／20、其他 4。古代這是對的（江戶該穿木屐）。
 // 但現代的鞋子格只有 sneakers／cleats／high heels 是現代專屬，布料格只有 latex／fishnets，
 // 加權全壓在它們身上：實測現代 3000 張 sneakers 佔鞋子 47%、latex 佔布料 53%。
 // 涼鞋、靴子、襪子本來就是現代的東西，在現代不需要靠加權「顯示年代」。
 {
-  const report = (name, cond, detail) => {
-    if (cond) console.log(`ok   ${name}`);
-    else {
-      failed += 1;
-      console.error(`FAIL ${name}${detail ? " — " + detail : ""}`);
-    }
-  };
   const by = new Map(data.tags.map((t) => [t.tag, t]));
   // 一輪抽 N 張，同時數好幾種 mutex（鞋子、布料一起數，不各抽一遍）。
+  // 分片時 i 走 shard, shard+份數, …。種子仍是 940000+i。父程序把次數加總後才套門檻。
   const shares = (era, mutexes, N) => {
     const out = new Map(mutexes.map((x) => [x, { m: new Map(), total: 0 }]));
     const casts = [{ girl: true, boy: false }, { girl: false, boy: true }, { girl: true, boy: true }];
     const heats = [["activity"], ["tease"], ["flash"], ["sex"], ["tease", "flash", "sex"]];
-    for (let i = 0; i < N; i += 1) {
+    let seen = 0;
+    for (let i = DRAW_SHARD; i < N; i += DRAW_SHARDS) {
+      seen += 1;
       const s = {
         ...defaultSettings(data),
         ...casts[i % 3],
@@ -261,26 +302,38 @@ else {
       const [top, n] = [...b.m].sort((a, c) => c[1] - a[1])[0] || ["-", 0];
       Object.assign(b, { top, pct: b.total ? n / b.total : 0 });
     }
-    return out;
+    return { out, seen };
   };
-  const share = (era, mutex, N) => shares(era, [mutex], N).get(mutex);
+  const share = (era, mutex, N) => {
+    const run = shares(era, [mutex], N);
+    return { bucket: run.out.get(mutex), seen: run.seen };
+  };
   // 布料現在只在「更多種類」或自由補抽時才出現（2026-10 一千五百張只有 18 張有布料）：
   // 抽太少，latex 佔幾成全看運氣（18 張裡 7 張就是 39%）。抽 8000 張、至少要有 60 個樣本才算數；
   // 8000 張時 latex 約 21%（以前加權壓在它身上是 53%），門檻 30% 才不會因為詞庫小改就翻來翻去。
   // 8000 → 12000（2026-10-14）：詞庫多了 29 張同名卡（alt_names.json），8000 張只剩 53 個布料樣本。
   // 12000 → 16000（2026-10-26）：衣服一批加了一百多個沒有互斥格的布料，衣服額度先被它們拿走，
   // mutex=fabric 的樣本 12000 張只剩 55 個。門檻仍是 60，樣本放大。
-  const modern = shares("modern", ["feet", "fabric"], 16000);
-  const feet = modern.get("feet");
-  report("現代的鞋子沒有一雙超過 35%", feet.pct < 0.35, `${feet.top} ${(feet.pct * 100).toFixed(0)}%`);
-  report("現代的 sneakers 不再獨佔（< 25%）", (feet.m.get("sneakers") || 0) / feet.total < 0.25, `sneakers ${(((feet.m.get("sneakers") || 0) / feet.total) * 100).toFixed(0)}%`);
-  const fabric = modern.get("fabric");
-  report("現代的布料樣本夠多（≥ 60 個）", fabric.total >= 60, `只有 ${fabric.total} 個`);
-  report("現代的 latex 不再獨佔（< 30%）", (fabric.m.get("latex") || 0) / fabric.total < 0.3, `latex ${(((fabric.m.get("latex") || 0) / fabric.total) * 100).toFixed(0)}%（${fabric.total} 個樣本）`);
+  const modernRun = shares("modern", ["feet", "fabric"], 16000);
+  const modern = modernRun.out;
   // 反方向：古代的時代專屬加權照舊 —— 江戶的鞋子仍以木屐／草履為主。
-  const edo = share("edo", "feet", 900);
-  const edoOwn = ["geta", "zouri"].reduce((a, t) => a + (edo.m.get(t) || 0), 0) / edo.total;
-  report("江戶的鞋子仍以木屐／草履為主（≥ 60%）", edoOwn >= 0.6, `${(edoOwn * 100).toFixed(0)}%`);
+  // 2026-10-26 姿勢一批沒有新的鞋子。同一組種子 900 張是 58.6%（木屐 44、草履 55，其餘是襪子、拖鞋、靴子）。
+  // 鞋子池沒變，是後面的姿勢把共用亂數挪開。放到 4000 張是 61.6%（447/726）。門檻仍是 60%。
+  const edoRun = share("edo", "feet", 4000);
+  const edo = edoRun.bucket;
+  if (DRAW_PART === "heavy") {
+    const pack = (b, seen) => ({ total: b.total, counts: Object.fromEntries(b.m), seen });
+    console.log("__SHARD__" + JSON.stringify({
+      modern: {
+        feet: pack(modern.get("feet"), modernRun.seen),
+        fabric: pack(modern.get("fabric"), modernRun.seen),
+      },
+      edo: pack(edo, edoRun.seen),
+    }));
+    process.exit(0);
+  }
+  failed += assertClothBuckets(modern.get("feet"), modern.get("fabric"), edo);
+}
 }
 
 if (failed) process.exit(1);
