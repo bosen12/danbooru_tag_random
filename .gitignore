@@ -31,3 +31,6 @@ zipu/art/manifest.json
 .no-face-fetch
 .no-character-bake
 .no-lora-manager-fetch
+
+# /graphify 產的知識圖（本機查程式用，不進版控、也不同步到開源版）
+graphify-out/
