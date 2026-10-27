@@ -1725,7 +1725,8 @@ const ALBUM_FIXTURE = [
     const hand6 = readFileSync(join(ROOT, "web6/hand.js"), "utf8");
     const fuseHtml6 = readFileSync(join(ROOT, "web6/fuse.html"), "utf8");
     const css6 = readFileSync(join(ROOT, "web6/card.css"), "utf8").replace(/\r\n/g, "\n");
-    ok("偏好卡牌：共用 hand.js，最多十張，兩個房間各存一份", hand6.includes("export function createHand(") && hand6.includes("max = 10") && app6.includes('key: "mochi.hand.v1"') && fuse6.includes('key: "mochi.fuse.hand.v1"'));
+    ok("偏好卡牌：共用 hand.js，不限張數；墨池、卡冊同一份，疊印台自己一份", hand6.includes("export function createHand(") && hand6.includes("max = Infinity") && app6.includes('key: "mochi.hand.v1"') && fuse6.includes('key: "mochi.fuse.hand.v1"') && readFileSync(join(ROOT, "web6/book.js"), "utf8").includes('const HAND_KEY = "mochi.hand.v1";'));
+    ok("偏好卡牌多到疊也看不清：平平一排、左右捲（滾輪也捲），新加的捲到看得到", hand6.includes("const scrolls = (n, w, room) =>") && hand6.includes("body.scrollLeft += e.deltaY;") && hand6.includes("else reveal0(tag);") && css6.includes('.fav-hand[data-scroll="true"] .fav-body {'));
     ok("偏好卡牌鈕：墨池在只抽牌左邊、疊印台在撤回左邊", fuseHtml6.indexOf('id="hand-btn"') >= 0 && fuseHtml6.indexOf('id="hand-btn"') < fuseHtml6.indexOf('id="undo"') && app6.indexOf("hand-btn") < app6.indexOf('"只抽牌"'));
     ok("已經在卡池的不擺在托盤上；從卡池拿下來飛回托盤、不回字盒", hand6.includes("tags.filter((t) => !inPool(t))") && fuse6.includes("(hand?.has(tag) && hand.nodeOf(tag)) || caseCard(tag)") && app6.includes("const homeNow = () => (hand?.has(tag) && hand.nodeOf(tag)) || libCardNode(tag);"));
     ok("挑牌模式：字盒點一下加、再點一下拿掉；托盤可以拖進拖出", fuse6.includes("if (hand?.editing) hand.toggle(card.tag") && app6.includes("if (hand?.editing) return void hand.toggle(card.tag") && fuse6.includes('{ id: "hand", el: hand?.el') && app6.includes('{ id: "hand", el: hand?.el'));
@@ -1751,7 +1752,7 @@ const ALBUM_FIXTURE = [
     // 左下的「卡池」跟膠囊會撞，一律讓。托盤打開（佔滿底邊）時兩個都讓。
     ok("窄螢幕角落的「卡池」標籤一律讓到托盤上面、廢字簍在托盤打開時讓；寬螢幕托盤兩旁留位置；提示浮在托盤上面", css6.includes('.pool-pill,\n  body[data-fav-hand-open="true"] .trash {\n    translate: 0 calc(-1 * var(--fav-h, 0px));') && css6.includes("width: min(calc(100vw - 200px)") && hand6.includes("vw >= 1100 ? 200 : 20") && css6.includes("body .toast {\n  bottom: calc(var(--fav-h, 0px)") && hand6.includes("Math.ceil(innerHeight - r.top) + 12"));
     ok("疊印台字盒：在池又在手牌的牌，「手」排在「在池」下面", css6.includes('.case-grid .card[data-state="pinned"][data-in-hand="true"]::before {\n  top: 22px;'));
-    ok("從托盤拿掉一張：提示帶「復原」，放回原位（挑牌模式不問）；滿了兩房間都有看得到的提示", hand6.includes("if (!quiet && !editing) onRemoved(tag, () => restore(tag, was));") && hand6.includes("function restore(tag, at)") && fuse6.includes('onRemoved: (t, undo) => toast(') && app6.includes('onRemoved: (t, undo) => toast(') && fuse6.includes("onFull: () => toast("));
+    ok("從托盤拿掉一張：提示帶「復原」，放回原位（挑牌模式不問）", hand6.includes("if (!quiet && !editing) onRemoved(tag, () => restore(tag, was));") && hand6.includes("function restore(tag, at)") && fuse6.includes('onRemoved: (t, undo) => toast(') && app6.includes('onRemoved: (t, undo) => toast('));
     ok("墨池：合成池捲出畫面時，牌往合成池的方向收進去＋「看合成池」，不飛出螢幕", app6.includes("function tuckAway(tag, from, dir)") && app6.includes("return from ? tuckAway(tag, from, to.top < 0 ? -1 : 1) : undefined;") && app6.includes('label: "看合成池"'));
     {
       const cards6 = readFileSync(join(ROOT, "web6/cards.js"), "utf8");
@@ -1928,8 +1929,17 @@ const ALBUM_FIXTURE = [
           return /if \(!usage\.synced\) \{\s*first = fetchUsage\(\);\s*const u = await Promise\.race\(\[first, new Promise\(\(r\) => setTimeout\(r, 700\)\)\]\);/.test(js) &&
             js.indexOf("Promise.race([first") < js.indexOf("render({ animate: false, deal: true });");
         }));
-      ok("卡冊的卡盒：牌上的＋放進盒子（飛進去、蓋盒中章）、盒子點開能拿掉、全部放進墨池走交接便條（web6、web7）",
-        ["web6", "web7"].every((d) => {
+      // 2026-10-27：web6 的卡盒改成偏好卡牌（墨池同一份）＋「＋」送去墨池；web7 照舊是卡盒。
+      {
+        const js = readFileSync(join(ROOT, "web6/book.js"), "utf8");
+        const store6 = readFileSync(join(ROOT, "web6/store.js"), "utf8");
+        ok("卡冊：牌上的＋，偏好卡牌收著＝送去墨池合成池（交接便條、頂欄墨池「+N」、蓋送墨池章，再按拿回來）、展開＝加進偏好卡牌；展開時點牌是挑牌不開詳情；舊卡盒併進偏好卡牌",
+          js.includes("if (picking()) return pickHand(card, node);") && js.includes('S.handOffPool(sending, "book")') && js.includes('kind: "send", text: "送墨池"') && js.includes("badge.textContent = `+${sending.length}`;") &&
+            js.includes("if (picking()) return pickHand(cell._card, node);") && js.includes("openPicks: true,") && js.includes('openKey: "mochi.book.hand.open",') && js.includes("function mergeOldBox()") &&
+            store6.includes("export function peekPoolHandoff(from)") && !js.includes("const BOX_KEY") && readFileSync(join(ROOT, "web6/app.js"), "utf8").includes('if (handoff.length && S.handoffFrom === "book" && kept.length)'));
+      }
+      ok("卡冊的卡盒：牌上的＋放進盒子（飛進去、蓋盒中章）、盒子點開能拿掉、全部放進墨池走交接便條（web7）",
+        ["web7"].every((d) => {
           const js = readFileSync(join(ROOT, d, "book.js"), "utf8");
           return js.includes('const BOX_KEY = "mochi.book.box.v1";') && js.includes("flight(ghost") && js.includes('kind: "box", text: "盒中"') && js.includes('S.handOffPool(box, "book")') && js.includes("leaveAndFlip(grid, slot)") &&
             readFileSync(join(ROOT, d, "app.js"), "utf8").includes("function greetHandoff()") &&
@@ -1939,7 +1949,7 @@ const ALBUM_FIXTURE = [
         readFileSync(join(ROOT, "web7/card-images.js"), "utf8").replace(/\r\n/g, "\n") === readFileSync(join(ROOT, "web6/card-images.js"), "utf8").replace(/\r\n/g, "\n") &&
           readFileSync(join(ROOT, "web7/cards.js"), "utf8").includes("bindArt(el(\"img\"") &&
           readFileSync(join(ROOT, "web7/app.js"), "utf8").includes("art ? handArt(t) :"));
-      ok("卡冊：右下角的＋／✓ 用兩條線畫（全形＋在中文字型裡偏上），放進盒子時折成勾（web6、web7）",
+      ok("卡冊：右下角的＋／✓ 用兩條線畫（全形＋在中文字型裡偏上），按下去折成勾（web6、web7）",
         ["web6", "web7"].every((d) => {
           const js = readFileSync(join(ROOT, d, "book.js"), "utf8");
           const cssText = readFileSync(join(ROOT, d, "book.css"), "utf8");
@@ -2060,7 +2070,7 @@ const ALBUM_FIXTURE = [
             app.includes("function greetPicked()") && app.includes("pickerFrom = new Set(pool);") &&
             cssText.includes(".stepper button::before {") && fuseCss.includes(".case-tab::before {");
         }));
-      ok("牌組：三頁共用面板（decks.js，/api/decks）；墨池合成池、疊印台卡池（空白版列出你的牌組、撤回回原版）、卡冊卡盒都能存、能套用（web6、web7）",
+      ok("牌組：三頁共用面板（decks.js，/api/decks）；墨池合成池、疊印台卡池（空白版列出你的牌組、撤回回原版）、卡冊（web6 偏好卡牌、web7 卡盒）都能存、能套用（web6、web7）",
         ["web6", "web7"].every((d) => {
           const decks = readFileSync(join(ROOT, d, "decks.js"), "utf8");
           return decks.includes("export function openDecks(") && decks.includes('"/api/decks"') && decks.includes("apply(deck)");
@@ -2072,7 +2082,7 @@ const ALBUM_FIXTURE = [
             const book = readFileSync(join(ROOT, d, "book.js"), "utf8");
             return readFileSync(join(ROOT, d, "index.html"), "utf8").includes('id="pool-decks"') && app.includes("const applyDeck = (deck) => applyCards(") &&
               readFileSync(join(ROOT, d, "fuse.html"), "utf8").includes('id="decks-btn"') && fuse.includes("function deckStarters()") && fuse.includes('startWith({ name: deck.name, tags: ok }, btn, { fresh, kind });') &&
-              book.includes("function deckToBox(deck)") && book.includes("onclick: openBoxDecks");
+              (d === "web6" ? book.includes("handTools({") && readFileSync(join(ROOT, d, "hand-tools.js"), "utf8").includes("openDecks({") : book.includes("function deckToBox(deck)") && book.includes("onclick: openBoxDecks"));
           }));
       ok("作品冊：第四個房間（四頁頂欄都有、換頁方向算 3）；墨池成品、疊印台作品詳情有收藏鈕（存伺服器、圖另存、縮圖）；作品冊照分級、能帶牌回墨池、刪除要按兩次（web6、web7）",
         ["web6", "web7"].every((d) => {
@@ -2098,7 +2108,7 @@ const ALBUM_FIXTURE = [
             const app = readFileSync(join(ROOT, d, "app.js"), "utf8");
             return readFileSync(join(ROOT, d, "index.html"), "utf8").includes('id="pool-paste"') && app.includes("function applyCards(tags, { replace = true") &&
               app.includes("listenPaste(") && readFileSync(join(ROOT, d, "fuse.js"), "utf8").includes("paste: () => openPastePlate()") &&
-              readFileSync(join(ROOT, d, "book.js"), "utf8").includes('where: "卡盒"') && readFileSync(join(ROOT, d, "decks.js"), "utf8").includes("貼上提示詞變成牌…");
+              (d === "web6" ? readFileSync(join(ROOT, d, "hand-tools.js"), "utf8").includes("openPaste({") : readFileSync(join(ROOT, d, "book.js"), "utf8").includes('where: "卡盒"')) && readFileSync(join(ROOT, d, "decks.js"), "utf8").includes("貼上提示詞變成牌…");
           }));
       ok("牌的份量：五段 0.7～1.4、牌面右下角寫數字（1.0 不標）、滾輪（停 250ms、頁面沒在捲）／+－／詳情與選單一排；送出 (tag:w)；牌組、貼上、作品冊、疊印台交接都帶份量（web6、web7）",
         readFileSync(join(ROOT, "web6/weights.js"), "utf8") === readFileSync(join(ROOT, "web7/weights.js"), "utf8") &&
@@ -2127,6 +2137,8 @@ const ALBUM_FIXTURE = [
           ['["G", "付印"]', '["P", "付印"]'],
           ['["Z", "復原（Ctrl Z 也可以）：提示上的「復原」；沒有的話撿回剛才封鎖、拿出的那一張"]', '["Z", "提示上有「復原」時：復原（清空合成池、撤下成品…）"]'],
           ['\n      ["Delete", "字盒的牌：丟進廢字簍（按 Z 撿回來）"],', ""],
+          // 2026-10-27 web6 的卡冊：卡盒改成偏好卡牌（web7 照舊）。
+          ['["B", "打開、收起偏好卡牌"]', '["B", "打開、收起卡盒"]'],
         ].reduce((text, [a, b]) => text.replace(a, b), readFileSync(join(ROOT, "web6/keys-help.js"), "utf8")) === readFileSync(join(ROOT, "web7/keys-help.js"), "utf8") &&
           ["web6", "web7"].every((d) =>
             [["app.js", "mochi"], ["fuse.js", "fuse"], ["book.js", "book"], ["album.js", "album"]].every(([f, room]) => readFileSync(join(ROOT, d, f), "utf8").includes(`mountKeysHelp("${room}");`)) &&
@@ -2141,10 +2153,22 @@ const ALBUM_FIXTURE = [
       ok("新手導覽：頂欄「教學」右邊的「導覽」，四個房間各自一步一步（亮出目標、文字小視窗、要動手的步驟做到才往下、找不到目標就略過、手機另一套步驟）；第一次來邀請一次（自動化測試不出現）；導覽層不被彈窗設成 inert（web6、web7）",
         readFileSync(join(ROOT, "web6/tour.js"), "utf8") === readFileSync(join(ROOT, "web7/tour.js"), "utf8") &&
           // web6 跟 web7 刻意不同的一行：2026-10-24 web6 的卡冊多了新到舊／舊到新、含禁用（web7 沒有）。
-          readFileSync(join(ROOT, "web6/tour-steps.js"), "utf8").replace(
-            "多到少、少到多、新到舊、舊到新；「出好圖」「常撤下」看哪些牌常出好圖、哪些常被你撤下（要先印一陣子才排得出來）。「含禁用」把不能用的角色也列出來。",
-            "多到少、少到多；「出好圖」「常撤下」看哪些牌常出好圖、哪些常被你撤下（要先印一陣子才排得出來）。"
-          ) === readFileSync(join(ROOT, "web7/tour-steps.js"), "utf8") &&
+          // 2026-10-27 web6 的卡盒改成偏好卡牌＋送去墨池（web7 照舊）。
+          [
+            [
+              "多到少、少到多、新到舊、舊到新；「出好圖」「常撤下」看哪些牌常出好圖、哪些常被你撤下（要先印一陣子才排得出來）。「含禁用」把不能用的角色也列出來。",
+              "多到少、少到多；「出好圖」「常撤下」看哪些牌常出好圖、哪些常被你撤下（要先印一陣子才排得出來）。",
+            ],
+            ["可以帶去墨池，或加進偏好卡牌。", "可以帶去墨池，或放進卡盒。"],
+            [
+              `    target: () => document.querySelector(".fav-hand .fav-tab"),
+    title: "偏好卡牌、送去墨池",
+    text: "牌上的 ＋ 把牌送去墨池合成池，人留在這裡繼續挑。展開底下的偏好卡牌時，點牌就收進長期常用的那一排（跟墨池同一份）。",`,
+              `    target: () => $("#box-pill"),
+    title: "卡盒",
+    text: "邊逛邊把牌收進卡盒（牌上的 ＋），收好一次帶去墨池，或存成牌組。",`,
+            ],
+          ].reduce((text, [a, c]) => text.replace(a, c), readFileSync(join(ROOT, "web6/tour-steps.js"), "utf8").replace(/\r\n/g, "\n")) === readFileSync(join(ROOT, "web7/tour-steps.js"), "utf8").replace(/\r\n/g, "\n") &&
           readFileSync(join(ROOT, "web/scroll-lock.js"), "utf8").includes('"tour", "toast"]);') &&
           ["web6", "web7"].every((d) =>
             [["app.js", "mochi"], ["fuse.js", "fuse"], ["book.js", "book"], ["album.js", "album"]].every(([f, room]) => readFileSync(join(ROOT, d, f), "utf8").includes(`mountTour("${room}");`)) &&
