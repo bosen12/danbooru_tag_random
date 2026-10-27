@@ -29,6 +29,7 @@ function runtime(path = new URL("../web6/motion.js", import.meta.url), beforeSou
   const context = {
     Map, Set, Math, console,
     matchMedia: () => ({ matches: false }),
+    getComputedStyle: (n) => ({ objectPosition: n.objectPosition || "50% 50%" }),
     getSfx: () => ({}),
     document: { body: { append(n) { n.isConnected = true; } } },
     performance: { now: () => now },
@@ -38,7 +39,7 @@ function runtime(path = new URL("../web6/motion.js", import.meta.url), beforeSou
     clearTimeout(id) { timers.delete(id); },
   };
   const source = (beforeSource ?? readFileSync(path, "utf8")).replace(/^import .*;\r?$/gm, "").replace(/\bexport /g, "");
-  const api = vm.runInNewContext(source + "\n({ flight, flip, flipBy, CURVE, DUR, travelTime, bezier, replayDeal: typeof replayDeal === 'function' ? replayDeal : null })", context);
+  const api = vm.runInNewContext(source + "\n({ flight, flip, flipBy, CURVE, DUR, travelTime, bezier, replayDeal: typeof replayDeal === 'function' ? replayDeal : null, cropFlipStart: typeof cropFlipStart === 'function' ? cropFlipStart : null })", context);
   return {
     ...api, node, events, timers, frames,
     step(time) { now = time; const pending = [...frames.values()]; frames.clear(); for (const fn of pending) fn(now); },
@@ -155,5 +156,28 @@ test("original and optimized flight styles remain byte-identical at every sample
     }
   }
 });
+
+// 牌飛進詳情：格子裡只露出插畫中間一段，起點要剛好是那一段（等比縮放，不擠扁），落地才打開成整張。
+function visibleAt(start, to) {
+  const [, tx, ty, s] = start.transform.match(/translate\(([-\d.]+)px, ([-\d.]+)px\) scale\(([\d.]+)\)$/).map(Number);
+  const [t, r, b, l] = start.clipPath.match(/inset\(([\d.]+)px ([\d.]+)px ([\d.]+)px ([\d.]+)px/).slice(1).map(Number);
+  return { s, left: to.left + tx + l * s, top: to.top + ty + t * s, right: to.left + tx + (to.width - r) * s, bottom: to.top + ty + (to.height - b) * s };
+}
+for (const [name, from, objectPosition] of [
+  ["tall grid card (crop the sides)", { left: 395.9, top: 454, width: 78.06, height: 154.27 }, "50% 22%"],
+  ["wide source (crop top 22%, bottom 78%)", { left: 40, top: 60, width: 200, height: 120 }, "50% 22%"],
+]) {
+  test("cropFlipStart: " + name + " starts exactly on the visible slice, uniformly scaled", () => {
+    for (const path of ["../web6/motion.js", "../web7/motion.js"]) {
+      const rt = runtime(new URL(path, import.meta.url));
+      const to = { left: 388, top: 126.2, width: 192, height: 280.8 };
+      const v = visibleAt(rt.cropFlipStart(from, to, { objectPosition }), to);
+      for (const k of ["left", "top"]) assert.ok(Math.abs(v[k] - from[k]) < 0.2, `${path} ${k} ${v[k]} vs ${from[k]}`);
+      assert.ok(Math.abs(v.right - (from.left + from.width)) < 0.2, `${path} right ${v.right}`);
+      assert.ok(Math.abs(v.bottom - (from.top + from.height)) < 0.2, `${path} bottom ${v.bottom}`);
+      assert.ok(Math.abs(v.s - Math.max(from.width / to.width, from.height / to.height)) < 1e-3);
+    }
+  });
+}
 
 if (failures) process.exitCode = 1;
