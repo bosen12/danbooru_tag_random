@@ -9,6 +9,10 @@ Created by / 原作者：[bosen12](https://github.com/bosen12) · Code: GPLv3 (`
 > Just want the card workbench? [danbooru_tag_mochi](https://github.com/bosen12/danbooru_tag_mochi) is that part on its own, with an English README.
 > Community: [join the Mochi Discord server](https://discord.gg/UtDK9w3Hw).
 
+> **Sexual imagery of minors is prohibited.** Do not use this software to generate sexual or sexualized images of anyone under 18, or of characters who are or look like minors, fictional ones included. The built-in blocks are a minimum safeguard, not a permission; removing or bypassing them to make such images is misuse.
+>
+> **禁止生成未成年人的性影像。** 不得用本軟體產生未滿 18 歲者、或是未成年／外觀像未成年的角色（包括虛構角色）的性或性暗示影像。內建的封鎖只是最低限度的防護，不代表沒被擋的就可以；為了產生這類影像而移除或繞過防護，就是濫用。
+
 本機隨機抽一套 Danbooru 標籤，立刻丟進 ComfyUI（WAI / Illustrious）生圖。
 
 社群：[加入墨池的 Discord 伺服器](https://discord.gg/UtDK9w3Hw)（分享作品、問用法、回報問題、許願新牌）。
