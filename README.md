@@ -7,8 +7,11 @@ Created by / 原作者：[bosen12](https://github.com/bosen12) · Code: GPLv3 (`
 > Windows: double-click `start-web6.bat` (the card workbench, English or Chinese) and open <http://127.0.0.1:8796>.
 > macOS / Linux: `./start.sh`. Card art downloads on first start.
 > Just want the card workbench? [danbooru_tag_mochi](https://github.com/bosen12/danbooru_tag_mochi) is that part on its own, with an English README.
+> Community: [join the Mochi Discord server](https://discord.gg/UtDK9w3Hw).
 
 本機隨機抽一套 Danbooru 標籤，立刻丟進 ComfyUI（WAI / Illustrious）生圖。
+
+社群：[加入墨池的 Discord 伺服器](https://discord.gg/UtDK9w3Hw)（分享作品、問用法、回報問題、許願新牌）。
 
 中文介面以中文牌名顯示；真正送給 Comfy 的 POS 仍是英文 tag。滑鼠停在中文上會顯示英文。
 
@@ -325,6 +328,12 @@ loli、shota 永遠不畫（`web/card-art.js` 的 `HARD_BANNED`）。有人的�
   ↓ 走進字盒、方向鍵在牌之間移動，第一排再 ↑ 回到搜尋框。注音、倉頡選字時按的 Enter 不算。
 - 清空合成池有五秒可以「復原」；清空時偏好卡牌回到手上，其他的收成一疊回字盒，復原時照原路飛回來。
 
+### 介紹頁、社群
+
+<http://127.0.0.1:8796/about.html>：一頁看完的墨池介紹（真的牌扇形攤開、五個房間、三步開始），附 [Discord](https://discord.gg/UtDK9w3Hw) 和 [GitHub](https://github.com/bosen12/danbooru_tag_mochi) 連結。
+頂欄「社群」打開加入 Discord 的小視窗（邀請連結可以複製）；第一次來墨池會先問一次要不要加入，關掉之後才冒出導覽的邀請卡。
+每個房間的導覽結尾前一步、使用教學影片的片尾，都會指到頂欄的「社群」。連結寫在 `web6/community.js`。
+
 ### 介紹影片
 
 <http://127.0.0.1:8796/intro.html>（墨池右上角「介紹影片」）：**三分鐘完整版**，排字匣、墨池、疊印台一次看完。
@@ -343,17 +352,18 @@ loli、shota 永遠不畫（`web/card-art.js` 的 `HARD_BANNED`）。有人的�
 `node scripts/export_intro_video.mjs 輸出.mp4`（預設存到桌面，三分鐘版約 15 分鐘）。影片裡的成品圖是 ComfyUI 真的畫的，
 重畫用 `node scripts/render_intro_art.mjs`。
 
-### 偏好卡牌（墨池、疊印台各一份）
+### 偏好卡牌（墨池、卡冊一份，疊印台一份）
 
-墨池「只抽牌」左邊、疊印台「撤回」左邊的「偏好卡牌」：最多十張常用的牌，攤在視窗底部的托盤上。
-托盤上的牌就是字盒那一張（同樣大小、同樣的樣子），兩個房間各存一份，互不影響。
+墨池「只抽牌」左邊、疊印台「撤回」左邊的「偏好卡牌」：長期常用的牌，不限張數，攤在視窗底部的托盤上（多到疊不下就平平一排、左右捲）。
+托盤上的牌就是字盒那一張（同樣大小、同樣的樣子）。墨池和卡冊共用一份，疊印台另存一份，互不影響。
+卡冊牌上的「＋」把牌直接送去墨池的合成池（頂欄墨池旁邊標「+N」），人留在卡冊繼續挑；展開卡冊底下的偏好卡牌時，點牌就收進那一排。
 
 - **加牌**：把字盒的牌拖到托盤（放在哪就插在哪，拖的時候會先空出那一格）；或按托盤上的「＋ 挑牌」再點字盒的牌
   （再點一次拿掉）；疊印台牌的選單、墨池的牌詳情也有「加入偏好卡牌」。字盒裡在手牌的牌右上角蓋一個「手」。
 - **出牌**：點托盤上的牌，或拖進合成池／卡池。已經在池裡的不擺在托盤上（十張裡有三張在池裡，托盤只擺七張）。
 - **拿掉**：指到牌右上角的 ×（觸控螢幕一直都在），或拖回字盒、按 Delete；拿掉後的提示可以「復原」。
 - **排順序**：在托盤裡拖，或鍵盤 Shift＋←→。鍵盤：托盤只佔一個 Tab 停點，←→ 在牌之間走，Enter 出牌。
-- **收起**：點標頭收成一顆「偏好卡牌 7/10」的標籤；開關狀態也記著。托盤開著時頁面底下會墊出它的高度，不蓋住內容；
+- **收起**：點標頭收成一顆「偏好卡牌 7」的標籤；開關狀態也記著。托盤開著時頁面底下會墊出它的高度，不蓋住內容；
   手機上角落的廢字簍、「卡池」標籤會讓到托盤上面。
 - **回到手上**：從池裡拿下來、被別張擠掉、清版時，偏好卡牌飛回托盤上它那一格（托盤收著就收進標籤），不回字盒；
   撤回清版時再從手上打出去。
