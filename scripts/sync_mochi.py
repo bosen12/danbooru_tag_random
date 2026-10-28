@@ -58,6 +58,7 @@ TEST_FILES = {
     "test_custom_cards.py": "test_custom_cards.py",
     "test_custom_cards_browser.mjs": "test_web6_custom_cards_browser.mjs",
     "test_pwa_browser.mjs": "test_web6_pwa_browser.mjs",
+    "test_theme_browser.mjs": "test_web6_theme_browser.mjs",
     "test_i18n.mjs": "test_web6_i18n.mjs",
     "test_i18n_browser.mjs": "test_web6_i18n_browser.mjs",
     "test_setup_browser.mjs": "test_mochi_setup_browser.mjs",
