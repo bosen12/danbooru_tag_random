@@ -332,6 +332,11 @@ loli、shota 永遠不畫（`web/card-art.js` 的 `HARD_BANNED`）。有人的�
   ↓ 走進字盒、方向鍵在牌之間移動，第一排再 ↑ 回到搜尋框。注音、倉頡選字時按的 Enter 不算。
 - 清空合成池有五秒可以「復原」；清空時偏好卡牌回到手上，其他的收成一疊回字盒，復原時照原路飛回來。
 
+### 安裝成 App、Windows 免安裝包
+
+- **安裝成 App（PWA）**：Chrome、Edge 認定可以安裝時，頂欄「社群」旁邊出現「安裝成 App」（`web6/install-app.js`），裝好後墨池有自己的視窗、桌面圖示，右鍵圖示可直接開疊印台、卡冊、作品冊、解析池（`web6/manifest.json` 的 shortcuts）。已經是 App 視窗開的不出現那顆鈕。
+- **Windows 免安裝包**：`python scripts/build_portable.py --repo ../danbooru_tag_mochi` 把開源版已提交的檔、官方免安裝 Python（3.12）和 Pillow 壓成一個 zip，打包時用包裡的 Python 開一次伺服器確認起得來，印出大小和 SHA-256。開源版的 `start.bat` 看到旁邊有 `python\python.exe` 就先用它，使用者不必先裝 Python。
+
 ### 介紹頁、社群
 
 <http://127.0.0.1:8796/about.html>：一頁看完的墨池介紹（真的牌扇形攤開、五個房間、三步開始），附 [Discord](https://discord.gg/UtDK9w3Hw) 和 [GitHub](https://github.com/bosen12/danbooru_tag_mochi) 連結。

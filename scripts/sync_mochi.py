@@ -36,6 +36,7 @@ SCRIPT_FILES = [
     "fetch_upscale_model.py", "card_art.mjs", "card_jobs.json", "card-art-check.bat", "bake-cards-window.bat",
     "fetch-cards-window.bat", "upscale-model-check.bat", "fetch-upscale-window.bat", "pose-assets-check.bat",
     "fetch-pose-window.bat", "fetch_lora_manager.py", "lora-manager-check.bat", "fetch-lora-manager-window.bat",
+    "build_portable.py",
 ]
 # 詞庫的原料與重做的腳本：web/lexicon_parts（另外整個帶）＋這些 → merge_lexicon.py、add_zh.py 重產 web/lexicon.json。
 # characters.json 是角色的完整資料（作品、禁用與原因、貼文數）。tests/test_lexicon_rebuild.py 會在暫存資料夾只拿這些重做一次，
@@ -56,6 +57,7 @@ TEST_FILES = {
     "test_discord_routes_browser.mjs": "test_web6_discord_routes_browser.mjs",
     "test_custom_cards.py": "test_custom_cards.py",
     "test_custom_cards_browser.mjs": "test_web6_custom_cards_browser.mjs",
+    "test_pwa_browser.mjs": "test_web6_pwa_browser.mjs",
     "test_i18n.mjs": "test_web6_i18n.mjs",
     "test_i18n_browser.mjs": "test_web6_i18n_browser.mjs",
     "test_setup_browser.mjs": "test_mochi_setup_browser.mjs",
