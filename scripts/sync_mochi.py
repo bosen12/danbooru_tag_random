@@ -29,7 +29,7 @@ W6 = ROOT / "web6"
 WEB = ROOT / "web"
 
 # 伺服器與它 import 的模組（根目錄）。
-ROOT_FILES = ["server.py", "card_usage.py", "card_decks.py", "card_art_custom.py", "discord_routes.py", "file_lock.py", "gen_log.py", "lora_scan.py", "recipes.py", "image_parse.py", "setup_tasks.py", "workflows.py", "config.example.json"]
+ROOT_FILES = ["server.py", "card_usage.py", "card_decks.py", "card_art_custom.py", "custom_cards.py", "discord_routes.py", "file_lock.py", "gen_log.py", "lora_scan.py", "recipes.py", "image_parse.py", "setup_tasks.py", "workflows.py", "config.example.json"]
 # 啟動檔與伺服器會叫到的腳本（卡面下載與烘焙、放大模型、姿勢參考、修臉節點、ComfyUI 的 LoRA Manager）。
 SCRIPT_FILES = [
     "app_config.py", "bake_card_art.py", "card_thumbnails.py", "fetch_card_art.py", "card_art_pack.json", "fetch_pose_assets.py", "fetch_face_detailer.py", "fetch_tagger.py",
@@ -54,6 +54,8 @@ TEST_FILES = {
     "test_fav_chars_sync.mjs": "test_fav_chars_sync.mjs",
     "test_gen_log_cap.py": "test_gen_log_cap.py",
     "test_discord_routes_browser.mjs": "test_web6_discord_routes_browser.mjs",
+    "test_custom_cards.py": "test_custom_cards.py",
+    "test_custom_cards_browser.mjs": "test_web6_custom_cards_browser.mjs",
     "test_i18n.mjs": "test_web6_i18n.mjs",
     "test_i18n_browser.mjs": "test_web6_i18n_browser.mjs",
     "test_setup_browser.mjs": "test_mochi_setup_browser.mjs",

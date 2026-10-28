@@ -44,6 +44,9 @@ function harness() {
     stepper: () => ({}), switchBox: () => ({}), mountSeedControl: () => ({}), renderGoFloat() {},
     el: (tag, attrs, ...children) => ({ tag, attrs, children: children.flat().filter(x => x && typeof x === "object"), text: children.filter(x => typeof x === "string").join("") }),
     handleLoraKeys: () => false, wfHandleKeys: () => false, anyOverlay: () => false, trashPanel: null,
+    // 自製牌（custom-cards.js）：池子裡沒有自製牌，詞庫外的字是空的；觸發字照 lora.js 的接法。
+    isCustomTag: (t) => typeof t === "string" && t.startsWith("custom:"), poolExtras: () => "",
+    joinTriggerParts: (parts) => parts.filter(Boolean).join(", "),
   };
   vm.createContext(ctx);
   const syncStart = text.indexOf("function syncWallEmpty(");

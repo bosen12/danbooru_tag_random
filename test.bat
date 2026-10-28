@@ -331,6 +331,12 @@ if errorlevel 1 (
   pause
   exit /b 1
 )
+echo == custom cards ==
+%PY% scripts\test_custom_cards.py
+if errorlevel 1 (
+  pause
+  exit /b 1
+)
 echo == server ==
 %PY% scripts\test_server.py
 if errorlevel 1 (
