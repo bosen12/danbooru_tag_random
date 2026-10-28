@@ -55,6 +55,8 @@ Webhook 網址|Webhook URL
 存設定|Save settings
 送一則測試|Send test post
 也收整個系列|Whole series too
+這張圖的角色|Characters in this image
+這張圖的牌|Cards in this image
 整個系列|Whole series
 找角色或系列：約兒、yor、間諜家家酒…|Find a character or series: Yor, Spy x Family…
 角色或系列（合起來最多 3 個）|Characters or series (up to 3 in total)
