@@ -12,6 +12,8 @@ function harness() {
   const frames = new Map(), timers = new Map(), records = [], nodes = [], sent = [], wall = { prepend(n) { nodes.unshift(n); } };
   const bar = { dataset: {}, children: [], querySelector() { return null; }, querySelectorAll() { return []; }, get childElementCount() { return this.children.length; }, replaceChildren(...children) { this.children = children; } };
   const wallHead = { dataset: {} }, wallEmpty = { hidden: false };
+  // 「成品」那列右邊的「印製中…／停」（app.js renderWallBusy）。
+  const wallBusy = { dataset: {}, isConnected: true, children: [], querySelector(sel) { return sel === ".go-stop" ? this.children.find((c) => c.attrs?.class?.includes("go-stop")) || null : null; }, replaceChildren(...children) { this.children = children; } };
   let clock = 0, seed = 0, sequence = 0;
   const ctx = {
     console, Date, Math, Promise, Set, Map, structuredClone,
@@ -37,12 +39,12 @@ function harness() {
     $: id => id === "wall" ? wall : id === "go-bar" ? bar : id === "wall-head" ? wallHead : id === "wall-empty" ? wallEmpty : {},
     refuse() {}, toast() {}, sfx: { deal() {}, roll() {} }, recordUses() {}, tagsOfPositive: () => [],
     shotNode: shot => ({ id: shot.id, querySelector: () => null }), enter() {}, trimWall() {},
-    S: { saveShots() {} }, generator: { busy: false, pending: 0, enqueue: shot => sent.push(shot.id), stop() {} }, renderGoBar() {}, reducedMotion: () => false, DUR: { micro: 120 },
-    looping: false, infinite: false, hand: null, seedNode: null, discord: null, weights: new Map(),
+    S: { saveShots() {} }, generator: { busy: false, pending: 0, enqueue: shot => sent.push(shot.id), stop() {} }, renderGoBar() {}, reducedMotion: () => false, DUR: { micro: 120, short: 220 }, CURVE: {}, css: () => "ease",
+    looping: false, infinite: false, hand: null, seedNode: null, discord: null, weights: new Map(), wallBusy,
     // 無限抽「印幾張停」（ui.loopMax，0＝不限）：這裡不限。
     ui: { loopMax: 0 }, loopSent: 0, loopMaxPicker: () => ({}),
     stepper: () => ({}), switchBox: () => ({}), mountSeedControl: () => ({}), renderGoFloat() {},
-    el: (tag, attrs, ...children) => ({ tag, attrs, children: children.flat().filter(x => x && typeof x === "object"), text: children.filter(x => typeof x === "string").join("") }),
+    el: (tag, attrs, ...children) => ({ tag, attrs, children: children.flat().filter(x => x && typeof x === "object"), text: children.filter(x => typeof x === "string").join(""), animate() {} }),
     handleLoraKeys: () => false, wfHandleKeys: () => false, anyOverlay: () => false, trashPanel: null,
     // 自製牌（custom-cards.js）：池子裡沒有自製牌，詞庫外的字是空的；觸發字照 lora.js 的接法。
     isCustomTag: (t) => typeof t === "string" && t.startsWith("custom:"), poolExtras: () => "",
@@ -53,8 +55,8 @@ function harness() {
   vm.runInContext(text.slice(syncStart, text.indexOf("\n}", syncStart) + 2), ctx);
   vm.runInContext(declarations + text.slice(begin, end) + "\nthis.drawBatch = drawBatch", ctx);
   return {
-    ctx, records, frames, timers, sent, nodes, bar,
-    wireControls() { for (const name of ["goStatusText", "renderGoStatus", "renderGoBar", "stopAll", "onKey"]) { /* 只抓最外層那一支（詳情視窗裡也有一支同名的 onKey） */ const start = text.indexOf("\nfunction " + name + "(") + 1; const finish = text.indexOf("\n}", start); vm.runInContext(text.slice(start, finish + 2), ctx); } },
+    ctx, records, frames, timers, sent, nodes, bar, wallBusy,
+    wireControls() { for (const name of ["goStatusText", "renderGoStatus", "renderGoBar", "renderWallBusy", "stopAll", "onKey"]) { /* 只抓最外層那一支（詳情視窗裡也有一支同名的 onKey） */ const start = text.indexOf("\nfunction " + name + "(") + 1; const finish = text.indexOf("\n}", start); vm.runInContext(text.slice(start, finish + 2), ctx); } },
     async drain() { for (let i = 0; i < 200; i++) { const pending = [...frames.values()]; frames.clear(); for (const fn of pending) fn(clock); await Promise.resolve(); } },
   };
 }
@@ -151,15 +153,17 @@ test("stop during an unfinished round does not submit jobs or start queued round
 test("the actual idle-page Stop button cancels preparation before generation", async () => {
   const h = harness(); h.wireControls();
   h.ctx.renderGoBar();
-  assert(!!!findText(h.bar.children, "停"));
+  assert(!!!findText(h.wallBusy.children, "停"));
   const pending = h.ctx.drawBatch(true);
   await settle(h);
-  const stop = findText(h.bar.children, "停");
+  // 「停」在「成品」那列（renderWallBusy），不在抽牌那排：那排印的時候一顆都不多，按鈕不會被擠到下一行。
+  assert(!!!findText(h.bar.children, "停"), "The draw bar must not grow a Stop button while printing");
+  const stop = findText(h.wallBusy.children, "停");
   assert(stop, "Stop must be available while draws are being prepared");
   stop.attrs.onclick();
   await h.drain(); await pending;
   assert.equal(h.sent.length, 0);
-  assert(!!!findText(h.bar.children, "停"));
+  assert(!!!findText(h.wallBusy.children, "停"));
 });
 
 test("the actual Escape handler cancels an idle-page draw round", async () => {
