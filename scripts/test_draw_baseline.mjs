@@ -407,7 +407,8 @@ const MATRIX_SEEDS = 200;
 // 2026-10-26 第六次：姿勢、特徵、主題 628 張進池（raimon 封鎖）。單人女的情境沒有男生；性愛檔 9 張陰莖都是動物陰莖（馬陰莖 3、狗陰莖 2，都帶出動物陰莖）。4d8d157e → 95ca9f5d。
 // 同日：衣服下穿比基尼、緊身衣、連身衣不再算穿著那件衣服（跟衣服下穿泳裝同一句）。五張單人女金標與 supplement 沒變。矩陣 95ca9f5d → 78a3c125。單人女的情境沒有男生；那 9 張仍是動物陰莖。
 // 2026-10-26 第七次：品質與 54.csv 共 110 張進池（9 個未成年保護字封鎖；noose、self-harm 不收）。仍是 1girl solo，沒有男生或人類陰莖。 矩陣 78a3c125 → 6b42ebfb。單人女的情境沒有男生，沒有人類陰莖。
-const MATRIX_GOLD = "6b42ebfb";
+// 2026-10-31：加反拉手臂 arm held back（性愛、要一男一女、佔兩隻手臂）與 arm grab（grabbing another's arm 的舊名）。姿勢候選多兩張，矩陣 6b42ebfb → 6ce30a24；五張單人女金標沒變。
+const MATRIX_GOLD = "6ce30a24";
 
 function matrixSettings(over) {
   const s = defaultSettings(data);
