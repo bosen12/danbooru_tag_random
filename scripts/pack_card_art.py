@@ -10,7 +10,13 @@
 下載端用它判斷「這張是上一版公開包放的、使用者沒自己重烘過」，才用新版蓋過去
 （重畫過的卡，例如 v1 貼地仰視腳邊有蟲，v2 重烘了）。自己烘的卡一張都不會被蓋。
 
-印出張數、兩包的大小、SHA-256，貼進 fetch_card_art.py 的 THUMBS、FULL、EXPECTED（BASE 換成新的 tag）。只用標準函式庫。
+給了 --previous 還會多打一包 card-art-update.zip（v13 起）：只放比上一版新增或重畫的卡（縮圖、原圖、它們的 manifest）。
+已經有上一版的人只抓這一包；v11 升 v12 整包重抓 318 MB，只抓新的是 131 MB。
+
+打包前先跑 scan_card_art.py：有整張空白的卡（v12 的融合畫面、未戴單眼罩就是這樣發出去的）就不打包，
+真的要發加 --allow-blank。掃描要 Pillow；其餘只用標準函式庫。
+
+印出張數、各包的大小、SHA-256，貼進 fetch_card_art.py 的 THUMBS、FULL、UPDATE、EXPECTED（BASE 換成新的 tag）。
 """
 from __future__ import annotations
 
@@ -85,6 +91,8 @@ def hard_banned() -> set[str]:
 
 def main() -> int:
     args = sys.argv[1:]
+    allow_blank = "--allow-blank" in args
+    args = [a for a in args if a != "--allow-blank"]
     previous = None
     if "--previous" in args:
         i = args.index("--previous")
@@ -120,36 +128,78 @@ def main() -> int:
         and v.get("rating", "general") == "general"
         and (CARDS / str(v.get("file", ""))).exists()
     }
+    try:
+        import scan_card_art
+
+        blank = scan_card_art.scan(manifest, general.keys())
+    except ImportError:
+        blank = None
+    if blank is None:
+        print("沒裝 Pillow，掃不了空白的卡：pip install pillow（真的要打包加 --allow-blank）")
+        if not allow_blank:
+            return 1
+    elif blank:
+        for tag, ink, std in blank:
+            print(f"blank  {tag}  (ink {ink:.4f}, std {std:.1f})")
+        print(f"{len(blank)} 張整張空白：改 web/card-art.js 的提示詞重烤（真的要照發加 --allow-blank）")
+        if not allow_blank:
+            return 1
     history = {}
+    old = {}
     if previous:
         with zipfile.ZipFile(previous) as z:
             old = json.loads(z.read("cards/manifest.json").decode("utf-8"))
         history = {k: v.get("positive", "") for k, v in old.items() if isinstance(v, dict)}
     out_dir.mkdir(parents=True, exist_ok=True)
-    thumbs_zip, full_zip = out_dir / "card-art-thumbs.zip", out_dir / "card-art-full.zip"
+    thumbs_zip, full_zip, update_zip = out_dir / "card-art-thumbs.zip", out_dir / "card-art-full.zip", out_dir / "card-art-update.zip"
+    # 比上一版新增或重畫的：增量包只放這些。
+    delta = sorted(k for k, v in general.items() if k not in history or history[k] != v.get("positive", "")) if previous else []
     # 固定時間戳與順序：同一批圖打出來的包每次都一樣，雜湊才對得起來。
     stamp = (2026, 1, 1, 0, 0, 0)
+
+    def put(z: zipfile.ZipFile, name: str, data: bytes) -> None:
+        z.writestr(zipfile.ZipInfo(name, date_time=stamp), data)
+
+    def put_json(z: zipfile.ZipFile, name: str, obj: dict) -> None:
+        put(z, name, json.dumps(obj, ensure_ascii=False, indent=1, sort_keys=True).encode("utf-8"))
+
     with zipfile.ZipFile(thumbs_zip, "w", compression=zipfile.ZIP_STORED) as zt, zipfile.ZipFile(full_zip, "w", compression=zipfile.ZIP_STORED) as zf:
         for key in sorted(general):
             f = str(general[key]["file"])
             for rel, z in ((f, zf), (f"thumb/{f}", zt)):
                 src = CARDS / rel
                 if src.exists():
-                    z.writestr(zipfile.ZipInfo(f"cards/{rel}", date_time=stamp), src.read_bytes())
-        zt.writestr(zipfile.ZipInfo("cards/manifest.json", date_time=stamp), json.dumps(general, ensure_ascii=False, indent=1, sort_keys=True))
+                    put(z, f"cards/{rel}", src.read_bytes())
+        put_json(zt, "cards/manifest.json", general)
         if history:
-            zt.writestr(zipfile.ZipInfo("cards/previous.json", date_time=stamp), json.dumps(history, ensure_ascii=False, indent=1, sort_keys=True))
+            put_json(zt, "cards/previous.json", history)
+    if delta:
+        # 縮圖在前、原圖在後：解的時候字盒先有縮圖。manifest 只放這幾張，previous.json 只放其中重畫的。
+        with zipfile.ZipFile(update_zip, "w", compression=zipfile.ZIP_STORED) as zu:
+            for prefix in ("thumb/", ""):
+                for key in delta:
+                    rel = prefix + str(general[key]["file"])
+                    if (CARDS / rel).exists():
+                        put(zu, f"cards/{rel}", (CARDS / rel).read_bytes())
+            put_json(zu, "cards/manifest.json", {k: general[k] for k in delta})
+            redrawn = {k: history[k] for k in delta if k in history}
+            if redrawn:
+                put_json(zu, "cards/previous.json", redrawn)
+    else:
+        update_zip.unlink(missing_ok=True)
     # 包裡有哪些卡、各是哪一版提示詞：fetch_card_art.py 用它判斷「缺的那些包裡補得到嗎」，
     # 補不到（詞庫比包新）就不下載，直接交給烘焙。跟 URL、SIZE、SHA256 一起 commit。
     listing = {k: v.get("positive", "") for k, v in sorted(general.items())}
     (ROOT / "scripts" / "card_art_pack.json").write_text(json.dumps(listing, ensure_ascii=False, indent=1) + "\n", encoding="utf-8")
     print("list    scripts/card_art_pack.json")
     print(f"cards   {len(general)}")
-    for z in (thumbs_zip, full_zip):
-        print(f"{z.name:20s} size {z.stat().st_size}  sha256 {hashlib.sha256(z.read_bytes()).hexdigest()}")
+    for z in (thumbs_zip, full_zip, update_zip):
+        if z.exists():
+            print(f"{z.name:20s} size {z.stat().st_size}  sha256 {hashlib.sha256(z.read_bytes()).hexdigest()}")
     if history:
         changed = sum(1 for k, v in general.items() if k in history and history[k] != v.get("positive", ""))
         print(f"redrawn since previous: {changed}")
+        print(f"update pack: {len(delta)} cards (new {len(delta) - changed}, redrawn {changed})")
     return 0
 
 

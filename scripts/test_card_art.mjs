@@ -73,7 +73,8 @@ const tagsOf = (positive) => positive.split(",").map((s) => s.trim());
 
 /* ---------- 畫人一定畫成年人 ---------- */
 {
-  const PEOPLE = /^(\d\+?(girls?|boys?)|multiple (girls|boys)|solo)$/;
+  // others：看不出性別的角色（4others，2026-11-02 起畫成四個人）。
+  const PEOPLE = /^(\d\+?(girls?|boys?|others?)|multiple (girls|boys|others)|solo)$/;
   const bad = jobs.filter((j) => {
     const t = tagsOf(j.positive);
     const person = t.some((x) => PEOPLE.test(x));
@@ -278,6 +279,30 @@ const tagsOf = (positive) => positive.split(",").map((s) => s.trim());
   ok("貼上封鎖字都進不收", !missed.length && full.cards.length === 0, missed.join(", ") || full.blocked.join("|"));
   const keep = parsePrompt("1girl, mother_and_daughter, school_uniform, serafuku, gakuran, babydoll, sisters, family", opts);
   ok("貼上母女、姊妹、家人、一般制服、babydoll 不會被擋", keep.blocked.length === 0, keep.blocked.join("|"));
+}
+
+/* ---------- v12 卡面包畫壞的（2026-11-02 走查） ---------- */
+{
+  // 名字就是好幾個人的牌，以前寫 1girl, solo：4others 畫成一個戴面具的女生、多名騎乘者只有一個人。
+  const MANY = /^(?:\d\+?(?:girls|boys|others)|multiple (?:girls|boys|others|riders|crossover)|crowd|crowded|people|audience|army)$/;
+  const solo = jobs.filter((j) => MANY.test(j.tag) && tagsOf(j.positive).includes("solo"));
+  ok("名字是好幾個人的牌不寫 solo", !solo.length, solo.map((j) => j.tag).join(", "));
+  // 「沒戴／沒有某樣東西」當靜物畫，牌面是一張空白（no eyepatch、no blindfold）。
+  const blankNo = jobs.filter((j) => /^no /.test(j.tag) && j.tag !== "no humans" && tagsOf(j.positive).includes("no humans"));
+  ok("「沒戴、沒有」的牌要畫人，不畫成空白靜物", !blankNo.length, blankNo.map((j) => j.tag).join(", "));
+  const want = new Map([
+    ["4others", "4others"],
+    ["multiple riders", "2girls"],
+    ["multiple crossover", "4girls"],
+    ["string", "holding string"],
+    ["blending", "abstract background"],
+  ]);
+  for (const [tag, must] of want) {
+    const j = jobs.find((x) => x.tag === tag);
+    ok(`${tag} 的卡面有 ${must}`, !!j && tagsOf(j.positive).includes(must), j?.positive);
+  }
+  const blend = jobs.find((x) => x.tag === "blending");
+  ok("融合畫面不用白底（白底會整張變白）", !!blend && !tagsOf(blend.positive).includes("white background"), blend?.positive);
 }
 
 if (failed) {
