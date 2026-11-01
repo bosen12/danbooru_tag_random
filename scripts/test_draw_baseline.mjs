@@ -72,9 +72,10 @@ const GOLD = {
   // 2026-10-26 第五次：環境 866 張進池（審查遮蓋不收；作品專屬、版面、政治符號、血腥、泛用大標籤只在釘了才出現）。仍是 1girl solo，沒有男生或人類陰莖。動物陰莖留在性愛檔。
   // 2026-10-26 第六次：姿勢、特徵、主題 628 張進池（raimon 進詞庫後封鎖；作品、版面、血腥、泛用大標籤、整張改寫只在釘了才出現）。仍是 1girl solo，沒有男生或人類陰莖。動物陰莖留在性愛檔。
   // 2026-10-26 第七次：品質與 54.csv 共 110 張進池（9 個未成年保護字封鎖；noose、self-harm 不收）。仍是 1girl solo，沒有男生或人類陰莖。
+  // 2026-11-01：260 個新字進池。這張換成冬制服、高叉內褲、橡實。仍是 1girl solo，沒有男生或人類陰莖。
   1: {
-    rng: 1122,
-    pos: "1girl, solo, pixie cut, orange eyes, grey hair, hair slicked back, small breasts, eyes visible through hair, veiny arms, no pupils, pink shorts, shorts, see-through shirt, shirt, striped panties, panties, print thighhighs, thighhighs, female masturbation, spread arms, close-up, looking to the side, jitome, grabbing own ass, railroad crossing, outdoors, railroad tracks, day, tree shade, shade, nsfw, explicit, masterpiece, best quality, amazing quality",
+    rng: 2375,
+    pos: "1girl, solo, pixie cut, orange eyes, grey hair, flipped hair, huge breasts, pink streaks, streaked hair, flower in eye, spread nipple, winter uniform, school uniform, highleg panties, panties, highleg, cross-laced legwear, sports bra, pasties, masturbation, falling, close-up, looking back, :i, hand on own elbow, red background, simple background, dim lighting, acorn, sweet potato, urban, nsfw, explicit, masterpiece, best quality, amazing quality",
   },
   // 2026-09-29：路人進了環境池，同一顆亂數落到別的環境字，後面的姿勢跟著換。
   // seed 42 少了束縛和手銬（手銬是束縛之後才拉的），多了咬唇。seed 100 花瓣換成剪影。
@@ -102,9 +103,10 @@ const GOLD = {
   // 2026-10-26 第五次：環境 866 張進池（審查遮蓋不收；作品專屬、版面、政治符號、血腥、泛用大標籤只在釘了才出現）。仍是 1girl solo，沒有男生或人類陰莖。動物陰莖留在性愛檔。
   // 2026-10-26 第六次：姿勢、特徵、主題 628 張進池（raimon 進詞庫後封鎖；作品、版面、血腥、泛用大標籤、整張改寫只在釘了才出現）。仍是 1girl solo，沒有男生或人類陰莖。動物陰莖留在性愛檔。
   // 2026-10-26 第七次：品質與 54.csv 共 110 張進池（9 個未成年保護字封鎖；noose、self-harm 不收）。仍是 1girl solo，沒有男生或人類陰莖。
+  // 2026-11-01：260 個新字進池。澡堂、狼換成道場、畫架。仍是 1girl solo，沒有男生或人類陰莖。
   42: {
-    rng: 2266,
-    pos: "1girl, solo, very short hair, yellow eyes, aqua hair, glowing hair, medium breasts, navel, bun cover, yellow tail, tail, teeth, bodypaint, fingering, sitting backwards, aiming at viewer, staring, >:), upper teeth only, bathhouse, bath, indoors, twilight, dim lighting, wolf, nsfw, explicit, masterpiece, best quality, amazing quality",
+    rng: 2364,
+    pos: "1girl, solo, very short hair, yellow eyes, aqua hair, alternate hairstyle, small breasts, arm under breasts, nail polish, hair scrunchie, polka dot dress, dress, formal clothes, jacket partially removed, jacket, grey neckerchief, neckerchief, masturbation through clothes, seiza, straight-on, looking to the side, ;), stomach (organ), dojo, indoors, day, easel, coffin, nsfw, explicit, masterpiece, best quality, amazing quality",
   },
   // 2026-10-05 第五次：女僕圍裙是布料疊層，不占連身裙。仍是 1girl solo。
   // 2026-10-05 第六次：爆炸頭跟長裙、探頭偷看。仍是 1girl solo。
@@ -128,9 +130,10 @@ const GOLD = {
   // 2026-10-26 第五次：環境 866 張進池（審查遮蓋不收；作品專屬、版面、政治符號、血腥、泛用大標籤只在釘了才出現）。仍是 1girl solo，沒有男生或人類陰莖。動物陰莖留在性愛檔。
   // 2026-10-26 第六次：姿勢、特徵、主題 628 張進池（raimon 進詞庫後封鎖；作品、版面、血腥、泛用大標籤、整張改寫只在釘了才出現）。仍是 1girl solo，沒有男生或人類陰莖。動物陰莖留在性愛檔。
   // 2026-10-26 第七次：品質與 54.csv 共 110 張進池（9 個未成年保護字封鎖；noose、self-harm 不收）。仍是 1girl solo，沒有男生或人類陰莖。
+  // 2026-11-01：260 個新字進池。這張換成滑雪、雪山、脫下的裙子。仍是 1girl solo，沒有男生或人類陰莖。
   100: {
-    rng: 2294,
-    pos: "1girl, solo, medium hair, grey eyes, white hair, flipped hair, large breasts, wispy bangs, sharp fingernails, cone hair bun, hair bun, summer uniform, school uniform, ribbed socks, socks, black scarf, scarf, talking on phone, talking, crossed ankles, out of frame, looking to the side, :i, cellphone, convenience store, indoors, twilight, candle, figure, nsfw, explicit, masterpiece, best quality, amazing quality",
+    rng: 2432,
+    pos: "1girl, solo, medium hair, grey eyes, white hair, heart ahoge, ahoge, medium breasts, colored inner hair, compound eyes, shorts, unworn skirt, cropped hoodie, hoodie, orange boots, boots, skiing, legs apart, bird's eye view, from above, looking at breasts, nervous smile, outdoors, snow, mountain, sunrise, sidelighting, aura, nsfw, explicit, masterpiece, best quality, amazing quality",
   },
   // 2026-09-29 第三次：這張是性愛。淋浴間換成海邊，衣服和光線跟著換。仍是 1girl solo。
   // 2026-10-04（9a087a5）：帶衣物名的姿勢（hand in panties 這類）在候選階段就要先有對的衣服，
@@ -156,9 +159,10 @@ const GOLD = {
   // 2026-10-26 第五次：環境 866 張進池（審查遮蓋不收；作品專屬、版面、政治符號、血腥、泛用大標籤只在釘了才出現）。仍是 1girl solo，沒有男生或人類陰莖。動物陰莖留在性愛檔。
   // 2026-10-26 第六次：姿勢、特徵、主題 628 張進池（raimon 進詞庫後封鎖；作品、版面、血腥、泛用大標籤、整張改寫只在釘了才出現）。仍是 1girl solo，沒有男生或人類陰莖。動物陰莖留在性愛檔。
   // 2026-10-26 第七次：品質與 54.csv 共 110 張進池（9 個未成年保護字封鎖；noose、self-harm 不收）。仍是 1girl solo，沒有男生或人類陰莖。
+  // 2026-11-01：260 個新字進池。這張換成酒吧、往前看。仍是 1girl solo，沒有男生或人類陰莖。
   999: {
-    rng: 2214,
-    pos: "1girl, solo, long hair, glowing eyes, grey hair, pointy hair, huge breasts, compound eyes, flower in eye, very sweaty, sweat, naked towel, masturbation, looking through legs, bird's eye view, from above, looking up, hungry, sauna, indoors, steam, morning, sunbeam, breathing fire, fire, nsfw, explicit, masterpiece, best quality, amazing quality",
+    rng: 2397,
+    pos: "1girl, solo, long hair, glowing eyes, grey hair, asymmetrical hair, gigantic breasts, blush stickers, dirty feet, long earlobes, undersuit, bear print, string bra, bra, collared jacket, jacket, crotchless, bag, nipple rings, piercing, masturbation, tripping, dutch angle, looking ahead, surprised, sex machine, bar (place), indoors, twilight, moonlight, cucumber, salad, nsfw, explicit, masterpiece, best quality, amazing quality",
   },
   // 2026-09-23：走光補抽改成「所有成立的走光動作同一池、衣服吻合的權重 10」之後，
   // 這張的走光動作從 exhibitionism 換成 cameltoe（她穿 thong，吻合），場景跟著換。
@@ -183,9 +187,10 @@ const GOLD = {
   // 2026-10-26 第五次：環境 866 張進池（審查遮蓋不收；作品專屬、版面、政治符號、血腥、泛用大標籤只在釘了才出現）。仍是 1girl solo，沒有男生或人類陰莖。動物陰莖留在性愛檔。
   // 2026-10-26 第六次：姿勢、特徵、主題 628 張進池（raimon 進詞庫後封鎖；作品、版面、血腥、泛用大標籤、整張改寫只在釘了才出現）。仍是 1girl solo，沒有男生或人類陰莖。動物陰莖留在性愛檔。
   // 2026-10-26 第七次：品質與 54.csv 共 110 張進池（9 個未成年保護字封鎖；noose、self-harm 不收）。仍是 1girl solo，沒有男生或人類陰莖。
+  // 2026-11-01：260 個新字進池。這張換成贅肉、保齡球館。仍是 1girl solo，沒有男生或人類陰莖。
   2026: {
-    rng: 2231,
-    pos: "1girl, solo, bob cut, purple eyes, white hair, hair rings, large breasts, scar across eye, bun cover, v-shaped eyes, stud earrings, earrings, naked ribbon, nude, towel, showering, knees apart feet together, cropped torso, staring, jealous, crotch focus, shower (place), indoors, steam, sunset, city lights, truck, nsfw, explicit, masterpiece, best quality, amazing quality",
+    rng: 2348,
+    pos: "1girl, solo, bob cut, purple eyes, white hair, ringlets, medium breasts, fat rolls, sun tattoo, long sidelocks, sidelocks, collar, nude, tickling, dancing, profile, looking at object, :t, public nudity, bowling alley, indoors, day, spotlight, sticker, sunflower, nsfw, explicit, masterpiece, best quality, amazing quality",
   },
 };
 
@@ -408,7 +413,8 @@ const MATRIX_SEEDS = 200;
 // 同日：衣服下穿比基尼、緊身衣、連身衣不再算穿著那件衣服（跟衣服下穿泳裝同一句）。五張單人女金標與 supplement 沒變。矩陣 95ca9f5d → 78a3c125。單人女的情境沒有男生；那 9 張仍是動物陰莖。
 // 2026-10-26 第七次：品質與 54.csv 共 110 張進池（9 個未成年保護字封鎖；noose、self-harm 不收）。仍是 1girl solo，沒有男生或人類陰莖。 矩陣 78a3c125 → 6b42ebfb。單人女的情境沒有男生，沒有人類陰莖。
 // 2026-10-31：加反拉手臂 arm held back（性愛、要一男一女、佔兩隻手臂）與 arm grab（grabbing another's arm 的舊名）。姿勢候選多兩張，矩陣 6b42ebfb → 6ce30a24；五張單人女金標沒變。
-const MATRIX_GOLD = "6ce30a24";
+// 2026-11-01：260 個新字進池。洗浴時非白名單內衣先卸下，免得補救池把浴袍穿回去。五張單人女金標都換了，仍是 1girl solo，沒有男生或人類陰莖。矩陣 6ce30a24 → abf1e2a3。單人女情境沒有 1boy；掃到的 futanari 是既有標籤。
+const MATRIX_GOLD = "abf1e2a3";
 
 function matrixSettings(over) {
   const s = defaultSettings(data);

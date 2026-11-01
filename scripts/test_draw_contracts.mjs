@@ -206,10 +206,11 @@ if (DRAW_PART !== "rest") {
     // 2026-10-26 衣服一批：保齡球不是球館帶出來的，跟環境字搶名額。釘球館 400 張、兩種模式合計只剩 3 次。再放大。
     // 2026-10-26 環境一批：環境池變大。購物車 400 張、兩種模式合計 4 次（約 0.5%）；聖誕樹合計 2 次（約 0.25%）。
     // 門檻仍是至少 5 次。購物車放到 2000（兩種模式合計預期約 20 次），聖誕樹放到 4000（預期約 20 次）。
-    const BIG = ["poker table", "nightstand", "shopping cart", "bowling ball", "steering wheel", "christmas tree", "sink", "counter", "microphone stand", "whiteboard"];
+    const BIG = ["poker table", "shopping cart", "bowling ball", "steering wheel", "christmas tree", "sink", "counter", "microphone stand", "whiteboard"];
     // 2026-10-26 品質一批：釘賭場、兩種模式各 400 張，牌桌合計只剩 3 次（約 0.4%）。門檻仍是至少 5 次。
     // 放到 2000，跟保齡球、購物車一樣（兩種模式合計預期約 15 次）。
-    const BIGGER = ["bowling ball", "shopping cart", "poker table"];
+    // 2026-11-01：環境池再大一輪。釘臥室、兩種模式各 400 張，床頭櫃合計只剩 4 次。規則還在（孤兒是 0）。放到 2000。
+    const BIGGER = ["bowling ball", "shopping cart", "poker table", "nightstand"];
     const HUGE = ["christmas tree"];
     const n = HUGE.includes(prop) ? 4000 : BIGGER.includes(prop) ? 2000 : BIG.includes(prop) ? 400 : 80;
     for (const mode of ["normal", "diverse"]) sweep(mk({ sceneMode: mode }), trigger, n, 500000);
