@@ -52,6 +52,7 @@ TEST_FILES = {
     "test_era_mix_rating_free.mjs": "test_era_mix_rating_free.mjs",
     "test_tab_sync.mjs": "test_tab_sync.mjs",
     "test_card_search.mjs": "test_card_search.mjs",
+    "test_mcp.mjs": "test_mochi_mcp.mjs",
     "test_fav_chars_sync.mjs": "test_fav_chars_sync.mjs",
     "test_gen_log_cap.py": "test_gen_log_cap.py",
     "test_discord_routes_browser.mjs": "test_web6_discord_routes_browser.mjs",
@@ -93,6 +94,8 @@ TEST_FILES = {
 MOCHI_OWN = {"README.md", "CLAUDE.md", "start.bat", "start.sh", ".gitignore", ".gitattributes", "LICENSE"}
 # three.js 的授權跟著 build 一起帶。
 EXTRA_WEB = ["vendor/three/LICENSE", "vendor/opencc/LICENSE", "vendor/opencc/NOTICE"]
+# 墨池的 MCP（mcp/mochi-mcp.mjs）載入的共用檔：網頁本身不載入，爬不到。
+EXTRA_WEB += ["trace-copy.js"]
 
 # (開源版的路徑, 原字串, 換成) —— 原字串找不到就印 WARN。
 REWRITES = [
@@ -107,6 +110,8 @@ REWRITES = [
     ("server.py", 'port = int(cfg("server.port", "PORT", 8787))', 'port = int(cfg("server.port", "PORT", 8796))'),
     ("server.py", '"DanbooruTagRandom (https://github.com/bosen12/danbooru_tag_random, 1.0)"', '"DanbooruTagMochi (https://github.com/bosen12/danbooru_tag_mochi, 1.0)"'),
     ("config.example.json", '"port": 8787,', '"port": 8796,'),
+    # 範例路徑換成開源版的資料夾名（每一處都換）。
+    ("mcp/README.md", "danbooru_tag_random", "danbooru_tag_mochi"),
     ("scripts/fetch_card_art.py", "github.com/bosen12/danbooru_tag_random/releases/download/", "github.com/bosen12/danbooru_tag_mochi/releases/download/"),
     ("scripts/card-art-check.bat", "(start.bat, start-web6.bat, start-zipu.bat)", "(start.bat)"),
     ("scripts/pose-assets-check.bat", "called by start-web6.bat and start-web7.bat.", "called by start.bat."),
@@ -184,6 +189,9 @@ def plan() -> dict[str, Path]:
         files[f] = ROOT / f
     for f in SCRIPT_FILES + LEXICON_FILES:
         files["scripts/" + f] = ROOT / "scripts" / f
+    # 給 AI 用的 MCP 伺服器（Claude、Codex、Grok Build）：整個資料夾照搬。
+    for rel in tracked("mcp"):
+        files[rel] = ROOT / rel
     for rel in tracked("web/lexicon_parts"):
         files[rel] = ROOT / rel
     for target, source in TEST_FILES.items():

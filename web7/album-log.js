@@ -15,7 +15,7 @@ import { weightsOfPositive } from "./weights.js";
 import { RATING_LABEL } from "./rules/rating.js";
 
 const PAGE = 300;
-const ORIGIN_ZH = { mochi: "墨池", fuse: "疊印台" };
+const ORIGIN_ZH = { mochi: "墨池", fuse: "疊印台", mcp: "AI" };
 const RANK = { general: 0, sensitive: 1, explicit: 2 };
 export const LOG_FILTERS = [
   ["all", "全部"],
