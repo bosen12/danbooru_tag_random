@@ -1933,8 +1933,8 @@ const ALBUM_FIXTURE = [
       {
         const js = readFileSync(join(ROOT, "web6/book.js"), "utf8");
         const store6 = readFileSync(join(ROOT, "web6/store.js"), "utf8");
-        ok("卡冊：牌上的＋，偏好卡牌收著＝送去墨池合成池（交接便條、頂欄墨池「+N」、蓋送墨池章，再按拿回來）、展開＝加進偏好卡牌；展開時點牌是挑牌不開詳情；舊卡盒併進偏好卡牌",
-          js.includes("if (picking()) return pickHand(card, node);") && js.includes('S.handOffPool(sending, "book")') && js.includes('kind: "send", text: "送墨池"') && js.includes("badge.textContent = `+${sending.length}`;") &&
+        ok("卡冊：牌上的＋，固定送去墨池合成池（交接便條、頂欄墨池「+N」、蓋送墨池章，再按拿回來）；展開時點牌是挑牌不開詳情；舊卡盒併進偏好卡牌",
+          js.includes('toggleSend(card, cells.get(card.tag)?.querySelector(".card"))') && js.includes('S.handOffPool(sending, "book")') && js.includes('kind: "send", text: "送墨池"') && js.includes("badge.textContent = `+${sending.length}`;") &&
             js.includes("if (picking()) return pickHand(cell._card, node);") && js.includes("openPicks: true,") && js.includes('openKey: "mochi.book.hand.open",') && js.includes("function mergeOldBox()") &&
             store6.includes("export function peekPoolHandoff(from)") && !js.includes("const BOX_KEY") && readFileSync(join(ROOT, "web6/app.js"), "utf8").includes('if (handoff.length && S.handoffFrom === "book" && kept.length)'));
       }
