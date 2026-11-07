@@ -149,6 +149,12 @@ if errorlevel 1 (
   pause
   exit /b 1
 )
+echo == mochi iPhone bridge ==
+call node scripts\test_mobile_bridge.mjs
+if errorlevel 1 (
+  pause
+  exit /b 1
+)
 echo == favorite characters sync ==
 call node scripts\test_fav_chars_sync.mjs
 if errorlevel 1 (
