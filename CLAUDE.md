@@ -31,15 +31,8 @@ git diff                               # 看過再 commit、push
 - 開源版的 `tests/` 也是從這邊複製的（對照表在 `sync_mochi.py` 的 `TEST_FILES`，例如 `tests/test_engine_release.mjs` ← `scripts/test_mochi_engine.mjs`）：要改那邊的測試，改這邊的來源檔。
 - 開源版自己的檔不會被蓋：`README.md`（英文在上、中文在下）、`CLAUDE.md`、`start.bat`、`start.sh`、`.gitignore`、`.gitattributes`、`LICENSE`、`.github/`（CI）。功能改了、README 要跟著改的話，到那邊改。
 - **發新的卡面包**（`card-art-vN`）：`python scripts/pack_card_art.py 輸出資料夾 --previous 上一版的縮圖包.zip` 打出縮圖包、原圖包（v7 起；新使用者先抓縮圖就有圖），和只放新增、重畫那些卡的增量包 `card-art-update.zip`（v13 起；有上一版的人只抓這包）。打包前會掃空白的卡面（`scripts/scan_card_art.py`），有就不打包。兩個 repo 的 Release 都要發同樣三個檔，`scripts/fetch_card_art.py` 的 `BASE`、`THUMBS`、`FULL`、`UPDATE`（`from` 寫上一版）跟著換（網址同步時 `REWRITES` 會換）。
-- 只動到其他版面（web、web1～web5、web7、web8、zipu、game）不用同步。
+- 只動到其他版面（web、web1～web5、web7、zipu、game）不用同步。
 - **開源版合併了外人的 PR**：同步之前先把那些改動搬回這邊，否則同步會蓋掉。`sync_mochi.py --check` 列出的檔如果不是這邊改的，就是還沒搬回來的。
-
-## web8（墨池工作台）
-
-墨池的新版面：一個畫面做完挑牌、生圖、看圖、再印。啟動 `WEB_DIR=web8 WEB_BASE=web6`（server.py 的 `WEB_BASE`：這個版面沒有的檔先到 web6 找，再退回 web/），規則、抽牌、生圖全用 web6 的 `mobile-bridge.js`、`gen.js`，卡冊、作品冊等房間也直接借 web6 的頁。
-- **web8 自己的檔一律 `w8-` 開頭**：跟 web6 同名的話，web6 的模組 import 到的會變成 web8 那支。
-- 只改 web8 不用同步開源版；改到它借用的 web6 檔、server.py 照舊要同步。
-- 設計與檔案說明在 `web8/README.md`。測試：`node scripts/test_web8_browser.mjs`（自己開伺服器、假的生圖串流，不碰 ComfyUI）。
 
 ## 第一次使用的準備（web6）
 
