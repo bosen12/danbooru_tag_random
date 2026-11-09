@@ -1,0 +1,110 @@
+<!doctype html>
+<html lang="zh-Hant" data-boot="loading" data-view="stage">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover" />
+    <title>墨池</title>
+    <meta name="description" content="墨池工作台：挑牌、生圖、看圖、再印，一個畫面做完。" />
+    <meta name="theme-color" content="#0b0c0f" />
+    <meta name="color-scheme" content="dark" />
+    <link rel="icon" href="favicon.svg" type="image/svg+xml" />
+    <link rel="preload" href="lexicon.json" as="fetch" crossorigin />
+    <link rel="preload" href="cards/manifest.json" as="fetch" crossorigin />
+    <link rel="modulepreload" href="engine.js" />
+    <link rel="modulepreload" href="mobile-bridge.js" />
+    <link rel="stylesheet" href="fonts.css" />
+    <link rel="stylesheet" href="w8.css" />
+    <script type="module" src="setup-panel.js"></script>
+  </head>
+  <body>
+    <div class="shell">
+      <header class="top">
+        <a class="brand" href="./" aria-label="墨池">
+          <span class="brand-seal" aria-hidden="true">墨</span>
+          <span class="brand-name">墨池</span>
+        </a>
+        <div class="seg seg-rating" id="rating" role="radiogroup" aria-label="分級"></div>
+        <div class="top-right">
+          <span class="link-pill" id="link" data-state="ok" role="status"><i aria-hidden="true"></i><span class="link-text">連線中</span></span>
+          <button class="btn btn-ghost btn-sm top-rooms" id="rooms" type="button" aria-haspopup="dialog">
+            <svg class="ico" viewBox="0 0 24 24" width="16" height="16" aria-hidden="true"><path d="M4 5h7v6H4zM13 5h7v14h-7zM4 13h7v6H4z" /></svg>
+            <span>房間</span>
+          </button>
+          <button class="icon-btn" id="help" type="button" aria-label="怎麼用（?）">?</button>
+        </div>
+      </header>
+
+      <aside class="lib" id="lib" aria-label="字盒">
+        <div class="lib-head">
+          <h2 class="panel-title">字盒</h2>
+          <div class="search">
+            <svg class="ico" viewBox="0 0 24 24" width="16" height="16" aria-hidden="true"><path d="M11 4a7 7 0 1 1 0 14a7 7 0 0 1 0-14zm9 16l-4.2-4.2" /></svg>
+            <input id="lib-q" type="search" placeholder="找牌：紅髮、海邊夕陽、kimono…" autocomplete="off" spellcheck="false" aria-label="找牌" />
+            <kbd class="search-key" aria-hidden="true">/</kbd>
+          </div>
+          <div class="suits" id="lib-suits" aria-label="花色"></div>
+          <div class="lib-status" id="lib-status" aria-live="polite"></div>
+        </div>
+        <div class="lib-scroll">
+          <div class="lib-grid" id="lib-grid"></div>
+          <div class="lib-more" id="lib-more" aria-hidden="true"></div>
+        </div>
+      </aside>
+
+      <main class="stage" aria-label="舞台">
+        <section class="recipe" id="recipe" aria-label="配方">
+          <div class="recipe-head">
+            <h2 class="panel-title">配方</h2>
+            <span class="recipe-count" id="recipe-count"></span>
+            <span class="grow"></span>
+            <button class="chip chip-ghost" id="recipe-bans" type="button" hidden>廢字簍 <span class="n">0</span></button>
+            <button class="link-btn" id="recipe-clear" type="button" hidden>清空</button>
+          </div>
+          <div class="recipe-tray" id="recipe-tray" role="list"></div>
+        </section>
+
+        <section class="canvas" id="canvas" aria-live="polite"></section>
+
+        <div class="strip" id="strip" role="group" aria-label="底片" hidden></div>
+      </main>
+
+      <div class="capsule" role="group" aria-label="生圖">
+          <div class="cap-n" aria-label="一次幾張">
+            <button class="step-btn" id="cap-minus" type="button" aria-label="少一張"><svg class="ico" viewBox="0 0 24 24" width="14" height="14" aria-hidden="true"><path d="M6 12h12" /></svg></button>
+            <output id="cap-n">1</output>
+            <button class="step-btn" id="cap-plus" type="button" aria-label="多一張"><svg class="ico" viewBox="0 0 24 24" width="14" height="14" aria-hidden="true"><path d="M12 6v12M6 12h12" /></svg></button>
+          </div>
+          <button class="btn btn-ghost cap-draw" id="cap-draw" type="button" title="只抽牌，不送去印（D）">只抽牌</button>
+          <button class="btn btn-primary cap-gen" id="cap-gen" type="button"><span>生圖</span><span class="cap-gen-n"></span><kbd class="cap-key" aria-hidden="true">Ctrl ↵</kbd></button>
+          <div class="cap-queue" id="cap-queue" hidden>
+            <span class="cap-queue-dot" aria-hidden="true"></span><span>印製中 <span class="n">0</span> 張</span>
+            <button class="link-btn" type="button">全部停</button>
+          </div>
+      </div>
+
+      <aside class="insp" aria-label="檢視">
+        <div class="insp-tabs" id="insp-tabs" role="tablist">
+          <button type="button" role="tab" data-panel="rules" aria-selected="true">規則</button>
+          <button type="button" role="tab" data-panel="detail" aria-selected="false">這張</button>
+        </div>
+        <div class="insp-scroll">
+          <div id="rules" role="tabpanel"></div>
+          <div id="detail" role="tabpanel" hidden></div>
+        </div>
+      </aside>
+
+      <nav class="tabs" id="tabs" aria-label="分頁">
+        <button type="button" data-view="lib"><svg class="ico" viewBox="0 0 24 24" width="20" height="20" aria-hidden="true"><path d="M5 5h6v6H5zM13 5h6v6h-6zM5 13h6v6H5zM13 13h6v6h-6z" /></svg>字盒</button>
+        <button type="button" data-view="stage"><svg class="ico" viewBox="0 0 24 24" width="20" height="20" aria-hidden="true"><path d="M4 6h16v12H4zM8 21h8" /></svg>舞台</button>
+        <button type="button" data-view="insp"><svg class="ico" viewBox="0 0 24 24" width="20" height="20" aria-hidden="true"><path d="M5 7h9M18 7h1M5 17h3M12 17h7M14 5v4M8 15v4" /></svg><span class="tab-label">規則</span></button>
+      </nav>
+    </div>
+
+    <div class="boot" aria-hidden="true">
+      <div class="boot-mark">墨</div>
+      <p class="boot-msg" id="boot-msg">正在讀詞庫…</p>
+    </div>
+    <div class="toasts" id="toasts" aria-live="polite"></div>
+    <script type="module" src="w8-main.js"></script>
+  </body>
+</html>
