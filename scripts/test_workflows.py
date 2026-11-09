@@ -342,6 +342,11 @@ ok("inspect widget input", text_in["kind"] == "widget" and text_in["value"] == "
 clip_in = next(i for i in clip["inputs"] if i["name"] == "clip")
 ok("inspect link input", clip_in["kind"] == "link", clip_in)
 ok("ckpt_name_of", workflows.ckpt_name_of(API_WF) == "wai.safetensors")
+ok(
+    "ckpt_name_of unet",
+    workflows.ckpt_name_of({"7": {"class_type": "UNETLoader", "inputs": {"unet_name": "anima-base-v1.0.safetensors"}}})
+    == "unet:anima-base-v1.0.safetensors",
+)
 ok("save image nodes", workflows.image_output_nodes(API_WF) == ["9"])
 
 multi_output = deepcopy(API_WF)

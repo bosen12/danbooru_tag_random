@@ -1609,6 +1609,11 @@ const ALBUM_FIXTURE = [
     const src = readFileSync(join(ROOT, ...file.split("/")), "utf8");
     ok(`${name}打開時走 focusEntry`, re.test(src));
   }
+  const ckptMenu = readFileSync(join(ROOT, "web", "lora.js"), "utf8");
+  ok(
+    "底模不是 Illustrious 時標題旁標 Pony／Anima",
+    ckptMenu.includes("ckpt-fmt") && ckptMenu.includes('return "Pony"') && ckptMenu.includes('return "Anima"'),
+  );
 }
 
 // web5（中控室）：boot.js 直接用 id 找的元素、boot.css 直接用的 CSS 變數，
