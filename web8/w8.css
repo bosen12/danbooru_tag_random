@@ -492,16 +492,11 @@ kbd {
 .search input:not(:placeholder-shown) ~ .search-key {
   display: none;
 }
+/* 花色全部看得到：放不下就換行（以前一排左右捲、捲動條又藏起來，姿勢、場景、風格擠到右邊看不到）。 */
 .suits {
   display: flex;
+  flex-wrap: wrap;
   gap: 6px;
-  overflow-x: auto;
-  scrollbar-width: none;
-  margin: 0 -16px;
-  padding: 0 16px;
-}
-.suits::-webkit-scrollbar {
-  display: none;
 }
 .suit {
   display: inline-flex;
