@@ -20,7 +20,7 @@ test('wall empty lifecycle updates its own heading state', () => {
     assert.equal(nodes['wall-empty'].hidden, hasShots);
     assert.equal(nodes['wall-head'].dataset.hasShots, String(hasShots));
   }
-  assert.equal((app.match(/syncWallEmpty\(/g) || []).length, 5, 'draw/render/remove/restore all synchronize wall state');
+  assert.equal((app.match(/syncWallEmpty\(/g) || []).length, 6, 'draw/render/remove/restore/cancel all synchronize wall state');
 });
 test('float lifecycle keeps its existing show and inert states on cached button renders', () => {
   const float = { dataset: {key: 'false|0|1|1'}, childElementCount: 1, inert: true, hidden: false };
