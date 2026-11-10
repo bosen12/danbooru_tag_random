@@ -2213,7 +2213,7 @@ const ALBUM_FIXTURE = [
           readFileSync(join(ROOT, "server.py"), "utf8").includes('"preprocessor": "OpenposePreprocessor"') &&
           ["web6", "web7"].every((d) => {
             const read = (f) => readFileSync(join(ROOT, d, f), "utf8");
-            return read("app.js").includes("pose: shot.pose") && read("app.js").includes('rulePair("姿勢", poseButton(') && read("fuse.js").includes('row("姿勢參考", poseButton(') &&
+            return read("app.js").includes("pose: shot.pose") && (read("app.js").includes('rulePair("姿勢", poseButton(') || (read("app.js").includes("const poseBtn = poseButton(") && read("app.js").includes('rulePair("姿勢", poseBtn)'))) && read("fuse.js").includes('row("姿勢參考", poseButton(') &&
               read("fuse.js").includes("${poseSig()}") && read("fuse.js").includes("onPoseChange(() =>") && read("store.js").includes("pose: s.pose || null,") && read("styles.css").includes(".pose-sheet {");
           }));
       ok("作品冊分輯與相似的作品：作品分頁可依時代、髮色、服裝、場景分段（記住選擇），詳情列出用牌重疊多的作品、點了換過去（web6、web7）",
