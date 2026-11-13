@@ -1863,6 +1863,25 @@ const ALBUM_FIXTURE = [
             book6q.includes("if (seenRows && (row < seenRows[0] || row >= seenRows[1])) quietArt(cell);") &&
             book6q.includes("function stageNow()") && book6q.includes("const busy = performance.now() - scrolledAt < 250;") && book6q.includes("if (i < artEnd) startArt(cell);") &&
             /\.book-stage \{[^}]*visibility: hidden;[^}]*contain: strict;/.test(bookCss6q));
+        ok("效能：整本牌名的字閒下來照字級分組先排一次（warmGlyphs，跟牌上的字名同一套字級：cards.js 的 spineFace），往下捲多遠都不必當場排新字；閒置一次最多用 12ms 就交還（手指放上去不必等）",
+          cards6b.includes("export function spineFace(card)") && cards6b.includes("const { spine, len, wrap, marks, size } = spineFace(card);") &&
+            book6q.includes("function warmGlyphs(deadline)") && book6q.includes("if (!warmGlyphs(deadline)) return buildAhead();") && book6q.includes("if (english || !list.length) return true;") &&
+            book6q.includes("const SLICE_MS = 12;") && book6q.includes("Math.min(SLICE_MS, idleDeadline.timeRemaining())") &&
+            book6q.includes("Math.min(prepCost, 4)") && book6q.includes("Math.min(glyphCost * 4, 4)"));
+      }
+      {
+        // body 當 :has 的主體：頁面上任何地方插入、拿掉一個元素（:has 的括號裡有屬性選擇器時一律算），瀏覽器都把所有 :has 規則牽涉到的元素重算一次樣式。
+        const css6all = ["styles.css", "card.css", "book.css", "custom.css", "locale.css", "tokens.css", "fonts.css", "fuse.css", "album.css", "arch.css", "about.css", "parse.css", "models.css", "film.css", "discord.css", "intro.css", "tutorial.css"]
+          .filter((f) => existsSync(join(ROOT, "web6", f)))
+          .map((f) => readFileSync(join(ROOT, "web6", f), "utf8"))
+          .join(NL);
+        const ui6o = readFileSync(join(ROOT, "web6/ui.js"), "utf8");
+        const app6o = readFileSync(join(ROOT, "web6/app.js"), "utf8");
+        ok("效能：web6 的 CSS 不拿 body／html 當 :has 的主體（有彈窗、浮動列出來改由 ui.js、app.js 標在 <html data-overlay／data-go-float>）",
+          !/(^|[\s,}])(body|html|:root)(\[[^\]]*\]|\.[\w-]+)*:has\(/m.test(css6all.replace(/\/\*[\s\S]*?\*\//g, "")) &&
+            css6all.includes("html[data-overlay] .toast.toast {") && css6all.includes("html[data-go-float] .wall-busy {") &&
+            ui6o.includes('document.documentElement.toggleAttribute("data-overlay", !!document.querySelector("body > .overlay"))') &&
+            app6o.includes('document.documentElement.toggleAttribute("data-go-float", show);'));
       }
       ok("剛加進手牌的那張，字盒上的「手」像橡皮章壓下來；本來就有的不重蓋", hand6.includes('n.classList.add("is-hand-stamp")') && hand6.includes('if (n.dataset.inHand !== "true" && !reduced())') && css6.includes("@keyframes hand-stamp"));
     }
