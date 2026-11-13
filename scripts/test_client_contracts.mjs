@@ -1854,7 +1854,16 @@ const ALBUM_FIXTURE = [
     {
       const cards6b = readFileSync(join(ROOT, "web6/cards.js"), "utf8");
       ok("整塊重畫的牌（卡池、影子、合成池）圖立刻載、同步解碼：重畫後第一格畫面不會整排空白", cards6b.includes("export function eagerArt(node)") && fuse6.includes("const node = eagerArt(cardNode(card, assets, { src: bed.carried[tag]") && fuse6.includes("const node = eagerArt(cardNode(card, assets, {}));") && app6.includes("const node = eagerArt(cardNode(card, assets, { flag: blocked"));
-      ok("晚到的圖淡進來（快取裡的直接出現，不先藏起來等 load）", cards6b.includes("if (performance.now() - born > 60 && !reducedMotion())"));
+      ok("晚到的圖淡進來（快取裡的直接出現，不先藏起來等 load）", cards6b.includes("if (!i._quiet && i.isConnected && performance.now() - born > 60 && !reducedMotion())"));
+      {
+        const book6q = readFileSync(join(ROOT, "web6/book.js"), "utf8");
+        const bookCss6q = readFileSync(join(ROOT, "web6/book.css"), "utf8");
+        ok("效能：卡冊捲動時接在畫面外的牌不掃光、不顯影（quietArt），閒下來先把下方幾屏的牌放進預排區排一次版（牌名的字先整形）、先抓圖；捲動中只做格子不排版",
+          cards6b.includes("export function quietArt(node)") && cards6b.includes("if (!i.dataset.ready) i.dataset.ready = \"1\";") &&
+            book6q.includes("if (seenRows && (row < seenRows[0] || row >= seenRows[1])) quietArt(cell);") &&
+            book6q.includes("function stageNow()") && book6q.includes("const busy = performance.now() - scrolledAt < 250;") && book6q.includes("if (i < artEnd) startArt(cell);") &&
+            /\.book-stage \{[^}]*visibility: hidden;[^}]*contain: strict;/.test(bookCss6q));
+      }
       ok("剛加進手牌的那張，字盒上的「手」像橡皮章壓下來；本來就有的不重蓋", hand6.includes('n.classList.add("is-hand-stamp")') && hand6.includes('if (n.dataset.inHand !== "true" && !reduced())') && css6.includes("@keyframes hand-stamp"));
     }
     ok("托盤上現在的分級出不了的牌：蓋「分級擋掉」、變淡；分級一換（兩個房間）就重新蓋／拿掉", hand6.includes("const why = blocked(t);") && fuse6.includes('blocked: (t) => (cardOf(t) && !rankOk(cardOf(t)) ? "分級擋掉" : null)') && app6.includes("ratingBlocked(lib.byTag.get(t).item, ratingOf(settings))") && /hand\?\.update\(\);/.test(app6.match(/^function setSettings\(patch\) \{[\s\S]*?^\}/m)?.[0] || "") && css6.includes(".fav-slot.is-blocked .fav-card"));
