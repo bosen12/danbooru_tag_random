@@ -1910,6 +1910,9 @@ const ALBUM_FIXTURE = [
           ok("卡冊、Discord 條件的搜尋框擋注音／倉頡選字的 Enter",
             /q\.addEventListener\("keydown", \(e\) => \{\s*\/\/[^\n]*\n\s*if \(e\.isComposing \|\| e\.keyCode === 229\) return;/.test(w6("book.js")) && w6("discord-routes.js").includes("if (ev.isComposing || ev.keyCode === 229) return;"));
         }
+        ok("換房間：除了左右相鄰，墨池↔卡冊、解析池→墨池也在背後先開好（prerender.js 的 ALSO）",
+          readFileSync(join(ROOT, "web6/prerender.js"), "utf8").includes('const ALSO = { index: ["book"], book: ["index"], parse: ["index"] };') &&
+            readFileSync(join(ROOT, "web6/prerender.js"), "utf8").includes("const near = [...[here - 1, here + 1].filter((i) => ROOMS[i]).map((i) => ROOMS[i]), ...also];"));
         ok("效能：web6 的 CSS 不拿 body／html 當 :has 的主體（有彈窗、浮動列出來改由 ui.js、app.js 標在 <html data-overlay／data-go-float>）",
           !/(^|[\s,}])(body|html|:root)(\[[^\]]*\]|\.[\w-]+)*:has\(/m.test(css6all.replace(/\/\*[\s\S]*?\*\//g, "")) &&
             css6all.includes("html[data-overlay] .toast.toast {") && css6all.includes("html[data-go-float] .wall-busy {") &&
