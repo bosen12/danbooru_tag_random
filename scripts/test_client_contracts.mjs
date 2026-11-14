@@ -1877,6 +1877,39 @@ const ALBUM_FIXTURE = [
           .join(NL);
         const ui6o = readFileSync(join(ROOT, "web6/ui.js"), "utf8");
         const app6o = readFileSync(join(ROOT, "web6/app.js"), "utf8");
+        {
+          // 2026-11-14 議會（claude、codex、grok）深度檢查，主席核實過的 13 項。
+          const w6 = (f) => readFileSync(join(ROOT, "web6", f), "utf8");
+          const appC = w6("app.js");
+          const enC = w6("locales/en.js");
+          const enParam = enC.slice(enC.indexOf("const parameterized = String.raw`"));
+          ok("按住 G／P 不放（鍵盤自動重複）只算第一下；疊印台的 G 也是",
+            appC.includes('if (e.repeat && (e.key === "g" || e.key === "G" || e.key === "p" || e.key === "P"))') && w6("fuse.js").includes("if (!e.repeat) printNow();"));
+          ok("Z 復原的指紋含權重（之後調過份量就不給復原）；封鎖時拿掉的偏好卡牌復原時放回托盤",
+            appC.includes('[...weights].map(([t, w]) => `${t}=${w}`).sort().join("|")') && appC.includes("undoTo.hand = tag;") && appC.includes("hand.add(s.before.hand, null, { quiet: true })"));
+          ok("「全部撤下」整批撤、一則提示、一次全部放回去（removeShot 的 quiet）",
+            appC.includes("function removeShot(shot, { quiet = false } = {})") && appC.includes("removeShot(s, { quiet: true })") && appC.includes("undos.reverse().forEach((u) => u())"));
+          ok("localStorage 寫不進去（滿了、不允許）會說一次（mochi-store-full）",
+            w6("store.js").includes('new CustomEvent("mochi-store-full"') && w6("hand.js").includes('new CustomEvent("mochi-store-full"') && w6("ui.js").includes('globalThis.addEventListener?.("mochi-store-full"'));
+          ok("自製卡：問不到預覽時越等越久、8 次就停下來說（存檔鈕不再卡在「卡面還在烤」）；存檔中改欄位不會把存檔鈕又打開",
+            w6("custom-editor.js").includes("if (++pollMisses < 8) return poll(Math.min(wait * 2, 5000));") && w6("custom-editor.js").includes("saveBtn.disabled = !!why || saving;"));
+          ok("第一次準備面板：問不到伺服器時不收起來、越等越久再問（以前斷一次就再也不問）",
+            w6("setup-panel.js").includes("return schedule(Math.min(POLL_MS * 2 ** misses, 30000));"));
+          ok("announce() 寫只給讀屏的 #live，不再清掉畫面上的提示和它的「復原」",
+            w6("index.html").includes('<div class="sr-only" id="live" aria-live="polite"></div>') && /function announce\(text\) \{\s*const t = \$\("live"\);/.test(appC));
+          ok("焦點在搜尋框時 Esc 照樣能停（框裡有字先清字）；用 Esc 停會說一句，無限抽也關了就一起講",
+            appC.includes("return stopAll({ say: true });") && appC.includes('if (say) toast(wasInfinite ? "停下了，無限抽也關了" : "停下了");'));
+          ok("英文版：含 {0} 的六句在 parameterized（以前放在逐字比對的 copy，永遠不會套用）",
+            ["印 {0} 張停|", "無限抽 {0} / {1}|", "無限抽印完 {0} 張", "略過 {0} 張", "收掉了 {0} 張取消的", "修臉 {0}|"].every((k) => enParam.includes(NL + k) && !enC.slice(0, enC.indexOf("const parameterized")).includes(NL + k)));
+          ok("無限抽自己接著抽的那幾輪不把畫面捲回成品",
+            appC.includes('if (!intent.auto) document.getElementById("wall-head").scrollIntoView({'));
+          ok("手機浮動列：印的時候狀態字浮在上方（成品列的「印製中」那時藏起來了）",
+            appC.includes('float.toggleAttribute("data-busy", busy);') && readFileSync(join(ROOT, "web6/styles.css"), "utf8").includes(".go-float[data-busy] .go-float-state {"));
+          ok("照這張再印：LoRA 連權重一起比，權重不同不說「跟現在選的一樣」",
+            appC.includes("const loraKey = (l, withStrength) =>") && appC.includes("currentLorasPayload().map((l) => loraKey(l, strengths))"));
+          ok("卡冊、Discord 條件的搜尋框擋注音／倉頡選字的 Enter",
+            /q\.addEventListener\("keydown", \(e\) => \{\s*\/\/[^\n]*\n\s*if \(e\.isComposing \|\| e\.keyCode === 229\) return;/.test(w6("book.js")) && w6("discord-routes.js").includes("if (ev.isComposing || ev.keyCode === 229) return;"));
+        }
         ok("效能：web6 的 CSS 不拿 body／html 當 :has 的主體（有彈窗、浮動列出來改由 ui.js、app.js 標在 <html data-overlay／data-go-float>）",
           !/(^|[\s,}])(body|html|:root)(\[[^\]]*\]|\.[\w-]+)*:has\(/m.test(css6all.replace(/\/\*[\s\S]*?\*\//g, "")) &&
             css6all.includes("html[data-overlay] .toast.toast {") && css6all.includes("html[data-go-float] .wall-busy {") &&
