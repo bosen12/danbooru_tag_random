@@ -23,18 +23,22 @@ test('wall empty lifecycle updates its own heading state', () => {
   assert.equal((app.match(/syncWallEmpty\(/g) || []).length, 6, 'draw/render/remove/restore/cancel all synchronize wall state');
 });
 test('float lifecycle keeps its existing show and inert states on cached button renders', () => {
-  const float = { dataset: {key: 'false|0|1|1'}, childElementCount: 1, inert: true, hidden: false };
-  const ctx = { $: () => float, document: { body: {dataset: {}} }, settings: {n: 1}, generator: {busy: false, pending: 0}, looping: false, drawingRounds: 0, goBarVisible: false, shots: [], pool: new Set(['x']) };
+  const attrs = node => ({ on: new Set(), toggleAttribute(name, force) { force ? this.on.add(name) : this.on.delete(name); return !!force; }, ...node });
+  const float = attrs({ dataset: {key: 'false|0|1|1'}, childElementCount: 1, inert: true, hidden: false });
+  const html = attrs({});
+  const ctx = { $: () => float, document: { body: {dataset: {}}, documentElement: html }, settings: {n: 1}, generator: {busy: false, pending: 0}, looping: false, drawingRounds: 0, goBarVisible: false, shots: [], pool: new Set(['x']), pickerMQ: {matches: false} };
   vm.createContext(ctx);
   const render = vm.runInContext(fn('renderGoFloat') + '\nrenderGoFloat', ctx);
   render();
   assert.equal(float.dataset.show, 'true');
   assert.equal(float.inert, false);
+  assert.ok(html.on.has('data-go-float'), 'page state lives on <html data-go-float>');
   assert.deepEqual(Object.keys(ctx.document.body.dataset), [], 'float CSS consumes its existing sibling state; overlays own inert changes');
   ctx.goBarVisible = true;
   render();
   assert.equal(float.dataset.show, 'false');
   assert.equal(float.inert, true);
+  assert.ok(!html.on.has('data-go-float'));
 });
 test('broad body/html/section relational selectors are absent; local relations remain', () => {
   for (const file of ['styles.css', 'card.css', 'fuse.css']) assert.doesNotMatch(read(file), /\b(?:body|html|section):has\(/, file);

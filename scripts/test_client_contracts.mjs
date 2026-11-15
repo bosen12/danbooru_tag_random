@@ -2398,6 +2398,31 @@ const ALBUM_FIXTURE = [
   ok("解析池：手機頂欄五格一排", read("web6/locale.css").includes(".page-switch { order: 3; width: 100%; display: grid; grid-template-columns: repeat(5, minmax(0, 1fr)); }"));
 }
 
+{
+  // 2026-11-15：iPhone 17。橫拿時靈動島、圓角那兩條讓開；加到主畫面時底下的橫槓讓開；iPhone 也有觸覺回饋。
+  const read = (f) => readFileSync(join(ROOT, f), "utf8").replace(/\r\n/g, "\n");
+  const styles = read("web6/styles.css");
+  const card = read("web6/card.css");
+  const fuse = read("web6/fuse.css");
+  ok("iPhone 橫拿：body 左右讓開安全區，貼邊的浮動鈕（廢字簍、字盒、付印、導覽、第一次準備、比較的關閉）各自加上",
+    styles.includes("padding-inline: env(safe-area-inset-left) env(safe-area-inset-right);") &&
+      [".trash {", ".trash-panel {", ".cmp-close {"].every((sel) => styles.split(sel + "\n")[1]?.split("}")[0].includes("env(safe-area-inset-right)")) &&
+      [".tour-offer {", ".setup-panel {"].every((sel) => styles.split(sel + "\n")[1]?.split("}")[0].includes("env(safe-area-inset-left)")) &&
+      fuse.split(".pool-pill {\n")[1].split("}")[0].includes("env(safe-area-inset-left)") &&
+      fuse.split(".print-float {\n")[1].split("}")[0].includes("env(safe-area-inset-right)"));
+  ok("iPhone 主畫面：偏好卡牌托盤讓開底下的橫槓，讓位給操作列時不重複算安全區",
+    card.includes("bottom: calc(10px + env(safe-area-inset-bottom));") && card.includes("bottom: calc(8px + env(safe-area-inset-bottom));") &&
+      card.includes(".go-float[data-show=\"true\"] ~ .fav-hand {\n  translate: -50% -62px;\n}"));
+  const haptic = read("web6/haptic.js");
+  ok("iPhone 觸覺回饋：沒有 vibrate 時點一個看不見的 switch 開關（只在觸控螢幕），點擊不往外傳；三處震動都走它",
+    haptic.includes('"switch" in HTMLInputElement.prototype') && haptic.includes('matchMedia("(pointer: coarse)")') &&
+      haptic.includes('input.setAttribute("switch", "")') && haptic.includes("e.stopPropagation()") &&
+      ["web6/app.js", "web6/fuse.js", "web6/drag.js"].every((f) => {
+        const s = read(f);
+        return s.includes('import { vibrate } from "./haptic.js";') && !s.includes("navigator.vibrate");
+      }));
+}
+
 if (failed) {
   console.error(NL + failed + " failed");
   process.exit(1);
