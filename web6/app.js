@@ -28,6 +28,7 @@ import {
   SKELETON,
   skeletonCap,
   stepSkeleton,
+  supplementKindKeys,
 } from "./engine.js";
 import { skeletonPicker } from "./skeleton-picker.js";
 import { compareThumb } from "./compare.js";
@@ -59,7 +60,7 @@ import { currentPose, poseButton } from "./pose.js";
 import { openDecks } from "./decks.js";
 import { SIZES, ratioBox } from "./sizes.js";
 import { mountMasonry } from "./wall-masonry.js";
-import { loadGroups, cachedGroups, withGroupPools } from "./card-groups.js";
+import { loadGroups, cachedGroups, withGroupPools, onGroupsChange } from "./card-groups.js";
 import { mountGroupPicks } from "./group-picks.js";
 import { handTools } from "./hand-tools.js";
 import { openPaste, listenPaste } from "./paste-prompt.js";
@@ -168,6 +169,7 @@ async function boot() {
   const customP = loadCustom();
   // 卡片群組（card-groups.js）：背景讀，抽牌時用；讀不到也照常開（勾選不會被清掉）。
   loadGroups();
+  onGroupsChange(() => skelPicker?.repaint());
   try {
     const [lexicon, manifest] = await Promise.all([
       fetch(lexUrl).then((r) => r.json()),
@@ -2183,7 +2185,8 @@ function renderRules() {
     )
   );
   // 數字比骨架少時，那一段在這裡展開選格（skeleton-picker.js）。
-  const picker = skeletonPicker({ settings: () => settings, save: (patch) => setSettings(patch) });
+  const picker = skeletonPicker({ settings: () => settings, save: (patch) => setSettings(patch), groupKeys: groupSkeletonKeys });
+  skelPicker = picker;
   const sizeSel = el("select", { class: "select", "aria-label": "尺寸" }, SIZES.map((s) => el("option", { value: s.id }, s.zh)));
   sizeSel.value = (SIZES.find((s) => s.w === settings.width && s.h === settings.height) || SIZES[0]).id;
   // 選單旁一個小框照長寬比畫：換尺寸時框從舊的比例變形成新的，一眼看出直、橫、多長。
@@ -2307,11 +2310,28 @@ function rulePair(label, control) {
   return el("span", { class: "rule-pair" }, el("span", { class: "rule-label" }, label), control);
 }
 
+// 選格那一排：勾了的群組管到哪幾格（用群組的顏色描出來）。
+let skelPicker = null;
+function groupSkeletonKeys(section) {
+  const out = new Set();
+  // 整組一起時每張只用一組，這裡把勾的每一組都算進來：哪一組被挑到都可能管到這幾格。
+  const ids = settings.groups?.[section]?.ids || [];
+  const tags = (cachedGroups() || []).filter((g) => ids.includes(g.id) && g.section === section).flatMap((g) => g.tags);
+  for (const t of tags) {
+    const item = lib.byTag.get(t)?.item;
+    if (item) for (const k of supplementKindKeys(item)) out.add(k);
+  }
+  return out;
+}
+
 let groupPicksApi = null;
 function groupPicks() {
   return (groupPicksApi ||= mountGroupPicks({
     settings: () => settings,
-    setSettings,
+    setSettings: (patch) => {
+      setSettings(patch);
+      skelPicker?.repaint();
+    },
     cardOf: (t) => lib.byTag.get(t),
     poolTags: () => [...pool].filter((t) => !isCustomTag(t)),
     // 這張牌在目前的設定下一定抽不到（抽牌途中才決定的，例如場景、互斥，不算）。
