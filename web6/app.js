@@ -3212,7 +3212,7 @@ function shotNode(shot, deal, { printing = false } = {}) {
       { class: "shot-meta" },
       status,
       el("code", {}, seedUseButton(shot.seed)),
-      el("span", {}, [ERA_LABELS[shot.era] || "", heatBlockedByRating(shot.heat, shot.rating) ? "" : HEAT_ZH[shot.heat] || ""].filter(Boolean).join("・")),
+      el("span", { class: "shot-era" }, [ERA_LABELS[shot.era] || "", heatBlockedByRating(shot.heat, shot.rating) ? "" : HEAT_ZH[shot.heat] || ""].filter(Boolean).join("・")),
       // 「牌・N」放在圖底下這一行（一直看得到）；其他動作在 shot-actions（電腦上疊在圖的下緣，滑過才浮出來）。
       toggle
     ),
@@ -3484,11 +3484,41 @@ function paintShot(node, shot) {
       frame.append(bar);
     }
     bar.style.setProperty("--p", String(shot.progress || 0));
-  } else if (bar) bar.remove();
+    // 外框一圈光照進度走（照 obscura 的暗房：一條光沿著框走一圈當進度）。
+    frame.style.setProperty("--ring-p", String(shot.progress || 0));
+  } else {
+    bar?.remove();
+    frame.style.removeProperty("--ring-p");
+  }
   const status = node.querySelector(".shot-meta .status");
   status.dataset.kind = shot.status === "failed" ? "err" : "";
   settleText(status,
-    shot.status === "done" ? (shot.hires ? `Hires ${HIRES_MODES[shot.hires.mode]?.zh || ""} ${shot.hires.width}×${shot.hires.height}` : "印好了") + (faceDepth(shot) > 1 ? `・修過臉 ×${faceDepth(shot)}` : shot.face ? "・修過臉" : "") : shot.status === "running" ? shot.note || "印製中" : shot.status === "drawn" ? "只抽牌" : words[shot.status] || "");
+    shot.status === "done" ? (shot.hires ? `Hires ${HIRES_MODES[shot.hires.mode]?.zh || ""} ${shot.hires.width}×${shot.hires.height}` : "印好了") + (faceDepth(shot) > 1 ? `・修過臉 ×${faceDepth(shot)}` : shot.face ? "・修過臉" : "") : shot.status === "running" ? runningText(shot) : shot.status === "drawn" ? "只抽牌" : words[shot.status] || "");
+  status.dataset.pct = shot.status === "running" && /^\d+%$/.test(status.textContent) ? "true" : "false";
+  // 畫的時候狀態後面接速度、剩多久（照 obscura：3.21 it/s · 剩 6 秒）。
+  let rate = status.nextElementSibling?.classList.contains("shot-rate") ? status.nextElementSibling : null;
+  if (shot.status === "running" && shot.its) {
+    if (!rate) {
+      rate = el("span", { class: "shot-rate", dataset: { noI18n: "" } });
+      status.after(rate);
+    }
+    rate.textContent = rateText(shot.its, shot.eta);
+  } else rate?.remove();
+}
+
+/** 畫的時候：開始走步數了就寫百分比（照 obscura 的 64%）；還沒開始照舊寫「排隊中」「接回剛才那張…」這類說明。 */
+function runningText(shot) {
+  if (/^繪製 \d+\/\d+$/.test(shot.note || "")) return `${Math.round((shot.progress || 0) * 100)}%`;
+  return shot.note || "印製中";
+}
+
+/** 3.21 it/s · 剩 6 秒（慢於一步一秒寫 s/it）。 */
+function rateText(its, eta) {
+  const speed = its >= 1 ? `${its.toFixed(2)} it/s` : `${(1 / its).toFixed(1)} s/it`;
+  if (eta == null || !Number.isFinite(eta)) return speed;
+  const s = Math.max(0, Math.round(eta));
+  const left = s >= 60 ? (english ? `${Math.floor(s / 60)}m ${s % 60}s left` : `剩 ${Math.floor(s / 60)} 分 ${s % 60} 秒`) : english ? `${s}s left` : `剩 ${s} 秒`;
+  return `${speed} · ${left}`;
 }
 
 const REPRINTABLE = new Set(["drawn", "failed", "cancelled", "stopped"]);
