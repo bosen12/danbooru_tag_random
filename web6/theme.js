@@ -3,7 +3,8 @@
  *
  *   深色（預設，墨池原本的樣子）、淺色（宣紙）、跟系統（照作業系統的淺／深）。存在 mochi.theme.v1，各頁、各分頁共用。
  *   <html data-theme="light|dark">：tokens.css 照它換一套顏色；color-scheme 讓捲軸、輸入框跟著換。
- *   頂欄語言地球旁邊一顆切換（圖示＋透明的原生下拉選單，跟語言那顆同一種做法），切了馬上換、不必重新整理。
+ *   頂欄語言地球旁邊一顆按鈕：按一下就在深色、淺色之間直接切（2026-11-16 專案主：不要選單、不要暈開的動畫）。
+ *   以前存的「跟系統」照樣認（照作業系統），按一下就換成另一個顏色、從此固定。
  *   第一排擠不下的寬度（手機等）改放在工具列聲音鈕後面，見 fit()。
  * 影片頁（介紹影片、使用教學）不載這支：它們是電影，永遠深色。 */
 (() => {
@@ -29,65 +30,36 @@
     root.style.colorScheme = t;
     const meta = document.querySelector('meta[name="theme-color"]');
     if (meta && meta.content !== META[t]) meta.content = META[t];
-    const picker = document.getElementById("theme-select");
-    if (picker && picker.value !== pref()) picker.value = pref();
-    const label = picker?.parentElement;
-    if (label) label.dataset.pref = pref();
+    const btn = document.getElementById("theme-select");
+    if (btn) paintButton(btn, t);
   }
 
-  /**
-   * 換外觀。從按鈕那一點暈開：新的顏色像一滴墨（或一張紙）從切換鈕往外滲，邊緣是軟的，不是一格跳。
-   * 用 View Transitions（Chrome、Edge、Safari 18）：舊畫面定格，新畫面用一個越開越大的圓遮罩露出來。
-   * 不支援的瀏覽器整頁顏色淡過去（.theme-shifting）；減少動態的直接換。實際顏色沒變（深色 → 跟系統，系統也是深色）就不演。
-   */
-  function set(v, from) {
+  function paintButton(btn, t = resolve()) {
+    const en = document.documentElement.lang === "en";
+    btn.dataset.pref = t;
+    btn.setAttribute("aria-pressed", t === "light" ? "true" : "false");
+    const next = t === "dark" ? (en ? "light" : "淺色") : en ? "dark" : "深色";
+    btn.setAttribute("aria-label", en ? `Switch to ${next}` : `換成${next}`);
+    btn.title = en ? `Appearance: ${t}. Click for ${next}.` : `外觀：${t === "dark" ? "深色" : "淺色"}，按一下換成${next}`;
+  }
+
+  /** 換外觀：直接切，不演（2026-11-16 專案主要按一下直切）。 */
+  function set(v) {
     if (!CHOICES.includes(v)) return;
-    const root = document.documentElement;
-    const before = resolve();
     try {
       localStorage.setItem(KEY, v);
     } catch {}
-    const done = () => dispatchEvent(new CustomEvent("mochi:themechange", { detail: { pref: v, theme: resolve(v) } }));
-    const calm = matchMedia("(prefers-reduced-motion: reduce)").matches;
-    if (calm || before === resolve(v)) return apply(), done();
-    if (typeof document.startViewTransition !== "function" || document.visibilityState !== "visible") {
-      root.classList.add("theme-shifting");
-      setTimeout(() => root.classList.remove("theme-shifting"), 450);
-      return apply(), done();
-    }
-    const box = (from || document.querySelector(".theme-picker"))?.getBoundingClientRect();
-    const x = box?.width ? box.left + box.width / 2 : innerWidth - 48;
-    const y = box?.height ? box.top + box.height / 2 : 24;
-    // 圓要蓋到離起點最遠的角，再多一圈軟邊。
-    const far = Math.hypot(Math.max(x, innerWidth - x), Math.max(y, innerHeight - y)) + SOFT;
-    root.style.setProperty("--ink-x", `${x}px`);
-    root.style.setProperty("--ink-y", `${y}px`);
-    root.classList.add("theme-inking");
-    const t = document.startViewTransition(apply);
-    t.ready
-      .then(() =>
-        root.animate(
-          { "--theme-ink-r": ["0px", `${far}px`] },
-          // 面積跟半徑平方走：前段快的曲線（ease-out）三成時間就蓋滿九成，後面半秒什麼都沒在動。
-          // 用前後都緩的曲線，暈開的那一圈整段都看得到在走；手機（半徑小）短一點。
-          { duration: far > 900 ? 760 : 620, easing: "cubic-bezier(0.55, 0.05, 0.3, 1)", fill: "forwards", pseudoElement: "::view-transition-new(root)" }
-        )
-      )
-      .catch(() => {});
-    t.finished.finally(() => {
-      root.classList.remove("theme-inking");
-      root.style.removeProperty("--ink-x");
-      root.style.removeProperty("--ink-y");
-      done();
-    });
+    apply();
+    dispatchEvent(new CustomEvent("mochi:themechange", { detail: { pref: v, theme: resolve(v) } }));
   }
-  const SOFT = 64;
+  /** 按一下：現在看到的是深色就換淺色，反之亦然。 */
+  const toggle = () => set(resolve() === "dark" ? "light" : "dark");
 
   apply();
   mq?.addEventListener?.("change", () => pref() === "auto" && apply());
   // 別的分頁換了：跟著換。
   addEventListener("storage", (e) => e.key === KEY && apply());
-  globalThis.MochiTheme = { pref, resolve, set };
+  globalThis.MochiTheme = { pref, resolve, set, toggle };
 
   const ICON = '<svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" stroke-width="1.6" aria-hidden="true"><circle cx="12" cy="12" r="8.5"/><path d="M12 3.5a8.5 8.5 0 0 0 0 17z" fill="currentColor" stroke="none"/></svg>';
 
@@ -96,26 +68,14 @@
     if (document.getElementById("theme-select")) return;
     const host = document.querySelector(".mast-primary");
     if (!host) return;
-    const en = document.documentElement.lang === "en";
-    const label = document.createElement("label");
+    const label = document.createElement("button");
+    label.type = "button";
+    label.id = "theme-select";
     label.className = "theme-picker";
     label.dataset.noI18n = "";
     label.innerHTML = ICON;
-    const select = document.createElement("select");
-    select.id = "theme-select";
-    select.setAttribute("aria-label", en ? "Appearance" : "外觀");
-    select.title = en ? "Appearance: dark, light, or follow the system" : "外觀：深色、淺色，或跟著系統";
-    select.style.fontFamily = '"Segoe UI", "Microsoft JhengHei", sans-serif';
-    for (const [value, zh, enText] of [["dark", "深色", "Dark"], ["light", "淺色", "Light"], ["auto", "跟系統", "System"]]) {
-      const o = document.createElement("option");
-      o.value = value;
-      o.textContent = en ? enText : zh;
-      select.append(o);
-    }
-    select.value = pref();
-    label.dataset.pref = pref();
-    select.addEventListener("change", () => set(select.value, label));
-    label.append(select);
+    paintButton(label);
+    label.addEventListener("click", toggle);
     const place = () => {
       const lang = host.querySelector(".language-picker");
       if (lang) host.insertBefore(label, lang);
@@ -173,7 +133,7 @@
     const slot = ["beside", sound && "tool", "compact"].filter(Boolean).find((s) => (at(s), height() <= base + 1 && scrolling() <= baseScroll)) || (sound ? "beside" : "none");
     at(slot);
     label.dataset.slot = slot;
-    if (focused) label.querySelector("select")?.focus();
+    if (focused) label.focus();
   }
 
   if (document.readyState === "loading") document.addEventListener("DOMContentLoaded", () => (apply(), mount()), { once: true });
