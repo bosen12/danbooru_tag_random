@@ -367,6 +367,12 @@ if errorlevel 1 (
   pause
   exit /b 1
 )
+echo == negative prompts ==
+%PY% scripts\test_negative_prompts.py
+if errorlevel 1 (
+  pause
+  exit /b 1
+)
 echo == workflow profiles ==
 %PY% scripts\test_workflows.py
 if errorlevel 1 (
