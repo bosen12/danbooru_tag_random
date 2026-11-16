@@ -1009,7 +1009,7 @@ function listNow() {
       genderOk(c) &&
       // 看一個群組（或替它加牌）：照群組篩，不看花色和小分類。
       (shelf?.active()
-        ? shelf.keep(c) && (!shelf.editing() || !ui.group || c.group === ui.group)
+        ? shelf.keep(c) && (shelf.editing() ? !ui.group || c.group === ui.group : !shelf.sub() || c.group === shelf.sub())
         : (ui.suit === "all" || c.suit === ui.suit) && (!ui.group || c.group === ui.group)) &&
       // 看一個群組時「只看用過的」不算：組員一律列出。
       (!ui.usedOnly || shelf?.active() || countOf(c.tag) > 0) &&
