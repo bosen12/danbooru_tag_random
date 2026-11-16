@@ -354,6 +354,11 @@ if errorlevel 1 (
   pause
   exit /b 1
 )
+call node scripts\test_prerender_handoff.mjs
+if errorlevel 1 (
+  pause
+  exit /b 1
+)
 echo == custom cards ==
 %PY% scripts\test_custom_cards.py
 if errorlevel 1 (
