@@ -343,6 +343,17 @@ if errorlevel 1 (
   pause
   exit /b 1
 )
+echo == card groups ==
+%PY% scripts\test_card_groups.py
+if errorlevel 1 (
+  pause
+  exit /b 1
+)
+call node scripts\test_card_groups_engine.mjs
+if errorlevel 1 (
+  pause
+  exit /b 1
+)
 echo == custom cards ==
 %PY% scripts\test_custom_cards.py
 if errorlevel 1 (
