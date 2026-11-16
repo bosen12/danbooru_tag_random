@@ -52,6 +52,7 @@ TEST_FILES = {
     "test_negative_prompts.py": "test_negative_prompts.py",
     "test_card_groups.py": "test_card_groups.py",
     "test_card_groups_engine.mjs": "test_card_groups_engine.mjs",
+    "test_prerender_handoff.mjs": "test_prerender_handoff.mjs",
     "test_era_mix_rating_free.mjs": "test_era_mix_rating_free.mjs",
     "test_tab_sync.mjs": "test_tab_sync.mjs",
     "test_card_search.mjs": "test_card_search.mjs",

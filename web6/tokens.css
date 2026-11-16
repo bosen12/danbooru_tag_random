@@ -160,4 +160,40 @@
   --peek-shadow: 0 20px 44px oklch(30% 0.03 250 / 0.24);
 }
 
-/* 切換外觀是直接切（theme.js），不演轉場。 */
+/* 切換外觀的那一下：整頁的底色、字色、框線淡過去（theme.js 加 0.45 秒的 class），不是一格跳。 */
+html.theme-shifting,
+html.theme-shifting *,
+html.theme-shifting *::before,
+html.theme-shifting *::after {
+  transition:
+    background-color var(--dur-long) var(--ease-in-out),
+    color var(--dur-long) var(--ease-in-out),
+    border-color var(--dur-long) var(--ease-in-out),
+    fill var(--dur-long) var(--ease-in-out),
+    stroke var(--dur-long) var(--ease-in-out),
+    rotate var(--dur-medium) var(--ease-settle) !important;
+}
+
+/* 換外觀的暈開（theme.js，瀏覽器有 View Transitions 時）：舊畫面定格在下面，新畫面從切換鈕那一點
+ * 用一個邊緣柔軟的圓露出來，像墨（或紙）往外滲。圓的大小 --theme-ink-r 由 theme.js 推；
+ * 起點 --ink-x / --ink-y 寫在 <html> 上，view-transition 的偽元素從 <html> 繼承。 */
+@property --theme-ink-r {
+  syntax: "<length>";
+  inherits: false;
+  initial-value: 0px;
+}
+/* 換頁的轉場幫頂欄、字盒、工作區各取了名字（styles.css「換版」）：換外觀時有名字的會單獨成一層、不吃遮罩，
+ * 第一格就整塊換成新顏色。這一下全部收回 root，整頁一起被墨蓋過去。（<html> 本身不能清：它就是 root。） */
+html.theme-inking body,
+html.theme-inking body * {
+  view-transition-name: none !important;
+}
+html.theme-inking::view-transition-old(root),
+html.theme-inking::view-transition-new(root) {
+  animation: none;
+  mix-blend-mode: normal;
+}
+html.theme-inking::view-transition-new(root) {
+  -webkit-mask-image: radial-gradient(circle at var(--ink-x) var(--ink-y), #000 calc(var(--theme-ink-r) - 64px), transparent var(--theme-ink-r));
+  mask-image: radial-gradient(circle at var(--ink-x) var(--ink-y), #000 calc(var(--theme-ink-r) - 64px), transparent var(--theme-ink-r));
+}
