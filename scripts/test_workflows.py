@@ -205,6 +205,10 @@ rt3 = workflows.apply_mapping(
 )
 ok("control lora name", rt3["12"]["inputs"]["lora_name"] == r"Character\foo.safetensors")
 ok("control lora strength", rt3["12"]["inputs"]["strength_model"] == 0.8)
+ok("control lora strength also sets the clip side (like the built-in graph)", rt3["12"]["inputs"]["strength_clip"] == 0.8)
+_ctl = {"positive": {"node": "6", "input": "text", "mode": "control"}, "loras": [{"node": "12", "input": "lora_name", "strengthInput": "strength_model", "mode": "control"}]}
+rt_none = workflows.apply_mapping(lora_wf, _ctl, {"positive": "x", "loras": []})
+ok("panel controls the node but picked nothing: the workflow's own LoRA is switched off", rt_none["12"]["inputs"]["strength_model"] == 0.0 and rt_none["12"]["inputs"]["strength_clip"] == 0.0, str(rt_none["12"]["inputs"]))
 ok("lora keep leaves name", workflows.apply_mapping(
     lora_wf,
     {
