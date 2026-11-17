@@ -167,6 +167,9 @@ img_rec = recipes.save_image_bytes(space["id"], png, suffix=".png")
 ok("image copy stores file name only", img_rec["image"]["file"].endswith(".png") and "/" not in img_rec["image"]["file"])
 ok("image path resolves inside files dir", recipes.resolve_stored_file(img_rec["image"]["file"]) is not None)
 ok("path traversal image rejected", recipes.resolve_stored_file("../engine.js") is None)
+src_rec = recipes.save_image_bytes(space["id"], png, suffix=".png", src="sub/ComfyUI_00012_.png#abcd")
+ok("image remembers which ComfyUI output it came from (log favourites match it)", src_rec["image"].get("src") == "sub/ComfyUI_00012_.png#abcd" and recipes.get_recipe(space["id"])["image"].get("src") == "sub/ComfyUI_00012_.png#abcd")
+ok("list summary carries the source", next(r for r in recipes.list_recipes() if r["id"] == space["id"])["image"].get("src") == "sub/ComfyUI_00012_.png#abcd")
 ok("absolute image rejected", recipes.resolve_stored_file(str(ROOT / "web" / "engine.js")) is None)
 
 try:
