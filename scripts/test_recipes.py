@@ -235,6 +235,33 @@ row = next(r for r in recipes.list_recipes() if r["id"] == thumb_rec["id"])
 ok("summary carries thumbnail, size, pinned", row["thumbnail"]["file"].endswith(".thumb.webp") and row["width"] == 832 and row["height"] == 1216 and row["pinned"] == ["1girl", "solo"], str(row))
 ok("thumbnail file is stored", recipes.resolve_stored_file(row["thumbnail"]["file"]) is not None)
 
+# 存圖存到一半，另一個分頁刪了這件作品：刪掉的不能被存圖寫回來（存圖整段拿著鎖）。
+race_rec = recipes.save_recipe(sample(name="存圖時刪掉"))
+writing = threading.Event()
+go_on = threading.Event()
+real_replace = recipes.os.replace
+
+
+def slow_replace(src, dst):
+    if str(dst).endswith(".png"):
+        writing.set()
+        go_on.wait(5)
+    return real_replace(src, dst)
+
+
+recipes.os.replace = slow_replace
+saver = threading.Thread(target=lambda: recipes.save_image_bytes(race_rec["id"], b"\x89PNG fake"))
+saver.start()
+writing.wait(5)
+deleter = threading.Thread(target=lambda: recipes.delete_recipe(race_rec["id"]))
+deleter.start()
+deleter.join(0.3)
+go_on.set()
+saver.join(5)
+deleter.join(5)
+recipes.os.replace = real_replace
+ok("deleting while the image is being saved stays deleted", recipes.get_recipe(race_rec["id"]) is None)
+
 if failed:
     print(f"\n{failed} failed")
     sys.exit(1)

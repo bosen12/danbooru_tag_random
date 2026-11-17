@@ -2331,7 +2331,7 @@ const ALBUM_FIXTURE = [
               read("gen.js").includes("if (leaving && !(err instanceof GenError)) return false;") &&
               read("store.js").includes("waiting: isWaiting(s),") && read("fuse.js").includes("waiting: S.isWaiting(p),") &&
               // web6 改成只由一個分頁接著印（tab-sync.js 的 whenPrinter），web7 還是開頁就接。
-              (read("app.js").includes("for (const s of waiting) generator.enqueue(s);") || (read("app.js").includes("for (const s of waitNow) generator.enqueue(s);") && read("app.js").includes('whenPrinter("mochi"'))) &&
+              (read("app.js").includes("for (const s of waiting) generator.enqueue(s);") || (read("app.js").includes("for (const s of waitNow) generator.enqueue(s, { reserved: s.reserved });") && read("app.js").includes('whenPrinter("mochi"'))) &&
               (read("fuse.js").includes("const waiting = prints.filter((p) => p._waiting).reverse();") || (read("fuse.js").includes("S.stillWaiting(stored.get(p.id)) : p._waiting)).reverse();") && read("fuse.js").includes('whenPrinter("fuse"'))) &&
               css.includes(".page-switch a[data-gen] .page-switch-gen {") && /\.mast-tools \.gen-badge \{\s*display: none;/.test(css);
           }));
