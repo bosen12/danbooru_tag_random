@@ -354,6 +354,31 @@ if errorlevel 1 (
   pause
   exit /b 1
 )
+call node scripts\test_wall_trim.mjs
+if errorlevel 1 (
+  pause
+  exit /b 1
+)
+call node scripts\test_card_groups_client.mjs
+if errorlevel 1 (
+  pause
+  exit /b 1
+)
+call node scripts\test_copy_text.mjs
+if errorlevel 1 (
+  pause
+  exit /b 1
+)
+call node scripts\test_draw_pool_ready.mjs
+if errorlevel 1 (
+  pause
+  exit /b 1
+)
+call node scripts\test_parse_race.mjs
+if errorlevel 1 (
+  pause
+  exit /b 1
+)
 call node scripts\test_prerender_handoff.mjs
 if errorlevel 1 (
   pause

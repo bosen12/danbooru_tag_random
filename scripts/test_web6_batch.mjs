@@ -35,7 +35,9 @@ function harness() {
     makeShot(drawn, seed, pins, snapshot) { return { id: "s" + seed, positive: drawn.positive, seed, width: snapshot?.width ?? ctx.settings.width, pins: [...pins], mine: [...pins], drawn: [] }; },
     currentTriggerText: () => "trigger", currentLorasPayload: () => [], currentCkpt: () => "model", currentWorkflowId: () => "wf", currentSampling: () => ({ steps: 19, cfg: 4 }),
     // 後來加的：姿勢參考、偏好角色、實際尺度、背景執行緒抽牌（這裡回 null，照舊在這邊抽，才數得到每一張）。
-    currentPose: () => null, withFavChars: s => s, withEffectiveHeats: s => s, drawInWorker: async () => null, hasDrawWorker: () => false, renderOverreach() {}, syncHandBtn() {}, afterPaint: fn => fn(), matchMedia: () => ({ matches: false }), innerHeight: 800, flip: (n, f) => f(),
+    currentPose: () => null, withFavChars: s => s, withEffectiveHeats: s => s, drawInWorker: async () => null, hasDrawWorker: () => false, renderOverreach() {}, syncHandBtn() {}, afterPaint: fn => fn(), matchMedia: () => ({ matches: false }), innerHeight: 800, flip: (n, f) => f(), wallFlip: f => f(),
+    // 卡片群組（card-groups.js）：這裡沒勾群組。
+    cachedGroups: () => null, loadGroups: async () => null, freshGroups: async () => null, withGroupPools: s => s, groupCardBlocked: () => null,
     $: id => id === "wall" ? wall : id === "go-bar" ? bar : id === "wall-head" ? wallHead : id === "wall-empty" ? wallEmpty : {},
     refuse() {}, toast() {}, sfx: { deal() {}, roll() {} }, recordUses() {}, tagsOfPositive: () => [],
     shotNode: shot => ({ id: shot.id, querySelector: () => null }), enter() {}, trimWall() {},
