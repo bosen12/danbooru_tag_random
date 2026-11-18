@@ -21,13 +21,14 @@ def main():
     parser = argparse.ArgumentParser(description=__doc__)
     parser.add_argument("provider", choices=assistant.CLI_NAMES)
     parser.add_argument("--model", help="留空使用 CLI 預設模型")
+    parser.add_argument("--effort", help="推理強度（留空用 CLI 預設）")
     parser.add_argument("--cancel-after", type=float, metavar="秒數",
                         help="在同一次請求中試取消，也可按 Ctrl+C")
     args = parser.parse_args()
     if args.cancel_after is not None and not 0 < args.cancel_after < assistant.TEST_TIMEOUT:
         parser.error(f"--cancel-after 必須大於 0 且小於 {assistant.TEST_TIMEOUT} 秒")
 
-    conn = {"provider": args.provider, "model": args.model}
+    conn = {"provider": args.provider, "model": args.model, "effort": args.effort or None}
     chat = {"system": "", "tools": [], "messages": [{"role": "user", "content": "只回覆 ok"}]}
     cancel = assistant._CancelScope()
     child = timer = code = result = error = None
