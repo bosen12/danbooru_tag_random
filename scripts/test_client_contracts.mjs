@@ -1730,7 +1730,7 @@ const ALBUM_FIXTURE = [
     const hand6 = readFileSync(join(ROOT, "web6/hand.js"), "utf8");
     const fuseHtml6 = readFileSync(join(ROOT, "web6/fuse.html"), "utf8");
     const css6 = readFileSync(join(ROOT, "web6/card.css"), "utf8").replace(/\r\n/g, "\n");
-    ok("偏好卡牌：共用 hand.js，不限張數；墨池、卡冊同一份，疊印台自己一份", hand6.includes("export function createHand(") && hand6.includes("max = Infinity") && app6.includes('key: "mochi.hand.v1"') && fuse6.includes('key: "mochi.fuse.hand.v1"') && readFileSync(join(ROOT, "web6/book.js"), "utf8").includes('const HAND_KEY = "mochi.hand.v1";'));
+    ok("偏好卡牌：共用 hand.js，不限張數；所有房間、所有裝置同一份（hand-store.js，存在伺服器），疊印台以前那份併進來", hand6.includes("export function createHand(") && hand6.includes("max = Infinity") && app6.includes("store: handStore,") && fuse6.includes("store: handStore,") && fuse6.includes('mergeLegacyHand("mochi.fuse.hand.v1");') && readFileSync(join(ROOT, "web6/book.js"), "utf8").includes('const HAND_KEY = "mochi.hand.v1";'));
     ok("偏好卡牌多到疊也看不清：平平一排、左右捲（滾輪也捲），新加的捲到看得到", hand6.includes("const scrolls = (n, w, room) =>") && hand6.includes("body.scrollLeft += e.deltaY;") && hand6.includes("else reveal0(tag);") && css6.includes('.fav-hand[data-scroll="true"] .fav-body {'));
     ok("偏好卡牌鈕：墨池在只抽牌左邊、疊印台在撤回左邊", fuseHtml6.indexOf('id="hand-btn"') >= 0 && fuseHtml6.indexOf('id="hand-btn"') < fuseHtml6.indexOf('id="undo"') && app6.indexOf("hand-btn") < app6.indexOf('"只抽牌"'));
     ok("已經在卡池的不擺在托盤上；從卡池拿下來飛回托盤、不回字盒", hand6.includes("tags.filter((t) => !inPool(t))") && fuse6.includes("(hand?.has(tag) && hand.nodeOf(tag)) || caseCard(tag)") && app6.includes("const homeNow = () => (hand?.has(tag) && hand.nodeOf(tag)) || libCardNode(tag);"));

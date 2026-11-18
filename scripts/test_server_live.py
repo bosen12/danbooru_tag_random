@@ -322,6 +322,8 @@ def start_server(comfy_port: int, extra_env=None):
         CARD_DECKS_PATH=str(Path(tempfile.mkdtemp()) / "card_decks.json"),
         CARD_GROUPS_PATH=str(Path(tempfile.mkdtemp()) / "card_groups.json"),
         CARD_FAV_CHARS_PATH=str(Path(tempfile.mkdtemp()) / "fav_chars.json"),
+        CARD_FAV_HAND_PATH=str(Path(tempfile.mkdtemp()) / "fav_hand.json"),
+        CARD_GROUP_PICKS_PATH=str(Path(tempfile.mkdtemp()) / "group_picks.json"),
         RECIPE_DATA_DIR=tempfile.mkdtemp(),
         # 第一次準備（會下載、裝東西、寫 data/setup.log）、清 ComfyUI 的 Hires 暫存：測試都不碰。
         NO_SETUP="1",
@@ -768,6 +770,18 @@ try:
         ok("版本對得上：整年快取", "immutable" in cache_of(f"/engine.js?v={m.group(1)}"))
         ok("版本對不上（改檔的那一瞬間拿舊版本號來要）：不准快取", cache_of("/engine.js?v=0000000000") == "no-cache")
         ok("沒帶版本：照舊每次回來問", cache_of("/engine.js") == "no-cache")
+    # 偏好卡牌、群組勾選：所有裝置共用（2026-11-18）。真的伺服器上收得到、讀得回來（資料夾是測試自己的）。
+    def api(path, body=None):
+        req = urllib.request.Request(f"http://127.0.0.1:{port}{path}", data=json.dumps(body).encode() if body is not None else None, headers={"Content-Type": "application/json"} if body is not None else {})
+        with urllib.request.urlopen(req, timeout=20) as r:
+            return json.loads(r.read().decode("utf-8"))
+    ok("偏好卡牌：伺服器一開始沒存過", api("/api/fav-hand")["saved"] is False)
+    api("/api/fav-hand", {"tags": ["red hair", "kimono"]})
+    ok("偏好卡牌：存了讀得回來（照順序）", api("/api/fav-hand")["tags"] == ["red hair", "kimono"])
+    ok("偏好卡牌：排順序", api("/api/fav-hand", {"order": ["kimono", "red hair"]})["tags"] == ["kimono", "red hair"])
+    ok("群組勾選：伺服器一開始沒存過", api("/api/group-picks")["saved"] is False)
+    api("/api/group-picks", {"picks": {"feature": {"ids": ["g-abcd"], "mode": "mix"}}})
+    ok("群組勾選：存了讀得回來", api("/api/group-picks")["picks"] == {"feature": {"ids": ["g-abcd"], "mode": "mix"}})
 finally:
     proc.terminate()
     try:

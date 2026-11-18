@@ -8,6 +8,7 @@ from pathlib import Path
 tmp = Path(tempfile.mkdtemp())
 os.environ["CARD_DECKS_PATH"] = str(tmp / "decks.json")
 os.environ["CARD_FAV_CHARS_PATH"] = str(tmp / "fav_chars.json")
+os.environ["CARD_FAV_HAND_PATH"] = str(tmp / "fav_hand.json")
 lex = tmp / "lexicon.json"
 lex.write_text(json.dumps({"tags": [{"tag": "1girl"}, {"tag": "solo"}, {"tag": "cat ears"}]}), encoding="utf-8")
 os.environ["CARD_USAGE_LEXICON"] = str(lex)
@@ -107,6 +108,18 @@ ok("偏好角色：檔案壞掉用 .bak 換回來", card_decks.load_fav_chars()[
 Path(os.environ["CARD_FAV_CHARS_PATH"]).write_text("{壞掉", encoding="utf-8")
 Path(os.environ["CARD_FAV_CHARS_PATH"] + ".bak").write_text("{也壞", encoding="utf-8")
 ok("偏好角色：備份也壞了就當成沒存過（瀏覽器那份會補上來）", card_decks.load_fav_chars()["saved"] is False)
+
+# 偏好卡牌（2026-11-18 改成伺服器共用）：跟偏好角色同一套，多一個順序。
+ok("偏好卡牌：沒存過", card_decks.load_fav_hand() == {"tags": [], "saved": False, "at": 0})
+card_decks.save_fav_hand({"tags": ["1girl", "solo", "cat ears"]})
+ok("偏好卡牌：整份存下、照順序讀回", card_decks.load_fav_hand()["tags"] == ["1girl", "solo", "cat ears"])
+ok("偏好卡牌：排順序（order）照著排", card_decks.save_fav_hand({"order": ["cat ears", "1girl", "solo"]})["tags"] == ["cat ears", "1girl", "solo"])
+# 手機加了 red hair（送 add），電腦同時把順序排過（order 裡沒有 red hair）：red hair 不能被排掉，留在最前面。
+card_decks.save_fav_hand({"add": ["red hair"]})
+_h = card_decks.save_fav_hand({"order": ["solo", "cat ears", "1girl"]})["tags"]
+ok("偏好卡牌：別台剛加的（order 裡沒有）留著、在最前面", _h == ["red hair", "solo", "cat ears", "1girl"])
+ok("偏好卡牌：拿掉一張", card_decks.save_fav_hand({"remove": ["solo"]})["tags"] == ["red hair", "cat ears", "1girl"])
+ok("偏好卡牌：跟偏好角色各存各的", "red hair" not in card_decks.load_fav_chars()["tags"])
 
 print("all ok" if not failed else f"{failed} failed")
 sys.exit(1 if failed else 0)
