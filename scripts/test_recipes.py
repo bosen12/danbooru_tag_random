@@ -265,6 +265,10 @@ deleter.join(5)
 recipes.os.replace = real_replace
 ok("deleting while the image is being saved stays deleted", recipes.get_recipe(race_rec["id"]) is None)
 
+# 第五輪 Astra：Hires 2× 之後的成品一邊超過 2048，存檔不能截成 2048（那是生圖的上限，不是成品的）。
+big = recipes.save_recipe(sample(width=1664, height=2432))
+ok("Hires sized favourite keeps its real size", (big["width"], big["height"]) == (1664, 2432) and recipes.get_recipe(big["id"])["height"] == 2432, str((big["width"], big["height"])))
+
 if failed:
     print(f"\n{failed} failed")
     sys.exit(1)

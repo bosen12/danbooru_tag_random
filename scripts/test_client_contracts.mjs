@@ -2140,6 +2140,25 @@ const ALBUM_FIXTURE = [
             app.includes("function greetPicked()") && app.includes("pickerFrom = new Set(pool);") &&
             cssText.includes(".stepper button::before {") && fuseCss.includes(".case-tab::before {");
         }));
+      ok("作品冊照這張再印：先讀完整配方（LoRA 強度、選過的觸發詞），讀不到才用清單那一列（第五輪 Astra）",
+        (() => {
+          const src = readFileSync(join(ROOT, "web6", "album.js"), "utf8");
+          return src.includes("async function reprintWork(all, w, btn)") && src.includes("onclick: (e) => reprintWork(all, w, e.currentTarget)") && /fetch\(`\/api\/recipes\/\$\{encodeURIComponent\(w\.id\)\}`/.test(src) && src.includes("src = { ...w, loras: full.recipe.loras }");
+        })());
+      ok("日誌：縮圖換成作品冊那份之後，詳情大圖和「開原圖」也用那份；大圖自己載不到也換（第五輪 Astra）",
+        (() => {
+          const src = readFileSync(join(ROOT, "web6", "album-log.js"), "utf8");
+          return src.includes("e._useFav = true;") && src.includes("const useFav = !!e._favImg && (e._useFav || e._gone);") && src.includes("onerror: swapToFav") && (src.match(/dataset: \{ orig: \"\" \}/g) || []).length === 2;
+        })());
+      ok("牌組：沒取名、預設名撞到舊的牌組時接編號，不蓋掉那一組（第五輪 Astra；按鈕寫的是「存成牌組」）",
+        (() => {
+          const src = readFileSync(join(ROOT, "web6", "decks.js"), "utf8");
+          const fn = src.match(/export function freeName\(base, decks\) \{[\s\S]*?\n\}/)[0].replace("export ", "");
+          const freeName = new Function(fn + "; return freeName;")();
+          const ds = [{ name: "紅髮・和服・站姿" }, { name: "紅髮・和服・站姿（2）" }];
+          return freeName("紅髮・和服・站姿", ds) === "紅髮・和服・站姿（3）" && freeName("黑髮", ds) === "黑髮" &&
+            src.includes("const hit = typed ? decks.find((d) => d.name === n) : null;") && src.includes("if (!typed) n = freeName(n, decks);");
+        })());
       ok("牌組：三頁共用面板（decks.js，/api/decks）；墨池合成池、疊印台卡池（空白版列出你的牌組、撤回回原版）、卡冊（web6 偏好卡牌、web7 卡盒）都能存、能套用（web6、web7）",
         ["web6", "web7"].every((d) => {
           const decks = readFileSync(join(ROOT, d, "decks.js"), "utf8");
