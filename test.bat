@@ -337,6 +337,24 @@ if errorlevel 1 (
   pause
   exit /b 1
 )
+echo == AI assistant backend ==
+%PY% scripts\test_assistant.py
+if errorlevel 1 (
+  pause
+  exit /b 1
+)
+echo == AI assistant tools ==
+call node scripts\test_assistant_tools.mjs
+if errorlevel 1 (
+  pause
+  exit /b 1
+)
+echo == AI assistant chat (web6 browser) ==
+call node scripts\test_web6_assistant_browser.mjs
+if errorlevel 1 (
+  pause
+  exit /b 1
+)
 echo == card decks ==
 %PY% scripts\test_card_decks.py
 if errorlevel 1 (

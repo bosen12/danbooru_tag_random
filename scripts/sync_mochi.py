@@ -29,7 +29,7 @@ W6 = ROOT / "web6"
 WEB = ROOT / "web"
 
 # 伺服器與它 import 的模組（根目錄）。
-ROOT_FILES = ["server.py", "card_usage.py", "card_decks.py", "card_groups.py", "card_art_custom.py", "custom_cards.py", "discord_routes.py", "negative_prompts.py", "file_lock.py", "gen_log.py", "lora_scan.py", "recipes.py", "image_parse.py", "setup_tasks.py", "workflows.py", "prompt_formats.py", "config.example.json"]
+ROOT_FILES = ["server.py", "assistant.py", "card_usage.py", "card_decks.py", "card_groups.py", "card_art_custom.py", "custom_cards.py", "discord_routes.py", "negative_prompts.py", "file_lock.py", "gen_log.py", "lora_scan.py", "recipes.py", "image_parse.py", "setup_tasks.py", "workflows.py", "prompt_formats.py", "config.example.json"]
 # 啟動檔與伺服器會叫到的腳本（卡面下載與烘焙、放大模型、姿勢參考、修臉節點、ComfyUI 的 LoRA Manager）。
 SCRIPT_FILES = [
     "app_config.py", "bake_card_art.py", "card_thumbnails.py", "fetch_card_art.py", "card_art_pack.json", "fetch_pose_assets.py", "fetch_face_detailer.py", "fetch_tagger.py",
@@ -48,6 +48,9 @@ LEXICON_FILES = [
     "export_lexicon_xlsx.py", "verify_danbooru_tags.mjs",
 ]
 TEST_FILES = {
+    "test_assistant.py": "test_assistant.py",
+    "test_assistant_tools.mjs": "test_assistant_tools.mjs",
+    "test_assistant_browser.mjs": "test_web6_assistant_browser.mjs",
     "test_discord_routes.py": "test_discord_routes.py",
     "test_negative_prompts.py": "test_negative_prompts.py",
     "test_card_groups.py": "test_card_groups.py",
