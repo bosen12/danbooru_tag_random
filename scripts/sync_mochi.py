@@ -58,6 +58,7 @@ TEST_FILES = {
     "test_go_float_scroll_browser.mjs": "test_go_float_scroll_browser.mjs",
     "test_ai_polish_chat.mjs": "test_ai_polish_chat.mjs",
     "test_ai_sol_ui.mjs": "test_ai_sol_ui.mjs",
+    "test_ai_found_float.mjs": "test_ai_found_float.mjs",
     "test_ai_polish_grok.mjs": "test_ai_polish_grok.mjs",
     "test_perf_browser.mjs": "test_web6_perf_browser.mjs",
     "test_discord_routes.py": "test_discord_routes.py",
