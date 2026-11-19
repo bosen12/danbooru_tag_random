@@ -131,6 +131,36 @@ export function askCommunityOnce() {
   return openCommunity({ first: true }).then(() => true);
 }
 
+/**
+ * 第一張圖印好之後才問（墨池呼叫）：等手上沒在生圖、沒有彈窗、使用者停手一會兒再開，不打斷看圖。
+ * busy()：還在忙就再等。一個瀏覽器只問一次（跟以前一樣）。
+ */
+let waitingAsk = false;
+export function askCommunityAfterFirstImage(busy = () => false) {
+  if (waitingAsk || asked() || navigator.webdriver) return;
+  waitingAsk = true;
+  let quietSince = performance.now();
+  const bump = () => (quietSince = performance.now());
+  addEventListener("pointerdown", bump, true);
+  addEventListener("keydown", bump, true);
+  const tick = () => {
+    if (asked()) return done();
+    const calm = !busy() && !document.querySelector(".overlay, [role='dialog'][aria-modal='true'], .tour-card, #tour-offer");
+    if (!calm) bump();
+    if (calm && performance.now() - quietSince > 4000) {
+      done();
+      askCommunityOnce();
+      return;
+    }
+    setTimeout(tick, 1000);
+  };
+  const done = () => {
+    removeEventListener("pointerdown", bump, true);
+    removeEventListener("keydown", bump, true);
+  };
+  setTimeout(tick, 1000);
+}
+
 /** 頂欄「社群」鈕：放在 after 後面。 */
 export function communityButton() {
   const b = el("button", { class: "mast-extra community-btn", id: "community-btn", type: "button", title: "加入墨池的 Discord 伺服器、GitHub" }, "社群");

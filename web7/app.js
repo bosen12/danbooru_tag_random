@@ -54,6 +54,7 @@ import { createTrashPanel } from "./trash-panel.js";
 import { createGenerator, comfyOnline, viewSrc, tabTitle, watchLink, LINK_LABEL, markGenLog } from "./gen.js";
 import { genSeed, mountSeedControl, seedUseButton } from "./seed-control.js";
 import { attachPeek } from "./card-peek.js";
+import { askCommunityAfterFirstImage } from "./community.js";
 import { createHires, openHiresPicker, paintHiresVeil, hiresBusy, HIRES_MODES } from "./hires.js";
 import * as S from "./store.js";
 import { recordUses } from "./usage.js";
@@ -1277,7 +1278,8 @@ function renderPool(fresh) {
       // 份量：右下角的數字；電腦上滑鼠停著滾滾輪、或 +／− 調（weights.js）。
       paintWeight(node, weights.get(t));
       wireWeightInput(node, { get: () => weights.get(t) || 1, set: (w) => setWeight(t, w) });
-      node.title = node.title ? `${node.title}（滾輪或 +／− 調份量）` : "點開看詳情；滾輪或 +／− 調份量";
+      // 滾輪只在右下角的份量上才調（2026-11-20：停下來看牌再往下捲，份量被默默調淡）。
+      node.title = node.title ? `${node.title}（+／− 或在右下角的份量上滾滾輪：調份量）` : "點開看詳情；+／− 或在右下角的份量上滾滾輪：調份量";
       return el(
         "div",
         { class: "pool-slot", style: poolInbound.has(t) ? "visibility: hidden" : undefined },
@@ -1520,7 +1522,11 @@ const generator = createGenerator({
   update: (shot) => {
     tabNote.shot(shot, generator.pending);
     if (shot._heard !== shot.status) {
-      if (shot.status === "done" && shot._heard) sfx.done();
+      if (shot.status === "done" && shot._heard) {
+        sfx.done();
+        // 第一張印好、閒下來之後才問要不要加入 Discord（community.js；以前一開頁就問）。
+        askCommunityAfterFirstImage(() => generator.busy || looping || drawingRounds > 0);
+      }
       else if (shot.status === "failed") sfx.fail();
       shot._heard = shot.status;
     }

@@ -5934,3 +5934,17 @@ a.btn {
     transform: scale(0.85);
   }
 }
+
+/* 份量角標是滾輪的熱區（web6 同一套，weights.js）：撐到至少 28px 才指得到；
+ * 平常 1.0 不顯示，滑鼠移到牌上才淡入的那顆用灰字。 */
+.card-w {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  box-sizing: border-box;
+  min-width: 28px;
+  min-height: 28px;
+}
+.card-w-rest {
+  color: var(--color-muted);
+}
