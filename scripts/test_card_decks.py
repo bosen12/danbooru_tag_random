@@ -1,4 +1,4 @@
-"""card_decks.py：只收詞庫有的字、要有名字、帶 id 覆寫（改名、刪掉後復原）、刪除、壞輸入不炸。"""
+"""card_decks.py：只收詞庫有的字、要有名字、核對版本後更新、明確復原、刪除。"""
 import json
 import os
 import sys
@@ -33,13 +33,13 @@ def raises(name, fn):
         ok(name, True)
 
 
-r = card_decks.save({"name": "  貓耳   單人 ", "tags": ["1girl", "cat ears", "cat ears", "not a tag", 5]})
+r = card_decks.save({"name": "  貓耳   單人 ", "tags": ["1girl", "cat ears", "cat ears"]})
 d = r["deck"]
 ok("新的一組有 id、名字收空白", d["id"].startswith("d-") and d["name"] == "貓耳 單人")
 ok("只收詞庫有的字、去重、照原本順序", d["tags"] == ["1girl", "cat ears"])
 ok("讀回來一樣", card_decks.load() == [d])
 
-r2 = card_decks.save({"id": d["id"], "name": "改名", "tags": ["solo"]})
+r2 = card_decks.save({**d, "name": "改名", "tags": ["solo"]})
 ok("帶 id 是覆寫，不是多一組", len(r2["decks"]) == 1 and r2["deck"]["name"] == "改名" and r2["deck"]["tags"] == ["solo"])
 ok("覆寫保留建立時間", r2["deck"]["createdAt"] == d["createdAt"])
 
@@ -48,8 +48,8 @@ ok("新的排在前面（最近改過的先）", r3["decks"][0]["id"] == r3["dec
 
 gone = card_decks.delete(d["id"])
 ok("刪掉回傳被刪的那組、剩下的", gone["deck"]["id"] == d["id"] and len(gone["decks"]) == 1)
-back = card_decks.save(gone["deck"])
-ok("刪掉後原樣送回去 = 復原（同一個 id）", back["deck"]["id"] == d["id"] and len(back["decks"]) == 2)
+back = card_decks.save({**gone["deck"], "restore": True})
+ok("明確復原會接回同一個 id", back["deck"]["id"] == d["id"] and len(back["decks"]) == 2)
 
 raises("沒有名字要擋", lambda: card_decks.save({"name": "  ", "tags": ["1girl"]}))
 raises("tags 不是陣列要擋", lambda: card_decks.save({"name": "x", "tags": "1girl"}))
@@ -57,8 +57,7 @@ raises("一張詞庫的牌都沒有要擋", lambda: card_decks.save({"name": "x"
 raises("刪不存在的要擋", lambda: card_decks.delete("d-000000000000"))
 raises("payload 不是物件要擋", lambda: card_decks.save(["x"]))
 
-many = card_decks.save({"name": "很多", "tags": ["1girl"] + [f"t{i}" for i in range(100)]})
-ok("名字、牌數有上限", len(many["deck"]["name"]) <= card_decks.MAX_NAME and len(many["deck"]["tags"]) <= card_decks.MAX_TAGS)
+raises("有一張牌不能存也要擋", lambda: card_decks.save({"name": "很多", "tags": ["1girl", "not a tag", 5]}))
 
 w = card_decks.save({"name": "有份量", "tags": ["1girl", "solo"], "weights": {"1girl": 1.2, "solo": 1, "cat ears": 0.7, "bogus": 1.4}})["deck"]
 ok("份量：只留牌組裡有的、不是 1 的", w["weights"] == {"1girl": 1.2})
@@ -107,7 +106,11 @@ Path(os.environ["CARD_FAV_CHARS_PATH"]).write_text("{壞掉", encoding="utf-8")
 ok("偏好角色：檔案壞掉用 .bak 換回來", card_decks.load_fav_chars()["tags"] == ["hatsune miku"])
 Path(os.environ["CARD_FAV_CHARS_PATH"]).write_text("{壞掉", encoding="utf-8")
 Path(os.environ["CARD_FAV_CHARS_PATH"] + ".bak").write_text("{也壞", encoding="utf-8")
-ok("偏好角色：備份也壞了就當成沒存過（瀏覽器那份會補上來）", card_decks.load_fav_chars()["saved"] is False)
+try:
+    card_decks.load_fav_chars()
+    ok("偏好角色：備份也壞了要回錯誤", False)
+except file_lock.StoreCorrupt:
+    ok("偏好角色：備份也壞了要回錯誤", True)
 
 # 偏好卡牌（2026-11-18 改成伺服器共用）：跟偏好角色同一套，多一個順序。
 ok("偏好卡牌：沒存過", card_decks.load_fav_hand() == {"tags": [], "saved": False, "at": 0})

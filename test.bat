@@ -355,6 +355,27 @@ if errorlevel 1 (
   pause
   exit /b 1
 )
+echo == round 6 regressions (storage, MCP errors, album, UI) ==
+%PY% scripts\test_round6_storage.py
+if errorlevel 1 (
+  pause
+  exit /b 1
+)
+call node scripts\test_round6_mcp.mjs
+if errorlevel 1 (
+  pause
+  exit /b 1
+)
+call node scripts\test_round6_album.mjs
+if errorlevel 1 (
+  pause
+  exit /b 1
+)
+call node scripts\test_web6_round6_ui.mjs
+if errorlevel 1 (
+  pause
+  exit /b 1
+)
 echo == card decks ==
 %PY% scripts\test_card_decks.py
 if errorlevel 1 (

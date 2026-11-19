@@ -1892,7 +1892,7 @@ const ALBUM_FIXTURE = [
           ok("localStorage 寫不進去（滿了、不允許）會說一次（mochi-store-full）",
             w6("store.js").includes('new CustomEvent("mochi-store-full"') && w6("hand.js").includes('new CustomEvent("mochi-store-full"') && w6("ui.js").includes('globalThis.addEventListener?.("mochi-store-full"'));
           ok("自製卡：問不到預覽時越等越久、8 次就停下來說（存檔鈕不再卡在「卡面還在烤」）；存檔中改欄位不會把存檔鈕又打開",
-            w6("custom-editor.js").includes("if (++pollMisses < 8) return poll(Math.min(wait * 2, 5000));") && w6("custom-editor.js").includes("saveBtn.disabled = !!why || saving;"));
+            w6("custom-editor.js").includes("if (++pollMisses < 8) return poll(Math.min(wait * 2, 5000));") && w6("custom-editor.js").includes("saveBtn.disabled = !!why || saving || !!conflict;"));
           ok("第一次準備面板：問不到伺服器時不收起來、越等越久再問（以前斷一次就再也不問）",
             w6("setup-panel.js").includes("return schedule(Math.min(POLL_MS * 2 ** misses, 30000));"));
           ok("announce() 寫只給讀屏的 #live，不再清掉畫面上的提示和它的「復原」",
@@ -2157,7 +2157,8 @@ const ALBUM_FIXTURE = [
           const freeName = new Function(fn + "; return freeName;")();
           const ds = [{ name: "紅髮・和服・站姿" }, { name: "紅髮・和服・站姿（2）" }];
           return freeName("紅髮・和服・站姿", ds) === "紅髮・和服・站姿（3）" && freeName("黑髮", ds) === "黑髮" &&
-            src.includes("const hit = typed ? decks.find((d) => d.name === n) : null;") && src.includes("if (!typed) n = freeName(n, decks);");
+            // 第六輪：有取名才找同名的那一組（帶開面板時看到的版本）；沒取名、另存都接編號。
+            src.includes("const hit = target || (!asCopy && typed ? available.find((d) => d.name === typed) : null);") && src.includes("const n = asCopy || !typed ? freeName(base, available) : base;");
         })());
       ok("牌組：三頁共用面板（decks.js，/api/decks）；墨池合成池、疊印台卡池（空白版列出你的牌組、撤回回原版）、卡冊（web6 偏好卡牌、web7 卡盒）都能存、能套用（web6、web7）",
         ["web6", "web7"].every((d) => {
