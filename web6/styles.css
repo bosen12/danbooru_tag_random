@@ -3104,18 +3104,18 @@ html[data-go-float] .wall-busy {
   pointer-events: auto;
 }
 
-/* 2026-11-19 專案主：「太長了，而且太小」。按鈕放大到好按的 44px、字跟著大；
+/* 2026-11-19 專案主：「太長了，而且太小」。按鈕放大一點（38px；44px 又太大）、字跟著大；
  * 平常那行狀態字（池子是空的，全靠抽／池裡 N 張）不放：它不是動作，只是把整條拉長。
  * 印的時候才寫出來（捲去看舊圖時也知道還有幾張）。 */
 .go-float .btn {
-  height: 44px;
-  padding-inline: var(--space-lg);
+  height: 38px;
+  padding-inline: var(--space-md);
   border-radius: 999px;
   font-size: var(--text-sm);
 }
 
 .go-float .btn-primary {
-  padding-inline: var(--space-xl, 28px);
+  padding-inline: var(--space-lg);
 }
 
 .go-float-state {
