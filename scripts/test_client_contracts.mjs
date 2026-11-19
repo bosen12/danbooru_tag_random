@@ -1800,7 +1800,8 @@ const ALBUM_FIXTURE = [
       const { bezier, CURVE, travelTime } = await import(pathToFileURL(join(ROOT, "web6/motion.js")).href);
       const ease = bezier([0.25, 0.1, 0.25, 1]);
       ok("動態詞彙：JS 的曲線跟 CSS 一樣（bezier 解出來的 ease 在 0.5 是 0.802），飛行曲線從靜止起步、不瞬移", Math.abs(ease(0.5) - 0.8024) < 0.002 && bezier(CURVE.travel)(0.055) < 0.08 && bezier(CURVE.travel)(0.5) > 0.75 && CURVE.exit && travelTime(300) < travelTime(1000));
-      ok("牌飛過去會追落點（每格重量）、有阻尼、影子跟著高度", motion6.includes("export function flight(ghost, from, target, opts = {})") && motion6.includes("const w = e * e * e * e;") && motion6.includes("ghost.style.boxShadow"));
+      // 2026-11-19 起影子在起飛時設一次就不動：每一格改 box-shadow 要整張牌重畫，抽並生圖時十幾張一起飛會掉幀。
+      ok("牌飛過去會追落點（每格重量）、有阻尼；影子起飛時設一次、途中不改（不逼每一格重畫）", motion6.includes("export function flight(ghost, from, target, opts = {})") && motion6.includes("const w = e * e * e * e;") && motion6.includes('boxShadow: "0 1px 0 var(--color-shine) inset, 0 15px 25px var(--color-shade)",') && !motion6.includes("ghost.style.boxShadow ="));
       ok("疊印台放牌：影子追落點，飛的路上版重畫出來的那張也藏著（不會出現兩張）", fuse6.includes("flight(ghost, from, () => plateNode(tag)") && fuse6.includes('if (inbound.has(tag)) node.style.visibility = "hidden";'));
       ok("同一張牌飛兩趟：只有最後一趟落地才揭牌（舊影子的回呼不會提早亮出新那趟）", fuse6.includes("if (!releaseInbound(tag, tok)) return;") && app6.includes("if (poolInbound.get(tag) !== tok) return;"));
       ok("墨池放牌：影子追落點，池裡那一格（牌＋×）落地才一起出現", app6.includes("flight(ghost, from, () => poolNode(tag)") && app6.includes('style: poolInbound.has(t) ? "visibility: hidden" : undefined'));

@@ -391,6 +391,11 @@ if errorlevel 1 (
   pause
   exit /b 1
 )
+call node scripts\test_web6_perf_browser.mjs
+if errorlevel 1 (
+  pause
+  exit /b 1
+)
 echo == card decks ==
 %PY% scripts\test_card_decks.py
 if errorlevel 1 (
