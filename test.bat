@@ -381,6 +381,16 @@ if errorlevel 1 (
   pause
   exit /b 1
 )
+call node scripts\test_ai_polish_chat.mjs
+if errorlevel 1 (
+  pause
+  exit /b 1
+)
+call node scripts\test_ai_polish_grok.mjs
+if errorlevel 1 (
+  pause
+  exit /b 1
+)
 echo == card decks ==
 %PY% scripts\test_card_decks.py
 if errorlevel 1 (

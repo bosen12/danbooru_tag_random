@@ -56,6 +56,8 @@ TEST_FILES = {
     "test_round6_album.mjs": "test_round6_album.mjs",
     "test_round6_ui.mjs": "test_web6_round6_ui.mjs",
     "test_go_float_scroll_browser.mjs": "test_go_float_scroll_browser.mjs",
+    "test_ai_polish_chat.mjs": "test_ai_polish_chat.mjs",
+    "test_ai_polish_grok.mjs": "test_ai_polish_grok.mjs",
     "test_discord_routes.py": "test_discord_routes.py",
     "test_negative_prompts.py": "test_negative_prompts.py",
     "test_card_groups.py": "test_card_groups.py",
