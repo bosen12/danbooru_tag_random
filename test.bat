@@ -386,6 +386,11 @@ if errorlevel 1 (
   pause
   exit /b 1
 )
+call node scripts\test_ai_sol_ui.mjs
+if errorlevel 1 (
+  pause
+  exit /b 1
+)
 call node scripts\test_ai_polish_grok.mjs
 if errorlevel 1 (
   pause
