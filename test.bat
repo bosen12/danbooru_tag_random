@@ -163,6 +163,16 @@ if errorlevel 1 (
   pause
   exit /b 1
 )
+call node scripts\test_astra5_a_browser.mjs
+if errorlevel 1 (
+  pause
+  exit /b 1
+)
+call node scripts\test_astra5_b_browser.mjs
+if errorlevel 1 (
+  pause
+  exit /b 1
+)
 echo == mochi MCP ==
 call node scripts\test_mochi_mcp.mjs
 if errorlevel 1 (
@@ -487,6 +497,12 @@ if errorlevel 1 (
 )
 echo == gen log cap ==
 %PY% scripts\test_gen_log_cap.py
+if errorlevel 1 (
+  pause
+  exit /b 1
+)
+echo == gen log by tag rating ==
+%PY% scripts\test_gen_log_bytag_rating.py
 if errorlevel 1 (
   pause
   exit /b 1
