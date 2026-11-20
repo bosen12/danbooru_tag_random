@@ -51,11 +51,17 @@ function harness() {
     // 自製牌（custom-cards.js）：池子裡沒有自製牌，詞庫外的字是空的；觸發字照 lora.js 的接法。
     isCustomTag: (t) => typeof t === "string" && t.startsWith("custom:"), poolExtras: () => "", goCount: (n) => `×${n}`, liftTrash() {},
     joinTriggerParts: (parts) => parts.filter(Boolean).join(", "),
+    // Hires／修臉（hires.js）：這裡沒有在跑的。
+    hiresBusy: () => false, faceBusy: () => false,
   };
   vm.createContext(ctx);
   const syncStart = text.indexOf("function syncWallEmpty(");
   vm.runInContext(text.slice(syncStart, text.indexOf("\n}", syncStart) + 2), ctx);
   vm.runInContext(declarations + text.slice(begin, end) + "\nthis.drawBatch = drawBatch", ctx);
+  // 「忙不忙」（printBusy、busyNow：Hires 也算忙）照 app.js 那幾行，跟 drawBatch 共用 drawingRounds。
+  const busyStart = text.indexOf("const printBusy = ");
+  const busyEnd = text.indexOf("\n}", text.indexOf("function hiresStatusText(", busyStart)) + 2;
+  vm.runInContext(text.slice(busyStart, busyEnd), ctx);
   return {
     ctx, records, frames, timers, sent, nodes, bar, wallBusy,
     wireControls() { for (const name of ["goStatusText", "renderGoStatus", "renderGoBar", "renderWallBusy", "stopAll", "onKey"]) { /* 只抓最外層那一支（詳情視窗裡也有一支同名的 onKey） */ const start = text.indexOf("\nfunction " + name + "(") + 1; const finish = text.indexOf("\n}", start); vm.runInContext(text.slice(start, finish + 2), ctx); } },

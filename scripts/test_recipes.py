@@ -269,6 +269,122 @@ ok("deleting while the image is being saved stays deleted", recipes.get_recipe(r
 big = recipes.save_recipe(sample(width=1664, height=2432))
 ok("Hires sized favourite keeps its real size", (big["width"], big["height"]) == (1664, 2432) and recipes.get_recipe(big["id"])["height"] == 2432, str((big["width"], big["height"])))
 
+# ---- Astra 6：共用圖檔、舊分頁、整批匯入、壞檔、縮圖 fsync ----
+# 舊程式（git show HEAD:recipes.py）刪除直接 unlink、帶編號存檔會把已刪的建回來、匯入寫到一半才報錯、壞 JSON 回 corrupt 但檔還在、縮圖不 fsync。
+png = b"\x89PNG\r\n\x1a\n" + b"astra6-png"
+kept = recipes.save_recipe(sample(name="共用原件", positive="red hair"))
+kept = recipes.save_image_bytes(kept["id"], png)
+kept_file = kept["image"]["file"]
+clone = recipes.import_payload(recipes.export_payload([kept["id"]]))[0]
+ok(
+    "匯入另存一份圖，不跟原件共用檔名",
+    clone["image"]["file"] != kept_file and recipes.resolve_stored_file(clone["image"]["file"]).read_bytes() == png,
+    str((kept_file, clone["image"]["file"])),
+)
+recipes.delete_recipe(clone["id"])
+ok("刪掉副本後原件的圖還在", recipes.resolve_stored_file(kept_file) is not None and recipes.resolve_stored_file(kept_file).read_bytes() == png)
+
+raw_kept = recipes.get_recipe(kept["id"])
+shared = dict(raw_kept)
+shared["id"] = "shared-copy"
+shared["name"] = "舊的共用副本"
+recipes._write_json(recipes.DATA_DIR / "shared-copy.json", shared)
+recipes.delete_recipe(kept["id"])
+ok(
+    "舊資料還共用檔名時，刪一件不會把另一件的圖移走",
+    recipes.get_recipe("shared-copy")["image"]["file"] == kept_file and recipes.resolve_stored_file(kept_file).read_bytes() == png,
+)
+recipes.delete_recipe("shared-copy")
+ok("最後一件刪掉後圖在回收區，不直接消失", recipes.resolve_stored_file(kept_file) is None and recipes._trash_file(kept_file) is not None)
+
+# 原件已刪。用刪除前的那份 JSON（還指著舊檔名）再匯入，要從回收區把圖複製回來。
+brought = recipes.import_payload({"schemaVersion": 1, "recipes": [raw_kept]})[0]
+ok(
+    "刪掉再匯入，圖從回收區回來",
+    brought["id"] != raw_kept["id"] and recipes.resolve_stored_file(brought["image"]["file"]) is not None
+    and recipes.resolve_stored_file(brought["image"]["file"]).read_bytes() == png,
+    str(brought.get("image")),
+)
+
+alive = recipes.save_recipe(sample(name="舊分頁", positive="blue hair"))
+alive = recipes.save_image_bytes(alive["id"], png)
+recipes.delete_recipe(alive["id"])
+try:
+    recipes.save_recipe({**alive, "name": "舊分頁改名"}, rid=alive["id"])
+    ok("已刪的作品被舊分頁改名要擋下", False)
+except recipes.RecipeError as exc:
+    ok(
+        "已刪的作品被舊分頁改名要擋下",
+        exc.code == "gone" and recipes.error_status(exc) == 409 and recipes.get_recipe(alive["id"]) is None,
+        f"{exc.code} {exc}",
+    )
+back = recipes.save_recipe({**alive, "restore": True}, rid=alive["id"])
+ok(
+    "明確復原才照原編號建回，圖也從回收區回來",
+    back["id"] == alive["id"] and recipes.resolve_stored_file(back["image"]["file"]) is not None
+    and recipes.resolve_stored_file(back["image"]["file"]).read_bytes() == png,
+    str(back.get("image")),
+)
+
+before_names = {p.name for p in td.glob("*.json")}
+try:
+    recipes.import_payload({"recipes": [{"name": "good", "positive": "a"}, {"schemaVersion": 2, "name": "future", "positive": "b"}]})
+    ok("一批裡有一件版本不認得要整批失敗", False)
+except recipes.RecipeError as exc:
+    ok("一批裡有一件版本不認得要整批失敗", exc.code == "schema", exc.code)
+ok("失敗的那次一件都沒寫", {p.name for p in td.glob("*.json")} == before_names)
+try:
+    recipes.import_payload({"recipes": [{"name": "good", "positive": "a"}, {"schemaVersion": 2, "name": "future", "positive": "b"}]})
+except recipes.RecipeError:
+    pass
+ok("重試不會多出一份 good", [i["id"] for i in recipes.list_recipes() if i["name"] == "good"] == [])
+try:
+    recipes.import_payload({"recipes": [{"name": "keep-me", "positive": "a"}, "nope"]})
+    ok("一批裡有一件不是配方要整批失敗", False)
+except recipes.RecipeError as exc:
+    ok("一批裡有一件不是配方要整批失敗", exc.code == "invalid")
+ok("不是配方的那次也一件都沒寫", not any(i["name"] == "keep-me" for i in recipes.list_recipes()))
+both = recipes.import_payload({"recipes": [{"name": "good", "positive": "a"}, {"name": "also-good", "positive": "b"}]})
+ok("整批都合法才一起寫入", len(both) == 2 and [i["name"] for i in both] == ["good", "also-good"])
+
+bad = td / "bad-one.json"
+bad.write_text("{", encoding="utf-8")
+try:
+    recipes.get_recipe("bad-one")
+    ok("壞掉的單件改名並回 corrupt", False)
+except recipes.RecipeError as exc:
+    ok(
+        "壞掉的單件改名並回 corrupt",
+        exc.code == "corrupt" and recipes.error_status(exc) == 404 and not bad.is_file()
+        and any(p.name.startswith("bad-one.json.corrupt-") for p in td.iterdir()),
+        str(exc),
+    )
+bad2 = td / "bad-two.json"
+bad2.write_text("[]", encoding="utf-8")
+try:
+    recipes.delete_recipe("bad-two")
+    ok("壞檔刪除時也改名留著，不再卡在讀檔", False)
+except recipes.RecipeError as exc:
+    ok("壞檔刪除時也改名留著，不再卡在讀檔", exc.code == "corrupt" and not bad2.is_file())
+listed = [i["id"] for i in recipes.list_recipes()]
+ok("列表還讀得到別件，壞檔不在清單裡", "bad-one" not in listed and "bad-two" not in listed and back["id"] in listed)
+
+thumb_sync = {"n": 0}
+real_fsync = recipes.os.fsync
+
+
+def _count_fsync(fd):
+    thumb_sync["n"] += 1
+    return real_fsync(fd)
+
+
+recipes.os.fsync = _count_fsync
+try:
+    recipes.save_thumbnail(back["id"], b"RIFF....WEBPVP8 fake")
+finally:
+    recipes.os.fsync = real_fsync
+ok("縮圖寫入有 fsync（JSON 本身一次，縮圖再一次）", thumb_sync["n"] >= 2, str(thumb_sync["n"]))
+
 if failed:
     print(f"\n{failed} failed")
     sys.exit(1)

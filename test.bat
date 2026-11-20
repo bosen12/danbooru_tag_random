@@ -173,6 +173,16 @@ if errorlevel 1 (
   pause
   exit /b 1
 )
+call node scripts\test_astra6_a_browser.mjs
+if errorlevel 1 (
+  pause
+  exit /b 1
+)
+call node scripts\test_astra6_b_browser.mjs
+if errorlevel 1 (
+  pause
+  exit /b 1
+)
 echo == mochi MCP ==
 call node scripts\test_mochi_mcp.mjs
 if errorlevel 1 (
@@ -438,6 +448,12 @@ if errorlevel 1 (
 )
 echo == card decks ==
 %PY% scripts\test_card_decks.py
+if errorlevel 1 (
+  pause
+  exit /b 1
+)
+echo == astra6 stores ==
+%PY% scripts\test_astra6_c.py
 if errorlevel 1 (
   pause
   exit /b 1
