@@ -348,6 +348,7 @@ Python 3 · 標準函式庫，不用裝任何套件|Python 3 · Standard library
 找作品|Search gallery
 搜尋字盒|Search card library
 搜尋：紅髮、red hair…（按 / 跳到這裡）|Search red hair, smile… (press /)
+搜尋：紅髮、kimono…（按 / 跳到這裡）|Search red hair, kimono… (press /)
 找牌：紅髮、kimono…（按 /）|Search red hair, kimono… (press /)
 找牌：紅髮、kimono…|Search red hair, kimono…
 找作品：牌名、提示詞…|Search cards or prompts…
