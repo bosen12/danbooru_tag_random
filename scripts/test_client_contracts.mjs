@@ -1862,8 +1862,17 @@ const ALBUM_FIXTURE = [
         ok("效能：卡冊捲動時接在畫面外的牌不掃光、不顯影（quietArt），閒下來先把下方幾屏的牌放進預排區排一次版（牌名的字先整形）、先抓圖；捲動中只做格子不排版",
           cards6b.includes("export function quietArt(node)") && cards6b.includes("if (!i.dataset.ready) i.dataset.ready = \"1\";") &&
             book6q.includes("if (seenRows && (row < seenRows[0] || row >= seenRows[1])) quietArt(cell);") &&
-            book6q.includes("function stageNow()") && book6q.includes("const busy = performance.now() - scrolledAt < 250;") && book6q.includes("if (i < artEnd) startArt(cell);") &&
+            book6q.includes("function stageNow()") && book6q.includes("const busy = performance.now() - scrolledAt < 250;") && book6q.includes("if (i < artEnd) aheadArt(cell, i);") &&
             /\.book-stage \{[^}]*visibility: hidden;[^}]*contain: strict;/.test(bookCss6q));
+        // 慢網路（2026-11-21）：連甩一大段時甩過去的幾百張圖不再全排著抓（電腦實測 773 個請求、停下來等 5.6 秒 → 299 個、0.5 秒）。
+        const images6q = readFileSync(join(ROOT, "web6/card-images.js"), "utf8");
+        ok("卡冊的圖輪到才抓：新做的格子圖先收著（holdArt），看得到的先抓、看不到的同時最多 ART_MAX 張；格子捲出去時還沒到就撤掉，捲回來再抓；最近常撤又甩得快就先不抓，停下 110ms 再抓",
+          images6q.includes("export function holdArt(img)") && images6q.includes("export function resumeArt(img)") && images6q.includes("if (img._heldSrc != null) img._heldSrc = url;") &&
+            images6q.includes("img.hasAttribute(\"srcset\")") && images6q.includes("source.currentSrc || source.src || source._heldSrc") &&
+            book6q.includes("for (const img of node.querySelectorAll(\".card-art > img\")) holdArt(img);") &&
+            book6q.includes("function pumpArt()") && book6q.includes("if (artBusy.size >= ART_MAX) break;") && book6q.includes("function dropArt(cell, miss = true)") &&
+            book6q.includes("const flinging = () => artMiss > ART_MISS && scrollSpeed > FLING_SPEED") && book6q.includes("artSettle = setTimeout(pumpArt, 110);") &&
+            book6q.includes("if (cell._art || artBusy.size >= ART_SOFT || flinging()) return;"));
         ok("效能：整本牌名的字閒下來照字級分組先排一次（warmGlyphs，跟牌上的字名同一套字級：cards.js 的 spineFace），往下捲多遠都不必當場排新字；閒置一次最多用 12ms 就交還（手指放上去不必等）",
           cards6b.includes("export function spineFace(card)") && cards6b.includes("const { spine, len, wrap, marks, size } = spineFace(card);") &&
             book6q.includes("function warmGlyphs(deadline)") && book6q.includes("if (!warmGlyphs(deadline)) return buildAhead();") && book6q.includes("if (english || !list.length) return true;") &&
