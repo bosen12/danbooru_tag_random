@@ -1925,6 +1925,14 @@ const ALBUM_FIXTURE = [
           ok("偏好卡牌托盤：量不到字盒寬度（手機字盒收在面板裡）只重量、量到才重擺；標籤內容沒變不重寫（以前開頁十秒每 250ms 重擺一次）",
             /measure\(\);\r?\n\s*if \(measured\) layout\(false\);/.test(hand6c) && hand6c.includes("if (tab._html !== tabHtml) {"));
           ok("殘影的圖同步解碼：第一格就有圖，不會先白一格再淡出", motion6c.includes('n.decoding = "sync";'));
+          // 2026-11-22：捲動的托盤出一張牌，整排中心挪半張，所有牌先跳半張再滑（電腦 71px、手機 43px）。
+          // 行為由 test_hand_reflow_browser.mjs 實測；這裡只釘住做法：從原處滑過去、捲動的範圍不被滑動中的牌撐大。
+          const card6c = readFileSync(join(ROOT, "web6/card.css"), "utf8");
+          ok("偏好卡牌托盤補位：擺到新位置再從畫面上原處滑過去（FLIP、離空格近的先動）；捲到最右邊被夾回來也補滑；滑動中的牌不撐大捲動範圍",
+            hand6c.includes("function startFlips(entries, focusV, hold)") && hand6c.includes("function checkClamp(assumed, focus, hold)") &&
+              hand6c.includes("if (fanW < fw0) checkClamp(s, focus, hold);") && hand6c.includes("for (const c of [...fan.children]) if (!keep.has(c)) leave(c);") &&
+              /\.fav-hand\[data-scroll="true"\] \.fav-fan \{\s*overflow-x: clip;/.test(card6c));
+          ok("疊印台的偏好卡牌也接伺服器那份、別的分頁改了就重擺（以前新裝置第一次開托盤是空的）", fuse6c.includes("handStore.onChange(() => hand.reload());"));
         }
         ok("效能：整本牌名的字閒下來照字級分組先排一次（warmGlyphs，跟牌上的字名同一套字級：cards.js 的 spineFace），往下捲多遠都不必當場排新字；閒置一次最多用 12ms 就交還（手指放上去不必等）",
           cards6b.includes("export function spineFace(card)") && cards6b.includes("const { spine, len, wrap, marks, size } = spineFace(card);") &&
