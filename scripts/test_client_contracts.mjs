@@ -1885,7 +1885,7 @@ const ALBUM_FIXTURE = [
         ok("疊印台換一批：按下去那一格只讓洗牌動、聲音先出，抽牌和重畫留到下一個任務；中間再有任何輸入先抽完（capture 的 flushReroll）",
           fuse6r.includes("let rerollSoon = null;") && fuse6r.includes("rerollSoon = run;") && fuse6r.includes("if (rerollSoon !== run) return;") &&
             fuse6r.includes('for (const type of ["pointerdown", "keydown"]) document.addEventListener(type, flushReroll, true);') &&
-            /function reroll\(\) \{\s*flushReroll\(\);[\s\S]*?sfx\.shuffle\(\);[\s\S]*?const run = \(\) => \{[\s\S]*?seeds = freshSeeds\(\);\s*\/\/[^\n]*\n\s*retrialPicked\(\);/.test(fuse6r));
+            /function reroll\(\) \{\s*flushReroll\(\);[\s\S]*?sfx\.shuffle\(\);[\s\S]*?const run = \(\) => \{[\s\S]*?seeds = freshSeeds\(\);\s*\/\/[^\n]*\n\s*retrialLater\(\);/.test(fuse6r));
         // 2026-11-22 專案主的推薦解析度表：加五種；滑鼠移到選項上跳出比例、用途（三個尺寸選單都有）。
         {
           const { SIZES: sizes6, sizeTip: sizeTip6 } = await import(pathToFileURL(join(ROOT, "web6/sizes.js")).href);
@@ -1916,8 +1916,12 @@ const ALBUM_FIXTURE = [
               fuse6c.includes("caseReuse = new Map([...grid.querySelectorAll(\":scope > .card[data-tag]\")]") && fuse6c.includes("if (old && old._card === card && old._src === src) {") &&
               fuse6c.includes("function platePiece(tag)") && fuse6c.includes("function ghostPiece(tag, t)") && fuse6c.includes("prunePlateCache(used);") &&
               fuse6c.includes("const onPlate = (node) => !!node && $(\"registers\").contains(node);"));
-          ok("疊印台改規則（分級、尺度、時代…）跟放牌一樣：先抽選中那張，其他三張丟背景執行緒（以前按下去 240ms）",
-            /saveFuseSettings\(prev\);\s*(\/\/[^\n]*\n\s*)*retrialPicked\(\);\s*renderAll\(\);\s*renderCase\(\);/.test(fuse6c));
+          ok("疊印台改規則（分級、尺度、時代…）跟放牌一樣四張都丟背景執行緒（以前按下去 240ms）",
+            /saveFuseSettings\(prev\);\s*(\/\/[^\n]*\n\s*)*retrialLater\(\);\s*renderAll\(\);\s*renderCase\(\);/.test(fuse6c));
+          ok("疊印台放牌、撤回、清版連選中那張也丟背景執行緒（手機以前放一張牌 0.8 秒才動）；付印、付印鈕、看提示詞先在這邊抽完；版上不把已經上版的牌當影子",
+            /rowNotes\[suit\] = \{[\s\S]*?\n  retrialLater\(\);\n  renderAfterPlace\(events\);/.test(fuse6c) && !/^\s*retrialPicked\(\);/m.test(fuse6c) &&
+              /function printNow\(\{ fresh = false \} = \{\}\) \{\s*ensurePicked\(\);/.test(fuse6c) && /function printAction\(btn\) \{\s*ensurePicked\(\);/.test(fuse6c) && /function showPos\(\) \{\s*ensurePicked\(\);/.test(fuse6c) &&
+              fuse6c.includes("t.extra.filter((x) => regOf(x) === suit && !bed.pins.includes(x))") && fuse6c.includes("if (i === picked) pickedArrived();"));
           ok("偏好卡牌托盤：量不到字盒寬度（手機字盒收在面板裡）只重量、量到才重擺；標籤內容沒變不重寫（以前開頁十秒每 250ms 重擺一次）",
             /measure\(\);\r?\n\s*if \(measured\) layout\(false\);/.test(hand6c) && hand6c.includes("if (tab._html !== tabHtml) {"));
           ok("殘影的圖同步解碼：第一格就有圖，不會先白一格再淡出", motion6c.includes('n.decoding = "sync";'));

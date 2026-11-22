@@ -43,11 +43,13 @@ function fixture(picked = 0, { worker = null } = {}) {
     refreshInk() { paints.push('ink'); },
     renderTrials() { paints.push('trials'); },
     renderCase() { paints.push('case'); },
+    // 選中那張抽回來（pickedArrived）：版上的影子、預覽、付印列換上。
+    renderPlate() { paints.push('plate'); }, renderPreview() { paints.push('preview'); }, renderPrintBar() { paints.push('printbar'); },
     // 背景執行緒（draw-pool.js）：worker 給的話剩下的試印丟給它抽；沒給就是開不了 worker，全在這邊抽。
     hasDrawWorker: () => !!worker,
     drawInWorker: req => (worker ? worker(req) : Promise.resolve(null)),
   });
-  vm.runInContext(retrialSource + '\nthis.api = { retrial, retrialPicked, finishTrials, settleTrials, get pending() { return trialsPending && [...trialsPending]; }, get known() { return knownTrials(); } };', context);
+  vm.runInContext(retrialSource + '\nthis.api = { retrial, retrialPicked, retrialLater, ensurePicked, finishTrials, settleTrials, get pending() { return trialsPending && [...trialsPending]; }, get known() { return knownTrials(); } };', context);
   const run = fn => { task++; fn(); };
   const frame = () => {
     const callbacks = [...frames.values()]; frames.clear();
@@ -282,6 +284,65 @@ test('rules changed by another path while the worker drew: its answer is not use
   assert.equal(f.api.pending.length, 3, 'Answer drawn with the old bans is ignored');
   for (let i = 0; i < 3; i++) { f.frame(); f.timer(0); }
   assert.equal(f.api.pending, null);
+});
+
+// 2026-11-22：放牌、撤回、清版、改規則、換一批連選中那張也丟背景（retrialLater）：手機（CPU÷4）放一張牌以前 0.8 秒畫面才動。
+test('retrialLater with a worker: the click draws nothing here, chosen trial asked first, plate repaints when it lands', async () => {
+  for (const selected of [0, 2]) {
+    const w = fakeWorker();
+    const f = fixture(selected, { worker: w.worker });
+    const expected = copy(f.context.trials);
+    f.api.retrialLater();
+    assert.equal(f.draws.length, 0, 'Nothing is drawn in the click');
+    assert.equal(w.asked.length, 0, 'The worker is asked only after the click frame is out');
+    f.frame(); f.timer(0);
+    assert.equal(w.asked.length, 1);
+    const order = [selected, ...[0, 1, 2, 3].filter((i) => i !== selected)];
+    assert.deepEqual(copy(w.asked[0].req.seeds), order.map((i) => f.context.seeds[i]), 'Chosen trial is first in the batch');
+    w.answer();
+    await settle();
+    assert.equal(f.draws.length, 0, 'Main thread drew nothing');
+    assert.deepEqual(copy(f.context.trials), expected, 'Worker results are the same trials');
+    assert.ok(f.paints.includes('plate') && f.paints.includes('preview') && f.paints.includes('printbar'), 'Plate, preview and print bar repaint with the new chosen trial');
+    assert.equal(f.api.pending, null);
+  }
+});
+
+test('retrialLater without a worker: chosen trial drawn first after the frame, then one per task', () => {
+  const f = fixture(2);
+  const expected = copy(f.context.trials);
+  f.api.retrialLater();
+  assert.equal(f.draws.length, 0, 'Nothing is drawn in the click');
+  f.frame(); f.timer(0);
+  assert.deepEqual(f.draws.map((d) => d.seed), [f.context.seeds[2]], 'Chosen trial is drawn first');
+  assert.deepEqual(f.paints, ['ink', 'plate', 'preview', 'trials', 'printbar'], 'Plate and preview repaint as soon as the chosen trial lands');
+  for (let i = 0; i < 3; i++) { f.frame(); f.timer(0); }
+  assert.deepEqual(copy(f.context.trials), expected);
+  assert.equal(f.api.pending, null);
+  assert.equal(f.frames.size + f.timers.size, 0);
+});
+
+test('readers that need the chosen trial (print, prompt, pick) draw it here first', async () => {
+  const w = fakeWorker();
+  const f = fixture(1, { worker: w.worker });
+  const expected = copy(f.context.trials);
+  f.api.retrialLater();
+  f.api.ensurePicked();
+  assert.deepEqual(f.draws.map((d) => d.seed), [f.context.seeds[1]], 'ensurePicked draws only the chosen trial');
+  assert.deepEqual(copy(f.context.trials[1]), expected[1]);
+  assert.ok(!f.api.pending.includes(1));
+  f.api.ensurePicked();
+  assert.equal(f.draws.length, 1, 'Second call is a no-op');
+  f.frame(); f.timer(0);
+  assert.deepEqual(copy(w.asked[0].req.seeds), [0, 2, 3].map((i) => f.context.seeds[i]), 'The worker is asked only for the rest');
+  w.answer();
+  await settle();
+  assert.deepEqual(copy(f.context.trials), expected);
+  const g = fixture(3);
+  g.api.retrialLater();
+  g.api.finishTrials();
+  assert.equal(g.draws.length, 4);
+  assert.ok(g.paints.includes('plate'), 'finishTrials repaints the plate when the chosen trial was still out');
 });
 
 if (process.argv.includes('--browser')) {
