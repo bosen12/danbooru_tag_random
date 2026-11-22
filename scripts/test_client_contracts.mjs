@@ -1904,6 +1904,24 @@ const ALBUM_FIXTURE = [
               fuse6r.includes("selected: s.id === sizeId, title: sizeTip(s) }") && fuse6r.includes("row(\"尺寸\", sizeSel),") && !fuse6r.includes("sizeKind(") &&
               sizes6.every((x) => enHas(x.zh) && enHas(sizeTip6(x))));
         }
+        // 2026-11-22 深度檢查：每個操作「內容一樣卻整塊重做」的地方（churn 探針），留下來的牌沿用原本的節點。
+        {
+          const read6c = (f) => readFileSync(join(ROOT, f), "utf8");
+          const book6c = read6c("web6/book.js"), app6c = read6c("web6/app.js"), fuse6c = read6c("web6/fuse.js"), hand6c = read6c("web6/hand.js"), motion6c = read6c("web6/motion.js");
+          ok("效能：卡冊整段重接（換分級、只看用過的、看群組）只動有變的格子，不再整批拔下來接回去（手機一次 60～140ms）",
+            book6c.includes("function placeChildren(parent, nodes)") && book6c.includes("placeChildren(grid, [padTop, ...live, padBottom, ...(tail ? [tail] : [])]);") &&
+              !book6c.includes("grid.replaceChildren(padTop, ...live"));
+          ok("效能：墨池（電腦）、疊印台的字盒重畫沿用原本的牌（同一個牌物件才沿用），疊印台版上的牌、影子沿用原本的節點（還在版上才沿用），圖不必重新解碼",
+            app6c.includes("libReuse = new Map([...grid.querySelectorAll(\":scope > .card[data-tag]\")]") && app6c.includes("function libCardNow(card)") && app6c.includes("if (old && old._card === card) {") &&
+              fuse6c.includes("caseReuse = new Map([...grid.querySelectorAll(\":scope > .card[data-tag]\")]") && fuse6c.includes("if (old && old._card === card && old._src === src) {") &&
+              fuse6c.includes("function platePiece(tag)") && fuse6c.includes("function ghostPiece(tag, t)") && fuse6c.includes("prunePlateCache(used);") &&
+              fuse6c.includes("const onPlate = (node) => !!node && $(\"registers\").contains(node);"));
+          ok("疊印台改規則（分級、尺度、時代…）跟放牌一樣：先抽選中那張，其他三張丟背景執行緒（以前按下去 240ms）",
+            /saveFuseSettings\(prev\);\s*(\/\/[^\n]*\n\s*)*retrialPicked\(\);\s*renderAll\(\);\s*renderCase\(\);/.test(fuse6c));
+          ok("偏好卡牌托盤：量不到字盒寬度（手機字盒收在面板裡）只重量、量到才重擺；標籤內容沒變不重寫（以前開頁十秒每 250ms 重擺一次）",
+            /measure\(\);\r?\n\s*if \(measured\) layout\(false\);/.test(hand6c) && hand6c.includes("if (tab._html !== tabHtml) {"));
+          ok("殘影的圖同步解碼：第一格就有圖，不會先白一格再淡出", motion6c.includes('n.decoding = "sync";'));
+        }
         ok("效能：整本牌名的字閒下來照字級分組先排一次（warmGlyphs，跟牌上的字名同一套字級：cards.js 的 spineFace），往下捲多遠都不必當場排新字；閒置一次最多用 12ms 就交還（手指放上去不必等）",
           cards6b.includes("export function spineFace(card)") && cards6b.includes("const { spine, len, wrap, marks, size } = spineFace(card);") &&
             book6q.includes("function warmGlyphs(deadline)") && book6q.includes("if (!warmGlyphs(deadline)) return buildAhead();") && book6q.includes("if (english || !list.length) return true;") &&
