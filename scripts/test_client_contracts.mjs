@@ -1873,6 +1873,37 @@ const ALBUM_FIXTURE = [
             book6q.includes("function pumpArt()") && book6q.includes("if (artBusy.size >= ART_MAX) break;") && book6q.includes("function dropArt(cell, miss = true)") &&
             book6q.includes("const flinging = () => artMiss > ART_MISS && scrollSpeed > FLING_SPEED") && book6q.includes("artSettle = setTimeout(pumpArt, 110);") &&
             book6q.includes("if (cell._art || artBusy.size >= ART_SOFT || flinging()) return;"));
+        // 2026-11-22 走查：主機回來自己接上；疊印台換一批先洗牌再抽（手機 CPU÷4：按下去 0.5～0.9 秒才動 → 40～56ms）。
+        const ping6r = readFileSync(join(ROOT, "web6/ping.js"), "utf8");
+        const album6r = readFileSync(join(ROOT, "web6/album.js"), "utf8");
+        const fuse6r = readFileSync(join(ROOT, "web6/fuse.js"), "utf8");
+        ok("連線：主機回來（伺服器重開，瀏覽器不會發 online）燈號替它發一次 online；作品冊重讀（讀不到的那一頁換掉）、卡冊次數馬上補；連不到的是主機時燈號寫「主機」不寫 Comfy",
+          ping6r.includes('const back = prev === "net";') && ping6r.includes('if (back) dispatchEvent(new Event("online"));') &&
+            ping6r.includes('p.querySelector(".ping-name").textContent = st === "net" ? "主機" : "Comfy";') &&
+            album6r.includes('addEventListener("online", () => {') && album6r.includes("async function refreshAlbum()") && album6r.includes("(failedBefore && !loadFailed && !before)") &&
+            book6q.includes('addEventListener("online", tick);') && /^主機\|Server\r?$/m.test(readFileSync(join(ROOT, "web6/locales/en.js"), "utf8")));
+        ok("疊印台換一批：按下去那一格只讓洗牌動、聲音先出，抽牌和重畫留到下一個任務；中間再有任何輸入先抽完（capture 的 flushReroll）",
+          fuse6r.includes("let rerollSoon = null;") && fuse6r.includes("rerollSoon = run;") && fuse6r.includes("if (rerollSoon !== run) return;") &&
+            fuse6r.includes('for (const type of ["pointerdown", "keydown"]) document.addEventListener(type, flushReroll, true);') &&
+            /function reroll\(\) \{\s*flushReroll\(\);[\s\S]*?sfx\.shuffle\(\);[\s\S]*?const run = \(\) => \{[\s\S]*?seeds = freshSeeds\(\);\s*\/\/[^\n]*\n\s*retrialPicked\(\);/.test(fuse6r));
+        // 2026-11-22 專案主的推薦解析度表：加五種；滑鼠移到選項上跳出比例、用途（三個尺寸選單都有）。
+        {
+          const { SIZES: sizes6, sizeTip: sizeTip6 } = await import(pathToFileURL(join(ROOT, "web6/sizes.js")).href);
+          const en6s = readFileSync(join(ROOT, "web6/locales/en.js"), "utf8");
+          const enHas = (zh) => new RegExp(`^${zh.replace(/[.*+?^${}()|[\]\\]/g, "\\$&")}\\|`, "m").test(en6s);
+          const want = [[1024, 1344], [896, 1344], [832, 1216], [1024, 1536], [960, 1280], [1152, 896], [1216, 832], [1344, 768], [1024, 1024]];
+          const app6s = readFileSync(join(ROOT, "web6/app.js"), "utf8");
+          ok("尺寸：推薦表的九種都在（加 1024×1344、896×1344、1024×1536、960×1280、1152×896；舊的 id 不動），每種都有比例、用途，寬高是 64 的倍數；推薦的兩種打星",
+            want.every(([w, h]) => sizes6.some((x) => x.w === w && x.h === h)) && sizes6.length === 11 && sizes6[0].id === "square" &&
+              ["square", "portrait-45", "portrait", "portrait-tall", "landscape", "landscape-wide"].every((id) => sizes6.some((x) => x.id === id)) &&
+              new Set(sizes6.map((x) => x.id)).size === sizes6.length &&
+              sizes6.every((x) => x.w % 64 === 0 && x.h % 64 === 0 && x.ratio && x.note) &&
+              sizes6.filter((x) => x.star).map((x) => `${x.w}×${x.h}`).join() === "1024×1344,896×1344");
+          ok("尺寸：滑鼠移到選項上跳出說明（墨池的選單、疊印台的付印列和規則都是選單，選項和選單本身都掛 sizeTip）；英文版每個選單字和說明都有",
+            app6s.includes("el(\"option\", { value: s.id, title: sizeTip(s) }, s.zh)") && app6s.includes("sizeSel.title = sizeTip(s);") &&
+              fuse6r.includes("selected: s.id === sizeId, title: sizeTip(s) }") && fuse6r.includes("row(\"尺寸\", sizeSel),") && !fuse6r.includes("sizeKind(") &&
+              sizes6.every((x) => enHas(x.zh) && enHas(sizeTip6(x))));
+        }
         ok("效能：整本牌名的字閒下來照字級分組先排一次（warmGlyphs，跟牌上的字名同一套字級：cards.js 的 spineFace），往下捲多遠都不必當場排新字；閒置一次最多用 12ms 就交還（手指放上去不必等）",
           cards6b.includes("export function spineFace(card)") && cards6b.includes("const { spine, len, wrap, marks, size } = spineFace(card);") &&
             book6q.includes("function warmGlyphs(deadline)") && book6q.includes("if (!warmGlyphs(deadline)) return buildAhead();") && book6q.includes("if (english || !list.length) return true;") &&

@@ -28,6 +28,25 @@ ok("fill uses mPool before allow", eng.includes("mPool(lex.bySection[section])")
 ok("takeFromPool accepts mPre", eng.includes("function takeFromPool(pool, count, rand, commit, prefer, allow, mPre)"));
 ok("allowSlow not referenced by m-mutex-index", !readFileSync(join(ROOT, "web/m-mutex-index.js"), "utf8").includes("allowSlow"));
 
+// 建索引、第一次抽牌都不逼引擎把八千多張牌的兄弟一次算完（2026-11-22：以前第一次抽牌多 70～80ms，手機 0.3 秒）。
+{
+  const fresh = indexLexicon(data);
+  const lazyIdx = buildMutexIndexFromLex(fresh);
+  drawOne(fresh, settings, new Set(), new Set(), mulberry32(1), 1);
+  ok("buildMutexIndexFromLex + first drawOne leave lex.siblings lazy", fresh.siblings._full === false);
+  let diff = "";
+  for (const item of data.tags.slice(0, 600)) {
+    const a = new Set(fresh.siblings.get(item.tag) || []);
+    const b = lazyIdx.siblingsOf(item.tag);
+    if (a.size !== b.size || [...a].some((x) => !b.has(x))) {
+      diff = item.tag;
+      break;
+    }
+  }
+  ok("lazy siblingsOf matches lex.siblings", !diff, diff);
+  ok("lazy siblingsOf: unknown tag is empty", lazyIdx.siblingsOf("no such tag").size === 0);
+}
+
 // Candidate delta + M equiv on live mutexTaken snapshots mid-draw approximation from final POS
 let before = 0, after = 0, dropped = 0, mismatch = 0;
 for (let i = 0; i < 40; i++) {
