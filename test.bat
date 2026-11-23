@@ -193,6 +193,11 @@ if errorlevel 1 (
   pause
   exit /b 1
 )
+call node scripts\test_fav_chars_browser.mjs
+if errorlevel 1 (
+  pause
+  exit /b 1
+)
 echo == mochi MCP ==
 call node scripts\test_mochi_mcp.mjs
 if errorlevel 1 (

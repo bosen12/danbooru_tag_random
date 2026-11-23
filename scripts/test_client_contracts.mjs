@@ -1933,6 +1933,14 @@ const ALBUM_FIXTURE = [
               hand6c.includes("if (fanW < fw0) checkClamp(s, focus, hold);") && hand6c.includes("for (const c of [...fan.children]) if (!keep.has(c)) leave(c);") &&
               /\.fav-hand\[data-scroll="true"\] \.fav-fan \{\s*overflow-x: clip;/.test(card6c));
           ok("疊印台的偏好卡牌也接伺服器那份、別的分頁改了就重擺（以前新裝置第一次開托盤是空的）", fuse6c.includes("handStore.onChange(() => hand.reload());"));
+          // 2026-11-23：偏好角色彈窗。行為由 test_fav_chars_browser.mjs、test_fav_chars_sync.mjs 實測；這裡只釘住做法。
+          const fav6c = readFileSync(join(ROOT, "web6/fav-chars.js"), "utf8");
+          const css6c = readFileSync(join(ROOT, "web6/styles.css"), "utf8").replace(/\r\n/g, "\n");
+          ok("偏好角色：名單有順序、按錯再按回來放回原位（伺服器那份也照順序）；彈窗的牌整格量一次寬度（不是每張各自當容器）；子分類沿用字盒那套籤；搜尋用字盒的排序",
+            /url: "\/api\/fav-chars",\s*order: true,/.test(fav6c) && fav6c.includes("store.add(t, slotOf(t))") && fav6c.includes("sizeCards(grid);") &&
+              fav6c.includes("genderChips(gender,") && fav6c.includes("seriesRun([allBtn,") && fav6c.includes("searchCards(pool, q)"));
+          ok("偏好角色彈窗：好幾頁時固定高度、翻頁鈕貼底；「找不到」那行藏起來就真的藏（display: flex 以前蓋過 hidden）",
+            /\.sheet\.favc-sheet\[data-paged="true"\] \{\s*display: flex;/.test(css6c) && /\.favc-empty\[hidden\] \{\s*display: none;/.test(css6c));
         }
         ok("效能：整本牌名的字閒下來照字級分組先排一次（warmGlyphs，跟牌上的字名同一套字級：cards.js 的 spineFace），往下捲多遠都不必當場排新字；閒置一次最多用 12ms 就交還（手指放上去不必等）",
           cards6b.includes("export function spineFace(card)") && cards6b.includes("const { spine, len, wrap, marks, size } = spineFace(card);") &&
