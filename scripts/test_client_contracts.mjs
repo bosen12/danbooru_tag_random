@@ -1941,6 +1941,11 @@ const ALBUM_FIXTURE = [
               fav6c.includes("genderChips(gender,") && fav6c.includes("seriesRun([allBtn,") && fav6c.includes("searchCards(pool, q)"));
           ok("偏好角色彈窗：好幾頁時固定高度、翻頁鈕貼底；「找不到」那行藏起來就真的藏（display: flex 以前蓋過 hidden）",
             /\.sheet\.favc-sheet\[data-paged="true"\] \{\s*display: flex;/.test(css6c) && /\.favc-empty\[hidden\] \{\s*display: none;/.test(css6c));
+          // 視窗高度：行為由 test_fav_chars_browser.mjs 逐格量（舊程式一格就跳完）。
+          const ui6c = readFileSync(join(ROOT, "web6/ui.js"), "utf8");
+          ok("視窗內容變了高度慢慢變：openSheet 自己看內容（MutationObserver＋圖載好），ResizeObserver 只記高度不改大小；呼叫端自己演的（sheet._grow）不重演；偏好角色換內容時從原本的高度變過去（貼上提示詞等其他視窗交給 openSheet）",
+            ui6c.includes("autoHeight(sheet, overlay);") && ui6c.includes("const own = sheet._grow && sheet._grow.playState === \"running\";") &&
+              fav6c.includes("const grow = opened ? heightChange(sheet.sheet) : null;"));
         }
         ok("效能：整本牌名的字閒下來照字級分組先排一次（warmGlyphs，跟牌上的字名同一套字級：cards.js 的 spineFace），往下捲多遠都不必當場排新字；閒置一次最多用 12ms 就交還（手指放上去不必等）",
           cards6b.includes("export function spineFace(card)") && cards6b.includes("const { spine, len, wrap, marks, size } = spineFace(card);") &&
