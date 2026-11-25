@@ -498,7 +498,8 @@ ok("等太久先改成略過（面板收得起來），之後載入了照樣標�
 
 # 下載卡面那句話寫的大小要跟 fetch_card_art.py 真正抓的包一樣（2026-11-26：包換到 v13 是 75／244 MB，面板還寫 30／103 MB）。
 # 換新卡面包改了 THUMBS／FULL 的 size，這裡會紅：記得一起改 setup_tasks.py 的那句和 web6/locales/en.js。
-_fca = (Path(__file__).resolve().parent / "fetch_card_art.py").read_text(encoding="utf-8")
+# 上游在 scripts/、開源版在 tests/：都從 repo 根目錄找。
+_fca = (Path(__file__).resolve().parent.parent / "scripts" / "fetch_card_art.py").read_text(encoding="utf-8")
 _sizes = [round(int(re.search(r'^' + k + r' = \{[^}]*"size": (\d+)', _fca, re.M).group(1)) / 1e6) for k in ("THUMBS", "FULL")]
 _setup_src = (Path(__file__).resolve().parent.parent / "setup_tasks.py").read_text(encoding="utf-8")
 ok("卡面下載那句話的大小跟真正的包一樣", f"先抓縮圖（約 {_sizes[0]} MB），再抓大圖（約 {_sizes[1]} MB）" in _setup_src, str(_sizes))
