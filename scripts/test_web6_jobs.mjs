@@ -32,6 +32,85 @@ for(const file of ['web6/app.js','web6/fuse.js']) {
 }
 // 撤下排隊中的成品（app.js 的 removeShot）：正在畫的是 current、還沒送出去的是 queued，拿掉的不會再送。
 test('generator.holds tells current from queued, and a dropped shot is never sent',async()=>{let release;const held=new Promise(r=>release=r);let idle;const ended=new Promise(r=>idle=r);const bodies=[];globalThis.fetch=async(u,o)=>{if(o&&o.body)bodies.push(JSON.parse(o.body).seed);if(bodies.length===1)await held;return response('j'+bodies.length);};const gen=createGenerator({payload:()=>({}),update(){},idle});const a={id:'a',positive:'x',seed:1},b={id:'b',positive:'x',seed:2},c={id:'c',positive:'x',seed:3};gen.enqueue(a);gen.enqueue(b);gen.enqueue(c);await new Promise(r=>setTimeout(r,0));assert.equal(gen.holds(a),'current');assert.equal(gen.holds(b),'queued');assert.equal(gen.holds({id:'z'}),null);gen.drop(new Set(['b']));assert.equal(gen.holds(b),null);release();await ended;assert.deepEqual(bodies,[1,3]);});
+// 2026-11-26：連續生圖時，上一張一進 ComfyUI（拿到 prompt_id），下一張就先送過去排在後面，中間顯示卡不閒著。
+const liveStream = (job) => {
+  let ctl;
+  const enc = new TextEncoder();
+  const body = new ReadableStream({ start: (c) => (ctl = c) });
+  return {
+    res: new Response(body, { headers: { 'X-Gen-Job': job } }),
+    push: (e, d) => ctl.enqueue(enc.encode(`event: ${e}\ndata: ${JSON.stringify(d)}\n\n`)),
+    end: () => ctl.close(),
+  };
+};
+const tick = () => new Promise((r) => setTimeout(r, 5));
+test('back-to-back shots: the next one is sent as soon as the current one is queued in ComfyUI, results stay in order', async () => {
+  const streams = [];
+  const posts = [];
+  globalThis.fetch = async (u, o) => { if (o?.body) posts.push(JSON.parse(o.body).seed); const s = liveStream('j' + posts.length); streams.push(s); return s.res; };
+  let idle; const ended = new Promise((r) => (idle = r));
+  const done = [];
+  const gen = createGenerator({ payload: () => ({}), update(s) { if (s.status === 'done') done.push(s.seed); }, idle });
+  for (const seed of [1, 2, 3]) gen.enqueue({ positive: 'x', seed });
+  await tick();
+  assert.deepEqual(posts, [1], 'only the first is sent before it reaches ComfyUI');
+  streams[0].push('queued', { prompt_id: 'p1' });
+  await tick();
+  assert.deepEqual(posts, [1, 2], 'second sent while the first is still drawing');
+  assert.equal(gen.pending, 3);
+  streams[1].push('queued', { prompt_id: 'p2' });
+  await tick();
+  assert.deepEqual(posts, [1, 2], 'never more than one ahead');
+  streams[0].push('done', { image: '/a', seed: 1 }); streams[0].end();
+  await tick();
+  assert.deepEqual(posts, [1, 2, 3], 'third goes out once the second is current and already queued');
+  streams[1].push('done', { image: '/b', seed: 2 }); streams[1].end();
+  streams[2].push('queued', { prompt_id: 'p3' }); streams[2].push('done', { image: '/c', seed: 3 }); streams[2].end();
+  await ended;
+  assert.deepEqual(done, [1, 2, 3]);
+});
+test('stop cancels both the drawing shot and the one already sent ahead', async () => {
+  const streams = [];
+  const cancels = [];
+  let n = 0;
+  globalThis.fetch = async (u, o) => {
+    if (String(u).startsWith('/api/gen/cancel')) { cancels.push(JSON.parse(o.body).job); return new Response('{}'); }
+    n++;
+    const s = liveStream('j' + n);
+    o.signal?.addEventListener('abort', () => { try { s.end(); } catch {} });
+    streams.push(s);
+    return s.res;
+  };
+  let idle; const ended = new Promise((r) => (idle = r));
+  const gen = createGenerator({ payload: () => ({}), update() {}, idle });
+  const a = { positive: 'x', seed: 1 }, b = { positive: 'x', seed: 2 };
+  gen.enqueue(a); gen.enqueue(b);
+  await tick();
+  streams[0].push('queued', { prompt_id: 'p1' });
+  await tick();
+  assert.equal(gen.holds(b), 'current', 'b is already in hand (sent ahead)');
+  gen.stop();
+  await ended;
+  assert.deepEqual(cancels.sort(), ['j1', 'j2']);
+  assert.equal(a.status, 'cancelled'); assert.equal(b.status, 'cancelled');
+});
+test('infinite loop: soon() is asked once the last shot is in ComfyUI, and the shot it adds is sent ahead', async () => {
+  const streams = [];
+  const posts = [];
+  globalThis.fetch = async (u, o) => { if (o?.body) posts.push(JSON.parse(o.body).seed); const s = liveStream('j' + posts.length); streams.push(s); return s.res; };
+  let idle; const ended = new Promise((r) => (idle = r));
+  let gen; let asked = 0;
+  gen = createGenerator({ payload: () => ({}), update() {}, idle, soon: () => { if (asked++ === 0) setTimeout(() => gen.enqueue({ positive: 'y', seed: 9 }), 1); } });
+  gen.enqueue({ positive: 'x', seed: 1 });
+  await tick();
+  streams[0].push('queued', { prompt_id: 'p1' });
+  await tick(); await tick();
+  assert.equal(asked >= 1, true);
+  assert.deepEqual(posts, [1, 9], 'next round goes out while the first is still drawing');
+  streams[0].push('done', { image: '/a', seed: 1 }); streams[0].end();
+  streams[1].push('queued', { prompt_id: 'p2' }); streams[1].push('done', { image: '/b', seed: 9 }); streams[1].end();
+  await ended;
+});
 test('generator tells the server which room sent it (gen-status badge)',async()=>{let idle;const ended=new Promise(r=>idle=r);let body;globalThis.fetch=async(u,o)=>{body=JSON.parse(o.body);return response('j');};const gen=createGenerator({origin:'fuse',payload:()=>({width:1}),update(){},idle});gen.enqueue({positive:'x',seed:1});await ended;assert.equal(body.origin,'fuse');assert.equal(body.width,1);});
 test('shots still waiting in the client queue survive leaving the room, but not for long',()=>{store.saveShots([{id:'w',status:'queued'},{id:'r',status:'running',job:'j'},{id:'d',status:'done'},{id:'n',status:'running'}]);const [w,r,d,n]=store.loadShots();assert.equal(w.waiting,true);assert.ok(Date.now()-w.waitedAt<5000);assert.equal(store.stillWaiting(w),true);assert.equal(r.waiting,false);assert.equal(r.live,true);assert.equal(d.waiting,false);assert.equal(n.waiting,true);assert.equal(store.stillWaiting({...w,waitedAt:Date.now()-store.WAIT_KEEP_MS-1}),false);assert.equal(store.stillWaiting({...w,job:'x'}),false);});
 test('fuse keeps waiting prints and marks them to re-enqueue',()=>{let saved;const ctx={prints:[{id:'p',positive:'x',status:'queued',at:'t'},{id:'q',positive:'y',status:'stopped'}],PRINT_MAX:80,writeJ:(k,v)=>saved=v,FK:{prints:'p'},S:store};evaluate('web6/fuse.js','savePrints',ctx)();assert.equal(saved[0].waiting,true);const loaded=evaluate('web6/fuse.js','loadPrints',Object.assign(ctx,{readJ:()=>saved}))();assert.equal(loaded.length,1);assert.equal(loaded[0].status,'queued');assert.equal(loaded[0]._waiting,true);});
