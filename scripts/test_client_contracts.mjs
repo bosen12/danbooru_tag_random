@@ -1782,6 +1782,7 @@ const ALBUM_FIXTURE = [
       ok("收著的作品籤趁空檔先排一次字（第一次展開不用當場排）；照籤上的字記，同樣的字只排一次", cards67[0].includes("if (!want) warmChips(chips);") && cards67[0].includes("const warmed = new Set();") && styles67[0].includes('.chip-run[data-fold="shut"] > .group-chip[data-warm] {'));
       ok("卡冊角色頁：「動漫」「遊戲」「其他」整類篩選（按下去順便打開，已經在篩再按才開合）、性別旁「♥ 偏好 N」只看偏好角色", fold[1].includes("famPick: pickFam, famPicked: ui.group === famKey(r.fam)") && fold[1].includes("function pickFam(fam)") && fold[1].includes("favChip(), seriesRun(all)") && fold[1].includes("favOk(c) &&") && fold[1].includes("groupOk(c)) &&") && cards67[0].includes("if (picking && want) return;"));
       ok("墨池字盒角色頁也有「♥ 偏好 N」（跟卡冊同一顆 favOnlyChip）：只看偏好角色、搜到不在名單裡的會說、關掉名單彈窗後重排", app6.includes("favOnlyChip(ui.favOnly, favCount(), pickFav), seriesRun(all)") && app6.includes("visible(c) && genderOk(c) && favOk(c)") && app6.includes("`「${c.zh}」不在偏好角色裡`") && fold[1].includes("const favChip = () => favOnlyChip(ui.favOnly, favCount(), pickFav);") && readFileSync(join(ROOT, "web6/fav-chars.js"), "utf8").includes("export function favOnlyChip(on, count, pick)"));
+      ok("疊印台字盒角色頁也有「♥ 偏好 N」（同一顆 favOnlyChip）：只看偏好角色、搜到不在名單裡的會說、名單變了只換數字", caseFold[0].includes("favOnlyChip(caseFav, caseFavCount(), pickFav), seriesRun(all)") && caseFold[0].includes('if (caseTab === "chara" && caseFav) list = list.filter((c) => favChars.has(c.tag));') && caseFold[0].includes("`「${c.zh}」不在偏好角色裡`") && caseFold[0].includes('paintFavOnlyChip($("case-groups"), caseFavCount());'));
       ok("卡冊（電腦）：偏好角色的實心愛心一開頁就在，不是滑過一次才冒出來；別處剛加的也立刻補上；其他牌照舊滑過去才做按鈕", fold[1].includes('if (HOVER.matches && !(card.suit === "chara" && favChars.has(card.tag))) cell._lazyButtons = true;') && fold[1].includes("if (cell._lazyButtons && favChars.has(tag)) addButtons(cell, card);"));
       ok("角色頁的作品籤前面有「系列：」標頭，不跟性別的「全部」並排混淆（字盒、卡冊、疊印台）", [...fold, ...caseFold].every((s) => s.includes("seriesRun(all)")));
       // 2026-10-21：web6 改用 cards.js 的 searchCards（排序、簡體、底線、分別找、猜），小分類名照樣對；web7 還是舊的那一行。
@@ -1798,7 +1799,7 @@ const ALBUM_FIXTURE = [
       ok("疊印台牌的選單：主要動作排第一、拿到焦點，加入偏好卡牌排後面", fuse6.includes('el("div", { class: "pop-acts" }, [...acts, handAct(tag, anchor)])'));
       ok("疊印台牌的選單：兩邊都放不下（手機）就開在牌的下面／上面，不蓋住那張牌", fuse6.includes('pop.dataset.side = below ? "below" : "above";') && fuseCss6.includes("@keyframes pop-in-below") && fuseCss6.includes('.pop:is([data-side="below"], [data-side="above"])::before'));
       // 2026-10-11：角色頁的性別篩選（全部／女／男）也算換分類，第三處。
-      ok("疊印台字盒換花色、換小分類、換性別：捲回最上面、前二十張依序發進來；放牌、打字重畫不發", fuse6.includes("let dealCase = false;") && fuse6.includes("const deal = dealCase;") && (fuse6.match(/dealCase = true;/g) || []).length === 3);
+      ok("疊印台字盒換花色、換小分類、換性別、切「偏好」：捲回最上面、前二十張依序發進來；放牌、打字重畫不發", fuse6.includes("let dealCase = false;") && fuse6.includes("const deal = dealCase;") && (fuse6.match(/dealCase = true;/g) || []).length === 4);
       ok("手機上卡池的說明自己一行，不被按鈕擠成好幾行", /@media \(max-width: 40rem\) \{\n  \.plate-sub \{\n    grid-row: 2;/.test(fuseCss6));
     }
     {
