@@ -414,7 +414,8 @@ const MATRIX_SEEDS = 200;
 // 2026-10-26 第七次：品質與 54.csv 共 110 張進池（9 個未成年保護字封鎖；noose、self-harm 不收）。仍是 1girl solo，沒有男生或人類陰莖。 矩陣 78a3c125 → 6b42ebfb。單人女的情境沒有男生，沒有人類陰莖。
 // 2026-10-31：加反拉手臂 arm held back（性愛、要一男一女、佔兩隻手臂）與 arm grab（grabbing another's arm 的舊名）。姿勢候選多兩張，矩陣 6b42ebfb → 6ce30a24；五張單人女金標沒變。
 // 2026-11-01：260 個新字進池。洗浴時非白名單內衣先卸下，免得補救池把浴袍穿回去。五張單人女金標都換了，仍是 1girl solo，沒有男生或人類陰莖。矩陣 6ce30a24 → abf1e2a3。單人女情境沒有 1boy；掃到的 futanari 是既有標籤。
-const MATRIX_GOLD = "abf1e2a3";
+// 2026-11-26：性愛情境多 angry sex、awkward sex、acrobatic sex，multitasking 從環境（怪異母題）搬到性愛情境；都要一男一女，單人女情境碰不到。五張單人女金標沒變。矩陣 abf1e2a3 → bb0454b1。
+const MATRIX_GOLD = "bb0454b1";
 
 function matrixSettings(over) {
   const s = defaultSettings(data);
