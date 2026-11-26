@@ -300,7 +300,7 @@ function ok(name, rows) {
     ["naga", "lamia", "2013-02-16"],
     ["incubus", "demon boy", "2021-02-08"],
     ["cravat", "ascot", "2021-08-10"],
-    ["public sex", "public indecency", "2021-11-21"],
+    // public sex（2021-11-21 併成 public indecency）拿掉：2026-11-26 專案主親自用模型測過認得，收成 public indecency 的別名卡。
     ["sento", "bathhouse", "2022-08-09"],
     ["hand on hip", "hand on own hip", "2023-03-27"],
     // 這四個的正規名詞庫裡本來就有，舊名等於重複競爭同一個格子。實測（全時代

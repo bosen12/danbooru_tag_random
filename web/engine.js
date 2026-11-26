@@ -4619,6 +4619,10 @@ const ODD_MOTIF = new Set([
   "noose",
   "self-harm",
   "living fleshlight",
+  // 專案主親自測過的 33 字裡非自願的三個：只在釘了才出現。
+  "unwanted creampie",
+  "forced kiss",
+  "mind break",
 ]);
 // 只當父字用的動作：騎乘要有騎的東西（騎馬、騎車、騎掃帚帶出來）。自己被抽到時
 // 畫面沒有坐騎（以前 41 張裡 11 張）。釘它、必抽照收。

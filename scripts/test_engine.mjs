@@ -5277,11 +5277,12 @@ function indoorOutdoorClash(have) {
   eq("beach never leftover armor/suit", beachSuit, 0);
   const pinWade = applyPin(lex, new Set(), new Set(), "wading").pinned;
   let wadeStand = 0;
-  for (let i = 0; i < 40; i++) {
+  // 2026-11-26：再加三十幾個姿勢字後 40 顆種子為 0；跟 exercising、weightlifting 一樣放到 200 顆。
+  for (let i = 0; i < 200; i++) {
     const h = tagsOf(drawOne(lex, s, pinWade, new Set(), mulberry32(440640 + i), 440640 + i));
     if (h.has("standing")) wadeStand += 1;
   }
-  ok("pinned wading can stand", wadeStand > 0, `stand=${wadeStand}/40`);
+  ok("pinned wading can stand", wadeStand > 0, `stand=${wadeStand}/200`);
   const pinBathLie = applyPin(lex, new Set(), new Set(), "bathing").pinned;
   const sTeaseB = { ...s, heats: ["tease"], weights: { activity: 0, tease: 1, flash: 0, sex: 0 } };
   let bathLie = 0;
@@ -5764,7 +5765,7 @@ function indoorOutdoorClash(have) {
     // 2026-10-26 第七次：品質與 54.csv 共 110 張進池（9 個未成年保護字封鎖；noose、self-harm 不收）。仍是 1girl solo，沒有男生或人類陰莖。
     // 2026-11-01：260 個新字進池。澡堂、狼換成道場、畫架、波點洋裝。仍是 1girl solo，沒有男生或人類陰莖。
     // 2026-11-26：專案主的模型認得清單、alltags 一般字、版面外框畫材共 1703 字進池，這張跟 test_draw_baseline 的 seed 42 一起換；仍是 1girl solo、沒有男生。
-    "1girl, solo, very short hair, yellow eyes, pink hair, afro, small breasts, hot, wet face, very sweaty, sweat, tight dress, dress, strapless bra, bra, garter belt, jirai kei, female masturbation, fallen down, fisheye, looking back, sideways mouth, hat tip, on motorcycle, outdoors, dawn, city lights, meteor shower, duct tape, tape, nsfw, explicit, masterpiece, best quality, amazing quality");
+    "1girl, solo, very short hair, yellow eyes, pink hair, afro, small breasts, hot, wet face, very sweaty, sweat, tight dress, dress, strapless bra, bra, garter belt, jirai kei, female masturbation, tripping, fisheye, looking back, sideways mouth, heart in heart hands, on motorcycle, outdoors, dawn, city lights, meteor shower, duct tape, tape, nsfw, explicit, masterpiece, best quality, amazing quality");
   ok("drawOne exposes shadow diagnostics", Array.isArray(shadowIntegrationDraw.shadowViolations));
 
   const eatProneShadow = validateSupportShadow({

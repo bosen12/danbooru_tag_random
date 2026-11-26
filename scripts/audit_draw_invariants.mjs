@@ -582,7 +582,8 @@ FAIL 性行為互斥  ×${bad}/${N}`);
 {
   const WASH = ["bathing", "showering", "shared bathing"];
   const ROBE = ["bathrobe", "yukata", "bath yukata", "fundoshi", "chemise"];
-  const N = 4000;
+  // 2026-11-26：姿勢字又多了三十幾個，洗澡圖 4000 張只剩 58 張（門檻 60）；放到 5000。
+  const N = 5000;
   const older = ERAS.filter((e) => e !== "modern");
   let washN = 0, nonRobeN = 0;
   for (let i = 0; i < N; i += 1) {
