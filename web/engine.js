@@ -4615,6 +4615,10 @@ const ODD_MOTIF = new Set([
   "faux figurine", "alphes (style)", "title parody", "zun (style)", "logo parody", "araki hirohiko (style)",
   "riyo (lyomsnpmp) (style)", "bkub (style)", "takeuchi takashi (style)", "toriyama akira (style)",
   "ishikei (style)", "homu", "charisma break", "3others", "6+others",
+  // 2026-11-26 專案主審過放行的絞索、自殘，和指定的活人飛機杯：只在釘了才出現。
+  "noose",
+  "self-harm",
+  "living fleshlight",
 ]);
 // 只當父字用的動作：騎乘要有騎的東西（騎馬、騎車、騎掃帚帶出來）。自己被抽到時
 // 畫面沒有坐騎（以前 41 張裡 11 張）。釘它、必抽照收。

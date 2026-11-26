@@ -241342,6 +241342,168 @@
       "group": "sex",
       "sub": "sex_fetish",
       "zh": "兒童間性行為"
+    },
+    {
+      "tag": "perversion of games",
+      "section": "pose",
+      "gate": "any",
+      "heat": [
+        "flash",
+        "sex"
+      ],
+      "mutex": null,
+      "bind": [],
+      "implies": [],
+      "layer": "normal",
+      "era": [
+        "any"
+      ],
+      "group": "flash",
+      "sub": "pose_situ",
+      "zh": "遊戲變色情"
+    },
+    {
+      "tag": "hanging legs",
+      "section": "pose",
+      "gate": "any",
+      "heat": [
+        "tease",
+        "flash",
+        "sex"
+      ],
+      "mutex": null,
+      "bind": [],
+      "implies": [],
+      "layer": "normal",
+      "era": [
+        "any"
+      ],
+      "group": "tease",
+      "sub": "pose_stance",
+      "zh": "雙腿懸空"
+    },
+    {
+      "tag": "competition",
+      "section": "env",
+      "gate": "any",
+      "heat": [
+        "tease",
+        "flash",
+        "sex"
+      ],
+      "mutex": null,
+      "bind": [],
+      "implies": [],
+      "layer": "normal",
+      "era": [
+        "any"
+      ],
+      "group": "other",
+      "sub": "obj_theme",
+      "needs": [
+        "pair"
+      ],
+      "zh": "比賽"
+    },
+    {
+      "tag": "fighting over penis",
+      "section": "pose",
+      "gate": "any",
+      "heat": [
+        "sex"
+      ],
+      "mutex": null,
+      "bind": [],
+      "implies": [
+        "penis"
+      ],
+      "layer": "normal",
+      "era": [
+        "any"
+      ],
+      "group": "sex",
+      "sub": "sex_group",
+      "needs": [
+        "pair",
+        "group",
+        "male"
+      ],
+      "zh": "爭搶陰莖"
+    },
+    {
+      "tag": "living fleshlight",
+      "section": "pose",
+      "gate": "any",
+      "heat": [
+        "sex"
+      ],
+      "mutex": null,
+      "bind": [],
+      "implies": [
+        "objectification"
+      ],
+      "layer": "normal",
+      "era": [
+        "any"
+      ],
+      "group": "sex",
+      "sub": "sex_bdsm",
+      "needs": [
+        "pair",
+        "male"
+      ],
+      "zh": "活人飛機杯"
+    },
+    {
+      "tag": "twister (game)",
+      "section": "pose",
+      "gate": "any",
+      "heat": [
+        "tease",
+        "flash",
+        "sex"
+      ],
+      "mutex": null,
+      "bind": [],
+      "implies": [
+        "playing games"
+      ],
+      "layer": "normal",
+      "era": [
+        "modern"
+      ],
+      "group": "activity",
+      "sub": "act_fun",
+      "needs": [
+        "pair"
+      ],
+      "zh": "扭扭樂"
+    },
+    {
+      "tag": "kissing another during penetration",
+      "section": "pose",
+      "gate": "any",
+      "heat": [
+        "sex"
+      ],
+      "mutex": null,
+      "bind": [],
+      "implies": [
+        "group sex",
+        "sex",
+        "kiss"
+      ],
+      "layer": "normal",
+      "era": [
+        "any"
+      ],
+      "group": "sex",
+      "sub": "sex_group",
+      "needs": [
+        "pair",
+        "group"
+      ],
+      "zh": "插入時吻別人"
     }
   ]
 }
