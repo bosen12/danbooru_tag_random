@@ -106,15 +106,16 @@ const sample = draws(200);
 }
 
 {
+  // 2026-11-26：原本用 kneeling，200 抽只出 2 次，詞庫一加字就抽不到；換成常見的 sitting。
   const bare = banlistFrom({ tags: [] }, lex);
-  const banned = banlistFrom({ tags: ["kneeling"] }, lex);
+  const banned = banlistFrom({ tags: ["sitting"] }, lex);
   let base = 0;
   let gone = 0;
   for (const draw of sample) {
-    if (eligibleAnswers(lex, draw, bare, "pose").some((c) => c.tag === "kneeling")) base += 1;
-    if (eligibleAnswers(lex, draw, banned, "pose").some((c) => c.tag === "kneeling")) gone += 1;
+    if (eligibleAnswers(lex, draw, bare, "pose").some((c) => c.tag === "sitting")) base += 1;
+    if (eligibleAnswers(lex, draw, banned, "pose").some((c) => c.tag === "sitting")) gone += 1;
   }
-  ok("kneeling is eligible when nothing is banned", base > 0, `base=${base}/200`);
+  ok("sitting is eligible when nothing is banned", base > 0, `base=${base}/200`);
   ok("banning the tag removes it", gone === 0, `gone=${gone}`);
 }
 

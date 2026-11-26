@@ -155,7 +155,7 @@ if (parsed.length === N) {
   if (mode === "clothing") {
     const modernSeen = merged.modern.feet.seen;
     const fabricSeen = merged.modern.fabric.seen;
-    if (modernSeen !== 16000 || fabricSeen !== 16000 || merged.edo.seen !== 4000) {
+    if (modernSeen !== 16000 || fabricSeen !== 16000 || merged.edo.seen !== 8000) {
       failed = true;
       console.error(`FAIL 衣服分片張數對不上（現代鞋子 ${modernSeen}、布料 ${fabricSeen}、江戶 ${merged.edo.seen}）`);
     }

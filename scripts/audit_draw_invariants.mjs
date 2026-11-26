@@ -527,7 +527,8 @@ FAIL 性行為互斥  ×${bad}/${N}`);
 {
   const WASH = ["bathing", "showering", "shared bathing"];
   const ROBE = ["bathrobe", "yukata", "bath yukata", "fundoshi", "chemise"];
-  const N = 4000;
+  // 2026-11-26：第一批 716 個新字進池時，4000 張只剩 76 張洗澡圖（門檻 80）。規則還在（袍子 0），放大取樣。
+  const N = 6000;
   let washN = 0, robeN = 0, coveredN = 0;
   const examples = [];
   for (let i = 0; i < N; i += 1) {
@@ -1248,7 +1249,8 @@ FAIL 性行為互斥  ×${bad}/${N}`);
 // 下面兩張表都是**這裡自己寫的**，不從 lexicon 的 era 欄反射 —— 反射的話，
 // 把 cigarette 改回 era=["any"] 這條就會跟著鬆掉，等於沒在守。
 {
-  const N = 700;
+  // 2026-11-26：活動多了二十幾種，現代 writing 700 抽只剩 10 次左右、只碰到一種筆；放到 1500。
+  const N = 1500;
   // 哪個時代不該出現哪個道具。理由寫在旁邊，改這裡等於改產品承諾。
   const WRONG_ERA = [
     ["edo", "cigarette", "江戶抽的是煙管，紙菸是明治以後的事"],

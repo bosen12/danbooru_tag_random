@@ -178,6 +178,9 @@ const SYMBOL_FILE = {
   "<|> <|>": "sym_pose_11",
   "\\||/": "sym_pose_12",
   "\\o/": "sym_o",
+  // 2026-11-26：:c 跟現有的 c: 撞成 c.webp；;( 清掉符號變成空檔。
+  ":c": "sym_mouth_c",
+  ";(": "sym_wink_sad",
 };
 
 export function artFile(tag) {
@@ -1375,6 +1378,8 @@ function castOf(item) {
     if (tag === "yuri") return ["2girls", "yuri", "adult"];
     // 2026-11-02：4others 寫成 1girl, solo，畫出一個戴面具的女生（v12 卡面包）。others 是看不出性別的角色。
     if (/^\d\+?others$/.test(tag)) return [tag, "multiple others", "adult"];
+    // 2026-11-26：multiple others 照 2others 畫（詞庫裡它帶出 2others），不寫 solo。
+    if (tag === "multiple others") return ["2others", "multiple others", "adult"];
   }
   // 2026-11-02：v12 卡面包裡寫 solo、畫成一個人的多人牌。
   if (CROWD_ART.has(tag)) return ["1girl", "solo focus", "adult"];
