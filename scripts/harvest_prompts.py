@@ -311,6 +311,16 @@ def norm_tag(name: str) -> str:
 # 整字才擋。baby／mother／father／child／uniform／school／elementary 不能放進上面的子字串表。
 HARD_EXACT = {
     "aged down",
+    # 2026-11-26：alltags 的未成年字與小學、國中制服（跟 web/card-art.js 的 HARD_BANNED 一起加）。
+    "if they mated",
+    "kono lolicon domome",
+    "age regression",
+    "lolidom",
+    "mesugaki",
+    "onee-loli",
+    "onii-shota",
+    "seishou elementary school uniform",
+    "nami junior high school uniform",
     "onee-shota",
     "oppai loli",
     "baby",

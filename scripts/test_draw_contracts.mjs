@@ -168,7 +168,7 @@ if (DRAW_PART !== "rest") {
     for (let i = 1 + DRAW_SHARD; i <= n; i += DRAW_SHARDS) {
       const out = drawOne(lex, settings, pinned, new Set(), mulberry32(seed0 + i), seed0 + i);
       const names = new Set(
-        out.positive.split(",").map((x) => x.trim().replace(/^\(/, "").replace(/:[\d.]+\)$/, ""))
+        out.positive.split(",").map((x) => x.trim().replace(/^\((.*):[\d.]+\)$/, "$1"))
       );
       drawn += 1;
       const flag = (key, why) => {

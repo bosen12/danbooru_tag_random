@@ -297,7 +297,7 @@ for (const sc of SCENARIOS) {
     const out = drawOne(lex, s, new Set(), new Set(), mulberry32(seed), seed);
     const arr = out.positive
       .split(",")
-      .map((x) => x.trim().replace(/^\(/, "").replace(/:[\d.]+\)$/, ""))
+      .map((x) => x.trim().replace(/^\((.*):[\d.]+\)$/, "$1"))
       .filter(Boolean);
     const names = new Set(arr);
     drawn += 1;

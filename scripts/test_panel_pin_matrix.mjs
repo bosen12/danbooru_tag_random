@@ -25,7 +25,7 @@ function ok(name, cond, detail = "") {
 }
 
 function tagsOf(drawn) {
-  return new Set(drawn.positive.split(",").map((raw) => raw.trim().replace(/^\(/, "").replace(/:[\d.]+\)$/, "")));
+  return new Set(drawn.positive.split(",").map((raw) => raw.trim().replace(/^\((.*):[\d.]+\)$/, "$1")));
 }
 
 function childMiss(mode) {

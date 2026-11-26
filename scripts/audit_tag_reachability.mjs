@@ -34,7 +34,7 @@ let seed = 880000;
 function tagsOf(positive) {
   return positive
     .split(",")
-    .map((raw) => raw.trim().replace(/^\(/, "").replace(/:[\d.]+\)$/, ""))
+    .map((raw) => raw.trim().replace(/^\((.*):[\d.]+\)$/, "$1"))
     .filter(Boolean);
 }
 
