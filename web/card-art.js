@@ -271,6 +271,8 @@ const PERSON_FRAME = {
 
 // 單獨畫會怪的字，補一個道具。
 const ART_EXTRA = {
+  // 2026-11-26：暗房（沖洗照片的房間），只寫 dark room 會畫成一片黑；補紅色安全燈與晾著的照片。
+  "dark room": "red light, photograph, hanging, indoors, dim lighting",
   // 2026-11-02：v12 卡面包裡畫壞的（scripts/scan_card_art.py 抓到的）。人數不對的在 castOf 改卡司。
   "multiple riders": "riding, motorcycle, full body",
   "multiple crossover": "crossover, group picture, full body, standing",
@@ -521,6 +523,8 @@ const HETERO_PICTURE = new Set([
 // 牌面不要帶的 implies。抽牌邏輯仍保留；只影響插畫。
 const ART_SKIP_IMPLY = {
   "testicle sucking": new Set(["sex"]),
+  // 2026-11-26：帶著 dark 烤出整張黑卡（scan_card_art 抓到）。
+  "dark room": new Set(["dark"]),
 };
 
 const ART_NEG = {
