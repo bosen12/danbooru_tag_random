@@ -319,6 +319,7 @@ HARD_EXACT = {
     "mesugaki",
     "onee-loli",
     "onii-shota",
+    "child on child",
     "seishou elementary school uniform",
     "nami junior high school uniform",
     "onee-shota",

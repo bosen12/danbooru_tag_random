@@ -31,7 +31,7 @@ const tagsOf = (positive) => positive.split(",").map((s) => s.trim());
     "toddlercon", "toddlersex", "mother and child", "father and child", "carrying baby",
     "kindergarten uniform", "tomoeda elementary school uniform", "children",
     // 2026-11-26：alltags 的未成年字與小學、國中制服，專案主說照 loli 與既有制服處理。
-    "if they mated", "kono lolicon domome", "age regression", "lolidom", "mesugaki", "onee-loli", "onii-shota",
+    "if they mated", "kono lolicon domome", "age regression", "lolidom", "mesugaki", "onee-loli", "onii-shota", "child on child",
     "seishou elementary school uniform", "nami junior high school uniform",
     "tokyo-3 middle school uniform",
     "mitakihara school uniform",
@@ -260,7 +260,7 @@ const tagsOf = (positive) => positive.split(",").map((s) => s.trim());
     "toddlercon", "toddlersex", "mother and child", "father and child", "carrying baby",
     "kindergarten uniform", "tomoeda elementary school uniform", "children",
     // 2026-11-26：alltags 的未成年字與小學、國中制服，專案主說照 loli 與既有制服處理。
-    "if they mated", "kono lolicon domome", "age regression", "lolidom", "mesugaki", "onee-loli", "onii-shota",
+    "if they mated", "kono lolicon domome", "age regression", "lolidom", "mesugaki", "onee-loli", "onii-shota", "child on child",
     "seishou elementary school uniform", "nami junior high school uniform",
     "tokyo-3 middle school uniform",
     "mitakihara school uniform",

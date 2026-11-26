@@ -5082,6 +5082,7 @@ const NEVER_DRAW = new Set([
   "mesugaki",
   "onee-loli",
   "onii-shota",
+  "child on child",
   "baby",
   "kodomo doushi",
   "toddlercon",
