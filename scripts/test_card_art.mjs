@@ -50,6 +50,9 @@ const tagsOf = (positive) => positive.split(",").map((s) => s.trim());
     "parent and child",
     "father and son",
     "child carry", "child",
+    // 2026-11-27 tagcomplete 那批：國中、小學、幼兒相關和抱著嬰兒。
+    "tokiwadai school gym uniform", "kamihama university affiliated school uniform", "raimon soccer uniform",
+    "blueberry academy school uniform", "randoseru", "problem solver 68 (blue archive)", "holding baby",
   ];
   ok("底線封鎖名單跟 HARD_BANNED 一致", HARD_BANNED.length === minor.length && minor.every((t) => HARD_BANNED.includes(t)), HARD_BANNED.join(", "));
   for (const t of HARD_BANNED) {
@@ -294,7 +297,7 @@ const tagsOf = (positive) => positive.split(",").map((s) => s.trim());
   const solo = jobs.filter((j) => MANY.test(j.tag) && tagsOf(j.positive).includes("solo"));
   ok("名字是好幾個人的牌不寫 solo", !solo.length, solo.map((j) => j.tag).join(", "));
   // 「沒戴／沒有某樣東西」當靜物畫，牌面是一張空白（no eyepatch、no blindfold）。
-  const blankNo = jobs.filter((j) => /^no /.test(j.tag) && j.tag !== "no humans" && tagsOf(j.positive).includes("no humans"));
+  const blankNo = jobs.filter((j) => /^no /.test(j.tag) && j.tag !== "no humans" && j.tag !== "no symbol" && tagsOf(j.positive).includes("no humans")); // no symbol 是禁止標誌（🚫）本身，本來就畫成靜物
   ok("「沒戴、沒有」的牌要畫人，不畫成空白靜物", !blankNo.length, blankNo.map((j) => j.tag).join(", "));
   const want = new Map([
     ["4others", "4others"],

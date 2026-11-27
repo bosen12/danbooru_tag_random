@@ -3706,13 +3706,25 @@ function placeCountsOutdoor(place, lex) {
 // 釘了雨或室內物件之後，活動能不能留下，要看「這個時代、這一側、而且職業／女僕裝
 // 也准」的場地還在不在。只問有沒有室外場地會漏：伸展的室外是公園，女僕裝卻只准
 // 庭園和陽台，兩邊一交集就是空的，場地格跟著空。
+// 交通工具裡面：算室內，但書桌、床頭櫃、洗手台這種擺設放不進去。
+const VEHICLE_ROOM = new Set([
+  "car interior", "train interior", "airplane interior", "cockpit", "bus interior",
+  "vehicle interior", "spacecraft interior", "carriage", "train", "bus",
+]);
+// 車裡本來就有的：車窗、車廂的窗簾。
+const VEHICLE_OK_PROP = new Set(["window", "curtains"]);
+
 function actHasUsableSide(act, era, lex, used, side) {
   const set = ACT_PLACE[act];
   if (!set) return false;
   const jobs = usedJobs(used, lex);
+  // 釘了室內擺設（side === "in" 是從那條來的）：車廂、機艙不算數。
+  // 不然釘書桌抽到開車，車內過關、書桌又進不了車，場地格空掉（2026-11-27，test_scene_place_contracts 抓到）。
+  const propHere = side === "in" && [...used].some((t) => INDOOR_PROP.has(t) && !VEHICLE_OK_PROP.has(t));
   for (const p of set) {
     const it = lex.byTag.get(p);
     if (!it || !eraOk(it, era)) continue;
+    if (propHere && VEHICLE_ROOM.has(p)) continue;
     if (side === "out") {
       if (!placeCountsOutdoor(p, lex)) continue;
       // 雨那條不認 BOTH_IO。會帶出室內、或本身是室內房間的，都不算室外。
@@ -4625,6 +4637,77 @@ const ODD_MOTIF = new Set([
   "mind break",
   // 2026-11-27 專案主指定：NTR 之前的日常（Danbooru 只有 23 帖、幾乎都是漫畫分格）。隨機抽到模型多半不認得、還會畫成漫畫，只在釘了才出現。
   "before netorare",
+  // 2026-11-27 tagcomplete 那批：有校名的高中、大學制服、學生打扮、VTuber 團服、自殘疤痕、漫畫分格、系列專屬的字，和兩個高中制服的別名：只在釘了才出現。
+  "chihaya (clothing)",
+  "muzzle (mask)",
+  "xiao guan (headdress)",
+  "underworld (ornament)",
+  "whale tail (clothing)",
+  "band (music)",
+  "toasting (gesture)",
+  "poppy (flower)",
+  "cosmos (flower)",
+  "white rabbit (animal)",
+  "nemophila (flower)",
+  "iris (flower)",
+  "garland (decoration)",
+  "lavender (flower)",
+  "saturn (planet)",
+  "pony (animal)",
+  "postbox (outgoing mail)",
+  "grease (mechanical)",
+  "nori (seaweed)",
+  "rpg (weapon)",
+  "queen (playing card)",
+  "horn (instrument)",
+  "alternate breast size",
+  "alternate hair length",
+  "2koma",
+  "3koma",
+  "1other",
+  "advanced nurturing high school uniform",
+  "hyakkaou academy school uniform",
+  "herensuge girls academy school uniform",
+  "seishou music academy uniform",
+  "summer pockets school uniform",
+  "yumenosaki school uniform",
+  "odaiba girls high school uniform",
+  "night raven college uniform",
+  "tsukinomori school uniform",
+  "trinity general school swimsuit",
+  "sailor swimsuit (idolmaster)",
+  "serasuku",
+  "angel's 24 uniform (blue archive)",
+  "kogal",
+  "sukeban",
+  "bloomers pull",
+  "hololive summer 2023 swimsuit",
+  "hololive idol uniform (origin)",
+  "self-harm scar",
+  "tokiwadai school gym uniform",
+  "kamihama university affiliated school uniform",
+  "raimon soccer uniform",
+  "blueberry academy school uniform",
+  "randoseru",
+  "problem solver 68 (blue archive)",
+  "holding baby",
+  "hatsuboshi gakuen school uniform",
+  "homurabara academy school uniform",
+  "moegi high school uniform",
+  "anna miller",
+  // 2026-11-27 Grok 第二輪審查補的：非自願、會改寫整張版面、只對特定角色有意義的。
+  "official alternate eye color",
+  "alternate body size",
+  "alternate facial hair",
+  "alternate height",
+  "accidental pervert",
+  "fake video",
+  "screenshot inset",
+  "body horror",
+  "game screenshot inset",
+  "doodle inset",
+  "double exposure",
+  "assisted rape",
 ]);
 // 只當父字用的動作：騎乘要有騎的東西（騎馬、騎車、騎掃帚帶出來）。自己被抽到時
 // 畫面沒有坐騎（以前 41 張裡 11 張）。釘它、必抽照收。
@@ -5124,6 +5207,14 @@ const NEVER_DRAW = new Set([
   "children",
   "child carry",
   "child",
+  // 2026-11-27 tagcomplete 那批：國中、小學、幼兒相關和專案主要禁的抱著嬰兒，收進詞庫但不抽、不烤（sync_20261127_tags.py 的 NEVER）。
+  "tokiwadai school gym uniform",
+  "kamihama university affiliated school uniform",
+  "raimon soccer uniform",
+  "blueberry academy school uniform",
+  "randoseru",
+  "problem solver 68 (blue archive)",
+  "holding baby",
 ]);
 /** 這個字是不是永遠不抽（看起來未成年）：卡片詳情的 Danbooru「看圖」連結也不給（danbooru-link.js）。 */
 export const neverDraw = (tag) => NEVER_DRAW.has(tag);
@@ -7828,6 +7919,16 @@ function drawOneImpl(lex, settings, pinned, userBanned, rand, seed, opts) {
     }
     fill("clothing", (item) => {
       if (item.layer === "skin") return !!selectedSlots.get("clothing")?.has("clothing:nude");
+      // 自己佔腿襪、鞋這種格子，卻會帶出連身（泳裝裡的褲襪 → swimsuit；布料卡 fur-trimmed dress → dress）：上衣、下著已經穿了就不抽，
+      // 不然連身疊在上衣上、下半身也沒交代（2026-11-27，test_engine「外套不能冒充下著」抓到）。
+      // 放在布料那條「一律放行」前面：布料卡沒有 mutex，以前直接過關。
+      if (
+        item.mutex !== "onepiece" &&
+        (mutexTaken.has("top") || mutexTaken.has("bottom")) &&
+        (item.implies || []).some((t) => lex.byTag.get(t)?.mutex === "onepiece")
+      ) {
+        return false;
+      }
       if (item.layer === "garment" && !item.mutex) {
         if (item.group === "fabric") return true;
         return someUsed((it) => relOf(it).has(item.tag));
@@ -8463,6 +8564,9 @@ function drawOneImpl(lex, settings, pinned, userBanned, rand, seed, opts) {
         (item) =>
           item.layer === "garment" &&
           bodyGarmentSlot(item) === "bottom" &&
+          // 這裡是「上衣有了、補下半身」：會帶出連身的下著（pants under dress → dress）不挑，
+          // 不然連身疊在上衣上；它自己後來在 reconcile 被拿掉，dress 還留著（2026-11-27 seed 63022）。
+          !(item.implies || []).some((t) => lex.byTag.get(t)?.mutex === "onepiece") &&
           (!kind || garmentOkForKind(item, kind, era)) &&
           allow(item)
       );

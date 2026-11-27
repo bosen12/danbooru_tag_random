@@ -35,7 +35,8 @@ function assertClothBuckets(feet, fabric, edo) {
   report("現代的 sneakers 不再獨佔（< 25%）", (feet.m.get("sneakers") || 0) / feet.total < 0.25, `sneakers ${(((feet.m.get("sneakers") || 0) / feet.total) * 100).toFixed(0)}%`);
   report("現代的布料樣本夠多（≥ 60 個）", fabric.total >= 60, `只有 ${fabric.total} 個`);
   report("現代的 latex 不再獨佔（< 30%）", (fabric.m.get("latex") || 0) / fabric.total < 0.3, `latex ${(((fabric.m.get("latex") || 0) / fabric.total) * 100).toFixed(0)}%（${fabric.total} 個樣本）`);
-  const edoOwn = ["geta", "zouri"].reduce((a, t) => a + (edo.m.get(t) || 0), 0) / edo.total;
+  // 2026-11-27：草鞋（waraji）也是江戶的鞋，算進來。
+  const edoOwn = ["geta", "zouri", "waraji"].reduce((a, t) => a + (edo.m.get(t) || 0), 0) / edo.total;
   report("江戶的鞋子仍以木屐／草履為主（≥ 55%）", edoOwn >= 0.55, `${(edoOwn * 100).toFixed(0)}%`);
   return nFail;
 }

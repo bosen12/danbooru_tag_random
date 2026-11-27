@@ -3240,6 +3240,14 @@ _HARD_BANNED = {
     "children",
     "child carry",
     "child",
+    # 2026-11-27 tagcomplete 那批：國中、小學、幼兒相關和抱著嬰兒（web/card-art.js 的 HARD_BANNED）。
+    "tokiwadai school gym uniform",
+    "kamihama university affiliated school uniform",
+    "raimon soccer uniform",
+    "blueberry academy school uniform",
+    "randoseru",
+    "problem solver 68 (blue archive)",
+    "holding baby",
 }
 _CHAR_BAN: dict = {"mtime": None, "tags": frozenset()}
 

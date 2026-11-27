@@ -20,6 +20,7 @@ function ok(name, cond, detail) {
 }
 
 const GOLD = {
+  // 2026-11-27 第二次：tagcomplete 那批 1065 張（.planning/tac-1127，Opus 分類、Grok 第二輪審查）進池，五張全換、亂數次數跟著變。仍是 1girl solo，沒有男生或陰莖。
   // 2026-11-27：專案主指定 imminent netorare、before netorare 進誘惑・情境那一格：seed 42 的 heart in heart hands → kissing hand、seed 999 的 necrophilia → electrostimulation，RNG 次數沒變。仍是 1girl solo，沒有男生。
   // 2026-11-26：專案主的模型認得清單、alltags 剩下的一般字、版面外框畫材共 1704 字和 87 張別名卡進池（.planning/tags-1126、1126b、1126c，Grok 十三批、Opus 驗收），五張全換。仍是 1girl solo，沒有男生或人類陰莖。
   // 2026-10-24 第四輪驗收（Opus）：早晨／夜晚、室內外規則補上新字，戶外也擲傢俱格，五張全換。仍是 1girl solo，沒有 1boy、沒有陰莖。
@@ -76,8 +77,8 @@ const GOLD = {
   // 2026-10-26 第七次：品質與 54.csv 共 110 張進池（9 個未成年保護字封鎖；noose、self-harm 不收）。仍是 1girl solo，沒有男生或人類陰莖。
   // 2026-11-01：260 個新字進池。這張換成冬制服、高叉內褲、橡實。仍是 1girl solo，沒有男生或人類陰莖。
   1: {
-    rng: 2949,
-    pos: "1girl, solo, pixie cut, orange eyes, light blue hair, dreadlocks, large breasts, black pubic hair, thick eyelashes, blue nails, nail polish, halter shirt, shirt, side-tie skirt, skirt, blue sailor collar, sailor collar, strawberry print panties, print panties, panties, pasties, fingering, twisted torso, pov, looking at viewer, nose bubble, remembering, island, outdoors, morning, lights, musket, antique firearm, white sky, nsfw, explicit, masterpiece, best quality, amazing quality",
+    rng: 3359,
+    pos: "1girl, solo, pixie cut, orange eyes, light blue hair, folded hair, large breasts, prosthesis, single blush sticker, blush stickers, blood on breasts, high heel sandals, sandals, bridal garter, white trim, print shorts, shorts, pasties, female masturbation, seiza, through screen, facing ahead, >o<, spread ass, public restroom, indoors, morning, wall lamp, basketball hoop, smartphone, cellphone, nsfw, explicit, masterpiece, best quality, amazing quality",
   },
   // 2026-09-29：路人進了環境池，同一顆亂數落到別的環境字，後面的姿勢跟著換。
   // seed 42 少了束縛和手銬（手銬是束縛之後才拉的），多了咬唇。seed 100 花瓣換成剪影。
@@ -107,8 +108,8 @@ const GOLD = {
   // 2026-10-26 第七次：品質與 54.csv 共 110 張進池（9 個未成年保護字封鎖；noose、self-harm 不收）。仍是 1girl solo，沒有男生或人類陰莖。
   // 2026-11-01：260 個新字進池。澡堂、狼換成道場、畫架。仍是 1girl solo，沒有男生或人類陰莖。
   42: {
-    rng: 2980,
-    pos: "1girl, solo, very short hair, yellow eyes, pink hair, afro, small breasts, hot, wet face, very sweaty, sweat, tight dress, dress, strapless bra, bra, garter belt, jirai kei, female masturbation, tripping, fisheye, looking back, sideways mouth, kissing hand, on motorcycle, outdoors, dawn, city lights, meteor shower, duct tape, tape, nsfw, explicit, masterpiece, best quality, amazing quality",
+    rng: 3283,
+    pos: "1girl, solo, very short hair, yellow eyes, pink hair, snake hair, medium breasts, hair flower, fake mustache, webbed hands, dolphin shorts, shorts, halter shirt, shirt, strawberry print panties, print panties, panties, waist apron, female masturbation, on back, profile, looking at mirror, :x, vibrator under panties, window, indoors, twilight, city lights, gatling gun, sitting on desk, nsfw, explicit, masterpiece, best quality, amazing quality",
   },
   // 2026-10-05 第五次：女僕圍裙是布料疊層，不占連身裙。仍是 1girl solo。
   // 2026-10-05 第六次：爆炸頭跟長裙、探頭偷看。仍是 1girl solo。
@@ -134,8 +135,8 @@ const GOLD = {
   // 2026-10-26 第七次：品質與 54.csv 共 110 張進池（9 個未成年保護字封鎖；noose、self-harm 不收）。仍是 1girl solo，沒有男生或人類陰莖。
   // 2026-11-01：260 個新字進池。這張換成滑雪、雪山、脫下的裙子。仍是 1girl solo，沒有男生或人類陰莖。
   100: {
-    rng: 2958,
-    pos: "1girl, solo, medium hair, grey eyes, aqua hair, hair rings, large breasts, purple nails, red nose, breasts on glass, suspender skirt, skirt, suspenders, yellow socks, socks, brown sweater vest, sweater, wiping face, squatting, dutch angle, blank stare, gloom (expression), parted lips, apartment, indoors, night, pencil case, nintendo 3ds, handheld game console, nsfw, explicit, masterpiece, best quality, amazing quality",
+    rng: 3385,
+    pos: "1girl, solo, medium hair, grey eyes, aqua hair, hair vines, large breasts, freckles, asymmetrical bangs, very sweaty, sweat, bathrobe, glasses, stud earrings, earrings, towel, showering, indian style, twitter strip game (meme), looking to the side, shy, holding cake, shower (place), indoors, evening, turkey (food), food, tissue box, cake, nsfw, explicit, masterpiece, best quality, amazing quality",
   },
   // 2026-09-29 第三次：這張是性愛。淋浴間換成海邊，衣服和光線跟著換。仍是 1girl solo。
   // 2026-10-04（9a087a5）：帶衣物名的姿勢（hand in panties 這類）在候選階段就要先有對的衣服，
@@ -163,8 +164,8 @@ const GOLD = {
   // 2026-10-26 第七次：品質與 54.csv 共 110 張進池（9 個未成年保護字封鎖；noose、self-harm 不收）。仍是 1girl solo，沒有男生或人類陰莖。
   // 2026-11-01：260 個新字進池。這張換成酒吧、往前看。仍是 1girl solo，沒有男生或人類陰莖。
   999: {
-    rng: 2997,
-    pos: "1girl, solo, long hair, glowing eyes, light blue hair, mohawk, medium breasts, bruise on face, half updo, fake mustache, white camisole, camisole, pantyhose under shorts, shorts, bra visible through clothes, black sailor collar, sailor collar, bag, nipple rings, piercing, masturbation, falling, upside-down, sideways glance, grin, electrostimulation, shore, outdoors, sunset, screen light, ar-15, rifle, gun, tokusatsu, nsfw, explicit, masterpiece, best quality, amazing quality",
+    rng: 3349,
+    pos: "1girl, solo, long hair, glowing eyes, light blue hair, afro, small breasts, tan, tweaking own nipple, multicolored nails, nude, frilled gloves, gloves, two-tone headwear, butterfly brooch, brooch, bag, nipple rings, piercing, masturbation, arm at side, full body, looking at mirror, :d, prolapse, beach, outdoors, dusk, different shadow, hologram, plum blossoms, nsfw, explicit, masterpiece, best quality, amazing quality",
   },
   // 2026-09-23：走光補抽改成「所有成立的走光動作同一池、衣服吻合的權重 10」之後，
   // 這張的走光動作從 exhibitionism 換成 cameltoe（她穿 thong，吻合），場景跟著換。
@@ -191,8 +192,8 @@ const GOLD = {
   // 2026-10-26 第七次：品質與 54.csv 共 110 張進池（9 個未成年保護字封鎖；noose、self-harm 不收）。仍是 1girl solo，沒有男生或人類陰莖。
   // 2026-11-01：260 個新字進池。這張換成贅肉、保齡球館。仍是 1girl solo，沒有男生或人類陰莖。
   2026: {
-    rng: 3038,
-    pos: "1girl, solo, bob cut, purple eyes, pink hair, inverted bob, medium breasts, black lips, lipstick, pink streaks, streaked hair, asymmetrical bangs, tears, loose shirt, shirt, micro panties, panties, long scarf, scarf, red pantyhose, pantyhose, riding bicycle, riding, victory pose, vanishing point, looking at object, sobbing, crying, downblouse, bicycle, beach, outdoors, morning, backlighting, blood on hands, nsfw, explicit, masterpiece, best quality, amazing quality",
+    rng: 3343,
+    pos: "1girl, solo, bob cut, purple eyes, pink hair, two side up, medium breasts, turn pale, dog tail, tail, deep wound, injury, unitard, ainu clothes, blue sports bra, sports bra, zebra print, animal print, juliet sleeves, long sleeves, puffy sleeves, weightlifting, outstretched arm, over shoulder, upturned eyes, sad smile, pantyhose pull, school gym, indoors, day, screen light, crest, radio antenna, nsfw, explicit, masterpiece, best quality, amazing quality",
   },
 };
 
@@ -417,8 +418,8 @@ const MATRIX_SEEDS = 200;
 // 2026-10-31：加反拉手臂 arm held back（性愛、要一男一女、佔兩隻手臂）與 arm grab（grabbing another's arm 的舊名）。姿勢候選多兩張，矩陣 6b42ebfb → 6ce30a24；五張單人女金標沒變。
 // 2026-11-01：260 個新字進池。洗浴時非白名單內衣先卸下，免得補救池把浴袍穿回去。五張單人女金標都換了，仍是 1girl solo，沒有男生或人類陰莖。矩陣 6ce30a24 → abf1e2a3。單人女情境沒有 1boy；掃到的 futanari 是既有標籤。
 // 2026-11-26：性愛情境多 angry sex、awkward sex、acrobatic sex，multitasking 從環境（怪異母題）搬到性愛情境；都要一男一女，單人女情境碰不到。五張單人女金標沒變。矩陣 abf1e2a3 → bb0454b1。
-// 2026-11-26 第二次：專案主的模型認得清單 716 字、alltags 剩下的一般字 945 字、版面外框畫材 43 字（扣掉不收的 2 字），加 87 張別名卡進池（scripts/sync_20261126_tags.py）。單人女十種情境 2000 張掃過沒有男生、陰莖（1815 張抽到新字）。矩陣 bb0454b1 → 6d812352；through screen 不再帶 screen、性愛不自己補會帶出 cooking 的做巧克力／烘焙，→ fa4b1e66；alltags 角色收 178 個、幼稚園等 12 字，→ 60a4c990；推車體位、專案主指定的 7 字、絞索自殘補進 ODD_MOTIF，→ 365aac8d；專案主親自測過的 29 字與 4 張別名卡，→ 11ec6c76；2026-11-27 專案主指定 imminent netorare、before netorare（後者只在釘了才出現），→ 654ac140。
-const MATRIX_GOLD = "654ac140";
+// 2026-11-26 第二次：專案主的模型認得清單 716 字、alltags 剩下的一般字 945 字、版面外框畫材 43 字（扣掉不收的 2 字），加 87 張別名卡進池（scripts/sync_20261126_tags.py）。單人女十種情境 2000 張掃過沒有男生、陰莖（1815 張抽到新字）。矩陣 bb0454b1 → 6d812352；through screen 不再帶 screen、性愛不自己補會帶出 cooking 的做巧克力／烘焙，→ fa4b1e66；alltags 角色收 178 個、幼稚園等 12 字，→ 60a4c990；推車體位、專案主指定的 7 字、絞索自殘補進 ODD_MOTIF，→ 365aac8d；專案主親自測過的 29 字與 4 張別名卡，→ 11ec6c76；2026-11-27 專案主指定 imminent netorare、before netorare（後者只在釘了才出現），→ 654ac140；tagcomplete 那批 1065 張進池，→ ea62b516；同日整套測試抓到的三條：布料卡（fur-trimmed dress）帶出連身要先過「穿了上衣不抽連身」、condom left inside 要一男一女、釘了室內擺設（書桌）不抽只能在車廂機艙的活動（開車），→ 910dfb9e；上衣有了補下著時不挑會帶出連身的下著（pants under dress），→ bdbe97ee。
+const MATRIX_GOLD = "bdbe97ee";
 
 function matrixSettings(over) {
   const s = defaultSettings(data);
