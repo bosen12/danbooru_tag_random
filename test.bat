@@ -78,6 +78,12 @@ if errorlevel 1 (
   pause
   exit /b 1
 )
+echo == related cards and wiki ==
+call node scripts\test_related_cards.mjs
+if errorlevel 1 (
+  pause
+  exit /b 1
+)
 echo == draw invariants ==
 call node scripts\test_block_shards.mjs scripts\audit_draw_invariants.mjs
 if errorlevel 1 (

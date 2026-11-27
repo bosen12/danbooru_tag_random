@@ -37,6 +37,8 @@ SCRIPT_FILES = [
     "fetch-cards-window.bat", "upscale-model-check.bat", "fetch-upscale-window.bat", "pose-assets-check.bat",
     "fetch-pose-window.bat", "fetch_lora_manager.py", "lora-manager-check.bat", "fetch-lora-manager-window.bat",
     "build_portable.py",
+    # 「相關的牌」與 wiki 說明的重產腳本（related_from_dataset.py 用 fetch_related_tags.py 的共用函式）。
+    "fetch_related_tags.py", "related_from_dataset.py", "fetch_tag_wiki.py",
 ]
 # 詞庫的原料與重做的腳本：web/lexicon_parts（另外整個帶）＋這些 → merge_lexicon.py、add_zh.py 重產 web/lexicon.json。
 # characters.json 是角色的完整資料（作品、禁用與原因、貼文數）。tests/test_lexicon_rebuild.py 會在暫存資料夾只拿這些重做一次，
@@ -132,6 +134,8 @@ MOCHI_OWN = {"README.md", "CLAUDE.md", "start.bat", "start.sh", ".gitignore", ".
 EXTRA_WEB = ["vendor/three/LICENSE", "vendor/opencc/LICENSE", "vendor/opencc/NOTICE"]
 # 墨池的 MCP（mcp/mochi-mcp.mjs）載入的共用檔：網頁本身不載入，爬不到。
 EXTRA_WEB += ["trace-copy.js"]
+# 伺服器讀的資料（網頁不直接載，爬不到）：卡片詳情的「相關的牌」、Danbooru wiki 說明。
+EXTRA_WEB += ["related_tags.json", "tag_wiki.json"]
 
 # (開源版的路徑, 原字串, 換成) —— 原字串找不到就印 WARN。
 REWRITES = [

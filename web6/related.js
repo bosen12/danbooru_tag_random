@@ -1,0 +1,327 @@
+/**
+ * 卡片詳情的「相關的牌」：Danbooru 上常一起出現的 tag。
+ * 字盒（app.js 的 showCard）和卡冊（book.js 的 openCard）共用。疊印台的放大卡不加。
+ *
+ * 伺服器 /api/related 已經擋過一輪。這裡再擋：禁用角色、HARD_BANNED、guard、
+ * 分級擋掉的、廢字簍、自製牌、詞庫裡沒有的。沒有檔、連不上：這一區不出現，不跳錯。
+ *
+ * 同一個回應也帶這張牌的 Danbooru wiki 說明（web/tag_wiki.json），畫在「相關的牌」上面。
+ * 未成年的字資料照存，只靠 hardban（HARD_BANNED、禁用角色）擋：伺服器擋一次，這裡再擋一次。
+ */
+import { cardNode, setCardFlag } from "./cards.js";
+import { el } from "./ui.js";
+import { heightChange, enter, dropAnimated, reducedMotion } from "./motion.js";
+import { t } from "./i18n.js";
+
+const LIMIT = 8;
+const DOTS = ["", "相關度：一格", "相關度：兩格", "相關度：三格"];
+
+/** 底線當空白、空白收成一格、小寫。 */
+export function normTag(raw) {
+  return String(raw ?? "").replaceAll("_", " ").replace(/\s+/g, " ").trim().toLowerCase();
+}
+
+/** 相關度三格。不寫小數。已經過 0.05 的才會出現，所以最少一格。 */
+export function relatedDots(milli) {
+  const n = Number(milli);
+  if (!Number.isFinite(n) || n < 200) return 1;
+  if (n < 500) return 2;
+  return 3;
+}
+
+export function relatedDotLabel(milli) {
+  return DOTS[relatedDots(milli)];
+}
+
+function nameSet(value) {
+  if (typeof value === "function" && value.length === 0) return nameSet(value());
+  if (typeof value === "function") return value;
+  const set = new Set();
+  const list = value instanceof Set ? value : Array.isArray(value) ? value : [];
+  for (const item of list) {
+    const name = normTag(item);
+    if (name) set.add(name);
+  }
+  return set;
+}
+
+function named(bucket, tag) {
+  const key = normTag(tag);
+  if (!key || !bucket) return false;
+  if (typeof bucket === "function") return !!bucket(tag) || !!bucket(key);
+  return bucket.has(key);
+}
+
+/**
+ * 依出現順序留下可以顯示的牌，最多 limit 張（預設 8）。
+ * ctx.card(名字) 回詞庫那張；沒有的丟掉。
+ * hardBanned／characterBan／guard／trash：Set、陣列，或零引數函式（現在的廢字簍）。
+ * ratingBlocked(card)、custom(card)：回 true 就丟掉。
+ */
+export function filterRelated(pairs, ctx = {}) {
+  const limit = Number.isFinite(ctx.limit) ? ctx.limit : LIMIT;
+  if (limit <= 0) return [];
+  const self = normTag(ctx.self);
+  const hard = nameSet(ctx.hardBanned);
+  const chars = nameSet(ctx.characterBan);
+  const guard = nameSet(ctx.guard);
+  const trash = nameSet(ctx.trash);
+  const seen = new Set();
+  const out = [];
+  for (const pair of Array.isArray(pairs) ? pairs : []) {
+    if (!Array.isArray(pair) || pair.length < 2) continue;
+    const raw = pair[0];
+    const milli = Number(pair[1]);
+    if (typeof raw !== "string" || !Number.isFinite(milli)) continue;
+    const key = normTag(raw);
+    if (!key || key === self || seen.has(key)) continue;
+    const card = typeof ctx.card === "function" ? ctx.card(raw) || ctx.card(key) : null;
+    if (!card || typeof card.tag !== "string") continue;
+    const canon = normTag(card.tag);
+    if (!canon || canon === self || seen.has(canon)) continue;
+    if (card.banned || card.custom || card.suit === "custom") continue;
+    if (typeof ctx.custom === "function" && ctx.custom(card)) continue;
+    if (typeof ctx.ratingBlocked === "function" && ctx.ratingBlocked(card)) continue;
+    if (named(hard, canon) || named(chars, canon) || named(guard, canon) || named(trash, canon)) continue;
+    seen.add(key);
+    seen.add(canon);
+    out.push({ tag: card.tag, milli, card });
+    if (out.length >= limit) break;
+  }
+  return out;
+}
+
+const cache = new Map();
+const inflight = new Map();
+let era = 0;
+
+export function clearRelatedCache() {
+  era += 1;
+  cache.clear();
+  inflight.clear();
+}
+
+function pairsOf(items, key) {
+  if (!items || typeof items !== "object") return [];
+  if (Array.isArray(items[key])) return items[key];
+  for (const [name, value] of Object.entries(items)) {
+    if (normTag(name) === key && Array.isArray(value)) return value;
+  }
+  return [];
+}
+
+function wikiOf(wiki, key) {
+  if (!wiki || typeof wiki !== "object") return "";
+  for (const [name, value] of Object.entries(wiki)) {
+    if (normTag(name) === key && typeof value === "string") return value.trim();
+  }
+  return "";
+}
+
+/** 這張牌自己能不能顯示說明：只看 hardban（HARD_BANNED、禁用角色）。 */
+export function wikiAllowed(tag, ctx = {}) {
+  const key = normTag(tag);
+  if (!key) return false;
+  return !named(nameSet(ctx.hardBanned), key) && !named(nameSet(ctx.characterBan), key);
+}
+
+function wikiSectionOf(text) {
+  return el(
+    "section",
+    { class: "tag-wiki" },
+    el("h3", {}, "Danbooru 說明"),
+    // 說明是 Danbooru 的英文原文：標 lang，翻譯（i18n.js）不碰、讀屏用英文念。
+    el("p", { class: "tag-wiki-text", lang: "en", translate: "no" }, text)
+  );
+}
+
+/** 同一張牌這頁只問一次。連不上、回應不對：不記快取，下次開詳情再試。 */
+export function loadRelated(tag, fetchImpl = globalThis.fetch) {
+  const key = normTag(tag);
+  if (!key) return Promise.resolve({ items: [], wiki: "", guard: new Set() });
+  const hit = cache.get(key);
+  if (hit) return Promise.resolve(hit);
+  const pending = inflight.get(key);
+  if (pending) return pending;
+  const started = era;
+  const job = (async () => {
+    try {
+      const res = await fetchImpl(`/api/related?${new URLSearchParams({ tag: key })}`, { cache: "no-store" });
+      if (started !== era) return null;
+      if (!res?.ok) return null;
+      const data = await res.json();
+      if (started !== era) return null;
+      if (!data || data.ok === false) return null;
+      const guard = new Set((Array.isArray(data.guard) ? data.guard : []).map(normTag).filter(Boolean));
+      const packed = { items: pairsOf(data.items, key), wiki: wikiOf(data.wiki, key), guard };
+      if (started === era) cache.set(key, packed);
+      return packed;
+    } catch {
+      return null;
+    } finally {
+      if (inflight.get(key) === job) inflight.delete(key);
+    }
+  })();
+  inflight.set(key, job);
+  return job;
+}
+
+function dotsOf(milli) {
+  const n = relatedDots(milli);
+  return el(
+    "span",
+    { class: "related-dots", role: "img", "aria-label": relatedDotLabel(milli) },
+    [1, 2, 3].map((i) => el("i", { class: i <= n ? "is-on" : "", "aria-hidden": "true" }))
+  );
+}
+
+function paintSlot(slot, card, opts) {
+  const node = slot.querySelector(".card");
+  if (!node) return;
+  const flag = opts.flag?.(card) || null;
+  if (flag?.kind === "pool") node.dataset.state = "pinned";
+  else if (flag?.kind === "ban") node.dataset.state = "banned";
+  else node.dataset.state = "";
+  setCardFlag(node, flag);
+  const add = slot.querySelector(".related-add");
+  if (!add) return;
+  const pressed = !!opts.pressed?.(card);
+  add.setAttribute("aria-pressed", pressed ? "true" : "false");
+  const label = opts.addLabel?.(card);
+  if (!label) return;
+  const text = t(label);
+  add.setAttribute("aria-label", text);
+  add.title = text;
+}
+
+function slotOf(item, opts) {
+  const flag = opts.flag?.(item.card) || null;
+  const node = cardNode(item.card, opts.assets, { flag });
+  if (flag?.kind === "pool") node.dataset.state = "pinned";
+  else if (flag?.kind === "ban") node.dataset.state = "banned";
+  node.addEventListener("click", () => opts.onOpen?.(item.card, node));
+  const label = opts.addLabel?.(item.card) || "放進合成池";
+  const add = el("button", {
+    class: "related-add",
+    type: "button",
+    title: label,
+    "aria-label": label,
+    "aria-pressed": opts.pressed?.(item.card) ? "true" : "false",
+    onclick: (e) => {
+      e.preventDefault();
+      e.stopPropagation();
+      opts.onAdd?.(item.card, node);
+    },
+  });
+  const face = el("div", { class: "related-face" }, node, add);
+  return el("div", { class: "related-slot", dataset: { tag: item.card.tag } }, face, dotsOf(item.milli));
+}
+
+function sectionOf(items, opts, pack) {
+  const row = el("div", { class: "related-row" });
+  for (const item of items) row.append(slotOf(item, opts));
+  const section = el(
+    "section",
+    { class: "related-cards" },
+    el("h3", {}, "相關的牌"),
+    el("p", { class: "related-sub" }, "Danbooru 上常一起出現"),
+    row
+  );
+  section._related = { opts, pack };
+  return section;
+}
+
+const mounted = new Set();
+
+function growOf(node) {
+  if (!node) return () => {};
+  const sheet = node.closest?.(".sheet");
+  const box = heightChange(node);
+  const outer = sheet && sheet !== node ? heightChange(sheet) : null;
+  return () => {
+    box.done();
+    outer?.done();
+  };
+}
+
+/** 「← 上一張」：關掉最上面這張詳情，底下原本那張還在。 */
+export function relatedBack(close) {
+  return el("button", { class: "related-back", type: "button", onclick: () => close?.() }, "← 上一張");
+}
+
+/**
+ * 清單回來才把這一區放進 parent（放在 opts.before 前面，沒有就接在最後）。
+ * 空的、資料不在、這時詳情已經關了：什麼都不留。
+ * 長出來用 heightChange，小牌照順序淡入；減少動態直接出現。
+ */
+export function mountRelated(parent, opts = {}) {
+  if (!parent || !opts.tag || !opts.assets) return;
+  loadRelated(opts.tag, opts.fetchImpl).then((pack) => {
+    if (!pack || !parent.isConnected) return;
+    let items = [];
+    let wiki = "";
+    try {
+      const ctx = typeof opts.context === "function" ? opts.context() : opts.context || {};
+      items = filterRelated(pack.items, { ...ctx, self: opts.tag, guard: pack.guard });
+      if (pack.wiki && wikiAllowed(opts.tag, ctx)) wiki = pack.wiki;
+    } catch {
+      return;
+    }
+    if ((!items.length && !wiki) || !parent.isConnected) return;
+    const finish = growOf(parent);
+    const before = opts.before;
+    const place = (node) => {
+      if (before && before.parentNode === parent) parent.insertBefore(node, before);
+      else parent.append(node);
+    };
+    if (wiki) {
+      const box = wikiSectionOf(wiki);
+      place(box);
+      if (!reducedMotion()) enter(box);
+    }
+    if (items.length) {
+      const section = sectionOf(items, opts, pack);
+      place(section);
+      mounted.add(section);
+      if (!reducedMotion()) {
+        const slots = section.querySelectorAll(".related-slot");
+        slots.forEach((slot, i) => enter(slot, { delay: i * 42 }));
+      }
+    }
+    finish();
+  }).catch(() => {});
+}
+
+/** 池子、廢字簍、分級、送去墨池變了：章跟著換；不能再顯示的用 dropAnimated 拿掉。 */
+export function refreshRelated() {
+  for (const section of [...mounted]) {
+    if (!section.isConnected) {
+      mounted.delete(section);
+      continue;
+    }
+    const { opts, pack } = section._related || {};
+    const row = section.querySelector(".related-row");
+    if (!opts || !pack || !row) continue;
+    let allowed;
+    try {
+      const ctx = typeof opts.context === "function" ? opts.context() : opts.context || {};
+      allowed = new Map(filterRelated(pack.items, { ...ctx, self: opts.tag, guard: pack.guard }).map((item) => [normTag(item.tag), item]));
+    } catch {
+      continue;
+    }
+    const doomed = [];
+    for (const slot of [...row.children]) {
+      const item = allowed.get(normTag(slot.dataset.tag));
+      if (!item) doomed.push(slot);
+      else paintSlot(slot, item.card, opts);
+    }
+    if (!doomed.length) continue;
+    const finish = growOf(section.parentElement || section);
+    for (const slot of doomed) dropAnimated(slot);
+    if (!row.children.length) {
+      mounted.delete(section);
+      dropAnimated(section);
+    }
+    finish();
+  }
+}

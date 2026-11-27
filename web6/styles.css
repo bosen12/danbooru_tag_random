@@ -4245,6 +4245,240 @@ body[data-dragging="true"] .library[data-over="true"] {
   }
 }
 
+/* 卡片詳情：相關的牌。說明下面、整寬；卡冊放在「用它做過的圖」上面。
+ * 電腦 4×2，手機一排橫捲。點在紙上（不是牌面上），深淺模式都用字色。 */
+.detail .related-back,
+.detail .tag-wiki,
+.detail .related-cards {
+  grid-column: 1 / -1;
+  min-width: 0;
+}
+
+.related-back {
+  justify-self: start;
+  min-height: 44px;
+  margin: 0;
+  padding: 0 var(--space-xs);
+  border: 0;
+  background: transparent;
+  color: var(--color-accent-text);
+  font: inherit;
+  font-size: var(--text-sm);
+  cursor: pointer;
+}
+
+.related-back:focus {
+  outline: none;
+}
+
+.related-back:focus-visible {
+  outline: 2px solid var(--color-focus);
+  outline-offset: 2px;
+}
+
+.related-cards {
+  display: grid;
+  gap: var(--space-2xs);
+  padding-top: var(--space-sm);
+  border-top: 1px solid var(--color-rule-2);
+  /* 自成一層：牌角＋的 z-index 只在這一區裡算。以前詳情捲動時，下面那排的＋浮在底部按鈕列上面（2026-11-27 截圖）。 */
+  position: relative;
+  z-index: 0;
+  isolation: isolate;
+}
+
+/* Danbooru wiki 說明：相關的牌上面一小段英文原文。字小、行距鬆，不搶詳情的主角。 */
+.tag-wiki {
+  display: grid;
+  gap: var(--space-2xs);
+  padding-top: var(--space-sm);
+  border-top: 1px solid var(--color-rule-2);
+}
+
+.tag-wiki h3 {
+  margin: 0;
+  font-size: var(--text-sm);
+  font-weight: 700;
+}
+
+.tag-wiki-text {
+  margin: 0;
+  color: var(--color-muted);
+  font-size: var(--text-xs);
+  line-height: 1.6;
+  overflow-wrap: anywhere;
+}
+
+.related-cards h3 {
+  margin: 0;
+  font-size: var(--text-sm);
+  font-weight: 700;
+}
+
+.related-sub {
+  margin: 0 0 var(--space-xs);
+  color: var(--color-muted);
+  font-size: var(--text-xs);
+}
+
+.related-row {
+  display: grid;
+  grid-template-columns: repeat(4, minmax(0, 1fr));
+  gap: var(--space-sm);
+  min-width: 0;
+}
+
+.related-slot {
+  min-width: 0;
+}
+
+.related-face {
+  position: relative;
+}
+
+.related-slot .card {
+  --card-w: 100%;
+  width: 100%;
+}
+
+.related-slot .card:focus {
+  outline: none;
+}
+
+.related-slot .card:focus-visible {
+  outline: 2px solid var(--color-focus);
+  outline-offset: 2px;
+}
+
+/* 牌角的＋：跟卡冊的送出鈕同一種兩條線，這裡一直看得到（詳情裡沒有別的地方按）。觸控至少 44px。 */
+.related-add {
+  position: absolute;
+  top: 2px;
+  right: 2px;
+  z-index: 3;
+  display: grid;
+  place-items: center;
+  width: 44px;
+  height: 44px;
+  padding: 0;
+  border: 1px solid var(--color-rule);
+  border-radius: 50%;
+  background: color-mix(in oklch, var(--color-paper) 88%, transparent);
+  color: var(--color-ink);
+  box-shadow: 0 6px 14px -6px var(--color-shade);
+  cursor: pointer;
+  touch-action: manipulation;
+  transition:
+    background-color var(--dur-micro) var(--ease-out),
+    color var(--dur-micro) var(--ease-out);
+}
+
+.related-add::before,
+.related-add::after {
+  content: "";
+  position: absolute;
+  left: 50%;
+  top: 50%;
+  width: 14px;
+  height: 2px;
+  margin: -1px 0 0 -7px;
+  border-radius: 1px;
+  background: currentColor;
+  transition:
+    transform var(--dur-short) var(--ease-settle),
+    width var(--dur-short) var(--ease-settle),
+    margin var(--dur-short) var(--ease-settle);
+}
+
+.related-add::after {
+  transform: rotate(90deg);
+}
+
+.related-add[aria-pressed="true"]::before {
+  width: 6px;
+  margin-left: -3px;
+  transform: translate(-3.6px, 2px) rotate(45deg);
+}
+
+.related-add[aria-pressed="true"]::after {
+  width: 10px;
+  margin-left: -5px;
+  transform: translate(1.2px, 0.3px) rotate(-50deg);
+}
+
+.related-add:hover {
+  background: var(--color-paper);
+}
+
+/* 滑鼠：＋小一點，不蓋住牌面（觸控照舊 44px）。 */
+@media (hover: hover) and (pointer: fine) {
+  .related-add {
+    top: 4px;
+    right: 4px;
+    width: 30px;
+    height: 30px;
+  }
+  .related-add::before,
+  .related-add::after {
+    width: 12px;
+    margin: -1px 0 0 -6px;
+  }
+}
+
+.related-add:focus {
+  outline: none;
+}
+
+.related-add:focus-visible {
+  outline: 2px solid var(--color-focus);
+  outline-offset: 2px;
+}
+
+.related-dots {
+  display: flex;
+  justify-content: center;
+  gap: 4px;
+  margin-top: 4px;
+}
+
+.related-dots i {
+  width: 7px;
+  height: 7px;
+  box-sizing: border-box;
+  border: 1.5px solid var(--color-muted);
+  border-radius: 50%;
+  background: transparent;
+}
+
+.related-dots i.is-on {
+  background: var(--color-accent-text);
+  border-color: var(--color-accent-text);
+}
+
+@media (max-width: 40rem) {
+  .related-row {
+    display: flex;
+    gap: var(--space-sm);
+    overflow-x: auto;
+    scroll-snap-type: x mandatory;
+    overscroll-behavior-x: contain;
+    padding-bottom: var(--space-2xs);
+  }
+
+  .related-slot {
+    flex: 0 0 7.5rem;
+    scroll-snap-align: start;
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .related-add,
+  .related-add::before,
+  .related-add::after {
+    transition: none;
+  }
+}
+
 .tag-en {
   font-family: var(--font-mono);
   font-size: var(--text-xs);

@@ -2301,6 +2301,13 @@ API Base URL 請填 HTTP 或 HTTPS 網址，網址裡不能帶帳密。|The API 
 模型清單的分頁有誤，請直接填寫模型名稱。|The model list's pages didn't line up. Type the model name instead.
 推理強度的值不對，請到助手設定重選。|That reasoning effort isn't valid. Choose it again in the assistant settings.
 模型沒有回傳預期的測試工具呼叫，請換一個模型再試。|The model didn't return the expected test tool call. Try another model.
+相關的牌|Related cards
+Danbooru 上常一起出現|Often tagged together on Danbooru
+Danbooru 說明|Danbooru wiki
+← 上一張|← Previous card
+相關度：一格|Relatedness: one dot
+相關度：兩格|Relatedness: two dots
+相關度：三格|Relatedness: three dots
 `;
 
 export const messages = Object.freeze(Object.fromEntries(copy.trim().split("\n").map((line) => {
@@ -2978,6 +2985,8 @@ ComfyUI 不收：{0}|ComfyUI rejected it: {0!}
 加進偏好卡牌：{0}|Add to favorite cards: {0}
 不送了，拿回來：{0}|Take back from Ink Pool: {0}
 送去墨池合成池：{0}|Send to the Ink Pool mix: {0}
+放進合成池：{0}|Add to the mix: {0}
+已經在合成池：{0}|Already in the mix: {0}
 {0} 張送去墨池合成池了：回墨池就在池裡|{0} cards sent to the Ink Pool mix: they'll be in the pool when you go back
 「{0}」已經送去墨池了|“{0}” is already on its way to Ink Pool
 卡盒改成偏好卡牌了：原本卡盒裡的 {0} 張已經放進偏好卡牌|The card box is now favorite cards: its {0} cards were moved into favorite cards

@@ -32,7 +32,8 @@ import { createHand, HAND_ICON } from "./hand.js";
 import { handStore } from "./hand-store.js";
 import { handTools } from "./hand-tools.js";
 import { measure, evaluate, announce, openWall } from "./achievements.js";
-import { initMotion, settleMotion, seat, refuse, flight, reducedMotion, swapIn, rowChange, heightChange, ghostOut, holdWidth, CURVE, DUR, css, cropFlipStart, cropFlipEnd } from "./motion.js";
+import { initMotion, settleMotion, seat, refuse, flight, reducedMotion, swapIn, rowChange, heightChange, ghostOut, holdWidth, CURVE, DUR, css, cropFlipStart, cropFlipEnd, dropAnimated } from "./motion.js";
+import { mountRelated, refreshRelated, relatedBack } from "./related.js";
 import { waitImage, unwaitImage, retrySrc } from "./img-wait.js";
 import { holdArt, resumeArt } from "./card-images.js";
 import { viewSrc } from "./gen.js";
@@ -309,6 +310,7 @@ async function boot() {
     set: (on) => {
       free = on;
       S.saveSettings({ ...(S.loadSettings() || {}), ratingFree: on });
+      refreshRelated();
       renderSuits();
       render();
       renderSummary();
@@ -457,6 +459,7 @@ function renderRating() {
             rating = r;
             // 跟墨池同一個尺度：這裡換了，回墨池也是這一檔。
             S.saveSettings({ ...(S.loadSettings() || {}), rating: r });
+            refreshRelated();
             renderRating();
             const selected = box.querySelector('[aria-checked="true"]');
             if (focused) selected?.focus({ preventScroll: true });
@@ -2335,7 +2338,7 @@ function ago(ms) {
   return new Date(ms).toLocaleDateString(dateLocale);
 }
 
-function openCard(card, srcNode) {
+function openCard(card, srcNode, { back = false } = {}) {
   if (card.custom) return openCustomCard(card, srcNode);
   // 翻開一張牌：跟墨池開詳情同一個聲音。
   sfx.tap?.();
@@ -2367,11 +2370,13 @@ function openCard(card, srcNode) {
     el("dd", { class: "book-war", dataset: { warOf: card.tag } }, warText(card.tag))
   );
   const share = c && sumShown.total ? Math.min(1, c / Math.max(...pool.map((x) => countOf(x.tag)), 1)) : 0;
+  const works = worksOf(card);
   const sheet = openSheet(
     card.zh,
     el(
       "div",
       { class: "detail book-detail" },
+      back ? relatedBack(() => sheet.close()) : null,
       detailImg ? el("div", { class: "detail-art" }, detailImg) : cardNode(card, assets, { tagName: "div" }),
       el(
         "div",
@@ -2392,7 +2397,7 @@ function openCard(card, srcNode) {
         el("dl", {}, cardFacts(card, lexNow(), data).map(([k, v]) => [el("dt", {}, k), el("dd", {}, v)])),
         card.banned ? el("p", { class: "book-ban-note" }, "這張是禁用角色，不能帶去墨池，也不能加進偏好卡牌。") : null
       ),
-      worksOf(card)
+      works
     ),
     {
       foot: card.banned ? [] : [
@@ -2424,6 +2429,25 @@ function openCard(card, srcNode) {
       ],
     }
   );
+  // 相關的牌在說明下面、「用它做過的圖」上面。沒有資料就整區不出現。＋照卡冊自己的送去墨池。
+  mountRelated(sheet.sheet.querySelector(".detail"), {
+    tag: card.tag,
+    before: works,
+    assets,
+    context: () => ({
+      card: (name) => lib.byTag.get(name),
+      hardBanned: HARD_BANNED,
+      characterBan: data?.characterBan || [],
+      trash: () => S.loadBans(),
+      ratingBlocked: (item) => blocked(item, seeRating()),
+      custom: (item) => !!(item.custom || item.suit === "custom"),
+    }),
+    flag: (item) => (inSend(item.tag) ? { kind: "send", text: "送墨池" } : null),
+    pressed: (item) => inSend(item.tag),
+    addLabel: (item) => (inSend(item.tag) ? `不送了，拿回來：${item.zh}` : `送去墨池合成池：${item.zh}`),
+    onAdd: (item, node) => toggleSend(item, node),
+    onOpen: (item, node) => openCard(item, node, { back: true }),
+  });
   flyToDetail(srcNode, sheet.sheet || document.querySelector(".overlay:last-of-type .sheet"));
   if (c) countUp(big, c);
 }
@@ -2974,7 +2998,7 @@ function flyToDetail(src, sheetEl) {
     { duration: DUR.long, easing: css(CURVE.out), fill: "forwards" }
   );
   const land = () => {
-    f.remove();
+    dropAnimated(f);
     dst.style.visibility = "";
   };
   anim.onfinish = land;
@@ -3146,6 +3170,7 @@ function updateSend(card, node, rect, adding) {
   }
   const cell = cells.get(card.tag);
   if (cell) paintMark(cell, card.tag);
+  refreshRelated();
   if (adding) {
     sfx.tap?.();
     flyToMochi(node, rect);

@@ -95,6 +95,7 @@ import { getSfx } from "./sfx.js";
 import { mountDiscord, openRouteFromShot } from "./discord-link.js";
 import { english, t, takeLanguageState } from "./i18n.js";
 import { danbooruLinks } from "./danbooru-link.js";
+import { mountRelated, refreshRelated, relatedBack } from "./related.js";
 import { pickStarters, refreshStarters } from "./starters.js";
 
 // 背後預先開好的這一頁（prerender.js）：點進去之前這個房間讀的存檔被別頁改過，就重新整理。
@@ -472,6 +473,8 @@ function setSettings(patch) {
   hand?.update();
   // 分級、尺度、不限制換了：抽牌列上面那行提醒跟著換。
   renderOverreach();
+  // 詳情裡的相關牌：分級換了，擋掉的那幾張收起來。
+  refreshRelated();
 }
 
 function saveUi() {
@@ -1561,6 +1564,8 @@ function repaintLibrary() {
   }
   // 成品詳情、牆上攤開的牌：放進合成池、丟進廢字簍之後馬上換章。
   for (const node of document.querySelectorAll(".result-card")) paintState(node, node.dataset.tag);
+  // 詳情裡的相關牌：池中章跟著換；丟進廢字簍的那張收起來。
+  refreshRelated();
 }
 
 
@@ -5540,13 +5545,13 @@ function showShot(shot, { focus } = {}) {
 
 /* ================= 單張牌的詳情 ================= */
 
-function showCard(tag, from, { shot = null } = {}) {
+function showCard(tag, from, { shot = null, back = false, src = null } = {}) {
   const card = lib.byTag.get(tag);
   if (!card) return;
   if (card.custom) return showCustomCard(tag, from);
   // 成品詳情裡點一張抽到的牌：主鈕是「換掉這張重抽」（其他牌釘住、這張排除、同一顆種子抽一次）。
   const swapShot = from === "shot" && shot && shot.drawn.some((d) => d.tag === tag) ? shot : null;
-  const srcNode = from === "pool" ? poolNode(tag) : from === "library" ? libCardNode(tag) : null;
+  const srcNode = src || (from === "pool" ? poolNode(tag) : from === "library" ? libCardNode(tag) : null);
   // 詳情裡那張大圖目前的位置（按鈕要讓牌從這裡飛去合成池／廢字簍）。
   const artNow = () => {
     const n = sheet.sheet.querySelector(".detail-art, .detail > .card");
@@ -5561,6 +5566,8 @@ function showCard(tag, from, { shot = null } = {}) {
     el(
       "div",
       { class: "detail" },
+      // 從相關的牌點進來：回到底下那張，不關整疊詳情。
+      back ? relatedBack(() => sheet.close()) : null,
       // 合成池裡的牌：最上面一排份量，橫跨整個寬度（手機調份量的地方；電腦也可以在牌上滾滾輪）。
       // 以前擠在右欄：手機上右欄只剩約 250px，五顆數字放不下、1.4 超出彈窗被切掉。
       inPool ? weightRow(weights.get(tag) || 1, (w) => setWeight(tag, w), el) : null,
@@ -5620,6 +5627,26 @@ function showCard(tag, from, { shot = null } = {}) {
       ],
     }
   );
+  // 相關的牌在說明下面、整寬。沒有資料就整區不出現。＋放進合成池，不關詳情。
+  mountRelated(sheet.sheet.querySelector(".detail"), {
+    tag,
+    assets,
+    context: () => ({
+      card: (name) => lib.byTag.get(name),
+      hardBanned: HARD_BANNED,
+      characterBan: data.characterBan || [],
+      trash: () => bans,
+      ratingBlocked: (c) => ratingBlocked(c.item, ratingOf(settings)),
+      custom: (c) => !!(c.custom || c.suit === "custom" || isCustomTag(c.tag)),
+    }),
+    flag: (c) => (pool.has(c.tag) ? { kind: "pool", text: "池中" } : null),
+    pressed: (c) => pool.has(c.tag),
+    addLabel: (c) => (pool.has(c.tag) ? `已經在合成池：${c.zh}` : `放進合成池：${c.zh}`),
+    onAdd: (c) => {
+      if (!pool.has(c.tag)) pin(c.tag);
+    },
+    onOpen: (c, node) => showCard(c.tag, "related", { back: true, src: node }),
+  });
   flyToDetail(srcNode, sheet.sheet);
 }
 
