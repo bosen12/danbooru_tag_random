@@ -54,7 +54,7 @@ globalThis.document = {
   addEventListener() {},
 };
 
-const { normTag, relatedDots, relatedDotLabel, filterRelated, loadRelated, clearRelatedCache, wikiAllowed } = await import(
+const { normTag, relatedDots, relatedDotLabel, filterRelated, loadRelated, clearRelatedCache, wikiAllowed, trailTo, TRAIL_MAX } = await import(
   pathToFileURL(join(root, "web6/related.js")).href
 );
 
@@ -141,6 +141,10 @@ ok("wiki：一般的牌顯示", wikiAllowed("school uniform", { hardBanned: ["lo
 ok("wiki：HARD_BANNED 不顯示（底線、大小寫照樣認）", !wikiAllowed("Loli", { hardBanned: ["loli"] }));
 ok("wiki：禁用角色不顯示", !wikiAllowed("anya_(spy_x_family)", { characterBan: ["anya (spy x family)"] }));
 ok("wiki：空名字不顯示", !wikiAllowed("", {}));
+// 麵包屑：點回路上的牌就退回那一步（不繞圈）；太長只留最後 TRAIL_MAX 張。
+ok("麵包屑：新的牌接在後面", JSON.stringify(trailTo("pleated skirt", ["school uniform", "serafuku"])) === JSON.stringify(["school uniform", "serafuku"]));
+ok("麵包屑：點回路上的牌退回那一步", JSON.stringify(trailTo("School_Uniform", ["school uniform", "serafuku"])) === "[]" && JSON.stringify(trailTo("serafuku", ["school uniform", "serafuku", "neckerchief"])) === JSON.stringify(["school uniform"]));
+ok("麵包屑：只留最後 TRAIL_MAX 張", trailTo("z", Array.from({ length: 30 }, (_, i) => "t" + i)).length === TRAIL_MAX);
 ok("自己那張不推薦", filterRelated([["bikini", 100]], { ...base, self: "bikini" }).length === 0);
 
 clearRelatedCache();
@@ -216,10 +220,21 @@ const fuseJs = read("web6/fuse.js");
 const css = read("web6/styles.css");
 const en = read("web6/locales/en.js");
 ok("拿掉相關牌用 dropAnimated，不直接 remove", relatedJs.includes("dropAnimated(") && !relatedJs.includes(".remove("));
-ok("清單長出來用 heightChange，小牌用 enter", relatedJs.includes("heightChange(") && relatedJs.includes("enter("));
-ok("字盒詳情接上相關的牌和上一張", appJs.includes("mountRelated(") && appJs.includes("relatedBack(") && appJs.includes("back = false"));
-ok("卡冊詳情接上相關的牌，放在用過的圖前面", bookJs.includes("mountRelated(") && bookJs.includes("before: works") && bookJs.includes("back = false"));
-ok("卡冊飛進詳情落地用 dropAnimated", /const land = \(\) => \{\s*dropAnimated\(f\);/.test(bookJs));
+// 2026-11-28：晚到的說明、相關的牌改成整個視窗 FLIP（上緣、高度一起滑），位移疊在進場動畫上；抓過的當下就放、跟著進場。
+const uiJs = read("web6/ui.js");
+ok("晚到的整個視窗一起長高（ui.js resizeSheet：慢起步、記在 sheet._grow 給 autoHeight 讓開），小牌用 enter",
+  relatedJs.includes("resizeSheet(") && /export function resizeSheet[\s\S]*?CURVE\.travel[\s\S]*?sheet\._grow = a/.test(uiJs) && relatedJs.includes("enter("));
+ok("同一個視窗換牌：換之前量高度、換完當下就開始變", /export function swapSheet[\s\S]*?const finish = resizeSheet\(sheet\)[\s\S]*?finish\(\);/.test(uiJs));
+ok("抓過的當下就放，跟著視窗進場", relatedJs.includes("cache.get(normTag(opts.tag))") && relatedJs.includes("placeRelated(parent, opts, ready, false)"));
+ok("滑鼠停在牌上就先抓", relatedJs.includes("export function installRelatedPrefetch") && appJs.includes("installRelatedPrefetch()"));
+// 2026-11-28：點相關的牌在同一個視窗裡換（swapSheet），最上面麵包屑；不再一層一層疊視窗。
+ok("字盒詳情接上相關的牌，同一個視窗換、有麵包屑", appJs.includes("mountRelated(") && appJs.includes("relatedTrail(") && appJs.includes("swapSheet(into") && appJs.includes("into: sheet") && !appJs.includes("back: true"));
+ok("卡冊詳情接上相關的牌，放在用過的圖前面，同一個視窗換", bookJs.includes("mountRelated(") && bookJs.includes("before: works") && bookJs.includes("relatedTrail(") && bookJs.includes("swapSheet(into") && !bookJs.includes("back: true"));
+ok("看過的牌有上限", relatedJs.includes("export const TRAIL_MAX") && appJs.includes("trailTo(next, nextTrail)") && bookJs.includes("trailTo(next, nextTrail)"));
+// 2026-11-28：牌飛進詳情收成 motion.js 的 detailFlight（字盒、卡冊共用；先量來源、換完內容再飛）。
+const motionJs = read("web6/motion.js");
+ok("飛進詳情落地用 dropAnimated（motion.js detailFlight）", /export function detailFlight[\s\S]*?const land = \(\) => \{\s*dropAnimated\(f\);/.test(motionJs));
+ok("字盒、卡冊都先量來源再換內容", appJs.includes("const flight = detailFlight(srcNode)") && bookJs.includes("const flight = detailFlight(srcNode)"));
 ok("疊印台不加相關的牌", !fuseJs.includes("mountRelated"));
 ok("電腦 4 欄、手機橫捲、觸控至少 44px", css.includes("repeat(4, minmax(0, 1fr))") && css.includes("scroll-snap-type: x mandatory") && css.includes("width: 44px"));
 for (const line of ["相關的牌|Related cards", "Danbooru 上常一起出現|Often tagged together on Danbooru", "← 上一張|← Previous card", "相關度：一格|Relatedness: one dot", "相關度：兩格|Relatedness: two dots", "相關度：三格|Relatedness: three dots", "放進合成池：{0}|Add to the mix: {0}", "已經在合成池：{0}|Already in the mix: {0}"]) {

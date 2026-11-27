@@ -9,8 +9,8 @@
  * 未成年的字資料照存，只靠 hardban（HARD_BANNED、禁用角色）擋：伺服器擋一次，這裡再擋一次。
  */
 import { cardNode, setCardFlag } from "./cards.js";
-import { el } from "./ui.js";
-import { heightChange, enter, dropAnimated, reducedMotion } from "./motion.js";
+import { el, resizeSheet } from "./ui.js";
+import { enter, dropAnimated, reducedMotion } from "./motion.js";
 import { t } from "./i18n.js";
 
 const LIMIT = 8;
@@ -233,20 +233,90 @@ function sectionOf(items, opts, pack) {
 
 const mounted = new Set();
 
+/** 詳情視窗長高、變矮（說明和相關的牌晚到、拿掉一張）：整個視窗一起平順地過去（ui.js 的 resizeSheet）。 */
 function growOf(node) {
-  if (!node) return () => {};
-  const sheet = node.closest?.(".sheet");
-  const box = heightChange(node);
-  const outer = sheet && sheet !== node ? heightChange(sheet) : null;
-  return () => {
-    box.done();
-    outer?.done();
-  };
+  return resizeSheet(node?.closest?.(".sheet"));
 }
 
-/** 「← 上一張」：關掉最上面這張詳情，底下原本那張還在。 */
+/**
+ * 預先抓：滑鼠停在牌上一下（0.12 秒）、或手指按下去（長按要半秒才開詳情）就先問。
+ * 右鍵、長按打開詳情時資料多半已經在快取裡，跟著視窗一起進場，不用再長高。
+ * 只裝一次；沒有 document（node 測試）什麼都不做。
+ */
+let prefetchInstalled = false;
+export function installRelatedPrefetch(root = globalThis.document) {
+  if (prefetchInstalled || !root?.addEventListener) return;
+  prefetchInstalled = true;
+  let timer = 0;
+  let pending = "";
+  const tagOf = (e) => e.target?.closest?.(".card[data-tag]")?.dataset?.tag || "";
+  root.addEventListener(
+    "pointerover",
+    (e) => {
+      const tag = tagOf(e);
+      if (tag === pending) return;
+      clearTimeout(timer);
+      pending = tag;
+      if (!tag) return;
+      timer = setTimeout(() => loadRelated(tag).catch(() => {}), e.pointerType === "mouse" ? 120 : 0);
+    },
+    { passive: true }
+  );
+  root.addEventListener(
+    "pointerdown",
+    (e) => {
+      const tag = tagOf(e);
+      if (tag) loadRelated(tag).catch(() => {});
+    },
+    { passive: true }
+  );
+}
+
+/** 「← 上一張」：關掉最上面這張詳情，底下原本那張還在。（舊的疊視窗做法；現在用 relatedTrail。） */
 export function relatedBack(close) {
   return el("button", { class: "related-back", type: "button", onclick: () => close?.() }, "← 上一張");
+}
+
+/** 同一個視窗裡最多記幾張看過的牌（更早的丟掉）。 */
+export const TRAIL_MAX = 12;
+
+/**
+ * 要去 next 時的麵包屑：next 已經在路上（制服 → 水手服 → 又點回制服）就退回那一步，不繞圈；
+ * 不然接在後面，只留最後 TRAIL_MAX 張。
+ */
+export function trailTo(next, trail) {
+  const list = Array.isArray(trail) ? trail : [];
+  const key = normTag(next);
+  const at = list.findIndex((t) => normTag(t) === key);
+  return (at >= 0 ? list.slice(0, at) : list).slice(-TRAIL_MAX);
+}
+
+/**
+ * 在同一個視窗裡從相關的牌一路點下去：最上面一排「← 制服 › 水手服 › 現在這張」。
+ * trail＝之前看過的牌（舊→新，不含現在這張）；go(i) 回到 trail[i]。← 回上一張。
+ * 太長只顯示最後三張，前面收成「…」（點了回到第一張）。名字照呼叫端（英文版給 tag）。
+ */
+export function relatedTrail(trail, current, { nameOf = (x) => x, go } = {}) {
+  if (!Array.isArray(trail) || !trail.length) return null;
+  const crumb = (i) =>
+    el("button", { class: "detail-trail-step", type: "button", dataset: { noI18n: "" }, onclick: () => go?.(i) }, nameOf(trail[i]));
+  const parts = [];
+  const from = trail.length > 3 ? trail.length - 3 : 0;
+  if (from > 0) {
+    parts.push(el("button", { class: "detail-trail-step", type: "button", title: nameOf(trail[0]), "aria-label": nameOf(trail[0]), dataset: { noI18n: "" }, onclick: () => go?.(0) }, "…"));
+    parts.push(el("span", { class: "detail-trail-sep", "aria-hidden": "true" }, "›"));
+  }
+  for (let i = from; i < trail.length; i++) {
+    parts.push(crumb(i));
+    parts.push(el("span", { class: "detail-trail-sep", "aria-hidden": "true" }, "›"));
+  }
+  parts.push(el("span", { class: "detail-trail-now", "aria-current": "page", dataset: { noI18n: "" } }, nameOf(current)));
+  return el(
+    "nav",
+    { class: "detail-trail", "aria-label": "看過的牌" },
+    el("button", { class: "related-back", type: "button", title: "上一張", "aria-label": "上一張", onclick: () => go?.(trail.length - 1) }, "←"),
+    el("div", { class: "detail-trail-path" }, parts)
+  );
 }
 
 /**
@@ -256,40 +326,53 @@ export function relatedBack(close) {
  */
 export function mountRelated(parent, opts = {}) {
   if (!parent || !opts.tag || !opts.assets) return;
+  // 已經抓過（預先抓、或這頁開過）：馬上放進去，跟著視窗一起進場，不用再長高、不會跳。
+  const ready = cache.get(normTag(opts.tag));
+  if (ready) {
+    placeRelated(parent, opts, ready, false);
+    return;
+  }
   loadRelated(opts.tag, opts.fetchImpl).then((pack) => {
-    if (!pack || !parent.isConnected) return;
-    let items = [];
-    let wiki = "";
-    try {
-      const ctx = typeof opts.context === "function" ? opts.context() : opts.context || {};
-      items = filterRelated(pack.items, { ...ctx, self: opts.tag, guard: pack.guard });
-      if (pack.wiki && wikiAllowed(opts.tag, ctx)) wiki = pack.wiki;
-    } catch {
-      return;
-    }
-    if ((!items.length && !wiki) || !parent.isConnected) return;
-    const finish = growOf(parent);
-    const before = opts.before;
-    const place = (node) => {
-      if (before && before.parentNode === parent) parent.insertBefore(node, before);
-      else parent.append(node);
-    };
-    if (wiki) {
-      const box = wikiSectionOf(wiki);
-      place(box);
-      if (!reducedMotion()) enter(box);
-    }
-    if (items.length) {
-      const section = sectionOf(items, opts, pack);
-      place(section);
-      mounted.add(section);
-      if (!reducedMotion()) {
-        const slots = section.querySelectorAll(".related-slot");
-        slots.forEach((slot, i) => enter(slot, { delay: i * 42 }));
-      }
-    }
-    finish();
+    if (pack && parent.isConnected) placeRelated(parent, opts, pack, true);
   }).catch(() => {});
+}
+
+function placeRelated(parent, opts, pack, late) {
+  let items = [];
+  let wiki = "";
+  try {
+    const ctx = typeof opts.context === "function" ? opts.context() : opts.context || {};
+    items = filterRelated(pack.items, { ...ctx, self: opts.tag, guard: pack.guard });
+    if (pack.wiki && wikiAllowed(opts.tag, ctx)) wiki = pack.wiki;
+  } catch {
+    return;
+  }
+  if ((!items.length && !wiki) || !parent.isConnected) return;
+  // 晚到的才要過渡；當下就放的是進場的一部分。但視窗正在變高度（同一個視窗換牌、回上一張）時，
+  // 當下放的也要接進那段動畫：不然動畫的終點沒算到這一區，播完一格跳到全高（實測回上一張跳 253px）。
+  const resizing = parent.closest?.(".sheet")?._grow?.playState === "running";
+  const finish = late || resizing ? growOf(parent) : () => {};
+  const motion = late && !reducedMotion();
+  const before = opts.before;
+  const place = (node) => {
+    if (before && before.parentNode === parent) parent.insertBefore(node, before);
+    else parent.append(node);
+  };
+  if (wiki) {
+    const box = wikiSectionOf(wiki);
+    place(box);
+    if (motion) enter(box);
+  }
+  if (items.length) {
+    const section = sectionOf(items, opts, pack);
+    place(section);
+    mounted.add(section);
+    if (motion) {
+      const slots = section.querySelectorAll(".related-slot");
+      slots.forEach((slot, i) => enter(slot, { delay: i * 42 }));
+    }
+  }
+  finish();
 }
 
 /** 池子、廢字簍、分級、送去墨池變了：章跟著換；不能再顯示的用 dropAnimated 拿掉。 */

@@ -2304,6 +2304,8 @@ API Base URL 請填 HTTP 或 HTTPS 網址，網址裡不能帶帳密。|The API 
 相關的牌|Related cards
 Danbooru 上常一起出現|Often tagged together on Danbooru
 Danbooru 說明|Danbooru wiki
+看過的牌|Cards you viewed
+上一張|Previous card
 ← 上一張|← Previous card
 相關度：一格|Relatedness: one dot
 相關度：兩格|Relatedness: two dots

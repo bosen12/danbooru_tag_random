@@ -53,7 +53,7 @@ import { initWorkflow, currentWorkflowId, currentSampling, wfHandleKeys } from "
 import { HARD_BANNED } from "./card-art.js";
 import { buildLibrary, sizeCards, groupChips, genderChips, chipRun, seriesRun, groupNow, createAssets, cardNode, setCardFlag, setEnterTarget, eagerArt, cardFacts, cardMatches, searchCards, searchNote, warmSearchKeys, CARD_SUIT_INFO, CARD_SUITS, RATING_ZH } from "./cards.js";
 import { bindArt, artFallback } from "./card-images.js";
-import { el, openSheet, anyOverlay, toast, runToastAction, dropToastAction, ICONS, syncChoices, bootFailed, friendlyError, isNetError } from "./ui.js";
+import { el, openSheet, swapSheet, anyOverlay, toast, runToastAction, dropToastAction, ICONS, syncChoices, bootFailed, friendlyError, isNetError } from "./ui.js";
 import { mountKeysHelp } from "./keys-help.js";
 import { mountTour } from "./tour.js";
 import { mountScreensaver } from "./screensaver.js";
@@ -72,7 +72,7 @@ import { openPaste, listenPaste, parsePrompt } from "./paste-prompt.js";
 import { paintWeight, wireWeightInput, weightRow, weightPositive } from "./weights.js";
 import { favButton } from "./album-save.js";
 import { createDrag, inkRing } from "./drag.js";
-import { initMotion, settleMotion, replayDeal, flip, flipBy, leave, enter, confirmButton, gatherHome, flight, seat, refuse, reducedMotion, swapIn, rowChange, ghostOut, heightChange, CURVE, DUR, css, cropFlipStart, cropFlipEnd, dropAnimated } from "./motion.js";
+import { initMotion, settleMotion, replayDeal, flip, flipBy, leave, enter, confirmButton, gatherHome, flight, seat, refuse, reducedMotion, swapIn, rowChange, ghostOut, heightChange, CURVE, DUR, css, cropFlipStart, cropFlipEnd, dropAnimated, detailFlight } from "./motion.js";
 import { cloneCard } from "./card-images.js";
 import { createHand } from "./hand.js";
 import { handStore } from "./hand-store.js";
@@ -95,7 +95,7 @@ import { getSfx } from "./sfx.js";
 import { mountDiscord, openRouteFromShot } from "./discord-link.js";
 import { english, t, takeLanguageState } from "./i18n.js";
 import { danbooruLinks } from "./danbooru-link.js";
-import { mountRelated, refreshRelated, relatedBack } from "./related.js";
+import { mountRelated, refreshRelated, relatedTrail, installRelatedPrefetch, trailTo } from "./related.js";
 import { pickStarters, refreshStarters } from "./starters.js";
 
 // 背後預先開好的這一頁（prerender.js）：點進去之前這個房間讀的存檔被別頁改過，就重新整理。
@@ -5545,13 +5545,20 @@ function showShot(shot, { focus } = {}) {
 
 /* ================= 單張牌的詳情 ================= */
 
-function showCard(tag, from, { shot = null, back = false, src = null } = {}) {
+// into：同一個詳情視窗換成這張（從相關的牌點進來、或麵包屑回去）；trail：這個視窗之前看過的牌（舊→新）。
+function showCard(tag, from, { shot = null, src = null, into = null, trail = [] } = {}) {
   const card = lib.byTag.get(tag);
   if (!card) return;
   if (card.custom) return showCustomCard(tag, from);
   // 成品詳情裡點一張抽到的牌：主鈕是「換掉這張重抽」（其他牌釘住、這張排除、同一顆種子抽一次）。
   const swapShot = from === "shot" && shot && shot.drawn.some((d) => d.tag === tag) ? shot : null;
   const srcNode = src || (from === "pool" ? poolNode(tag) : from === "library" ? libCardNode(tag) : null);
+  // 牌飛進詳情：先趁來源還在畫面上量好（同一個視窗換牌時，被點的小牌會跟著舊內容拿掉）。
+  const flight = detailFlight(srcNode);
+  // 同一個視窗換：標題、內文、按鈕列換新的；不然開新視窗。
+  const show = into ? (title, body, opts) => swapSheet(into, title, body, opts.foot) : openSheet;
+  const nameOf = (t) => (english ? String(t).replace(/_/g, " ") : lib.byTag.get(t)?.zh || t);
+  const goTo = (next, nextTrail, node) => showCard(next, "related", { into: sheet, trail: trailTo(next, nextTrail), src: node });
   // 詳情裡那張大圖目前的位置（按鈕要讓牌從這裡飛去合成池／廢字簍）。
   const artNow = () => {
     const n = sheet.sheet.querySelector(".detail-art, .detail > .card");
@@ -5561,13 +5568,13 @@ function showCard(tag, from, { shot = null, back = false, src = null } = {}) {
   const facts = cardFacts(card, lex, data);
   const inPool = pool.has(tag);
   const banned = bans.has(tag);
-  const sheet = openSheet(
+  const sheet = show(
     card.zh,
     el(
       "div",
       { class: "detail" },
-      // 從相關的牌點進來：回到底下那張，不關整疊詳情。
-      back ? relatedBack(() => sheet.close()) : null,
+      // 從相關的牌一路點下來：「← 制服 › 水手服 › 這張」，點哪張回哪張，全在同一個視窗裡。
+      relatedTrail(trail, tag, { nameOf, go: (i) => goTo(trail[i], trail.slice(0, i)) }),
       // 合成池裡的牌：最上面一排份量，橫跨整個寬度（手機調份量的地方；電腦也可以在牌上滾滾輪）。
       // 以前擠在右欄：手機上右欄只剩約 250px，五顆數字放不下、1.4 超出彈窗被切掉。
       inPool ? weightRow(weights.get(tag) || 1, (w) => setWeight(tag, w), el) : null,
@@ -5645,40 +5652,15 @@ function showCard(tag, from, { shot = null, back = false, src = null } = {}) {
     onAdd: (c) => {
       if (!pool.has(c.tag)) pin(c.tag);
     },
-    onOpen: (c, node) => showCard(c.tag, "related", { back: true, src: node }),
+    onOpen: (c, node) => goTo(c.tag, [...trail, tag], node),
   });
-  flyToDetail(srcNode, sheet.sheet);
+  flight?.(sheet.sheet);
 }
 
 /** 打開詳情：圖從點的那張牌飛進彈窗裡的大圖（落點量的是彈窗進場動畫結束後的位置）。 */
 function flyToDetail(src, sheetEl) {
-  if (!src || matchMedia("(prefers-reduced-motion: reduce)").matches) return;
-  const dst = sheetEl.querySelector(".detail-art, .detail > .card");
-  const from = (src.querySelector(".card-art") || src).getBoundingClientRect();
-  if (!dst || !from.width || from.bottom < 0 || from.top > innerHeight) return;
-  const anims = sheetEl.getAnimations();
-  for (const a of anims) a.currentTime = a.effect.getComputedTiming().endTime;
-  const to = dst.getBoundingClientRect();
-  for (const a of anims) a.currentTime = 0;
-  if (!to.width) return;
-  const f = cloneCard(src.querySelector(".card-art") || src);
-  // 複製品直接放在落點、用落點的大小，從起點「縮放＋位移」過去（FLIP）。以前動的是
-  // left／top／width／height，每一格都要排版，生圖時主執行緒一忙就掉格；transform 交給合成器。
-  // 用大的尺寸往小的縮，圖不會在放大途中糊掉。
-  Object.assign(f.style, { position: "fixed", left: to.left + "px", top: to.top + "px", width: to.width + "px", height: to.height + "px", margin: "0", zIndex: "200", pointerEvents: "none", overflow: "hidden", borderRadius: "6px", transformOrigin: "0 0", willChange: "transform" });
-  document.body.append(f);
-  dst.style.visibility = "hidden";
-  // 等比縮放＋裁切框打開（motion.js cropFlipStart）：長寬各縮各的會把多人的圖擠扁再彈開。
-  const anim = f.animate(
-    [cropFlipStart(from, to, src.querySelector(".card-art img")), cropFlipEnd],
-    { duration: DUR.long, easing: css(CURVE.out), fill: "forwards" }
-  );
-  const land = () => {
-    dropAnimated(f);
-    dst.style.visibility = "";
-  };
-  anim.onfinish = land;
-  setTimeout(land, 700);
+  // 跟卡冊共用 motion.js 的 detailFlight（先量來源、再飛進詳情的大圖）。
+  detailFlight(src)?.(sheetEl);
 }
 
 /* ================= 廢字簍 ================= */
@@ -6021,4 +6003,6 @@ if (new URLSearchParams(location.search).has("debug")) {
 }
 
 // 開機到一半出錯（本機存檔讀不懂、連不到主機）：不要停在「正在讀詞庫…」，說清楚、給重試或重設（ui.js 的 bootFailed）。
+// 卡片詳情的說明、相關的牌：滑鼠停在牌上就先抓，打開詳情時跟著進場，不會晚到把視窗撐高（字盒、卡冊都是 .card[data-tag]）。
+installRelatedPrefetch();
 boot().catch(bootFailed);

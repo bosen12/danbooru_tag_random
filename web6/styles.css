@@ -4248,6 +4248,7 @@ body[data-dragging="true"] .library[data-over="true"] {
 /* 卡片詳情：相關的牌。說明下面、整寬；卡冊放在「用它做過的圖」上面。
  * 電腦 4×2，手機一排橫捲。點在紙上（不是牌面上），深淺模式都用字色。 */
 .detail .related-back,
+.detail .detail-trail,
 .detail .tag-wiki,
 .detail .related-cards {
   grid-column: 1 / -1;
@@ -4265,6 +4266,84 @@ body[data-dragging="true"] .library[data-over="true"] {
   font: inherit;
   font-size: var(--text-sm);
   cursor: pointer;
+}
+
+/* 同一個視窗裡從相關的牌一路點下去：「← 制服 › 水手服 › 這張」。一行放不下就橫捲，不換行（不把詳情往下推）。 */
+.detail-trail {
+  display: flex;
+  align-items: center;
+  gap: var(--space-2xs);
+  min-width: 0;
+  margin: calc(var(--space-xs) * -1) 0 0;
+}
+
+.detail-trail .related-back {
+  flex: none;
+  min-width: 44px;
+  font-size: var(--text-md);
+}
+
+.detail-trail-path {
+  display: flex;
+  align-items: center;
+  gap: var(--space-2xs);
+  min-width: 0;
+  overflow-x: auto;
+  scrollbar-width: none;
+  white-space: nowrap;
+  font-size: var(--text-sm);
+}
+
+.detail-trail-path::-webkit-scrollbar {
+  display: none;
+}
+
+.detail-trail-step {
+  flex: none;
+  min-height: 44px;
+  padding: 0 var(--space-2xs);
+  border: 0;
+  border-radius: var(--radius-sm);
+  background: transparent;
+  color: var(--color-accent-text);
+  font: inherit;
+  cursor: pointer;
+}
+
+.detail-trail-step:hover {
+  text-decoration: underline;
+  text-underline-offset: 3px;
+}
+
+.detail-trail-step:focus {
+  outline: none;
+}
+
+.detail-trail-step:focus-visible {
+  outline: 2px solid var(--color-focus);
+  outline-offset: 2px;
+}
+
+.detail-trail-sep {
+  flex: none;
+  color: var(--color-muted);
+}
+
+.detail-trail-now {
+  flex: none;
+  color: var(--color-ink);
+  font-weight: 700;
+}
+
+@media (pointer: fine) {
+  .detail-trail-step,
+  .detail-trail .related-back {
+    min-height: 32px;
+  }
+
+  .detail-trail .related-back {
+    min-width: 32px;
+  }
 }
 
 .related-back:focus {
