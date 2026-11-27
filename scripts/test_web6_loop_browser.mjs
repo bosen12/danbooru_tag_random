@@ -9,6 +9,8 @@
 //      （以前只有最早開的分頁接著印，重新整理那頁存檔裡排著的沒人接，又算「在跑」不能裁，牆滿時反把剛印好的裁掉）。
 //   2. 印了好幾張之後，已經拿掉的元素上沒有還在算的動畫（合牌的星火、牌、光演完 fill: forwards 掛著，
 //      拿掉了還沒回收前每一格都要照顧，越印越卡）。
+//   1b. 另一個墨池頁後來才開：讀進來排著的，在印的那頁印好之後也跟著變成印好（以前永遠「等前面的印完」）。
+//   1c. 後開那頁之後存一次檔：不能把送圖那頁印好的改回「等前面的印完」（2026-11-27 專案主截圖：送圖那頁一排印好的寫著排隊中）。
 //   3. 成品牆上沒有毛玻璃（backdrop-filter）：以前每張的按鈕列、牌·N 都帶，滿牆 425 個合成圖層；
 //      只給滑鼠底下那張也不行：按鈕列淡入時毛玻璃糊不到底下的圖，按鈕先黑、淡入完才變灰（閃一下）。
 import { createServer } from "node:http";
@@ -170,6 +172,32 @@ try {
     }, 15000);
     ok("1. 另一個墨池分頁開著、這頁重新整理：排著的接著印完", after.ok, `重新整理前 ${JSON.stringify(before)}，之後 ${JSON.stringify(after.s)}`);
     void a;
+    await c.close();
+  }
+
+  // 1b. 一個墨池分頁在印、另一個分頁後來才開（專案主常常同時開好幾個墨池頁）：後開的那頁從存檔讀進來的排著的幾張，
+  //     那邊印好之後這邊也要跟著變成印好。以前讀進來再序列化少了 reserved，對不上存檔，永遠「等前面的印完」。
+  {
+    const c = await context(8);
+    const a = await open(c);
+    await a.locator("#go-bar .btn-primary").click();
+    await until(async () => ({ ok: ((await statuses(a)).queued || 0) >= 4 }), 5000);
+    const b = await open(c);
+    const mid = await statuses(b);
+    const done = await until(async () => {
+      const sa = await statuses(a);
+      return { ok: (sa.done || 0) === 8, sa };
+    }, 20000);
+    await sleep(1500);
+    const sb = await statuses(b);
+    ok("1b. 後開的墨池頁：讀進來排著的幾張，那邊印好這邊也跟著印好", done.ok && (mid.queued || 0) + (mid.running || 0) > 0 && !sb.queued && !sb.running, `後開那頁剛開 ${JSON.stringify(mid)}，在印的那頁 ${JSON.stringify(done.sa)}，後開那頁最後 ${JSON.stringify(sb)}`);
+    // 1c. 後開那頁之後存一次檔（撤下一張）：不能用它手上舊的「排著」蓋掉在印那頁的「印好了」。
+    //     以前會：送圖的那頁自己已經印好的又變回「等前面的印完」，印圖的程序早就做完它，永遠卡在牆上。
+    await a.bringToFront();
+    await b.evaluate(() => [...document.querySelectorAll('#wall > .shot[data-status="done"] .shot-remove')].pop()?.click());
+    await sleep(2000);
+    const sa2 = await statuses(a);
+    ok("1c. 後開那頁存檔之後，送圖那頁印好的不會被改回排隊中", !sa2.queued && !sa2.running && (sa2.done || 0) >= 7, JSON.stringify(sa2));
     await c.close();
   }
 
