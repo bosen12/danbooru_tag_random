@@ -401,7 +401,7 @@ except SystemExit:
 server._RELATED_OVERRIDE = work / "missing.json"
 server._WIKI_OVERRIDE = work / "missing-wiki.json"
 missing = server.related_payload(["school uniform"])
-ok("沒有關聯檔回空的", missing == {"ok": True, "items": {}, "wiki": {}, "guard": []}, str(missing))
+ok("沒有關聯檔回空的", missing == {"ok": True, "items": {}, "wiki": {}, "wikiZh": {}, "guard": []}, str(missing))
 
 bad = work / "bad.json"
 bad.write_text("{", encoding="utf-8")
@@ -446,6 +446,10 @@ wiki_path.write_text(json.dumps({"version": 1, "wiki": {
   "loli": "should never be shown",
   "anya (spy x family)": "should never be shown",
   "bikini": "A two-piece swimsuit.",
+}, "wikiZh": {
+  "school uniform": "學生穿的制服。",
+  "loli": "不會顯示",
+  "anya (spy x family)": "不會顯示",
 }}), encoding="utf-8")
 server._WIKI_OVERRIDE = wiki_path
 w = server.related_payload(["School_Uniform", "loli", "anya (spy x family)", "bikini", "not in wiki"])
@@ -453,6 +457,8 @@ ok("wiki 說明跟著回、名字正規化", w["wiki"].get("school uniform") == 
 ok("wiki：未成年的字（HARD_BANNED）不給", "loli" not in w["wiki"], str(w["wiki"]))
 ok("wiki：禁用角色不給", all("anya" not in k for k in w["wiki"]), str(w["wiki"]))
 ok("wiki：沒有說明的不出現", "not in wiki" not in w["wiki"])
+ok("wiki 中文翻譯跟著回（沒翻的不帶，網頁退回英文）", w["wikiZh"].get("school uniform") == "學生穿的制服。" and "bikini" not in w["wikiZh"], str(w["wikiZh"]))
+ok("wiki 中文翻譯：永遠不抽的字、禁用角色照擋", "loli" not in w["wikiZh"] and all("anya" not in k for k in w["wikiZh"]))
 server._WIKI_OVERRIDE = work / "missing-wiki.json"
 ok("wiki 檔不在：空的、不壞", server.related_payload(["school uniform"])["wiki"] == {})
 
