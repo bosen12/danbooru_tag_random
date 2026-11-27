@@ -707,6 +707,9 @@ RECLASS = {
     "leotard aside": {"section": "pose", "mutex": "clothes_action", "layer": "normal", "heat": ["flash", "sex"], "era": ["modern"]},
     "one-piece swimsuit pull": {"section": "pose", "mutex": "clothes_action", "layer": "normal", "heat": ["flash", "sex"], "era": ["modern"]},
     "hetero": {"needs": ["pair", "female", "male"]},
+    # 2026-11-28 專案主：人物選「女」、合成池放陰道塞物，每張都冒出 1boy。收集時標成一男一女（pair、male、female），
+    # 但它是陰道裡塞了東西，一個女生就成立；釘的牌要男生時引擎會照釘的補男生，人物設定擋不住。
+    "vaginal object insertion": {"needs": ["female"]},
     "penis on ass": {"needs": ["pair", "female", "male"], "gate": "any"},
     "looking at another": {"needs": ["pair"]},
     "clothed male nude female": {"needs": ["pair", "female", "male"]},
@@ -972,6 +975,8 @@ SEX_ACT = {
 
 SOLO_SEX_ACT = {
     "object insertion",
+    # 陰道裡塞東西：一個人就成立（跟 object insertion、large insertion 一樣）。
+    "vaginal object insertion",
     # 觸手不是第二個人。佔住 sex_act，但不要求 pair，也不把男生拉進來。
     "tentacle sex",
     # 機器、道具、自己的身體。不把第二個人拉進來。

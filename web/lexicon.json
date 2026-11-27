@@ -22398,8 +22398,6 @@
       "group": "sex",
       "sub": "sex_insert",
       "needs": [
-        "pair",
-        "male",
         "female"
       ],
       "zh": "陰道塞物"
