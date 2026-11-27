@@ -367,11 +367,19 @@ ok("anya 在 characterBan", "anya (spy x family)" in server.character_ban())
 import hardban
 ok("伺服器的永遠不抽的字跟 web/rules/hardban.js 一模一樣", set(server._HARD_BANNED) == set(hardban.load_hard_ban()) and len(server._HARD_BANNED) >= 50, str(len(server._HARD_BANNED)))
 ok("以前伺服器漏掉的 10 個字都在", all(t in server._HARD_BANNED for t in ["mesugaki", "child on child", "lolidom", "age regression", "if they mated", "kono lolicon domome", "onee-loli", "onii-shota", "seishou elementary school uniform", "nami junior high school uniform"]))
+# 名單長短不管（專案主：不要用少於幾個字當讀壞）：刻意刪成一個、清空都照用。
+ok("名單長短不管：一個字、空的都照用", hardban.parse_hard_ban('export const HARD_BAN = Object.freeze(["loli"]);') == ["loli"] and hardban.parse_hard_ban("export const HARD_BAN = Object.freeze([]);") == [])
+# 格式壞了（雙引號被改成單引號）會讀成 0 個字、封鎖整個消失：當讀壞，不啟動。
 try:
-    hardban.parse_hard_ban('export const HARD_BAN = Object.freeze(["loli"]);')
-    ok("名單讀出來太少就當讀壞", False)
+    hardban.parse_hard_ban("export const HARD_BAN = Object.freeze(['loli', 'shota']);")
+    ok("格式壞了（單引號）當讀壞", False)
 except ValueError:
-    ok("名單讀出來太少就當讀壞", True)
+    ok("格式壞了（單引號）當讀壞", True)
+try:
+    hardban.parse_hard_ban("export const HARD_BAN = [];")
+    ok("認不出名單的寫法當讀壞", False)
+except ValueError:
+    ok("認不出名單的寫法當讀壞", True)
 try:
     hardban.load_hard_ban(work / "no-such-hardban.js")
     ok("名單檔不在就不啟動", False)

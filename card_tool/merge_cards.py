@@ -80,8 +80,9 @@ def hardban(new_cards: Path) -> tuple[set[str], set[str], set[str] | None]:
         raise SystemExit("找不到新版的永遠不抽的字（web/rules/hardban.js）：未成年保護對不上，不合併。")
     body = re.sub(r"//[^\n]*", "", m.group(1))
     banned = {w.lower() for w in re.findall(r'"([^"\\]*)"', body)}
-    if len(banned) < 10:
-        raise SystemExit(f"HARD_BANNED 只讀到 {len(banned)} 個字，跟預期不合：不合併。")
+    # 名單長短不管；但除了雙引號字串還有別的寫法（單引號…）就是讀不懂，不合併（以免讀成 0 個字、什麼都沒擋）。
+    if re.sub(r'"[^"\\]*"', "", body).replace(",", "").strip():
+        raise SystemExit(f"{src} 的名單有讀不懂的寫法：不合併。")
     chars: set[str] = set()
     lex_tags = None
     for lex_path in (web / "lexicon.json", HERE.parent / "web" / "lexicon.json"):

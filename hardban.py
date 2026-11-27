@@ -3,8 +3,9 @@
 伺服器（server.py）、腳本（相關的牌、打包卡面）都從這裡讀，不再各自抄一份
 （以前伺服器那份少了 10 個字，2026-11-28 合併）。
 
-讀不到、格式不對、數量少得不合理：一律停下來（SystemExit）。寧可不啟動、不產檔，
-也不要在沒有封鎖的情況下跑。
+讀不到、格式不對：一律停下來（SystemExit）。寧可不啟動、不產檔，也不要在沒有封鎖的情況下跑。
+名單長短不管（2026-11-28 專案主：不要用「少於幾個字」當讀壞）：刻意刪字、清空都照用。
+但格式要對 —— 名單裡除了註解只能是一行一個雙引號字串；雙引號被改成單引號這種會讀成 0 個字、封鎖整個消失，當讀壞。
 """
 
 from __future__ import annotations
@@ -14,8 +15,6 @@ from pathlib import Path
 
 ROOT = Path(__file__).resolve().parent
 HARD_BAN_FILE = ROOT / "web" / "rules" / "hardban.js"
-# 名單少於這個數就當成讀壞了（現在 50 個）。
-MIN_WORDS = 10
 _PATTERN = re.compile(r"export const HARD_BAN = Object\.freeze\(\[(.*?)\]\);", re.S)
 
 
@@ -26,8 +25,10 @@ def parse_hard_ban(src: str) -> list[str]:
         raise ValueError("找不到 export const HARD_BAN = Object.freeze([...]);")
     body = re.sub(r"//[^\n]*", "", m.group(1))
     words = re.findall(r'"([^"\\]*)"', body)
-    if len(words) < MIN_WORDS:
-        raise ValueError(f"只讀到 {len(words)} 個字，跟預期不合")
+    # 拿掉讀到的字、逗號、空白之後不能剩東西：剩下的就是讀不懂的寫法（單引號、反引號、變數…），當讀壞。
+    rest = re.sub(r'"[^"\\]*"', "", body).replace(",", "").strip()
+    if rest:
+        raise ValueError(f"名單裡有讀不懂的寫法：{rest[:40]!r}（一行一個雙引號字串）")
     return words
 
 
