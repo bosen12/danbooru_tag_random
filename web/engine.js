@@ -9445,8 +9445,15 @@ export function clothingKindKeys(item) {
 }
 
 /** UI and engine counting share these logical kinds without changing canonical tags. */
+// 總稱卡：不佔選格的任何一格、也不算進「每段抽幾個」（選格模式下）。
+// 「性交」只說有在做、沒說怎麼做；51 張具體的行為（陰道性交、騎乘位、後背位…）都會帶上它。
+// 以前它自己佔了「性愛」那格：合成池釘了性交、姿勢只勾性愛，引擎怎麼樣都不補具體的行為（2026-11-28 專案主）。
+// 引擎也不會單獨隨機抽到它（沒有格子的根牌在選格模式下不收）；被具體的行為帶進來照舊。
+const UMBRELLA_KIND = new Set(["sex"]);
+
 export function supplementKindKeys(item) {
   if (!item) return [];
+  if (UMBRELLA_KIND.has(item.tag)) return [];
   if (item.section === "clothing") {
     const keys = clothingKindKeys(item);
     // An era garment occupies its actual garment slot; a generic era label is an implied parent.

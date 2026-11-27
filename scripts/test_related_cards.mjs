@@ -279,6 +279,18 @@ clearRelatedCache();
     if (p.includes("immobilization") || p.includes("forced orgasm")) leak++;
   }
   ok("補相關關著：那種牌照舊不會自己冒出來", leak === 0, `${leak}/30`);
+  // 2026-11-28 專案主：「性交」是總稱，不佔選格的「性愛」那一格：釘了它、姿勢只勾性愛，照樣補一個具體的行為。
+  {
+    const off = eng.SKELETON.pose.map(([g]) => `pose:${g}`).filter((k) => k !== "pose:sex");
+    const sx = eng.sanitizeSettings({ ...eng.defaultSettings(data), girl: true, boy: true, rating: "explicit", heats: ["sex"], counts: { ...eng.defaultSettings(data).counts, pose: 1 }, offGroups: off }, data);
+    let filled = 0;
+    for (let i = 0; i < 10; i++) {
+      const d = eng.drawOne(lex, sx, new Set(["sex"]), new Set(), eng.mulberry32(700 + i), 700 + i, { trace: true });
+      if (d.trace.kept.some((k) => k.tag !== "sex" && k.source === "random" && eng.supplementKindKeys(lex.byTag.get(k.tag)).includes("pose:sex"))) filled += 1;
+    }
+    ok("性交是總稱：釘了它、姿勢只勾性愛，照樣補具體的行為", filled === 10, `${filled}/10`);
+    ok("性交不佔任何一格", eng.supplementKindKeys(lex.byTag.get("sex")).length === 0);
+  }
   ok("補相關：設定清乾淨（點數 1～3、張數 1～12、tags 只收字串）",
     JSON.stringify(eng.sanitizeRelatedFill({ on: "yes", dots: 9, max: 99, tags: ["a", 3, "a", null, "b"] })) === JSON.stringify({ on: false, dots: 3, max: 12, tags: ["a", "b"] }));
 }
