@@ -284,6 +284,18 @@ clearRelatedCache();
 }
 
 const read = (rel) => readFileSync(join(root, rel), "utf8");
+// 永遠不抽的字只有一份：web/rules/hardban.js。卡面、引擎從它來；三個檔裡不再自己抄一份。
+{
+  const hb = await import(pathToFileURL(join(root, "web/rules/hardban.js")).href);
+  const ca = await import(pathToFileURL(join(root, "web/card-art.js")).href);
+  const en = await import(pathToFileURL(join(root, "web/engine.js")).href);
+  ok("hardban：卡面的 HARD_BANNED 就是 rules/hardban.js 那份", ca.HARD_BANNED === hb.HARD_BAN && hb.HARD_BAN.length >= 50);
+  ok("hardban：引擎每個字都擋", hb.HARD_BAN.every((t) => en.neverDraw(t)));
+  ok("hardban：engine.js、card-art.js、server.py 不再自己抄一份",
+    !readFileSync(join(root, "web/engine.js"), "utf8").includes("const NEVER_DRAW = new Set([") &&
+    !readFileSync(join(root, "web/card-art.js"), "utf8").includes("export const HARD_BANNED = Object.freeze([") &&
+    !readFileSync(join(root, "server.py"), "utf8").includes("_HARD_BANNED = {"));
+}
 const relatedJs = read("web6/related.js");
 const appJs = read("web6/app.js");
 const bookJs = read("web6/book.js");
@@ -350,6 +362,21 @@ def ok(name, cond, detail=""):
 ok("yor briar 是角色", "yor briar" in server.character_names())
 ok("family 不是角色", "family" not in server.character_names())
 ok("anya 在 characterBan", "anya (spy x family)" in server.character_ban())
+
+# 永遠不抽的字只有一份（web/rules/hardban.js），伺服器讀它；讀不到、讀壞就不啟動（2026-11-28 合併）。
+import hardban
+ok("伺服器的永遠不抽的字跟 web/rules/hardban.js 一模一樣", set(server._HARD_BANNED) == set(hardban.load_hard_ban()) and len(server._HARD_BANNED) >= 50, str(len(server._HARD_BANNED)))
+ok("以前伺服器漏掉的 10 個字都在", all(t in server._HARD_BANNED for t in ["mesugaki", "child on child", "lolidom", "age regression", "if they mated", "kono lolicon domome", "onee-loli", "onii-shota", "seishou elementary school uniform", "nami junior high school uniform"]))
+try:
+    hardban.parse_hard_ban('export const HARD_BAN = Object.freeze(["loli"]);')
+    ok("名單讀出來太少就當讀壞", False)
+except ValueError:
+    ok("名單讀出來太少就當讀壞", True)
+try:
+    hardban.load_hard_ban(work / "no-such-hardban.js")
+    ok("名單檔不在就不啟動", False)
+except SystemExit:
+    ok("名單檔不在就不啟動", True)
 
 server._RELATED_OVERRIDE = work / "missing.json"
 server._WIKI_OVERRIDE = work / "missing-wiki.json"

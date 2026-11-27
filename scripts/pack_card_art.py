@@ -31,8 +31,9 @@ CARDS = ROOT / "web" / "cards"
 
 
 def hard_banned() -> set[str]:
-    """web/card-art.js 的 HARD_BANNED（看起來未成年的字）。讀不到就不打包，不猜。"""
-    import re
+    """永遠不抽的字（web/rules/hardban.js，唯一的一份；2026-11-28 以前在 card-art.js）。讀不到就不打包，不猜。"""
+    sys.path.insert(0, str(ROOT))
+    import hardban
 
     # 公開包照「已經 commit 的規則」打：工作區裡還沒 commit 的改動不算數。
     # 讀不到 git（不是從 repo 跑）才退回工作區那份。
@@ -40,14 +41,14 @@ def hard_banned() -> set[str]:
 
     try:
         src = subprocess.run(
-            ["git", "show", "HEAD:web/card-art.js"], cwd=ROOT, capture_output=True, check=True
+            ["git", "show", "HEAD:web/rules/hardban.js"], cwd=ROOT, capture_output=True, check=True
         ).stdout.decode("utf-8")
     except (OSError, subprocess.CalledProcessError):
-        src = (ROOT / "web" / "card-art.js").read_text(encoding="utf-8")
-    m = re.search(r"HARD_BANNED\s*=\s*Object\.freeze\(\[([^\]]*)\]\)", src)
-    if not m:
-        raise SystemExit("找不到 web/card-art.js 的 HARD_BANNED，不打包")
-    banned = set(re.findall(r'"([^"]+)"', m.group(1)))
+        src = hardban.HARD_BAN_FILE.read_text(encoding="utf-8")
+    try:
+        banned = set(hardban.parse_hard_ban(src))
+    except ValueError as e:
+        raise SystemExit(f"web/rules/hardban.js 讀不到（{e}），不打包")
     # 底線本身被改掉（例如換成亂碼）也不打包：公開包絕不能放進這些字。
     need = {
         "loli",
