@@ -5863,7 +5863,10 @@ function drawOneImpl(lex, settings, pinned, userBanned, rand, seed, opts) {
     if (EYELESS_CAM.has(item.tag) && hasUsed((t) => needsEyes(lex.byTag.get(t)))) return false;
     // 使用者明講要的（釘選、必抽）不受下面兩條限制。
     const askedFor = pinned.has(item.tag) || commitMeta.source === SOURCES.must_draw;
-    if (sceneMode === "normal" && ODD_MOTIF.has(item.tag) && !askedFor) return false;
+    // 補相關牌也補「只有自己釘才會出現」的牌（2026-11-28 專案主：全部都補）：它是從你放進合成池的牌找出來、
+    // 照相關度挑的，不是隨機冒出來的（動彈不得配固定式拘束具、強制高潮配性愛機器）。只放這一條，下面的照擋。
+    const relatedAsk = commitMeta.source === SOURCES.related;
+    if (sceneMode === "normal" && ODD_MOTIF.has(item.tag) && !askedFor && !relatedAsk) return false;
     if (
       PARENT_ONLY.has(item.tag) &&
       !askedFor &&

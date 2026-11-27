@@ -267,6 +267,18 @@ clearRelatedCache();
   const banned = eng.sanitizeSettings({ ...base2, relatedFill: { on: true, dots: 1, max: 2, tags: ["randoseru", "pleated skirt"] } }, data);
   const d4 = eng.drawOne(lex, banned, new Set(), new Set(), eng.mulberry32(11), 11);
   ok("補相關：永遠不抽的字不補", !d4.positive.split(", ").includes("randoseru"));
+  // 2026-11-28 專案主：「只有自己釘才會出現」的牌，補相關牌照補（動彈不得配固定式拘束具）。
+  const odd = eng.sanitizeSettings({ ...base2, heats: ["sex"], rating: "explicit", relatedFill: { on: true, dots: 1, max: 2, tags: ["immobilization", "forced orgasm"] } }, data);
+  const d5 = eng.drawOne(lex, odd, new Set(["stationary restraints"]), new Set(), eng.mulberry32(300), 300, { trace: true });
+  const rel5 = d5.trace.kept.filter((k) => k.source === "related").map((k) => k.tag);
+  ok("補相關：只有自己釘才會出現的牌照補", rel5.includes("immobilization") && rel5.includes("forced orgasm"), JSON.stringify(rel5));
+  const plain = eng.sanitizeSettings({ ...base2, heats: ["sex"], rating: "explicit" }, data);
+  let leak = 0;
+  for (let i = 0; i < 30; i++) {
+    const p = eng.drawOne(lex, plain, new Set(["stationary restraints"]), new Set(), eng.mulberry32(600 + i), 600 + i).positive.split(", ");
+    if (p.includes("immobilization") || p.includes("forced orgasm")) leak++;
+  }
+  ok("補相關關著：那種牌照舊不會自己冒出來", leak === 0, `${leak}/30`);
   ok("補相關：設定清乾淨（點數 1～3、張數 1～12、tags 只收字串）",
     JSON.stringify(eng.sanitizeRelatedFill({ on: "yes", dots: 9, max: 99, tags: ["a", 3, "a", null, "b"] })) === JSON.stringify({ on: false, dots: 3, max: 12, tags: ["a", "b"] }));
 }
