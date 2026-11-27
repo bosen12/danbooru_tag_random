@@ -4534,6 +4534,38 @@ body[data-dragging="true"] .library[data-over="true"] {
   border-color: var(--color-accent-text);
 }
 
+/* 相關值：滑鼠移到這一格（或鍵盤停在裡面）才淡入，點跟著往左讓一點位置；手機沒有滑過這件事，一直顯示。 */
+.related-dots {
+  align-items: center;
+}
+
+.related-val {
+  max-width: 0;
+  overflow: hidden;
+  opacity: 0;
+  color: var(--color-muted);
+  font-size: var(--text-xs);
+  font-weight: 600;
+  font-variant-numeric: tabular-nums;
+  line-height: 1;
+  transition: max-width var(--dur-short) var(--ease-out), opacity var(--dur-short) var(--ease-out), margin var(--dur-short) var(--ease-out);
+}
+
+.related-slot:hover .related-val,
+.related-slot:focus-within .related-val {
+  max-width: 3em;
+  margin-left: 2px;
+  opacity: 1;
+}
+
+@media (hover: none) {
+  .related-val {
+    max-width: 3em;
+    margin-left: 2px;
+    opacity: 1;
+  }
+}
+
 /* 帶入相關牌：合成池的牌按右鍵浮出的小面板（related-fill.js）。一張小紙片：上面選相關度、最多幾張，
  * 中間當場列出會帶入哪幾張，下面一顆帶入。浮在彈窗（.overlay z-index 60）上面，詳情裡也叫得出來。 */
 .rf-pop {

@@ -294,6 +294,7 @@ ok("更多規則有補相關牌（開關、幾個點以上、最多幾張），�
 ok("合成池的牌右鍵開帶入相關牌小面板、詳情也有一顆", appJs.includes("openPoolRelated(t, node)") && appJs.includes('"帶入相關牌…"'));
 ok("帶入時不擠掉池子裡的牌", appJs.includes("if ([...sim].some((t) => !next.pinned.has(t))) continue;"));
 ok("成品標「補相關」", appJs.includes('related: "補相關"'));
+ok("相關值：滑過整張小牌就淡入（手機一直顯示）", relatedJs.includes('class: "related-val"') && /\.related-slot:hover \.related-val/.test(css) && /@media \(hover: none\)[\s\S]*?\.related-val/.test(css));
 ok("小面板：位置打開時算一次、高度平順變、讀取中有佔位、淡入淡出", fillJs.includes("box.style.bottom") && fillJs.includes("const resize = (from)") && fillJs.includes("rf-chip-ghost") && fillJs.includes("dropAnimated(o.box)"));
 ok("看過的牌有上限", relatedJs.includes("export const TRAIL_MAX") && appJs.includes("trailTo(next, nextTrail)") && bookJs.includes("trailTo(next, nextTrail)"));
 // 2026-11-28：牌飛進詳情收成 motion.js 的 detailFlight（字盒、卡冊共用；先量來源、換完內容再飛）。

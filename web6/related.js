@@ -174,12 +174,14 @@ export function loadRelated(tag, fetchImpl = globalThis.fetch) {
 
 function dotsOf(milli) {
   const n = relatedDots(milli);
-  // 滑鼠放上去看相關值（0.61 這種）；讀屏念「相關度：三格（0.61）」。
+  // 相關值（0.61 這種）：滑鼠移到這一格（整張小牌，不用瞄準 7px 的點）就在點旁邊淡入；手機一直顯示（styles.css）。
+  // 以前只掛在點的 title 上，要停在小點上一秒多才看得到（2026-11-28 專案主：滑鼠放上牌看不到相關值）。
   const label = `${relatedDotLabel(milli)}（${relatedValue(milli)}）`;
   return el(
     "span",
     { class: "related-dots", role: "img", "aria-label": label, title: label },
-    [1, 2, 3].map((i) => el("i", { class: i <= n ? "is-on" : "", "aria-hidden": "true" }))
+    [1, 2, 3].map((i) => el("i", { class: i <= n ? "is-on" : "", "aria-hidden": "true" })),
+    el("b", { class: "related-val", "aria-hidden": "true" }, relatedValue(milli))
   );
 }
 
@@ -222,7 +224,7 @@ function slotOf(item, opts) {
     },
   });
   const face = el("div", { class: "related-face" }, node, add);
-  return el("div", { class: "related-slot", dataset: { tag: item.card.tag } }, face, dotsOf(item.milli));
+  return el("div", { class: "related-slot", dataset: { tag: item.card.tag }, title: `${item.card.zh || item.card.tag}・${relatedDotLabel(item.milli)}（${relatedValue(item.milli)}）` }, face, dotsOf(item.milli));
 }
 
 function sectionOf(items, opts, pack) {
