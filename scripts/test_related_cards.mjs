@@ -300,6 +300,7 @@ ok("看過的牌有上限", relatedJs.includes("export const TRAIL_MAX") && appJ
 // 2026-11-28：牌飛進詳情收成 motion.js 的 detailFlight（字盒、卡冊共用；先量來源、換完內容再飛）。
 const motionJs = read("web6/motion.js");
 ok("飛進詳情落地用 dropAnimated（motion.js detailFlight）", /export function detailFlight[\s\S]*?const land = \(\) => \{\s*dropAnimated\(f\);/.test(motionJs));
+ok("飛進詳情的複製品不帶份量、池中章", /export function detailFlight[\s\S]*?querySelectorAll\("\.card-w, \.card-flag"\)/.test(motionJs));
 ok("字盒、卡冊都先量來源再換內容", appJs.includes("const flight = detailFlight(srcNode)") && bookJs.includes("const flight = detailFlight(srcNode)"));
 ok("疊印台不加相關的牌", !fuseJs.includes("mountRelated"));
 ok("電腦 4 欄、手機橫捲、觸控至少 44px", css.includes("repeat(4, minmax(0, 1fr))") && css.includes("scroll-snap-type: x mandatory") && css.includes("width: 44px"));

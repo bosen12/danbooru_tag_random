@@ -1226,6 +1226,9 @@ export function detailFlight(src) {
   if (!from.width || from.bottom < 0 || from.top > innerHeight) return null;
   const img = src.querySelector?.(".card-art img") || null;
   const f = cloneCard(art);
+  // 牌上的小標（右下角的份量、池中／封鎖章）是貼在牌面上的，不是圖：複製品不要帶，不然跟著圖一起放大、
+  // 落地才消失（2026-11-28 專案主：從合成池點開，右下角的份量跟著放大然後不見）。
+  for (const n of f.querySelectorAll(".card-w, .card-flag")) n.remove();
   return (sheetEl) => {
     const dst = sheetEl?.querySelector(".detail-art, .detail > .card");
     if (!dst) return;
