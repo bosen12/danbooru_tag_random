@@ -12,12 +12,13 @@
  *   node scripts/test_parallel.mjs                 全部
  *   node scripts/test_parallel.mjs --failed        只重跑上次失敗的那幾段
  *   node scripts/test_parallel.mjs --only 服裝,draw  名稱裡有這些字的段（逗號分開，不分大小寫）
- *   node scripts/test_parallel.mjs -j 8            最多同時 8 格
+ *   node scripts/test_parallel.mjs -j 8            最多同時 8 格（預設核心數的一半）
+ *   node scripts/test_parallel.mjs -j 24 --normal  人不在電腦前：全部核心、一般優先權，最快
  *   test.bat --failed／test.bat --only 服裝         test.bat 的參數照樣傳過來
  */
 import { spawn } from "node:child_process";
 import { readFileSync, writeFileSync, mkdirSync } from "node:fs";
-import { availableParallelism, tmpdir } from "node:os";
+import { availableParallelism, tmpdir, setPriority, constants as osConstants } from "node:os";
 import { dirname, join } from "node:path";
 import { fileURLToPath } from "node:url";
 
@@ -28,7 +29,15 @@ const arg = (name) => {
   const i = process.argv.indexOf(name);
   return i > 0 ? process.argv[i + 1] || "" : null;
 };
-const SLOTS = Math.max(2, Number(arg("-j")) || availableParallelism());
+// 預設只用一半核心、優先權「低於正常」：以前一開就是 24 格一般優先權，每支瀏覽器測試再各開一個 Chrome，
+// CPU、記憶體全滿，專案主的電腦整台卡住（2026-11-27）。優先權子行程會繼承，測試只吃閒著的 CPU。
+// 人不在電腦前要最快：-j 24 --normal。
+if (!process.argv.includes("--normal")) {
+  try {
+    setPriority(osConstants.priority.PRIORITY_BELOW_NORMAL);
+  } catch {}
+}
+const SLOTS = Math.max(2, Number(arg("-j")) || Math.ceil(availableParallelism() / 2));
 const ENGINE_SHARDS = Math.min(10, Math.max(2, SLOTS - 4));
 // 慢的統計段：每段 4 份就夠把最重的迴圈拆開，又留得出格子給引擎。核心少就少分幾份。
 const STAT_SHARDS = Math.min(4, Math.max(2, Math.floor(SLOTS / 6)));
