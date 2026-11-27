@@ -33,6 +33,12 @@ export function relatedDotLabel(milli) {
   return DOTS[relatedDots(milli)];
 }
 
+/** 滑鼠放在點上看的數字：0～1，兩位小數（Danbooru 上一起出現的程度，cosine）。 */
+export function relatedValue(milli) {
+  const n = Number(milli);
+  return Number.isFinite(n) ? (Math.max(0, Math.min(1000, n)) / 1000).toFixed(2) : "";
+}
+
 function nameSet(value) {
   if (typeof value === "function" && value.length === 0) return nameSet(value());
   if (typeof value === "function") return value;
@@ -168,9 +174,11 @@ export function loadRelated(tag, fetchImpl = globalThis.fetch) {
 
 function dotsOf(milli) {
   const n = relatedDots(milli);
+  // 滑鼠放上去看相關值（0.61 這種）；讀屏念「相關度：三格（0.61）」。
+  const label = `${relatedDotLabel(milli)}（${relatedValue(milli)}）`;
   return el(
     "span",
-    { class: "related-dots", role: "img", "aria-label": relatedDotLabel(milli) },
+    { class: "related-dots", role: "img", "aria-label": label, title: label },
     [1, 2, 3].map((i) => el("i", { class: i <= n ? "is-on" : "", "aria-hidden": "true" }))
   );
 }
@@ -275,6 +283,38 @@ export function installRelatedPrefetch(root = globalThis.document) {
 /** 「← 上一張」：關掉最上面這張詳情，底下原本那張還在。（舊的疊視窗做法；現在用 relatedTrail。） */
 export function relatedBack(close) {
   return el("button", { class: "related-back", type: "button", onclick: () => close?.() }, "← 上一張");
+}
+
+/** 幾個點以上（1～3）→ 相關值（×1000）至少多少。跟 relatedDots 的分界一樣：兩格是 0.2 起、三格是 0.5 起。 */
+export const DOT_MIN = Object.freeze({ 1: 0, 2: 200, 3: 500 });
+
+/**
+ * 從幾張牌的相關牌裡挑（補相關牌：更多規則從合成池的牌、合成池牌的右鍵小面板從那一張）：
+ *   - 相關度至少 dots 個點；同一張被好幾張牌推薦，取最高的那個值；
+ *   - 照相關度由高到低（一樣高照名字），起點那幾張、exclude 裡的不算；
+ *   - 顯示的那套過濾照用（ctx：禁用角色、HARD_BANNED、分級、廢字簍、自製牌、詞庫裡沒有的）。
+ * 回傳 [{ tag, milli, card }]，最多 limit 張。讀不到關聯：空的。
+ */
+export async function pickRelated(seeds, { dots = 2, limit = 64, ctx = {}, exclude = [], fetchImpl } = {}) {
+  const list = [...new Set([...(seeds || [])].map(String).filter(Boolean))];
+  if (!list.length) return [];
+  const floor = DOT_MIN[dots] ?? DOT_MIN[2];
+  const skip = new Set([...list, ...(exclude || [])].map(normTag));
+  const packs = await Promise.all(list.map((t) => loadRelated(t, fetchImpl).catch(() => null)));
+  const best = new Map();
+  for (const pack of packs) {
+    if (!pack) continue;
+    for (const item of filterRelated(pack.items, { ...ctx, limit: 9999, guard: pack.guard })) {
+      if (item.milli < floor) continue;
+      const key = normTag(item.tag);
+      if (skip.has(key)) continue;
+      const had = best.get(key);
+      if (!had || had.milli < item.milli) best.set(key, item);
+    }
+  }
+  return [...best.values()]
+    .sort((x, y) => y.milli - x.milli || (x.tag < y.tag ? -1 : x.tag > y.tag ? 1 : 0))
+    .slice(0, Math.max(0, limit));
 }
 
 /** 同一個視窗裡最多記幾張看過的牌（更早的丟掉）。 */

@@ -95,7 +95,8 @@ import { getSfx } from "./sfx.js";
 import { mountDiscord, openRouteFromShot } from "./discord-link.js";
 import { english, t, takeLanguageState } from "./i18n.js";
 import { danbooruLinks } from "./danbooru-link.js";
-import { mountRelated, refreshRelated, relatedTrail, installRelatedPrefetch, trailTo } from "./related.js";
+import { mountRelated, refreshRelated, relatedTrail, installRelatedPrefetch, trailTo, pickRelated } from "./related.js";
+import { openRelatedFill, closeRelatedFill, FILL_MAX } from "./related-fill.js";
 import { pickStarters, refreshStarters } from "./starters.js";
 
 // 背後預先開好的這一頁（prerender.js）：點進去之前這個房間讀的存檔被別頁改過，就重新整理。
@@ -110,7 +111,7 @@ for (const type of ["pointerdown", "keydown"]) {
 const LAND_SFX_MS = DUR.long;
 
 const HEAT_ZH = { activity: "活動", tease: "誘惑", flash: "走光", sex: "性愛" };
-const SRC_ZH = { implies: "附帶", bind: "附帶", era_anchor: "時代", repair: "補位", must_draw: "必抽", preset: "組合", fixed: "固定", group: "群組" };
+const SRC_ZH = { implies: "附帶", bind: "附帶", era_anchor: "時代", repair: "補位", must_draw: "必抽", preset: "組合", fixed: "固定", group: "群組", related: "補相關" };
 const SECTION_ORDER = ["subject", "feature", "clothing", "pose", "env", "style", "quality"];
 
 let data = null;
@@ -2468,6 +2469,11 @@ function renderPool(fresh) {
         node.addEventListener("pointerleave", () => mates.forEach((m) => poolNode(m)?.classList.remove("is-related")));
       }
       node.addEventListener("click", () => showCard(t, "pool"));
+      // 右鍵：帶入這張的相關牌（小面板）。手機長按開詳情，詳情裡也有一顆。
+      node.addEventListener("contextmenu", (e) => {
+        e.preventDefault();
+        openPoolRelated(t, node);
+      });
       drag.attach(node, { tag: t, from: "pool" });
       // 份量：右下角的數字；電腦上滑鼠停著滾滾輪、或 +／− 調（weights.js）。
       paintWeight(node, weights.get(t));
@@ -2670,6 +2676,20 @@ function renderRules() {
     renderLibrary();
   });
 
+  // 補相關牌（2026-11-28 專案主）：合成池的牌在 Danbooru 上常一起出現的，抽的時候照順序補進這張圖。
+  // 關著：選單變淡、抽牌一點都不變。成品上補進來的牌標「補相關」。
+  const rfNow = settings.relatedFill || { on: false, dots: 2, max: 3 };
+  const rfDots = el("select", { class: "select", "aria-label": "補幾個點以上的相關牌", disabled: !rfNow.on }, [1, 2, 3].map((n) => el("option", { value: String(n) }, ["", "●○○ 以上", "●●○ 以上", "●●●"][n])));
+  rfDots.value = String(rfNow.dots);
+  rfDots.onchange = () => setSettings({ relatedFill: { ...settings.relatedFill, dots: Number(rfDots.value) } });
+  const rfMax = el("select", { class: "select", "aria-label": "最多補幾張相關牌", disabled: !rfNow.on }, Array.from({ length: FILL_MAX }, (_, i) => el("option", { value: String(i + 1) }, `最多 ${i + 1} 張`)));
+  rfMax.value = String(rfNow.max);
+  rfMax.onchange = () => setSettings({ relatedFill: { ...settings.relatedFill, max: Number(rfMax.value) } });
+  const rfOn = switchBox("補相關牌", rfNow.on, (v) => {
+    setSettings({ relatedFill: { ...settings.relatedFill, on: v } });
+    rfDots.disabled = rfMax.disabled = !v;
+  }, "開：從合成池的牌找 Danbooru 上常一起出現的牌，照相關度由高到低補進這張圖（過不了規則的跳過）；成品上標「補相關」");
+
   // 放牌的兩個開關（預設都開，跟以前一樣）。
   const companions = switchBox("附帶", settings.pinCompanions !== false, (v) => setSettings({ pinCompanions: v }), "開：釘了一張牌，抽的時候把它附帶的牌一起帶上（夏日洋裝帶洋裝）。關：你從池子拿掉的附帶牌不會被抽回來");
   const mutex = switchBox("互斥", settings.pinMutex !== false, (v) => setSettings({ pinMutex: v }), "開：放一張牌時，池子裡跟它互斥的牌拿下來（放黑髮，紅髮下來）。關：互斥的牌都留著，兩張都寫進提示詞");
@@ -2740,14 +2760,15 @@ function renderRules() {
     el(
       "details",
       { class: "more-rules", open: moreOpen },
-      el("summary", { class: "pressable" }, "更多規則：每段張數與選格、場景、職業、角色"),
+      el("summary", { class: "pressable" }, "更多規則：每段張數與選格、場景、職業、角色、補相關牌"),
       el(
         "div",
         {},
         el("div", { class: "rule-row" }, el("span", { class: "rule-label" }, "每段抽幾個"), counts),
         picker.node,
         el("div", { class: "rule-row" }, rulePair("場景", sceneSel), job, eraOnly),
-        el("div", { class: "rule-row" }, rulePair("角色", el("span", { class: "rule-pair" }, chara, charaSub, series, favBtn)))
+        el("div", { class: "rule-row" }, rulePair("角色", el("span", { class: "rule-pair" }, chara, charaSub, series, favBtn))),
+        el("div", { class: "rule-row rule-related" }, rulePair("相關牌", el("span", { class: "rule-pair" }, rfOn, rfDots, rfMax)))
       )
     )
   );
@@ -3881,6 +3902,14 @@ async function drawBatchNow(gen, intent, epoch) {
     }
     intent.groups = structuredClone(got);
   }
+  // 補相關牌（更多規則）：合成池的牌在 Danbooru 上常一起出現、夠相關的牌，照相關度排好，這一輪每張共用。
+  // 引擎照順序試、過規則的補到「最多幾張」為止。讀不到關聯（沒有關聯檔、連不上）：照常抽，不補。
+  // 關著：不問伺服器、不帶任何東西給引擎（抽法跟原本一模一樣）。
+  if (intent.settings.relatedFill?.on && intent.pool.size && !intent.relatedTags) {
+    const got = await pickRelated([...intent.pool], { dots: intent.settings.relatedFill.dots, ctx: relatedContext(), exclude: [...intent.bans] }).catch(() => []);
+    if (epoch !== drawEpoch) return;
+    intent.relatedTags = got.map((it) => it.tag);
+  }
   haptic(gen ? 18 : 12);
   // 先讓按下去的樣子（墨暈、按鈕壓下、「抽牌中」）畫出來再抽：抽一張在慢手機上要 300ms 以上，
   // 以前整段跟點擊在同一個任務裡，畫面要等抽完才動，像沒按到。無限抽自己接的那幾輪不用等。
@@ -3904,7 +3933,8 @@ async function drawBatchNow(gen, intent, epoch) {
     const seed = randomSeed();
     const keepGroups = intent.settings.samePerson && firstGroupIds?.feature ? { feature: firstGroupIds.feature } : null;
     // usable：整組一起時，跳過在這份設定下一張都抽不到的組（不然那一段靜靜變回一般抽法）。
-    const drawSettings = withGroupPools(withFavChars(withEffectiveHeats(intent.settings)), intent.groups, seed, { keep: keepGroups, usable: groupUsable });
+    const grouped = withGroupPools(withFavChars(withEffectiveHeats(intent.settings)), intent.groups, seed, { keep: keepGroups, usable: groupUsable });
+    const drawSettings = intent.relatedTags?.length ? { ...grouped, relatedFill: { ...grouped.relatedFill, tags: intent.relatedTags } } : grouped;
     // 背景執行緒抽（draw-pool.js）：抽的時候畫面照常動、按得到。抽不了才在這邊抽（結果一樣）。
     // ifReady：背景執行緒的詞庫還沒建好（慢手機剛開頁）就直接在這邊抽，不乾等。
     const viaWorker = hasDrawWorker() ? await drawInWorker({ settings: drawSettings, pins, banned, seeds: [seed], trace: true, ifReady: true }) : null;
@@ -5589,6 +5619,10 @@ function showCard(tag, from, { shot = null, src = null, into = null, trail = [] 
     ),
     {
       foot: [
+        // 池子裡的牌：帶入它的相關牌（跟右鍵同一個小面板）。按了帶入先關詳情，牌飛進合成池才看得到。
+        inPool && !card.custom
+          ? el("button", { class: "btn btn-ghost", type: "button", onclick: (e) => openPoolRelated(tag, e.currentTarget, { before: () => sheet.close() }) }, "帶入相關牌…")
+          : null,
         card.suit === "chara" && !banned
           ? el(
               "button",
@@ -5638,14 +5672,7 @@ function showCard(tag, from, { shot = null, src = null, into = null, trail = [] 
   mountRelated(sheet.sheet.querySelector(".detail"), {
     tag,
     assets,
-    context: () => ({
-      card: (name) => lib.byTag.get(name),
-      hardBanned: HARD_BANNED,
-      characterBan: data.characterBan || [],
-      trash: () => bans,
-      ratingBlocked: (c) => ratingBlocked(c.item, ratingOf(settings)),
-      custom: (c) => !!(c.custom || c.suit === "custom" || isCustomTag(c.tag)),
-    }),
+    context: relatedContext,
     flag: (c) => (pool.has(c.tag) ? { kind: "pool", text: "池中" } : null),
     pressed: (c) => pool.has(c.tag),
     addLabel: (c) => (pool.has(c.tag) ? `已經在合成池：${c.zh}` : `放進合成池：${c.zh}`),
@@ -5655,6 +5682,60 @@ function showCard(tag, from, { shot = null, src = null, into = null, trail = [] 
     onOpen: (c, node) => goTo(c.tag, [...trail, tag], node),
   });
   flight?.(sheet.sheet);
+}
+
+/** 相關的牌顯示、補相關牌挑牌共用的過濾：禁用角色、HARD_BANNED、分級、廢字簍、自製牌、詞庫裡沒有的。 */
+function relatedContext() {
+  return {
+    card: (name) => lib.byTag.get(name),
+    hardBanned: HARD_BANNED,
+    characterBan: data.characterBan || [],
+    trash: () => bans,
+    ratingBlocked: (c) => ratingBlocked(c.item, ratingOf(settings)),
+    custom: (c) => !!(c.custom || c.suit === "custom" || isCustomTag(c.tag)),
+  };
+}
+
+/**
+ * 合成池裡一張牌的「帶入相關牌」小面板（右鍵；詳情裡也有一顆）。設定跟更多規則的補相關牌同一份（幾個點以上、最多幾張）。
+ * 會擠掉池子裡已經有的牌的不挑（不拿你放的牌去換）；按了帶入，牌從預覽小籤一張接一張飛進合成池。
+ */
+function openPoolRelated(tag, anchor, { before = null } = {}) {
+  const card = lib.byTag.get(tag);
+  if (!card) return;
+  const rf = settings.relatedFill || { dots: 2, max: 3 };
+  openRelatedFill(anchor, {
+    name: english ? String(tag).replace(/_/g, " ") : card.zh,
+    nameOf: (c) => (english ? String(c.tag).replace(/_/g, " ") : c.zh),
+    dots: rf.dots,
+    max: rf.max,
+    pick: async (dots) => {
+      const got = await pickRelated([tag], { dots, ctx: relatedContext(), exclude: [...pool] });
+      const out = [];
+      let sim = new Set(pool);
+      for (const it of got) {
+        const next = applyPin(lex, sim, bans, it.tag, pinOpts());
+        if ([...sim].some((t) => !next.pinned.has(t))) continue;
+        sim = next.pinned;
+        out.push(it);
+        if (out.length >= FILL_MAX) break;
+      }
+      return out;
+    },
+    onChange: (v) => setSettings({ relatedFill: { ...settings.relatedFill, dots: v.dots, max: v.max } }),
+    onBring: (items, from) => {
+      before?.();
+      // 一張接一張：跟字盒點牌飛進池子同一套（flyInto），間隔 90ms；落地的聲音 pin 自己會放。
+      items.forEach((it, i) =>
+        setTimeout(() => {
+          if (pool.has(it.tag) || bans.has(it.tag)) return;
+          pin(it.tag);
+          flyInto(it.tag, from.get(it.tag) || null);
+        }, (before ? 200 : 0) + i * 90)
+      );
+      toast(`帶入 ${items.length} 張相關牌`);
+    },
+  });
 }
 
 /** 打開詳情：圖從點的那張牌飛進彈窗裡的大圖（落點量的是彈窗進場動畫結束後的位置）。 */

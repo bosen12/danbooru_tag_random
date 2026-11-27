@@ -7626,6 +7626,41 @@ function drawOneImpl(lex, settings, pinned, userBanned, rand, seed, opts) {
       for (const t of used) if (!before.has(t)) mustLocked.add(t);
     }
   }
+  // 補相關牌（更多規則）：網頁照關聯檔挑好、照相關度排好的牌（合成池的牌在 Danbooru 上常一起出現的），
+  // 照順序一張一張試，補到 max 張為止。跟必抽一樣過互斥、尺度、女／男、廢字簍、分級，整條 implies 也驗；
+  // 但時代照擋（這是程式挑的，不是使用者明講的）。過不了就跳過、試下一張。
+  // 補到的牌跟必抽一樣受保護（mustLocked）：後面的補牌、reconcile 不會把它擠掉。
+  // 沒開、沒有牌：一顆骰子都不擲、一行都不跑，抽法跟原本一模一樣。
+  const relatedSpec = settings.relatedFill && settings.relatedFill.on && Array.isArray(settings.relatedFill.tags)
+    ? settings.relatedFill
+    : null;
+  if (relatedSpec && relatedSpec.tags.length) {
+    const want = Math.max(0, Math.min(RELATED_FILL_MAX, Math.floor(Number(relatedSpec.max)) || 0));
+    let added = 0;
+    commitMeta.source = SOURCES.related;
+    commitMeta.stage = STAGES.related;
+    for (const tag of relatedSpec.tags) {
+      if (added >= want) break;
+      const item = lex.byTag.get(tag);
+      if (!item || used.has(tag) || NEVER_DRAW.has(tag)) continue;
+      if (!allow(item)) continue;
+      let chainOk = true;
+      for (const dep of implyChain(lex, tag)) {
+        const it = lex.byTag.get(dep);
+        if (it && (!heatOk(it, heat) || !gateOk(it, female, male))) {
+          chainOk = false;
+          break;
+        }
+      }
+      if (!chainOk) continue;
+      const before = new Set(used);
+      if (!commit(tag) || !used.has(tag)) continue;
+      added += 1;
+      for (const t of used) if (!before.has(t)) mustLocked.add(t);
+    }
+    commitMeta.source = SOURCES.random;
+    commitMeta.stage = STAGES.fill;
+  }
   // 「使用者明講要什麼」這一層，必抽比照釘選：場景服裝規則和最後的 reconcile 都讓路。
   // sceneClothLocked() 本來就是這樣對待釘選的。真正的互斥、以及身體姿勢對不上（例如
   // 性愛體位跟雙手抱胸）仍然照擋，抽不到就在 mustReport 如實回報。
@@ -9667,6 +9702,17 @@ export function sanitizeGroupPick(raw) {
   return Object.keys(out).length ? out : undefined;
 }
 
+// 補相關牌：幾個點以上（1～3）、最多幾張（1～RELATED_FILL_MAX）；tags 是這一張要試的牌（照順序，網頁挑好帶進來）。
+export const RELATED_FILL_MAX = 12;
+export function sanitizeRelatedFill(raw) {
+  const r = raw && typeof raw === "object" ? raw : {};
+  const dots = Math.max(1, Math.min(3, Math.floor(Number(r.dots)) || 2));
+  const max = Math.max(1, Math.min(RELATED_FILL_MAX, Math.floor(Number(r.max)) || 3));
+  const out = { on: r.on === true, dots, max };
+  if (Array.isArray(r.tags)) out.tags = [...new Set(r.tags.filter((t) => typeof t === "string" && t))].slice(0, 64);
+  return out;
+}
+
 // settings.mustDraw is keyed "section:sub" (or a legacy "section:group") -> how many it must contribute.
 export function sanitizeMustDraw(raw) {
   const out = {};
@@ -9715,6 +9761,9 @@ export function defaultSettings(data) {
     lockScene: true,
     sceneMode: "normal",
     mustDraw: {},
+    // 補相關牌（更多規則，2026-11-28 專案主）：合成池的牌在 Danbooru 上常一起出現、相關度至少 dots 個點的牌，
+    // 照相關度由高到低補，最多 max 張。哪幾張由網頁照關聯檔挑好、抽的時候放進 tags 帶進來（引擎不讀關聯檔）。
+    relatedFill: { on: false, dots: 2, max: 3 },
     offGroups: [],
     // 選格的「隨機」開關（2026-11-19 專案主要的）：開著的段可以亮好幾格，每張從裡面隨機挑「每段抽幾個」那麼多格。
     skelRandom: [],
@@ -9781,6 +9830,7 @@ export function sanitizeSettings(raw, data) {
     sceneMode,
     lockScene: sceneMode !== "weird",
     mustDraw: sanitizeMustDraw(raw.mustDraw),
+    relatedFill: sanitizeRelatedFill(raw.relatedFill),
     groups: sanitizeGroupPick(raw.groups),
     offGroups: sanitizeOffGroups(raw.offGroups),
     skelRandom: sanitizeSkelRandom(raw.skelRandom),

@@ -36,6 +36,7 @@ const copy = String.raw`
 帶牌去墨池|Take cards to Ink Pool
 無法交接選牌，請檢查瀏覽器儲存空間。|Could not transfer cards. Check browser storage.
 更多規則：每段張數與選格、場景、職業、角色|More rules: counts and slots, scene, jobs, characters
+更多規則：每段張數與選格、場景、職業、角色、補相關牌|More rules: counts and slots, scene, jobs, characters, related cards
 這是候選提示詞，尚未生成圖片。按「付印」才會生圖。|This is a candidate prompt, with no image yet. Press Generate to make it.
 四組候選提示詞，還不是圖片。≠ 表示與已選試印不同。|Four candidate prompts, with no images yet. ≠ marks differences from the selected proof.
 與已選試印不同|Different from the selected proof
@@ -2306,10 +2307,40 @@ Danbooru 上常一起出現|Often tagged together on Danbooru
 Danbooru 說明|Danbooru wiki
 看過的牌|Cards you viewed
 上一張|Previous card
+帶入相關牌|Add related cards
+帶入相關牌…|Add related cards…
+ 在 Danbooru 上常一起出現的| often tagged with it on Danbooru
+相關度|Relatedness
+最多|Up to
+少一張|One fewer
+多一張|One more
+1 個點以上|1 dot or more
+2 個點以上|2 dots or more
+3 個點以上|3 dots
+以上|+
+讀取中…|Loading…
+沒有符合的相關牌|No related cards match
+符合的只有 {0} 張|Only {0} match
+帶入 {0} 張|Add {0}
+帶入|Add
+沒有可以帶入的|Nothing to add
+帶入 {0} 張相關牌|Added {0} related cards
+補相關牌|Related fill
+相關牌|Related
+補相關|Related
+●○○ 以上|●○○ or more
+●●○ 以上|●●○ or more
+最多 {0} 張|Up to {0}
+補幾個點以上的相關牌|Minimum relatedness to add
+最多補幾張相關牌|Most related cards to add
+開：從合成池的牌找 Danbooru 上常一起出現的牌，照相關度由高到低補進這張圖（過不了規則的跳過）；成品上標「補相關」|On: add cards often tagged with your pool cards on Danbooru, most related first (skipping any the rules reject); results mark them "Related"
 ← 上一張|← Previous card
 相關度：一格|Relatedness: one dot
 相關度：兩格|Relatedness: two dots
 相關度：三格|Relatedness: three dots
+相關度：一格（{0}）|Relatedness: one dot ({0})
+相關度：兩格（{0}）|Relatedness: two dots ({0})
+相關度：三格（{0}）|Relatedness: three dots ({0})
 `;
 
 export const messages = Object.freeze(Object.fromEntries(copy.trim().split("\n").map((line) => {

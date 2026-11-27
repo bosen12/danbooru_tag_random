@@ -4534,6 +4534,200 @@ body[data-dragging="true"] .library[data-over="true"] {
   border-color: var(--color-accent-text);
 }
 
+/* 帶入相關牌：合成池的牌按右鍵浮出的小面板（related-fill.js）。一張小紙片：上面選相關度、最多幾張，
+ * 中間當場列出會帶入哪幾張，下面一顆帶入。浮在彈窗（.overlay z-index 60）上面，詳情裡也叫得出來。 */
+.rf-pop {
+  position: fixed;
+  z-index: 90;
+  width: min(19rem, calc(100vw - 16px));
+  display: grid;
+  gap: var(--space-xs);
+  padding: var(--space-sm) var(--space-md) var(--space-md);
+  border: 1px solid var(--color-rule);
+  border-radius: var(--radius-md);
+  background: var(--color-paper-2);
+  box-shadow: var(--shadow-lift), 0 24px 60px var(--color-shade);
+  transform-origin: top left;
+}
+
+.rf-head {
+  display: grid;
+  gap: 2px;
+}
+
+.rf-head b {
+  font-size: var(--text-sm);
+}
+
+.rf-sub {
+  color: var(--color-muted);
+  font-size: var(--text-xs);
+}
+
+.rf-row {
+  display: flex;
+  align-items: center;
+  gap: var(--space-xs);
+}
+
+.rf-label {
+  min-width: 3.5em;
+  color: var(--color-muted);
+  font-size: var(--text-xs);
+}
+
+.rf-segs {
+  display: flex;
+  gap: 4px;
+}
+
+.rf-seg {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  min-height: 32px;
+  padding: 0 var(--space-xs);
+  border: 1px solid var(--color-rule);
+  border-radius: var(--radius-sm);
+  background: transparent;
+  color: var(--color-ink);
+  font: inherit;
+  font-size: var(--text-xs);
+  cursor: pointer;
+  transition: background-color var(--dur-short) var(--ease-out), border-color var(--dur-short) var(--ease-out);
+}
+
+.rf-seg[aria-pressed="true"] {
+  border-color: var(--color-accent-text);
+  background: color-mix(in oklch, var(--color-accent) 16%, transparent);
+}
+
+.rf-seg-plus {
+  color: var(--color-muted);
+}
+
+.rf-dots {
+  display: inline-flex;
+  gap: 3px;
+}
+
+.rf-dots i {
+  width: 7px;
+  height: 7px;
+  box-sizing: border-box;
+  border: 1.5px solid var(--color-muted);
+  border-radius: 50%;
+}
+
+.rf-dots i.is-on {
+  background: var(--color-accent-text);
+  border-color: var(--color-accent-text);
+}
+
+.rf-stepper {
+  display: inline-flex;
+  align-items: center;
+  border: 1px solid var(--color-rule);
+  border-radius: var(--radius-sm);
+}
+
+.rf-step {
+  width: 32px;
+  height: 32px;
+  border: 0;
+  background: transparent;
+  color: var(--color-ink);
+  font: inherit;
+  cursor: pointer;
+}
+
+.rf-step:disabled {
+  opacity: 0.35;
+  cursor: default;
+}
+
+.rf-n {
+  min-width: 1.6em;
+  text-align: center;
+  font-variant-numeric: tabular-nums;
+  font-weight: 700;
+}
+
+.rf-unit {
+  color: var(--color-muted);
+  font-size: var(--text-xs);
+}
+
+.rf-list {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+  min-height: 30px;
+  padding-top: var(--space-2xs);
+  border-top: 1px solid var(--color-rule-2);
+}
+
+.rf-chip {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  min-height: 28px;
+  padding: 0 var(--space-xs);
+  border-radius: 999px;
+  background: var(--color-paper-3);
+  font-size: var(--text-xs);
+}
+
+.rf-chip-ghost {
+  width: 4.5rem;
+  background: linear-gradient(90deg, var(--color-paper-3), var(--color-rule-2), var(--color-paper-3));
+  background-size: 200% 100%;
+  animation: rf-shimmer var(--dur-breath) linear infinite;
+}
+
+@keyframes rf-shimmer {
+  to {
+    background-position: -200% 0;
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .rf-chip-ghost {
+    animation: none;
+  }
+}
+
+.rf-pop[data-loading] .rf-list {
+  opacity: 0.5;
+}
+
+.rf-note {
+  margin: 0;
+  color: var(--color-muted);
+  font-size: var(--text-xs);
+}
+
+.rf-foot {
+  display: flex;
+  justify-content: flex-end;
+}
+
+.rf-go:disabled {
+  opacity: 0.5;
+}
+
+@media (pointer: coarse) {
+  .rf-seg,
+  .rf-step {
+    min-height: 44px;
+  }
+
+  .rf-step {
+    width: 44px;
+    height: 44px;
+  }
+}
+
 @media (max-width: 40rem) {
   .related-row {
     display: flex;

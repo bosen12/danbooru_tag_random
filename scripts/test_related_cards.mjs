@@ -54,7 +54,7 @@ globalThis.document = {
   addEventListener() {},
 };
 
-const { normTag, relatedDots, relatedDotLabel, filterRelated, loadRelated, clearRelatedCache, wikiAllowed, trailTo, TRAIL_MAX } = await import(
+const { normTag, relatedDots, relatedDotLabel, relatedValue, filterRelated, loadRelated, clearRelatedCache, wikiAllowed, trailTo, TRAIL_MAX, pickRelated, DOT_MIN } = await import(
   pathToFileURL(join(root, "web6/related.js")).href
 );
 
@@ -141,6 +141,8 @@ ok("wiki：一般的牌顯示", wikiAllowed("school uniform", { hardBanned: ["lo
 ok("wiki：HARD_BANNED 不顯示（底線、大小寫照樣認）", !wikiAllowed("Loli", { hardBanned: ["loli"] }));
 ok("wiki：禁用角色不顯示", !wikiAllowed("anya_(spy_x_family)", { characterBan: ["anya (spy x family)"] }));
 ok("wiki：空名字不顯示", !wikiAllowed("", {}));
+// 滑鼠放在點上看相關值。
+ok("相關值兩位小數", relatedValue(611) === "0.61" && relatedValue(50) === "0.05" && relatedValue(1000) === "1.00" && relatedValue("x") === "");
 // 麵包屑：點回路上的牌就退回那一步（不繞圈）；太長只留最後 TRAIL_MAX 張。
 ok("麵包屑：新的牌接在後面", JSON.stringify(trailTo("pleated skirt", ["school uniform", "serafuku"])) === JSON.stringify(["school uniform", "serafuku"]));
 ok("麵包屑：點回路上的牌退回那一步", JSON.stringify(trailTo("School_Uniform", ["school uniform", "serafuku"])) === "[]" && JSON.stringify(trailTo("serafuku", ["school uniform", "serafuku", "neckerchief"])) === JSON.stringify(["school uniform"]));
@@ -212,6 +214,63 @@ clearRelatedCache();
   ok("空清單也算成功，不再問", n === 1 && packed.items.length === 0);
 }
 
+// 補相關牌的挑法（更多規則、合成池右鍵小面板共用）：幾個點以上、同一張取最高、起點和 exclude 不算、顯示那套過濾照用。
+clearRelatedCache();
+{
+  const answers = {
+    bikini: [["beach", 600], ["safe 1", 300], ["safe 2", 150], ["loli", 900], ["hot", 800], ["trash me", 700]],
+    "safe 1": [["beach", 450], ["safe 3", 520], ["bikini", 900], ["safe 4", 210]],
+  };
+  const fetchImpl = async (url) => {
+    const tag = new URL(String(url), "http://x").searchParams.get("tag");
+    return { ok: true, json: async () => ({ ok: true, items: { [tag]: answers[tag] || [] }, guard: [] }) };
+  };
+  const two = await pickRelated(["bikini", "safe 1"], { dots: 2, ctx: base, fetchImpl });
+  ok("補相關：兩個點以上、照相關度排、同一張取最高（beach 600 不是 450）",
+    JSON.stringify(two.map((x) => [x.tag, x.milli])) === JSON.stringify([["beach", 600], ["safe 3", 520], ["safe 4", 210]]), JSON.stringify(two.map((x) => [x.tag, x.milli])));
+  ok("補相關：起點那幾張不算（safe 1 被 bikini 推薦也不補）", !two.some((x) => x.tag === "safe 1" || x.tag === "bikini"));
+  ok("補相關：未成年、分級擋掉、廢字簍照擋", !two.some((x) => ["loli", "hot", "trash me"].includes(x.tag)));
+  const three = await pickRelated(["bikini", "safe 1"], { dots: 3, ctx: base, fetchImpl });
+  ok("補相關：三個點只收 0.5 以上", JSON.stringify(three.map((x) => x.tag)) === JSON.stringify(["beach", "safe 3"]), JSON.stringify(three.map((x) => x.tag)));
+  const one = await pickRelated(["bikini"], { dots: 1, ctx: base, exclude: ["beach"], fetchImpl });
+  ok("補相關：一個點全收、exclude 不算", JSON.stringify(one.map((x) => x.tag)) === JSON.stringify(["safe 1", "safe 2"]), JSON.stringify(one.map((x) => x.tag)));
+  ok("補相關：門檻跟點數的分界一樣", DOT_MIN[1] === 0 && DOT_MIN[2] === 200 && DOT_MIN[3] === 500 && relatedDots(199) === 1 && relatedDots(200) === 2 && relatedDots(500) === 3);
+  ok("補相關：沒有起點回空的", (await pickRelated([], { fetchImpl })).length === 0);
+}
+
+// 引擎：補相關牌照順序試、過規則才補、記成 related；關著跟原本一模一樣。
+{
+  const eng = await import(pathToFileURL(join(root, "web/engine.js")).href);
+  const data = JSON.parse(readFileSync(join(root, "web/lexicon.json"), "utf8"));
+  const lex = eng.indexLexicon(data);
+  const base2 = eng.sanitizeSettings({ ...eng.defaultSettings(data), girl: true, boy: false, heats: ["tease"], eras: ["modern"] }, data);
+  ok("補相關：預設關著", base2.relatedFill.on === false && base2.relatedFill.dots === 2 && base2.relatedFill.max === 3);
+  const pins = new Set(["school uniform"]);
+  const want = ["serafuku", "pleated skirt", "neckerchief", "sailor collar", "white shirt"];
+  let same = 0;
+  for (let i = 0; i < 12; i++) {
+    const a = eng.drawOne(lex, base2, pins, new Set(), eng.mulberry32(100 + i), 100 + i).positive;
+    const off = eng.sanitizeSettings({ ...base2, relatedFill: { on: false, dots: 2, max: 3, tags: want } }, data);
+    if (a === eng.drawOne(lex, off, pins, new Set(), eng.mulberry32(100 + i), 100 + i).positive) same += 1;
+  }
+  ok("補相關：關著（就算帶了 tags）抽法一模一樣", same === 12, `${same}/12`);
+  const on = eng.sanitizeSettings({ ...base2, relatedFill: { on: true, dots: 2, max: 3, tags: want } }, data);
+  const d = eng.drawOne(lex, on, pins, new Set(), eng.mulberry32(201), 201, { trace: true });
+  const rel = d.trace.kept.filter((k) => k.source === "related").map((k) => k.tag);
+  ok("補相關：照順序補到最多 3 張，記成 related（serafuku 跟學生制服互斥，跳過）", JSON.stringify(rel) === JSON.stringify(["pleated skirt", "neckerchief", "sailor collar"]), JSON.stringify(rel));
+  const mutex = eng.sanitizeSettings({ ...base2, relatedFill: { on: true, dots: 1, max: 2, tags: ["black shirt", "pleated skirt", "neckerchief"] } }, data);
+  const d2 = eng.drawOne(lex, mutex, new Set(["white shirt"]), new Set(), eng.mulberry32(7), 7, { trace: true });
+  ok("補相關：跟釘的牌同一格（上衣）的跳過", !d2.positive.split(", ").includes("black shirt") && d2.trace.kept.filter((k) => k.source === "related").length === 2);
+  const era = eng.sanitizeSettings({ ...base2, relatedFill: { on: true, dots: 1, max: 1, tags: ["hanfu", "pleated skirt"] } }, data);
+  const d3 = eng.drawOne(lex, era, new Set(), new Set(), eng.mulberry32(9), 9, { trace: true });
+  ok("補相關：時代不對的跳過（現代不補漢服）", JSON.stringify(d3.trace.kept.filter((k) => k.source === "related").map((k) => k.tag)) === JSON.stringify(["pleated skirt"]));
+  const banned = eng.sanitizeSettings({ ...base2, relatedFill: { on: true, dots: 1, max: 2, tags: ["randoseru", "pleated skirt"] } }, data);
+  const d4 = eng.drawOne(lex, banned, new Set(), new Set(), eng.mulberry32(11), 11);
+  ok("補相關：永遠不抽的字不補", !d4.positive.split(", ").includes("randoseru"));
+  ok("補相關：設定清乾淨（點數 1～3、張數 1～12、tags 只收字串）",
+    JSON.stringify(eng.sanitizeRelatedFill({ on: "yes", dots: 9, max: 99, tags: ["a", 3, "a", null, "b"] })) === JSON.stringify({ on: false, dots: 3, max: 12, tags: ["a", "b"] }));
+}
+
 const read = (rel) => readFileSync(join(root, rel), "utf8");
 const relatedJs = read("web6/related.js");
 const appJs = read("web6/app.js");
@@ -230,6 +289,12 @@ ok("滑鼠停在牌上就先抓", relatedJs.includes("export function installRel
 // 2026-11-28：點相關的牌在同一個視窗裡換（swapSheet），最上面麵包屑；不再一層一層疊視窗。
 ok("字盒詳情接上相關的牌，同一個視窗換、有麵包屑", appJs.includes("mountRelated(") && appJs.includes("relatedTrail(") && appJs.includes("swapSheet(into") && appJs.includes("into: sheet") && !appJs.includes("back: true"));
 ok("卡冊詳情接上相關的牌，放在用過的圖前面，同一個視窗換", bookJs.includes("mountRelated(") && bookJs.includes("before: works") && bookJs.includes("relatedTrail(") && bookJs.includes("swapSheet(into") && !bookJs.includes("back: true"));
+const fillJs = read("web6/related-fill.js");
+ok("更多規則有補相關牌（開關、幾個點以上、最多幾張），抽牌帶 tags 給引擎", appJs.includes('switchBox("補相關牌"') && appJs.includes("relatedFill: { ...grouped.relatedFill, tags: intent.relatedTags }") && appJs.includes("pickRelated([...intent.pool]"));
+ok("合成池的牌右鍵開帶入相關牌小面板、詳情也有一顆", appJs.includes("openPoolRelated(t, node)") && appJs.includes('"帶入相關牌…"'));
+ok("帶入時不擠掉池子裡的牌", appJs.includes("if ([...sim].some((t) => !next.pinned.has(t))) continue;"));
+ok("成品標「補相關」", appJs.includes('related: "補相關"'));
+ok("小面板：位置打開時算一次、高度平順變、讀取中有佔位、淡入淡出", fillJs.includes("box.style.bottom") && fillJs.includes("const resize = (from)") && fillJs.includes("rf-chip-ghost") && fillJs.includes("dropAnimated(o.box)"));
 ok("看過的牌有上限", relatedJs.includes("export const TRAIL_MAX") && appJs.includes("trailTo(next, nextTrail)") && bookJs.includes("trailTo(next, nextTrail)"));
 // 2026-11-28：牌飛進詳情收成 motion.js 的 detailFlight（字盒、卡冊共用；先量來源、換完內容再飛）。
 const motionJs = read("web6/motion.js");
