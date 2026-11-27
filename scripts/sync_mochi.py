@@ -234,6 +234,9 @@ def plan() -> dict[str, Path]:
         files[rel] = ROOT / rel
     for rel in tracked("web/lexicon_parts"):
         files[rel] = ROOT / rel
+    # 小工具（合併舊版烤好的卡面 card_tool/merge-cards.bat）：整個資料夾照搬。
+    for rel in tracked("card_tool"):
+        files[rel] = ROOT / rel
     for target, source in TEST_FILES.items():
         files["tests/" + target] = ROOT / "scripts" / source
     return files
