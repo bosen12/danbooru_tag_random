@@ -9,7 +9,8 @@
 //      （以前只有最早開的分頁接著印，重新整理那頁存檔裡排著的沒人接，又算「在跑」不能裁，牆滿時反把剛印好的裁掉）。
 //   2. 印了好幾張之後，已經拿掉的元素上沒有還在算的動畫（合牌的星火、牌、光演完 fill: forwards 掛著，
 //      拿掉了還沒回收前每一格都要照顧，越印越卡）。
-//   3. 成品牆上帶毛玻璃（backdrop-filter）的只有看得到的那幾個（以前每張的按鈕列、牌·N 都帶，滿牆 425 個合成圖層）。
+//   3. 成品牆上沒有毛玻璃（backdrop-filter）：以前每張的按鈕列、牌·N 都帶，滿牆 425 個合成圖層；
+//      只給滑鼠底下那張也不行：按鈕列淡入時毛玻璃糊不到底下的圖，按鈕先黑、淡入完才變灰（閃一下）。
 import { createServer } from "node:http";
 import { readFile } from "node:fs/promises";
 import { existsSync } from "node:fs";
@@ -214,7 +215,7 @@ try {
     const merges = await p.evaluate(() => window.__merges);
     ok("2. 印了 12 張、合牌演了幾次：拿掉的元素上沒有還在算的動畫", (shots.done || 0) >= 12 && merges >= 4 && r.result.value.n === 0, `成品 ${JSON.stringify(shots)}，合牌 ${merges} 次，殘留 ${r.result.value.n}：${JSON.stringify(r.result.value.m)}`);
 
-    // 3. 滑鼠不在牆上：毛玻璃只有看得到的（排著、在印的牌·N）。
+    // 3. 滑鼠不在牆上：沒有毛玻璃。
     await p.mouse.move(5, 5);
     await sleep(500);
     const blur = await p.evaluate(() => {
@@ -224,17 +225,17 @@ try {
       });
       return { n: list.length, who: [...new Set(list.map((n) => n.className))].slice(0, 5) };
     });
-    ok("3. 成品牆上的毛玻璃只給看得到的（12 張成品、滑鼠不在牆上：0 個）", blur.n === 0, JSON.stringify(blur));
-    // 滑鼠移上一張：那一張的按鈕列、牌·N 有毛玻璃，其他張沒有。
+    ok("3. 成品牆上沒有毛玻璃（12 張成品、滑鼠不在牆上：0 個）", blur.n === 0, JSON.stringify(blur));
+    // 滑鼠移上一張：按鈕列浮出來，也沒有毛玻璃（有的話淡入時按鈕先黑後灰、閃一下）。
     const box = await p.locator("#wall > .shot").first().boundingBox();
     await p.mouse.move(box.x + box.width / 2, box.y + box.height / 2);
     await sleep(500);
     const hover = await p.evaluate(() => {
       const shots = [...document.querySelectorAll("#wall > .shot")];
       const has = (s) => [...s.querySelectorAll("*")].some((n) => (getComputedStyle(n).backdropFilter || "none") !== "none");
-      return { first: has(shots[0]), others: shots.slice(1).filter(has).length };
+      return { shown: getComputedStyle(shots[0].querySelector(".shot-actions")).opacity, blurred: shots.filter(has).length };
     });
-    ok("3. 滑鼠底下那張有毛玻璃、其他張沒有", hover.first && hover.others === 0, JSON.stringify(hover));
+    ok("3. 滑鼠移上一張：按鈕列浮出來、沒有毛玻璃", hover.shown === "1" && hover.blurred === 0, JSON.stringify(hover));
     await c.close();
   }
 } finally {
