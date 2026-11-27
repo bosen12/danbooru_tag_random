@@ -213,7 +213,8 @@ if (DRAW_PART !== "rest") {
     // 2026-11-26：專案主的模型認得清單等 1704 個字進池。釘車內、兩種模式各 400 張，方向盤合計只剩 4 次。規則還在。放到 2000。
     // 2026-11-26 角色、推車體位一批：釘教室、兩種模式各 400 張，白板合計只剩 4 次。規則還在（孤兒是 0）。放到 2000。
     // 同一天再加 7 個字：水槽（釘廚房）兩種模式各 400 張合計只剩 4 次，一樣放到 2000。
-    const BIGGER = ["bowling ball", "shopping cart", "poker table", "nightstand", "steering wheel", "whiteboard", "sink"];
+    // 2026-11-27 tagcomplete 那批 1065 張：麥克風架（釘卡拉 OK 包廂）兩種模式各 400 張合計只剩 4 次。規則還在（孤兒是 0）。放到 2000。
+    const BIGGER = ["bowling ball", "shopping cart", "poker table", "nightstand", "steering wheel", "whiteboard", "sink", "microphone stand"];
     const HUGE = ["christmas tree"];
     const n = HUGE.includes(prop) ? 4000 : BIGGER.includes(prop) ? 2000 : BIG.includes(prop) ? 400 : 80;
     for (const mode of ["normal", "diverse"]) sweep(mk({ sceneMode: mode }), trigger, n, 500000);
