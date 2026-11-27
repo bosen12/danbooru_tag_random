@@ -20,6 +20,7 @@ function ok(name, cond, detail) {
 }
 
 const GOLD = {
+  // 2026-11-27：專案主指定 imminent netorare、before netorare 進誘惑・情境那一格：seed 42 的 heart in heart hands → kissing hand、seed 999 的 necrophilia → electrostimulation，RNG 次數沒變。仍是 1girl solo，沒有男生。
   // 2026-11-26：專案主的模型認得清單、alltags 剩下的一般字、版面外框畫材共 1704 字和 87 張別名卡進池（.planning/tags-1126、1126b、1126c，Grok 十三批、Opus 驗收），五張全換。仍是 1girl solo，沒有男生或人類陰莖。
   // 2026-10-24 第四輪驗收（Opus）：早晨／夜晚、室內外規則補上新字，戶外也擲傢俱格，五張全換。仍是 1girl solo，沒有 1boy、沒有陰莖。
   // 2026-10-24 Grok 建議池 558 張（Opus 驗收）：候選池變大，亂數順序跟著變，五張全換。仍是 1girl solo，沒有 1boy、沒有陰莖。
@@ -107,7 +108,7 @@ const GOLD = {
   // 2026-11-01：260 個新字進池。澡堂、狼換成道場、畫架。仍是 1girl solo，沒有男生或人類陰莖。
   42: {
     rng: 2980,
-    pos: "1girl, solo, very short hair, yellow eyes, pink hair, afro, small breasts, hot, wet face, very sweaty, sweat, tight dress, dress, strapless bra, bra, garter belt, jirai kei, female masturbation, tripping, fisheye, looking back, sideways mouth, heart in heart hands, on motorcycle, outdoors, dawn, city lights, meteor shower, duct tape, tape, nsfw, explicit, masterpiece, best quality, amazing quality",
+    pos: "1girl, solo, very short hair, yellow eyes, pink hair, afro, small breasts, hot, wet face, very sweaty, sweat, tight dress, dress, strapless bra, bra, garter belt, jirai kei, female masturbation, tripping, fisheye, looking back, sideways mouth, kissing hand, on motorcycle, outdoors, dawn, city lights, meteor shower, duct tape, tape, nsfw, explicit, masterpiece, best quality, amazing quality",
   },
   // 2026-10-05 第五次：女僕圍裙是布料疊層，不占連身裙。仍是 1girl solo。
   // 2026-10-05 第六次：爆炸頭跟長裙、探頭偷看。仍是 1girl solo。
@@ -163,7 +164,7 @@ const GOLD = {
   // 2026-11-01：260 個新字進池。這張換成酒吧、往前看。仍是 1girl solo，沒有男生或人類陰莖。
   999: {
     rng: 2997,
-    pos: "1girl, solo, long hair, glowing eyes, light blue hair, mohawk, medium breasts, bruise on face, half updo, fake mustache, white camisole, camisole, pantyhose under shorts, shorts, bra visible through clothes, black sailor collar, sailor collar, bag, nipple rings, piercing, masturbation, falling, upside-down, sideways glance, grin, necrophilia, shore, outdoors, sunset, screen light, ar-15, rifle, gun, tokusatsu, nsfw, explicit, masterpiece, best quality, amazing quality",
+    pos: "1girl, solo, long hair, glowing eyes, light blue hair, mohawk, medium breasts, bruise on face, half updo, fake mustache, white camisole, camisole, pantyhose under shorts, shorts, bra visible through clothes, black sailor collar, sailor collar, bag, nipple rings, piercing, masturbation, falling, upside-down, sideways glance, grin, electrostimulation, shore, outdoors, sunset, screen light, ar-15, rifle, gun, tokusatsu, nsfw, explicit, masterpiece, best quality, amazing quality",
   },
   // 2026-09-23：走光補抽改成「所有成立的走光動作同一池、衣服吻合的權重 10」之後，
   // 這張的走光動作從 exhibitionism 換成 cameltoe（她穿 thong，吻合），場景跟著換。
@@ -416,8 +417,8 @@ const MATRIX_SEEDS = 200;
 // 2026-10-31：加反拉手臂 arm held back（性愛、要一男一女、佔兩隻手臂）與 arm grab（grabbing another's arm 的舊名）。姿勢候選多兩張，矩陣 6b42ebfb → 6ce30a24；五張單人女金標沒變。
 // 2026-11-01：260 個新字進池。洗浴時非白名單內衣先卸下，免得補救池把浴袍穿回去。五張單人女金標都換了，仍是 1girl solo，沒有男生或人類陰莖。矩陣 6ce30a24 → abf1e2a3。單人女情境沒有 1boy；掃到的 futanari 是既有標籤。
 // 2026-11-26：性愛情境多 angry sex、awkward sex、acrobatic sex，multitasking 從環境（怪異母題）搬到性愛情境；都要一男一女，單人女情境碰不到。五張單人女金標沒變。矩陣 abf1e2a3 → bb0454b1。
-// 2026-11-26 第二次：專案主的模型認得清單 716 字、alltags 剩下的一般字 945 字、版面外框畫材 43 字（扣掉不收的 2 字），加 87 張別名卡進池（scripts/sync_20261126_tags.py）。單人女十種情境 2000 張掃過沒有男生、陰莖（1815 張抽到新字）。矩陣 bb0454b1 → 6d812352；through screen 不再帶 screen、性愛不自己補會帶出 cooking 的做巧克力／烘焙，→ fa4b1e66；alltags 角色收 178 個、幼稚園等 12 字，→ 60a4c990；推車體位、專案主指定的 7 字、絞索自殘補進 ODD_MOTIF，→ 365aac8d；專案主親自測過的 29 字與 4 張別名卡，→ 11ec6c76。
-const MATRIX_GOLD = "11ec6c76";
+// 2026-11-26 第二次：專案主的模型認得清單 716 字、alltags 剩下的一般字 945 字、版面外框畫材 43 字（扣掉不收的 2 字），加 87 張別名卡進池（scripts/sync_20261126_tags.py）。單人女十種情境 2000 張掃過沒有男生、陰莖（1815 張抽到新字）。矩陣 bb0454b1 → 6d812352；through screen 不再帶 screen、性愛不自己補會帶出 cooking 的做巧克力／烘焙，→ fa4b1e66；alltags 角色收 178 個、幼稚園等 12 字，→ 60a4c990；推車體位、專案主指定的 7 字、絞索自殘補進 ODD_MOTIF，→ 365aac8d；專案主親自測過的 29 字與 4 張別名卡，→ 11ec6c76；2026-11-27 專案主指定 imminent netorare、before netorare（後者只在釘了才出現），→ 654ac140。
+const MATRIX_GOLD = "654ac140";
 
 function matrixSettings(over) {
   const s = defaultSettings(data);
