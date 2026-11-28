@@ -288,8 +288,67 @@ clearRelatedCache();
       const d = eng.drawOne(lex, sx, new Set(["sex"]), new Set(), eng.mulberry32(700 + i), 700 + i, { trace: true });
       if (d.trace.kept.some((k) => k.tag !== "sex" && k.source === "random" && eng.supplementKindKeys(lex.byTag.get(k.tag)).includes("pose:sex"))) filled += 1;
     }
-    ok("性交是總稱：釘了它、姿勢只勾性愛，照樣補具體的行為", filled === 10, `${filled}/10`);
-    ok("性交不佔任何一格", eng.supplementKindKeys(lex.byTag.get("sex")).length === 0);
+    ok("性交沒有互斥：釘了它、姿勢只勾性愛，照樣補具體的行為", filled === 10, `${filled}/10`);
+    ok("性交照舊算性愛那一格", JSON.stringify(eng.supplementKindKeys(lex.byTag.get("sex"))) === JSON.stringify(["pose:sex"]));
+  }
+  // 2026-11-28 專案主：選格模式下，池裡（釘的＋它帶進來的）沒有互斥的牌不佔格、那一格照樣補；有互斥的照舊佔住。
+  {
+    const d0 = eng.defaultSettings(data);
+    const only = (section, slot) => eng.sanitizeSettings({
+      ...d0, girl: true, boy: true, rating: "explicit", heats: ["sex"],
+      counts: { ...d0.counts, [section]: 1 },
+      offGroups: eng.SKELETON[section].map(([g]) => `${section}:${g}`).filter((k) => k !== slot),
+    }, data);
+    // 算「引擎替這一格補了牌」：引擎自己抽的，或引擎抽的牌帶進來的（性愛行為帶保險套）；釘的牌帶進來的不算。
+    const fills = (section, slot, pin, loose = true) => {
+      const s = only(section, slot);
+      let n = 0;
+      for (let i = 0; i < 8; i++) {
+        const d = eng.drawOne(lex, s, new Set([pin]), new Set(), eng.mulberry32(820 + i), 820 + i, { trace: true });
+        const engine = (k) => k.source === "random" || (loose && k.source === "implies" && k.parent !== pin);
+        if (d.trace.kept.some((k) => k.tag !== pin && engine(k) && eng.supplementKindKeys(lex.byTag.get(k.tag)).includes(slot))) n += 1;
+      }
+      return n;
+    };
+    for (const [section, slot, pin] of [["feature", "feature:skin", "freckles"], ["feature", "feature:makeup", "lipstick"], ["pose", "pose:sex", "cum on body"], ["clothing", "clothing:acc", "mouth piercing"]]) {
+      const n = fills(section, slot, pin);
+      ok(`池裡沒互斥的牌不佔格：釘 ${pin}，${slot} 照樣補`, n === 8, `${n}/8`);
+    }
+    // 自己沒互斥、帶進來的父字有互斥：父字也是池裡的牌，佔住那一格（高踢腿帶 kicking、博麗神社帶 shrine）。
+    for (const [section, slot, pin] of [["pose", "pose:sex", "cowgirl position"], ["pose", "pose:body", "high kick"], ["env", "env:place", "hakurei shrine"], ["env", "env:place", "black hole"], ["env", "env:place", "beach"], ["feature", "feature:hair_color", "black hair"]]) {
+      const n = fills(section, slot, pin, false);
+      ok(`池裡有互斥的牌佔住那一格：釘 ${pin}，${slot} 不再補`, n === 0, `${n}/8`);
+    }
+    for (const t of ["black hole", "hakurei shrine", "rei no pool", "voile"]) ok(`${t} 有場地互斥`, lex.byTag.get(t)?.mutex === "place");
+    // 2026-11-28 同一輪：眼睛被遮住佔視線、魔物娘／怪物男／非人生物／獸化人佔種族（以前沒互斥，釘了還會補「看著觀眾」「精靈」）。
+    ok("眼睛被遮住有視線互斥", lex.byTag.get("covered eyes")?.mutex === "gaze");
+    for (const t of ["monster girl", "monster boy", "creature", "furry"]) ok(`${t} 有種族互斥`, lex.byTag.get(t)?.mutex === "race");
+    for (const [section, slot, pin] of [["pose", "pose:gaze", "covered eyes"], ["feature", "feature:race", "monster girl"], ["feature", "feature:race", "furry"]]) {
+      const n = fills(section, slot, pin, false);
+      ok(`池裡有互斥的牌佔住那一格：釘 ${pin}，${slot} 不再補`, n === 0, `${n}/8`);
+    }
+    {
+      // 眼睛被遮住進了視線格，但要有東西遮才出現（PARENT_ONLY）：沒釘的時候引擎不自己抽。
+      const s = eng.sanitizeSettings({ ...d0, girl: true, boy: true }, data);
+      let hit = 0;
+      for (let i = 0; i < 60; i++) if (eng.drawOne(lex, s, new Set(), new Set(), eng.mulberry32(5000 + i), 5000 + i).positive.split(", ").includes("covered eyes")) hit += 1;
+      ok("眼睛被遮住不會自己被抽到", hit === 0, `${hit}/60`);
+    }
+    // 傘跟它的子項互相帶出，不互斥：釘獸人照樣帶出怪物男、釘惡魔娘照樣帶出魔物娘。
+    for (const [pin, parent] of [["orc", "monster boy"], ["demon girl", "monster girl"]]) {
+      const d = eng.drawOne(lex, only("feature", "feature:race"), new Set([pin]), new Set(), eng.mulberry32(840), 840);
+      ok(`釘 ${pin} 照樣帶出 ${parent}`, d.positive.split(", ").includes(parent), d.positive);
+    }
+    // 引擎自己補的沒互斥牌照舊佔格：妝容 1 格只補一張，不會一直補下去。
+    {
+      const s = only("feature", "feature:makeup");
+      let over = 0;
+      for (let i = 0; i < 8; i++) {
+        const d = eng.drawOne(lex, s, new Set(), new Set(), eng.mulberry32(860 + i), 860 + i, { trace: true });
+        if (d.trace.kept.filter((k) => k.source === "random" && eng.supplementKindKeys(lex.byTag.get(k.tag)).includes("feature:makeup")).length > 1) over += 1;
+      }
+      ok("引擎自己補的沒互斥牌照舊佔格（妝容只補一張）", over === 0, `${over}/8`);
+    }
   }
   ok("補相關：設定清乾淨（點數 1～3、張數 1～12、tags 只收字串）",
     JSON.stringify(eng.sanitizeRelatedFill({ on: "yes", dots: 9, max: 99, tags: ["a", 3, "a", null, "b"] })) === JSON.stringify({ on: false, dots: 3, max: 12, tags: ["a", "b"] }));

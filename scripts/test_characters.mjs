@@ -50,15 +50,21 @@ ok("角色：抽角色、加入系列名預設都關", s.drawCharacter === false
 
 const on = { ...s, drawCharacter: true };
 const pin2g = applyPin(lex, new Set(), new Set(), "2girls").pinned;
+// 2026-10-26：人物「不限」時釘 2girls 只鎖女生人數，男生照人數表抽（chooseCast）。
+// 角色照畫面上的人數、性別抽：兩個女角色，加上補進來的男生各一個男角色（跟 test_engine.mjs 同一塊，2026-11-28 對齊）。
 let rightCount = 0;
 let female = 0;
 for (let i = 0; i < 60; i++) {
   const d = drawOne(lex, on, pin2g, new Set(), mulberry32(931000 + i), 931000 + i);
   const cs = charsOf(d.positive);
-  if (cs.length === 2) rightCount += 1;
-  if (cs.every((t) => lex.byTag.get(t).gate === "female")) female += 1;
+  const tags = tagsOf(d);
+  const men = tags.has("2boys") ? 2 : tags.has("1boy") ? 1 : 0;
+  const fc = cs.filter((t) => lex.byTag.get(t).gate === "female").length;
+  const mc = cs.filter((t) => lex.byTag.get(t).gate === "male").length;
+  if (fc === 2 && mc === men) rightCount += 1;
+  if (fc === 2) female += 1;
 }
-eq("角色：釘 2girls、抽角色打開：每張都是兩個角色", rightCount, 60);
+eq("角色：釘 2girls、抽角色打開：兩個女角色，補進來的男生各一個男角色", rightCount, 60);
 eq("角色：兩個女生抽到的都是女角色", female, 60);
 const pinBoy = applyPin(lex, new Set(), new Set(), "1boy").pinned;
 const sBoy = { ...on, girl: false, boy: true };
